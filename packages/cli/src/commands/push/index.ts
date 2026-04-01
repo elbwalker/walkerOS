@@ -109,11 +109,7 @@ async function pushCore(
       }
     }
 
-    const eventObj = event as { name?: string; data?: Record<string, unknown> };
-    const validatedEvent: { name: string; data: Record<string, unknown> } = {
-      name: eventObj.name!,
-      data: (eventObj.data || {}) as Record<string, unknown>,
-    };
+    const validatedEvent = event as Record<string, unknown>;
 
     // Detect input type
     logger.debug('Detecting input type');
@@ -328,7 +324,7 @@ export async function push(
  */
 async function executeConfigPush(
   options: PushCommandOptions,
-  validatedEvent: { name: string; data: Record<string, unknown> },
+  validatedEvent: Record<string, unknown>,
   logger: Logger.Instance,
   setTempDir: (dir: string) => void,
   snapshotCode?: string,
@@ -443,7 +439,7 @@ async function executeConfigPush(
     const [transformerId] = transformerSimulateEntry;
     return executeTransformerSimulation(
       tempPath,
-      validatedEvent,
+      validatedEvent as WalkerOS.DeepPartialEvent,
       logger,
       transformerId,
       overrides,
@@ -461,10 +457,12 @@ async function executeConfigPush(
     `Executing in ${platform} environment (${platform === 'web' ? 'JSDOM' : 'Node.js'})`,
   );
 
+  const eventInput = validatedEvent as WalkerOS.DeepPartialEvent;
+
   if (simulatedDestEntry) {
     return executeSimulatedDestination(
       tempPath,
-      validatedEvent,
+      eventInput,
       logger,
       platform,
       simulatedDestEntry[0],
@@ -476,7 +474,7 @@ async function executeConfigPush(
 
   return executeDestinationPush(
     tempPath,
-    validatedEvent,
+    eventInput,
     logger,
     platform,
     overrides,
@@ -491,7 +489,7 @@ async function executeConfigPush(
 async function executeBundlePush(
   bundleContent: string,
   platform: Platform,
-  validatedEvent: { name: string; data: Record<string, unknown> },
+  validatedEvent: Record<string, unknown>,
   logger: Logger.Instance,
   setTempDir: (dir: string) => void,
   overrides: PushOverrides = {},
@@ -515,7 +513,7 @@ async function executeBundlePush(
   );
   return executeDestinationPush(
     tempPath,
-    validatedEvent,
+    validatedEvent as WalkerOS.DeepPartialEvent,
     logger,
     platform,
     overrides,
@@ -525,26 +523,12 @@ async function executeBundlePush(
 }
 
 /**
- * Typed event input for push command
- */
-interface PushEventInput {
-  name: string;
-  data: Record<string, unknown>;
-  // Source simulation fields
-  content?: unknown;
-  trigger?: {
-    type?: string;
-    options?: unknown;
-  };
-}
-
-/**
  * Execute non-simulated destination push (full pipeline).
  * Uses withFlowContext for environment setup and cleanup.
  */
 async function executeDestinationPush(
   esmPath: string,
-  event: PushEventInput,
+  event: WalkerOS.DeepPartialEvent,
   logger: Logger.Instance,
   platform: 'web' | 'server',
   overrides?: PushOverrides,
@@ -555,7 +539,7 @@ async function executeDestinationPush(
   const networkCalls: NetworkCall[] = [];
 
   return withFlowContext(
-    { esmPath, platform, logger, snapshotCode, timeout, networkCalls },
+    { esmPath, platform, logger, snapshotCode, timeout, networkCalls, asyncDrain: { timeout: 5000 } },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       applyOverrides(config, overrides || {});
@@ -567,10 +551,7 @@ async function executeDestinationPush(
       const collector = result.collector;
 
       logger.info(`Pushing event: ${event.name}`);
-      const elbResult = await collector.push({
-        name: event.name,
-        data: event.data,
-      });
+      const elbResult = await collector.push(event);
 
       await collector.command('shutdown');
 
@@ -591,7 +572,7 @@ async function executeDestinationPush(
  */
 async function executeSimulatedDestination(
   esmPath: string,
-  event: PushEventInput,
+  event: WalkerOS.DeepPartialEvent,
   logger: Logger.Instance,
   platform: 'web' | 'server',
   destId: string,
@@ -603,7 +584,7 @@ async function executeSimulatedDestination(
   const networkCalls: NetworkCall[] = [];
 
   return withFlowContext(
-    { esmPath, platform, logger, snapshotCode, timeout, networkCalls },
+    { esmPath, platform, logger, snapshotCode, timeout, networkCalls, asyncDrain: { timeout: 5000 } },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       applyOverrides(config, overrides);
@@ -628,10 +609,7 @@ async function executeSimulatedDestination(
       const ingest = createIngest(destId);
 
       // Run before chain (mandatory preparation)
-      let processedEvent = {
-        name: event.name,
-        data: event.data,
-      } as WalkerOS.Event;
+      let processedEvent = event as WalkerOS.Event;
       const before = destination.config.before;
       if (before && collector.transformers) {
         const beforeChainIds = resolveBeforeChain(
@@ -711,7 +689,7 @@ async function executeSimulatedDestination(
  */
 async function executeTransformerSimulation(
   esmPath: string,
-  event: PushEventInput,
+  event: WalkerOS.DeepPartialEvent,
   logger: Logger.Instance,
   transformerId: string,
   overrides: PushOverrides,
@@ -754,10 +732,7 @@ async function executeTransformerSimulation(
         throw new Error(`Transformer "${transformerId}" failed to initialize`);
       }
 
-      const inputEvent = {
-        name: event.name,
-        data: event.data,
-      } as WalkerOS.DeepPartialEvent;
+      const inputEvent = event as WalkerOS.DeepPartialEvent;
       const ingest = createIngest(transformerId);
       const captured: Array<{ event: unknown; timestamp: number }> = [];
 
@@ -849,7 +824,7 @@ async function executeTransformerSimulation(
  */
 async function executeSourceSimulation(
   esmPath: string,
-  event: PushEventInput,
+  event: Record<string, unknown>,
   logger: Logger.Instance,
   overrides: PushOverrides,
   createTrigger: (...args: unknown[]) => Promise<{
@@ -868,7 +843,7 @@ async function executeSourceSimulation(
   const networkCalls: NetworkCall[] = [];
 
   return withFlowContext(
-    { esmPath, platform, logger, snapshotCode, networkCalls },
+    { esmPath, platform, logger, snapshotCode, networkCalls, asyncDrain: { timeout: 5000 } },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       applyOverrides(config, overrides);
@@ -891,7 +866,10 @@ async function executeSourceSimulation(
       logger.info('Simulating source');
 
       const content = event.content ?? event;
-      await trigger(event.trigger?.type, event.trigger?.options)(content);
+      const triggerOpts = event.trigger as
+        | { type?: string; options?: unknown }
+        | undefined;
+      await trigger(triggerOpts?.type, triggerOpts?.options)(content);
 
       if (instance.flow?.collector?.command) {
         await instance.flow.collector.command('shutdown');

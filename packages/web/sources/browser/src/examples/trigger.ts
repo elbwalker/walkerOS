@@ -94,13 +94,13 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
 
       switch (type) {
         case 'click':
-          dispatch(new MouseEvent('click', { bubbles: true }));
+          dispatch(new win.MouseEvent('click', { bubbles: true }));
           break;
         case 'submit':
-          dispatch(new Event('submit', { bubbles: true }));
+          dispatch(new win.Event('submit', { bubbles: true }));
           break;
         case 'hover':
-          dispatch(new MouseEvent('mouseenter', { bubbles: true }));
+          dispatch(new win.MouseEvent('mouseenter', { bubbles: true }));
           break;
         case 'scroll':
           Object.defineProperty(win, 'scrollY', {
@@ -111,7 +111,7 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
                 : 500,
             configurable: true,
           });
-          win.dispatchEvent(new Event('scroll'));
+          win.dispatchEvent(new win.Event('scroll'));
           break;
         case 'impression':
         case 'visible':

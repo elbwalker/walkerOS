@@ -39,8 +39,10 @@ function isElementVisible(element: HTMLElement): boolean {
 
   // Cache visibility result for 500ms to balance accuracy with performance
   if (!cached || now - cached.lastChecked > 500) {
+    const win = element.ownerDocument.defaultView!;
+    const doc = element.ownerDocument;
     cached = {
-      isVisible: isVisible(element),
+      isVisible: isVisible(element, win, doc),
       lastChecked: now,
     };
     visibilityCache.set(element, cached);
@@ -81,11 +83,13 @@ export function unobserveElement(
 function createObserver(
   scope: Document | Element,
 ): IntersectionObserver | undefined {
-  if (!window.IntersectionObserver) return undefined;
+  const doc = (scope as Element).ownerDocument || (scope as Document);
+  const win = doc.defaultView;
+  if (!win || !win.IntersectionObserver) return undefined;
 
   return tryCatch(
     () =>
-      new window.IntersectionObserver(
+      new win.IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             handleIntersection(scope, entry);
@@ -121,8 +125,9 @@ function handleIntersection(
 
     // Cache element size for 1 second to reduce DOM queries
     if (!cached || now - cached.lastChecked > 1000) {
+      const win = target.ownerDocument.defaultView!;
       cached = {
-        isLarge: target.offsetHeight > window.innerHeight,
+        isLarge: target.offsetHeight > win.innerHeight,
         lastChecked: now,
       };
       elementSizeCache.set(target, cached);
@@ -145,7 +150,8 @@ function handleIntersection(
 
       // Only create timer if none exists
       if (!existingTimer) {
-        const timer = window.setTimeout(async () => {
+        const targetWin = target.ownerDocument.defaultView!;
+        const timer = targetWin.setTimeout(async () => {
           // Final visibility check before triggering (cached for performance)
           if (isElementVisible(target)) {
             // Get element configuration to access context
@@ -214,8 +220,8 @@ export function triggerVisible(
   element: HTMLElement,
   config: { multiple?: boolean } = { multiple: false },
 ): void {
-  // Use scope from settings, fallback to document
-  const scope = context.settings.scope || document;
+  const scope = context.settings.scope;
+  if (!scope) return;
   const state = visibilityStates.get(scope);
 
   if (state?.observer && element) {

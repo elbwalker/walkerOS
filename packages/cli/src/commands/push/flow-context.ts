@@ -4,6 +4,7 @@ import { JSDOM, VirtualConsole } from 'jsdom';
 import type { Logger } from '@walkeros/core';
 import type { NetworkCall, PushResult } from './types.js';
 import { getErrorMessage } from '../../core/utils.js';
+import { installTimerInterception, type TimerControl } from './async-drain.js';
 
 export interface FlowContextOptions {
   esmPath: string;
@@ -13,6 +14,8 @@ export interface FlowContextOptions {
   timeout?: number;
   /** When provided, fetch/sendBeacon are polyfilled and calls recorded here */
   networkCalls?: NetworkCall[];
+  /** Enable timer interception + async drain after callback completes */
+  asyncDrain?: { timeout?: number };
 }
 
 /**
@@ -41,13 +44,14 @@ export async function withFlowContext(
   options: FlowContextOptions,
   fn: (module: FlowModule) => Promise<PushResult>,
 ): Promise<PushResult> {
-  const { esmPath, platform, logger, snapshotCode, timeout, networkCalls } =
+  const { esmPath, platform, logger, snapshotCode, timeout, networkCalls, asyncDrain } =
     options;
   const startTime = Date.now();
   const g = global as unknown as Record<string, unknown>;
   let savedWindow: unknown, savedDocument: unknown, savedNavigator: unknown;
   let savedFetch: typeof fetch | undefined;
   let dom: JSDOM | undefined;
+  let timerControl: TimerControl | undefined;
 
   // JSDOM setup for web platform
   if (platform === 'web') {
@@ -75,6 +79,16 @@ export async function withFlowContext(
       applyNetworkPolyfills(dom, networkCalls);
       global.fetch = dom.window.fetch as typeof fetch;
     }
+  }
+
+  // Install timer interception AFTER JSDOM setup, BEFORE ESM import
+  // so the bundle's top-level setTimeout references are captured
+  if (asyncDrain) {
+    timerControl = installTimerInterception({
+      domWindow: platform === 'web' && dom
+        ? (dom.window as unknown as Window & typeof globalThis)
+        : undefined,
+    });
   }
 
   try {
@@ -107,8 +121,13 @@ export async function withFlowContext(
       __configData: module.__configData,
     };
 
-    // Execute step-specific logic with optional timeout
-    if (timeout) {
+    // Execute step-specific logic
+    if (timerControl) {
+      // asyncDrain mode: no outer timeout (flush has its own wall-clock safety)
+      const result = await fn(flowModule);
+      await timerControl.flush(asyncDrain?.timeout ?? 5000);
+      return result;
+    } else if (timeout) {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(
           () => reject(new Error(`Push timeout after ${timeout}ms`)),
@@ -126,6 +145,7 @@ export async function withFlowContext(
       error: getErrorMessage(error),
     };
   } finally {
+    if (timerControl) timerControl.restore();
     if (savedFetch !== undefined) {
       cleanupNetworkPolyfills(savedFetch);
     }

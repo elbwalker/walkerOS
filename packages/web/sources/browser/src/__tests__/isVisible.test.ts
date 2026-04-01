@@ -44,7 +44,7 @@ describe('isVisible', () => {
     document.elementFromPoint = jest.fn(() => elem);
     document.body.appendChild(elem);
 
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
 
     // Restore original window height
     w.innerHeight = innerHeight;
@@ -70,7 +70,7 @@ describe('isVisible', () => {
     Object.defineProperty(elem, 'offsetHeight', { value: 50 });
     Object.defineProperty(elem, 'clientHeight', { value: 50 });
 
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
   });
 
   test('isVisible handles zero-sized elements', () => {
@@ -93,7 +93,7 @@ describe('isVisible', () => {
     Object.defineProperty(elem, 'offsetHeight', { value: 0 });
     Object.defineProperty(elem, 'clientHeight', { value: 0 });
 
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
   });
 
   test('isVisible handles element covered by another element', () => {
@@ -119,7 +119,7 @@ describe('isVisible', () => {
     // Mock elementFromPoint to return a different element (covering element)
     document.elementFromPoint = jest.fn(() => coveringElem);
 
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
   });
 
   test('isVisible handles element at viewport edge', () => {
@@ -144,7 +144,7 @@ describe('isVisible', () => {
 
     document.elementFromPoint = jest.fn(() => elem);
 
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
   });
 
   test('isVisible handles hidden element (display: none)', () => {
@@ -168,7 +168,7 @@ describe('isVisible', () => {
     Object.defineProperty(elem, 'offsetHeight', { value: 0 });
     Object.defineProperty(elem, 'clientHeight', { value: 0 });
 
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
   });
 
   test('isVisible handles partially visible element', () => {
@@ -194,7 +194,7 @@ describe('isVisible', () => {
     document.elementFromPoint = jest.fn(() => elem);
 
     // Should still be considered visible if any part is in viewport
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
   });
 
   test('isVisible works with actual DOM elements', () => {
@@ -210,7 +210,7 @@ describe('isVisible', () => {
 
     // Note: In jsdom, getBoundingClientRect may return zeros
     // but the function should still handle it gracefully
-    expect(() => isVisible(div)).not.toThrow();
+    expect(() => isVisible(div, window, document)).not.toThrow();
 
     document.body.removeChild(div);
   });
