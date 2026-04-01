@@ -8,7 +8,6 @@ import type {
   Ingest,
 } from '@walkeros/core';
 import {
-  assign,
   buildCacheContext,
   clone,
   compileCache,
@@ -165,6 +164,8 @@ export async function pushToDestinations(
       let currentQueue = (destination.queuePush || []).map((event) => ({
         ...event,
         consent,
+        user,
+        globals,
       }));
 
       // Reset original queue while processing to enable async processing
@@ -275,10 +276,6 @@ export async function pushToDestinations(
       let totalDuration = 0;
       await Promise.all(
         allowedEvents.map(async (event) => {
-          // Merge event with collector state, prioritizing event properties
-          event.globals = assign(globals, event.globals);
-          event.user = assign(user, event.user);
-
           // Full cache check: before the before chain (skips everything on HIT)
           let cacheMiss: { key: string; ttl: number } | undefined;
           if (compiledDCache?.full && dCacheStore) {

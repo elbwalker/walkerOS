@@ -478,7 +478,9 @@ export async function bundleCore(
           minify: buildOptions.minify,
         });
       } else {
-        finalCode = buildServerWrapper(wrappedInput);
+        finalCode = await buildServerWrapper(wrappedInput, {
+          minify: buildOptions.minify,
+        });
       }
 
       await fs.writeFile(outputPath, finalCode);
@@ -1263,9 +1265,10 @@ export function buildSplitConfigObject(
   const dataPayloadObj: Record<string, Record<string, unknown>> = {};
 
   // Helper to resolve the code variable for a package-based step
-  function resolveCodeVar(
-    step: { package?: string; code?: string | true },
-  ): string {
+  function resolveCodeVar(step: {
+    package?: string;
+    code?: string | true;
+  }): string {
     // String code without package = named import from packages section
     if (step.code && typeof step.code === 'string' && !step.package) {
       return step.code;
@@ -1358,7 +1361,11 @@ export function buildSplitConfigObject(
       if (isInlineCode(source.code)) {
         return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next as string | string[] | undefined, 'next')}`;
       }
-      return buildSplitStepEntry('sources', key, source as Record<string, unknown>);
+      return buildSplitStepEntry(
+        'sources',
+        key,
+        source as Record<string, unknown>,
+      );
     });
 
   // Build destinations
@@ -1372,7 +1379,11 @@ export function buildSplitConfigObject(
       if (isInlineCode(dest.code)) {
         return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, dest.before, 'before', true)}`;
       }
-      return buildSplitStepEntry('destinations', key, dest as Record<string, unknown>);
+      return buildSplitStepEntry(
+        'destinations',
+        key,
+        dest as Record<string, unknown>,
+      );
     });
 
   // Build transformers
@@ -1386,7 +1397,11 @@ export function buildSplitConfigObject(
       if (isInlineCode(transformer.code)) {
         return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, transformer.next, 'next')}`;
       }
-      return buildSplitStepEntry('transformers', key, transformer as Record<string, unknown>);
+      return buildSplitStepEntry(
+        'transformers',
+        key,
+        transformer as Record<string, unknown>,
+      );
     });
 
   // Build stores
@@ -1699,4 +1714,15 @@ export default async function(context = {}) {
 
   return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
 }`;
+
+  if (options.minify) {
+    const esbuild = await import('esbuild');
+    const result = await esbuild.transform(wrapped, {
+      minify: true,
+      target: 'node18',
+    });
+    return result.code;
+  }
+
+  return wrapped;
 }

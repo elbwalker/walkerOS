@@ -8,16 +8,13 @@ import { assign } from '@walkeros/core';
 export function processConsent(
   collector: Collector.Instance,
   data: WalkerOS.Consent,
-): { update: WalkerOS.Consent; runQueue: boolean } {
-  let runQueue = false;
+): { update: WalkerOS.Consent } {
   const update: WalkerOS.Consent = {};
   Object.entries(data).forEach(([name, granted]) => {
-    const state = !!granted;
-    update[name] = state;
-    runQueue = runQueue || state;
+    update[name] = !!granted;
   });
 
   collector.consent = assign(collector.consent, update);
 
-  return { update, runQueue };
+  return { update };
 }

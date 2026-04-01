@@ -96,19 +96,26 @@ config: {
 
 Two separate mechanisms control when destinations receive events:
 
-| Mechanism | Purpose | Scope | Effect |
-| --------- | ------- | ----- | ------ |
+| Mechanism | Purpose              | Scope             | Effect                                                                                 |
+| --------- | -------------------- | ----------------- | -------------------------------------------------------------------------------------- |
 | `require` | Delay initialization | Whole destination | Destination stays in `pending` until all required events fire (e.g., `walker consent`) |
-| `consent` | Filter events | Per-event | Events without matching consent are silently skipped or queued |
+| `consent` | Filter events        | Per-event         | Events without matching consent are silently skipped or queued                         |
 
-**Require** gates the destination *lifecycle*. A destination with
+**Require** gates the destination _lifecycle_. A destination with
 `require: ["consent"]` does not exist in the collector until a
 `"walker consent"` event fires. Until then, events are queued internally.
 
-**Consent** gates *individual event delivery*. A destination with
+**Consent** gates _individual event delivery_. A destination with
 `consent: { marketing: true }` only receives events where the collector's
 consent state (or the event's own `consent` field) includes
 `{ marketing: true }`.
+
+**State refresh on flush:** When queued events are flushed to a destination,
+they receive the _current_ collector state (`consent`, `user`, `globals`) — not
+the stale state from when they were originally captured. Any state-mutation
+command (`walker consent`, `walker user`, `walker globals`, etc.) triggers a
+flush attempt. The consent gate still applies: events without required consent
+simply return to the queue.
 
 Both can be combined:
 
@@ -137,7 +144,10 @@ Policy modifies the event BEFORE mapping rules run. Defined at config level
 {
   "config": {
     "policy": {
-      "user_data.email": { "key": "user.email", "consent": { "marketing": true } }
+      "user_data.email": {
+        "key": "user.email",
+        "consent": { "marketing": true }
+      }
     }
   }
 }

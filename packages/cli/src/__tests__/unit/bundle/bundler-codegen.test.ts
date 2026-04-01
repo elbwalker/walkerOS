@@ -35,14 +35,14 @@ describe('buildWebWrapper', () => {
 });
 
 describe('buildServerWrapper', () => {
-  it('generates server export default wrapper', () => {
+  it('generates server export default wrapper', async () => {
     const esmCode = generateSplitWireConfigModule(
       'const stores = {};',
       '{ sources: {}, destinations: {} }',
       '',
     );
 
-    const result = buildServerWrapper(esmCode);
+    const result = await buildServerWrapper(esmCode);
 
     expect(result).toContain('const stores = {};');
     expect(result).toContain('export default async function');
@@ -52,14 +52,14 @@ describe('buildServerWrapper', () => {
     expect(result).not.toContain('window');
   });
 
-  it('server wrapper applies sourceSettings override', () => {
+  it('server wrapper applies sourceSettings override', async () => {
     const esmCode = generateSplitWireConfigModule(
       'const stores = {};',
       '{ sources: { http: { config: { settings: { port: 8080 } } } } }',
       '',
     );
 
-    const result = buildServerWrapper(esmCode);
+    const result = await buildServerWrapper(esmCode);
 
     expect(result).toContain('context.sourceSettings');
     expect(result).toContain(
@@ -467,7 +467,6 @@ describe('detectExplicitCodeImports', () => {
   });
 });
 
-
 describe('$store: prefix', () => {
   it('should resolve $store: to stores variable reference', () => {
     const result = serializeWithCode('$store:cache', 0);
@@ -570,10 +569,10 @@ describe('buildWebWrapper', () => {
 });
 
 describe('buildServerWrapper', () => {
-  it('wraps ESM code with export default factory', () => {
+  it('wraps ESM code with export default factory', async () => {
     const esm =
       'export function wireConfig() { return {}; }\nexport { startFlow };';
-    const result = buildServerWrapper(esm);
+    const result = await buildServerWrapper(esm);
     expect(result).toContain('export default async function(context = {})');
     expect(result).toContain('wireConfig(__configData)');
     expect(result).toContain('startFlow(config)');
@@ -713,9 +712,7 @@ describe('buildSplitConfigObject', () => {
     // Store config (plain) goes to data payload
     expect(result.dataPayload).toContain('1000');
     // Store declaration references __data for plain config
-    expect(result.storesDeclaration).toContain(
-      '__data.stores.memory.config',
-    );
+    expect(result.storesDeclaration).toContain('__data.stores.memory.config');
   });
 
   it('puts plain collector in data payload', () => {
@@ -803,9 +800,7 @@ describe('buildSplitConfigObject', () => {
     expect(result.dataPayload).toContain('60');
 
     // before is plain → data payload
-    expect(result.codeConfigObject).toContain(
-      '__data.destinations.ga4.before',
-    );
+    expect(result.codeConfigObject).toContain('__data.destinations.ga4.before');
     expect(result.dataPayload).toContain('fingerprint');
   });
 });

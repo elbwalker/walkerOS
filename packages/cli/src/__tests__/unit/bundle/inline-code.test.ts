@@ -226,14 +226,14 @@ describe('Integration', () => {
 });
 
 describe('buildServerWrapper', () => {
-  it('should include sourceSettings override in server wrapper', () => {
+  it('should include sourceSettings override in server wrapper', async () => {
     const esmCode = generateSplitWireConfigModule(
       'const stores = {};',
       '{ sources: { http: { code: expressSource, config: { settings: { port: 3000 } } } }, destinations: {} }',
       '',
     );
 
-    const result = buildServerWrapper(esmCode);
+    const result = await buildServerWrapper(esmCode);
 
     // Must contain sourceSettings override block
     expect(result).toContain('context.sourceSettings');
@@ -242,14 +242,14 @@ describe('buildServerWrapper', () => {
     expect(result).toContain('export default async function');
   });
 
-  it('should apply sourceSettings spread merge to sources', () => {
+  it('should apply sourceSettings spread merge to sources', async () => {
     const esmCode = generateSplitWireConfigModule(
       'const stores = {};',
       '{}',
       '',
     );
 
-    const result = buildServerWrapper(esmCode);
+    const result = await buildServerWrapper(esmCode);
 
     // The generated code should spread merge sourceSettings into source configs
     expect(result).toContain('context.sourceSettings');
@@ -258,28 +258,28 @@ describe('buildServerWrapper', () => {
     );
   });
 
-  it('applies logger from context', () => {
+  it('applies logger from context', async () => {
     const esmCode = generateSplitWireConfigModule(
       'const stores = {};',
       '{}',
       '',
     );
 
-    const result = buildServerWrapper(esmCode);
+    const result = await buildServerWrapper(esmCode);
 
     expect(result).toContain('context.logger');
     // Should NOT contain old manual logger spread merge
     expect(result).not.toContain('config.logger = { ...config.logger');
   });
 
-  it('logger assignment comes before sourceSettings', () => {
+  it('logger assignment comes before sourceSettings', async () => {
     const esmCode = generateSplitWireConfigModule(
       'const stores = {};',
       '{}',
       '',
     );
 
-    const result = buildServerWrapper(esmCode);
+    const result = await buildServerWrapper(esmCode);
 
     const loggerIdx = result.indexOf('context.logger');
     const sourceSettingsIdx = result.indexOf('context.sourceSettings');
