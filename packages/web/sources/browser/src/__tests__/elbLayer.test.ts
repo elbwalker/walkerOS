@@ -400,29 +400,18 @@ describe('Elb Layer', () => {
       // Set URL path
       window.history.replaceState({}, '', '/walker-run-test');
 
-      // Initialize source with pageview enabled - should send pageview immediately
+      // Initialize source with pageview enabled
       const source = await createBrowserSource(collector, { pageview: true });
 
-      // Should have sent initial pageview
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'page view',
-          data: expect.objectContaining({
-            id: '/walker-run-test',
-          }),
-          trigger: 'load',
-        }),
-      );
+      // No pageview during init — waits for on('run')
+      expect(mockPush).not.toHaveBeenCalled();
 
-      // Clear mock to test on('run') behavior
-      mockPush.mockClear();
-
-      // Test the source's on method directly
+      // Trigger run — pageview fires here
       if (source.on) {
         await source.on('run', collector);
       }
 
-      // Should have triggered another pageview
+      // Should have sent pageview on run
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'page view',

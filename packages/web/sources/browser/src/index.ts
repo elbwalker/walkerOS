@@ -99,15 +99,6 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     // Setup global triggers (click, submit) when DOM is ready
     await ready(initTriggers, translationContext, settings);
 
-    // Setup load triggers and pageview on each run
-    const handleRun = () => {
-      processLoadTriggers(translationContext, settings);
-      sendPageview(settings);
-    };
-
-    // Trigger initial run on page load
-    handleRun();
-
     // Set up automatic window.elb assignment if configured
     if (isString(settings.elb) && settings.elb) {
       (actualWindow as unknown as Record<string, unknown>)[settings.elb] = (

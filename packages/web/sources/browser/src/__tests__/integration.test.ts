@@ -67,29 +67,18 @@ describe('Browser Source Integration Tests', () => {
       // Set URL path
       window.history.replaceState({}, '', '/test-page');
 
-      // Initialize source with pageview enabled - should automatically send pageview
+      // Initialize source with pageview enabled
       const source = await createBrowserSource(collector, { pageview: true });
 
-      // Should have sent initial pageview during source initialization
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'page view',
-          trigger: 'load',
-          data: expect.objectContaining({
-            id: '/test-page',
-          }),
-        }),
-      );
+      // No pageview during init — waits for on('run')
+      expect(mockPush).not.toHaveBeenCalled();
 
-      // Clear mock to test on('run') behavior
-      mockPush.mockClear();
-
-      // Test the source's on('run') method directly (new interface)
+      // Trigger run — this is when pageview fires (same as startFlow → command('run'))
       if (source.on) {
         await source.on('run', collector);
       }
 
-      // Should have processed another pageview event
+      // Should have processed pageview event
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'page view',
@@ -240,7 +229,10 @@ describe('Browser Source Integration Tests', () => {
         </div>
       `;
 
-      await createBrowserSource(collector, { pageview: false });
+      const source = await createBrowserSource(collector, { pageview: false });
+
+      // Load triggers fire on run, not during init
+      if (source.on) await source.on('run');
 
       // Should still process at least the valid element
       expect(mockPush).toHaveBeenCalled();
