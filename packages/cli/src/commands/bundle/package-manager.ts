@@ -100,8 +100,60 @@ export async function collectAllSpecs(
       localPath: item.localPath,
     });
 
-    // Skip transitive resolution for local packages
-    if (item.localPath) continue;
+    // Resolve transitive deps for local packages by reading package.json
+    if (item.localPath) {
+      const resolvedPath = path.isAbsolute(item.localPath)
+        ? item.localPath
+        : path.resolve(configDir || process.cwd(), item.localPath);
+
+      // Check if this local path has a package.json (directories only)
+      const candidatePath = path.join(resolvedPath, 'package.json');
+      const hasPkgJson = await fs.pathExists(candidatePath);
+
+      if (hasPkgJson) {
+        try {
+          const pkgJson = await fs.readJson(candidatePath);
+
+          // Queue regular dependencies
+          const deps = pkgJson.dependencies || {};
+          for (const [depName, depSpec] of Object.entries(deps)) {
+            if (typeof depSpec === 'string') {
+              queue.push({
+                name: depName,
+                spec: depSpec,
+                source: 'dependency',
+                from: item.name,
+                optional: false,
+              });
+            }
+          }
+
+          // Queue peerDependencies with metadata
+          const peerDeps = pkgJson.peerDependencies || {};
+          const peerMeta = pkgJson.peerDependenciesMeta || {};
+          for (const [depName, depSpec] of Object.entries(peerDeps)) {
+            if (typeof depSpec === 'string') {
+              const isOptional =
+                (peerMeta as Record<string, { optional?: boolean }>)[depName]
+                  ?.optional === true;
+              queue.push({
+                name: depName,
+                spec: depSpec,
+                source: 'peerDependency',
+                from: item.name,
+                optional: isOptional,
+              });
+            }
+          }
+        } catch (error) {
+          logger.debug(
+            `Failed to read package.json for local package ${item.name}: ${error}`,
+          );
+        }
+      }
+
+      continue;
+    }
 
     // Fetch manifest from registry
     let manifest: pacote.ManifestResult;
