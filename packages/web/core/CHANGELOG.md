@@ -1,5 +1,16 @@
 # @walkeros/web-core
 
+## 3.2.0
+
+### Patch Changes
+
+- Updated dependencies [eb865e1]
+- Updated dependencies [c0a53f9]
+- Updated dependencies [f007c9f]
+- Updated dependencies [bf2dc5b]
+- Updated dependencies [da0b640]
+  - @walkeros/core@3.2.0
+
 ## 3.1.1
 
 ### Patch Changes

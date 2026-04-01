@@ -1,5 +1,47 @@
 # @walkeros/mcp
 
+## 3.2.0
+
+### Minor Changes
+
+- 884527d: Unify simulation for sources, destinations, and transformers through
+  the push command.
+  - All step types simulate via `push` with auto-env loading and call tracking
+  - Add `--simulate transformer.X` to invoke a transformer directly with an
+    event
+  - Before chains run as mandatory preparation; next chains are skipped
+  - Source simulation captures at the collector.push boundary, preserving the
+    full before chain
+  - Hooks (prePush/postDestinationPush) capture events instead of manual
+    overrides
+  - Timer interception flushes setTimeout/setInterval deterministically for
+    async patterns (debounced batches, detached Promise chains)
+  - MCP migrated to the push-based simulation pipeline
+  - Legacy simulate code removed
+
+### Patch Changes
+
+- b826b5f: Improve flow_simulate tool description, warnings, and prompts to
+  explain require, consent, mapping, and policy behavior. Agents using the MCP
+  now get actionable guidance when destinations are pending or events are
+  silently skipped.
+- Updated dependencies [eb865e1]
+- Updated dependencies [f55fc1d]
+- Updated dependencies [bbbeba1]
+- Updated dependencies [c0a53f9]
+- Updated dependencies [f007c9f]
+- Updated dependencies [7d1a268]
+- Updated dependencies [616b9b2]
+- Updated dependencies [bf2dc5b]
+- Updated dependencies [91159be]
+- Updated dependencies [da0b640]
+- Updated dependencies [2cc1b54]
+- Updated dependencies [a0b019f]
+- Updated dependencies [431be04]
+- Updated dependencies [884527d]
+  - @walkeros/core@3.2.0
+  - @walkeros/cli@3.2.0
+
 ## 3.1.1
 
 ### Patch Changes

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-meta",
   "description": "Meta server destination for walkerOS",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "license": "MIT",
   "exports": {
     ".": {
@@ -33,11 +33,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "^3.1.1",
-    "@walkeros/server-core": "^3.1.1"
+    "@walkeros/core": "^3.2.0",
+    "@walkeros/server-core": "^3.2.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "^3.1.1"
+    "@walkeros/collector": "^3.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

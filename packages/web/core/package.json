@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-core",
   "description": "Web-specific utilities for walkerOS",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -50,6 +50,6 @@
     }
   ],
   "dependencies": {
-    "@walkeros/core": "^3.1.1"
+    "@walkeros/core": "^3.2.0"
   }
 }

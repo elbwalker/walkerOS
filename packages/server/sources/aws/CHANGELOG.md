@@ -1,5 +1,25 @@
 # @walkeros/server-source-aws
 
+## 3.2.0
+
+### Minor Changes
+
+- f47d251: Accept non-JSON POST bodies in all server sources
+
+  Server sources no longer reject non-JSON bodies with HTTP 400. Instead, they
+  push an empty event `{}` to the collector, enabling `source.before`
+  transformers to process raw input via ingest. Raw body is available through
+  ingest mapping (e.g., `"rawBody": "body"`).
+
+### Patch Changes
+
+- Updated dependencies [eb865e1]
+- Updated dependencies [c0a53f9]
+- Updated dependencies [f007c9f]
+- Updated dependencies [bf2dc5b]
+- Updated dependencies [da0b640]
+  - @walkeros/core@3.2.0
+
 ## 3.1.1
 
 ### Patch Changes

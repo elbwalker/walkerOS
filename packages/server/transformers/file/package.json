@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-transformer-file",
   "description": "File serving transformer for walkerOS - serves static files via pluggable Store backend",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -26,11 +26,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "^3.1.1"
+    "@walkeros/core": "^3.2.0"
   },
   "devDependencies": {
-    "@walkeros/core": "^3.1.1",
-    "@walkeros/store-memory": "^3.1.1"
+    "@walkeros/core": "^3.2.0",
+    "@walkeros/store-memory": "^3.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
