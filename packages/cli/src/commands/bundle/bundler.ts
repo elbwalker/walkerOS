@@ -346,7 +346,31 @@ export async function bundleCore(
     // Step 1.6: Auto-add step packages (sources, destinations, transformers, stores)
     const stepPackages = collectAllStepPackages(flowSettings);
     for (const pkg of stepPackages) {
-      if (!buildOptions.packages[pkg]) {
+      const isLocalPath = pkg.startsWith('.') || pkg.startsWith('/');
+
+      if (isLocalPath) {
+        // Normalize: convert path-based package: to packages section entry
+        // This reuses the existing local-path import machinery
+        const varName = packageNameToVariable(pkg);
+        if (!buildOptions.packages[varName]) {
+          buildOptions.packages[varName] = {
+            path: pkg,
+            imports: [`default as ${varName}`],
+          };
+        }
+
+        // Rewrite all components that reference this path to use code: instead
+        for (const section of ['sources', 'destinations', 'transformers', 'stores'] as const) {
+          const steps = (flowSettings as Record<string, Record<string, Record<string, unknown>>>)[section];
+          if (!steps) continue;
+          for (const step of Object.values(steps)) {
+            if (step.package === pkg) {
+              step.code = varName;
+              delete step.package;
+            }
+          }
+        }
+      } else if (!buildOptions.packages[pkg]) {
         buildOptions.packages[pkg] = {};
       }
     }
@@ -745,9 +769,8 @@ export function getNodeExternals(): string[] {
 }
 
 /**
- * Collects all npm package names declared in flow steps.
- * Filters out local paths (starting with . or /) — only npm packages.
- * Used to auto-add step packages to buildOptions.packages.
+ * Collects all package names declared in flow steps.
+ * Returns both npm packages and local paths — caller handles routing.
  */
 export function collectAllStepPackages(
   flowSettings: Flow.Settings,
@@ -766,15 +789,7 @@ export function collectAllStepPackages(
     }
   }
 
-  // Filter: only npm packages, not local paths
-  const npmPackages = new Set<string>();
-  for (const pkg of allPackages) {
-    if (!pkg.startsWith('.') && !pkg.startsWith('/')) {
-      npmPackages.add(pkg);
-    }
-  }
-
-  return npmPackages;
+  return allPackages;
 }
 
 /**
@@ -1156,10 +1171,10 @@ export async function createEntryPoint(
   const importsCode = importStatements.join('\n');
   const hasFlow =
     Object.values(flowSettings.sources || {}).some(
-      (s) => s.package || isInlineCode(s.code),
+      (s) => s.package || hasCodeReference(s.code),
     ) ||
     Object.values(flowSettings.destinations || {}).some(
-      (d) => d.package || isInlineCode(d.code),
+      (d) => d.package || hasCodeReference(d.code),
     );
 
   // If no sources/destinations, just return user code with imports (no flow wrapper)

@@ -199,14 +199,16 @@ describe('collectAllStepPackages', () => {
     expect(collectAllStepPackages(settings)).toEqual(new Set());
   });
 
-  it('skips local paths (starting with . or /)', () => {
+  it('includes local paths (starting with . or /)', () => {
     const settings = {
       sources: {
-        local1: { package: './my-source' },
+        local1: { package: './relative/source' },
         local2: { package: '/abs/path/source' },
       },
     } as unknown as Flow.Settings;
-    expect(collectAllStepPackages(settings)).toEqual(new Set());
+    const result = collectAllStepPackages(settings);
+    expect(result.has('./relative/source')).toBe(true);
+    expect(result.has('/abs/path/source')).toBe(true);
   });
 
   it('includes scoped npm packages (starting with @)', () => {
@@ -314,5 +316,29 @@ describe('collectAllStepPackages auto-add merge logic', () => {
     expect(packages['@walkeros/server-source-express']).toEqual({
       version: '2.0.0',
     });
+  });
+});
+
+describe('path-based package: normalization', () => {
+  it('should handle absolute path in source package: field', () => {
+    const flowSettings = {
+      sources: {
+        express: { package: '/workspaces/dev/packages/server/sources/express' },
+      },
+    } as unknown as Flow.Settings;
+
+    const result = collectAllStepPackages(flowSettings);
+    expect(result.has('/workspaces/dev/packages/server/sources/express')).toBe(true);
+  });
+
+  it('should handle relative path in source package: field', () => {
+    const flowSettings = {
+      sources: {
+        express: { package: './packages/server/sources/express' },
+      },
+    } as unknown as Flow.Settings;
+
+    const result = collectAllStepPackages(flowSettings);
+    expect(result.has('./packages/server/sources/express')).toBe(true);
   });
 });
