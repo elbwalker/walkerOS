@@ -360,8 +360,18 @@ export async function bundleCore(
         }
 
         // Rewrite all components that reference this path to use code: instead
-        for (const section of ['sources', 'destinations', 'transformers', 'stores'] as const) {
-          const steps = (flowSettings as Record<string, Record<string, Record<string, unknown>>>)[section];
+        for (const section of [
+          'sources',
+          'destinations',
+          'transformers',
+          'stores',
+        ] as const) {
+          const steps = (
+            flowSettings as Record<
+              string,
+              Record<string, Record<string, unknown>>
+            >
+          )[section];
           if (!steps) continue;
           for (const step of Object.values(steps)) {
             if (step.package === pkg) {
@@ -946,23 +956,23 @@ export function detectExplicitCodeImports(
 
 interface ImportGenerationResult {
   importStatements: string[];
-  examplesMappings: string[];
+  devExportEntries: string[];
 }
 
 /**
  * Generates import statements and examples mappings from build packages.
  * Handles explicit imports, default imports for destinations/sources, and utility imports.
  */
-function generateImportStatements(
+async function generateImportStatements(
   packages: BuildOptions['packages'],
   destinationPackages: Set<string>,
   sourcePackages: Set<string>,
   transformerPackages: Set<string>,
   storePackages: Set<string>,
   explicitCodeImports: Map<string, Set<string>>,
-): ImportGenerationResult {
+  packagePaths: Map<string, string>,
+): Promise<ImportGenerationResult> {
   const importStatements: string[] = [];
-  const examplesMappings: string[] = [];
   const usedPackages = new Set([
     ...destinationPackages,
     ...sourcePackages,
@@ -1011,23 +1021,6 @@ function generateImportStatements(
           }
         }
       }
-
-      // Check if this package imports examples and create mappings
-      const examplesImport = uniqueImports.find((imp) =>
-        imp.includes('examples as '),
-      );
-      if (examplesImport) {
-        const examplesVarName = examplesImport.split(' as ')[1];
-        const destinationMatch = packageName.match(
-          /@walkeros\/web-destination-(.+)$/,
-        );
-        if (destinationMatch) {
-          const destinationName = destinationMatch[1];
-          examplesMappings.push(
-            `  ${destinationName}: typeof ${examplesVarName} !== 'undefined' ? ${examplesVarName} : undefined`,
-          );
-        }
-      }
     }
 
     // 4. Auto-import startFlow from collector (always required for flows)
@@ -1047,7 +1040,29 @@ function generateImportStatements(
     // Examples are no longer auto-imported - simulator loads them dynamically
   }
 
-  return { importStatements, examplesMappings };
+  // Generate /dev imports for packages that expose a ./dev export
+  const devExportEntries: string[] = [];
+  for (const packageName of usedPackages) {
+    const localPath = packagePaths.get(packageName);
+    if (!localPath) continue;
+
+    try {
+      const pkgJsonPath = path.join(localPath, 'package.json');
+      const pkgJson = await fs.readJSON(pkgJsonPath);
+      const exports = pkgJson.exports;
+      if (exports && typeof exports === 'object' && './dev' in exports) {
+        const varName = `__dev_${packageNameToVariable(packageName)}`;
+        importStatements.push(
+          `import * as ${varName} from '${packageName}/dev';`,
+        );
+        devExportEntries.push(`'${packageName}': ${varName}`);
+      }
+    } catch {
+      // Package doesn't have a readable package.json — skip gracefully
+    }
+  }
+
+  return { importStatements, devExportEntries };
 }
 
 const VALID_JS_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
@@ -1159,13 +1174,14 @@ export async function createEntryPoint(
     validateComponentNames(flowWithSections.stores, 'stores');
 
   // Generate import statements
-  const { importStatements } = generateImportStatements(
+  const { importStatements, devExportEntries } = await generateImportStatements(
     buildOptions.packages,
     destinationPackages,
     sourcePackages,
     transformerPackages,
     storePackages,
     explicitCodeImports,
+    packagePaths,
   );
 
   const importsCode = importStatements.join('\n');
@@ -1198,10 +1214,17 @@ export async function createEntryPoint(
     buildOptions.code || '',
   );
 
-  // Return ESM module (imports + wireConfig + startFlow re-export)
+  // Append __devExports if any packages expose /dev
+  const devExportsBlock =
+    devExportEntries.length > 0
+      ? `\nexport const __devExports = {\n  ${devExportEntries.join(',\n  ')},\n};`
+      : '';
+
+  // Return ESM module (imports + wireConfig + startFlow re-export + optional devExports)
+  const fullModule = wireConfigModule + devExportsBlock;
   const codeEntry = importsCode
-    ? `${importsCode}\n\n${wireConfigModule}`
-    : wireConfigModule;
+    ? `${importsCode}\n\n${fullModule}`
+    : fullModule;
 
   return { codeEntry, dataPayload, hasFlow: true };
 }

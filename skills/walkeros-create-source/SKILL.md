@@ -2,7 +2,7 @@
 name: walkeros-create-source
 description:
   Use when creating a new walkerOS source. Example-driven workflow starting with
-  research and input examples before implementation.
+  research and examples before implementation.
 ---
 
 # Create a New Source
@@ -23,7 +23,7 @@ Before starting, read these skills:
   Transform raw input to events
 - [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
-  Documentation standards (for Phase 8)
+  Documentation standards (for Phase 9)
 
 ## Source Types
 
@@ -50,50 +50,79 @@ Before starting, read these skills:
 ## Process Overview
 
 ```
-1. Research     → Understand input format, find SDK/types
-2. Examples     → Create input examples in dev entry FIRST
-3. Mapping      → Define input → walkerOS event transformation
-4. Scaffold     → Copy template and configure
-5. Convention   → Add walkerOS.json metadata and buildDev
-6. Implement    → Build using examples as test fixtures
-7. Test         → Verify against example variations
-8. Document     → Write README
+1. Research     → Deeply understand external system, SDK, and data format
+2. Classify     → Determine source type and integration approach
+3. Examples     → Define in/out pairs FIRST (start with the end result)
+4. Mapping      → Define input → walkerOS event transformation
+5. Scaffold     → Copy template and configure
+6. Convention   → Add walkerOS.json metadata and buildDev
+7. Implement    → Build using examples as test fixtures
+8. Test         → Verify against example variations
+9. Document     → Write README
 ```
 
 ---
 
 ## Phase 1: Research
 
-**Goal:** Understand the input format before writing any code.
+**Goal:** Deeply understand the external system before writing any code.
+Research quality determines implementation quality.
 
-### 1.1 Identify Input Source
+### 1.1 Find and Install Official SDK
 
-- [ ] **What triggers events?** - HTTP POST, webhook, DOM mutation, dataLayer
-      push
-- [ ] **What data is received?** - Request body, headers, query params
-- [ ] **Authentication?** - API keys, signatures, tokens
+Always prefer the vendor's official SDK package over raw HTTP API calls. The SDK
+handles transport, data formatting, and platform specifics — don't reinvent
+these.
 
-### 1.2 Find Official Resources
+- [ ] **Install the SDK** — `npm install @vendor/sdk` and read the actual source
+- [ ] **Read TypeScript types** — Import types from the SDK package directly.
+      Never duplicate type definitions. This ensures IntelliSense completeness
+      and consistency with SDK updates.
+- [ ] **Understand the full API surface** — List every public method and type
+      export. What data structures does the platform provide? What request/event
+      formats exist?
 
 ```bash
-# Search npm for official types
-npm search @[platform]
-npm info @types/[platform]
+# Search npm for official packages
+npm search [vendor-name]
+npm search @[vendor]
 
-# Check for official SDK
-npm search [platform]-sdk
+# Install and inspect actual types
+npm install @vendor/sdk
+ls node_modules/@vendor/sdk/lib/esm/
 ```
 
-### 1.3 Document Input Schema
+### 1.2 Understand SDK Architecture
 
-| Field        | Type   | Required | Description            |
-| ------------ | ------ | -------- | ---------------------- |
-| `event`      | string | Yes      | Event type from source |
-| `properties` | object | No       | Event data             |
-| `userId`     | string | No       | User identifier        |
-| `timestamp`  | number | No       | Event time             |
+- [ ] **Init options** — What does the SDK expose? How is the platform
+      connection established?
+- [ ] **Call ordering** — When does data arrive? Is it pushed (webhooks,
+      callbacks) or pulled (polling, intercepting)? What are the timing
+      implications?
+- [ ] **Data format** — What does the raw event/request look like? Headers, body
+      structure, query params, authentication tokens?
+- [ ] **Identity signals** — Does the external system provide user IDs, session
+      IDs, device IDs? How are they delivered (headers, cookies, body fields)?
+- [ ] **Consent** — Does the platform have consent signals? How are they
+      communicated?
+
+### 1.3 Identify All Data Entry Points
+
+Go beyond just the primary event payload. Most external systems provide multiple
+data channels:
+
+| Data Channel     | Examples                            | walkerOS Handling    |
+| ---------------- | ----------------------------------- | -------------------- |
+| Event payload    | Request body, DOM event data        | Default `push()`     |
+| Headers/metadata | Auth tokens, content-type, origin   | `context` or `user`  |
+| Query params     | UTM parameters, tracking IDs        | `data` or `context`  |
+| Platform context | Cloud function metadata, Lambda ctx | `source` or `custom` |
+| Identity         | User ID, session ID, device ID      | `user`               |
+| Consent signals  | Opt-in/out flags, consent string    | `consent`            |
 
 ### 1.4 Check Existing Patterns
+
+Review similar sources in the codebase:
 
 ```bash
 # List existing sources
@@ -109,23 +138,76 @@ ls packages/server/sources/
 
 ### Gate: Research Complete
 
-- [ ] Input trigger identified (HTTP, webhook, DOM, dataLayer)
-- [ ] Input schema documented (required/optional fields)
-- [ ] Fields mapped to walkerOS event structure
+- [ ] Official SDK installed and types inspected (or HTTP API documented if no
+      SDK exists)
+- [ ] All data entry points listed with their format
+- [ ] Init options and call ordering understood
+- [ ] Identity and consent signal delivery documented
+- [ ] Raw event/request structure mapped to walkerOS event fields
+
+### Checkpoint: Research Review (Optional)
+
+If working with human oversight, pause here to confirm:
+
+- SDK integration approach correct?
+- Data capture strategy makes sense for the use case?
+- Any platform quirks or limitations to handle?
 
 ---
 
-## Phase 2: Create Input Examples (BEFORE Implementation)
+## Phase 2: Classify Source Type
 
-**Goal:** Define realistic input data in `dev` entry FIRST.
+**Goal:** Understand what the source captures and how it delivers data, which
+determines implementation complexity.
 
-### 2.1 Scaffold Directory Structure
+### 2.1 Source Categories
+
+| Category           | Description                                | Mapping Needed                  | Example Sources          |
+| ------------------ | ------------------------------------------ | ------------------------------- | ------------------------ |
+| **Transformation** | Converts external event format to walkerOS | Essential — must map fields     | `dataLayer`, `fetch`     |
+| **Transport**      | Receives events from a specific platform   | Structural — platform unwrap    | `gcp`, `aws`, `express`  |
+| **Interception**   | Intercepts existing data flows             | Varies — depends on data format | `dataLayer`, CMP sources |
+
+### 2.2 Determine Integration Approach
+
+| Approach                    | When to use                         | Pattern                                                   |
+| --------------------------- | ----------------------------------- | --------------------------------------------------------- |
+| **Platform SDK as host**    | SDK provides typed request/response | Use SDK types, wrap handler in walkerOS source            |
+| **DOM interception**        | Capture browser-side events         | Listen to DOM events, intercept arrays/globals            |
+| **HTTP handler**            | Generic webhook/API receiver        | Parse request, extract events, forward to collector       |
+| **Callback/event listener** | Platform provides event emitter     | Register listener, transform events, forward to collector |
+
+**Prefer the vendor SDK** — it provides typed request/response objects and
+handles platform specifics. Raw HTTP parsing is a fallback when no SDK exists.
+
+When using the vendor SDK:
+
+- Import types from the SDK package directly
+- Use SDK request/response types for handler signatures
+- Let the SDK handle platform-specific parsing (body parsing, header extraction)
+
+### Gate: Classification Complete
+
+- [ ] Source category identified (transformation / transport / interception)
+- [ ] Integration approach chosen (SDK / DOM / HTTP / callback)
+- [ ] Know what the source captures and how it delivers data
+
+---
+
+## Phase 3: Create Input Examples (BEFORE Implementation)
+
+**Mandatory.** Examples are the test fixtures for Phase 8. Define expected
+in/out pairs FIRST — start with the end result in mind. Without examples, you
+cannot test. Even for simple sources, examples serve as test fixtures,
+simulation data, and documentation.
+
+### 3.1 Scaffold Directory Structure
 
 ```bash
 mkdir -p packages/server/sources/[name]/src/{examples,schemas,types}
 ```
 
-### 2.2 Create Example Files
+### 3.2 Create Example Files
 
 | File                   | Purpose                        | Template                              |
 | ---------------------- | ------------------------------ | ------------------------------------- |
@@ -134,7 +216,7 @@ mkdir -p packages/server/sources/[name]/src/{examples,schemas,types}
 | `examples/requests.ts` | HTTP request examples (server) | [requests.ts](./examples/requests.ts) |
 | `examples/mapping.ts`  | Event name/data transformation | [mapping.ts](./examples/mapping.ts)   |
 
-### 2.3 Step Examples
+### 3.3 Step Examples
 
 Add step examples with `{ in, out, trigger }` for end-to-end step testing:
 
@@ -162,7 +244,7 @@ The `trigger` field tells `createTrigger` how to simulate the invocation (HTTP
 method for server, event type for browser). `in` is the platform-specific
 content. `out` is always a walkerOS event.
 
-### 2.4 createTrigger
+### 3.4 createTrigger
 
 Every source exports a `createTrigger` from its examples that follows the
 unified `Trigger.CreateFn` interface. It simulates real-world invocations from
@@ -217,7 +299,7 @@ Reference implementations:
 See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for testing
 patterns with `createTrigger` and spy destinations.
 
-### 2.4 Export via dev.ts
+### 3.5 Export via dev.ts
 
 ```typescript
 export * as schemas from './schemas';
@@ -229,10 +311,11 @@ export * as examples from './examples';
 - [ ] All example files compile (`npm run build`)
 - [ ] Can trace: input → expected output for each example
 - [ ] Edge cases included (minimal input, invalid input)
+- [ ] Examples are complete enough to serve as test fixtures for Phase 8
 
 ---
 
-## Phase 3: Define Mapping
+## Phase 4: Define Mapping
 
 **Goal:** Document transformation from input format to walkerOS events.
 
@@ -258,7 +341,7 @@ Output: Should match outputs.pageViewEvent
 
 ---
 
-## Phase 4: Scaffold
+## Phase 5: Scaffold
 
 **Template sources:**
 
@@ -306,7 +389,7 @@ sources: {
 
 ---
 
-## Phase 5: walkerOS.json Convention
+## Phase 6: walkerOS.json Convention
 
 Every walkerOS package ships a `walkerOS.json` file for CDN-based schema
 discovery.
@@ -378,9 +461,9 @@ Guidelines:
 
 ---
 
-## Phase 6: Implement
+## Phase 7: Implement
 
-**Now write code to transform inputs to expected outputs.**
+**Now write code to produce the outputs defined in Phase 3.**
 
 ### Template Files
 
@@ -413,7 +496,10 @@ Guidelines:
 
 ---
 
-## Phase 7: Test Against Examples
+## Phase 8: Test Against Examples
+
+> Tests verify implementation against the examples from Phase 3. If examples are
+> incomplete, tests will be incomplete.
 
 **Verify implementation produces expected outputs.**
 
@@ -436,7 +522,7 @@ Use the test template: [index.test.ts](./templates/server/index.test.ts)
 
 ---
 
-## Phase 8: Document
+## Phase 9: Document
 
 Follow the [writing-documentation](../walkeros-writing-documentation/SKILL.md)
 skill for:

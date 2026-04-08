@@ -29,6 +29,7 @@ export interface FlowModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   startFlow: (config: unknown) => Promise<any>;
   __configData?: unknown;
+  __devExports?: Record<string, unknown>;
 }
 
 /**
@@ -44,8 +45,15 @@ export async function withFlowContext(
   options: FlowContextOptions,
   fn: (module: FlowModule) => Promise<PushResult>,
 ): Promise<PushResult> {
-  const { esmPath, platform, logger, snapshotCode, timeout, networkCalls, asyncDrain } =
-    options;
+  const {
+    esmPath,
+    platform,
+    logger,
+    snapshotCode,
+    timeout,
+    networkCalls,
+    asyncDrain,
+  } = options;
   const startTime = Date.now();
   const g = global as unknown as Record<string, unknown>;
   let savedWindow: unknown, savedDocument: unknown, savedNavigator: unknown;
@@ -85,9 +93,10 @@ export async function withFlowContext(
   // so the bundle's top-level setTimeout references are captured
   if (asyncDrain) {
     timerControl = installTimerInterception({
-      domWindow: platform === 'web' && dom
-        ? (dom.window as unknown as Window & typeof globalThis)
-        : undefined,
+      domWindow:
+        platform === 'web' && dom
+          ? (dom.window as unknown as Window & typeof globalThis)
+          : undefined,
     });
   }
 
@@ -119,6 +128,7 @@ export async function withFlowContext(
       wireConfig,
       startFlow,
       __configData: module.__configData,
+      __devExports: module.__devExports,
     };
 
     // Execute step-specific logic
