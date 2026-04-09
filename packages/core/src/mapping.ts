@@ -223,6 +223,7 @@ export async function processEventMapping<
   mapping?: Mapping.Rule;
   mappingKey?: string;
   ignore: boolean;
+  skip: boolean;
 }> {
   // Step 1: Apply config-level policy (modifies event)
   if (config.policy) {
@@ -254,10 +255,19 @@ export async function processEventMapping<
   let data =
     config.data && (await getMappingValue(event, config.data, { collector }));
 
+  const skip = Boolean(eventMapping?.skip);
+
   if (eventMapping) {
     // Check if event should be ignored
     if (eventMapping.ignore) {
-      return { event, data, mapping: eventMapping, mappingKey, ignore: true };
+      return {
+        event,
+        data,
+        mapping: eventMapping,
+        mappingKey,
+        ignore: true,
+        skip,
+      };
     }
 
     // Override event name if specified
@@ -275,5 +285,12 @@ export async function processEventMapping<
     }
   }
 
-  return { event, data, mapping: eventMapping, mappingKey, ignore: false };
+  return {
+    event,
+    data,
+    mapping: eventMapping,
+    mappingKey,
+    ignore: false,
+    skip,
+  };
 }

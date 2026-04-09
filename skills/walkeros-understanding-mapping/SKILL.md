@@ -35,7 +35,8 @@ implementation.
 2. Find matching rule via getMappingEvent()
 3. Apply rule.policy (modifies event)
 4. Transform config.data (global)
-5. Check rule.ignore
+5. Check rule.ignore (short-circuits if true)
+5b. Read rule.skip (informational — destination honors it)
 6. Override event.name if rule.name
 7. Transform rule.data (event-specific)
 ```
@@ -61,7 +62,8 @@ interface Config {
 interface Rule {
   name?: string; // Override event name
   data?: Value; // Event-specific data transformation
-  ignore?: boolean; // Skip this event entirely
+  ignore?: boolean; // Skip this event entirely (no processing, no push)
+  skip?: boolean; // Process settings side effects, skip destination default push
   policy?: Policy; // Event-specific pre-processing
   condition?: Function; // Match condition (for arrays)
   consent?: Consent; // Required consent for this rule
@@ -69,6 +71,22 @@ interface Rule {
   batch?: number; // Batch size for grouping
 }
 ```
+
+### Skip vs Ignore
+
+Both flags control rule behavior but have different semantics:
+
+- `ignore: true` — the rule matched but **nothing happens**. No data transform,
+  no destination call, no side effects. Use for suppression.
+- `skip: true` — the rule matched and the destination `push()` **is** called.
+  `settings.identify`, `settings.revenue`, `settings.group`, etc. still run.
+  Only the destination's default forwarding call (e.g. `track()`, `capture()`,
+  `event()`) is suppressed. Use for "identify without an event" style flows.
+
+If both flags are set on the same rule, `ignore` wins.
+
+Common use case: a `user login` event that should call `amplitude.identify()`
+but should not create a separate `track("user login")` event in Amplitude.
 
 ### Mapping.ValueConfig (Value Extraction)
 
@@ -332,16 +350,17 @@ JSON strings to actual JavaScript functions during build.
 
 ### Rule Features Cheatsheet
 
-| Feature     | Purpose                  |
-| ----------- | ------------------------ |
-| `name`      | Override event name      |
-| `data`      | Transform event data     |
-| `ignore`    | Skip event entirely      |
-| `policy`    | Pre-process event        |
-| `condition` | Match condition (arrays) |
-| `consent`   | Required consent         |
-| `settings`  | Custom configuration     |
-| `batch`     | Batch size               |
+| Feature     | Purpose                                            |
+| ----------- | -------------------------------------------------- |
+| `name`      | Override event name                                |
+| `data`      | Transform event data                               |
+| `ignore`    | Skip event entirely (no processing, no push)       |
+| `skip`      | Run settings side effects, skip default forwarding |
+| `policy`    | Pre-process event                                  |
+| `condition` | Match condition (arrays)                           |
+| `consent`   | Required consent                                   |
+| `settings`  | Custom configuration                               |
+| `batch`     | Batch size                                         |
 
 ### Config Features Cheatsheet
 

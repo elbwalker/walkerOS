@@ -31,6 +31,7 @@ export interface Rule<Settings = unknown> {
   settings?: Settings; // Arbitrary but protected configurations for custom event config
   data?: Data; // Mapping of event data
   ignore?: boolean; // Choose to no process an event when set to true
+  skip?: boolean; // Process settings side effects, but skip destination's default push call
   name?: string; // Use a custom event name
   policy?: Policy; // Event-level policy applied after config-level policy
 }
