@@ -1,8 +1,17 @@
+// The real @microsoft/clarity package is ESM and can't be parsed by Jest's
+// default CommonJS transformer. Tests always wire their own mock via
+// `env.clarity`, so the real module is never touched — we stub the import
+// with an empty default export to let Jest load the destination file.
+jest.mock('@microsoft/clarity', () => ({
+  __esModule: true,
+  default: {},
+}));
+
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
-import type { Env } from '../types';
+import type { Env, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
 type ExpectedOut = CallRecord | CallRecord[];
@@ -32,21 +41,14 @@ function spyEnv(env: Env): {
     };
   env.clarity = {
     init: makeSpy('init'),
-    identify: makeSpy('identify') as Env['clarity']['identify'],
-    setTag: makeSpy('setTag') as Env['clarity']['setTag'],
+    identify: makeSpy('identify') as NonNullable<Env['clarity']>['identify'],
+    setTag: makeSpy('setTag') as NonNullable<Env['clarity']>['setTag'],
     event: makeSpy('event'),
-    consent: makeSpy('consent'),
-    consentV2: makeSpy('consentV2') as Env['clarity']['consentV2'],
+    consentV2: makeSpy('consentV2') as NonNullable<Env['clarity']>['consentV2'],
     upgrade: makeSpy('upgrade'),
   };
   return { env, collected: () => calls };
 }
-
-// Canonical consent translation table used for command:'consent' examples.
-const TEST_CONSENT_MAP = {
-  analytics: 'analytics_Storage' as const,
-  marketing: 'ad_Storage' as const,
-};
 
 describe('clarity destination — step examples', () => {
   it.each(Object.entries(examples.step))('%s', async (name, rawExample) => {
@@ -55,6 +57,13 @@ describe('clarity destination — step examples', () => {
       mapping?: unknown;
       out?: unknown;
       command?: 'consent' | 'user' | 'config' | 'run';
+      /**
+       * Optional destination-level settings override supplied by the example.
+       * Merged on top of the fixed `apiKey`. Used by examples that exercise
+       * destination-level settings (e.g. destinationLevelIdentify, consent
+       * examples that need settings.consent).
+       */
+      settings?: Partial<Settings>;
     };
 
     const env = clone(examples.env.push) as Env;
@@ -63,19 +72,18 @@ describe('clarity destination — step examples', () => {
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow({ tagging: 2 });
 
+    const baseSettings: Partial<Settings> & { apiKey: string } = {
+      apiKey: 'test-project',
+      ...(example.settings || {}),
+    };
+
     if (example.command === 'consent') {
       // Command examples: route `in` through elb('walker <command>', in)
-      // rather than pushing it as an event. Register a minimal destination
-      // with the canonical consent translation table.
+      // rather than pushing it as an event.
       elb(
         'walker destination',
         { ...dest, env: spiedEnv },
-        {
-          settings: {
-            apiKey: 'test-project',
-            consent: TEST_CONSENT_MAP,
-          },
-        },
+        { settings: baseSettings },
       );
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
@@ -90,7 +98,7 @@ describe('clarity destination — step examples', () => {
         'walker destination',
         { ...dest, env: spiedEnv },
         {
-          settings: { apiKey: 'test-project' },
+          settings: baseSettings,
           mapping: mappingConfig,
         },
       );

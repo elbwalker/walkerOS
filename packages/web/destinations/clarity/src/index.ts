@@ -1,9 +1,20 @@
 import type { WalkerOS } from '@walkeros/core';
 import { getMappingValue, isObject, isString } from '@walkeros/core';
-import type { Destination, Env, Mapping, Settings } from './types';
+import Clarity from '@microsoft/clarity';
+import type { ClaritySDK, Destination, Env, Mapping, Settings } from './types';
 
 // Types export
 export * as DestinationClarity from './types';
+
+/**
+ * Resolve the Clarity SDK: use the caller-provided mock when available
+ * (tests), otherwise fall back to the real `@microsoft/clarity` default
+ * export. Matches the pattern used by @walkeros/server-destination-gcp for
+ * the BigQuery SDK.
+ */
+function getClarity(env: Env | undefined): ClaritySDK {
+  return env?.clarity ?? (Clarity as unknown as ClaritySDK);
+}
 
 const INCLUDE_SECTIONS: Record<string, (e: WalkerOS.Event) => unknown> = {
   data: (e) => e.data,
@@ -30,7 +41,7 @@ function coerceTagValue(value: unknown): string | string[] | undefined {
   return undefined; // skip nested objects
 }
 
-function emitTag(clarity: Env['clarity'], key: string, raw: unknown): void {
+function emitTag(clarity: ClaritySDK, key: string, raw: unknown): void {
   const value = coerceTagValue(raw);
   if (value === undefined) return;
   clarity.setTag(key, value);
@@ -39,7 +50,7 @@ function emitTag(clarity: Env['clarity'], key: string, raw: unknown): void {
 function setIncludeTags(
   event: WalkerOS.Event,
   sections: string[],
-  clarity: Env['clarity'],
+  clarity: ClaritySDK,
 ): void {
   const effective = sections.includes('all')
     ? Object.keys(INCLUDE_SECTIONS)
@@ -55,6 +66,29 @@ function setIncludeTags(
   }
 }
 
+/**
+ * Call `Clarity.identify(...)` with only the positional arguments actually
+ * provided. Trailing undefined args are dropped so callers see a clean
+ * signature (`identify('us3r')` instead of `identify('us3r', undefined, undefined, undefined)`).
+ */
+function callIdentify(
+  clarity: ClaritySDK,
+  customId: string,
+  customSessionId?: string,
+  customPageId?: string,
+  friendlyName?: string,
+): void {
+  if (friendlyName !== undefined) {
+    clarity.identify(customId, customSessionId, customPageId, friendlyName);
+  } else if (customPageId !== undefined) {
+    clarity.identify(customId, customSessionId, customPageId);
+  } else if (customSessionId !== undefined) {
+    clarity.identify(customId, customSessionId);
+  } else {
+    clarity.identify(customId);
+  }
+}
+
 export const destinationClarity: Destination = {
   type: 'clarity',
 
@@ -64,56 +98,33 @@ export const destinationClarity: Destination = {
     const settings = config.settings;
     if (!settings?.apiKey) return false;
 
-    // env.clarity must be wired by the caller. Tests pass a mock; production
-    // wires the @microsoft/clarity default export via dev.ts.
-    env?.clarity.init(settings.apiKey);
+    getClarity(env).init(settings.apiKey);
 
     return config;
   },
 
   async push(event, { config, rule, env }) {
-    if (!env) return;
+    const clarity = getClarity(env as Env | undefined);
     const settings = (config.settings || {}) as Partial<Settings>;
     const mappingSettings = (rule?.settings || {}) as Mapping;
 
-    // 1. Include tags — rule-level override → destination-level → none
-    const includeSections = mappingSettings.include ?? settings.include ?? [];
-    if (includeSections.length > 0) {
-      setIncludeTags(event, includeSections, env.clarity);
-    }
-
-    // 2. Explicit tags via mapping.settings.set
-    if (mappingSettings.set !== undefined) {
-      const resolved = await getMappingValue(event, mappingSettings.set);
-      if (isObject(resolved)) {
-        for (const [key, raw] of Object.entries(resolved)) {
-          emitTag(env.clarity, key, raw);
-        }
-      }
-    }
-
-    // 3. Session upgrade
-    if (mappingSettings.upgrade !== undefined) {
-      const reason = await getMappingValue(event, mappingSettings.upgrade);
-      if (isString(reason) && reason) {
-        env.clarity.upgrade(reason);
-      }
-    }
-
-    // 4. Identify — per-event rule override wins over destination-level
+    // 1. Identify — rule-level override wins over destination-level.
+    //    Fires first per Clarity's own guidance so subsequent tag/event
+    //    calls are associated with the right user.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     if (identifyMapping !== undefined) {
       const resolved = await getMappingValue(event, identifyMapping);
       if (isObject(resolved)) {
         const { customId, customSessionId, customPageId, friendlyName } =
           resolved as {
-            customId?: string;
-            customSessionId?: string;
-            customPageId?: string;
-            friendlyName?: string;
+            customId?: unknown;
+            customSessionId?: unknown;
+            customPageId?: unknown;
+            friendlyName?: unknown;
           };
-        if (customId && isString(customId)) {
-          env.clarity.identify(
+        if (isString(customId) && customId) {
+          callIdentify(
+            clarity,
             customId,
             isString(customSessionId) ? customSessionId : undefined,
             isString(customPageId) ? customPageId : undefined,
@@ -123,51 +134,64 @@ export const destinationClarity: Destination = {
       }
     }
 
+    // 2. Include tags — rule-level override → destination-level → none
+    const includeSections = mappingSettings.include ?? settings.include ?? [];
+    if (includeSections.length > 0) {
+      setIncludeTags(event, includeSections, clarity);
+    }
+
+    // 3. Explicit tags via mapping.settings.set
+    if (mappingSettings.set !== undefined) {
+      const resolved = await getMappingValue(event, mappingSettings.set);
+      if (isObject(resolved)) {
+        for (const [key, raw] of Object.entries(resolved)) {
+          emitTag(clarity, key, raw);
+        }
+      }
+    }
+
+    // 4. Session priority upgrade
+    if (mappingSettings.upgrade !== undefined) {
+      const reason = await getMappingValue(event, mappingSettings.upgrade);
+      if (isString(reason) && reason) {
+        clarity.upgrade(reason);
+      }
+    }
+
     // 5. Default event forwarding — unless rule.skip is set
     if (rule?.skip !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
-      env.clarity.event(eventName);
+      clarity.event(eventName);
     }
   },
 
   on(type, context) {
     if (type !== 'consent' || !context.data) return;
-    const env = context.env as Env | undefined;
-    if (!env) return;
+    const clarity = getClarity(context.env as Env | undefined);
 
     const consent = context.data as WalkerOS.Consent;
     const settings = (context.config?.settings || {}) as Partial<Settings>;
     const consentMap = settings.consent;
-    if (!consentMap) return; // No translation table, no action
+    if (!consentMap) return; // Users MUST configure settings.consent; without it we take no action.
 
     const v2: {
       analytics_Storage?: 'granted' | 'denied';
       ad_Storage?: 'granted' | 'denied';
     } = {};
-    let anyGranted = false;
-    let anyDenied = false;
 
     for (const [walkerKey, clarityKey] of Object.entries(consentMap)) {
       if (!(walkerKey in consent)) continue;
-      const granted = consent[walkerKey] === true;
-      v2[clarityKey] = granted ? 'granted' : 'denied';
-      if (granted) anyGranted = true;
-      else anyDenied = true;
+      v2[clarityKey] = consent[walkerKey] === true ? 'granted' : 'denied';
     }
 
     if (Object.keys(v2).length === 0) return;
 
-    env.clarity.consentV2(
+    clarity.consentV2(
       v2 as {
         analytics_Storage: 'granted' | 'denied';
         ad_Storage: 'granted' | 'denied';
       },
     );
-
-    // Full revocation — also call the legacy v1 API to erase cookies.
-    if (anyDenied && !anyGranted) {
-      env.clarity.consent(false);
-    }
   },
 };
 

@@ -1,11 +1,23 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
+import type { Settings } from '../types';
+
+/**
+ * Examples may optionally override destination-level settings for a test.
+ * The test runner reads `settings` from the example and merges it into the
+ * base destination settings (on top of the fixed `apiKey`). Used by examples
+ * that exercise destination-level `settings.identify` / `settings.include`,
+ * and by `command: 'consent'` examples that need `settings.consent` set.
+ */
+export type ClarityStepExample = Flow.StepExample & {
+  settings?: Partial<Settings>;
+};
 
 /**
  * Default event forwarding — every walkerOS event becomes Clarity.event(name).
  * No mapping rule; the destination's default push behavior fires.
  */
-export const defaultEventForwarding: Flow.StepExample = {
+export const defaultEventForwarding: ClarityStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: ['clarity.event', 'product view'],
 };
@@ -16,7 +28,7 @@ export const defaultEventForwarding: Flow.StepExample = {
  * plus explicit allows. This example IS an ignored event — the destination
  * must produce zero calls.
  */
-export const wildcardIgnored: Flow.StepExample = {
+export const wildcardIgnored: ClarityStepExample = {
   in: getEvent('debug noise', { timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
@@ -25,9 +37,10 @@ export const wildcardIgnored: Flow.StepExample = {
 /**
  * Identity via settings.identify (per-event, user login).
  * Resolves positional args for Clarity.identify(customId, sessionId, pageId, friendlyName).
+ * Trailing undefined args are omitted, so all four args are passed when friendlyName is set.
  * Then fires the default Clarity.event(...) forwarding.
  */
-export const userLoginIdentify: Flow.StepExample = {
+export const userLoginIdentify: ClarityStepExample = {
   in: getEvent('user login', {
     timestamp: 1700000102,
     data: { id: 'u-123', name: 'Jane Doe' },
@@ -49,11 +62,32 @@ export const userLoginIdentify: Flow.StepExample = {
 };
 
 /**
- * Explicit custom tags via mapping.settings.set.
- * Each resolved key → Clarity.setTag(key, value). Tags fire BEFORE the default event.
+ * Destination-level settings.identify — Clarity officially recommends calling
+ * identify() on every page load. walkerOS expresses this via destination-level
+ * `settings.identify`, which fires on every push.
  */
-export const productViewWithTags: Flow.StepExample = {
-  in: getEvent('product view', { timestamp: 1700000103 }),
+export const destinationLevelIdentify: ClarityStepExample = {
+  in: getEvent('page view', { timestamp: 1700000103 }),
+  settings: {
+    identify: {
+      map: {
+        customId: 'user.id',
+      },
+    },
+  },
+  out: [
+    ['clarity.identify', 'us3r'],
+    ['clarity.event', 'page view'],
+  ],
+};
+
+/**
+ * Explicit custom tags via mapping.settings.set.
+ * Each resolved key → Clarity.setTag(key, value). Tags fire after identify
+ * but before the default event.
+ */
+export const productViewWithTags: ClarityStepExample = {
+  in: getEvent('product view', { timestamp: 1700000104 }),
   mapping: {
     settings: {
       set: {
@@ -72,11 +106,44 @@ export const productViewWithTags: Flow.StepExample = {
 };
 
 /**
- * Session priority upgrade — mark this session as important so Clarity retains it
- * beyond the sampling cap. upgrade fires before the default event.
+ * Array tag values — Clarity.setTag(key, value) natively accepts string[].
+ * walkerOS array values are passed through unchanged (each element is
+ * coerced to string, but the array shape is preserved — no flattening,
+ * no splitting into multiple calls).
  */
-export const orderCompleteUpgrade: Flow.StepExample = {
-  in: getEvent('order complete', { timestamp: 1700000104 }),
+export const arrayTagValue: ClarityStepExample = {
+  in: getEvent('product view', {
+    timestamp: 1700000105,
+    data: {
+      id: 'ers',
+      name: 'Everyday Ruck Snack',
+      color: 'black',
+      size: 'l',
+      price: 420,
+      tags: ['sale', 'featured'],
+    },
+  }),
+  mapping: {
+    settings: {
+      set: {
+        map: {
+          product_tags: 'data.tags',
+        },
+      },
+    },
+  },
+  out: [
+    ['clarity.setTag', 'product_tags', ['sale', 'featured']],
+    ['clarity.event', 'product view'],
+  ],
+};
+
+/**
+ * Session priority upgrade — mark this session as important so Clarity retains
+ * it beyond the sampling cap. upgrade fires before the default event.
+ */
+export const orderCompleteUpgrade: ClarityStepExample = {
+  in: getEvent('order complete', { timestamp: 1700000106 }),
   mapping: {
     name: 'Purchase',
     settings: {
@@ -94,8 +161,8 @@ export const orderCompleteUpgrade: Flow.StepExample = {
  * Primitives coerce to strings; arrays pass through as string[].
  * The example includes `data` only; keys become `data_<field>`.
  */
-export const orderCompleteInclude: Flow.StepExample = {
-  in: getEvent('order complete', { timestamp: 1700000105 }),
+export const orderCompleteInclude: ClarityStepExample = {
+  in: getEvent('order complete', { timestamp: 1700000107 }),
   mapping: {
     settings: {
       include: ['data'],
@@ -112,12 +179,36 @@ export const orderCompleteInclude: Flow.StepExample = {
 };
 
 /**
+ * Combined-feature rule — Clarity's canonical usage pattern: identify the
+ * user, set session tags, upgrade session priority, then fire the event.
+ * This is the authoritative test for the push execution order
+ * (identify → tags → upgrade → event).
+ */
+export const combinedFeatures: ClarityStepExample = {
+  in: getEvent('order complete', { timestamp: 1700000108 }),
+  mapping: {
+    name: 'Purchase',
+    settings: {
+      identify: { map: { customId: 'user.id' } },
+      set: { map: { order_id: 'data.id' } },
+      upgrade: { value: 'purchase' },
+    },
+  },
+  out: [
+    ['clarity.identify', 'us3r'],
+    ['clarity.setTag', 'order_id', '0rd3r1d'],
+    ['clarity.upgrade', 'purchase'],
+    ['clarity.event', 'Purchase'],
+  ],
+};
+
+/**
  * mapping.skip — the rule runs (set/identify/upgrade all execute) but the
  * default Clarity.event(...) call is suppressed. Useful for page view, where
  * Clarity has its own page tracking and you only want to set tags.
  */
-export const pageViewSkip: Flow.StepExample = {
-  in: getEvent('page view', { timestamp: 1700000106 }),
+export const pageViewSkip: ClarityStepExample = {
+  in: getEvent('page view', { timestamp: 1700000109 }),
   mapping: {
     skip: true,
     settings: {
@@ -140,9 +231,15 @@ export const pageViewSkip: Flow.StepExample = {
  * Uses the canonical StepExample.command='consent' pattern: the test runner
  * dispatches via elb('walker consent', in) instead of pushing an event.
  */
-export const consentGrantBoth: Flow.StepExample = {
+export const consentGrantBoth: ClarityStepExample = {
   command: 'consent',
   in: { analytics: true, marketing: true } as WalkerOS.Consent,
+  settings: {
+    consent: {
+      analytics: 'analytics_Storage',
+      marketing: 'ad_Storage',
+    },
+  },
   out: [
     [
       'clarity.consentV2',
@@ -152,18 +249,23 @@ export const consentGrantBoth: Flow.StepExample = {
 };
 
 /**
- * Consent revocation — denied consent calls Clarity.consentV2(...) with denied
- * flags AND Clarity.consent(false) (the legacy v1 API that erases cookies
- * and ends the session).
+ * Consent revocation — denied categories call Clarity.consentV2(...) with
+ * denied flags. The destination does NOT call the legacy `Clarity.consent(false)`
+ * API at all — consentV2 is the single source of truth for consent state.
  */
-export const consentRevoke: Flow.StepExample = {
+export const consentRevoke: ClarityStepExample = {
   command: 'consent',
   in: { analytics: false, marketing: false } as WalkerOS.Consent,
+  settings: {
+    consent: {
+      analytics: 'analytics_Storage',
+      marketing: 'ad_Storage',
+    },
+  },
   out: [
     [
       'clarity.consentV2',
       { analytics_Storage: 'denied', ad_Storage: 'denied' },
     ],
-    ['clarity.consent', false],
   ],
 };

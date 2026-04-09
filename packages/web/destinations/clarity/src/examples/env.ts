@@ -3,16 +3,15 @@ import type { Env } from '../types';
 /**
  * Example environment configurations for Microsoft Clarity destination.
  *
- * The @microsoft/clarity package is imported as a module, so we model
- * the SDK surface at the top level of Env rather than via a window global.
  * Tests clone `push` and replace individual methods with jest spies.
+ * Production leaves `env.clarity` undefined — the destination falls back
+ * to the real `@microsoft/clarity` default export.
  */
 
 const noop = () => {};
 
 /**
  * Pre-init environment — Clarity SDK methods are no-ops until init wires them.
- * Used by the init code path.
  */
 export const init: Env | undefined = {
   clarity: {
@@ -20,7 +19,6 @@ export const init: Env | undefined = {
     identify: noop,
     setTag: noop,
     event: noop,
-    consent: noop,
     consentV2: noop,
     upgrade: noop,
   },
@@ -36,7 +34,6 @@ export const push: Env = {
     identify: noop,
     setTag: noop,
     event: noop,
-    consent: noop,
     consentV2: noop,
     upgrade: noop,
   },
@@ -51,6 +48,5 @@ export const simulation = [
   'call:clarity.setTag',
   'call:clarity.event',
   'call:clarity.consentV2',
-  'call:clarity.consent',
   'call:clarity.upgrade',
 ];

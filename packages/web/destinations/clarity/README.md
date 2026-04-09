@@ -130,8 +130,11 @@ settings: {
 }
 ```
 
-Revoking **all** mapped keys also triggers the legacy `Clarity.consent(false)`
-call, which erases cookies and ends the session.
+All consent state — grants, revocations, partial updates — is forwarded to
+`Clarity.consentV2(...)`. The legacy `Clarity.consent(...)` API is not used.
+Without `settings.consent`, the destination takes no action on consent changes;
+the walkerOS `config.consent` gate still blocks unconsented events from reaching
+the destination in the first place.
 
 ## Contribute
 

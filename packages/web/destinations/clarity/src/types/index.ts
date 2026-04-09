@@ -37,9 +37,10 @@ export interface Mapping {
 }
 
 /**
- * Clarity SDK surface — mirrors the default export of @microsoft/clarity.
- * We model it as a typed shape so tests can mock individual methods without
- * touching a window global.
+ * Clarity SDK surface — the subset of @microsoft/clarity methods this
+ * destination actually uses. Mirrors the default export so tests can mock
+ * each method individually. The legacy `consent()` API is intentionally
+ * not exposed here — this destination only uses `consentV2`.
  */
 export interface ClaritySDK {
   init: (projectId: string) => void;
@@ -51,7 +52,6 @@ export interface ClaritySDK {
   ) => void;
   setTag: (key: string, value: string | string[]) => void;
   event: (name: string) => void;
-  consent: (consent?: boolean) => void;
   consentV2: (consentOptions?: {
     ad_Storage: 'granted' | 'denied';
     analytics_Storage: 'granted' | 'denied';
@@ -60,12 +60,12 @@ export interface ClaritySDK {
 }
 
 /**
- * Env — mock surface for the vendor SDK during tests.
- * The @microsoft/clarity package is imported as a module, so we mock the module
- * shape rather than a window global.
+ * Env — optional override for the vendor SDK. Production leaves this
+ * undefined and the destination falls back to the real `@microsoft/clarity`
+ * default export. Tests provide a mock via `env.clarity = { ... }`.
  */
 export interface Env extends DestinationWeb.Env {
-  clarity: ClaritySDK;
+  clarity?: ClaritySDK;
 }
 
 export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
