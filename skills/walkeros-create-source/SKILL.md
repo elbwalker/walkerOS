@@ -21,7 +21,10 @@ Before starting, read these skills:
   structure sources emit
 - [understanding-mapping](../walkeros-understanding-mapping/SKILL.md) -
   Transform raw input to events
-- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test with
+  env pattern and dev examples
+- [using-step-examples](../walkeros-using-step-examples/SKILL.md) -
+  Authoritative `Flow.StepExample` pattern, `createTrigger`, Three Type Zones
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
   Documentation standards (for Phase 9)
 
@@ -197,65 +200,142 @@ When using the vendor SDK:
 ## Phase 3: Create Input Examples (BEFORE Implementation)
 
 **Mandatory.** Examples are the test fixtures for Phase 8. Define expected
-in/out pairs FIRST — start with the end result in mind. Without examples, you
-cannot test. Even for simple sources, examples serve as test fixtures,
-simulation data, and documentation.
+`trigger` / `in` / `out` triples FIRST — start with the end result in mind.
+Without examples, you cannot test. Even for simple sources, step examples are
+the single source of truth for tests, simulations, and documentation.
+
+> **Authoritative pattern:** See
+> [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
+> Type Zones, `createTrigger` contract, and CI integration. This skill reuses
+> that contract — do not diverge.
 
 ### 3.1 Scaffold Directory Structure
 
 ```bash
-mkdir -p packages/server/sources/[name]/src/{examples,schemas,types}
+mkdir -p packages/<platform>/sources/[name]/src/examples
+mkdir -p packages/<platform>/sources/[name]/src/{schemas,types}
 ```
 
-### 3.2 Create Example Files
+### 3.2 Required Files (3–4 files)
 
-| File                   | Purpose                        | Template                              |
-| ---------------------- | ------------------------------ | ------------------------------------- |
-| `examples/inputs.ts`   | Incoming data examples         | [inputs.ts](./examples/inputs.ts)     |
-| `examples/outputs.ts`  | Expected walkerOS events       | [outputs.ts](./examples/outputs.ts)   |
-| `examples/requests.ts` | HTTP request examples (server) | [requests.ts](./examples/requests.ts) |
-| `examples/mapping.ts`  | Event name/data transformation | [mapping.ts](./examples/mapping.ts)   |
+All reference sources in the monorepo use this exact layout in `src/examples/`.
+Match it — no `inputs.ts`, `outputs.ts`, `requests.ts`, or standalone
+`mapping.ts`.
 
-### 3.3 Step Examples
+| File                  | Required? | Purpose                                                             |
+| --------------------- | --------- | ------------------------------------------------------------------- |
+| `examples/step.ts`    | yes       | `Flow.StepExample` entries with `trigger` / `in` / `out` triples    |
+| `examples/trigger.ts` | yes       | `createTrigger` implementation following `Trigger.CreateFn`         |
+| `examples/index.ts`   | yes       | Barrel exports: `env` (if present), `step`, `createTrigger`         |
+| `examples/env.ts`     | if needed | Mock env for platform deps (browser window/document, express, etc.) |
 
-Add step examples with `{ in, out, trigger }` for end-to-end step testing:
+`env.ts` is included whenever the source touches platform globals or injected
+deps — all web sources and every server source that wraps a platform SDK ship
+one. Sources whose tests drive the collector entirely through `trigger.ts` (e.g.
+`web/sources/session`) may omit it. When in doubt, **include it**.
 
-| File                  | Purpose                           | Status |
-| --------------------- | --------------------------------- | ------ |
-| `examples/step.ts`    | Step examples with in/out/trigger | NEW    |
-| `examples/trigger.ts` | createTrigger implementation      | NEW    |
+The old `inputs.ts` / `outputs.ts` / `requests.ts` / `mapping.ts` files are gone
+— their contents now live inline in each `Flow.StepExample` entry in `step.ts`.
+
+### 3.3 Three Type Zones for Sources
+
+Sources are the **inverse** of destinations in the Three Type Zones model:
+
+| Zone      | Source semantics                                                                      |
+| --------- | ------------------------------------------------------------------------------------- |
+| `trigger` | How to simulate the invocation (HTTP method, DOM event type, cloud event)             |
+| `in`      | External trigger content — HTTP request, DOM HTML, SDK payload (NOT a walkerOS event) |
+| `out`     | The walkerOS event(s) the source should emit (`WalkerOS.Event`)                       |
+
+Where a destination does `WalkerOS.Event → vendor output`, a source does
+`external content → WalkerOS.Event`. Read
+[using-step-examples](../walkeros-using-step-examples/SKILL.md) before authoring
+entries.
+
+### 3.4 Typing Rules (strict)
+
+**No `any`.** Every example value must be explicitly typed.
+
+- **`trigger`** uses the local source trigger type or a platform-native type
+  (e.g. `'load' | 'click'` for DOM, HTTP method strings for server sources).
+- **`in`** uses the **vendor / platform SDK types** imported from the official
+  package whenever available (Express `Request`, Fetch `Request`, API Gateway
+  `APIGatewayProxyEvent`, Lambda `Context`, GCP `CloudEvent`, etc.). Do not
+  invent local request types when the platform publishes them.
+- **`out`** uses `WalkerOS.Event` (or `DeepPartialEvent` for fragments).
+- **Step entries** are typed `Flow.StepExample` from `@walkeros/core`.
+- **Mock env** is typed against the source's local `Env` type from `../types`.
+- `createTrigger` is typed as `Trigger.CreateFn<Content, Result>` — the
+  `Content` and `Result` generics come from the source's own types module.
+
+### 3.5 Code Template — `examples/step.ts`
 
 ```typescript
-// examples/step.ts
 import type { Flow } from '@walkeros/core';
 
-export const checkoutPost: Flow.StepExample = {
+// One step example per captured trigger / input shape.
+// `trigger` tells createTrigger how to simulate the invocation.
+// `in` is the platform-specific content (HTTP request, DOM HTML, SDK payload) —
+//      typed against the platform SDK's published types where available.
+// `out` is the walkerOS event the source is expected to emit.
+
+export const pageView: Flow.StepExample = {
+  trigger: {
+    type: 'load',
+    options: {
+      url: 'https://example.com/docs',
+      title: 'Documentation',
+    },
+  },
+  in: '', // no external content — DOM-driven trigger
+  out: {
+    name: 'page view',
+    data: { domain: 'example.com', title: 'Documentation', id: '/docs' },
+    entity: 'page',
+    action: 'view',
+    trigger: 'load',
+    source: { type: 'browser', id: 'https://example.com/docs' },
+  },
+};
+
+// Server example: HTTP POST carrying a walker event payload.
+export const orderComplete: Flow.StepExample = {
   trigger: { type: 'POST' },
   in: {
     method: 'POST',
     path: '/collect',
     body: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
   },
-  out: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+  out: {
+    name: 'order complete',
+    data: { id: 'ORD-123', total: 149.97 },
+    entity: 'order',
+    action: 'complete',
+  },
 };
 ```
 
-The `trigger` field tells `createTrigger` how to simulate the invocation (HTTP
-method for server, event type for browser). `in` is the platform-specific
-content. `out` is always a walkerOS event.
-
-### 3.4 createTrigger
-
-Every source exports a `createTrigger` from its examples that follows the
-unified `Trigger.CreateFn` interface. It simulates real-world invocations from
-the outside — no source instance access, full blackbox.
+### 3.6 `examples/index.ts` (barrel)
 
 ```typescript
-// examples/trigger.ts
-import type { Trigger, Collector } from '@walkeros/core';
+export * as env from './env'; // omit if the source has no env.ts
+export * as step from './step';
+export { createTrigger, trigger } from './trigger';
+```
+
+### 3.7 `examples/trigger.ts` — `createTrigger`
+
+Every source exports a `createTrigger` following the unified
+`Trigger.CreateFn<Content, Result>` interface. It simulates real-world
+invocations from the outside — no source instance access, full blackbox.
+
+```typescript
+import type { Trigger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 
-const createTrigger: Trigger.CreateFn<Content, Result> = async (config) => {
+export const createTrigger: Trigger.CreateFn<Content, Result> = async (
+  config,
+) => {
   let flow: Trigger.FlowHandle | undefined;
 
   const trigger: Trigger.Fn<Content, Result> =
@@ -264,8 +344,9 @@ const createTrigger: Trigger.CreateFn<Content, Result> = async (config) => {
         const result = await startFlow(config);
         flow = { collector: result.collector, elb: result.elb };
       }
-      // Package-specific: make real HTTP request, inject DOM, etc.
-      return result;
+      // Package-specific: make real HTTP request, inject DOM, dispatch SDK call.
+      // Return the Result type declared by this source.
+      return /* ... */;
     };
 
   return {
@@ -281,6 +362,8 @@ Reference implementations:
 
 - **Browser:** `packages/web/sources/browser/src/examples/trigger.ts` — DOM
   injection + native event dispatch
+- **Session:** `packages/web/sources/session/src/examples/trigger.ts` — no
+  env.ts, trigger drives collector directly
 - **Express:** `packages/server/sources/express/src/examples/trigger.ts` — real
   HTTP `fetch()` to running server
 - **CMP (Usercentrics):**
@@ -296,22 +379,52 @@ Reference implementations:
   `packages/server/sources/gcp/src/cloudfunction/examples/trigger.ts` —
   synthesizes mock req/res (matching GCP Functions Framework)
 
-See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for testing
-patterns with `createTrigger` and spy destinations.
+### 3.8 Test Fixture Contract (hard rule)
 
-### 3.5 Export via dev.ts
+The examples authored here **are** the Phase 8 test fixtures. No parallel
+fixtures allowed.
+
+- `src/index.test.ts` **MUST** iterate examples via
+  `it.each(Object.entries(examples.step))`.
+- Tests **must NOT** contain hardcoded trigger payloads, HTTP requests, DOM
+  HTML, or expected events.
+- If a test needs a value that is not in `examples.step`, **add it to `step.ts`
+  first**, then consume it from the test.
+- Tests invoke `examples.createTrigger(config)` and dispatch each example's
+  `trigger.type` + `in` content, asserting the collector receives `out`.
+
+See the canonical source tests under
+`packages/web/sources/browser/src/index.test.ts` and
+`packages/server/sources/express/src/index.test.ts`.
+
+### 3.9 Export via `dev.ts`
 
 ```typescript
 export * as schemas from './schemas';
 export * as examples from './examples';
 ```
 
-### Gate: Examples Valid
+### Phase 3 Acceptance Checklist
 
-- [ ] All example files compile (`npm run build`)
-- [ ] Can trace: input → expected output for each example
+- [ ] `src/examples/step.ts` — one `Flow.StepExample` per captured trigger /
+      input shape, typed `trigger` / `in` / `out`
+- [ ] `src/examples/trigger.ts` — exports `createTrigger` typed as
+      `Trigger.CreateFn<Content, Result>`
+- [ ] `src/examples/index.ts` — barrel exports `step`, `createTrigger`, and
+      `env` (when present)
+- [ ] `src/examples/env.ts` — included whenever the source touches platform
+      globals or injected deps; typed against local `Env`; no real network
+- [ ] No standalone `inputs.ts`, `outputs.ts`, `requests.ts`, or `mapping.ts`
+      files
+- [ ] All platform / SDK types imported from the official package — no `any`, no
+      reinvented request / response shapes
+- [ ] `src/index.test.ts` iterates `examples.step` via
+      `it.each(Object.entries(...))`
+- [ ] Tests contain zero hardcoded payloads, requests, or expected events —
+      everything flows from `examples.step`
 - [ ] Edge cases included (minimal input, invalid input)
-- [ ] Examples are complete enough to serve as test fixtures for Phase 8
+- [ ] `npm run build` passes — examples compile against published types
+- [ ] Each example traces: `trigger` + `in` → source push → matches `out`
 
 ---
 
@@ -319,25 +432,29 @@ export * as examples from './examples';
 
 **Goal:** Document transformation from input format to walkerOS events.
 
-Use [mapping.ts](./examples/mapping.ts) as your template.
+Mapping lives **inside** each `Flow.StepExample` entry in `step.ts` — no
+separate `mapping.ts` file. Sources typically carry the mapping either in the
+source's own `settings` (see `dataLayer` for an example) or inline via the
+`trigger` → `in` → `out` relationship: the `in` content is the raw platform
+payload; the `out` is the walkerOS event after the source's transformation.
 
 ### Verify Mapping Logic
 
+For each entry in `step.ts`, trace:
+
 ```text
-Input: inputs.pageViewInput (event: 'page_view')
-  ↓ Match mapping rule: page_view.*
-  ↓ Apply rule.name: 'page_view' → 'page view'
-  ↓ Apply rule.data.map transformations
-  ↓ properties.page_title → title
-  ↓ properties.page_path → path
-Output: Should match outputs.pageViewEvent
+Input: examples.step.pageView.trigger + examples.step.pageView.in
+  ↓ createTrigger dispatches the trigger
+  ↓ Source receives platform content, runs its transformation
+  ↓ Source calls env.push / collector.push
+Output: Should match examples.step.pageView.out (a WalkerOS.Event)
 ```
 
 ### Gate: Mapping Verified
 
-- [ ] Mapping rules cover main input event types
-- [ ] Each rule.name transforms to correct walkerOS event name
-- [ ] Each mapping rule traces correctly to expected output
+- [ ] Step examples cover the main input event types
+- [ ] Each example name transforms to correct walkerOS event name
+- [ ] Each example traces correctly from `(trigger, in)` to `out`
 
 ---
 
@@ -500,24 +617,39 @@ Guidelines:
 
 > Tests verify implementation against the examples from Phase 3. If examples are
 > incomplete, tests will be incomplete.
+>
+> See [testing-strategy](../walkeros-testing-strategy/SKILL.md) for the shared
+> env / dev-examples conventions this phase depends on.
 
 **Verify implementation produces expected outputs.**
 
 ### Test Template
 
-Use the test template: [index.test.ts](./templates/server/index.test.ts)
+Use the test template: [index.test.ts](./templates/server/index.test.ts).
+Canonical references:
+
+- `packages/web/sources/browser/src/index.test.ts`
+- `packages/server/sources/express/src/index.test.ts`
 
 ### Key Test Patterns
 
-1. **Use `createSourceContext()` helper** - Standardizes context creation
-2. **Mock `env.push`** - Verify events are forwarded to collector
-3. **Use examples for test data** - Don't hardcode test values
-4. **Test error paths** - Verify graceful error handling and logging
+1. **`it.each(Object.entries(examples.step))` is mandatory** — one iteration per
+   step example. Do not write per-feature tests with hand-rolled payloads.
+2. **Drive via `createTrigger`** — construct the trigger with `startFlow`
+   config, then dispatch each example's `trigger.type` + `in` content.
+3. **Use `createSourceContext()` helper** for any direct context construction.
+4. **Zero hardcoded payloads** — every trigger type, request body, DOM HTML, and
+   expected event comes from `examples.step` or `examples.env`. If you need
+   something new, add it to examples first.
+5. **Test error paths** — verify graceful error handling and logging for invalid
+   input (add an error example to `examples.step` if needed).
 
 ### Gate: Tests Pass
 
 - [ ] `npm run test` passes
-- [ ] Tests verify against example outputs (not hardcoded values)
+- [ ] Tests iterate via `it.each(Object.entries(examples.step))`
+- [ ] Tests contain no hardcoded payloads, requests, or expected events
+- [ ] Every assertion reads from `examples.step[...].out`
 - [ ] Invalid input handled gracefully (no crashes)
 
 ---
@@ -571,7 +703,9 @@ requirements (build, test, lint, no `any`):
   interface and push pattern
 - [understanding-events](../walkeros-understanding-events/SKILL.md) - Event
   structure
-- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - Testing with env
-  mocking
+- [using-step-examples](../walkeros-using-step-examples/SKILL.md) —
+  Authoritative `Flow.StepExample` + `createTrigger` pattern, Three Type Zones
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) — Testing with env
+  mocking and dev-examples-as-fixtures conventions
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
   Documentation standards

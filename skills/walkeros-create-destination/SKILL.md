@@ -20,9 +20,11 @@ Before starting, read these skills:
 - [understanding-mapping](../walkeros-understanding-mapping/SKILL.md) - Event
   transformation
 - [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test with
-  env pattern
+  env pattern (Phase 3 + Phase 8)
+- [using-step-examples](../walkeros-using-step-examples/SKILL.md) -
+  Authoritative pattern for `Flow.StepExample` structure and Three Type Zones
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
-  Documentation standards (for Phase 8)
+  Documentation standards (for Phase 9)
 
 ## Choose Your Template
 
@@ -169,70 +171,167 @@ When using the vendor SDK:
 
 ## Phase 3: Create Examples (BEFORE Implementation)
 
-**Mandatory.** Examples are the test fixtures for Phase 8. Define expected
-in/out pairs FIRST — start with the end result in mind. Without examples, you
-cannot test. Even for free-form vendors where no mapping is "required," examples
-serve as test fixtures, simulation data, and documentation.
+**Mandatory.** Examples are the test fixtures for Phase 8. Define expected `in`
+/ `out` / `mapping` triples FIRST — start with the end result in mind. Without
+examples, you cannot test. Even for free-form vendors where no mapping is
+strictly "required," step examples serve as the single source of truth for
+tests, simulations, and documentation.
+
+> **Authoritative pattern:** See
+> [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
+> Type Zones and lifecycle. This skill reuses that contract — do not diverge.
 
 ### 3.1 Scaffold Directory Structure
 
 ```bash
-mkdir -p packages/web/destinations/[name]/src/{examples,schemas,types}
+mkdir -p packages/web/destinations/[name]/src/examples
+mkdir -p packages/web/destinations/[name]/src/{schemas,types}
 ```
 
-### 3.2 Create Example Files
+### 3.2 Required Files (3 files total)
 
-Create these files based on the templates in this skill:
+All seven reference web destinations (gtag, meta, snowplow, plausible, piwikpro,
+api, demo) use exactly three files in `src/examples/`. Match this structure — no
+`events.ts`, `outputs.ts`, or standalone `mapping.ts`.
 
-| File                  | Purpose                              | Template                            |
-| --------------------- | ------------------------------------ | ----------------------------------- |
-| `examples/outputs.ts` | Vendor API calls we will make        | [outputs.ts](./examples/outputs.ts) |
-| `examples/events.ts`  | walkerOS events that trigger outputs | [events.ts](./examples/events.ts)   |
-| `examples/env.ts`     | Mock environment for testing         | [env.ts](./examples/env.ts)         |
-| `examples/mapping.ts` | Default event transformation         | [mapping.ts](./examples/mapping.ts) |
+| File                | Purpose                                                           |
+| ------------------- | ----------------------------------------------------------------- |
+| `examples/env.ts`   | Mock environment for testing (no real network calls)              |
+| `examples/step.ts`  | `Flow.StepExample` entries with `in` / `out` / `mapping?` triples |
+| `examples/index.ts` | Barrel exports: `env` and `step`                                  |
 
-### 3.3 Step Examples
+The `step.ts` file embeds the input event, the mapping config, and the expected
+vendor output together in one `Flow.StepExample` — subsuming what older skills
+described as separate `events.ts` / `outputs.ts` / `mapping.ts` files.
 
-Add step examples with `{ in, out }` pairs for end-to-end step testing:
+### 3.3 Typing Rules (strict)
 
-| File               | Purpose                         | Status |
-| ------------------ | ------------------------------- | ------ |
-| `examples/step.ts` | Step examples with in/out pairs | NEW    |
+**No `any`.** Every example value must be explicitly typed.
+
+- **Inputs** use `WalkerOS.Event` (via `getEvent()` from `@walkeros/core`) —
+  never hand-roll event literals.
+- **Outputs** use **vendor SDK types** imported from the official package
+  whenever the vendor publishes them. Do not invent local output types for
+  payloads the vendor already types (e.g. use Meta Pixel's `fbq` argument types,
+  not a local `FbqCall` interface).
+- **Step entries** are typed `Flow.StepExample` from `@walkeros/core`.
+- **Mock env** is typed against the destination's local `Env` type from
+  `../types`. No `as any`, no untyped `{}`.
+- Vendor SDK types come from the SDK you installed in Phase 1 — reuse them
+  rather than duplicating shapes.
+
+### 3.4 Code Template — `examples/step.ts`
 
 ```typescript
-// examples/step.ts
-export const step = {
-  purchase: {
-    in: {
-      name: 'order complete',
-      data: { id: 'ORD-123', total: 149.97, currency: 'EUR' },
+import type { Flow, WalkerOS } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
+
+// One step example per supported feature / setting.
+// `in`  is a WalkerOS.Event (use getEvent for deterministic fixtures).
+// `out` is the vendor-specific call we expect the destination to produce —
+//       typed against the vendor SDK's published types where available.
+// `mapping` is the mapping rule under test (optional — omit for default push).
+
+export const purchase: Flow.StepExample = {
+  in: getEvent('order complete', { timestamp: 1700000100 }),
+  mapping: {
+    name: 'purchase',
+    data: {
+      map: {
+        transaction_id: 'data.id',
+        value: 'data.total',
+        currency: { key: 'data.currency', value: 'EUR' },
+      },
     },
-    out: [
-      'event',
-      'purchase',
-      { transaction_id: 'ORD-123', value: 149.97, currency: 'EUR' },
-    ],
   },
+  out: [
+    'event',
+    'purchase',
+    {
+      transaction_id: '0rd3r1d',
+      value: 555,
+      currency: 'EUR',
+    },
+  ],
+};
+
+export const pageView: Flow.StepExample = {
+  in: getEvent('page view', { timestamp: 1700000102 }),
+  mapping: undefined,
+  out: ['event', 'page_view', { send_to: 'G-XXXXXX-1' }],
 };
 ```
 
-For destinations, `in` is a walkerOS event and `out` is vendor-specific (gtag
-args, API payload, pixel call). See
-[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
-Type Zones.
+For destinations, the Three Type Zones collapse to:
 
-### 3.4 Export via dev.ts
+- `in` = walkerOS event (`WalkerOS.Event`)
+- `out` = vendor output (typed against vendor SDK)
+- `mapping` = rule under test (optional)
+
+### 3.5 `examples/index.ts` (barrel)
+
+```typescript
+export * as env from './env';
+export * as step from './step';
+```
+
+### 3.6 `examples/env.ts`
+
+Mock the vendor SDK surface and any DOM touchpoints. Never reach real network,
+real cookies, or real globals. Type the exports against your local `Env`:
+
+```typescript
+import type { Env } from '../types';
+
+export const init: Env | undefined = {
+  /* pre-init state (vendor SDK not yet loaded) */
+};
+
+export const push: Env = {
+  /* post-init state used for push() tests */
+};
+```
+
+### 3.7 Test Fixture Contract (hard rule)
+
+The examples authored here **are** the Phase 8 test fixtures. No parallel
+fixtures allowed.
+
+- `src/index.test.ts` (or `src/__tests__/stepExamples.test.ts`) **MUST** iterate
+  examples via `it.each(Object.entries(examples.step))`.
+- Tests **must NOT** contain hardcoded payloads, vendor configs, or expected
+  outputs.
+- If a test needs a value that is not in `examples.step`, **add it to `step.ts`
+  first**, then consume it from the test. Never inline test data.
+- The only per-test setup allowed is deriving destination `settings` from the
+  example's `mapping.settings` (e.g. enabling the right sub-tool).
+
+See `packages/web/destinations/gtag/src/__tests__/stepExamples.test.ts` for a
+canonical reference.
+
+### 3.8 Export via `dev.ts`
 
 ```typescript
 export * as schemas from './schemas';
 export * as examples from './examples';
 ```
 
-### Gate: Examples Valid
+### Phase 3 Acceptance Checklist
 
-- [ ] All example files compile (`npm run build`)
-- [ ] Can trace: input event → expected output for each example
-- [ ] Examples are complete enough to serve as test fixtures for Phase 8
+- [ ] `src/examples/env.ts` — mock env, no real network, typed against local
+      `Env`
+- [ ] `src/examples/step.ts` — one `Flow.StepExample` per supported feature /
+      setting, typed `in` / `out` / `mapping?`
+- [ ] `src/examples/index.ts` — barrel exports `env` and `step`
+- [ ] No standalone `events.ts`, `outputs.ts`, or `mapping.ts` files
+- [ ] All vendor SDK types imported from the official package — no `any`, no
+      reinvented local output types
+- [ ] `src/index.test.ts` (or `__tests__/stepExamples.test.ts`) iterates
+      `examples.step` via `it.each(Object.entries(...))`
+- [ ] Tests contain zero hardcoded payloads / vendor configs / expected outputs
+      — everything flows from `examples.step`
+- [ ] `npm run build` passes — examples compile against published types
+- [ ] Each example traces: `in` → apply `mapping` → matches `out`
 
 ---
 
@@ -240,25 +339,26 @@ export * as examples from './examples';
 
 **Goal:** Document transformation from walkerOS events to vendor format.
 
-Use [mapping.ts](./examples/mapping.ts) as your template.
+Mapping rules live **inside** each `Flow.StepExample` entry in `step.ts` — no
+separate `mapping.ts` file. Each step example embeds the exact mapping rule
+under test alongside its `in` event and expected `out` output.
 
 ### Verify Mapping Logic
 
-Create a mental (or actual) trace:
+For each entry in `step.ts`, trace:
 
 ```
-Input: events.pageView
-  ↓ Apply mapping
-  ↓ page.view rule matches
-  ↓ name: 'pageview'
-  ↓ data.path → url, data.title → title
-Output: Should match outputs.pageViewCall
+Input: examples.step.purchase.in     (WalkerOS.Event)
+  ↓ Apply examples.step.purchase.mapping
+  ↓ name transforms, data.map applied
+Output: Should match examples.step.purchase.out
 ```
 
 ### Gate: Mapping Verified
 
-- [ ] Mapping covers: page view + at least one conversion event
-- [ ] Each mapping rule traces correctly to expected output
+- [ ] Step examples cover: page view + at least one conversion event
+- [ ] One step example per supported setting / sub-tool
+- [ ] Each `mapping` traces correctly from `in` to `out`
 
 ---
 
@@ -424,25 +524,37 @@ Use these templates as your starting point:
 
 > Tests verify implementation against the examples from Phase 3. If examples are
 > incomplete, tests will be incomplete.
+>
+> See [testing-strategy](../walkeros-testing-strategy/SKILL.md) for the shared
+> env / dev-examples conventions this phase depends on.
 
 **Verify implementation produces expected outputs.**
 
 ### Test Template
 
-Use the test template: [index.test.ts](./templates/simple/index.test.ts)
+Use the test template: [index.test.ts](./templates/simple/index.test.ts).
+Reference canonical implementation:
+`packages/web/destinations/gtag/src/__tests__/stepExamples.test.ts`.
 
 ### Key Test Patterns
 
-1. **Use `createPushContext()` helper** - Standardizes context creation
-2. **Include `id` field** - Required in context (new requirement)
-3. **Use `rule` instead of `mapping`** - Property renamed in PushContext
-4. **Use examples for test data** - Don't hardcode test values
-5. **Use `it.each` with step examples** - Iterate `examples.step` for coverage
+1. **`it.each(Object.entries(examples.step))` is mandatory** — one iteration per
+   step example. Do not write per-feature tests with hand-rolled payloads.
+2. **Use `createPushContext()` helper** — standardizes context creation.
+3. **Include `id` field** — required in context.
+4. **Use `rule` instead of `mapping`** — property renamed in `PushContext`.
+5. **Zero hardcoded payloads** — every input, vendor config, and expected output
+   comes from `examples.step` or `examples.env`. If you need something new, add
+   it to examples first.
+6. **Clone env per test** — `clone(examples.env.push)` so vendor mocks don't
+   leak across iterations.
 
 ### Gate: Tests Pass
 
 - [ ] `npm run test` passes
-- [ ] Tests verify against example outputs (not hardcoded values)
+- [ ] Tests iterate via `it.each(Object.entries(examples.step))`
+- [ ] Tests contain no hardcoded payloads, vendor configs, or expected outputs
+- [ ] Every assertion reads from `examples.step[...].out`
 
 ---
 
@@ -491,7 +603,9 @@ requirements (build, test, lint, no `any`):
 
 - [understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
   Destination interface and env pattern
-- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - Testing with env
-  mocking
+- [using-step-examples](../walkeros-using-step-examples/SKILL.md) —
+  Authoritative `Flow.StepExample` pattern and Three Type Zones
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) — Testing with env
+  mocking and dev-examples-as-fixtures conventions
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
   Documentation standards

@@ -2,10 +2,12 @@ import type { Collector, WalkerOS } from '@walkeros/core';
 import {
   getId,
   getMarketingParameters,
+  type ClickIdEntry,
   type MarketingParameters,
 } from '@walkeros/core';
 
 export interface SessionWindowConfig {
+  clickIds?: ClickIdEntry[];
   data?: WalkerOS.Properties;
   domains?: string[];
   isStart?: boolean;
@@ -43,7 +45,11 @@ export function sessionWindow(
   const referrer = ref && new URL(ref).hostname;
 
   // Marketing
-  const marketing = getMarketingParameters(url, config.parameters);
+  const marketing = getMarketingParameters(
+    url,
+    config.parameters,
+    config.clickIds,
+  );
   if (Object.keys(marketing).length) {
     // Check for marketing parameters like UTM and add existing
     if (!marketing.marketing)
