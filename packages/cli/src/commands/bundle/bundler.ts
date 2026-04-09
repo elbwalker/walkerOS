@@ -1660,6 +1660,74 @@ const __configData = ${dataPayload};
 }
 
 /**
+ * Generate a stage 2 entry file for wrapping an ALREADY-embedded skeleton.
+ *
+ * Unlike `generateWebEntry`, this variant imports `__configData` from the
+ * skeleton (instead of inlining a `dataPayload` string). Used by the
+ * publish-time `wrapSkeleton` helper, which runs on a stage 1 skeleton
+ * produced via `bundle({ skipWrapper: true })` — those skeletons already
+ * export `__configData` alongside `wireConfig` and `startFlow`.
+ */
+export function generateWrapEntry(
+  stage1Path: string,
+  options: { windowCollector?: string; windowElb?: string } = {},
+): string {
+  const assignments: string[] = [];
+  if (options.windowCollector) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
+    );
+  }
+  if (options.windowElb) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowElb}'] = elb;`,
+    );
+  }
+  const assignmentCode =
+    assignments.length > 0 ? '\n' + assignments.join('\n') : '';
+
+  return `import { startFlow, wireConfig, __configData } from '${stage1Path}';
+
+(async () => {
+  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
+})();`;
+}
+
+/**
+ * Generate a stage 2 entry file for wrapping a node skeleton.
+ *
+ * Mirrors `generateServerEntry` but imports `__configData` from the skeleton
+ * instead of inlining it. Output is a default-export factory module matching
+ * the runner contract at `runtime/load-bundle.ts:53-66`: `module.default` is
+ * an async function that takes a context and returns
+ * `{ collector, elb, httpHandler? }`.
+ */
+export function generateWrapEntryServer(stage1Path: string): string {
+  return `import { startFlow, wireConfig, __configData } from '${stage1Path}';
+
+export default async function(context = {}) {
+  const config = wireConfig(__configData);
+
+  if (context.logger) config.logger = context.logger;
+
+  if (context.sourceSettings && config.sources) {
+    for (const src of Object.values(config.sources)) {
+      if (src.config?.settings) {
+        src.config.settings = { ...src.config.settings, ...context.sourceSettings };
+      }
+    }
+  }
+
+  const result = await startFlow(config);
+
+  const httpSource = Object.values(result.collector.sources || {})
+    .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
+
+  return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
+}`;
+}
+
+/**
  * Process config value for serialization.
  * Handles $code: prefix to output raw JavaScript instead of quoted strings.
  */
