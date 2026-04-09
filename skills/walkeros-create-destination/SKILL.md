@@ -260,6 +260,14 @@ export const pageView: Flow.StepExample = {
   mapping: undefined,
   out: ['event', 'page_view', { send_to: 'G-XXXXXX-1' }],
 };
+
+// For destinations that handle consent updates, use the command field
+// to route `in` through elb('walker consent', in) instead of an event push:
+export const consentGranted: Flow.StepExample = {
+  command: 'consent',
+  in: { marketing: true, functional: true },
+  out: ['consent', 'update', { ad_storage: 'granted' }],
+};
 ```
 
 For destinations, the Three Type Zones collapse to:
@@ -512,6 +520,8 @@ Use these templates as your starting point:
 7. **Consent two-layer**: `config.consent` gates walkerOS event delivery.
    `on('consent')` controls vendor SDK internals (opt-out, pause capture, etc.).
    Both needed for complete consent compliance.
+   - For step-example tests, use `command: 'consent'` on `Flow.StepExample` to
+     invoke the `on('consent')` handler. Do not push consent data as an event.
 
 ### Gate: Implementation Compiles
 

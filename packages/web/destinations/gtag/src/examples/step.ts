@@ -157,22 +157,15 @@ export const gtmDataLayerPush: Flow.StepExample = {
 /**
  * Consent Mode v2 with marketing + functional granted.
  *
- * This example demonstrates consent handling via the on('consent') handler,
- * not a regular event push. The default consent mapping is:
+ * Uses the `command: 'consent'` field to route `in` through the
+ * `elb('walker consent', in)` handler rather than pushing it as an event.
+ * The default consent mapping is:
  *   marketing → ad_storage, ad_user_data, ad_personalization
  *   functional → analytics_storage
- *
- * When both marketing and functional consent are granted, the gtag consent
- * update call grants all four parameters.
- *
- * Note: The `in` field contains the consent data (not a walkerOS event),
- * and the test triggers it via `elb('walker consent', data)`.
  */
 export const consentModeV2: Flow.StepExample = {
+  command: 'consent',
   in: { marketing: true, functional: true },
-  mapping: {
-    _consent: true,
-  },
   out: [
     'consent',
     'update',

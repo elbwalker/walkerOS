@@ -170,6 +170,12 @@ export const StepExampleSchema = z
       .describe('Source trigger metadata'),
     mapping: z.unknown().optional().describe('Mapping configuration'),
     out: z.unknown().optional().describe('Expected output from the step'),
+    command: z
+      .enum(['config', 'consent', 'user', 'run'])
+      .optional()
+      .describe(
+        "Invoke elb('walker <command>', in) instead of pushing in as an event",
+      ),
   })
   .describe('Named example with input/output pair');
 

@@ -77,8 +77,24 @@ Each example has a human-readable name and two fields:
 | `mapping` | object | The mapping rule applied to this event (destinations only) |
 | `out` | any | The data the step produces |
 | `out: false` | `false` | The step rejects or filters this event |
+| `command` | string | Route `in` through a walker command instead of pushing it as an event (`config`, `consent`, `user`, `run`) |
 
 For destinations, the optional `mapping` field captures the mapping rule that transforms the walkerOS event into the vendor-specific output. This ties the example to a specific mapping configuration, so tests and simulations can register it dynamically as `{ [entity]: { [action]: example.mapping } }`.
+
+### Command examples
+
+Some destinations need to react to walker commands (consent updates, user identification, run state) rather than events. Set the `command` field on a step example so the test runner invokes `elb('walker <command>', in)` instead of pushing `in` as a regular event:
+
+<CodeSnippet
+  code={`{
+  "command": "consent",
+  "in": { "marketing": true, "functional": true },
+  "out": ["consent", "update", { "ad_storage": "granted", "analytics_storage": "granted" }]
+}`}
+  language="json"
+/>
+
+Supported commands: \`config\`, \`consent\`, \`user\`, \`run\`. When `command` is set, `mapping` is ignored — commands don't flow through event mapping. See the [walkeros-using-step-examples skill](https://github.com/elbwalker/walkerOS/blob/main/skills/walkeros-using-step-examples/SKILL.md#command-step-example) for the full test-runner pattern.
 
 You can add as many named examples as you need. Each name becomes addressable from the CLI with `--example`.
 

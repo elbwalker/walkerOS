@@ -441,9 +441,29 @@ export interface Settings {
 }
 
 /**
+ * Walker command names that a step example can invoke instead of pushing
+ * its `in` as a regular event. Mirrors the `elb('walker <command>', ...)`
+ * surface in `WalkerCommands` (see types/elb.ts).
+ *
+ * - `config` — update collector config (maps to `elb('walker config', in)`)
+ * - `consent` — update consent state (maps to `elb('walker consent', in)`)
+ * - `user` — update user identification (maps to `elb('walker user', in)`)
+ * - `run` — fire run state (maps to `elb('walker run', in)`)
+ *
+ * Note: `walker destination`, `walker hook`, and `walker on` are
+ * intentionally excluded — they configure wiring, not test data.
+ */
+export type StepCommand = 'config' | 'consent' | 'user' | 'run';
+
+/**
  * Named example pair for a step.
  * `in` is the input to the step, `out` is the expected output.
  * `out: false` indicates the step filters/drops this event.
+ *
+ * When `command` is set, the test runner invokes
+ * `elb('walker <command>', in)` instead of pushing `in` as a regular event.
+ * When `command` is absent (default), `in` is pushed as a normal event via
+ * `elb(event)`.
  */
 export interface StepExample {
   description?: string;
@@ -457,6 +477,12 @@ export interface StepExample {
   };
   mapping?: unknown;
   out?: unknown;
+  /**
+   * Invoke a walker command with `in` instead of pushing `in` as an event.
+   * When set, the test runner calls `elb('walker <command>', in)`.
+   * When absent (default), `in` is pushed as a regular event.
+   */
+  command?: StepCommand;
 }
 
 /**

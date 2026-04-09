@@ -278,8 +278,9 @@ getMarketingParameters(url, undefined, [{ param: 'xyzclid', platform: 'xyz' }]);
 ```
 
 Multi-click-ID URLs preserve every raw value, but `clickId` and `platform`
-reference the highest-priority match. See [`src/clickIds.ts`](./src/clickIds.ts)
-for the full registry and priority order.
+reference the highest-priority match. See
+[`src/getMarketingParameters.ts`](./src/getMarketingParameters.ts) for the full
+registry and priority order.
 
 ### Type Validation
 
