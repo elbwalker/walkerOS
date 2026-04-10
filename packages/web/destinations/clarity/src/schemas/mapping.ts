@@ -7,12 +7,6 @@ export const MappingSchema = z.object({
       'Per-event identity mapping. Resolves to { customId, customSessionId?, customPageId?, friendlyName? } → Clarity.identify(...).',
     )
     .optional(),
-  include: z
-    .array(z.string())
-    .describe(
-      'Overrides destination-level include for this rule. See settings.include.',
-    )
-    .optional(),
   set: z
     .unknown()
     .describe(

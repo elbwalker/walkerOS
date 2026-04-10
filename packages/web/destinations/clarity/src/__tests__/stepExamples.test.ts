@@ -57,13 +57,8 @@ describe('clarity destination — step examples', () => {
       mapping?: unknown;
       out?: unknown;
       command?: 'consent' | 'user' | 'config' | 'run';
-      /**
-       * Optional destination-level settings override supplied by the example.
-       * Merged on top of the fixed `apiKey`. Used by examples that exercise
-       * destination-level settings (e.g. destinationLevelIdentify, consent
-       * examples that need settings.consent).
-       */
       settings?: Partial<Settings>;
+      configInclude?: string[];
     };
 
     const env = clone(examples.env.push) as Env;
@@ -83,7 +78,10 @@ describe('clarity destination — step examples', () => {
       elb(
         'walker destination',
         { ...dest, env: spiedEnv },
-        { settings: baseSettings },
+        {
+          include: example.configInclude,
+          settings: baseSettings,
+        },
       );
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
@@ -98,6 +96,7 @@ describe('clarity destination — step examples', () => {
         'walker destination',
         { ...dest, env: spiedEnv },
         {
+          include: example.configInclude,
           settings: baseSettings,
           mapping: mappingConfig,
         },

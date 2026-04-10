@@ -81,11 +81,18 @@ export async function wrapSkeleton(
     minifyOptions,
   } = options;
 
-  if (options.previewScope && !/^[a-zA-Z0-9_-]{1,64}$/.test(options.previewScope)) {
-    throw new Error(`Invalid previewScope "${options.previewScope}". Must match /^[a-zA-Z0-9_-]{1,64}$/.`);
+  if (
+    options.previewScope &&
+    !/^[a-zA-Z0-9_-]{1,64}$/.test(options.previewScope)
+  ) {
+    throw new Error(
+      `Invalid previewScope "${options.previewScope}". Must match /^[a-zA-Z0-9_-]{1,64}$/.`,
+    );
   }
   if (options.previewOrigin && !/^[a-z0-9.-]+$/.test(options.previewOrigin)) {
-    throw new Error(`Invalid previewOrigin "${options.previewOrigin}". Must be a bare hostname matching /^[a-z0-9.-]+$/.`);
+    throw new Error(
+      `Invalid previewOrigin "${options.previewOrigin}". Must be a bare hostname matching /^[a-z0-9.-]+$/.`,
+    );
   }
 
   if (!(await fs.pathExists(skeletonPath))) {
@@ -100,8 +107,12 @@ export async function wrapSkeleton(
       ? generateWrapEntry(absoluteSkeletonPath, {
           ...(windowCollector ? { windowCollector } : {}),
           ...(windowElb ? { windowElb } : {}),
-          ...(options.previewOrigin ? { previewOrigin: options.previewOrigin } : {}),
-          ...(options.previewScope ? { previewScope: options.previewScope } : {}),
+          ...(options.previewOrigin
+            ? { previewOrigin: options.previewOrigin }
+            : {}),
+          ...(options.previewScope
+            ? { previewScope: options.previewScope }
+            : {}),
         })
       : generateWrapEntryServer(absoluteSkeletonPath);
 

@@ -4,7 +4,8 @@
 
 Add preview mode preflight to web bundles
 
-- `WrapSkeletonOptions` accepts optional `previewOrigin` and `previewScope` fields
+- `WrapSkeletonOptions` accepts optional `previewOrigin` and `previewScope`
+  fields
 - `generateWrapEntry` injects a preflight snippet before `startFlow` when both
   are set: checks `?elbPreview` param / cookie, loads preview bundle from
   `{previewOrigin}/preview/{previewScope}/walker.{token}.js`, skips production

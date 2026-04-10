@@ -5,12 +5,12 @@ import type { Settings } from '../types';
 /**
  * Examples may optionally override destination-level settings for a test.
  * The test runner reads `settings` from the example and merges it into the
- * base destination settings (on top of the fixed `apiKey`). Used by examples
- * that exercise destination-level `settings.identify` / `settings.include`,
- * and by `command: 'consent'` examples that need `settings.consent` set.
+ * base destination settings (on top of the fixed `apiKey`). `configInclude`
+ * is passed as config-level include when registering the destination.
  */
 export type ClarityStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
+  configInclude?: string[];
 };
 
 /**
@@ -164,9 +164,7 @@ export const orderCompleteUpgrade: ClarityStepExample = {
 export const orderCompleteInclude: ClarityStepExample = {
   in: getEvent('order complete', { timestamp: 1700000107 }),
   mapping: {
-    settings: {
-      include: ['data'],
-    },
+    include: ['data'],
   },
   out: [
     ['clarity.setTag', 'data_id', '0rd3r1d'],

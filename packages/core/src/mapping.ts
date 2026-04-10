@@ -293,8 +293,11 @@ export async function processEventMapping<
     if (Object.keys(includeData).length > 0) {
       // Include is the bottom layer — data wins on key conflict.
       data = isObject(data)
-        ? (assign(includeData, data as Record<string, unknown>) as unknown as WalkerOS.Property)
-        : data ?? (includeData as unknown as WalkerOS.Property);
+        ? (assign(
+            includeData,
+            data as Record<string, unknown>,
+          ) as unknown as WalkerOS.Property)
+        : (data ?? (includeData as unknown as WalkerOS.Property));
     }
   }
 

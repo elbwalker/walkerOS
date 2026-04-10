@@ -13,12 +13,6 @@ export const SettingsSchema = z.object({
       'Translation table from walkerOS consent keys to Clarity ConsentV2 categories. Example: { "analytics": "analytics_Storage", "marketing": "ad_Storage" }. Required to get meaningful consent behavior — Clarity expects its own category names.',
     )
     .optional(),
-  include: z
-    .array(z.string())
-    .describe(
-      'walkerOS event sections to forward as Clarity custom tags. Values: "data", "globals", "context", "user", "source", "version", "event", "all". Each section is flattened with a prefix (e.g. data → data_*).',
-    )
-    .optional(),
   identify: z
     .unknown()
     .describe(

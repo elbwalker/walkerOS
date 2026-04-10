@@ -26,9 +26,7 @@ export function flattenIncludeSections(
   sections: string[],
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  const effective = sections.includes('all')
-    ? Object.keys(SECTIONS)
-    : sections;
+  const effective = sections.includes('all') ? Object.keys(SECTIONS) : sections;
 
   for (const section of effective) {
     const picker = SECTIONS[section];

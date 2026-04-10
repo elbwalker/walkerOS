@@ -16,22 +16,6 @@ function getClarity(env: Env | undefined): ClaritySDK {
   return env?.clarity ?? (Clarity as unknown as ClaritySDK);
 }
 
-const INCLUDE_SECTIONS: Record<string, (e: WalkerOS.Event) => unknown> = {
-  data: (e) => e.data,
-  globals: (e) => e.globals,
-  context: (e) => e.context,
-  user: (e) => e.user,
-  source: (e) => e.source,
-  version: (e) => e.version,
-  event: (e) => ({
-    entity: e.entity,
-    action: e.action,
-    id: e.id,
-    timestamp: e.timestamp,
-    name: e.name,
-  }),
-};
-
 function coerceTagValue(value: unknown): string | string[] | undefined {
   if (value == null || value === '') return undefined;
   if (Array.isArray(value)) return value.map(String);
@@ -45,25 +29,6 @@ function emitTag(clarity: ClaritySDK, key: string, raw: unknown): void {
   const value = coerceTagValue(raw);
   if (value === undefined) return;
   clarity.setTag(key, value);
-}
-
-function setIncludeTags(
-  event: WalkerOS.Event,
-  sections: string[],
-  clarity: ClaritySDK,
-): void {
-  const effective = sections.includes('all')
-    ? Object.keys(INCLUDE_SECTIONS)
-    : sections;
-  for (const section of effective) {
-    const picker = INCLUDE_SECTIONS[section];
-    if (!picker) continue;
-    const bag = picker(event);
-    if (!isObject(bag)) continue;
-    for (const [key, raw] of Object.entries(bag)) {
-      emitTag(clarity, `${section}_${key}`, raw);
-    }
-  }
 }
 
 /**
@@ -103,7 +68,7 @@ export const destinationClarity: Destination = {
     return config;
   },
 
-  async push(event, { config, rule, env }) {
+  async push(event, { config, rule, env, data }) {
     const clarity = getClarity(env as Env | undefined);
     const settings = (config.settings || {}) as Partial<Settings>;
     const mappingSettings = (rule?.settings || {}) as Mapping;
@@ -134,10 +99,13 @@ export const destinationClarity: Destination = {
       }
     }
 
-    // 2. Include tags — rule-level override → destination-level → none
-    const includeSections = mappingSettings.include ?? settings.include ?? [];
-    if (includeSections.length > 0) {
-      setIncludeTags(event, includeSections, clarity);
+    // 2. Include tags — pre-flattened by core into context.data
+    if (isObject(data)) {
+      for (const [key, raw] of Object.entries(
+        data as Record<string, unknown>,
+      )) {
+        emitTag(clarity, key, raw);
+      }
     }
 
     // 3. Explicit tags via mapping.settings.set

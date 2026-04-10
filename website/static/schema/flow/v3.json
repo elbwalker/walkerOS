@@ -111,9 +111,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "push"
-                      ],
+                      "required": ["push"],
                       "additionalProperties": false,
                       "description": "Inline code for custom sources/transformers/destinations"
                     }
@@ -213,12 +211,7 @@
                       "command": {
                         "description": "Invoke elb('walker <command>', in) instead of pushing in as an event",
                         "type": "string",
-                        "enum": [
-                          "config",
-                          "consent",
-                          "user",
-                          "run"
-                        ]
+                        "enum": ["config", "consent", "user", "run"]
                       }
                     },
                     "additionalProperties": false,
@@ -279,19 +272,13 @@
                             }
                           }
                         },
-                        "required": [
-                          "match",
-                          "key",
-                          "ttl"
-                        ],
+                        "required": ["match", "key", "ttl"],
                         "additionalProperties": false
                       },
                       "description": "Cache rules — at least one required"
                     }
                   },
-                  "required": [
-                    "rules"
-                  ],
+                  "required": ["rules"],
                   "additionalProperties": false
                 }
               },
@@ -336,9 +323,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "push"
-                      ],
+                      "required": ["push"],
                       "additionalProperties": false,
                       "description": "Inline code for custom sources/transformers/destinations"
                     }
@@ -434,12 +419,7 @@
                       "command": {
                         "description": "Invoke elb('walker <command>', in) instead of pushing in as an event",
                         "type": "string",
-                        "enum": [
-                          "config",
-                          "consent",
-                          "user",
-                          "run"
-                        ]
+                        "enum": ["config", "consent", "user", "run"]
                       }
                     },
                     "additionalProperties": false,
@@ -500,19 +480,13 @@
                             }
                           }
                         },
-                        "required": [
-                          "match",
-                          "key",
-                          "ttl"
-                        ],
+                        "required": ["match", "key", "ttl"],
                         "additionalProperties": false
                       },
                       "description": "Cache rules — at least one required"
                     }
                   },
-                  "required": [
-                    "rules"
-                  ],
+                  "required": ["rules"],
                   "additionalProperties": false
                 }
               },
@@ -557,9 +531,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "push"
-                      ],
+                      "required": ["push"],
                       "additionalProperties": false,
                       "description": "Inline code for custom sources/transformers/destinations"
                     }
@@ -655,12 +627,7 @@
                       "command": {
                         "description": "Invoke elb('walker <command>', in) instead of pushing in as an event",
                         "type": "string",
-                        "enum": [
-                          "config",
-                          "consent",
-                          "user",
-                          "run"
-                        ]
+                        "enum": ["config", "consent", "user", "run"]
                       }
                     },
                     "additionalProperties": false,
@@ -721,19 +688,13 @@
                             }
                           }
                         },
-                        "required": [
-                          "match",
-                          "key",
-                          "ttl"
-                        ],
+                        "required": ["match", "key", "ttl"],
                         "additionalProperties": false
                       },
                       "description": "Cache rules — at least one required"
                     }
                   },
-                  "required": [
-                    "rules"
-                  ],
+                  "required": ["rules"],
                   "additionalProperties": false
                 }
               },
@@ -778,9 +739,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "push"
-                      ],
+                      "required": ["push"],
                       "additionalProperties": false,
                       "description": "Inline code for custom sources/transformers/destinations"
                     }
@@ -860,12 +819,7 @@
                       "command": {
                         "description": "Invoke elb('walker <command>', in) instead of pushing in as an event",
                         "type": "string",
-                        "enum": [
-                          "config",
-                          "consent",
-                          "user",
-                          "run"
-                        ]
+                        "enum": ["config", "consent", "user", "run"]
                       }
                     },
                     "additionalProperties": false,
@@ -1037,10 +991,7 @@
       }
     }
   },
-  "required": [
-    "flows",
-    "version"
-  ],
+  "required": ["flows", "version"],
   "additionalProperties": false,
   "description": "walkerOS flow configuration (walkeros.config.json)",
   "definitions": {
@@ -1079,10 +1030,7 @@
                 ]
               }
             },
-            "required": [
-              "match",
-              "next"
-            ],
+            "required": ["match", "next"],
             "additionalProperties": false
           }
         }
@@ -1116,11 +1064,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "key",
-            "operator",
-            "value"
-          ],
+          "required": ["key", "operator", "value"],
           "additionalProperties": false
         },
         {
@@ -1137,9 +1081,7 @@
               }
             }
           },
-          "required": [
-            "and"
-          ],
+          "required": ["and"],
           "additionalProperties": false
         },
         {
@@ -1156,9 +1098,7 @@
               }
             }
           },
-          "required": [
-            "or"
-          ],
+          "required": ["or"],
           "additionalProperties": false
         }
       ]

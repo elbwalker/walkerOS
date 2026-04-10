@@ -68,7 +68,9 @@ describe('Preview preflight jsdom integration', () => {
         startFlowCalled = true;
         return Promise.resolve({ collector: {}, elb: () => {} });
       };
-      (win as unknown as Record<string, unknown>).__mockWireConfig = (d: unknown) => d;
+      (win as unknown as Record<string, unknown>).__mockWireConfig = (
+        d: unknown,
+      ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
 
       const script = win.document.createElement('script');
@@ -103,7 +105,9 @@ describe('Preview preflight jsdom integration', () => {
         startFlowCalled = true;
         return Promise.resolve({ collector: {}, elb: () => {} });
       };
-      (win as unknown as Record<string, unknown>).__mockWireConfig = (d: unknown) => d;
+      (win as unknown as Record<string, unknown>).__mockWireConfig = (
+        d: unknown,
+      ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
 
       const script = win.document.createElement('script');
@@ -148,7 +152,9 @@ describe('Preview preflight jsdom integration', () => {
         startFlowCalled = true;
         return Promise.resolve({ collector: {}, elb: () => {} });
       };
-      (win as unknown as Record<string, unknown>).__mockWireConfig = (d: unknown) => d;
+      (win as unknown as Record<string, unknown>).__mockWireConfig = (
+        d: unknown,
+      ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
 
       const script = win.document.createElement('script');
@@ -184,7 +190,9 @@ describe('Preview preflight jsdom integration', () => {
         startFlowCalled = true;
         return Promise.resolve({ collector: {}, elb: () => {} });
       };
-      (win as unknown as Record<string, unknown>).__mockWireConfig = (d: unknown) => d;
+      (win as unknown as Record<string, unknown>).__mockWireConfig = (
+        d: unknown,
+      ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
 
       const script = win.document.createElement('script');
@@ -211,7 +219,9 @@ describe('Preview preflight jsdom integration', () => {
         windowElb: 'elb',
       });
 
-      const dom = createDom('https://example.com/page?elbPreview=sometoken12345678901');
+      const dom = createDom(
+        'https://example.com/page?elbPreview=sometoken12345678901',
+      );
       const win = dom.window;
 
       let startFlowCalled = false;
@@ -219,7 +229,9 @@ describe('Preview preflight jsdom integration', () => {
         startFlowCalled = true;
         return Promise.resolve({ collector: {}, elb: () => {} });
       };
-      (win as unknown as Record<string, unknown>).__mockWireConfig = (d: unknown) => d;
+      (win as unknown as Record<string, unknown>).__mockWireConfig = (
+        d: unknown,
+      ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
 
       const script = win.document.createElement('script');

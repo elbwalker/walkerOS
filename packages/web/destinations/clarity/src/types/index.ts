@@ -10,13 +10,11 @@ import type { DestinationWeb } from '@walkeros/web-core';
  * apiKey is the Clarity project ID (e.g. "3t0wlogvdz").
  * consent translates walkerOS consent keys to Clarity's ConsentV2 categories.
  * identify resolves to positional args for Clarity.identify(...).
- * include names walkerOS event sections to flatten into Clarity.setTag(...) calls.
  */
 export interface Settings {
   apiKey: string;
   consent?: Record<string, 'analytics_Storage' | 'ad_Storage'>;
   identify?: WalkerOSMapping.Value;
-  include?: string[];
 }
 
 export type InitSettings = Partial<Settings>;
@@ -31,7 +29,6 @@ export type InitSettings = Partial<Settings>;
  */
 export interface Mapping {
   identify?: WalkerOSMapping.Value;
-  include?: string[];
   set?: WalkerOSMapping.Value;
   upgrade?: WalkerOSMapping.Value;
 }
