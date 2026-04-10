@@ -1,15 +1,13 @@
 import type { WalkerOS, Logger } from '@walkeros/core';
-import type { GA4Settings, GA4Mapping, Parameters } from '../types';
+import type { GA4Settings, Parameters } from '../types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
-import { getParamsInclude } from '../shared/parameters';
 import { normalizeEventName } from '../shared/mapping';
 import { getEnv } from '@walkeros/web-core';
 
 export function pushGA4Event(
   event: WalkerOS.Event,
   settings: GA4Settings,
-  mapping: GA4Mapping = {},
   data: WalkerOS.AnyObject,
   env: DestinationWeb.Env | undefined,
   logger: Logger.Instance,
@@ -19,18 +17,9 @@ export function pushGA4Event(
   if (!settings.measurementId)
     logger.throw('Config settings ga4.measurementId missing');
 
-  const eventData = isObject(data) ? data : {};
-
-  const paramsInclude = getParamsInclude(
-    event,
-    // Add data to include by default
-    mapping.include || settings.include || ['data'],
-  );
-
-  const eventParams: Parameters = {
-    ...paramsInclude,
-    ...eventData,
-  };
+  const eventParams: Parameters = isObject(data)
+    ? { ...(data as Record<string, unknown>) }
+    : {};
 
   // Event name (snake_case default)
   let eventName = event.name; // Assume custom mapped name

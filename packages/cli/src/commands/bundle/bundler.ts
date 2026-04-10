@@ -1670,7 +1670,12 @@ const __configData = ${dataPayload};
  */
 export function generateWrapEntry(
   stage1Path: string,
-  options: { windowCollector?: string; windowElb?: string } = {},
+  options: {
+    windowCollector?: string;
+    windowElb?: string;
+    previewOrigin?: string;
+    previewScope?: string;
+  } = {},
 ): string {
   const assignments: string[] = [];
   if (options.windowCollector) {
@@ -1686,9 +1691,43 @@ export function generateWrapEntry(
   const assignmentCode =
     assignments.length > 0 ? '\n' + assignments.join('\n') : '';
 
+  const hasPreview = !!(options.previewOrigin && options.previewScope);
+  const previewOriginLiteral = JSON.stringify(options.previewOrigin ?? '');
+  const previewScopeLiteral = JSON.stringify(options.previewScope ?? '');
+
+  const preflightBlock = hasPreview
+    ? `
+  // --- Preview mode preflight ---
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    var __previewOrigin = ${previewOriginLiteral};
+    var __previewScope = ${previewScopeLiteral};
+    var __params = new URLSearchParams(location.search);
+    var __tokens = __params.getAll('elbPreview');
+    var __param = __tokens.length > 0 ? __tokens[__tokens.length - 1] : null;
+    var __secure = location.protocol === 'https:' ? '; Secure' : '';
+
+    if (__param === 'off') {
+      document.cookie = 'elbPreview=; path=/; max-age=0; SameSite=Lax' + __secure;
+    } else if (__param && /^[a-zA-Z0-9_-]{21}$/.test(__param)) {
+      document.cookie = 'elbPreview=' + __param + '; path=/; max-age=604800; SameSite=Lax' + __secure;
+    }
+
+    var __match = /(?:^|; )elbPreview=([^;]+)/.exec(document.cookie);
+    var __token = __match && __match[1];
+    if (__token && /^[a-zA-Z0-9_-]{21}$/.test(__token)) {
+      var __s = document.createElement('script');
+      __s.src = 'https://' + __previewOrigin + '/preview/' + __previewScope + '/walker.' + __token + '.js';
+      document.head.appendChild(__s);
+      return;
+    }
+  }
+  // --- End preview mode preflight ---
+`
+    : '';
+
   return `import { startFlow, wireConfig, __configData } from '${stage1Path}';
 
-(async () => {
+(async () => {${preflightBlock}
   const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
 })();`;
 }

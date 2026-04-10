@@ -7,6 +7,7 @@ import type { Collector, Destination, WalkerOS } from '.';
 export interface Config<T = unknown> {
   consent?: WalkerOS.Consent; // Required consent to process events
   data?: Value | Values; // Global data transformation
+  include?: string[]; // Event sections to flatten into context.data
   mapping?: Rules<Rule<T>>; // Event-specific mapping rules
   policy?: Policy; // Pre-processing rules
 }
@@ -30,6 +31,7 @@ export interface Rule<Settings = unknown> {
   consent?: WalkerOS.Consent; // Required consent states process the event
   settings?: Settings; // Arbitrary but protected configurations for custom event config
   data?: Data; // Mapping of event data
+  include?: string[]; // Event sections to flatten into context.data
   ignore?: boolean; // Choose to no process an event when set to true
   skip?: boolean; // Process settings side effects, but skip destination's default push call
   name?: string; // Use a custom event name

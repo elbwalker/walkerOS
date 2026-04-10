@@ -5,11 +5,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000100 }),
   mapping: {
     name: 'purchase',
-    settings: {
-      ga4: {
-        include: ['data', 'context'],
-      },
-    },
+    include: ['data', 'context'],
     data: {
       map: {
         transaction_id: 'data.id',
@@ -56,11 +52,7 @@ export const addToCart: Flow.StepExample = {
   in: getEvent('product add', { timestamp: 1700000101 }),
   mapping: {
     name: 'add_to_cart',
-    settings: {
-      ga4: {
-        include: ['data'],
-      },
-    },
+    include: ['data'],
     data: {
       map: {
         currency: { value: 'EUR', key: 'data.currency' },
@@ -186,11 +178,7 @@ export const consentModeV2: Flow.StepExample = {
 export const ga4WithIncludeAll: Flow.StepExample = {
   in: getEvent('page view', { timestamp: 1700000106 }),
   mapping: {
-    settings: {
-      ga4: {
-        include: ['all'],
-      },
-    },
+    include: ['all'],
   },
   out: [
     'event',
@@ -240,8 +228,9 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000107 }),
   mapping: {
     name: 'purchase',
+    include: ['data'],
     settings: {
-      ga4: { include: ['data'] },
+      ga4: {},
       ads: { label: 'PURCHASE_CONV' },
       gtm: {},
     },

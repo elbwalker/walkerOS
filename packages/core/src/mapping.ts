@@ -5,6 +5,7 @@ import { castToProperty } from './property';
 import { tryCatchAsync } from './tryCatch';
 import { getGrantedConsent } from './consent';
 import { assign } from './assign';
+import { flattenIncludeSections } from './include';
 
 /**
  * Gets the mapping for an event.
@@ -282,6 +283,18 @@ export async function processEventMapping<
         isObject(data) && isObject(dataEvent) // Only merge objects
           ? assign(data, dataEvent)
           : dataEvent;
+    }
+  }
+
+  // Include: flatten event sections into data. Rule-level replaces config-level.
+  const effectiveInclude = eventMapping?.include ?? config.include;
+  if (effectiveInclude && effectiveInclude.length > 0) {
+    const includeData = flattenIncludeSections(event, effectiveInclude);
+    if (Object.keys(includeData).length > 0) {
+      // Include is the bottom layer — data wins on key conflict.
+      data = isObject(data)
+        ? (assign(includeData, data as Record<string, unknown>) as unknown as WalkerOS.Property)
+        : data ?? (includeData as unknown as WalkerOS.Property);
     }
   }
 

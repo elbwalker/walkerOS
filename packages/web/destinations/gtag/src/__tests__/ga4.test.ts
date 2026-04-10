@@ -93,14 +93,14 @@ describe('GA4 Implementation', () => {
       const logger = createThrowingLogger();
 
       expect(() =>
-        pushGA4Event(mockEvent, settings, {}, {}, mockEnv, logger),
+        pushGA4Event(mockEvent, settings, {}, mockEnv, logger),
       ).toThrow('Config settings ga4.measurementId missing');
     });
 
     it('should push event with snake_case name by default', () => {
       const settings: GA4Settings = { measurementId: 'G-TEST123' };
 
-      pushGA4Event(mockEvent, settings, {}, { value: 123.45 }, mockEnv);
+      pushGA4Event(mockEvent, settings, { value: 123.45 }, mockEnv);
 
       expect(mockGtag).toHaveBeenCalledWith(
         'event',
@@ -118,7 +118,6 @@ describe('GA4 Implementation', () => {
       pushGA4Event(
         mockEvent,
         settings,
-        {},
         { price: 99.99, currency: 'USD' },
         mockEnv,
       );
@@ -140,7 +139,7 @@ describe('GA4 Implementation', () => {
         debug: true,
       };
 
-      pushGA4Event(mockEvent, settings, {}, {}, mockEnv);
+      pushGA4Event(mockEvent, settings, {}, mockEnv);
 
       expect(mockGtag).toHaveBeenCalledWith(
         'event',
@@ -158,7 +157,7 @@ describe('GA4 Implementation', () => {
         snakeCase: false,
       };
 
-      pushGA4Event(mockEvent, settings, {}, {}, mockEnv);
+      pushGA4Event(mockEvent, settings, {}, mockEnv);
 
       expect(mockGtag).toHaveBeenCalledWith(
         'event',

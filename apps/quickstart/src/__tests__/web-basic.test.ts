@@ -82,10 +82,8 @@ describe('walkerOS Web Basic Example', () => {
               order: {
                 complete: {
                   name: 'purchase',
+                  include: ['data'],
                   settings: {
-                    ga4: {
-                      include: ['data'],
-                    },
                     ads: {},
                   },
                   data: {
@@ -150,11 +148,15 @@ describe('walkerOS Web Basic Example', () => {
         currency: 'EUR',
       }),
     );
-    expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: 'AW-XXXXXXXXX/purchase',
-      currency: 'EUR',
-      transaction_id: '0rd3r1d',
-      value: 555,
-    });
+    expect(mockGtag).toHaveBeenCalledWith(
+      'event',
+      'conversion',
+      expect.objectContaining({
+        send_to: 'AW-XXXXXXXXX/purchase',
+        currency: 'EUR',
+        transaction_id: '0rd3r1d',
+        value: 555,
+      }),
+    );
   });
 });

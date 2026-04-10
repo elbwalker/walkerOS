@@ -87,7 +87,7 @@ export const destinationGtag: Destination = {
 
     // Push to GA4 if configured
     if (ga4?.measurementId) {
-      pushGA4Event(event, ga4, eventMapping.ga4, ga4Data, env, logger);
+      pushGA4Event(event, ga4, ga4Data, env, logger);
     }
 
     // @TODO: Fix condition - should check for rule.settings?.ads?.label || rule.name
