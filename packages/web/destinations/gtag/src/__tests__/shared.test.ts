@@ -1,5 +1,4 @@
 import { addScript, initializeGtag, resetLoadedScripts } from '../shared/gtag';
-import { getParamsInclude } from '../shared/parameters';
 import { normalizeEventName, getData } from '../shared/mapping';
 
 // Setup DOM mocks
@@ -86,60 +85,6 @@ describe('Shared Utilities', () => {
       initializeGtag(window);
 
       expect((window as any).gtag).toBe(existingGtag);
-    });
-  });
-
-  describe('getParamsInclude', () => {
-    const mockEvent = {
-      id: 'event-id',
-      timing: 123,
-      trigger: 'manual',
-      entity: 'product',
-      action: 'view',
-      data: { id: 'product-1', name: 'Test Product' },
-      context: { page: ['home'] },
-      user: { id: 'user-1' },
-    };
-
-    it('should include specified groups', () => {
-      const result = getParamsInclude(mockEvent as any, ['data', 'user']);
-
-      expect(result).toEqual({
-        data_id: 'product-1',
-        data_name: 'Test Product',
-        user_id: 'user-1',
-      });
-    });
-
-    it('should include event properties when event group specified', () => {
-      const result = getParamsInclude(mockEvent as any, ['event']);
-
-      expect(result).toEqual({
-        event_id: 'event-id',
-        event_timing: 123,
-        event_trigger: 'manual',
-        event_entity: 'product',
-        event_action: 'view',
-        event_group: undefined,
-        event_count: undefined,
-      });
-    });
-
-    it('should handle context properties correctly', () => {
-      const result = getParamsInclude(mockEvent as any, ['context']);
-
-      expect(result).toEqual({
-        context_page: 'home',
-      });
-    });
-
-    it('should expand "all" to all groups', () => {
-      const result = getParamsInclude(mockEvent as any, ['all']);
-
-      expect(result).toHaveProperty('data_id');
-      expect(result).toHaveProperty('user_id');
-      expect(result).toHaveProperty('context_page');
-      expect(result).toHaveProperty('event_id');
     });
   });
 

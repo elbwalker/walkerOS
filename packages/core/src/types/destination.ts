@@ -82,6 +82,8 @@ export interface Config<T extends TypesGeneric = Types> {
   settings?: InitSettings<T>;
   /** Global data transformation applied to all events; result passed as context.data to push. */
   data?: WalkerOSMapping.Value | WalkerOSMapping.Values;
+  /** Event sections to flatten into context.data. */
+  include?: string[];
   /** Runtime dependencies merged from code and config env; extensible per destination. */
   env?: Env<T>;
   /** Destination identifier; auto-generated if not provided. */

@@ -1,0 +1,77 @@
+{
+  "name": "@walkeros/web-destination-clarity",
+  "description": "Microsoft Clarity web destination for walkerOS (session replay, heatmaps, smart events)",
+  "version": "3.2.0",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "import": "./dist/examples/index.mjs",
+      "require": "./dist/examples/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    }
+  },
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
+    "test": "jest",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@microsoft/clarity": "^1.0.2",
+    "@walkeros/web-core": "^3.2.0"
+  },
+  "devDependencies": {
+    "@walkeros/collector": "^3.2.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/web/destinations/clarity"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "walkerOS": {
+    "type": "destination",
+    "platform": [
+      "web"
+    ],
+    "docs": "https://www.walkeros.io/docs/destinations/web/clarity"
+  },
+  "keywords": [
+    "walkerOS",
+    "walkerOS-destination",
+    "destination",
+    "web",
+    "clarity",
+    "microsoft-clarity",
+    "session-replay",
+    "heatmap"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

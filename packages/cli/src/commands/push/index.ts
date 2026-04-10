@@ -26,16 +26,19 @@ import {
   type Platform,
 } from '../../core/index.js';
 
-import type { Logger, WalkerOS } from '@walkeros/core';
+import type { Flow, Logger, WalkerOS } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
-import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
+import {
+  loadFlowConfig,
+  loadJsonConfig,
+  loadJsonFromSource,
+} from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { NetworkCall, PushCommandOptions, PushResult } from './types.js';
 import type { PushOptions } from '../../schemas/push.js';
 import { buildOverrides, type PushOverrides } from './overrides.js';
 import { applyOverrides } from './apply-overrides.js';
-import { resolvePackageImportPath } from '../../core/package-path.js';
 import { withFlowContext } from './flow-context.js';
 import { prepareFlow } from './prepare.js';
 import { schemas } from '@walkeros/core/dev';
@@ -360,31 +363,9 @@ async function executeConfigPush(
   const platform = getPlatform(flowSettings);
 
   // Build overrides from --mock flags (simulate is handled upstream in push())
-  const overrides = buildOverrides(
-    { mock: options.mock },
-    flowSettings,
-  );
+  const overrides = buildOverrides({ mock: options.mock }, flowSettings);
 
-  // Auto-load destination /dev envs for simulated/mocked destinations
-  if (overrides.destinations) {
-    const { loadDestinationEnvs } = await import('./env-loader.js');
-    const configDir = buildOptions.configDir || process.cwd();
-    const envs = await loadDestinationEnvs(
-      flowSettings.destinations ?? {},
-      flowSettings.packages,
-      configDir,
-    );
-    for (const [destId, env] of Object.entries(envs)) {
-      if (overrides.destinations[destId] && env.push) {
-        overrides.destinations[destId].env = env.push;
-        if (env.simulation && env.simulation.length > 0) {
-          overrides.destinations[destId].simulation = env.simulation;
-        }
-      }
-    }
-  }
-
-  // Bundle to temp file
+  // Bundle to temp file (env loading moved to __devExports in the bundle)
   logger.debug('Bundling flow configuration');
   const tempDir = getTmpPath(
     undefined,
@@ -477,7 +458,15 @@ async function executeDestinationPush(
   const networkCalls: NetworkCall[] = [];
 
   return withFlowContext(
-    { esmPath, platform, logger, snapshotCode, timeout, networkCalls, asyncDrain: { timeout: 5000 } },
+    {
+      esmPath,
+      platform,
+      logger,
+      snapshotCode,
+      timeout,
+      networkCalls,
+      asyncDrain: { timeout: 5000 },
+    },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       applyOverrides(config, overrides || {});
@@ -505,6 +494,7 @@ async function executeDestinationPush(
 
 export interface SimulateSourceOptions {
   sourceId: string;
+  bundlePath?: string;
   flow?: string;
   silent?: boolean;
   verbose?: boolean;
@@ -522,19 +512,40 @@ export interface SimulateSourceOptions {
  * content shapes. The source's createTrigger defines what it expects.
  */
 export async function simulateSource(
-  configPath: string,
+  configOrPath: string | Flow.Config,
   input: unknown,
   options: SimulateSourceOptions,
 ): Promise<PushResult> {
   const startTime = Date.now();
 
-  const prepared = await prepareFlow({
-    configPath,
-    flow: options.flow,
-    simulate: ['source.' + options.sourceId],
-    silent: options.silent,
-    verbose: options.verbose,
-  });
+  // Resolve config: accept either file path or config object
+  let config: Flow.Config;
+  if (typeof configOrPath === 'string') {
+    config = (await loadJsonConfig(configOrPath)) as Flow.Config;
+  } else {
+    config = configOrPath;
+  }
+
+  const prepareInput = options.bundlePath
+    ? {
+        mode: 'prebuilt' as const,
+        bundlePath: options.bundlePath,
+        config,
+        flow: options.flow,
+        simulate: ['source.' + options.sourceId],
+        silent: options.silent,
+        verbose: options.verbose,
+      }
+    : {
+        mode: 'build' as const,
+        config,
+        flow: options.flow,
+        simulate: ['source.' + options.sourceId],
+        silent: options.silent,
+        verbose: options.verbose,
+      };
+
+  const prepared = await prepareFlow(prepareInput);
 
   try {
     const logger = createCLILogger({
@@ -542,32 +553,13 @@ export async function simulateSource(
       verbose: options.verbose,
     });
 
-    // Resolve source package and load createTrigger from /dev export
+    // Resolve source package name (needed for __devExports lookup inside context)
     const sourceConfig = (prepared.flowSettings.sources ?? {})[
       options.sourceId
     ] as { package?: string } | undefined;
 
     if (!sourceConfig?.package) {
-      throw new Error(
-        `Source "${options.sourceId}" has no package defined`,
-      );
-    }
-
-    const devPath = resolvePackageImportPath(
-      sourceConfig.package,
-      prepared.flowSettings.packages,
-      prepared.configDir,
-      '/dev',
-    );
-    const devModule = await import(devPath);
-    const createTrigger =
-      devModule.examples?.createTrigger ||
-      devModule.default?.examples?.createTrigger;
-
-    if (!createTrigger) {
-      throw new Error(
-        `Source package "${sourceConfig.package}" has no createTrigger in /dev export`,
-      );
+      throw new Error(`Source "${options.sourceId}" has no package defined`);
     }
 
     // Load snapshot code if provided
@@ -590,22 +582,35 @@ export async function simulateSource(
         networkCalls,
       },
       async (module) => {
-        const config = module.wireConfig(module.__configData ?? undefined);
-        applyOverrides(config, prepared.overrides);
+        // Look up createTrigger from __devExports (bundled /dev export)
+        const devExports = module.__devExports?.[sourceConfig!.package!] as
+          | { examples?: { createTrigger?: Function } }
+          | undefined;
+        const createTrigger = devExports?.examples?.createTrigger;
+        if (!createTrigger) {
+          throw new Error(
+            `Source package "${sourceConfig!.package}" has no createTrigger in /dev export`,
+          );
+        }
+
+        const flowConfig = module.wireConfig(module.__configData ?? undefined);
+        applyOverrides(flowConfig, prepared.overrides);
 
         // Capture events at the collector.push boundary via prePush hook.
         // Hook is wired by startFlow (inside createTrigger) before events fire.
         const captured: Array<{ event: unknown; timestamp: number }> = [];
 
-        config.hooks = {
-          ...((config.hooks as Record<string, unknown>) || {}),
+        flowConfig.hooks = {
+          ...((flowConfig.hooks as Record<string, unknown>) || {}),
           prePush: ({ fn }: { fn: Function }, event: unknown) => {
             captured.push({ event, timestamp: Date.now() });
             return { ok: true }; // Stop propagation — don't call fn
           },
         };
 
-        const instance = await createTrigger(config, { sourceId: options.sourceId });
+        const instance = await createTrigger(flowConfig, {
+          sourceId: options.sourceId,
+        });
         const { trigger } = instance;
 
         logger.info('Simulating source');
@@ -644,6 +649,7 @@ export async function simulateSource(
 
 export interface SimulateTransformerOptions {
   transformerId: string;
+  bundlePath?: string;
   flow?: string;
   mock?: string[];
   silent?: boolean;
@@ -662,7 +668,7 @@ export interface SimulateTransformerOptions {
  * If the transformer drops the event (returns false), output event is null.
  */
 export async function simulateTransformer(
-  configPath: string,
+  configOrPath: string | Flow.Config,
   event: WalkerOS.DeepPartialEvent,
   options: SimulateTransformerOptions,
 ): Promise<PushResult> {
@@ -678,14 +684,36 @@ export async function simulateTransformer(
     };
   }
 
-  const prepared = await prepareFlow({
-    configPath,
-    flow: options.flow,
-    simulate: ['transformer.' + options.transformerId],
-    mock: options.mock,
-    silent: options.silent,
-    verbose: options.verbose,
-  });
+  // Resolve config: accept either file path or config object
+  let config: Flow.Config;
+  if (typeof configOrPath === 'string') {
+    config = (await loadJsonConfig(configOrPath)) as Flow.Config;
+  } else {
+    config = configOrPath;
+  }
+
+  const prepareInput = options.bundlePath
+    ? {
+        mode: 'prebuilt' as const,
+        bundlePath: options.bundlePath,
+        config,
+        flow: options.flow,
+        simulate: ['transformer.' + options.transformerId],
+        mock: options.mock,
+        silent: options.silent,
+        verbose: options.verbose,
+      }
+    : {
+        mode: 'build' as const,
+        config,
+        flow: options.flow,
+        simulate: ['transformer.' + options.transformerId],
+        mock: options.mock,
+        silent: options.silent,
+        verbose: options.verbose,
+      };
+
+  const prepared = await prepareFlow(prepareInput);
 
   try {
     const logger = createCLILogger({
@@ -713,20 +741,19 @@ export async function simulateTransformer(
         networkCalls,
       },
       async (module) => {
-        const config = module.wireConfig(module.__configData ?? undefined);
-        applyOverrides(config, prepared.overrides);
+        const flowConfig = module.wireConfig(module.__configData ?? undefined);
+        applyOverrides(flowConfig, prepared.overrides);
 
         // Don't initialize sources or destinations during transformer simulation.
-        if (config.sources) config.sources = {};
-        if (config.destinations) config.destinations = {};
+        if (flowConfig.sources) flowConfig.sources = {};
+        if (flowConfig.destinations) flowConfig.destinations = {};
 
-        const result = await module.startFlow(config);
+        const result = await module.startFlow(flowConfig);
         if (!result?.collector)
           throw new Error('Invalid bundle: collector not available');
 
         const collector = result.collector;
-        const transformer =
-          collector.transformers?.[options.transformerId];
+        const transformer = collector.transformers?.[options.transformerId];
 
         if (!transformer) {
           throw new Error(
@@ -839,6 +866,7 @@ export async function simulateTransformer(
 
 export interface SimulateDestinationOptions {
   destinationId: string;
+  bundlePath?: string;
   flow?: string;
   mock?: string[];
   silent?: boolean;
@@ -856,7 +884,7 @@ export interface SimulateDestinationOptions {
  * before chains — without manual wiring.
  */
 export async function simulateDestination(
-  configPath: string,
+  configOrPath: string | Flow.Config,
   event: WalkerOS.DeepPartialEvent,
   options: SimulateDestinationOptions,
 ): Promise<PushResult> {
@@ -872,14 +900,36 @@ export async function simulateDestination(
     };
   }
 
-  const prepared = await prepareFlow({
-    configPath,
-    flow: options.flow,
-    simulate: ['destination.' + options.destinationId],
-    mock: options.mock,
-    silent: options.silent,
-    verbose: options.verbose,
-  });
+  // Resolve config: accept either file path or config object
+  let config: Flow.Config;
+  if (typeof configOrPath === 'string') {
+    config = (await loadJsonConfig(configOrPath)) as Flow.Config;
+  } else {
+    config = configOrPath;
+  }
+
+  const prepareInput = options.bundlePath
+    ? {
+        mode: 'prebuilt' as const,
+        bundlePath: options.bundlePath,
+        config,
+        flow: options.flow,
+        simulate: ['destination.' + options.destinationId],
+        mock: options.mock,
+        silent: options.silent,
+        verbose: options.verbose,
+      }
+    : {
+        mode: 'build' as const,
+        config,
+        flow: options.flow,
+        simulate: ['destination.' + options.destinationId],
+        mock: options.mock,
+        silent: options.silent,
+        verbose: options.verbose,
+      };
+
+  const prepared = await prepareFlow(prepareInput);
 
   try {
     const logger = createCLILogger({
@@ -905,38 +955,58 @@ export async function simulateDestination(
         networkCalls,
       },
       async (module) => {
-        const config = module.wireConfig(module.__configData ?? undefined);
-        applyOverrides(config, prepared.overrides);
+        const flowConfig = module.wireConfig(module.__configData ?? undefined);
+        applyOverrides(flowConfig, prepared.overrides);
 
-        // Wrap env for call tracking if simulation paths exist
-        const destOverride =
-          prepared.overrides.destinations?.[options.destinationId];
+        // Read env from bundled __devExports
+        const destPkg = (prepared.flowSettings.destinations ?? {})[
+          options.destinationId
+        ] as { package?: string } | undefined;
         let trackedCalls: Array<{
           fn: string;
           args: unknown[];
           ts: number;
         }> = [];
-        if (destOverride?.simulation?.length) {
-          const destinations = config.destinations as Record<
-            string,
-            { config?: { env?: Record<string, unknown> } }
-          >;
-          const destConfig = destinations[options.destinationId]?.config;
-          if (destConfig?.env) {
-            const combined = {
-              ...destConfig.env,
-              simulation: destOverride.simulation,
-            };
-            const { wrappedEnv, calls } = wrapEnv(combined);
-            destConfig.env = wrappedEnv;
-            trackedCalls = calls;
+
+        if (destPkg?.package) {
+          const devExports = module.__devExports?.[destPkg.package] as
+            | {
+                examples?: {
+                  env?: {
+                    push?: Record<string, unknown>;
+                    simulation?: string[];
+                  };
+                };
+              }
+            | undefined;
+          const devEnv = devExports?.examples?.env;
+
+          if (devEnv?.push) {
+            const destinations = flowConfig.destinations as Record<
+              string,
+              { config?: { env?: Record<string, unknown> } }
+            >;
+            const destConfig = destinations[options.destinationId]?.config;
+            if (destConfig) {
+              destConfig.env = devEnv.push;
+            }
+
+            if (devEnv.simulation?.length) {
+              const combined = {
+                ...devEnv.push,
+                simulation: devEnv.simulation,
+              };
+              const { wrappedEnv, calls } = wrapEnv(combined);
+              if (destConfig) destConfig.env = wrappedEnv;
+              trackedCalls = calls;
+            }
           }
         }
 
         // Don't initialize sources — unnecessary overhead
-        if (config.sources) config.sources = {};
+        if (flowConfig.sources) flowConfig.sources = {};
 
-        const result = await module.startFlow(config);
+        const result = await module.startFlow(flowConfig);
         if (!result?.collector)
           throw new Error('Invalid bundle: collector not available');
 

@@ -56,6 +56,7 @@ interface StepExample {
   out: unknown; // Expected output
   trigger?: { type?: string; options?: unknown }; // How to invoke
   mapping?: unknown; // Destination mapping rule
+  command?: 'config' | 'consent' | 'user' | 'run'; // Route to walker command
 }
 ```
 
@@ -146,6 +147,33 @@ so tests can register it dynamically:
 
 Consumers iterate all examples via `Object.entries(examples.step)` —
 `export * as step` exposes every named export directly.
+
+### Command Step Example
+
+Some destinations need to respond to walker commands (`walker consent`,
+`walker user`, `walker run`), not events. Set the `command` field to route `in`
+through `elb('walker <command>', in)` instead of pushing it as an event:
+
+```typescript
+export const consentGranted: Flow.StepExample = {
+  command: 'consent',
+  in: { marketing: true, functional: true },
+  out: [
+    'consent',
+    'update',
+    { ad_storage: 'granted', analytics_storage: 'granted' },
+  ],
+};
+```
+
+Supported commands: `config`, `consent`, `user`, `run`.
+
+- When `command` is absent (default), `in` is pushed as a regular event via
+  `elb(in)`.
+- When `command` is set, `mapping` is **not** applied — commands don't flow
+  through event mapping.
+- The `out` format is destination-specific. For gtag it's
+  `[action, subAction, params]` matching `gtag(...)` calls.
 
 ## Writing Examples
 

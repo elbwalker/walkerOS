@@ -1,0 +1,152 @@
+---
+title: Mixpanel
+description: "Server-side event delivery to Mixpanel for product analytics with people profiles and groups"
+path: /docs/destinations/server/mixpanel
+sidebar_position: 8
+package: '@walkeros/server-destination-mixpanel'
+---
+import { schemas } from '@walkeros/server-destination-mixpanel/dev';
+
+# Mixpanel
+
+<PackageLink env="server" github="packages/server/destinations/mixpanel" npm="@walkeros/server-destination-mixpanel" />
+
+Server-side event delivery to Mixpanel for product analytics, people profiles, and group analytics via the official [`mixpanel`](https://www.npmjs.com/package/mixpanel) Node.js SDK.
+
+:::info Where This Fits
+Mixpanel is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Mixpanel', highlight: true } }}
+/>
+
+Sends events server-side to Mixpanel via `/track` (real-time, up to 5 days old) or `/import` (historical, any age). Supports people profile operations, group analytics, and identity resolution.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-mixpanel`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationMixpanel } from '@walkeros/server-destination-mixpanel';
+
+await startFlow({
+  destinations: {
+    mixpanel: {
+      code: destinationMixpanel,
+      config: {
+        settings: {
+          apiKey: 'YOUR_PROJECT_TOKEN',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "mixpanel": {
+    "package": "@walkeros/server-destination-mixpanel",
+    "code": "destinationMixpanel",
+    "config": {
+      "settings": {
+        "apiKey": "YOUR_PROJECT_TOKEN"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={schemas.settings} />
+
+## Docker Deployment
+
+### Step 1: Create Flow Configuration
+
+Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "mixpanel": {
+      "package": "@walkeros/server-destination-mixpanel",
+      "config": {
+        "settings": {
+          "apiKey": "$env.MIXPANEL_TOKEN",
+          "secret": "$env.MIXPANEL_SECRET:",
+          "host": "api-eu.mixpanel.com"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the Flow
+
+Bundle your flow configuration before running in Docker:
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e MIXPANEL_TOKEN=your-project-token \\
+  -e MIXPANEL_SECRET=your-api-secret \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Docker Compose Example
+
+<CodeSnippet
+  code={`services:
+  walkeros:
+    image: walkeros/flow:latest
+    environment:
+      - MIXPANEL_TOKEN=\${MIXPANEL_TOKEN}
+      - MIXPANEL_SECRET=\${MIXPANEL_SECRET}
+    volumes:
+      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
+    ports:
+      - "8080:8080"`}
+  language="yaml"
+/>
+
+:::tip Security Best Practice
+Never commit project tokens or API secrets to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

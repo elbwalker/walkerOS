@@ -89,10 +89,8 @@ export async function setupWebBasic(): Promise<{
             order: {
               complete: {
                 name: 'purchase',
+                include: ['data', 'context'],
                 settings: {
-                  ga4: {
-                    include: ['data', 'context'],
-                  },
                   ads: {},
                 },
                 data: {

@@ -685,4 +685,99 @@ describe('Destination', () => {
       expect(mockPushBatch2).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('skip flag', () => {
+    test('still calls destination.push when rule.skip is true', async () => {
+      const skipDestination: Destination.Instance = {
+        init: jest.fn(),
+        push: jest.fn(),
+        config: {
+          init: true,
+          mapping: {
+            user: { login: { skip: true, settings: { identify: true } } },
+          },
+        },
+      };
+
+      const collector = createWalkerjs({
+        destinations: { skipDest: skipDestination },
+      });
+
+      await pushToDestinations(
+        collector,
+        createEvent({ name: 'user login' }),
+        {},
+        { skipDest: skipDestination },
+      );
+
+      // Destination IS still called — settings.* side effects can run.
+      expect(skipDestination.push).toHaveBeenCalledTimes(1);
+      const callArgs = (skipDestination.push as jest.Mock).mock.calls[0];
+      // Context.rule.skip is true so the destination can branch on it.
+      expect(callArgs[1].rule.skip).toBe(true);
+    });
+
+    test('rule.ignore still short-circuits (unchanged behavior)', async () => {
+      const ignoreDestination: Destination.Instance = {
+        init: jest.fn(),
+        push: jest.fn(),
+        config: {
+          init: true,
+          mapping: {
+            user: { login: { ignore: true } },
+          },
+        },
+      };
+
+      const collector = createWalkerjs({
+        destinations: { ignoreDest: ignoreDestination },
+      });
+
+      await pushToDestinations(
+        collector,
+        createEvent({ name: 'user login' }),
+        {},
+        { ignoreDest: ignoreDestination },
+      );
+
+      // ignore short-circuits — push must NOT be called.
+      expect(ignoreDestination.push).not.toHaveBeenCalled();
+    });
+
+    test('skip + settings: destination decides what to run', async () => {
+      const calls: string[] = [];
+      const fakeDestination: Destination.Instance = {
+        init: jest.fn(),
+        push: jest.fn().mockImplementation((_event, context) => {
+          if (context.rule?.settings?.identify) calls.push('identify');
+          if (!context.rule?.skip) calls.push('track');
+        }),
+        config: {
+          init: true,
+          mapping: {
+            user: {
+              login: {
+                skip: true,
+                settings: { identify: { map: { user: 'data.id' } } },
+              },
+            },
+          },
+        },
+      };
+
+      const collector = createWalkerjs({
+        destinations: { fake: fakeDestination },
+      });
+
+      await pushToDestinations(
+        collector,
+        createEvent({ name: 'user login' }),
+        {},
+        { fake: fakeDestination },
+      );
+
+      // Destination ran identify side effect but skipped the default track call.
+      expect(calls).toEqual(['identify']);
+    });
+  });
 });

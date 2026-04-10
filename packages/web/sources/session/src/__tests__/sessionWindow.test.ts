@@ -1,3 +1,4 @@
+import type { WalkerOS } from '@walkeros/core';
 import { sessionWindow } from '../lib';
 
 describe('SessionStart', () => {
@@ -103,6 +104,37 @@ describe('SessionStart', () => {
     // Verify session detected from injected referrer
     expect(result.isStart).toBe(true);
     expect(result.referrer).toBe('external.test');
+  });
+
+  test('exposes platform from default click-ID registry', () => {
+    const session = sessionWindow({
+      url: 'https://example.com/?gclid=abc',
+      isStart: true,
+    });
+    expect(session.isStart).toBe(true);
+    expect((session as WalkerOS.Properties).platform).toBe('google');
+    expect((session as WalkerOS.Properties).clickId).toBe('gclid');
+    expect((session as WalkerOS.Properties).gclid).toBe('abc');
+  });
+
+  test('custom clickIds from settings extends default registry', () => {
+    const session = sessionWindow({
+      url: 'https://example.com/?xyzclid=abc',
+      isStart: true,
+      clickIds: [{ param: 'xyzclid', platform: 'xyz' }],
+    });
+    expect((session as WalkerOS.Properties).platform).toBe('xyz');
+    expect((session as WalkerOS.Properties).clickId).toBe('xyzclid');
+    expect((session as WalkerOS.Properties).xyzclid).toBe('abc');
+  });
+
+  test('custom clickIds can override default platform name', () => {
+    const session = sessionWindow({
+      url: 'https://example.com/?fbclid=f',
+      isStart: true,
+      clickIds: [{ param: 'fbclid', platform: 'facebook' }],
+    });
+    expect((session as WalkerOS.Properties).platform).toBe('facebook');
   });
 
   test('Reload', () => {

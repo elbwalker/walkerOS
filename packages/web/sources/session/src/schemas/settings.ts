@@ -1,4 +1,5 @@
 import { z } from '@walkeros/core/dev';
+import { ClickIdEntrySchema } from '@walkeros/core';
 
 /**
  * Session source settings schema
@@ -62,6 +63,13 @@ export const SettingsSchema = z.object({
   cb: z
     .any()
     .describe('Custom session callback function or false to disable')
+    .optional(),
+
+  clickIds: z
+    .array(ClickIdEntrySchema)
+    .describe(
+      'Custom click-ID registry. Entries with a `param` matching a default override the platform name in place; new params append to the end of the priority list.',
+    )
     .optional(),
 });
 

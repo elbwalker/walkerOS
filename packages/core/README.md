@@ -259,18 +259,28 @@ finds the appropriate mapping rule for an event.
 
 #### getMarketingParameters
 
-`getMarketingParameters(url: URL, custom?: MarketingParameters): WalkerOS.Properties`
-extracts UTM and click ID parameters from URLs.
+`getMarketingParameters(url: URL, custom?: MarketingParameters, clickIds?: ClickIdEntry[]): WalkerOS.Properties`
+extracts UTM and click ID parameters from URLs. When a known ad-platform click
+ID is present, the result also includes a `platform` field resolving to a
+canonical identifier (e.g. `gclid` → `google`, `fbclid` → `meta`).
 
 ```js
 getMarketingParameters(
   new URL('https://example.com/?utm_source=docs&gclid=123'),
 );
-// Returns { source: "docs", gclid: "123", clickId: "gclid" }
+// Returns { source: "docs", gclid: "123", clickId: "gclid", platform: "google" }
 
 // With custom parameters
 getMarketingParameters(url, { utm_custom: 'custom', partner: 'partnerId' });
+
+// With a custom click-ID registry (extends or overrides defaults)
+getMarketingParameters(url, undefined, [{ param: 'xyzclid', platform: 'xyz' }]);
 ```
+
+Multi-click-ID URLs preserve every raw value, but `clickId` and `platform`
+reference the highest-priority match. See
+[`src/getMarketingParameters.ts`](./src/getMarketingParameters.ts) for the full
+registry and priority order.
 
 ### Type Validation
 

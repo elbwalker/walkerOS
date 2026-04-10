@@ -1,6 +1,6 @@
 import { destinationGtag, resetConsentState } from '../index';
 import { examples } from '../dev';
-import type { Settings, Rule, Include } from '../types';
+import type { Settings, Rule } from '../types';
 import { type WalkerOS, type Collector } from '@walkeros/core';
 import { clone, createMockContext, createMockLogger } from '@walkeros/core';
 
@@ -213,7 +213,7 @@ describe('Unified Gtag Destination', () => {
         ga4: { measurementId: 'G-XXXXXXXXXX' },
       };
       const config = { settings };
-      const mapping: Rule = { settings: { ga4: { include: ['data'] } } };
+      const mapping: Rule = { settings: { ga4: {} } };
 
       await destinationGtag.push(
         mockEvent,
@@ -230,7 +230,6 @@ describe('Unified Gtag Destination', () => {
       expect(pushGA4Event).toHaveBeenCalledWith(
         mockEvent,
         settings.ga4,
-        mapping.settings?.ga4,
         mockData,
         mockEnv,
         mockLogger,
@@ -331,7 +330,7 @@ describe('Unified Gtag Destination', () => {
       const mapping = {
         name: 'PURCHASE_CONVERSION',
         settings: {
-          ga4: { include: ['data'] as Include },
+          ga4: {},
           ads: {},
           gtm: {},
         },
@@ -352,7 +351,6 @@ describe('Unified Gtag Destination', () => {
       expect(pushGA4Event).toHaveBeenCalledWith(
         mockEvent,
         settings.ga4,
-        mapping.settings?.ga4,
         mockData,
         mockEnv,
         mockLogger,
@@ -418,7 +416,6 @@ describe('Unified Gtag Destination', () => {
       expect(pushGA4Event).toHaveBeenCalledWith(
         mockEvent,
         settings.ga4,
-        undefined,
         mockData,
         mockEnv,
         mockLogger,

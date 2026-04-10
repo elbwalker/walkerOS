@@ -5,6 +5,7 @@ import {
   detectExplicitCodeImports,
   serializeWithCode,
   generateSplitWireConfigModule,
+  generateWrapEntry,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
 import type { Flow } from '@walkeros/core';
@@ -741,5 +742,80 @@ describe('generateSplitWireConfigModule', () => {
     expect(storesIdx).toBeGreaterThan(-1);
     expect(configIdx).toBeGreaterThan(-1);
     expect(storesIdx).toBeLessThan(configIdx);
+  });
+});
+
+describe('generateWrapEntry preview preflight', () => {
+  it('includes preflight when previewOrigin and previewScope are set', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      previewOrigin: 'cdn.walkeros.io',
+      previewScope: 'proj_abc123',
+    });
+    expect(output).toContain('elbPreview');
+    expect(output).toContain('URLSearchParams');
+    expect(output).toContain('cdn.walkeros.io');
+    expect(output).toContain('proj_abc123');
+  });
+
+  it('preflight runs BEFORE startFlow', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      previewOrigin: 'cdn.walkeros.io',
+      previewScope: 'proj_abc123',
+    });
+    const previewIdx = output.indexOf('elbPreview');
+    const startFlowIdx = output.indexOf('startFlow(wireConfig');
+    expect(previewIdx).toBeLessThan(startFlowIdx);
+  });
+
+  it('omits preflight entirely when previewOrigin is absent', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {});
+    expect(output).not.toContain('elbPreview');
+    expect(output).toContain('startFlow(wireConfig(__configData))');
+  });
+
+  it('omits preflight when previewScope is empty string', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      previewOrigin: 'cdn.walkeros.io',
+      previewScope: '',
+    });
+    expect(output).not.toContain('elbPreview');
+  });
+
+  it('preserves window assignments alongside preflight', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      windowCollector: 'collector',
+      windowElb: 'elb',
+      previewOrigin: 'cdn.walkeros.io',
+      previewScope: 'proj_test',
+    });
+    expect(output).toContain("window['collector']");
+    expect(output).toContain("window['elb']");
+    expect(output).toContain('elbPreview');
+  });
+});
+
+describe('previewScope / previewOrigin validation', () => {
+  it('throws on path-traversal previewScope', async () => {
+    const { wrapSkeleton } = await import('../../../commands/bundle/wrap.js');
+    await expect(
+      wrapSkeleton({
+        skeletonPath: '/tmp/fake.mjs',
+        platform: 'browser',
+        outputPath: '/tmp/out.js',
+        previewScope: '../evil',
+      }),
+    ).rejects.toThrow(/Invalid previewScope/);
+  });
+
+  it('throws on previewOrigin with special characters', async () => {
+    const { wrapSkeleton } = await import('../../../commands/bundle/wrap.js');
+    await expect(
+      wrapSkeleton({
+        skeletonPath: '/tmp/fake.mjs',
+        platform: 'browser',
+        outputPath: '/tmp/out.js',
+        previewOrigin: 'evil.com/x?',
+      }),
+    ).rejects.toThrow(/Invalid previewOrigin/);
   });
 });

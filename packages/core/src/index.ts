@@ -5,6 +5,7 @@ export * from './anonymizeIP';
 export * from './flow';
 export * from './assign';
 export * from './byPath';
+export * from './include';
 export * from './castValue';
 export * from './clone';
 export * from './consent';

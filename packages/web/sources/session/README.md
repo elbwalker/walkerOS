@@ -145,6 +145,12 @@ When a new session is detected, the source pushes a `session start` event:
 }
 ```
 
+Marketing click IDs detected in the URL (e.g. `gclid`, `fbclid`) resolve to a
+canonical `platform` field on the session data (e.g. `google`, `meta`). Extend
+or override the built-in registry via `settings.clickIds` — entries with a
+`param` matching a default override the platform name in place, new params
+append to the priority list.
+
 ## Migration from Browser Source
 
 If you were using the browser source with session enabled:

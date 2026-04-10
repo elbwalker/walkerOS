@@ -1,10 +1,11 @@
-import type { Collector, WalkerOS, On } from '@walkeros/core';
+import type { Collector, WalkerOS, On, ClickIdEntry } from '@walkeros/core';
 import type { SessionStorageConfig } from './sessionStorage';
 import { sessionStorage } from './sessionStorage';
 import { sessionWindow } from './sessionWindow';
 import { getGrantedConsent, isArray, isDefined } from '@walkeros/core';
 
 export interface SessionConfig extends SessionStorageConfig {
+  clickIds?: ClickIdEntry[];
   consent?: string | string[];
   storage?: boolean;
   cb?: SessionCallback | false;

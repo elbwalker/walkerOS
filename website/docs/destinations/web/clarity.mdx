@@ -1,0 +1,185 @@
+---
+title: Microsoft Clarity
+description: Session replays, heatmaps, and behavioural insights
+path: /docs/destinations/web/clarity
+sidebar_position: 5
+package: '@walkeros/web-destination-clarity'
+---
+
+import destinationClarity from '@walkeros/web-destination-clarity';
+import { examples, schemas } from '@walkeros/web-destination-clarity/dev';
+
+export const destination = { ...destinationClarity, examples };
+
+# Microsoft Clarity
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/clarity"
+  npm="@walkeros/web-destination-clarity"
+/>
+
+[Microsoft Clarity](https://clarity.microsoft.com/) provides session replays,
+heatmaps and behavioural insights for web products — free and without sampling
+caps. This destination forwards walkerOS events to Clarity via the official
+[`@microsoft/clarity`](https://www.npmjs.com/package/@microsoft/clarity) SDK,
+translating events into `Clarity.event(...)` calls, resolving custom tags,
+identities, session priority, and consent state.
+
+:::info Where This Fits
+Clarity is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Clarity', highlight: true } }}
+/>
+
+Loads the Clarity SDK, forwards every walkerOS event, and lets you layer on
+custom tags, identities, and consent translation.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-clarity`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationClarity } from '@walkeros/web-destination-clarity';
+
+await startFlow({
+  destinations: {
+    clarity: {
+      code: destinationClarity,
+      config: {
+        settings: {
+          apiKey: '3t0wlogvdz',
+          consent: {
+            analytics: 'analytics_Storage',
+            marketing: 'ad_Storage',
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "clarity": {
+    "package": "@walkeros/web-destination-clarity",
+    "config": {
+      "settings": {
+        "apiKey": "3t0wlogvdz",
+        "consent": {
+          "analytics": "analytics_Storage",
+          "marketing": "ad_Storage"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={schemas.settings} />
+
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### Default event forwarding
+
+Every walkerOS event becomes `Clarity.event(name)` without any mapping.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: '3t0wlogvdz' }}
+  event={examples.step.defaultEventForwarding.in}
+  mapping={examples.step.defaultEventForwarding.mapping}
+  generic={true}
+/>
+
+### Custom tags via `set`
+
+Resolve explicit key/value pairs into `Clarity.setTag(key, value)` calls.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: '3t0wlogvdz' }}
+  event={examples.step.productViewWithTags.in}
+  mapping={examples.step.productViewWithTags.mapping}
+  generic={true}
+/>
+
+### Flatten sections with `include`
+
+Forward entire walkerOS event sections as prefixed Clarity tags.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: '3t0wlogvdz' }}
+  event={examples.step.orderCompleteInclude.in}
+  mapping={examples.step.orderCompleteInclude.mapping}
+  generic={true}
+/>
+
+### Identify
+
+Resolve a mapping value into positional `Clarity.identify(...)` arguments.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: '3t0wlogvdz' }}
+  event={examples.step.userLoginIdentify.in}
+  mapping={examples.step.userLoginIdentify.mapping}
+  generic={true}
+/>
+
+### Session priority upgrade
+
+Flag important sessions so Clarity retains them beyond sampling.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: '3t0wlogvdz' }}
+  event={examples.step.orderCompleteUpgrade.in}
+  mapping={examples.step.orderCompleteUpgrade.mapping}
+  generic={true}
+/>
+
+## Consent translation
+
+Clarity expects its own category names (`analytics_Storage`, `ad_Storage`).
+walkerOS uses arbitrary consent keys, so translation is **explicit**: configure
+`settings.consent` once and the destination maps every `walker consent` event
+into `Clarity.consentV2({ ... })`. When all mapped keys are revoked, the
+destination additionally calls `Clarity.consent(false)` (the legacy v1 API
+that erases cookies and ends the session).

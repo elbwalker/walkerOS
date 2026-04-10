@@ -5,11 +5,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000100 }),
   mapping: {
     name: 'purchase',
-    settings: {
-      ga4: {
-        include: ['data', 'context'],
-      },
-    },
+    include: ['data', 'context'],
     data: {
       map: {
         transaction_id: 'data.id',
@@ -56,11 +52,7 @@ export const addToCart: Flow.StepExample = {
   in: getEvent('product add', { timestamp: 1700000101 }),
   mapping: {
     name: 'add_to_cart',
-    settings: {
-      ga4: {
-        include: ['data'],
-      },
-    },
+    include: ['data'],
     data: {
       map: {
         currency: { value: 'EUR', key: 'data.currency' },
@@ -157,22 +149,15 @@ export const gtmDataLayerPush: Flow.StepExample = {
 /**
  * Consent Mode v2 with marketing + functional granted.
  *
- * This example demonstrates consent handling via the on('consent') handler,
- * not a regular event push. The default consent mapping is:
+ * Uses the `command: 'consent'` field to route `in` through the
+ * `elb('walker consent', in)` handler rather than pushing it as an event.
+ * The default consent mapping is:
  *   marketing → ad_storage, ad_user_data, ad_personalization
  *   functional → analytics_storage
- *
- * When both marketing and functional consent are granted, the gtag consent
- * update call grants all four parameters.
- *
- * Note: The `in` field contains the consent data (not a walkerOS event),
- * and the test triggers it via `elb('walker consent', data)`.
  */
 export const consentModeV2: Flow.StepExample = {
+  command: 'consent',
   in: { marketing: true, functional: true },
-  mapping: {
-    _consent: true,
-  },
   out: [
     'consent',
     'update',
@@ -193,11 +178,7 @@ export const consentModeV2: Flow.StepExample = {
 export const ga4WithIncludeAll: Flow.StepExample = {
   in: getEvent('page view', { timestamp: 1700000106 }),
   mapping: {
-    settings: {
-      ga4: {
-        include: ['all'],
-      },
-    },
+    include: ['all'],
   },
   out: [
     'event',
@@ -247,8 +228,9 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000107 }),
   mapping: {
     name: 'purchase',
+    include: ['data'],
     settings: {
-      ga4: { include: ['data'] },
+      ga4: {},
       ads: { label: 'PURCHASE_CONV' },
       gtm: {},
     },

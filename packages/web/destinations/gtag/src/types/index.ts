@@ -77,7 +77,6 @@ export type InitSettings = Partial<Settings>;
 export interface GA4Settings extends BaseSettings {
   measurementId: string;
   debug?: boolean;
-  include?: Include;
   pageview?: boolean;
   server_container_url?: string;
   snakeCase?: boolean;
@@ -110,9 +109,7 @@ export interface Mapping {
 }
 
 // GA4-specific mapping
-export interface GA4Mapping {
-  include?: Include;
-}
+export interface GA4Mapping {}
 
 // GTM specific mapping
 export interface GTMMapping {}
@@ -120,17 +117,6 @@ export interface GTMMapping {}
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;
 export type Param = WalkerOSMapping.Value;
-
-export type Include = Array<
-  | 'all'
-  | 'context'
-  | 'data'
-  | 'event'
-  | 'globals'
-  | 'source'
-  | 'user'
-  | 'version'
->;
 
 export type Parameters = Gtag.ControlParams &
   Gtag.EventParams &

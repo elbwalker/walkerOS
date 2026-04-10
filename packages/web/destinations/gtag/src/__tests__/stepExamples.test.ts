@@ -23,12 +23,34 @@ describe('Step Examples', () => {
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow({ tagging: 2 });
 
+    // Command examples: route `in` through elb('walker <command>', in) instead
+    // of pushing it as an event. Wire a minimal destination first so the
+    // command handler has at least one tool registered.
+    if (example.command) {
+      elb(
+        'walker destination',
+        { ...dest, env },
+        { settings: { ga4: { measurementId: 'G-XXXXXX-1' } } },
+      );
+
+      const cmd = `walker ${example.command}` as 'walker consent';
+      await elb(cmd, example.in as WalkerOS.Consent);
+
+      const outArgs = example.out as unknown[];
+      const matchingCall = mockGtag.mock.calls.find(
+        (call) => call[0] === outArgs[0] && call[1] === outArgs[1],
+      );
+      expect(matchingCall).toBeDefined();
+      expect(matchingCall![2]).toEqual(outArgs[2]);
+      return;
+    }
+
     // Derive destination-level settings from mapping settings
     const destSettings: Record<string, unknown> = {};
     if (
       !mapping?.settings ||
       mappingSettings.ga4 !== undefined ||
-      (!mappingSettings.ads && !mappingSettings.gtm && !mapping._consent)
+      (!mappingSettings.ads && !mappingSettings.gtm)
     ) {
       destSettings.ga4 = { measurementId: 'G-XXXXXX-1' };
     }
@@ -38,15 +60,9 @@ describe('Step Examples', () => {
     if (mappingSettings.gtm) {
       destSettings.gtm = { containerId: 'GTM-XXXXXXX' };
     }
-    // Consent examples need at least one tool for init
-    if (mapping?._consent && !destSettings.ga4) {
-      destSettings.ga4 = { measurementId: 'G-XXXXXX-1' };
-    }
 
     const mappingConfig = mapping
       ? (() => {
-          // For consent examples, no event mapping is needed
-          if (mapping._consent) return undefined;
           const event = example.in as WalkerOS.Event;
           return { [event.entity]: { [event.action]: mapping } };
         })()
@@ -61,17 +77,7 @@ describe('Step Examples', () => {
       },
     );
 
-    if (mapping?._consent) {
-      // Consent examples: trigger consent handler instead of pushing an event
-      await elb('walker consent', example.in as WalkerOS.Consent);
-
-      const outArgs = example.out as unknown[];
-      const consentCall = mockGtag.mock.calls.find(
-        (call) => call[0] === 'consent' && call[1] === 'update',
-      );
-      expect(consentCall).toBeDefined();
-      expect(consentCall![2]).toEqual(outArgs[2]);
-    } else if (
+    if (
       example.out &&
       typeof example.out === 'object' &&
       !Array.isArray(example.out) &&
