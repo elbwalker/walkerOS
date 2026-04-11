@@ -30,6 +30,7 @@ walkeros bundle <config> [options]
 ### Output
 
 By default, the bundle is written to stdout. Use `-o` to write to a file:
+
 - **Web flows**: `-o ./dist/walker.js`
 - **Server flows**: `-o ./dist/bundle.mjs`
 
@@ -63,16 +64,16 @@ walkeros push <config|bundle> [options]
 
 ### Options
 
-| Option                  | Description                                                     |
-| ----------------------- | --------------------------------------------------------------- |
-| `-e, --event <source>`  | Event (required) - JSON string, file, or URL                    |
-| `--flow <name>`         | Flow to use                                                     |
-| `-p, --platform <type>` | Platform override                                               |
+| Option                  | Description                                                           |
+| ----------------------- | --------------------------------------------------------------------- |
+| `-e, --event <source>`  | Event (required) - JSON string, file, or URL                          |
+| `--flow <name>`         | Flow to use                                                           |
+| `-p, --platform <type>` | Platform override                                                     |
 | `--simulate <step>`     | Simulate a step (repeatable). Use `destination.NAME` or `source.NAME` |
-| `--mock <step=value>`   | Mock a step with a specific return value (repeatable)           |
-| `--snapshot <source>`   | JS file to eval before execution (sets global state)            |
-| `--json`                | JSON output                                                     |
-| `-v, --verbose`         | Verbose logging                                                 |
+| `--mock <step=value>`   | Mock a step with a specific return value (repeatable)                 |
+| `--snapshot <source>`   | JS file to eval before execution (sets global state)                  |
+| `--json`                | JSON output                                                           |
+| `-v, --verbose`         | Verbose logging                                                       |
 
 **Without `--simulate`:** Makes real API calls. Test with `--simulate` first.
 

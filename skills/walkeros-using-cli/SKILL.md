@@ -36,14 +36,14 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 
 ## Commands Overview
 
-| Command    | Purpose                        | Safe? |
-| ---------- | ------------------------------ | ----- |
-| `bundle`   | Generate JS bundle from config | ✅    |
+| Command    | Purpose                                                  | Safe? |
+| ---------- | -------------------------------------------------------- | ----- |
+| `bundle`   | Generate JS bundle from config                           | ✅    |
 | `push`     | Execute with real API calls (or `--simulate` for mocked) | ⚠️    |
-| `run`      | Local HTTP event collection    | ✅    |
-| `deploy`   | Deploy flows to cloud          | ⚠️    |
-| `validate` | Validate configs/events        | ✅    |
-| `cache`    | Manage caching                 | ✅    |
+| `run`      | Local HTTP event collection                              | ✅    |
+| `deploy`   | Deploy flows to cloud                                    | ⚠️    |
+| `validate` | Validate configs/events                                  | ✅    |
+| `cache`    | Manage caching                                           | ✅    |
 
 For detailed command reference, see
 [commands-reference.md](commands-reference.md).
@@ -215,7 +215,8 @@ Options:
   -s, --silent      Silent mode
 ```
 
-Output: stdout (use `-o ./dist/walker.js` for web or `-o ./dist/bundle.mjs` for server)
+Output: stdout (use `-o ./dist/walker.js` for web or `-o ./dist/bundle.mjs` for
+server)
 
 ### Push Command
 
@@ -288,7 +289,8 @@ Options:
 
 1. **Validate event**: `walkeros validate event.json`
 2. **Check mapping**: Event must match entity/action in mapping
-3. **Use simulate first**: `walkeros push flow.json -e event.json --simulate destination.demo -v`
+3. **Use simulate first**:
+   `walkeros push flow.json -e event.json --simulate destination.demo -v`
 
 ### Destination Not Found in Simulation
 
@@ -326,9 +328,9 @@ If the destination is found but receives 0 events:
 
 ### Web Simulation Transport
 
-Web simulations run in JSDOM. `fetch` and `navigator.sendBeacon` are
-polyfilled as tracked no-ops -- no real HTTP requests are made. Captured
-network calls are included in `PushResult.networkCalls` when present.
+Web simulations run in JSDOM. `fetch` and `navigator.sendBeacon` are polyfilled
+as tracked no-ops -- no real HTTP requests are made. Captured network calls are
+included in `PushResult.networkCalls` when present.
 
 ### Local Packages Not Found
 
