@@ -148,8 +148,10 @@ Platform is determined by the presence of the `web` or `server` key:
 - `"web": {}` - Browser environment (client-side tracking)
 
 The CLI automatically applies platform-specific build defaults:
-- **Web**: IIFE format, ES2020 target, output to `./dist/walker.js`
-- **Server**: ESM format, Node20 target, output to `./dist/bundle.mjs`
+- **Web**: IIFE format, ES2020 target
+- **Server**: ESM format, Node20 target
+
+The bundle is written to stdout by default. Use `-o` to write to a file (e.g., `-o ./dist/walker.js` for web, `-o ./dist/bundle.mjs` for server).
 
 ### Packages
 

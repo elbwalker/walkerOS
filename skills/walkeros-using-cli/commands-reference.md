@@ -29,8 +29,9 @@ walkeros bundle <config> [options]
 
 ### Output
 
-- **Web flows**: `./dist/walker.js`
-- **Server flows**: `./dist/bundle.mjs`
+By default, the bundle is written to stdout. Use `-o` to write to a file:
+- **Web flows**: `-o ./dist/walker.js`
+- **Server flows**: `-o ./dist/bundle.mjs`
 
 ### Examples
 

@@ -103,9 +103,9 @@ Create `flow.json`:
   language="bash"
 />
 
-This creates:
-- **Web**: `./dist/walker.js` (IIFE format, loadable via script tag)
-- **Server**: `./dist/bundle.mjs` (ESM format, runnable with Node.js)
+This writes the bundle to stdout. Use `-o` to write to a file:
+- **Web**: `-o ./dist/walker.js` (IIFE format, loadable via script tag)
+- **Server**: `-o ./dist/bundle.mjs` (ESM format, runnable with Node.js)
 
 ### 4. Deploy
 

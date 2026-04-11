@@ -187,6 +187,17 @@ export async function bundleCommand(
         if (writingToStdout && !options.json) {
           const bundleContent = await fs.readFile(buildOptions.output);
           await writeResult(bundleContent, {});
+
+          // Hint for interactive terminals
+          if (process.stdout.isTTY) {
+            const defaultPath =
+              buildOptions.platform === 'browser'
+                ? './dist/walker.js'
+                : './dist/bundle.mjs';
+            logger.info(
+              `Bundle written to stdout. Use -o ${defaultPath} to write to file.`,
+            );
+          }
         }
 
         // Dockerfile only with -o

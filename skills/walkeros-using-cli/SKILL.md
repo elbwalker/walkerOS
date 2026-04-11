@@ -215,7 +215,7 @@ Options:
   -s, --silent      Silent mode
 ```
 
-Output: `./dist/walker.js` (web) or `./dist/bundle.mjs` (server)
+Output: stdout (use `-o ./dist/walker.js` for web or `-o ./dist/bundle.mjs` for server)
 
 ### Push Command
 
