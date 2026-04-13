@@ -6,7 +6,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Get Started',
-      collapsed: false,
+      collapsed: true,
       items: [
         {
           type: 'doc',
@@ -127,44 +127,165 @@ const sidebars: SidebarsConfig = {
             {
               type: 'category',
               label: 'Analytics Tools',
-              collapsed: false,
+              collapsed: true,
               items: [
-                'destinations/web/amplitude',
-                'destinations/server/amplitude',
-                'destinations/web/clarity',
-                'destinations/web/gtag/ga4',
-                'destinations/web/gtag/gtm',
-                'destinations/web/mixpanel',
-                'destinations/server/mixpanel',
-                'destinations/web/piwikpro',
-                'destinations/web/plausible',
-                'destinations/web/posthog',
-                'destinations/server/posthog',
-                'destinations/web/segment',
-                'destinations/server/segment',
-                'destinations/web/snowplow',
+                {
+                  type: 'category',
+                  label: 'Amplitude',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/amplitude',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/amplitude',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/clarity',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/gtag/ga4',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/gtag/gtm',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'category',
+                  label: 'Mixpanel',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/mixpanel',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/mixpanel',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/piwikpro',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/plausible',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'category',
+                  label: 'PostHog',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/posthog',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/posthog',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
+                },
+                {
+                  type: 'category',
+                  label: 'Segment',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/segment',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/segment',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/snowplow',
+                  className: 'sidebar-badge-web',
+                },
               ],
             },
             {
               type: 'category',
               label: 'Marketing Tools',
-              collapsed: false,
+              collapsed: true,
               items: [
-                'destinations/web/gtag/ads',
-                'destinations/web/linkedin',
-                'destinations/server/linkedin',
-                'destinations/web/meta-pixel',
-                'destinations/server/meta-capi',
-                'destinations/web/pinterest',
-                'destinations/server/pinterest',
-                'destinations/web/tiktok',
-                'destinations/server/tiktok',
+                {
+                  type: 'doc',
+                  id: 'destinations/web/gtag/ads',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/datamanager',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/linkedin',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/linkedin',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/meta-pixel',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/meta-capi',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/pinterest',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/pinterest',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/tiktok',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/tiktok',
+                  className: 'sidebar-badge-server',
+                },
               ],
             },
             {
               type: 'category',
               label: 'Data Warehouses',
-              collapsed: false,
+              collapsed: true,
               items: [
                 {
                   type: 'category',
@@ -173,11 +294,29 @@ const sidebars: SidebarsConfig = {
                     type: 'doc',
                     id: 'destinations/api/index',
                   },
-                  items: ['destinations/api/web', 'destinations/api/server'],
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/api/web',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/api/server',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
                 },
-                'destinations/server/aws',
-                'destinations/server/datamanager',
-                'destinations/server/gcp',
+                {
+                  type: 'doc',
+                  id: 'destinations/server/aws',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/gcp',
+                  className: 'sidebar-badge-server',
+                },
               ],
             },
             'destinations/create-your-own',
