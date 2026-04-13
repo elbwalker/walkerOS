@@ -3,7 +3,6 @@ import cors from 'cors';
 import { requestToData, createRespond } from '@walkeros/core';
 import type { Source } from '@walkeros/core';
 import type { ExpressSource, Types, EventRequest } from './types';
-import { SettingsSchema } from './schemas';
 import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
 
 /**
@@ -26,11 +25,14 @@ export const sourceExpress = async (
   const expressLib = env.express ?? express;
   const corsLib = env.cors ?? cors;
 
-  // Validate and apply default settings
-  const parsed = SettingsSchema.parse(config.settings || {});
+  // Apply defaults (no runtime validation — flow.json is developer-controlled).
+  const userSettings = config.settings || {};
   const settings = {
-    ...parsed,
-    paths: parsed.paths ?? (parsed.path ? [parsed.path] : ['/collect']),
+    ...userSettings,
+    cors: userSettings.cors ?? true,
+    paths:
+      userSettings.paths ??
+      (userSettings.path ? [userSettings.path] : ['/collect']),
   };
 
   const app = expressLib();

@@ -11,10 +11,8 @@ import {
   getPath,
 } from './utils';
 import { processEvent } from './push';
-import { SettingsSchema } from './schemas/settings';
 
 export * as SourceLambda from './types';
-export * as schemas from './schemas';
 
 // Export examples
 export * as examples from './examples';
@@ -23,7 +21,14 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
   const { config = {}, env, setIngest } = context;
   const { push: envPush } = env;
 
-  const settings = SettingsSchema.parse(config.settings || {});
+  const userSettings = config.settings || {};
+  const settings = {
+    ...userSettings,
+    cors: userSettings.cors ?? true,
+    timeout: userSettings.timeout ?? 30000,
+    enablePixelTracking: userSettings.enablePixelTracking ?? true,
+    healthPath: userSettings.healthPath ?? '/health',
+  };
 
   const fullConfig: Source.Config<Types> = {
     ...config,

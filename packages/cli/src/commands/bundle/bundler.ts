@@ -972,6 +972,7 @@ async function generateImportStatements(
   storePackages: Set<string>,
   explicitCodeImports: Map<string, Set<string>>,
   packagePaths: Map<string, string>,
+  withDev: boolean,
 ): Promise<ImportGenerationResult> {
   const importStatements: string[] = [];
   const usedPackages = new Set([
@@ -1041,25 +1042,32 @@ async function generateImportStatements(
     // Examples are no longer auto-imported - simulator loads them dynamically
   }
 
-  // Generate /dev imports for packages that expose a ./dev export
+  // Generate /dev imports for packages that expose a ./dev export.
+  // Only emitted when withDev is true (i.e., skipWrapper bundles consumed by
+  // push/simulate/flow-context). Production IIFE bundles skip this entirely —
+  // otherwise the dev graph (zod schemas, etc.) leaks into walker.js because
+  // stage 2 esbuild cannot tree-shake transitive imports out of the already-
+  // concatenated stage 1 file.
   const devExportEntries: string[] = [];
-  for (const packageName of usedPackages) {
-    const localPath = packagePaths.get(packageName);
-    if (!localPath) continue;
+  if (withDev) {
+    for (const packageName of usedPackages) {
+      const localPath = packagePaths.get(packageName);
+      if (!localPath) continue;
 
-    try {
-      const pkgJsonPath = path.join(localPath, 'package.json');
-      const pkgJson = await fs.readJSON(pkgJsonPath);
-      const exports = pkgJson.exports;
-      if (exports && typeof exports === 'object' && './dev' in exports) {
-        const varName = `__dev_${packageNameToVariable(packageName)}`;
-        importStatements.push(
-          `import * as ${varName} from '${packageName}/dev';`,
-        );
-        devExportEntries.push(`'${packageName}': ${varName}`);
+      try {
+        const pkgJsonPath = path.join(localPath, 'package.json');
+        const pkgJson = await fs.readJSON(pkgJsonPath);
+        const exports = pkgJson.exports;
+        if (exports && typeof exports === 'object' && './dev' in exports) {
+          const varName = `__dev_${packageNameToVariable(packageName)}`;
+          importStatements.push(
+            `import * as ${varName} from '${packageName}/dev';`,
+          );
+          devExportEntries.push(`'${packageName}': ${varName}`);
+        }
+      } catch {
+        // Package doesn't have a readable package.json — skip gracefully
       }
-    } catch {
-      // Package doesn't have a readable package.json — skip gracefully
     }
   }
 
@@ -1174,7 +1182,9 @@ export async function createEntryPoint(
   if (flowWithSections.stores)
     validateComponentNames(flowWithSections.stores, 'stores');
 
-  // Generate import statements
+  // Generate import statements.
+  // withDev only for skipWrapper bundles (push/simulate/flow-context); production
+  // IIFE bundles get a clean stage 1 without dev imports — see generateImportStatements.
   const { importStatements, devExportEntries } = await generateImportStatements(
     buildOptions.packages,
     destinationPackages,
@@ -1183,6 +1193,7 @@ export async function createEntryPoint(
     storePackages,
     explicitCodeImports,
     packagePaths,
+    buildOptions.skipWrapper === true,
   );
 
   const importsCode = importStatements.join('\n');

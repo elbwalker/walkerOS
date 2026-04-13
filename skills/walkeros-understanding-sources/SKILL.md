@@ -118,8 +118,14 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
   const { config = {}, env } = context;
   const { push: envPush } = env;
 
-  // Validate settings with Zod schema
-  const settings = SettingsSchema.parse(config.settings || {});
+  // Apply defaults inline — flow.json is developer-controlled, so no
+  // runtime validation. Shape checks live in ./schemas and are used by
+  // `walkeros validate` and dev tooling, never at runtime.
+  const userSettings = config.settings || {};
+  const settings = {
+    ...userSettings,
+    // example default: port: userSettings.port ?? 3000,
+  };
 
   const push = async (req: Request, res: Response): Promise<void> => {
     // Transform HTTP request → walkerOS event

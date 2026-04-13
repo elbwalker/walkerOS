@@ -4,7 +4,7 @@ import type {
   CorsOptionsSchema,
   RouteConfigSchema,
 } from './schemas';
-import { z } from '@walkeros/core/dev';
+import type { z } from '@walkeros/core/dev';
 
 export type Settings = z.infer<typeof SettingsSchema>;
 export type CorsOptions = z.infer<typeof CorsOptionsSchema>;

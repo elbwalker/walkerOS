@@ -4,10 +4,8 @@ import {
 } from '../../tools/package.js';
 
 jest.mock('@walkeros/core', () => {
-  const actual = jest.requireActual('@walkeros/core');
   return {
     fetchPackage: jest.fn(),
-    mergeConfigSchema: actual.mergeConfigSchema,
     mcpResult: jest.fn((result, hints) => ({
       content: [
         {

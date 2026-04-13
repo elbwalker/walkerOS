@@ -1,5 +1,4 @@
-import { z } from '@walkeros/core/dev';
-import { ClickIdEntrySchema } from '@walkeros/core';
+import { z, ClickIdEntrySchema } from '@walkeros/core/dev';
 
 /**
  * Session source settings schema

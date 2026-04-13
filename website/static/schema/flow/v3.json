@@ -834,31 +834,53 @@
           "collector": {
             "description": "Collector configuration for event processing (uses Collector.InitConfig)"
           },
-          "packages": {
-            "description": "NPM packages to bundle",
+          "bundle": {
+            "description": "Build-time configuration (packages + overrides)",
             "type": "object",
-            "propertyNames": {
-              "type": "string",
-              "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
-            },
-            "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "version": {
-                  "type": "string"
+            "properties": {
+              "packages": {
+                "description": "NPM packages to bundle",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
                 },
-                "imports": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "path": {
-                  "type": "string"
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "imports": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
                 }
               },
-              "additionalProperties": false
-            }
+              "overrides": {
+                "description": "Transitive dependency overrides",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "packages": {
+            "description": "Legacy top-level packages (moved to bundle.packages)"
           },
           "variables": {
             "description": "Flow-level variables (override Config.variables, overridden by source/destination variables)",

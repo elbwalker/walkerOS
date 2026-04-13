@@ -1,6 +1,5 @@
 import type { WalkerOS } from './types';
 import { assign } from './assign';
-import { z } from './schemas/validation';
 
 export interface MarketingParameters {
   [key: string]: string;
@@ -8,19 +7,15 @@ export interface MarketingParameters {
 
 /**
  * Click-ID registry entry — maps a URL parameter name to a canonical platform.
+ *
+ * Runtime shape only; the corresponding Zod schema lives in
+ * `@walkeros/core/dev` (schemas/marketing.ts) for dev tooling that needs
+ * validation or JSON Schema generation.
  */
-export const ClickIdEntrySchema = z.object({
-  param: z
-    .string()
-    .describe(
-      'Lowercase URL parameter name. Match is case-insensitive on lookup.',
-    ),
-  platform: z
-    .string()
-    .describe('Canonical platform identifier (lowercase, kebab-case).'),
-});
-
-export type ClickIdEntry = z.infer<typeof ClickIdEntrySchema>;
+export interface ClickIdEntry {
+  param: string;
+  platform: string;
+}
 
 /**
  * Default click-ID registry.

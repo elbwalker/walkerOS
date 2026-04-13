@@ -1,6 +1,6 @@
 import type { Source, Elb } from '@walkeros/core';
 import type { SettingsSchema } from '../schemas';
-import { z } from '@walkeros/core/dev';
+import type { z } from '@walkeros/core/dev';
 
 // Export browser-specific elb types
 export * from './elb';

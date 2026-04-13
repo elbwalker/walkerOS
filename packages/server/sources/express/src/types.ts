@@ -7,7 +7,7 @@ import type {
   CorsOptionsSchema,
   RouteConfigSchema,
 } from './schemas';
-import { z } from '@walkeros/core/dev';
+import type { z } from '@walkeros/core/dev';
 
 // Types inferred from Zod schemas
 export type Settings = z.infer<typeof SettingsSchema>;

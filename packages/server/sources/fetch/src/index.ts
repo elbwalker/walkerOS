@@ -1,7 +1,6 @@
 import { requestToData, isObject, isDefined } from '@walkeros/core';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
 import type { FetchSource, Types } from './types';
-import { SettingsSchema, EventSchema } from './schemas';
 import {
   createCorsHeaders,
   createPixelResponse,
@@ -11,10 +10,15 @@ import {
 
 export const sourceFetch: Source.Init<Types> = async (context) => {
   const { config = {}, env, setIngest } = context;
-  const parsed = SettingsSchema.parse(config.settings || {});
+  const userSettings = config.settings || {};
   const settings = {
-    ...parsed,
-    paths: parsed.paths ?? (parsed.path ? [parsed.path] : ['/collect']),
+    ...userSettings,
+    cors: userSettings.cors ?? true,
+    maxRequestSize: userSettings.maxRequestSize ?? 102400,
+    maxBatchSize: userSettings.maxBatchSize ?? 100,
+    paths:
+      userSettings.paths ??
+      (userSettings.path ? [userSettings.path] : ['/collect']),
   };
   const { logger } = env;
 
@@ -158,8 +162,7 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
 
         // Check for batch (eventData is a validated object at this point)
         const validData = eventData as Record<string, unknown>;
-        const isBatch =
-          'batch' in validData && Array.isArray(validData.batch);
+        const isBatch = 'batch' in validData && Array.isArray(validData.batch);
 
         if (isBatch) {
           const batch = validData.batch as unknown[];
@@ -205,29 +208,9 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
           );
         }
 
-        // Single event - validate
-        const validation = EventSchema.safeParse(eventData);
-        if (!validation.success) {
-          const errors = validation.error.issues.map((issue) => ({
-            path: issue.path.join('.'),
-            message: issue.message,
-          }));
-
-          logger.error('Event validation failed', { errors });
-
-          return createJsonResponse(
-            {
-              success: false,
-              error: 'Event validation failed',
-              validationErrors: errors,
-            },
-            400,
-            corsHeaders,
-          );
-        }
-
+        // Forward event directly — validation is not the source's responsibility.
         const result = await processEvent(
-          validation.data as WalkerOS.DeepPartialEvent,
+          eventData as WalkerOS.DeepPartialEvent,
           env.push,
         );
         if (result.error) {
@@ -301,21 +284,8 @@ async function processBatch(
   for (let i = 0; i < events.length; i++) {
     const event = events[i];
 
-    const validation = EventSchema.safeParse(event);
-    if (!validation.success) {
-      results.failed++;
-      results.errors.push({
-        index: i,
-        error: `Validation failed: ${validation.error.issues[0].message}`,
-      });
-      logger.error(`Batch event ${i} validation failed`, {
-        errors: validation.error.issues,
-      });
-      continue;
-    }
-
     try {
-      const result = await push(validation.data as WalkerOS.DeepPartialEvent);
+      const result = await push(event as WalkerOS.DeepPartialEvent);
       if (result?.event?.id) {
         results.ids.push(result.event.id);
       }
@@ -336,7 +306,6 @@ async function processBatch(
 export type * from './types';
 export * as SourceFetch from './types';
 export * from './utils';
-export * as schemas from './schemas';
 export * as examples from './examples';
 
 export default sourceFetch;
