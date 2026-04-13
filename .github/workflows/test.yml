@@ -41,21 +41,20 @@ jobs:
           cache: 'npm'
       - run: corepack enable
       - run: npm ci
-      - name: Run tests
-        run:
-          npm run test -- ${{ (github.ref == 'refs/heads/main' ||
-          github.base_ref == 'main') && '--force' || '' }}
+      - name: Run test, typecheck, lint
+        run: |
+          npx turbo run test typecheck lint ${{ (github.ref == 'refs/heads/main' || github.base_ref == 'main') && '--force' || '' }}
         env:
           CI: true
-          NODE_OPTIONS: '--max-old-space-size=1536'
+          NODE_OPTIONS: '--max-old-space-size=4096'
       - name: Show test summary
         if: always()
         run: |
           echo "Test run complete. Check logs above for details."
           if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.base_ref }}" = "main" ]; then
-            echo "✅ Ran with --force (no cache) for main branch accuracy"
+            echo "Ran with --force (no cache) for main branch accuracy"
           else
-            echo "✅ Used cache for faster feedback"
+            echo "Used cache for faster feedback"
           fi
       - name: Upload test results on failure
         if: failure()
@@ -66,12 +65,13 @@ jobs:
             packages/*/coverage/
             packages/*/.tmp/
           retention-days: 7
-      - run: npm run typecheck
-      - run: npm run lint
       - name: Validate documentation
         run: npm run validate:links
+        env:
+          CI: true
+          NODE_OPTIONS: '--max-old-space-size=4096'
       - name: Run integration tests
         run: npm run test:integration
         env:
           CI: true
-          NODE_OPTIONS: '--max-old-space-size=1536'
+          NODE_OPTIONS: '--max-old-space-size=4096'
