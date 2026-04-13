@@ -77,8 +77,9 @@ jobs:
             fi
           done
 
-          # Dedupe and format packages as markdown links
-          PACKAGES_FORMATTED=$(echo -e "$PACKAGES" | sort -u | grep -v '^$' | while read pkg; do
+          # Dedupe raw bare names (one per line) and markdown-formatted variants
+          PACKAGES_RAW=$(echo -e "$PACKAGES" | sort -u | grep -v '^$')
+          PACKAGES_FORMATTED=$(echo "$PACKAGES_RAW" | while read pkg; do
             echo "- [$pkg](https://www.npmjs.com/package/$pkg)"
           done)
 
@@ -87,6 +88,9 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
           echo "packages<<EOF" >> $GITHUB_OUTPUT
           echo "$PACKAGES_FORMATTED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "packages_raw<<EOF" >> $GITHUB_OUTPUT
+          echo "$PACKAGES_RAW" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           echo "release_needed=$RELEASE_NEEDED" >> $GITHUB_OUTPUT
 
@@ -122,6 +126,36 @@ jobs:
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Deprecate prior next versions for this stable
+        if: inputs.release_type == 'stable release'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGES_RAW: ${{ steps.changesets.outputs.packages_raw }}
+        run: |
+          while IFS= read -r pkg; do
+            [ -z "$pkg" ] && continue
+            stable_version=$(npm view "$pkg" version 2>/dev/null) || continue
+            [ -z "$stable_version" ] && continue
+            next_versions=$(npm view "$pkg" versions --json 2>/dev/null | \
+              STABLE="$stable_version" node -e "
+                const versions = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+                const stable = process.env.STABLE;
+                const re = new RegExp('^' + stable.replace(/[.]/g, '\\\\.') + '-next[.\\\\-]');
+                versions
+                  .filter(v => re.test(v))
+                  .forEach(v => console.log(v));
+              " || true)
+            if [ -z "$next_versions" ]; then
+              echo "$pkg: no next versions matching ${stable_version}-next*"
+              continue
+            fi
+            while IFS= read -r v; do
+              echo "Deprecating $pkg@$v"
+              npm deprecate "$pkg@$v" "Superseded by $pkg@$stable_version" \
+                || echo "  (deprecate failed for $pkg@$v)"
+            done <<< "$next_versions"
+          done <<< "$PACKAGES_RAW"
 
       - name: Commit version changes (stable only)
         if: inputs.release_type == 'stable release'
