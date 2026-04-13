@@ -161,10 +161,11 @@ describe('Integration', () => {
     const flowSettings: Flow.Settings = {
       server: {},
       bundle: {
-        packages: {},
-        '@walkeros/collector': { imports: ['startFlow'] },
-        '@walkeros/transformer-validator': {
-          imports: ['transformerValidator'],
+        packages: {
+          '@walkeros/collector': { imports: ['startFlow'] },
+          '@walkeros/transformer-validator': {
+            imports: ['transformerValidator'],
+          },
         },
       },
       sources: {

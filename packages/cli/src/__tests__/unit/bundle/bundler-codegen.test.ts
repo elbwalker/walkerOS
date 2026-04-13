@@ -16,9 +16,10 @@ describe('createEntryPoint integration', () => {
     const flowSettings: Flow.Settings = {
       web: {},
       bundle: {
-        packages: {},
-        '@walkeros/web-source-browser': {
-          imports: ['createTagger'],
+        packages: {
+          '@walkeros/web-source-browser': {
+            imports: ['createTagger'],
+          },
         },
       },
       sources: {
@@ -61,9 +62,10 @@ describe('createEntryPoint integration', () => {
     const flowSettings: Flow.Settings = {
       web: {},
       bundle: {
-        packages: {},
-        '@some/no-default-pkg': {
-          imports: ['namedSource'],
+        packages: {
+          '@some/no-default-pkg': {
+            imports: ['namedSource'],
+          },
         },
       },
       sources: {
@@ -104,10 +106,11 @@ describe('createEntryPoint integration', () => {
     const flowSettings: Flow.Settings = {
       server: {},
       bundle: {
-        packages: {},
-        '@walkeros/collector': { imports: ['startFlow'] },
-        '@walkeros/server-source-express': {},
-        '@walkeros/destination-demo': {},
+        packages: {
+          '@walkeros/collector': { imports: ['startFlow'] },
+          '@walkeros/server-source-express': {},
+          '@walkeros/destination-demo': {},
+        },
       },
       sources: {
         http: {
@@ -165,11 +168,12 @@ describe('createEntryPoint integration', () => {
     const flowSettings: Flow.Settings = {
       server: {},
       bundle: {
-        packages: {},
-        '@walkeros/collector': { imports: ['startFlow'] },
-        '@walkeros/server-source-express': {},
-        '@walkeros/server-transformer-fingerprint': {},
-        '@walkeros/store-memory': {},
+        packages: {
+          '@walkeros/collector': { imports: ['startFlow'] },
+          '@walkeros/server-source-express': {},
+          '@walkeros/server-transformer-fingerprint': {},
+          '@walkeros/store-memory': {},
+        },
       },
       sources: {
         http: {
@@ -235,9 +239,10 @@ describe('Implicit Collector', () => {
     const flowSettings: Flow.Settings = {
       web: {},
       bundle: {
-        packages: {},
-        '@walkeros/collector': {}, // No imports specified
-        '@walkeros/web-source-browser': {},
+        packages: {
+          '@walkeros/collector': {}, // No imports specified
+          '@walkeros/web-source-browser': {},
+        },
       },
       sources: {
         browser: {
@@ -275,9 +280,10 @@ describe('Implicit Collector', () => {
     const flowSettings: Flow.Settings = {
       web: {},
       bundle: {
-        packages: {},
-        '@walkeros/collector': { version: '0.5.0' }, // Version only, no imports
-        '@walkeros/web-source-browser': {},
+        packages: {
+          '@walkeros/collector': { version: '0.5.0' }, // Version only, no imports
+          '@walkeros/web-source-browser': {},
+        },
       },
       sources: {
         browser: {
@@ -315,9 +321,10 @@ describe('Implicit Collector', () => {
     const flowSettings: Flow.Settings = {
       web: {},
       bundle: {
-        packages: {},
-        '@walkeros/collector': { imports: ['createCollector'] }, // Explicit import, no startFlow
-        '@walkeros/web-source-browser': {},
+        packages: {
+          '@walkeros/collector': { imports: ['createCollector'] }, // Explicit import, no startFlow
+          '@walkeros/web-source-browser': {},
+        },
       },
       sources: {
         browser: {
