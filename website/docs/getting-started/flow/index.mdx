@@ -412,11 +412,11 @@ Sources, transformers, collectors, and destinations connect in specific ways. Th
 |------|----|-------|-------|
 | Source | Transformer | `before` on source | Consent-exempt preprocessing |
 | Source | Transformer | `next` on source | Pre-collector chain |
-| Source | Collector | omit `next` | Default — events go straight to collector |
+| Source | Collector | omit `next` | Default: events go straight to collector |
 | Transformer | Transformer | `before` on transformer | Pre-transform enrichment |
 | Transformer | Transformer | `next` on transformer | Chain continues to next transformer |
 | Collector | Transformer | `before` on destination | Post-collector chain |
-| Collector | Destination | omit `before` | Default — events go straight to destination |
+| Collector | Destination | omit `before` | Default: events go straight to destination |
 | Destination | Transformer | `next` on destination | Post-push processing |
 
 **Connections that are not allowed:**
@@ -431,13 +431,13 @@ The `next` and `before` fields on sources, transformers, and destinations all ac
 | Value | Behavior |
 |-------|----------|
 | `"validate"` (string) | Walks `transformer.next` links until the chain ends |
-| `["validate", "enrich"]` (array) | Uses the array as-is — ignores each transformer's `next` property |
+| `["validate", "enrich"]` (array) | Uses the array as-is, ignoring each transformer's `next` property |
 
 When walking a string chain, three edge cases apply:
 
 1. **String with array `next`**: If `validate.next` is `["a", "b"]`, the walker appends that array and stops. The final chain becomes `["validate", "a", "b"]`.
 2. **Missing target**: If a transformer name in the chain does not exist, that step is skipped and the event proceeds unchanged. If a string chain points to a nonexistent first transformer, the chain is empty and the event goes through without transformation.
-3. **Circular reference**: Detected via a visited set and safely broken — no infinite loop.
+3. **Circular reference**: Detected via a visited set and safely broken, with no infinite loop.
 
 #### Pre-collector vs post-collector transformers
 
@@ -447,7 +447,7 @@ All transformers live in a single `transformers` pool. Their position in the pip
 [Source.before] → Source ──[next]──→ Pre-transformers ──→ Collector ──→ Post-transformers ──[before]──→ Destination ──[next]──→ Post-push
 ```
 
-The same transformer can appear in both a pre-collector and a post-collector chain. For example, you might use `validate` in a source's `next` chain and again in a destination's `before` chain — each invocation runs independently.
+The same transformer can appear in both a pre-collector and a post-collector chain. For example, you might use `validate` in a source's `next` chain and again in a destination's `before` chain. Each invocation runs independently.
 
 <CodeSnippet
   code={`{
@@ -479,7 +479,7 @@ In this config, `validate` runs before the collector (pre-chain) and `enrich` ru
 
 #### Conditional routing
 
-The `next` property supports conditional routing via `Route[]` — an array of `{ match, next }` objects evaluated against ingest metadata:
+The `next` property supports conditional routing via `Route[]`, an array of `{ match, next }` objects evaluated against ingest metadata:
 
 <CodeSnippet
   code={`{
@@ -502,7 +502,7 @@ The `next` property supports conditional routing via `Route[]` — an array of `
   language="json"
 />
 
-Routes are evaluated in order — the first match wins. If no route matches, the event passes through unchanged to the collector. Conditional routing works on all chain positions: `source.before`, `source.next`, `transformer.before`, `transformer.next`, `destination.before`, and `destination.next`.
+Routes are evaluated in order. The first match wins. If no route matches, the event passes through unchanged to the collector. Conditional routing works on all chain positions: `source.before`, `source.next`, `transformer.before`, `transformer.next`, `destination.before`, and `destination.next`.
 
 #### Deferred activation with `require`
 

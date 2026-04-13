@@ -16,66 +16,94 @@ const noopPromise = () => ({ promise: Promise.resolve() });
  * Tests spy by replacing these methods with jest.fn() in the test runner.
  */
 class MockIdentify implements IdentifyInstance {
-  set() {
+  _ops: Record<string, Record<string, unknown>> = {};
+
+  private _record(op: string, prop: string, value?: unknown) {
+    if (!this._ops[op]) this._ops[op] = {};
+    this._ops[op][prop] = value;
     return this;
   }
-  setOnce() {
-    return this;
+
+  set(prop: string, value: unknown) {
+    return this._record('set', prop, value);
   }
-  add() {
-    return this;
+  setOnce(prop: string, value: unknown) {
+    return this._record('setOnce', prop, value);
   }
-  append() {
-    return this;
+  add(prop: string, value: unknown) {
+    return this._record('add', prop, value);
   }
-  prepend() {
-    return this;
+  append(prop: string, value: unknown) {
+    return this._record('append', prop, value);
   }
-  preInsert() {
-    return this;
+  prepend(prop: string, value: unknown) {
+    return this._record('prepend', prop, value);
   }
-  postInsert() {
-    return this;
+  preInsert(prop: string, value: unknown) {
+    return this._record('preInsert', prop, value);
   }
-  remove() {
-    return this;
+  postInsert(prop: string, value: unknown) {
+    return this._record('postInsert', prop, value);
   }
-  unset() {
-    return this;
+  remove(prop: string, value: unknown) {
+    return this._record('remove', prop, value);
+  }
+  unset(prop: string) {
+    return this._record('unset', prop);
   }
   clearAll() {
+    this._ops['clearAll'] = {};
     return this;
+  }
+
+  toJSON() {
+    return this._ops;
   }
 }
 
 /** Minimal chainable Revenue mock. */
 class MockRevenue implements RevenueInstance {
-  setProductId() {
+  _data: Record<string, unknown> = {};
+
+  setProductId(v: string) {
+    this._data.productId = v;
     return this;
   }
-  setPrice() {
+  setPrice(v: number) {
+    this._data.price = v;
     return this;
   }
-  setQuantity() {
+  setQuantity(v: number) {
+    this._data.quantity = v;
     return this;
   }
-  setRevenueType() {
+  setRevenueType(v: string) {
+    this._data.revenueType = v;
     return this;
   }
-  setCurrency() {
+  setCurrency(v: string) {
+    this._data.currency = v;
     return this;
   }
-  setRevenue() {
+  setRevenue(v: number) {
+    this._data.revenue = v;
     return this;
   }
-  setReceipt() {
+  setReceipt(v: string) {
+    this._data.receipt = v;
     return this;
   }
-  setReceiptSig() {
+  setReceiptSig(v: string) {
+    this._data.receiptSig = v;
     return this;
   }
-  setEventProperties() {
+  setEventProperties(v: unknown) {
+    this._data.eventProperties = v;
     return this;
+  }
+
+  toJSON() {
+    return this._data;
   }
 }
 

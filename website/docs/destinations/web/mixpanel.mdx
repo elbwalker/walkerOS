@@ -111,20 +111,21 @@ individual event mapping.
 
 ### Default event forwarding
 
-Every walkerOS event becomes `mixpanel.track(event.name, properties)` without
-any mapping.
+Every walkerOS event becomes `mixpanel.track(event.name, properties)`.
+Without `include` config, `properties` is empty. Add `include: ['data']`
+to the destination config to forward event data as properties.
 
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'mp_test' }}
   event={examples.step.defaultEventForwarding.in}
-  mapping={examples.step.defaultEventForwarding.mapping}
+  mapping={{ include: ['data'] }}
   generic={true}
 />
 
 ### Identify with people properties
 
-Resolve a mapping value into Mixpanel's identity vocabulary — `distinctId` is
+Resolve a mapping value into Mixpanel's identity vocabulary. `distinctId` is
 the new user identity, and `set`/`setOnce`/`increment`/`append`/`union` operate
 on the user's people profile via `mixpanel.people.*`.
 
@@ -139,7 +140,7 @@ on the user's people profile via `mixpanel.people.*`.
 ### People profile operations only
 
 When the resolved object has no `distinctId`, identity is unchanged but the
-people operations still fire — useful for profile updates that should not
+people operations still fire, which is useful for profile updates that should not
 create a new identity.
 
 <DestinationDemo
@@ -215,14 +216,14 @@ reaching the destination in the first place.
 
 Mixpanel features that are deferred or not in scope for v1:
 
-- **`alias()`** — anonymous-to-identified merging is handled by walkerOS
+- **`alias()`**: anonymous-to-identified merging is handled by walkerOS
   identity (the source resolves the user before pushing).
-- **`register()` / super properties** — use destination-level
+- **`register()` / super properties**: use destination-level
   `settings.include` to attach properties on every event instead. Mixpanel's
   super-property pattern overlaps with walkerOS's mapping model.
-- **`people.track_charge`** — deprecated by Mixpanel since v2.78. Send
+- **`people.track_charge`**: deprecated by Mixpanel since v2.78. Send
   revenue events as regular `track()` calls with a `revenue` property.
-- **`time_event` / page view auto-tracking** — walkerOS sources handle event
+- **`time_event` / page view auto-tracking**: walkerOS sources handle event
   capture and timing.
 
 All other built-in `mixpanel-browser` config options pass through `settings`
@@ -233,4 +234,3 @@ directly (e.g. `api_host`, `persistence`, `cross_subdomain_cookie`,
 
 - [Mixpanel documentation](https://docs.mixpanel.com/)
 - [`mixpanel-browser` SDK reference](https://docs.mixpanel.com/docs/tracking-methods/sdks/javascript)
-- [walkerOS destinations](/docs/destinations)

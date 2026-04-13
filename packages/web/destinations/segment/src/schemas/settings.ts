@@ -5,7 +5,7 @@ export const SettingsSchema = z.object({
     .string()
     .min(1)
     .describe(
-      'Your Segment source write key. Find it in your Segment workspace under Connections → Sources → Settings → API Keys. Maps to `writeKey` in the Analytics.js `load()` call.',
+      'Your Segment source write key. Find it in your Segment workspace under Connections, Sources, Settings, API Keys. Maps to `writeKey` in the Analytics.js `load()` call (like a1B2c3D4e5F6a1B2c3D4e5F6a1B2c3D4).',
     ),
   cdnURL: z
     .string()

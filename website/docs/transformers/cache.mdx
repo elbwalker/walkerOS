@@ -41,7 +41,7 @@ Add `cache` to any step in your flow config:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `full` | `boolean` | `false` (`true` for sources) | Stop flow on cache HIT — skip remaining steps and return cached value |
+| `full` | `boolean` | `false` (`true` for sources) | Stop flow on cache HIT and skip remaining steps, returning the cached value |
 | `store` | `string` | Built-in memory | Reference to a store in `flow.stores` |
 | `rules` | `CacheRule[]` | Required | At least one cache rule |
 
@@ -49,7 +49,7 @@ Add `cache` to any step in your flow config:
 
 ### Source Cache (full by default)
 
-Source cache intercepts requests before the pipeline runs. Sources default to `full: true` — on cache HIT, the cached respond value is returned immediately and the pipeline is skipped. Set `full: false` to skip only the source step and let the pipeline continue.
+Source cache intercepts requests before the pipeline runs. Sources default to `full: true`. On cache HIT, the cached respond value is returned immediately and the pipeline is skipped. Set `full: false` to skip only the source step and let the pipeline continue.
 
 ```json
 "sources": {
@@ -65,7 +65,7 @@ Source cache intercepts requests before the pipeline runs. Sources default to `f
 
 ### Transformer Cache (step-level)
 
-Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment. With `full: true`, the remaining chain stops on HIT — downstream transformers and destinations are skipped.
+Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment. With `full: true`, the remaining chain stops on HIT and downstream transformers and destinations are skipped.
 
 ```json
 "transformers": {
@@ -82,7 +82,7 @@ Transformer cache skips the transformer's execution on HIT but continues the cha
 
 ### Destination Cache (deduplication)
 
-Destination cache skips the push on HIT — preventing duplicate events from reaching the destination. Other destinations still receive the event. With `full: true`, the `before` transformer chain is also skipped on HIT.
+Destination cache skips the push on HIT, preventing duplicate events from reaching the destination. Other destinations still receive the event. With `full: true`, the `before` transformer chain is also skipped on HIT.
 
 ```json
 "destinations": {
@@ -101,11 +101,11 @@ Destination cache skips the push on HIT — preventing duplicate events from rea
 
 Cache keys use dot-path resolution from a structured context:
 
-- `ingest.method` — request method from source ingest
-- `ingest.path` — request path from source ingest
-- `event.name` — event name
-- `event.data.id` — nested event data field
-- `event.user.loggedIn` — user properties
+- `ingest.method`: request method from source ingest
+- `ingest.path`: request path from source ingest
+- `event.name`: event name
+- `event.data.id`: nested event data field
+- `event.user.loggedIn`: user properties
 
 ## Update Rules
 

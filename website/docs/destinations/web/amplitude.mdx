@@ -116,14 +116,15 @@ individual event mapping.
 
 ### Default event forwarding
 
-Every walkerOS event becomes
-`amplitude.track(event.name, event_properties)` with no mapping at all.
+Every walkerOS event becomes `amplitude.track(event.name, event_properties)`.
+Without `include` config, `event_properties` is empty. Add `include: ['data']`
+to the destination config to forward event data as properties.
 
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
   event={examples.step.defaultEventForwarding.in}
-  mapping={examples.step.defaultEventForwarding.mapping}
+  mapping={{ include: ['data'] }}
   generic={true}
 />
 
@@ -183,7 +184,7 @@ Assign a user to a group and enrich group properties in one rule.
 
 Declare the required consent keys on `config.consent`. When a walker
 consent event arrives, the destination's `on('consent')` handler toggles
-`amplitude.setOptOut()` — strict semantics: all required keys must be
+`amplitude.setOptOut()` with strict semantics: all required keys must be
 granted for opt-in, any missing grant opts out.
 
 ```typescript

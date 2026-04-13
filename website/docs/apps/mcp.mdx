@@ -12,8 +12,8 @@ assistant integration.
 
 | Package | Purpose |
 |---------|---------|
-| `@walkeros/mcp` | Flow development — tools, reference resources, guided prompts, cloud API |
-| `@walkeros/mcp-source-browser` | HTML tagging — generate, parse, and validate `data-elb` attributes |
+| `@walkeros/mcp` | Flow development: tools, reference resources, guided prompts, cloud API |
+| `@walkeros/mcp-source-browser` | HTML tagging: generate, parse, and validate `data-elb` attributes |
 
 ## Claude Code plugin
 
@@ -21,7 +21,7 @@ The recommended way to get started in Claude Code. One plugin installs both MCP
 servers **and** 18 skills that teach Claude how to build sources, destinations,
 transformers, and flows.
 
-**Step 1 — add the marketplace:**
+**Step 1: add the marketplace:**
 
 ```
 /plugin marketplace add elbwalker/walkerOS
@@ -65,8 +65,8 @@ Each server starts on STDIO and registers its tools automatically.
 
 | Variable | Used by | Required | Default | Purpose |
 |----------|---------|----------|---------|---------|
-| `WALKEROS_TOKEN` | mcp | No | — | Bearer token for cloud API and remote bundling |
-| `WALKEROS_PROJECT_ID` | mcp | No | — | Active project ID (`proj_...`) |
+| `WALKEROS_TOKEN` | mcp | No | none | Bearer token for cloud API and remote bundling |
+| `WALKEROS_PROJECT_ID` | mcp | No | none | Active project ID (`proj_...`) |
 | `WALKEROS_APP_URL` | mcp | No | `https://app.walkeros.io` | Base URL override |
 
 `@walkeros/mcp-source-browser` works without any environment variables.
@@ -140,7 +140,7 @@ Returns summarized per-destination results.
 #### `flow_push`
 
 Push a real event through a walkerOS flow to actual destinations.
-**This makes real API calls.** Best for server-side flows — web destinations
+**This makes real API calls.** Best for server-side flows. Web destinations
 require browser globals not available in Node.js.
 
 | Parameter | Type | Required | Description |

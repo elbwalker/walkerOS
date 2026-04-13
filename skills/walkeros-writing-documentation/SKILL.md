@@ -396,6 +396,16 @@ sidebar_position: [N]
 
 ## Non-Negotiables
 
+### Punctuation
+
+Never use em dashes (`—`). Use a comma, period, or rephrase the sentence
+instead.
+
+```text
+CORRECT: "free and without sampling caps"
+WRONG:   "free — without sampling caps"
+```
+
 ### Event Naming
 
 ```text

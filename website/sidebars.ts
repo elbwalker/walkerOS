@@ -6,7 +6,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Get Started',
-      collapsed: false,
+      collapsed: true,
       items: [
         {
           type: 'doc',
@@ -126,33 +126,199 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: 'category',
-              label: 'API',
-              link: {
-                type: 'doc',
-                id: 'destinations/api/index',
-              },
-              items: ['destinations/api/web', 'destinations/api/server'],
+              label: 'Analytics Tools',
+              collapsed: true,
+              items: [
+                {
+                  type: 'category',
+                  label: 'Amplitude',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/amplitude',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/amplitude',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/clarity',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/gtag/ga4',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/gtag/gtm',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'category',
+                  label: 'Mixpanel',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/mixpanel',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/mixpanel',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/piwikpro',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/plausible',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'category',
+                  label: 'PostHog',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/posthog',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/posthog',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
+                },
+                {
+                  type: 'category',
+                  label: 'Segment',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/segment',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/segment',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/snowplow',
+                  className: 'sidebar-badge-web',
+                },
+              ],
             },
             {
               type: 'category',
-              label: 'Google tag (gtag)',
-              link: {
-                type: 'doc',
-                id: 'destinations/web/gtag/index',
-              },
+              label: 'Marketing Tools',
+              collapsed: true,
               items: [
-                'destinations/web/gtag/ga4',
-                'destinations/web/gtag/ads',
-                'destinations/web/gtag/gtm',
+                {
+                  type: 'doc',
+                  id: 'destinations/web/gtag/ads',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/datamanager',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/linkedin',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/linkedin',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/meta-pixel',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/meta-capi',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/pinterest',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/pinterest',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/tiktok',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/tiktok',
+                  className: 'sidebar-badge-server',
+                },
               ],
             },
-            'destinations/web/meta-pixel',
-            'destinations/web/piwikpro',
-            'destinations/web/plausible',
-            'destinations/web/snowplow',
-            'destinations/server/aws',
-            'destinations/server/gcp',
-            'destinations/server/meta-capi',
+            {
+              type: 'category',
+              label: 'Data Warehouses',
+              collapsed: true,
+              items: [
+                {
+                  type: 'category',
+                  label: 'API',
+                  link: {
+                    type: 'doc',
+                    id: 'destinations/api/index',
+                  },
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/api/web',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/api/server',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/aws',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/gcp',
+                  className: 'sidebar-badge-server',
+                },
+              ],
+            },
             'destinations/create-your-own',
           ],
         },

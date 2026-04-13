@@ -144,7 +144,7 @@ individual event mapping.
 ### Simple conversion ID
 
 The minimum conversion: just the Campaign Manager `conversion_id`. Form
-submissions, signups, downloads — anything that's a one-shot Conversion Rule.
+submissions, signups, downloads, or anything that's a one-shot Conversion Rule.
 
 <DestinationDemo
   destination={destination}
@@ -187,7 +187,7 @@ landing page). Both calls live in the LinkedIn pipeline; they do not collide.
 ### Skipping a fully configured rule
 
 `mapping.skip: true` suppresses the call while keeping the rule on disk for
-quick reactivation — useful for A/B testing which conversions fire or pausing
+quick reactivation, which is useful for A/B testing which conversions fire or pausing
 a rule mid-campaign without redeploying. Equivalent to omitting
 `settings.conversion` entirely under the opt-in model.
 
@@ -224,7 +224,7 @@ LinkedIn is an advertising platform. The walkerOS consent key is **`marketing`**
 
 The walkerOS `config.consent` gate blocks unconsented events from reaching
 the destination in the first place. The Insight Tag itself has no vendor
-opt-out API — when consent is later revoked, walkerOS stops sending events
+opt-out API. When consent is later revoked, walkerOS stops sending events,
 but the loaded tag stays in the page.
 
 ### Deferred script load
@@ -233,19 +233,19 @@ If you want the Insight Tag to load **only** after consent is granted, set
 `loadScript: true` and leave `config.consent.marketing` un-granted at init
 time. The destination will skip `addScript()` during init and inject the
 script the first time an `on('consent')` event grants `marketing`. The
-handler is idempotent — if a `<script src="...snap.licdn.com...">` already
+handler is idempotent. If a `<script src="...snap.licdn.com...">` already
 exists in the DOM, no second injection happens.
 
 :::note Auto page view + retargeting
 The Insight Tag fires its own page view on load and drops first-party cookies
-for audience building. The destination has no knob to suppress this — it is
+for audience building. The destination has no knob to suppress this. It is
 the expected behavior for retargeting, separate from explicit conversion
 tracking.
 :::
 
 ## No identity tracking
 
-LinkedIn identity on the web is cookie-based — the Insight Tag manages its
+LinkedIn identity on the web is cookie-based. The Insight Tag manages its
 own first-party cookies and matches visitors against LinkedIn member profiles
 server-side. There is no `lintrk('identify', ...)` API. The destination does
 **not** forward user IDs, emails, phone numbers, or the `li_fat_id` click ID.

@@ -125,7 +125,7 @@ Add to your `flow.json` destinations:
 ## Standard event taxonomy
 
 Pinterest expects lowercase concatenated event names. The destination never
-auto-maps — every conversion event needs an explicit `mapping.name`.
+auto-maps. Every conversion event needs an explicit `mapping.name`.
 
 | walkerOS event   | Pinterest event | Notes                                                                              |
 | ---------------- | --------------- | ---------------------------------------------------------------------------------- |
@@ -191,8 +191,8 @@ into N separate SDK calls.
 ### Lead with enhanced matching
 
 `settings.identify` resolves to `{ em, external_id }` and fires `pintrk('set',
-data)` BEFORE the track call. The Pinterest JS tag auto-hashes `em` — pass raw
-emails through, do NOT pre-hash.
+data)` BEFORE the track call. The Pinterest JS tag auto-hashes `em`, so pass raw
+emails through and do NOT pre-hash.
 
 <DestinationDemo
   destination={destination}
@@ -223,14 +223,14 @@ the JS tag with SHA-256:
 
 | Field         | Source                              | Notes                                                    |
 | ------------- | ----------------------------------- | -------------------------------------------------------- |
-| `em`          | `data.email` / `user.email` / etc.  | Pinterest auto-hashes — pass raw email, do NOT pre-hash. |
+| `em`          | `data.email` / `user.email` / etc.  | Pinterest auto-hashes. Pass raw email, do NOT pre-hash. |
 | `external_id` | `data.id` / `user.id`               | Stable user identifier. Auto-hashed by Pinterest.        |
 
 The destination strictly limits to these two fields. CAPI-only fields (`ph`,
 `fn`, `ln`, `address`, `country`, `ip`, `ua`) belong to the future server
 destination and are intentionally not accepted here.
 
-Identity is diffed against the destination's runtime state — `pintrk('set',
+Identity is diffed against the destination's runtime state, and `pintrk('set',
 ...)` only fires when the resolved identity actually changes. The
 destination-level `settings.identify` is resolved lazily on the first event
 (init has no event to bind to), so `pintrk('load', tagId)` is called without
@@ -262,14 +262,14 @@ suppression flag:
 3. If consent is later re-granted (all required keys `true`), the flag flips
    back and tracking resumes.
 
-The Pinterest Tag itself stays loaded throughout — only the walkerOS bridge
+The Pinterest Tag itself stays loaded throughout. Only the walkerOS bridge
 goes silent.
 
 :::note Auto page view
 The destination fires `pintrk('page')` once on init by default to match
 Pinterest's base code convention. Set `settings.pageview: false` if your
-walkerOS sources already emit page view events that you map to `pagevisit` —
-that prevents a duplicate initial fire.
+walkerOS sources already emit page view events that you map to `pagevisit`,
+which prevents a duplicate initial fire.
 :::
 
 ## Future: Conversions API
