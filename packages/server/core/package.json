@@ -26,8 +26,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "devDependencies": {
-    "@walkeros/collector": "^3.2.0",
-    "@walkeros/core": "*"
+    "@walkeros/collector": "3.2.0",
+    "@walkeros/core": "3.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
@@ -51,6 +51,6 @@
     }
   ],
   "dependencies": {
-    "@walkeros/core": "^3.2.0"
+    "@walkeros/core": "3.2.0"
   }
 }

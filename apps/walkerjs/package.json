@@ -40,12 +40,12 @@
     "preview": "npm run build && npx serve -l 3333 examples"
   },
   "dependencies": {
-    "@walkeros/core": "^3.2.0",
-    "@walkeros/collector": "^3.2.0",
-    "@walkeros/web-core": "^3.2.0",
-    "@walkeros/web-source-browser": "^3.2.0",
-    "@walkeros/web-source-datalayer": "^3.2.0",
-    "@walkeros/web-source-session": "^3.2.0"
+    "@walkeros/core": "3.2.0",
+    "@walkeros/collector": "3.2.0",
+    "@walkeros/web-core": "3.2.0",
+    "@walkeros/web-source-browser": "3.2.0",
+    "@walkeros/web-source-datalayer": "3.2.0",
+    "@walkeros/web-source-session": "3.2.0"
   },
   "devDependencies": {
     "@swc/jest": "^0.2.39",

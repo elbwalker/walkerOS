@@ -32,7 +32,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "^3.2.0"
+    "@walkeros/core": "3.2.0"
   },
   "devDependencies": {},
   "repository": {

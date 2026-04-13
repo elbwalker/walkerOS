@@ -1,5 +1,5 @@
 ---
-'@walkeros/web-destination-gtag': major
+'@walkeros/web-destination-gtag': minor
 ---
 
 **BREAKING:** `settings.include` and `mapping.settings.*.include` have been

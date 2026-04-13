@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-firehose": "^3.952.0",
-    "@walkeros/server-core": "^3.2.0"
+    "@walkeros/server-core": "3.2.0"
   },
   "devDependencies": {},
   "repository": {

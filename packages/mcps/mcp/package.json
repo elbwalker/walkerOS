@@ -31,15 +31,15 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@walkeros/cli": "^3.2.0",
-    "@walkeros/core": "^3.2.0"
+    "@walkeros/cli": "3.2.0",
+    "@walkeros/core": "3.2.0"
   },
   "peerDependencies": {
     "zod": "^4.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@walkeros/config": "*"
+    "@walkeros/config": "3.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

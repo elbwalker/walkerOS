@@ -18,7 +18,7 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
   },
   "dependencies": {
-    "@walkeros/cli": "^3.0.0"
+    "@walkeros/cli": "3.2.0"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

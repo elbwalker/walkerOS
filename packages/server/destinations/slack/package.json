@@ -35,11 +35,11 @@
   },
   "dependencies": {
     "@slack/web-api": "^7.0.0",
-    "@walkeros/core": "^3.2.0",
-    "@walkeros/server-core": "^3.2.0"
+    "@walkeros/core": "3.2.0",
+    "@walkeros/server-core": "3.2.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "^3.2.0"
+    "@walkeros/collector": "3.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

@@ -38,11 +38,11 @@
   },
   "dependencies": {
     "mixpanel-browser": "^2.78.0",
-    "@walkeros/web-core": "^3.2.0"
+    "@walkeros/web-core": "3.2.0"
   },
   "devDependencies": {
     "@types/mixpanel-browser": "^2.50.0",
-    "@walkeros/collector": "^3.2.0"
+    "@walkeros/collector": "3.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

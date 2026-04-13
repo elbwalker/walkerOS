@@ -37,11 +37,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/web-core": "^3.2.0"
+    "@walkeros/web-core": "3.2.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "^3.2.0",
-    "@walkeros/config": "*",
+    "@walkeros/collector": "3.2.0",
+    "@walkeros/config": "3.2.0",
     "@snowplow/browser-tracker-core": "^4.6.8",
     "@snowplow/browser-plugin-snowplow-ecommerce": "^4.6.8"
   },

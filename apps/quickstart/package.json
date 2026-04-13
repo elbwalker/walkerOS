@@ -14,12 +14,12 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "^3.0.0",
-    "@walkeros/collector": "^3.0.0",
-    "@walkeros/web-core": "^3.0.0",
-    "@walkeros/web-source-browser": "^3.0.0",
-    "@walkeros/web-destination-gtag": "^3.0.0",
-    "@walkeros/web-destination-api": "^3.0.0"
+    "@walkeros/core": "3.2.0",
+    "@walkeros/collector": "3.2.0",
+    "@walkeros/web-core": "3.2.0",
+    "@walkeros/web-source-browser": "3.2.0",
+    "@walkeros/web-destination-gtag": "3.2.0",
+    "@walkeros/web-destination-api": "3.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
