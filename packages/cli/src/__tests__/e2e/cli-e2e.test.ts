@@ -107,8 +107,9 @@ describeIfBuilt('CLI E2E', () => {
           default: {
             web: {},
             bundle: {
-              packages: {},
-              '@walkeros/core': { imports: ['getId'] },
+              packages: {
+                '@walkeros/core': { imports: ['getId'] },
+              },
             },
           },
         },
@@ -197,8 +198,9 @@ describeIfBuilt('CLI E2E', () => {
           default: {
             web: {},
             bundle: {
-              packages: {},
-              '@walkeros/core': { imports: ['getId'] },
+              packages: {
+                '@walkeros/core': { imports: ['getId'] },
+              },
             },
           },
         },
