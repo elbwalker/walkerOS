@@ -1,5 +1,122 @@
 # @walkeros/core
 
+## 3.3.0
+
+### Minor Changes
+
+- 2849acb: **BREAKING CHANGE:** The `packages` block has moved from
+  `flow.<name>.packages` to `flow.<name>.bundle.packages`. Flow files using the
+  old shape fail fast with a migration error pointing to the new location.
+
+  Also adds `flow.<name>.bundle.overrides` — a `Record<string, string>` for
+  pinning transitive dependency versions, matching npm's `overrides` semantics.
+  Use this to resolve version conflicts when a transitive dependency's declared
+  range conflicts with another required version in the same tree (the original
+  motivating case: `@amplitude/engagement-browser` pins
+  `@amplitude/analytics-types@^1.0.0` while `@amplitude/analytics-browser`
+  transitively requires `analytics-types@2.11.1` exact — previously an
+  unresolvable bundler conflict).
+
+  **Migration:** move the existing `packages` block one level deeper into a new
+  `bundle` wrapper.
+
+  ```diff
+    {
+      "version": 3,
+      "flows": {
+        "default": {
+          "web": {},
+  -       "packages": {
+  -         "@walkeros/collector": {}
+  -       },
+  +       "bundle": {
+  +         "packages": {
+  +           "@walkeros/collector": {}
+  +         }
+  +       },
+          "sources": { },
+          "destinations": { }
+        }
+      }
+    }
+  ```
+
+  **Overrides example:**
+
+  ```json
+  {
+    "flows": {
+      "default": {
+        "web": {},
+        "bundle": {
+          "packages": {
+            "@walkeros/web-destination-amplitude": {}
+          },
+          "overrides": {
+            "@amplitude/analytics-types": "2.11.1"
+          }
+        }
+      }
+    }
+  }
+  ```
+
+  Overrides only substitute **transitive** dependencies during resolution —
+  direct package specs declared in `bundle.packages` always win. Overrides
+  targeting a direct local-path package emit a warning and are ignored. Peer
+  constraint mismatches against the chosen override emit a warning but do not
+  error (the override is an explicit user directive).
+
+- 08c365a: Add `include` as a first-class field on `Destination.Config`
+  (destination-level) and `Mapping.Rule` (per-event override). The collector
+  resolves `include` in `processEventMapping` before calling `push()`,
+  flattening specified event sections into prefixed key-value pairs (e.g.
+  `data_price: 420`) and merging them as the bottom layer of `context.data`.
+
+  Rule-level `include` replaces config-level (not additive). Merge priority:
+  include (bottom) → config.data → rule.data (top, wins on conflict). The
+  `context` section correctly extracts `[0]` from OrderedProperties tuples.
+
+  New export: `flattenIncludeSections(event, sections)` from `@walkeros/core`.
+
+- 08c365a: Add `skip?: boolean` to `Mapping.Rule` as a universal sibling of
+  `ignore`. Destinations can now honor a rule-level `skip` to process
+  `settings.*` side effects (identify, revenue, group, etc.) while omitting
+  their default forwarding call (`track()`, `capture()`, `event()`). Replaces
+  destination-specific `settings.skipTrack` / `settings.skipEvent` toggles.
+
+  `processEventMapping()` now returns an explicit `skip: boolean` field
+  alongside `ignore`. The collector does not short-circuit on `skip` — it still
+  calls `destination.push()` so the destination can run its side effects. The
+  destination implementation reads `context.rule?.skip` and gates its default
+  forwarding call on `!skip`.
+
+  `ignore: true` still wins when both flags are set on the same rule.
+
+- 08c365a: Add `command` field to `Flow.StepExample` for routing non-event
+  inputs through walker commands (`consent`, `user`, `run`, `config`). Replaces
+  the gtag-only `_consent: true` magic marker pattern. Test runners can now
+  explicitly opt into `elb('walker <command>', in)` instead of pushing `in` as a
+  regular event.
+
+  **Breaking for anyone copying gtag's step-example test runner:** the
+  `_consent: true` magic marker on `mapping` is gone. Migrate to
+  `command: 'consent'` on `Flow.StepExample`.
+
+### Patch Changes
+
+- 08c365a: Expand `getMarketingParameters` to recognise 25+ ad platform click
+  IDs (Pinterest, Reddit, Quora, Yandex, Outbrain, Taboola, Mailchimp, Klaviyo,
+  HubSpot, Adobe, Impact, CJ, Branch, plus Google's `wbraid`/`gbraid`). Add a
+  new `platform` field that resolves the click ID to a canonical platform
+  identifier (e.g. `gclid` → `google`, `fbclid` → `meta`). Multi-click-ID URLs
+  are resolved deterministically via a priority order.
+
+  Custom click-ID registries can be passed as the third argument to
+  `getMarketingParameters`, or via the new `clickIds` field in the session
+  source settings — so flow.json users can extend or override defaults without
+  touching code.
+
 ## 3.2.0
 
 ### Minor Changes

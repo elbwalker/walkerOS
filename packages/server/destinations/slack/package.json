@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-slack",
   "description": "Slack server destination for walkerOS (Incoming Webhook + @slack/web-api, Block Kit, channel routing, threading, DMs)",
-  "version": "0.0.1",
+  "version": "3.3.0",
   "license": "MIT",
   "exports": {
     ".": {
@@ -35,11 +35,11 @@
   },
   "dependencies": {
     "@slack/web-api": "^7.0.0",
-    "@walkeros/core": "3.2.0",
-    "@walkeros/server-core": "3.2.0"
+    "@walkeros/core": "3.3.0",
+    "@walkeros/server-core": "3.3.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "3.2.0"
+    "@walkeros/collector": "3.3.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

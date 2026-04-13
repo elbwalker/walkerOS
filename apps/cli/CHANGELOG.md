@@ -1,5 +1,15 @@
 # walkeros
 
+## 3.3.0
+
+### Patch Changes
+
+- Updated dependencies [2849acb]
+- Updated dependencies [ae02457]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+  - @walkeros/cli@3.3.0
+
 ## 2.0.1
 
 ### Patch Changes

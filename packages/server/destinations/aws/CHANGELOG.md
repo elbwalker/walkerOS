@@ -1,5 +1,11 @@
 # @walkeros/server-destination-aws
 
+## 3.3.0
+
+### Patch Changes
+
+- @walkeros/server-core@3.3.0
+
 ## 3.2.0
 
 ### Patch Changes

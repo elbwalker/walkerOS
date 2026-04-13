@@ -1,5 +1,44 @@
 # @walkeros/collector
 
+## 3.3.0
+
+### Minor Changes
+
+- 08c365a: Add `include` as a first-class field on `Destination.Config`
+  (destination-level) and `Mapping.Rule` (per-event override). The collector
+  resolves `include` in `processEventMapping` before calling `push()`,
+  flattening specified event sections into prefixed key-value pairs (e.g.
+  `data_price: 420`) and merging them as the bottom layer of `context.data`.
+
+  Rule-level `include` replaces config-level (not additive). Merge priority:
+  include (bottom) → config.data → rule.data (top, wins on conflict). The
+  `context` section correctly extracts `[0]` from OrderedProperties tuples.
+
+  New export: `flattenIncludeSections(event, sections)` from `@walkeros/core`.
+
+- 08c365a: Add `skip?: boolean` to `Mapping.Rule` as a universal sibling of
+  `ignore`. Destinations can now honor a rule-level `skip` to process
+  `settings.*` side effects (identify, revenue, group, etc.) while omitting
+  their default forwarding call (`track()`, `capture()`, `event()`). Replaces
+  destination-specific `settings.skipTrack` / `settings.skipEvent` toggles.
+
+  `processEventMapping()` now returns an explicit `skip: boolean` field
+  alongside `ignore`. The collector does not short-circuit on `skip` — it still
+  calls `destination.push()` so the destination can run its side effects. The
+  destination implementation reads `context.rule?.skip` and gates its default
+  forwarding call on `!skip`.
+
+  `ignore: true` still wins when both flags are set on the same rule.
+
+### Patch Changes
+
+- Updated dependencies [2849acb]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+  - @walkeros/core@3.3.0
+
 ## 3.2.0
 
 ### Minor Changes
