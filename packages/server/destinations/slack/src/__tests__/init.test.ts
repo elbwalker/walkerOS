@@ -1,7 +1,10 @@
 jest.mock('@slack/web-api', () => ({
   __esModule: true,
   WebClient: class {
-    constructor(public token: string, public opts: unknown) {}
+    constructor(
+      public token: string,
+      public opts: unknown,
+    ) {}
   },
 }));
 

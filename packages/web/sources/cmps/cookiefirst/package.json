@@ -38,8 +38,9 @@
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "lint": "eslint \"**/*.ts*\"",
     "test": "jest",
+    "typecheck": "tsc --noEmit",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {

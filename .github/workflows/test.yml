@@ -41,9 +41,17 @@ jobs:
           cache: 'npm'
       - run: corepack enable
       - run: npm ci
+      - name: Restore turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.workflow }}-${{ github.ref_name }}-
+            turbo-${{ github.workflow }}-main-
       - name: Run test, typecheck, lint
         run: |
-          npx turbo run test typecheck lint ${{ (github.ref == 'refs/heads/main' || github.base_ref == 'main') && '--force' || '' }}
+          npx turbo run test typecheck lint --concurrency=1 ${{ (github.ref == 'refs/heads/main' || github.base_ref == 'main') && '--force' || '' }}
         env:
           CI: true
           NODE_OPTIONS: '--max-old-space-size=4096'

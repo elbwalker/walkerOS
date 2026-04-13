@@ -23,7 +23,7 @@
     "build": "tsup --silent",
     "dev": "jest --watchAll --colors",
     "storybook": "storybook dev -p 6007 --no-open",
-    "lint": "tsc && eslint \"src/**/*.ts*\"",
+    "lint": "eslint \"src/**/*.ts*\"",
     "test": "jest",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "build-storybook": "storybook build",

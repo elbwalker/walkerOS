@@ -150,17 +150,18 @@ export function DestinationDemo({
 
         // Auto-detect destination.examples.env.push (for push method)
         const destinationEnv = (
-          destination as { examples?: { env?: { push?: unknown } } }
+          destination as {
+            examples?: { env?: { push?: Destination.BaseEnv } };
+          }
         ).examples?.env?.push;
 
         // For initFirst destinations (e.g. Snowplow), run init with the push
         // env so the tracker is created, then patch the adapter to intercept
         // calls before push runs.
-        if (initFirst && destination.init) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (initFirst && destination.init && destinationEnv) {
           const updatedConfig = await destination.init({
             ...context,
-            env: destinationEnv as any,
+            env: destinationEnv,
           });
           if (updatedConfig && typeof updatedConfig === 'object') {
             context.config = { ...context.config, ...updatedConfig };
@@ -182,10 +183,9 @@ export function DestinationDemo({
             }
           }
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await destination.push(processed.event, {
             ...context,
-            env: destinationEnv as any,
+            env: destinationEnv,
           });
 
           setOutput(formatCapturedCalls(calls));

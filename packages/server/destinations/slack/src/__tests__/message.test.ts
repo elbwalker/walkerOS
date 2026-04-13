@@ -38,9 +38,7 @@ describe('buildMessage', () => {
 
   it('passes through rule.settings.blocks when provided', () => {
     const event = getEvent('order complete', { data: {} });
-    const blocks = [
-      { type: 'section', text: { type: 'mrkdwn', text: 'hi' } },
-    ];
+    const blocks = [{ type: 'section', text: { type: 'mrkdwn', text: 'hi' } }];
     const msg = buildMessage(event, baseSettings, { blocks });
     expect(msg.blocks).toEqual(blocks);
   });

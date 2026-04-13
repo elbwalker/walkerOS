@@ -127,4 +127,4 @@ async function pushWebApi(
   }
 
   await client.chat.postMessage(baseArgs as never);
-};
+}

@@ -30,7 +30,9 @@ export const SettingsSchema = z
       .optional(),
     blocks: z
       .array(z.record(z.string(), z.unknown()))
-      .describe('Default Block Kit blocks applied when no mapping override is set.')
+      .describe(
+        'Default Block Kit blocks applied when no mapping override is set.',
+      )
       .optional(),
     includeHeader: z
       .boolean()
@@ -40,7 +42,9 @@ export const SettingsSchema = z
       .optional(),
     unfurlLinks: z
       .boolean()
-      .describe('Enable link unfurling. Default: false (cleaner for automated alerts).')
+      .describe(
+        'Enable link unfurling. Default: false (cleaner for automated alerts).',
+      )
       .optional(),
     unfurlMedia: z
       .boolean()
@@ -52,7 +56,9 @@ export const SettingsSchema = z
       .optional(),
     threadTs: z
       .string()
-      .describe('Static thread_ts for replies (rarely set at destination level).')
+      .describe(
+        'Static thread_ts for replies (rarely set at destination level).',
+      )
       .optional(),
     retryConfig: z
       .enum(['default', 'fiveRetriesInFiveMinutes', 'none'])
