@@ -4,7 +4,7 @@ description: Standalone session detection and management for walkerOS
 sidebar_position: 1
 package: '@walkeros/web-source-session'
 ---
-import { schemas } from '@walkeros/web-source-session/dev';
+import data from '@walkeros/web-source-session/walkerOS.json';
 
 <PackageLink github="packages/web/sources/session" npm="@walkeros/web-source-session" />
 
@@ -217,7 +217,7 @@ A returning visitor starting their second session has `isStart: true` but `isNew
 
 ## Configuration
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Consent integration
 
@@ -285,7 +285,7 @@ The `cb` setting lets you hook into session detection. It receives the detected 
   language="typescript"
 />
 
-Set `cb: false` to completely disable the default behavior — no `user` commands and no `session start` event will be emitted. This is useful when you want full control over what happens after detection.
+Set `cb: false` to completely disable the default behavior. No `user` commands and no `session start` event will be emitted. This is useful when you want full control over what happens after detection.
 
 ## Next steps
 

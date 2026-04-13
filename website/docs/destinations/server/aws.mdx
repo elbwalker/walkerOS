@@ -5,7 +5,7 @@ path: /docs/destinations/server/aws
 sidebar_position: 1
 package: '@walkeros/server-destination-aws'
 ---
-import { schemas } from '@walkeros/server-destination-aws/dev';
+import data from '@walkeros/server-destination-aws/walkerOS.json';
 
 # AWS Firehose
 
@@ -105,7 +105,7 @@ Add to your `flow.json` destinations:
 
 Configuration options for the `settings.firehose` property:
 
-<PropertyTable schema={schemas.firehose} />
+<PropertyTable schema={data.schemas.firehose} />
 
 ## Docker Deployment
 

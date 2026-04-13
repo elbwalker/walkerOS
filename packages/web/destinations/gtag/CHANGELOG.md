@@ -1,5 +1,60 @@
 # @walkeros/web-destination-gtag
 
+## 3.3.0
+
+### Minor Changes
+
+- 08c365a: **BREAKING:** `settings.include` and `mapping.settings.*.include`
+  have been removed. Use `config.include` (destination-level) and
+  `mapping.include` (per-event rule-level) instead. The include logic is now
+  handled by the walkerOS core/collector — the destination receives
+  pre-flattened properties in `context.data` automatically.
+
+  Migration:
+
+  Before:
+
+  ```json
+  "config": {
+    "settings": { "ga4": { "include": ["data"] } }
+  }
+  ```
+
+  After:
+
+  ```json
+  "config": {
+    "include": ["data"]
+  }
+  ```
+
+  For per-event overrides:
+
+  Before:
+
+  ```json
+  "mapping": { "order": { "complete": { "settings": { "ga4": { "include": ["data", "globals"] } } } } }
+  ```
+
+  After:
+
+  ```json
+  "mapping": { "order": { "complete": { "include": ["data", "globals"] } } }
+  ```
+
+### Patch Changes
+
+- 08c365a: Add `command` field to `Flow.StepExample` for routing non-event
+  inputs through walker commands (`consent`, `user`, `run`, `config`). Replaces
+  the gtag-only `_consent: true` magic marker pattern. Test runners can now
+  explicitly opt into `elb('walker <command>', in)` instead of pushing `in` as a
+  regular event.
+
+  **Breaking for anyone copying gtag's step-example test runner:** the
+  `_consent: true` magic marker on `mapping` is gone. Migrate to
+  `command: 'consent'` on `Flow.StepExample`.
+  - @walkeros/web-core@3.3.0
+
 ## 3.2.0
 
 ### Patch Changes

@@ -22,8 +22,17 @@ export function formatCapturedCalls(
   return calls
     .map(({ path, args }) => {
       const functionName = path[path.length - 1];
-      const formattedArgs = args
+      // Strip trailing undefined args for cleaner output
+      const trimmedArgs = [...args];
+      while (
+        trimmedArgs.length > 0 &&
+        trimmedArgs[trimmedArgs.length - 1] === undefined
+      ) {
+        trimmedArgs.pop();
+      }
+      const formattedArgs = trimmedArgs
         .map((arg) => {
+          if (arg === undefined) return 'undefined';
           if (typeof arg === 'string') return `'${arg}'`;
           if (typeof arg === 'object' && arg !== null)
             return JSON.stringify(arg, null, 2);

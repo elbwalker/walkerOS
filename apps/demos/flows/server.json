@@ -4,7 +4,6 @@
     "server": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/server-source-express": {},
         "@walkeros/destination-demo": {},
         "@walkeros/server-destination-gcp": {}

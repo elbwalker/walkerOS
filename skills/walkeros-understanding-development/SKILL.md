@@ -18,16 +18,18 @@ complete.
 
 ## Commands
 
-| Command          | Purpose                     |
-| ---------------- | --------------------------- |
-| `npm install`    | Install all dependencies    |
-| `npm run dev`    | Watch mode for all packages |
-| `npm run build`  | Build all packages          |
-| `npm run test`   | Run all tests               |
-| `npm run lint`   | ESLint + TypeScript check   |
-| `npm run format` | Prettier formatting         |
+| Command             | Purpose                     |
+| ------------------- | --------------------------- |
+| `npm install`       | Install all dependencies    |
+| `npm run dev`       | Watch mode for all packages |
+| `npm run build`     | Build all packages          |
+| `npm run test`      | Run all tests               |
+| `npm run typecheck` | TypeScript type check       |
+| `npm run lint`      | ESLint                      |
+| `npm run format`    | Prettier formatting         |
 
-**Validation before commit:** `npm run build && npm run test && npm run lint`
+**Validation before commit:**
+`npm run typecheck && npm run lint && npm run build && npm run test`
 
 ## XP Principles (Non-Negotiable)
 

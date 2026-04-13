@@ -1,23 +1,6 @@
 import { z } from '@walkeros/core/dev';
 
 /**
- * Include configuration for GA4
- * Specifies which event properties to include
- */
-export const IncludeSchema = z.array(
-  z.enum([
-    'all',
-    'context',
-    'data',
-    'event',
-    'globals',
-    'source',
-    'user',
-    'version',
-  ]),
-);
-
-/**
  * Consent Mode Configuration
  * Can be false (disabled), true (use defaults), or custom mapping
  */
@@ -35,9 +18,6 @@ export const GA4SettingsSchema = z.object({
     .boolean()
     .describe('Enable debug mode for GA4 (like true)')
     .optional(),
-  include: IncludeSchema.describe(
-    "Array of properties to include in events (like ['data', 'context', 'user'])",
-  ).optional(),
   pageview: z
     .boolean()
     .describe('Enable automatic pageview tracking (like true)')

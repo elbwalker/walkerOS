@@ -91,21 +91,33 @@ export function validateFlow(
     }
   }
 
-  // 8. CLI-specific: warn about packages without version
-  const packages = config.packages as
-    | Record<string, Record<string, unknown>>
-    | undefined;
-  if (packages && typeof packages === 'object') {
-    for (const [pkgName, pkgConfig] of Object.entries(packages)) {
-      if (!pkgConfig.version && !pkgConfig.path) {
-        warnings.push({
-          path: `packages.${pkgName}`,
-          message: `Package "${pkgName}" has no version specified`,
-          suggestion: 'Consider specifying a version for reproducible builds',
-        });
+  // 8. CLI-specific: warn about packages without version (per-flow bundle.packages)
+  let totalPackageCount = 0;
+  if (flows && typeof flows === 'object') {
+    for (const [flowName, flowValue] of Object.entries(
+      flows as Record<string, unknown>,
+    )) {
+      const flow = flowValue as { bundle?: { packages?: unknown } };
+      const packages = flow.bundle?.packages as
+        | Record<string, Record<string, unknown>>
+        | undefined;
+      if (packages && typeof packages === 'object') {
+        for (const [pkgName, pkgConfig] of Object.entries(packages)) {
+          if (!pkgConfig.version && !pkgConfig.path) {
+            warnings.push({
+              path: `flows.${flowName}.bundle.packages.${pkgName}`,
+              message: `Package "${pkgName}" has no version specified`,
+              suggestion:
+                'Consider specifying a version for reproducible builds',
+            });
+          }
+        }
+        totalPackageCount += Object.keys(packages).length;
       }
     }
-    details.packageCount = Object.keys(packages).length;
+  }
+  if (totalPackageCount > 0) {
+    details.packageCount = totalPackageCount;
   }
 
   // 9. Expose core's IntelliSense context in details (bonus for MCP consumers)

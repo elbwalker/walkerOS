@@ -146,7 +146,7 @@ The Docker container is configured via environment variables:
 
 The runtime accepts bundles from three sources (checked in priority order):
 
-**File path** (default) — mount or bake the bundle into the container:
+**File path** (default): mount or bake the bundle into the container:
 
 <CodeSnippet
   code={`docker run -p 8080:8080 \\
@@ -155,7 +155,7 @@ The runtime accepts bundles from three sources (checked in priority order):
   language="bash"
 />
 
-**URL** — fetch the bundle from a remote location at startup:
+**URL**: fetch the bundle from a remote location at startup:
 
 <CodeSnippet
   code={`docker run -p 8080:8080 \\
@@ -166,14 +166,14 @@ The runtime accepts bundles from three sources (checked in priority order):
 
 Works with presigned S3/GCS URLs, CDNs, or any HTTP(S) endpoint.
 
-**Stdin pipe** — pipe the bundle directly into the container:
+**Stdin pipe**: pipe the bundle directly into the container:
 
 <CodeSnippet
   code={`cat flow.mjs | docker run -i -p 8080:8080 walkeros/flow:latest`}
   language="bash"
 />
 
-Stdin takes highest priority — if data is piped, the `BUNDLE` env var is ignored.
+Stdin takes highest priority. If data is piped, the `BUNDLE` env var is ignored.
 
 ## Including files
 
@@ -219,11 +219,11 @@ The `include` field in your flow config copies folders into the bundle output di
 />
 
 :::warning Avoid circular includes
-The `include` field copies folders into the **output directory** (where the bundle is written). If your output is `dist/bundle.mjs` and you set `include: ["./dist"]`, the bundler will try to copy `dist/` into `dist/dist/` — a circular operation that will error.
+The `include` field copies folders into the **output directory** (where the bundle is written). If your output is `dist/bundle.mjs` and you set `include: ["./dist"]`, the bundler will try to copy `dist/` into `dist/dist/`, a circular operation that will error.
 
 **Fix:** Only include folders that are **not** the output directory:
-- `"include": ["./shared"]` — copies `shared/` into the output directory
-- `"include": ["./credentials"]` — copies `credentials/` into the output directory
+- `"include": ["./shared"]`: copies `shared/` into the output directory
+- `"include": ["./credentials"]`: copies `credentials/` into the output directory
 :::
 
 Build with Dockerfile generation:
@@ -257,8 +257,8 @@ During development, mount folders directly instead of baking them into the image
 
 Keep served files and credentials in separate directories:
 
-- **`public/`** — Files served to clients (static assets, templates)
-- **`credentials/`** — Secret files (API keys, service accounts)
+- **`public/`**: Files served to clients (static assets, templates)
+- **`credentials/`**: Secret files (API keys, service accounts)
 
 The fs store only serves files under its configured `basePath`. Never point it at a directory containing secrets.
 
@@ -483,7 +483,7 @@ Create `bigquery-collect.json`:
     },
     "collector": { "run": true }
   },
-  "build": {
+  "bundle": {
     "packages": {
       "@walkeros/collector": { "version": "latest" },
       "@walkeros/server-source-express": { "version": "latest" },
@@ -626,7 +626,7 @@ Create `web-tracker.json`:
     },
     "collector": { "run": true }
   },
-  "build": {
+  "bundle": {
     "packages": {
       "@walkeros/collector": { "version": "latest" },
       "@walkeros/web-source-browser": { "version": "latest" },

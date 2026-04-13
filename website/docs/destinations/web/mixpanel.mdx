@@ -1,0 +1,236 @@
+---
+title: Mixpanel
+description: Product analytics with people profiles and group analytics
+path: /docs/destinations/web/mixpanel
+sidebar_position: 8
+package: '@walkeros/web-destination-mixpanel'
+---
+
+import destinationMixpanel from '@walkeros/web-destination-mixpanel';
+import data from '@walkeros/web-destination-mixpanel/walkerOS.json';
+
+export const destination = { ...destinationMixpanel, examples: data.examples };
+
+# Mixpanel
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/mixpanel"
+  npm="@walkeros/web-destination-mixpanel"
+/>
+
+[Mixpanel](https://mixpanel.com/) is a product analytics platform with people
+profiles, group analytics, and cohort-based reporting. This destination forwards
+walkerOS events to Mixpanel via the official
+[`mixpanel-browser`](https://www.npmjs.com/package/mixpanel-browser) SDK,
+translating events into `mixpanel.track(...)` calls and resolving identity,
+people properties, group assignments, and consent opt-in/opt-out.
+
+:::info Where This Fits
+Mixpanel is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Mixpanel', highlight: true } }}
+/>
+
+Loads the Mixpanel SDK, forwards every walkerOS event, and lets you layer on
+identity, people profile operations, group analytics, and consent handling.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-mixpanel`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationMixpanel } from '@walkeros/web-destination-mixpanel';
+
+await startFlow({
+  destinations: {
+    mixpanel: {
+      code: destinationMixpanel,
+      config: {
+        settings: {
+          apiKey: 'YOUR_PROJECT_TOKEN',
+          api_host: 'https://api-eu.mixpanel.com',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "mixpanel": {
+    "package": "@walkeros/web-destination-mixpanel",
+    "config": {
+      "settings": {
+        "apiKey": "YOUR_PROJECT_TOKEN",
+        "api_host": "https://api-eu.mixpanel.com"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## Mapping data.examples
+
+:::tip
+
+The code data.examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### Default event forwarding
+
+Every walkerOS event becomes `mixpanel.track(event.name, properties)`.
+Without `include` config, `properties` is empty. Add `include: ['data']`
+to the destination config to forward event data as properties.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'mp_test' }}
+  event={data.examples.step.defaultEventForwarding.in}
+  mapping={{ include: ['data'] }}
+  generic={true}
+/>
+
+### Identify with people properties
+
+Resolve a mapping value into Mixpanel's identity vocabulary. `distinctId` is
+the new user identity, and `set`/`setOnce`/`increment`/`append`/`union` operate
+on the user's people profile via `mixpanel.people.*`.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'mp_test' }}
+  event={data.examples.step.userLoginIdentifyAndPeople.in}
+  mapping={data.examples.step.userLoginIdentifyAndPeople.mapping}
+  generic={true}
+/>
+
+### People profile operations only
+
+When the resolved object has no `distinctId`, identity is unchanged but the
+people operations still fire, which is useful for profile updates that should not
+create a new identity.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'mp_test' }}
+  event={data.examples.step.profileUpdateAllPeopleOperations.in}
+  mapping={data.examples.step.profileUpdateAllPeopleOperations.mapping}
+  generic={true}
+/>
+
+### Group association and group profiles
+
+`settings.group` calls `mixpanel.set_group(key, id)` to associate the user
+with a group. `settings.groupIdentify` writes properties on the group profile
+itself via `mixpanel.get_group(key, id).set/setOnce/union/...`.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'mp_test' }}
+  event={data.examples.step.userGroupAssociation.in}
+  mapping={data.examples.step.userGroupAssociation.mapping}
+  generic={true}
+/>
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'mp_test' }}
+  event={data.examples.step.companyUpdateGroupProfile.in}
+  mapping={data.examples.step.companyUpdateGroupProfile.mapping}
+  generic={true}
+/>
+
+### Logout
+
+`settings.reset: true` calls `mixpanel.reset()` to clear distinct ID and
+super properties on logout. Combine with `skip: true` so the rule does not
+fire a default `track()` call.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'mp_test' }}
+  event={data.examples.step.userLogoutReset.in}
+  mapping={data.examples.step.userLogoutReset.mapping}
+  generic={true}
+/>
+
+## Consent
+
+Declare required consent keys via `config.consent`. When a `walker consent`
+event arrives with all declared keys granted, the destination calls
+`mixpanel.opt_in_tracking()`. When any declared key is revoked, it calls
+`mixpanel.opt_out_tracking()`, which stops Mixpanel from capturing or
+queueing events:
+
+<CodeSnippet
+  code={`destinations: {
+  mixpanel: {
+    code: destinationMixpanel,
+    config: {
+      consent: { analytics: true },
+      settings: { apiKey: 'YOUR_PROJECT_TOKEN' },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+Without `config.consent` the destination takes no action on consent changes;
+the walkerOS `config.consent` gate still blocks unconsented events from
+reaching the destination in the first place.
+
+## Intentionally not supported
+
+Mixpanel features that are deferred or not in scope for v1:
+
+- **`alias()`**: anonymous-to-identified merging is handled by walkerOS
+  identity (the source resolves the user before pushing).
+- **`register()` / super properties**: use destination-level
+  `settings.include` to attach properties on every event instead. Mixpanel's
+  super-property pattern overlaps with walkerOS's mapping model.
+- **`people.track_charge`**: deprecated by Mixpanel since v2.78. Send
+  revenue events as regular `track()` calls with a `revenue` property.
+- **`time_event` / page view auto-tracking**: walkerOS sources handle event
+  capture and timing.
+
+All other built-in `mixpanel-browser` config options pass through `settings`
+directly (e.g. `api_host`, `persistence`, `cross_subdomain_cookie`,
+`secure_cookie`, `ip`, `property_blacklist`, `loaded` callback, etc.).
+
+## Related
+
+- [Mixpanel documentation](https://docs.mixpanel.com/)
+- [`mixpanel-browser` SDK reference](https://docs.mixpanel.com/docs/tracking-methods/sdks/javascript)

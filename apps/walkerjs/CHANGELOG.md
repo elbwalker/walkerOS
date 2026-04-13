@@ -1,5 +1,21 @@
 # @walkeros/walker.js
 
+## 3.3.0
+
+### Patch Changes
+
+- Updated dependencies [2849acb]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+  - @walkeros/core@3.3.0
+  - @walkeros/web-source-session@3.3.0
+  - @walkeros/collector@3.3.0
+  - @walkeros/web-core@3.3.0
+  - @walkeros/web-source-datalayer@3.3.0
+  - @walkeros/web-source-browser@3.3.0
+
 ## 3.2.0
 
 ### Patch Changes

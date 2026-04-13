@@ -186,6 +186,30 @@ receives events. Each destination can have its own chain. See
 [understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
 for chain details.
 
+## Consent: Two-Layer Pattern
+
+Destinations that integrate vendor SDKs typically need two consent layers:
+
+**Layer 1: `config.consent`** — gates walkerOS event delivery. If consent is not
+granted, events don't reach the destination. This is the primary barrier.
+
+**Layer 2: `on('consent')`** — controls vendor SDK internals. Even when walkerOS
+stops sending events, the vendor SDK may still run its own behaviors (DOM
+capture, polling, fetching configs). Use `on('consent')` to pause/resume these.
+
+```typescript
+on(type, context) {
+  if (type !== 'consent') return;
+  const consent = context.data;
+  // Derive from config.consent keys — don't hardcode consent names
+  const granted = Object.keys(config.consent || {}).every(k => consent[k]);
+  vendorSdk.setOptOut(!granted);
+}
+```
+
+Both layers are needed for complete consent compliance. `config.consent`
+prevents data flow. `on('consent')` prevents vendor SDK side effects.
+
 ## Response Delegation (env.respond)
 
 Destinations can customize HTTP responses by calling

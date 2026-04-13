@@ -71,6 +71,33 @@ export const PackagesSchema = z
   )
   .describe('NPM packages to bundle');
 
+/**
+ * Overrides schema — pin transitive dependency versions.
+ *
+ * @remarks
+ * Flat `Record<string, string>` matching npm's `overrides` semantics.
+ * Only affects transitive deps; direct package specs always win.
+ */
+export const OverridesSchema = z
+  .record(
+    z.string().regex(npmPackageNamePattern, 'Invalid npm package name'),
+    z.string().min(1, 'Override version cannot be empty'),
+  )
+  .describe('Transitive dependency version overrides');
+
+/**
+ * Bundle schema — build-time configuration for the bundler.
+ */
+export const BundleSchema = z
+  .object({
+    packages: PackagesSchema.optional().describe('NPM packages to bundle'),
+    overrides: OverridesSchema.optional().describe(
+      'Transitive dependency overrides',
+    ),
+  })
+  .strict()
+  .describe('Bundle configuration (packages + overrides)');
+
 // ========================================
 // Platform Configuration Schemas
 // ========================================
@@ -170,6 +197,12 @@ export const StepExampleSchema = z
       .describe('Source trigger metadata'),
     mapping: z.unknown().optional().describe('Mapping configuration'),
     out: z.unknown().optional().describe('Expected output from the step'),
+    command: z
+      .enum(['config', 'consent', 'user', 'run'])
+      .optional()
+      .describe(
+        "Invoke elb('walker <command>', in) instead of pushing in as an event",
+      ),
   })
   .describe('Named example with input/output pair');
 
@@ -504,7 +537,19 @@ export const SettingsSchema = z
       .describe(
         'Collector configuration for event processing (uses Collector.InitConfig)',
       ),
-    packages: PackagesSchema.optional().describe('NPM packages to bundle'),
+    bundle: BundleSchema.optional().describe(
+      'Build-time configuration (packages + overrides)',
+    ),
+    packages: z
+      .unknown()
+      .optional()
+      .refine((val) => val === undefined, {
+        message:
+          '`packages` must live under `bundle.packages`. ' +
+          'Move your packages block to `flow.<name>.bundle.packages`. ' +
+          'This is a breaking change — see CHANGELOG migration guide.',
+      })
+      .describe('Legacy top-level packages (moved to bundle.packages)'),
     variables: VariablesSchema.optional().describe(
       'Flow-level variables (override Config.variables, overridden by source/destination variables)',
     ),

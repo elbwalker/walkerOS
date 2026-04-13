@@ -1,9 +1,9 @@
 import type { Source } from '@walkeros/core';
 import type { Config, Input, Settings } from './types';
-import { SettingsSchema } from './schemas';
 
 export * as SourceName from './types';
-export * as schemas from './schemas';
+// Note: schemas belong in ./dev (separate subpath export), never in the
+// main runtime entry — otherwise zod gets pulled into production bundles.
 export * as examples from '../../examples';
 
 /**
@@ -11,7 +11,7 @@ export * as examples from '../../examples';
  *
  * Key patterns:
  * 1. Context destructuring - extract config, env, logger, id from context
- * 2. Schema validation - use Zod schemas to validate settings
+ * 2. Apply defaults inline - flow.json is developer-controlled
  * 3. Forward to collector - call env.push() to send events
  * 4. Error logging - use logger?.error() for errors only
  * 5. Return Source.Instance - return { type, config, push } object
@@ -25,8 +25,14 @@ export const sourceMySource: Source.Init<{
   const { config = {}, env } = context;
   const { push: envPush, logger } = env;
 
-  // Validate and apply default settings using Zod schema
-  const settings = SettingsSchema.parse(config.settings || {});
+  // Apply defaults inline — flow.json is developer-controlled, so no
+  // runtime validation. Shape checks live in ./schemas and are used by
+  // `walkeros validate` and dev tooling, never at runtime.
+  const userSettings = config.settings || {};
+  const settings: Settings = {
+    validateSignature: userSettings.validateSignature ?? false,
+    apiKeyHeader: userSettings.apiKeyHeader ?? 'x-api-key',
+  };
 
   const fullConfig: Source.Config<{ settings: Settings }> = {
     ...config,

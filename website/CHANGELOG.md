@@ -1,5 +1,44 @@
 # @walkeros/website
 
+## 3.3.0
+
+### Patch Changes
+
+- Updated dependencies [08c365a]
+- Updated dependencies [2849acb]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+  - @walkeros/web-destination-amplitude@3.3.0
+  - @walkeros/core@3.3.0
+  - @walkeros/web-destination-clarity@3.3.0
+  - @walkeros/web-destination-gtag@3.3.0
+  - @walkeros/collector@3.3.0
+  - @walkeros/web-destination-linkedin@3.3.0
+  - @walkeros/web-destination-mixpanel@3.3.0
+  - @walkeros/web-destination-pinterest@3.3.0
+  - @walkeros/web-destination-posthog@3.3.0
+  - @walkeros/web-destination-segment@3.3.0
+  - @walkeros/web-destination-tiktok@3.3.0
+  - @walkeros/explorer@3.3.0
+  - @walkeros/walker.js@3.3.0
+  - @walkeros/server-destination-api@3.3.0
+  - @walkeros/web-destination-piwikpro@3.3.0
+  - @walkeros/web-destination-api@3.3.0
+  - @walkeros/web-destination-meta@3.3.0
+  - @walkeros/web-destination-plausible@3.3.0
+  - @walkeros/web-destination-snowplow@3.3.0
+  - @walkeros/web-source-browser@3.3.0
+
 ## 0.6.4
 
 ### Patch Changes

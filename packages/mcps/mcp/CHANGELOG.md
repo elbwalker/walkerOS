@@ -1,5 +1,20 @@
 # @walkeros/mcp
 
+## 3.3.0
+
+### Patch Changes
+
+- Updated dependencies [2849acb]
+- Updated dependencies [08c365a]
+- Updated dependencies [ae02457]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+- Updated dependencies [08c365a]
+  - @walkeros/cli@3.3.0
+  - @walkeros/core@3.3.0
+
 ## 3.2.0
 
 ### Minor Changes

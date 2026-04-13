@@ -72,6 +72,7 @@ export {
 
 // Hint schemas (direct export — flat record, no namespace needed)
 export { CodeSchema, HintSchema, HintsSchema } from './hint';
+export { ClickIdEntrySchema } from './marketing';
 
 // ========================================
 // Direct Exports (commonly used schemas)

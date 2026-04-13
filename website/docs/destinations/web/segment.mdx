@@ -1,0 +1,228 @@
+---
+title: Segment
+description: Segment CDP, routing events to 400+ downstream destinations
+path: /docs/destinations/web/segment
+sidebar_position: 8
+package: '@walkeros/web-destination-segment'
+---
+
+import destinationSegment from '@walkeros/web-destination-segment';
+import data from '@walkeros/web-destination-segment/walkerOS.json';
+
+export const destination = { ...destinationSegment, examples: data.examples };
+
+# Segment
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/segment"
+  npm="@walkeros/web-destination-segment"
+/>
+
+[Segment](https://segment.com/) is a customer data platform that routes your
+event data to 400+ downstream destinations (analytics, marketing,
+warehouses, ...). This destination forwards walkerOS events to Segment via
+the official
+[`@segment/analytics-next`](https://www.npmjs.com/package/@segment/analytics-next)
+(Analytics.js 2.0) SDK, implementing the full Segment Spec surface: `track`,
+`identify`, `group`, `page`, and `reset`.
+
+:::info Where This Fits
+Segment is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Segment', highlight: true } }}
+/>
+
+Loads Analytics.js, forwards events as Segment Spec calls, and automatically
+stamps consent context on every call.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-segment`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationSegment } from '@walkeros/web-destination-segment';
+
+await startFlow({
+  destinations: {
+    segment: {
+      code: destinationSegment,
+      config: {
+        settings: {
+          apiKey: 'YOUR_SEGMENT_WRITE_KEY',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "segment": {
+    "package": "@walkeros/web-destination-segment",
+    "config": {
+      "settings": {
+        "apiKey": "YOUR_SEGMENT_WRITE_KEY"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+The `Settings` type extends Segment's `InitOptions`, so every passthrough
+option (cookie, storage, integrations, plan, retryQueue, ...) works alongside
+the walkerOS-specific fields above.
+
+## Mapping data.examples
+
+:::tip
+
+The code data.examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### Default event forwarding
+
+Every walkerOS event becomes `analytics.track(name, properties)`.
+Without `include` config, `properties` is empty. Add `include: ['data']`
+to the destination config to forward event data as properties.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'test-project' }}
+  event={data.examples.step.defaultEventForwarding.in}
+  mapping={{ include: ['data'] }}
+  generic={true}
+/>
+
+### User login identify
+
+Per-event identity with reserved Segment Spec traits (`email`, `name`,
+`plan`, `company`). `skip: true` suppresses the default `track()` call so
+only the identity side effect runs.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'test-project' }}
+  event={data.examples.step.userLoginIdentify.in}
+  mapping={data.examples.step.userLoginIdentify.mapping}
+  generic={true}
+/>
+
+### Group assignment
+
+Attach a user to a company and set the company's traits in a single
+`group()` call.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'test-project' }}
+  event={data.examples.step.companyUpdateGroup.in}
+  mapping={data.examples.step.companyUpdateGroup.mapping}
+  generic={true}
+/>
+
+### Page views
+
+Segment's `page()` is first-class. Configure it explicitly via
+`mapping.settings.page`.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'test-project' }}
+  event={data.examples.step.pageViewAsPage.in}
+  mapping={data.examples.step.pageViewAsPage.mapping}
+  generic={true}
+/>
+
+### Order Completed (Segment Ecommerce Spec)
+
+A single `track('Order Completed', { products: [...] })` call using
+`mapping.name` for the PascalCase event name and `mapping.data` with a
+nested `loop` to build the products array inline.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'test-project' }}
+  event={data.examples.step.orderCompletedEcommerce.in}
+  mapping={data.examples.step.orderCompletedEcommerce.mapping}
+  generic={true}
+/>
+
+## Consent
+
+The destination supports two complementary consent mechanisms:
+
+**Automatic context forwarding.** When `settings.consent` is configured,
+every `track`, `identify`, `group`, and `page` call is stamped with
+`context.consent.categoryPreferences`. walkerOS consent keys are remapped
+to Segment category names:
+
+<CodeSnippet
+  code={`settings: {
+  apiKey: 'WRITE_KEY',
+  consent: {
+    analytics: 'Analytics',
+    marketing: 'Advertising',
+  },
+}`}
+  language="typescript"
+/>
+
+**Deferred-load consent pattern.** When `config.consent` is declared,
+`AnalyticsBrowser.load()` is held until the first `walker consent` command
+that grants all required keys. This is Segment's primary consent mechanism
+Analytics.js has no `optOut()` method, so the only way to enforce consent
+is to avoid loading the SDK in the first place.
+
+<CodeSnippet
+  code={`destinations: {
+  segment: {
+    code: destinationSegment,
+    config: {
+      consent: { analytics: true },
+      settings: { apiKey: 'WRITE_KEY' },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+## Scope Notes
+
+- **`alias()` and `screen()`** are intentionally deferred. `alias()` is a
+  legacy identity-linking method; `screen()` is mobile-only.
+- **Plugins, source middleware, and destination middleware** cannot be
+  serialized in JSON flow configs. Register them programmatically on the
+  returned `AnalyticsBrowser` instance if needed.

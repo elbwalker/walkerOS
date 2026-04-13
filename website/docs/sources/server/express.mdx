@@ -5,7 +5,7 @@ sidebar_position: 1
 package: '@walkeros/server-source-express'
 ---
 
-import { schemas } from '@walkeros/server-source-express/dev';
+import data from '@walkeros/server-source-express/walkerOS.json';
 
 <PackageLink env="server" github="packages/server/sources/express" npm="@walkeros/server-source-express" />
 
@@ -137,7 +137,7 @@ Server sources require platform-specific handlers. For containerized deployments
 
 ## Configuration
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## HTTP methods
 

@@ -3,15 +3,6 @@
   "flows": {
     "default": {
       "web": {},
-      "packages": {
-        "@walkeros/collector": {
-          "version": "latest",
-          "imports": ["startFlow"]
-        },
-        "@walkeros/destination-demo": {
-          "version": "latest"
-        }
-      },
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
@@ -59,6 +50,17 @@
         "globals": {
           "environment": "production",
           "version": "1.0.0"
+        }
+      },
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {
+            "version": "latest",
+            "imports": ["startFlow"]
+          },
+          "@walkeros/destination-demo": {
+            "version": "latest"
+          }
         }
       }
     }

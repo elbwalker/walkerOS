@@ -163,6 +163,43 @@ h6 {
   width: 200% !important;
 }
 
+/* Sidebar destination badges */
+.sidebar-badge-web .menu__link::after {
+  content: 'Web';
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  line-height: 1.6;
+  background-color: var(--color-elbwalker-100);
+  color: var(--color-elbwalker-700);
+}
+
+.sidebar-badge-server .menu__link::after {
+  content: 'Server';
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  line-height: 1.6;
+  background-color: var(--color-gray-200);
+  color: var(--color-gray-700);
+}
+
+[data-theme='dark'] .sidebar-badge-web .menu__link::after {
+  background-color: var(--color-elbwalker-700);
+  color: var(--color-elbwalker-100);
+}
+
+[data-theme='dark'] .sidebar-badge-server .menu__link::after {
+  background-color: var(--color-gray-700);
+  color: var(--color-gray-200);
+}
+
 /* Override text colors */
 @layer base {
   .text-black {

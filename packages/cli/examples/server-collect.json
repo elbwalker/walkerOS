@@ -3,18 +3,6 @@
   "flows": {
     "default": {
       "server": {},
-      "packages": {
-        "@walkeros/collector": {
-          "version": "latest",
-          "imports": ["startFlow"]
-        },
-        "@walkeros/server-source-express": {
-          "version": "latest"
-        },
-        "@walkeros/destination-demo": {
-          "version": "latest"
-        }
-      },
       "sources": {
         "http": {
           "package": "@walkeros/server-source-express",
@@ -53,6 +41,20 @@
         "globals": {
           "environment": "test",
           "version": "1.0.0"
+        }
+      },
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {
+            "version": "latest",
+            "imports": ["startFlow"]
+          },
+          "@walkeros/server-source-express": {
+            "version": "latest"
+          },
+          "@walkeros/destination-demo": {
+            "version": "latest"
+          }
         }
       }
     }

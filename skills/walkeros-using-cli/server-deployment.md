@@ -21,7 +21,6 @@ needs an HTTP source (Express) for health checks and event collection:
     "default": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/server-source-express": {},
         "@walkeros/destination-demo": {}
       },

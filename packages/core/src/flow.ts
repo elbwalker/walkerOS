@@ -357,7 +357,7 @@ export function getFlowSettings(
       const resolvedCode = resolveCodeFromPackage(
         source.package,
         source.code,
-        result.packages,
+        result.bundle?.packages,
       );
 
       // Exclude deprecated code: true, only keep valid string or InlineCode
@@ -415,7 +415,7 @@ export function getFlowSettings(
       const resolvedCode = resolveCodeFromPackage(
         dest.package,
         dest.code,
-        result.packages,
+        result.bundle?.packages,
       );
 
       // Exclude deprecated code: true, only keep valid string or InlineCode
@@ -471,7 +471,7 @@ export function getFlowSettings(
       const resolvedCode = resolveCodeFromPackage(
         store.package,
         store.code,
-        result.packages,
+        result.bundle?.packages,
       );
 
       const validCode =
@@ -523,7 +523,7 @@ export function getFlowSettings(
       const resolvedCode = resolveCodeFromPackage(
         transformer.package,
         transformer.code,
-        result.packages,
+        result.bundle?.packages,
       );
 
       const validCode =

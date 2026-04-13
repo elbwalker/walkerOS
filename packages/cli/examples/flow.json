@@ -3,20 +3,6 @@
   "flows": {
     "default": {
       "web": {},
-      "packages": {
-        "@walkeros/collector": {
-          "version": "latest",
-          "imports": ["startFlow"]
-        },
-        "@walkeros/web-destination-gtag": {
-          "version": "latest",
-          "imports": ["destinationGtag"]
-        },
-        "@walkeros/destination-demo": {
-          "version": "latest",
-          "imports": ["destinationDemo"]
-        }
-      },
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
@@ -74,6 +60,22 @@
         "globals": {
           "environment": "production",
           "version": "1.0.0"
+        }
+      },
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {
+            "version": "latest",
+            "imports": ["startFlow"]
+          },
+          "@walkeros/web-destination-gtag": {
+            "version": "latest",
+            "imports": ["destinationGtag"]
+          },
+          "@walkeros/destination-demo": {
+            "version": "latest",
+            "imports": ["destinationDemo"]
+          }
         }
       }
     }

@@ -20,14 +20,19 @@ function createSourceContext(
 }
 
 describe('logger usage', () => {
-  it('should use logger.throw for validation errors', async () => {
+  it('should forward events without runtime validation', async () => {
+    // The source no longer validates event shape — events are forwarded as-is
+    // and any downstream rejection is the collector/destination's concern.
     const mockLogger = createMockLogger();
+    const mockPush = jest
+      .fn()
+      .mockResolvedValue({ event: { id: 'forwarded' } });
 
     const source = await sourceFetch(
       createSourceContext(
         {},
         {
-          push: jest.fn() as never,
+          push: mockPush as never,
           command: jest.fn() as never,
           elb: jest.fn() as never,
           logger: mockLogger,
@@ -43,10 +48,10 @@ describe('logger usage', () => {
 
     const response = await source.push(request);
 
-    // Should NOT throw (catches internally and returns error response)
-    expect(response.status).toBe(400);
-    // But should have logged the error
-    expect(mockLogger.error).toHaveBeenCalled();
+    // No validation rejection — event is forwarded successfully.
+    expect(response.status).toBe(200);
+    expect(mockPush).toHaveBeenCalled();
+    expect(mockLogger.error).not.toHaveBeenCalled();
   });
 
   it('should NOT log routine operations', async () => {

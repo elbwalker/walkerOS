@@ -9,14 +9,19 @@ import {
 import { startFlow } from '@walkeros/collector';
 import { CodeBox } from '../molecules/code-box';
 import { Grid } from '../atoms/grid';
-import { captureDestinationPush } from '../../helpers/capture';
+import {
+  captureDestinationPush,
+  formatCapturedCalls,
+} from '../../helpers/capture';
 
 export interface DestinationDemoProps {
   destination: Destination.Instance;
   event: WalkerOS.PartialEvent;
   mapping?: Mapping.Rule | string;
   settings?: unknown;
+  include?: string[]; // Passed as config.include for data enrichment
   generic?: boolean; // When true, wraps mapping in '*': { '*': mapping }
+  initFirst?: boolean; // When true, calls destination.init() before push()
   labelEvent?: string;
   labelMapping?: string;
   labelOutput?: string;
@@ -82,7 +87,9 @@ export function DestinationDemo({
   event: initialEvent,
   mapping: initialMapping = {},
   settings,
+  include,
   generic = false,
+  initFirst = false,
   labelEvent = 'Event',
   labelMapping = 'Mapping',
   labelOutput = 'Result',
@@ -113,6 +120,7 @@ export function DestinationDemo({
         const config: Destination.Config = {
           settings: settings || {},
           mapping: wrappedMapping,
+          ...(include && { include }),
         };
 
         // Create minimal collector for mapping processing
@@ -128,6 +136,7 @@ export function DestinationDemo({
           ingest: createIngest('demo'),
           config,
           data: processed.data,
+          rule: processed.mapping,
           env: destination.env || {},
           logger: collector.logger,
         };
@@ -141,8 +150,47 @@ export function DestinationDemo({
 
         // Auto-detect destination.examples.env.push (for push method)
         const destinationEnv = (
-          destination as { examples?: { env?: { push?: unknown } } }
+          destination as {
+            examples?: { env?: { push?: Destination.BaseEnv } };
+          }
         ).examples?.env?.push;
+
+        // For initFirst destinations (e.g. Snowplow), run init with the push
+        // env so the tracker is created, then patch the adapter to intercept
+        // calls before push runs.
+        if (initFirst && destination.init && destinationEnv) {
+          const updatedConfig = await destination.init({
+            ...context,
+            env: destinationEnv,
+          });
+          if (updatedConfig && typeof updatedConfig === 'object') {
+            context.config = { ...context.config, ...updatedConfig };
+          }
+
+          // Patch the adapter stored in _state to intercept push calls
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const adapter = (context.config?.settings as any)?._state?.adapter;
+          const calls: Array<{ path: string[]; args: unknown[] }> = [];
+          if (adapter) {
+            for (const key of Object.keys(adapter)) {
+              const original = adapter[key];
+              if (typeof original === 'function') {
+                adapter[key] = (...args: unknown[]) => {
+                  calls.push({ path: [key], args });
+                  return original(...args);
+                };
+              }
+            }
+          }
+
+          await destination.push(processed.event, {
+            ...context,
+            env: destinationEnv,
+          });
+
+          setOutput(formatCapturedCalls(calls));
+          return;
+        }
 
         // Use captureDestinationPush to automatically capture output
         const captureFn = captureDestinationPush(destination, destinationEnv);

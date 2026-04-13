@@ -6,20 +6,6 @@
         "windowCollector": "collector",
         "windowElb": "elb"
       },
-      "packages": {
-        "@walkeros/collector": {
-          "imports": ["startFlow"]
-        },
-        "@walkeros/source-demo": {
-          "imports": ["sourceDemo"]
-        },
-        "@walkeros/destination-demo": {
-          "imports": ["destinationDemo"]
-        },
-        "@walkeros/web-destination-api": {
-          "imports": ["destinationAPI"]
-        }
-      },
       "sources": {
         "demo": {
           "package": "@walkeros/source-demo",
@@ -28,7 +14,10 @@
               "events": [
                 {
                   "name": "page view",
-                  "data": { "title": "Home", "path": "/" },
+                  "data": {
+                    "title": "Home",
+                    "path": "/"
+                  },
                   "delay": 0
                 },
                 {
@@ -67,6 +56,22 @@
         "run": true,
         "globals": {
           "language": "en"
+        }
+      },
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {
+            "imports": ["startFlow"]
+          },
+          "@walkeros/source-demo": {
+            "imports": ["sourceDemo"]
+          },
+          "@walkeros/destination-demo": {
+            "imports": ["destinationDemo"]
+          },
+          "@walkeros/web-destination-api": {
+            "imports": ["destinationAPI"]
+          }
         }
       }
     }

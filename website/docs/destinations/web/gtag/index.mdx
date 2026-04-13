@@ -5,7 +5,7 @@ sidebar_position: 1
 package: '@walkeros/web-destination-gtag'
 ---
 
-import { schemas } from '@walkeros/web-destination-gtag/dev';
+import data from '@walkeros/web-destination-gtag/walkerOS.json';
 
 # Google Gtag
 
@@ -94,13 +94,13 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings`):
 
-<PropertyTable schema={schemas.mapping} />
+<PropertyTable schema={data.schemas.mapping} />
 
 ## Next Steps
 

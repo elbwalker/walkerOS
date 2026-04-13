@@ -750,4 +750,46 @@ describe('processEventMapping', () => {
     // Data transformation uses the modified event
     expect(result.data).toEqual({ email: 'john@example.com' });
   });
+
+  describe('skip flag', () => {
+    test('returns skip: false when rule has no skip flag', async () => {
+      const result = await processEventMapping(
+        { name: 'user login', data: {} },
+        { mapping: { user: { login: { settings: {} } } } },
+        mockCollector,
+      );
+      expect(result.skip).toBe(false);
+      expect(result.ignore).toBe(false);
+    });
+
+    test('returns skip: true when rule has skip: true', async () => {
+      const result = await processEventMapping(
+        { name: 'user login', data: {} },
+        { mapping: { user: { login: { skip: true, settings: {} } } } },
+        mockCollector,
+      );
+      expect(result.skip).toBe(true);
+      expect(result.ignore).toBe(false);
+    });
+
+    test('ignore wins over skip when both set, but skip still reported', async () => {
+      const result = await processEventMapping(
+        { name: 'user login', data: {} },
+        { mapping: { user: { login: { ignore: true, skip: true } } } },
+        mockCollector,
+      );
+      expect(result.ignore).toBe(true);
+      expect(result.skip).toBe(true);
+    });
+
+    test('skip: false when no matching rule', async () => {
+      const result = await processEventMapping(
+        { name: 'user login', data: {} },
+        { mapping: {} },
+        mockCollector,
+      );
+      expect(result.skip).toBe(false);
+      expect(result.ignore).toBe(false);
+    });
+  });
 });

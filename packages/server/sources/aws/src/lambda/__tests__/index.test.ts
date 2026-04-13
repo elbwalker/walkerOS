@@ -1052,24 +1052,25 @@ describe('sourceLambda', () => {
   });
 
   describe('settings validation', () => {
-    it('should reject invalid timeout value', async () => {
-      await expect(
-        sourceLambda(
-          createSourceContext(
-            {
-              settings: {
-                timeout: 999999999, // Exceeds 900000ms Lambda limit
-              },
+    it('should pass through user-supplied timeout without runtime validation', async () => {
+      // Config is developer-controlled; the source no longer runs zod validation.
+      const source = await sourceLambda(
+        createSourceContext(
+          {
+            settings: {
+              timeout: 999999999,
             },
-            {
-              push: mockPush as never,
-              command: mockCommand as never,
-              elb: jest.fn() as never,
-              logger: mockLogger,
-            },
-          ),
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
         ),
-      ).rejects.toThrow();
+      );
+
+      expect(source.config.settings?.timeout).toBe(999999999);
     });
 
     it('should use default settings when none provided', async () => {

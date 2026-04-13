@@ -6,7 +6,7 @@ import type {
   Context,
 } from 'aws-lambda';
 import type { SettingsSchema, CorsOptionsSchema } from './schemas';
-import { z } from '@walkeros/core/dev';
+import type { z } from '@walkeros/core/dev';
 
 // Lambda event types
 export type LambdaEvent = APIGatewayProxyEvent | APIGatewayProxyEventV2;

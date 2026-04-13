@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/quickstart",
-  "version": "2.0.1",
+  "version": "3.3.0",
   "private": true,
   "description": "Verified code examples for walkerOS documentation",
   "license": "MIT",
@@ -14,12 +14,12 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "^3.0.0",
-    "@walkeros/collector": "^3.0.0",
-    "@walkeros/web-core": "^3.0.0",
-    "@walkeros/web-source-browser": "^3.0.0",
-    "@walkeros/web-destination-gtag": "^3.0.0",
-    "@walkeros/web-destination-api": "^3.0.0"
+    "@walkeros/core": "3.3.0",
+    "@walkeros/collector": "3.3.0",
+    "@walkeros/web-core": "3.3.0",
+    "@walkeros/web-source-browser": "3.3.0",
+    "@walkeros/web-destination-gtag": "3.3.0",
+    "@walkeros/web-destination-api": "3.3.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

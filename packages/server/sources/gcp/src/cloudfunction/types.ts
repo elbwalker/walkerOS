@@ -1,6 +1,6 @@
 import type { WalkerOS, Source as CoreSource } from '@walkeros/core';
 import type { SettingsSchema, CorsOptionsSchema } from './schemas';
-import { z } from '@walkeros/core/dev';
+import type { z } from '@walkeros/core/dev';
 
 // Minimal request/response interfaces
 export interface Request {
@@ -45,8 +45,10 @@ export type Types = CoreSource.Types<
   InitSettings
 >;
 
-export interface CloudFunctionSource
-  extends Omit<CoreSource.Instance<Types>, 'push'> {
+export interface CloudFunctionSource extends Omit<
+  CoreSource.Instance<Types>,
+  'push'
+> {
   push: Push;
 }
 

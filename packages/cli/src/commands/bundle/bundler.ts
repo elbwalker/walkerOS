@@ -360,8 +360,18 @@ export async function bundleCore(
         }
 
         // Rewrite all components that reference this path to use code: instead
-        for (const section of ['sources', 'destinations', 'transformers', 'stores'] as const) {
-          const steps = (flowSettings as Record<string, Record<string, Record<string, unknown>>>)[section];
+        for (const section of [
+          'sources',
+          'destinations',
+          'transformers',
+          'stores',
+        ] as const) {
+          const steps = (
+            flowSettings as Record<
+              string,
+              Record<string, Record<string, unknown>>
+            >
+          )[section];
           if (!steps) continue;
           for (const step of Object.values(steps)) {
             if (step.package === pkg) {
@@ -393,6 +403,7 @@ export async function bundleCore(
       buildOptions.cache,
       buildOptions.configDir, // For resolving relative local paths
       CACHE_DIR,
+      buildOptions.overrides,
     );
 
     // Fix @walkeros packages to have proper ESM exports
@@ -946,23 +957,24 @@ export function detectExplicitCodeImports(
 
 interface ImportGenerationResult {
   importStatements: string[];
-  examplesMappings: string[];
+  devExportEntries: string[];
 }
 
 /**
  * Generates import statements and examples mappings from build packages.
  * Handles explicit imports, default imports for destinations/sources, and utility imports.
  */
-function generateImportStatements(
+async function generateImportStatements(
   packages: BuildOptions['packages'],
   destinationPackages: Set<string>,
   sourcePackages: Set<string>,
   transformerPackages: Set<string>,
   storePackages: Set<string>,
   explicitCodeImports: Map<string, Set<string>>,
-): ImportGenerationResult {
+  packagePaths: Map<string, string>,
+  withDev: boolean,
+): Promise<ImportGenerationResult> {
   const importStatements: string[] = [];
-  const examplesMappings: string[] = [];
   const usedPackages = new Set([
     ...destinationPackages,
     ...sourcePackages,
@@ -1011,23 +1023,6 @@ function generateImportStatements(
           }
         }
       }
-
-      // Check if this package imports examples and create mappings
-      const examplesImport = uniqueImports.find((imp) =>
-        imp.includes('examples as '),
-      );
-      if (examplesImport) {
-        const examplesVarName = examplesImport.split(' as ')[1];
-        const destinationMatch = packageName.match(
-          /@walkeros\/web-destination-(.+)$/,
-        );
-        if (destinationMatch) {
-          const destinationName = destinationMatch[1];
-          examplesMappings.push(
-            `  ${destinationName}: typeof ${examplesVarName} !== 'undefined' ? ${examplesVarName} : undefined`,
-          );
-        }
-      }
     }
 
     // 4. Auto-import startFlow from collector (always required for flows)
@@ -1047,7 +1042,36 @@ function generateImportStatements(
     // Examples are no longer auto-imported - simulator loads them dynamically
   }
 
-  return { importStatements, examplesMappings };
+  // Generate /dev imports for packages that expose a ./dev export.
+  // Only emitted when withDev is true (i.e., skipWrapper bundles consumed by
+  // push/simulate/flow-context). Production IIFE bundles skip this entirely —
+  // otherwise the dev graph (zod schemas, etc.) leaks into walker.js because
+  // stage 2 esbuild cannot tree-shake transitive imports out of the already-
+  // concatenated stage 1 file.
+  const devExportEntries: string[] = [];
+  if (withDev) {
+    for (const packageName of usedPackages) {
+      const localPath = packagePaths.get(packageName);
+      if (!localPath) continue;
+
+      try {
+        const pkgJsonPath = path.join(localPath, 'package.json');
+        const pkgJson = await fs.readJSON(pkgJsonPath);
+        const exports = pkgJson.exports;
+        if (exports && typeof exports === 'object' && './dev' in exports) {
+          const varName = `__dev_${packageNameToVariable(packageName)}`;
+          importStatements.push(
+            `import * as ${varName} from '${packageName}/dev';`,
+          );
+          devExportEntries.push(`'${packageName}': ${varName}`);
+        }
+      } catch {
+        // Package doesn't have a readable package.json — skip gracefully
+      }
+    }
+  }
+
+  return { importStatements, devExportEntries };
 }
 
 const VALID_JS_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
@@ -1158,14 +1182,18 @@ export async function createEntryPoint(
   if (flowWithSections.stores)
     validateComponentNames(flowWithSections.stores, 'stores');
 
-  // Generate import statements
-  const { importStatements } = generateImportStatements(
+  // Generate import statements.
+  // withDev only for skipWrapper bundles (push/simulate/flow-context); production
+  // IIFE bundles get a clean stage 1 without dev imports — see generateImportStatements.
+  const { importStatements, devExportEntries } = await generateImportStatements(
     buildOptions.packages,
     destinationPackages,
     sourcePackages,
     transformerPackages,
     storePackages,
     explicitCodeImports,
+    packagePaths,
+    buildOptions.skipWrapper === true,
   );
 
   const importsCode = importStatements.join('\n');
@@ -1198,10 +1226,17 @@ export async function createEntryPoint(
     buildOptions.code || '',
   );
 
-  // Return ESM module (imports + wireConfig + startFlow re-export)
+  // Append __devExports if any packages expose /dev
+  const devExportsBlock =
+    devExportEntries.length > 0
+      ? `\nexport const __devExports = {\n  ${devExportEntries.join(',\n  ')},\n};`
+      : '';
+
+  // Return ESM module (imports + wireConfig + startFlow re-export + optional devExports)
+  const fullModule = wireConfigModule + devExportsBlock;
   const codeEntry = importsCode
-    ? `${importsCode}\n\n${wireConfigModule}`
-    : wireConfigModule;
+    ? `${importsCode}\n\n${fullModule}`
+    : fullModule;
 
   return { codeEntry, dataPayload, hasFlow: true };
 }
@@ -1634,6 +1669,113 @@ const __configData = ${dataPayload};
 (async () => {
   const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
 })();`;
+}
+
+/**
+ * Generate a stage 2 entry file for wrapping an ALREADY-embedded skeleton.
+ *
+ * Unlike `generateWebEntry`, this variant imports `__configData` from the
+ * skeleton (instead of inlining a `dataPayload` string). Used by the
+ * publish-time `wrapSkeleton` helper, which runs on a stage 1 skeleton
+ * produced via `bundle({ skipWrapper: true })` — those skeletons already
+ * export `__configData` alongside `wireConfig` and `startFlow`.
+ */
+export function generateWrapEntry(
+  stage1Path: string,
+  options: {
+    windowCollector?: string;
+    windowElb?: string;
+    previewOrigin?: string;
+    previewScope?: string;
+  } = {},
+): string {
+  const assignments: string[] = [];
+  if (options.windowCollector) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
+    );
+  }
+  if (options.windowElb) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowElb}'] = elb;`,
+    );
+  }
+  const assignmentCode =
+    assignments.length > 0 ? '\n' + assignments.join('\n') : '';
+
+  const hasPreview = !!(options.previewOrigin && options.previewScope);
+  const previewOriginLiteral = JSON.stringify(options.previewOrigin ?? '');
+  const previewScopeLiteral = JSON.stringify(options.previewScope ?? '');
+
+  const preflightBlock = hasPreview
+    ? `
+  // --- Preview mode preflight ---
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    var __previewOrigin = ${previewOriginLiteral};
+    var __previewScope = ${previewScopeLiteral};
+    var __params = new URLSearchParams(location.search);
+    var __tokens = __params.getAll('elbPreview');
+    var __param = __tokens.length > 0 ? __tokens[__tokens.length - 1] : null;
+    var __secure = location.protocol === 'https:' ? '; Secure' : '';
+
+    if (__param === 'off') {
+      document.cookie = 'elbPreview=; path=/; max-age=0; SameSite=Lax' + __secure;
+    } else if (__param && /^[a-zA-Z0-9_-]{8,32}$/.test(__param)) {
+      document.cookie = 'elbPreview=' + __param + '; path=/; max-age=604800; SameSite=Lax' + __secure;
+    }
+
+    var __match = /(?:^|; )elbPreview=([^;]+)/.exec(document.cookie);
+    var __token = __match && __match[1];
+    if (__token && /^[a-zA-Z0-9_-]{8,32}$/.test(__token)) {
+      var __s = document.createElement('script');
+      __s.src = 'https://' + __previewOrigin + '/preview/' + __previewScope + '/walker.' + __token + '.js';
+      document.head.appendChild(__s);
+      return;
+    }
+  }
+  // --- End preview mode preflight ---
+`
+    : '';
+
+  return `import { startFlow, wireConfig, __configData } from '${stage1Path}';
+
+(async () => {${preflightBlock}
+  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
+})();`;
+}
+
+/**
+ * Generate a stage 2 entry file for wrapping a node skeleton.
+ *
+ * Mirrors `generateServerEntry` but imports `__configData` from the skeleton
+ * instead of inlining it. Output is a default-export factory module matching
+ * the runner contract at `runtime/load-bundle.ts:53-66`: `module.default` is
+ * an async function that takes a context and returns
+ * `{ collector, elb, httpHandler? }`.
+ */
+export function generateWrapEntryServer(stage1Path: string): string {
+  return `import { startFlow, wireConfig, __configData } from '${stage1Path}';
+
+export default async function(context = {}) {
+  const config = wireConfig(__configData);
+
+  if (context.logger) config.logger = context.logger;
+
+  if (context.sourceSettings && config.sources) {
+    for (const src of Object.values(config.sources)) {
+      if (src.config?.settings) {
+        src.config.settings = { ...src.config.settings, ...context.sourceSettings };
+      }
+    }
+  }
+
+  const result = await startFlow(config);
+
+  const httpSource = Object.values(result.collector.sources || {})
+    .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
+
+  return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
+}`;
 }
 
 /**

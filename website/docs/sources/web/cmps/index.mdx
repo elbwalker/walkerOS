@@ -16,7 +16,7 @@ description: Automate consent handling with walkerOS CMP source packages
 
 walkerOS provides ready-made source packages for popular Consent Management
 Platforms. Each source listens for CMP events and automatically calls
-`elb('walker consent', state)` — no manual event listener code needed.
+`elb('walker consent', state)`, with no manual event listener code needed.
 
 | CMP | Package |
 | --- | ------- |
@@ -26,7 +26,7 @@ Platforms. Each source listens for CMP events and automatically calls
 
 ## Conditional activation with `require`
 
-Some sources and destinations shouldn't initialize right away — they may depend
+Some sources and destinations shouldn't initialize right away. They may depend
 on consent status being resolved first, or need information provided by other
 sources (like session IDs). The `require` option solves this by deferring
 initialization until specific collector events have fired.
@@ -65,7 +65,7 @@ until the listed events occur:
 In this example the CMP source initializes immediately and fires
 `elb('walker consent', state)` once the user makes a choice. That `consent`
 event unblocks the session source, the dataLayer source, and the GA4
-destination — all at once.
+destination, all at once.
 
 ### How `require` works
 
@@ -74,14 +74,14 @@ destination — all at once.
 2. Each time a collector event fires (e.g., `consent`, `session`, `user`), the
    collector checks all pending items
 3. When all listed conditions are met, the source or destination initializes
-4. Destinations receive all previously queued events on activation — no data is
+4. Destinations receive all previously queued events on activation, so no data is
    lost
 
 ### Key points
 
-- **CMP sources must not have `require`** — they need to initialize immediately
+- **CMP sources must not have `require`**: they need to initialize immediately
   to detect consent
-- **Accepted values**: any collector event type — `"consent"`, `"session"`,
+- **Accepted values**: any collector event type, such as `"consent"`, `"session"`,
   `"user"`, `"run"`, `"config"`, `"globals"`, etc.
 - **AND logic**: `require: ["consent", "session"]` waits for **both** events
 - **Cascading**: a CMP source fires `consent` → session source activates and

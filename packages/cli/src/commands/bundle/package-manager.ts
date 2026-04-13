@@ -38,7 +38,7 @@ export interface Package {
 
 export interface VersionSpec {
   spec: string;
-  source: 'direct' | 'dependency' | 'peerDependency';
+  source: 'direct' | 'override' | 'dependency' | 'peerDependency';
   from: string;
   optional: boolean;
   localPath?: string;
@@ -50,8 +50,33 @@ interface ResolvedPackage {
   localPath?: string;
 }
 
+export interface NestedPackage {
+  name: string;
+  version: string;
+  consumers: string[];
+}
+
+export interface ResolutionResult {
+  topLevel: Map<string, ResolvedPackage>;
+  nested: NestedPackage[];
+}
+
 function getPackageDirectory(baseDir: string, packageName: string): string {
   return path.join(baseDir, 'node_modules', packageName);
+}
+
+function getNestedPackageDirectory(
+  baseDir: string,
+  consumerName: string,
+  nestedPackageName: string,
+): string {
+  return path.join(
+    baseDir,
+    'node_modules',
+    consumerName,
+    'node_modules',
+    nestedPackageName,
+  );
 }
 
 // ============================================================
@@ -62,6 +87,7 @@ export async function collectAllSpecs(
   packages: Package[],
   logger: Logger.Instance,
   configDir?: string,
+  overrides: Record<string, string> = {},
 ): Promise<Map<string, VersionSpec[]>> {
   const allSpecs = new Map<string, VersionSpec[]>();
   const visited = new Set<string>();
@@ -74,6 +100,39 @@ export async function collectAllSpecs(
     optional: boolean;
     localPath?: string;
   }
+
+  // Warn about overrides targeting direct local-path packages
+  const directLocalNames = new Set(
+    packages.filter((p) => p.path).map((p) => p.name),
+  );
+  for (const overrideName of Object.keys(overrides)) {
+    if (directLocalNames.has(overrideName)) {
+      logger.warn(
+        `Override for ${overrideName} ignored — direct package is a local path`,
+      );
+    }
+  }
+
+  // Helper: substitute a transitive dep spec with its override (if any)
+  const substituteDep = (
+    depName: string,
+    depSpec: string,
+    source: 'dependency' | 'peerDependency',
+    from: string,
+    optional: boolean,
+  ): QueueItem => {
+    const overrideSpec = overrides[depName];
+    if (overrideSpec) {
+      return {
+        name: depName,
+        spec: overrideSpec,
+        source: 'override',
+        from: `override (was ${depSpec} from ${from})`,
+        optional,
+      };
+    }
+    return { name: depName, spec: depSpec, source, from, optional };
+  };
 
   const queue: QueueItem[] = packages.map((pkg) => ({
     name: pkg.name,
@@ -118,13 +177,9 @@ export async function collectAllSpecs(
           const deps = pkgJson.dependencies || {};
           for (const [depName, depSpec] of Object.entries(deps)) {
             if (typeof depSpec === 'string') {
-              queue.push({
-                name: depName,
-                spec: depSpec,
-                source: 'dependency',
-                from: item.name,
-                optional: false,
-              });
+              queue.push(
+                substituteDep(depName, depSpec, 'dependency', item.name, false),
+              );
             }
           }
 
@@ -136,13 +191,15 @@ export async function collectAllSpecs(
               const isOptional =
                 (peerMeta as Record<string, { optional?: boolean }>)[depName]
                   ?.optional === true;
-              queue.push({
-                name: depName,
-                spec: depSpec,
-                source: 'peerDependency',
-                from: item.name,
-                optional: isOptional,
-              });
+              queue.push(
+                substituteDep(
+                  depName,
+                  depSpec,
+                  'peerDependency',
+                  item.name,
+                  isOptional,
+                ),
+              );
             }
           }
         } catch (error) {
@@ -175,13 +232,9 @@ export async function collectAllSpecs(
     const deps = (m.dependencies as Record<string, string> | undefined) || {};
     for (const [depName, depSpec] of Object.entries(deps)) {
       if (typeof depSpec === 'string') {
-        queue.push({
-          name: depName,
-          spec: depSpec,
-          source: 'dependency',
-          from: item.name,
-          optional: false,
-        });
+        queue.push(
+          substituteDep(depName, depSpec, 'dependency', item.name, false),
+        );
       }
     }
 
@@ -195,13 +248,15 @@ export async function collectAllSpecs(
     for (const [depName, depSpec] of Object.entries(peerDeps)) {
       if (typeof depSpec === 'string') {
         const isOptional = peerMeta[depName]?.optional === true;
-        queue.push({
-          name: depName,
-          spec: depSpec,
-          source: 'peerDependency',
-          from: item.name,
-          optional: isOptional,
-        });
+        queue.push(
+          substituteDep(
+            depName,
+            depSpec,
+            'peerDependency',
+            item.name,
+            isOptional,
+          ),
+        );
       }
     }
   }
@@ -215,21 +270,23 @@ export async function collectAllSpecs(
 
 const SOURCE_PRIORITY: Record<VersionSpec['source'], number> = {
   direct: 0,
-  dependency: 1,
-  peerDependency: 2,
+  override: 1,
+  dependency: 2,
+  peerDependency: 3,
 };
 
 export function resolveVersionConflicts(
   allSpecs: Map<string, VersionSpec[]>,
   logger: Logger.Instance,
-): Map<string, ResolvedPackage> {
-  const resolved = new Map<string, ResolvedPackage>();
+): ResolutionResult {
+  const topLevel = new Map<string, ResolvedPackage>();
+  const nested: NestedPackage[] = [];
 
   for (const [name, specs] of allSpecs) {
     // Local paths always win
     const localSpec = specs.find((s) => s.localPath);
     if (localSpec) {
-      resolved.set(name, {
+      topLevel.set(name, {
         name,
         version: 'local',
         localPath: localSpec.localPath,
@@ -265,6 +322,7 @@ export function resolveVersionConflicts(
     const directExact = directSpecs.find((s) => semver.valid(s.spec) !== null);
 
     let chosenVersion: string;
+    const alreadyNested = new Set<string>();
 
     if (directExact) {
       // Direct exact version always wins
@@ -280,10 +338,17 @@ export function resolveVersionConflicts(
       const uniqueExact = [...new Set(exactVersions)];
 
       if (uniqueExact.length > 1) {
-        throw new Error(
-          `Version conflict for ${name}: ${uniqueExact.join(' vs ')} ` +
-            `(from ${activeSpecs.map((s) => `${s.spec} via ${s.from}`).join(', ')})`,
-        );
+        // Site A: multiple exact versions — highest wins, losers get nested
+        const sorted = [...uniqueExact].sort(semver.rcompare);
+        chosenVersion = sorted[0];
+        for (let i = 1; i < sorted.length; i++) {
+          const loserVersion = sorted[i];
+          const consumers = activeSpecs
+            .filter((s) => s.spec === loserVersion)
+            .map((s) => s.from);
+          nested.push({ name, version: loserVersion, consumers });
+          alreadyNested.add(loserVersion);
+        }
       } else if (uniqueExact.length === 1) {
         chosenVersion = uniqueExact[0];
       } else {
@@ -303,6 +368,10 @@ export function resolveVersionConflicts(
               logger.warn(
                 `${name}@${chosenVersion} differs from peer constraint ${spec.spec} (from ${spec.from})`,
               );
+            } else if (!alreadyNested.has(spec.spec)) {
+              // Site C: transitive exact differs from chosen — nest it
+              nested.push({ name, version: spec.spec, consumers: [spec.from] });
+              alreadyNested.add(spec.spec);
             }
           }
         } else {
@@ -317,20 +386,32 @@ export function resolveVersionConflicts(
                 `${name}@${chosenVersion} may not satisfy peer constraint ${spec.spec} (from ${spec.from})`,
               );
             } else {
-              throw new Error(
-                `Version conflict: ${name}@${chosenVersion} does not satisfy ` +
-                  `${spec.spec} required by ${spec.from}`,
-              );
+              // Site B: range not satisfied — nest the range
+              nested.push({ name, version: spec.spec, consumers: [spec.from] });
             }
           }
         }
       }
     }
 
-    resolved.set(name, { name, version: chosenVersion });
+    topLevel.set(name, { name, version: chosenVersion });
   }
 
-  return resolved;
+  // Consolidate nested entries with same name+version (merge consumers)
+  const consolidatedMap = new Map<string, NestedPackage>();
+  for (const entry of nested) {
+    const key = `${entry.name}@${entry.version}`;
+    const existing = consolidatedMap.get(key);
+    if (existing) {
+      for (const c of entry.consumers) {
+        if (!existing.consumers.includes(c)) existing.consumers.push(c);
+      }
+    } else {
+      consolidatedMap.set(key, { ...entry, consumers: [...entry.consumers] });
+    }
+  }
+
+  return { topLevel, nested: [...consolidatedMap.values()] };
 }
 
 // ============================================================
@@ -344,6 +425,7 @@ export async function downloadPackages(
   useCache = true,
   configDir?: string,
   tmpDir?: string,
+  overrides: Record<string, string> = {},
 ): Promise<Map<string, string>> {
   const packagePaths = new Map<string, string>();
 
@@ -355,10 +437,15 @@ export async function downloadPackages(
 
   // Phase 1: Collect all version specs
   logger.debug('Resolving dependencies');
-  const allSpecs = await collectAllSpecs(packages, logger, configDir);
+  const allSpecs = await collectAllSpecs(
+    packages,
+    logger,
+    configDir,
+    overrides,
+  );
 
   // Phase 2: Resolve conflicts
-  const resolved = resolveVersionConflicts(allSpecs, logger);
+  const { topLevel, nested } = resolveVersionConflicts(allSpecs, logger);
 
   // Phase 3: Install each resolved package exactly once
   await fs.ensureDir(targetDir);
@@ -369,7 +456,7 @@ export async function downloadPackages(
     if (pkg.path) localPackageMap.set(pkg.name, pkg.path);
   }
 
-  for (const [name, pkg] of resolved) {
+  for (const [name, pkg] of topLevel) {
     // Handle local packages
     if (pkg.localPath || localPackageMap.has(name)) {
       const localPath = pkg.localPath || localPackageMap.get(name)!;
@@ -438,6 +525,53 @@ export async function downloadPackages(
       packagePaths.set(name, packageDir);
     } catch (error) {
       throw new Error(`Failed to download ${packageSpec}: ${error}`);
+    }
+  }
+
+  // Install nested packages
+  for (const nestedPkg of nested) {
+    let resolvedSpec = `${nestedPkg.name}@${nestedPkg.version}`;
+
+    if (!semver.valid(nestedPkg.version)) {
+      try {
+        const manifest = await withTimeout(
+          pacote.manifest(resolvedSpec, PACOTE_OPTS),
+          PACKAGE_DOWNLOAD_TIMEOUT_MS,
+          `Manifest fetch timed out: ${resolvedSpec}`,
+        );
+        const resolved = (manifest as unknown as { version: string }).version;
+        resolvedSpec = `${nestedPkg.name}@${resolved}`;
+      } catch (error) {
+        throw new Error(
+          `Failed to resolve nested dependency ${resolvedSpec}: ${error}`,
+        );
+      }
+    }
+
+    for (const consumer of nestedPkg.consumers) {
+      const nestedDir = getNestedPackageDirectory(
+        targetDir,
+        consumer,
+        nestedPkg.name,
+      );
+      try {
+        await fs.ensureDir(path.dirname(nestedDir));
+        const cacheDir =
+          process.env.NPM_CACHE_DIR || getTmpPath(tmpDir, 'cache', 'npm');
+        await withTimeout(
+          pacote.extract(resolvedSpec, nestedDir, {
+            ...PACOTE_OPTS,
+            cache: cacheDir,
+          }),
+          PACKAGE_DOWNLOAD_TIMEOUT_MS,
+          `Nested package download timed out: ${resolvedSpec}`,
+        );
+        logger.debug(`Nested: ${resolvedSpec} under ${consumer}`);
+      } catch (error) {
+        throw new Error(
+          `Failed to install nested ${resolvedSpec} for ${consumer}: ${error}`,
+        );
+      }
     }
   }
 

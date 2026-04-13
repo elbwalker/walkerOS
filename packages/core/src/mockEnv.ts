@@ -50,8 +50,22 @@ export function mockEnv<T extends object>(
         const currentPath = [...path, prop];
 
         if (typeof value === 'function') {
+          // Preserve constructors (classes) so `new amp.Identify()` works
+          if (value.prototype && value.prototype.constructor === value) {
+            return value;
+          }
           return (...args: unknown[]) => {
-            return interceptor(currentPath, args, value);
+            const result = interceptor(currentPath, args, value);
+            // If the function returns an object, proxy it so chained calls are intercepted
+            if (result && typeof result === 'object') {
+              return createProxy(result as object, currentPath);
+            }
+            // Fall back to calling the original and proxying its return if it's an object
+            const original = (value as Function)(...args);
+            if (original && typeof original === 'object') {
+              return createProxy(original as object, currentPath);
+            }
+            return result;
           };
         }
 

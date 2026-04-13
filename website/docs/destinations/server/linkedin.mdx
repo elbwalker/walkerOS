@@ -1,0 +1,199 @@
+---
+title: LinkedIn Conversions API
+description: "Server-side conversion event delivery to LinkedIn for enhanced ad attribution"
+path: /docs/destinations/server/linkedin
+sidebar_position: 11
+package: '@walkeros/server-destination-linkedin'
+---
+import data from '@walkeros/server-destination-linkedin/walkerOS.json';
+
+# LinkedIn Conversions API
+
+<PackageLink env="server" github="packages/server/destinations/linkedin" npm="@walkeros/server-destination-linkedin" />
+
+Server-side event delivery to LinkedIn's Conversions API for enhanced ad attribution and privacy-compliant conversion tracking.
+
+:::info Where This Fits
+LinkedIn Conversions API is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'LinkedIn CAPI', highlight: true } }}
+/>
+
+Sends conversion events server-side to LinkedIn's Conversions API, bypassing browser limitations for improved data quality. Deduplicates with the browser-side Insight Tag via `eventId`.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-linkedin`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationLinkedIn } from '@walkeros/server-destination-linkedin';
+
+await startFlow({
+  destinations: {
+    linkedin: {
+      code: destinationLinkedIn,
+      config: {
+        settings: {
+          accessToken: 'YOUR_ACCESS_TOKEN',
+          conversionRuleId: 'YOUR_CONVERSION_RULE_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "linkedin": {
+    "package": "@walkeros/server-destination-linkedin",
+    "code": "destinationLinkedIn",
+    "config": {
+      "settings": {
+        "accessToken": "YOUR_ACCESS_TOKEN",
+        "conversionRuleId": "YOUR_CONVERSION_RULE_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## User identification
+
+The destination builds a `userIds` array from the event data. At least one identifier is required or the event is silently skipped.
+
+**SHA256_EMAIL** -- Resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending. Set `doNotHash: ['email']` if you are pre-hashing upstream.
+
+**LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID** -- The LinkedIn click ID (`li_fat_id`) forwarded from the browser session. Map it via `user_data` in settings or through event mapping:
+
+<CodeSnippet
+  code={`"settings": {
+  "accessToken": "$env.LINKEDIN_ACCESS_TOKEN",
+  "conversionRuleId": "$env.LINKEDIN_CONVERSION_RULE_ID",
+  "user_data": {
+    "li_fat_id": "context.li_fat_id"
+  }
+}`}
+  language="json"
+/>
+
+## Per-event conversion override
+
+The default `conversionRuleId` from settings applies to all events. Override it per event via mapping to route different events to different Campaign Manager conversion rules:
+
+<CodeSnippet
+  code={`"mapping": {
+  "order": {
+    "complete": {
+      "settings": {
+        "conversion": {
+          "map": {
+            "ruleId": { "value": "99887766" },
+            "value": "data.total",
+            "currency": { "key": "data.currency", "value": "EUR" }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Browser deduplication
+
+When running both the web [LinkedIn Insight Tag](/docs/destinations/web/linkedin) and this server destination, use the same `eventId` (from `event.id`) on both sides. LinkedIn deduplicates conversions that share the same `eventId` and conversion rule, so only one conversion is counted.
+
+## Docker deployment
+
+### Step 1: Create flow configuration
+
+Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "linkedin": {
+      "package": "@walkeros/server-destination-linkedin",
+      "config": {
+        "settings": {
+          "accessToken": "$env.LINKEDIN_ACCESS_TOKEN",
+          "conversionRuleId": "$env.LINKEDIN_CONVERSION_RULE_ID"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the flow
+
+Bundle your flow configuration before running in Docker:
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e LINKEDIN_ACCESS_TOKEN=your-access-token \\
+  -e LINKEDIN_CONVERSION_RULE_ID=12345678 \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Docker Compose example
+
+<CodeSnippet
+  code={`services:
+  walkeros:
+    image: walkeros/flow:latest
+    environment:
+      - LINKEDIN_ACCESS_TOKEN=\${LINKEDIN_ACCESS_TOKEN}
+      - LINKEDIN_CONVERSION_RULE_ID=\${LINKEDIN_CONVERSION_RULE_ID}
+    volumes:
+      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
+    ports:
+      - "8080:8080"`}
+  language="yaml"
+/>
+
+:::tip Security best practice
+Never commit access tokens to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

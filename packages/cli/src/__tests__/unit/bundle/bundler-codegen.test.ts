@@ -5,6 +5,7 @@ import {
   detectExplicitCodeImports,
   serializeWithCode,
   generateSplitWireConfigModule,
+  generateWrapEntry,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
 import type { Flow } from '@walkeros/core';
@@ -14,9 +15,11 @@ describe('createEntryPoint integration', () => {
   it('generates default import even when imports are specified', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
-        '@walkeros/web-source-browser': {
-          imports: ['createTagger'],
+      bundle: {
+        packages: {
+          '@walkeros/web-source-browser': {
+            imports: ['createTagger'],
+          },
         },
       },
       sources: {
@@ -58,9 +61,11 @@ describe('createEntryPoint integration', () => {
   it('uses named import only when explicit code is specified', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
-        '@some/no-default-pkg': {
-          imports: ['namedSource'],
+      bundle: {
+        packages: {
+          '@some/no-default-pkg': {
+            imports: ['namedSource'],
+          },
         },
       },
       sources: {
@@ -100,10 +105,12 @@ describe('createEntryPoint integration', () => {
   it('generates complete entry point with explicit code', async () => {
     const flowSettings: Flow.Settings = {
       server: {},
-      packages: {
-        '@walkeros/collector': { imports: ['startFlow'] },
-        '@walkeros/server-source-express': {},
-        '@walkeros/destination-demo': {},
+      bundle: {
+        packages: {
+          '@walkeros/collector': { imports: ['startFlow'] },
+          '@walkeros/server-source-express': {},
+          '@walkeros/destination-demo': {},
+        },
       },
       sources: {
         http: {
@@ -160,11 +167,13 @@ describe('createEntryPoint integration', () => {
   it('generates valid store references in full entry point', async () => {
     const flowSettings: Flow.Settings = {
       server: {},
-      packages: {
-        '@walkeros/collector': { imports: ['startFlow'] },
-        '@walkeros/server-source-express': {},
-        '@walkeros/server-transformer-fingerprint': {},
-        '@walkeros/store-memory': {},
+      bundle: {
+        packages: {
+          '@walkeros/collector': { imports: ['startFlow'] },
+          '@walkeros/server-source-express': {},
+          '@walkeros/server-transformer-fingerprint': {},
+          '@walkeros/store-memory': {},
+        },
       },
       sources: {
         http: {
@@ -229,9 +238,11 @@ describe('Implicit Collector', () => {
   it('auto-imports startFlow when collector is in packages without imports specified', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
-        '@walkeros/collector': {}, // No imports specified
-        '@walkeros/web-source-browser': {},
+      bundle: {
+        packages: {
+          '@walkeros/collector': {}, // No imports specified
+          '@walkeros/web-source-browser': {},
+        },
       },
       sources: {
         browser: {
@@ -268,9 +279,11 @@ describe('Implicit Collector', () => {
   it('auto-imports startFlow when collector has version but no imports', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
-        '@walkeros/collector': { version: '0.5.0' }, // Version only, no imports
-        '@walkeros/web-source-browser': {},
+      bundle: {
+        packages: {
+          '@walkeros/collector': { version: '0.5.0' }, // Version only, no imports
+          '@walkeros/web-source-browser': {},
+        },
       },
       sources: {
         browser: {
@@ -307,9 +320,11 @@ describe('Implicit Collector', () => {
   it('preserves explicit collector imports while adding startFlow', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
-        '@walkeros/collector': { imports: ['createCollector'] }, // Explicit import, no startFlow
-        '@walkeros/web-source-browser': {},
+      bundle: {
+        packages: {
+          '@walkeros/collector': { imports: ['createCollector'] }, // Explicit import, no startFlow
+          '@walkeros/web-source-browser': {},
+        },
       },
       sources: {
         browser: {
@@ -489,7 +504,9 @@ describe('buildSplitConfigObject', () => {
   it('splits plain config values into data payload', () => {
     const flowSettings = {
       server: {},
-      packages: { '@walkeros/server-source-express': {} },
+      bundle: {
+        packages: { '@walkeros/server-source-express': {} },
+      },
       sources: {
         express: {
           package: '@walkeros/server-source-express',
@@ -510,7 +527,9 @@ describe('buildSplitConfigObject', () => {
   it('keeps $store: env in code skeleton', () => {
     const flowSettings = {
       server: {},
-      packages: { '@walkeros/web-destination-ga4': {} },
+      bundle: {
+        packages: { '@walkeros/web-destination-ga4': {} },
+      },
       sources: {},
       destinations: {
         ga4: {
@@ -741,5 +760,80 @@ describe('generateSplitWireConfigModule', () => {
     expect(storesIdx).toBeGreaterThan(-1);
     expect(configIdx).toBeGreaterThan(-1);
     expect(storesIdx).toBeLessThan(configIdx);
+  });
+});
+
+describe('generateWrapEntry preview preflight', () => {
+  it('includes preflight when previewOrigin and previewScope are set', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      previewOrigin: 'cdn.walkeros.io',
+      previewScope: 'proj_abc123',
+    });
+    expect(output).toContain('elbPreview');
+    expect(output).toContain('URLSearchParams');
+    expect(output).toContain('cdn.walkeros.io');
+    expect(output).toContain('proj_abc123');
+  });
+
+  it('preflight runs BEFORE startFlow', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      previewOrigin: 'cdn.walkeros.io',
+      previewScope: 'proj_abc123',
+    });
+    const previewIdx = output.indexOf('elbPreview');
+    const startFlowIdx = output.indexOf('startFlow(wireConfig');
+    expect(previewIdx).toBeLessThan(startFlowIdx);
+  });
+
+  it('omits preflight entirely when previewOrigin is absent', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {});
+    expect(output).not.toContain('elbPreview');
+    expect(output).toContain('startFlow(wireConfig(__configData))');
+  });
+
+  it('omits preflight when previewScope is empty string', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      previewOrigin: 'cdn.walkeros.io',
+      previewScope: '',
+    });
+    expect(output).not.toContain('elbPreview');
+  });
+
+  it('preserves window assignments alongside preflight', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      windowCollector: 'collector',
+      windowElb: 'elb',
+      previewOrigin: 'cdn.walkeros.io',
+      previewScope: 'proj_test',
+    });
+    expect(output).toContain("window['collector']");
+    expect(output).toContain("window['elb']");
+    expect(output).toContain('elbPreview');
+  });
+});
+
+describe('previewScope / previewOrigin validation', () => {
+  it('throws on path-traversal previewScope', async () => {
+    const { wrapSkeleton } = await import('../../../commands/bundle/wrap.js');
+    await expect(
+      wrapSkeleton({
+        skeletonPath: '/tmp/fake.mjs',
+        platform: 'browser',
+        outputPath: '/tmp/out.js',
+        previewScope: '../evil',
+      }),
+    ).rejects.toThrow(/Invalid previewScope/);
+  });
+
+  it('throws on previewOrigin with special characters', async () => {
+    const { wrapSkeleton } = await import('../../../commands/bundle/wrap.js');
+    await expect(
+      wrapSkeleton({
+        skeletonPath: '/tmp/fake.mjs',
+        platform: 'browser',
+        outputPath: '/tmp/out.js',
+        previewOrigin: 'evil.com/x?',
+      }),
+    ).rejects.toThrow(/Invalid previewOrigin/);
   });
 });

@@ -1,11 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import {
-  fetchPackage,
-  mergeConfigSchema,
-  mcpResult,
-  mcpError,
-} from '@walkeros/core';
+import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
+import { mergeConfigSchema } from '@walkeros/core/dev';
 import { fetchCatalog, normalizePlatform } from '../catalog.js';
 
 export function registerPackageSearchTool(server: McpServer) {

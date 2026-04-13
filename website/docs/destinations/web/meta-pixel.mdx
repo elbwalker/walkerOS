@@ -7,9 +7,9 @@ package: '@walkeros/web-destination-meta'
 ---
 
 import destinationMetaPixel from '@walkeros/web-destination-meta';
-import { examples, schemas } from '@walkeros/web-destination-meta/dev';
+import data from '@walkeros/web-destination-meta/walkerOS.json';
 
-export const destination = { ...destinationMetaPixel, examples };
+export const destination = { ...destinationMetaPixel, examples: data.examples };
 
 # Meta Pixel
 
@@ -97,7 +97,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 #### Example
 
@@ -108,11 +108,11 @@ Add to your `flow.json` destinations:
   }}
 />
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -127,8 +127,8 @@ Learn more aboot
   settings={{ pixelId: '1234567890' }}
   smallText={true}
   height={'512px'}
-  event={examples.step.viewContent.in}
-  mapping={examples.step.viewContent.mapping}
+  event={data.examples.step.viewContent.in}
+  mapping={data.examples.step.viewContent.mapping}
   generic={true}
 />
 
@@ -139,8 +139,8 @@ Learn more aboot
   settings={{ pixelId: '1234567890' }}
   smallText={true}
   height={'512px'}
-  event={examples.step.addToCart.in}
-  mapping={examples.step.addToCart.mapping}
+  event={data.examples.step.addToCart.in}
+  mapping={data.examples.step.addToCart.mapping}
   generic={true}
 />
 
@@ -151,8 +151,8 @@ Learn more aboot
   settings={{ pixelId: '1234567890' }}
   smallText={true}
   height={'512px'}
-  event={examples.step.initiateCheckout.in}
-  mapping={examples.step.initiateCheckout.mapping}
+  event={data.examples.step.initiateCheckout.in}
+  mapping={data.examples.step.initiateCheckout.mapping}
   generic={true}
 />
 
@@ -163,7 +163,7 @@ Learn more aboot
   settings={{ pixelId: '1234567890' }}
   smallText={true}
   height={'512px'}
-  event={examples.step.purchase.in}
-  mapping={examples.step.purchase.mapping}
+  event={data.examples.step.purchase.in}
+  mapping={data.examples.step.purchase.mapping}
   generic={true}
 />

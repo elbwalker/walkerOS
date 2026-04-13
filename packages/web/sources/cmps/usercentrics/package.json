@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-cmp-usercentrics",
   "description": "Usercentrics consent management source for walkerOS",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "license": "MIT",
   "walkerOS": {
     "type": "source",
@@ -29,7 +29,8 @@
       "types": "./dist/dev.d.ts",
       "import": "./dist/dev.mjs",
       "require": "./dist/dev.js"
-    }
+    },
+    "./walkerOS.json": "./dist/walkerOS.json"
   },
   "files": [
     "dist/**"
@@ -38,13 +39,14 @@
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "lint": "eslint \"**/*.ts*\"",
     "test": "jest",
+    "typecheck": "tsc --noEmit",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "^3.2.0",
-    "@walkeros/collector": "^3.2.0"
+    "@walkeros/core": "3.3.0",
+    "@walkeros/collector": "3.3.0"
   },
   "devDependencies": {},
   "repository": {

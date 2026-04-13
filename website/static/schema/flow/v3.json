@@ -157,16 +157,18 @@
                   "additionalProperties": {}
                 },
                 "next": {
-                  "description": "First transformer in post-source chain. If omitted, events route directly to collector.",
-                  "anyOf": [
+                  "description": "Pre-collector transformer chain. String, string[], or NextRule[] for conditional routing based on ingest data.",
+                  "allOf": [
                     {
-                      "type": "string"
-                    },
+                      "$ref": "#/definitions/__schema0"
+                    }
+                  ]
+                },
+                "before": {
+                  "description": "Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.",
+                  "allOf": [
                     {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
+                      "$ref": "#/definitions/__schema0"
                     }
                   ]
                 },
@@ -179,16 +181,105 @@
                   "additionalProperties": {
                     "type": "object",
                     "properties": {
+                      "description": {
+                        "description": "Human-readable description",
+                        "type": "string"
+                      },
                       "in": {
                         "description": "Input to the step"
                       },
+                      "trigger": {
+                        "description": "Source trigger metadata",
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "description": "Trigger mechanism (e.g., click, POST, load)",
+                            "type": "string"
+                          },
+                          "options": {
+                            "description": "Mechanism-specific options"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "mapping": {
+                        "description": "Mapping configuration"
+                      },
                       "out": {
                         "description": "Expected output from the step"
+                      },
+                      "command": {
+                        "description": "Invoke elb('walker <command>', in) instead of pushing in as an event",
+                        "type": "string",
+                        "enum": ["config", "consent", "user", "run"]
                       }
                     },
                     "additionalProperties": false,
                     "description": "Named example with input/output pair"
                   }
+                },
+                "cache": {
+                  "description": "Cache configuration for this source (match → key → ttl rules)",
+                  "type": "object",
+                  "properties": {
+                    "full": {
+                      "description": "Stop flow on cache HIT (default: false). When true, skip remaining steps and return cached value.",
+                      "type": "boolean"
+                    },
+                    "store": {
+                      "description": "Store ID for persistent caching (references a configured store)",
+                      "type": "string"
+                    },
+                    "rules": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "match": {
+                            "anyOf": [
+                              {
+                                "$ref": "#/definitions/__schema1"
+                              },
+                              {
+                                "type": "string",
+                                "const": "*"
+                              }
+                            ],
+                            "description": "Match expression or wildcard to determine when this rule applies"
+                          },
+                          "key": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Dot-path fields used to build the cache key"
+                          },
+                          "ttl": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "Time-to-live in seconds for cached entries"
+                          },
+                          "update": {
+                            "description": "Response mutations applied on cache hit (key → Value mapping)",
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "$ref": "#/definitions/__schema2"
+                            }
+                          }
+                        },
+                        "required": ["match", "key", "ttl"],
+                        "additionalProperties": false
+                      },
+                      "description": "Cache rules — at least one required"
+                    }
+                  },
+                  "required": ["rules"],
+                  "additionalProperties": false
                 }
               },
               "additionalProperties": false,
@@ -274,16 +365,18 @@
                   "additionalProperties": {}
                 },
                 "before": {
-                  "description": "First transformer in pre-destination chain. If omitted, events are sent directly from collector.",
-                  "anyOf": [
+                  "description": "Post-collector transformer chain. String, string[], or NextRule[] for conditional routing.",
+                  "allOf": [
                     {
-                      "type": "string"
-                    },
+                      "$ref": "#/definitions/__schema0"
+                    }
+                  ]
+                },
+                "next": {
+                  "description": "Post-push transformer chain. Push response available at context.ingest._response.",
+                  "allOf": [
                     {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
+                      "$ref": "#/definitions/__schema0"
                     }
                   ]
                 },
@@ -296,16 +389,105 @@
                   "additionalProperties": {
                     "type": "object",
                     "properties": {
+                      "description": {
+                        "description": "Human-readable description",
+                        "type": "string"
+                      },
                       "in": {
                         "description": "Input to the step"
                       },
+                      "trigger": {
+                        "description": "Source trigger metadata",
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "description": "Trigger mechanism (e.g., click, POST, load)",
+                            "type": "string"
+                          },
+                          "options": {
+                            "description": "Mechanism-specific options"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "mapping": {
+                        "description": "Mapping configuration"
+                      },
                       "out": {
                         "description": "Expected output from the step"
+                      },
+                      "command": {
+                        "description": "Invoke elb('walker <command>', in) instead of pushing in as an event",
+                        "type": "string",
+                        "enum": ["config", "consent", "user", "run"]
                       }
                     },
                     "additionalProperties": false,
                     "description": "Named example with input/output pair"
                   }
+                },
+                "cache": {
+                  "description": "Cache configuration for this destination (match → key → ttl rules)",
+                  "type": "object",
+                  "properties": {
+                    "full": {
+                      "description": "Stop flow on cache HIT (default: false). When true, skip remaining steps and return cached value.",
+                      "type": "boolean"
+                    },
+                    "store": {
+                      "description": "Store ID for persistent caching (references a configured store)",
+                      "type": "string"
+                    },
+                    "rules": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "match": {
+                            "anyOf": [
+                              {
+                                "$ref": "#/definitions/__schema1"
+                              },
+                              {
+                                "type": "string",
+                                "const": "*"
+                              }
+                            ],
+                            "description": "Match expression or wildcard to determine when this rule applies"
+                          },
+                          "key": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Dot-path fields used to build the cache key"
+                          },
+                          "ttl": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "Time-to-live in seconds for cached entries"
+                          },
+                          "update": {
+                            "description": "Response mutations applied on cache hit (key → Value mapping)",
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "$ref": "#/definitions/__schema2"
+                            }
+                          }
+                        },
+                        "required": ["match", "key", "ttl"],
+                        "additionalProperties": false
+                      },
+                      "description": "Cache rules — at least one required"
+                    }
+                  },
+                  "required": ["rules"],
+                  "additionalProperties": false
                 }
               },
               "additionalProperties": false,
@@ -361,17 +543,19 @@
                 "env": {
                   "description": "Transformer environment configuration"
                 },
+                "before": {
+                  "description": "Pre-transformer chain. Runs before this transformer push function.",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema0"
+                    }
+                  ]
+                },
                 "next": {
-                  "description": "Next transformer in chain. If omitted: pre-collector routes to collector, post-collector routes to destination.",
-                  "anyOf": [
+                  "description": "Next transformer in chain. String, string[], or NextRule[] for conditional routing.",
+                  "allOf": [
                     {
-                      "type": "string"
-                    },
-                    {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
+                      "$ref": "#/definitions/__schema0"
                     }
                   ]
                 },
@@ -413,16 +597,105 @@
                   "additionalProperties": {
                     "type": "object",
                     "properties": {
+                      "description": {
+                        "description": "Human-readable description",
+                        "type": "string"
+                      },
                       "in": {
                         "description": "Input to the step"
                       },
+                      "trigger": {
+                        "description": "Source trigger metadata",
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "description": "Trigger mechanism (e.g., click, POST, load)",
+                            "type": "string"
+                          },
+                          "options": {
+                            "description": "Mechanism-specific options"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "mapping": {
+                        "description": "Mapping configuration"
+                      },
                       "out": {
                         "description": "Expected output from the step"
+                      },
+                      "command": {
+                        "description": "Invoke elb('walker <command>', in) instead of pushing in as an event",
+                        "type": "string",
+                        "enum": ["config", "consent", "user", "run"]
                       }
                     },
                     "additionalProperties": false,
                     "description": "Named example with input/output pair"
                   }
+                },
+                "cache": {
+                  "description": "Cache configuration for this transformer (match → key → ttl rules)",
+                  "type": "object",
+                  "properties": {
+                    "full": {
+                      "description": "Stop flow on cache HIT (default: false). When true, skip remaining steps and return cached value.",
+                      "type": "boolean"
+                    },
+                    "store": {
+                      "description": "Store ID for persistent caching (references a configured store)",
+                      "type": "string"
+                    },
+                    "rules": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "match": {
+                            "anyOf": [
+                              {
+                                "$ref": "#/definitions/__schema1"
+                              },
+                              {
+                                "type": "string",
+                                "const": "*"
+                              }
+                            ],
+                            "description": "Match expression or wildcard to determine when this rule applies"
+                          },
+                          "key": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Dot-path fields used to build the cache key"
+                          },
+                          "ttl": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "Time-to-live in seconds for cached entries"
+                          },
+                          "update": {
+                            "description": "Response mutations applied on cache hit (key → Value mapping)",
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "$ref": "#/definitions/__schema2"
+                            }
+                          }
+                        },
+                        "required": ["match", "key", "ttl"],
+                        "additionalProperties": false
+                      },
+                      "description": "Cache rules — at least one required"
+                    }
+                  },
+                  "required": ["rules"],
+                  "additionalProperties": false
                 }
               },
               "additionalProperties": false,
@@ -516,11 +789,37 @@
                   "additionalProperties": {
                     "type": "object",
                     "properties": {
+                      "description": {
+                        "description": "Human-readable description",
+                        "type": "string"
+                      },
                       "in": {
                         "description": "Input to the step"
                       },
+                      "trigger": {
+                        "description": "Source trigger metadata",
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "description": "Trigger mechanism (e.g., click, POST, load)",
+                            "type": "string"
+                          },
+                          "options": {
+                            "description": "Mechanism-specific options"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "mapping": {
+                        "description": "Mapping configuration"
+                      },
                       "out": {
                         "description": "Expected output from the step"
+                      },
+                      "command": {
+                        "description": "Invoke elb('walker <command>', in) instead of pushing in as an event",
+                        "type": "string",
+                        "enum": ["config", "consent", "user", "run"]
                       }
                     },
                     "additionalProperties": false,
@@ -535,31 +834,53 @@
           "collector": {
             "description": "Collector configuration for event processing (uses Collector.InitConfig)"
           },
-          "packages": {
-            "description": "NPM packages to bundle",
+          "bundle": {
+            "description": "Build-time configuration (packages + overrides)",
             "type": "object",
-            "propertyNames": {
-              "type": "string",
-              "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
-            },
-            "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "version": {
-                  "type": "string"
+            "properties": {
+              "packages": {
+                "description": "NPM packages to bundle",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
                 },
-                "imports": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "path": {
-                  "type": "string"
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "imports": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
                 }
               },
-              "additionalProperties": false
-            }
+              "overrides": {
+                "description": "Transitive dependency overrides",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "packages": {
+            "description": "Legacy top-level packages (moved to bundle.packages)"
           },
           "variables": {
             "description": "Flow-level variables (override Config.variables, overridden by source/destination variables)",
@@ -694,5 +1015,214 @@
   },
   "required": ["flows", "version"],
   "additionalProperties": false,
-  "description": "walkerOS flow configuration (walkeros.config.json)"
+  "description": "walkerOS flow configuration (walkeros.config.json)",
+  "definitions": {
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "match": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/__schema1"
+                  },
+                  {
+                    "type": "string",
+                    "const": "*"
+                  }
+                ]
+              },
+              "next": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/__schema0"
+                  }
+                ]
+              }
+            },
+            "required": ["match", "next"],
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    "__schema1": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "operator": {
+              "type": "string",
+              "enum": [
+                "eq",
+                "contains",
+                "prefix",
+                "suffix",
+                "regex",
+                "gt",
+                "lt",
+                "exists"
+              ]
+            },
+            "value": {
+              "type": "string"
+            },
+            "not": {
+              "type": "boolean"
+            }
+          },
+          "required": ["key", "operator", "value"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "and": {
+              "type": "array",
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/__schema1"
+                  }
+                ]
+              }
+            }
+          },
+          "required": ["and"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "or": {
+              "type": "array",
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/__schema1"
+                  }
+                ]
+              }
+            }
+          },
+          "required": ["or"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema2": {
+      "anyOf": [
+        {
+          "type": "string",
+          "description": "String value or property path (e.g., \"data.id\")"
+        },
+        {
+          "type": "number",
+          "description": "Numeric value"
+        },
+        {
+          "type": "boolean",
+          "description": "Boolean value"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "key": {
+              "description": "Property path to extract from event (e.g., \"data.id\", \"user.email\")",
+              "type": "string"
+            },
+            "value": {
+              "description": "Static primitive value",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "fn": {
+              "description": "Custom transformation function as string (serialized)",
+              "type": "string"
+            },
+            "map": {
+              "description": "Object mapping: transform event data to structured output",
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "$ref": "#/definitions/__schema2"
+              }
+            },
+            "loop": {
+              "description": "Loop transformation: [source, transform] for array processing",
+              "type": "array",
+              "items": [
+                {
+                  "$ref": "#/definitions/__schema2"
+                },
+                {
+                  "$ref": "#/definitions/__schema2"
+                }
+              ]
+            },
+            "set": {
+              "description": "Set of values: combine or select from multiple values",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/__schema2"
+              }
+            },
+            "consent": {
+              "description": "Required consent states to include this value",
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "boolean"
+              }
+            },
+            "condition": {
+              "description": "Condition function as string: return true to include value",
+              "type": "string"
+            },
+            "validate": {
+              "description": "Validation function as string: return true if value is valid",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Value transformation configuration with multiple strategies"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/__schema2"
+          },
+          "description": "Array of values"
+        }
+      ]
+    }
+  }
 }

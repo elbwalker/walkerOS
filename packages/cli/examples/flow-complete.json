@@ -17,7 +17,10 @@
             "item_id": "data.id",
             "item_name": "data.name",
             "price": "data.price",
-            "quantity": { "key": "data.quantity", "value": 1 }
+            "quantity": {
+              "key": "data.quantity",
+              "value": 1
+            }
           }
         }
       ]
@@ -29,7 +32,10 @@
           "map": {
             "id": "data.id",
             "item_price": "data.price",
-            "quantity": { "key": "data.quantity", "value": 1 }
+            "quantity": {
+              "key": "data.quantity",
+              "value": 1
+            }
           }
         }
       ]
@@ -42,15 +48,22 @@
       "globals": {
         "type": "object",
         "properties": {
-          "environment": { "type": "string" },
-          "version": { "type": "string" }
+          "environment": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
         }
       },
       "consent": {
         "type": "object",
         "required": ["functional"],
         "properties": {
-          "functional": { "type": "boolean", "const": true }
+          "functional": {
+            "type": "boolean",
+            "const": true
+          }
         }
       },
       "events": {
@@ -62,8 +75,14 @@
                 "type": "object",
                 "required": ["id", "name"],
                 "properties": {
-                  "id": { "type": "string", "description": "Product SKU" },
-                  "name": { "type": "string", "description": "Display name" }
+                  "id": {
+                    "type": "string",
+                    "description": "Product SKU"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Display name"
+                  }
                 }
               }
             }
@@ -75,7 +94,10 @@
                 "type": "object",
                 "required": ["quantity"],
                 "properties": {
-                  "quantity": { "type": "integer", "minimum": 1 }
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
                 }
               }
             }
@@ -89,8 +111,13 @@
                 "type": "object",
                 "required": ["id", "total"],
                 "properties": {
-                  "id": { "type": "string" },
-                  "total": { "type": "number", "minimum": 0 }
+                  "id": {
+                    "type": "string"
+                  },
+                  "total": {
+                    "type": "number",
+                    "minimum": 0
+                  }
                 }
               }
             }
@@ -105,15 +132,6 @@
         "windowCollector": "collector",
         "windowElb": "elb"
       },
-      "packages": {
-        "@walkeros/collector": {},
-        "@walkeros/web-source-browser": {},
-        "@walkeros/web-source-datalayer": {},
-        "@walkeros/source-demo": {},
-        "@walkeros/web-destination-gtag": {},
-        "@walkeros/web-destination-api": {},
-        "@walkeros/transformer-validator": {}
-      },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
@@ -123,7 +141,9 @@
               "prefix": "data-elb",
               "pageview": true,
               "session": {
-                "consent": { "marketing": true }
+                "consent": {
+                  "marketing": true
+                }
               },
               "elb": "elb",
               "elbLayer": true
@@ -149,7 +169,10 @@
                       "name": "items.0.item_name",
                       "price": "items.0.price",
                       "currency": "currency",
-                      "quantity": { "key": "items.0.quantity", "value": 1 }
+                      "quantity": {
+                        "key": "items.0.quantity",
+                        "value": 1
+                      }
                     }
                   }
                 }
@@ -178,7 +201,10 @@
               "events": [
                 {
                   "name": "page view",
-                  "data": { "title": "Home", "path": "/" },
+                  "data": {
+                    "title": "Home",
+                    "path": "/"
+                  },
                   "delay": 0
                 },
                 {
@@ -205,7 +231,9 @@
                 },
                 {
                   "name": "test debug",
-                  "data": { "message": "This should be ignored" },
+                  "data": {
+                    "message": "This should be ignored"
+                  },
                   "delay": 800
                 },
                 {
@@ -274,9 +302,13 @@
           "package": "@walkeros/web-destination-gtag",
           "config": {
             "require": ["consent", "user"],
-            "consent": { "marketing": true },
+            "consent": {
+              "marketing": true
+            },
             "settings": {
-              "ga4": { "measurementId": "$var.ga4MeasurementId" }
+              "ga4": {
+                "measurementId": "$var.ga4MeasurementId"
+              }
             },
             "mapping": {
               "page": {
@@ -306,8 +338,12 @@
                           {
                             "map": {
                               "item_id": [
-                                { "key": "data.sku" },
-                                { "key": "data.id" }
+                                {
+                                  "key": "data.sku"
+                                },
+                                {
+                                  "key": "data.id"
+                                }
                               ],
                               "item_name": "data.name",
                               "item_category": "data.category",
@@ -335,7 +371,10 @@
                             "map": {
                               "item_id": "data.id",
                               "item_name": "data.name",
-                              "quantity": { "key": "data.quantity", "value": 1 }
+                              "quantity": {
+                                "key": "data.quantity",
+                                "value": 1
+                              }
                             }
                           }
                         ]
@@ -376,7 +415,10 @@
             "page-view": {
               "in": {
                 "name": "page view",
-                "data": { "title": "Home", "path": "/" },
+                "data": {
+                  "title": "Home",
+                  "path": "/"
+                },
                 "entity": "page",
                 "action": "view"
               },
@@ -392,7 +434,10 @@
               "out": [
                 "event",
                 "page_view",
-                { "page_title": "Home", "page_location": "/" }
+                {
+                  "page_title": "Home",
+                  "page_location": "/"
+                }
               ]
             },
             "product-add": {
@@ -412,7 +457,10 @@
                 "name": "add_to_cart",
                 "data": {
                   "map": {
-                    "currency": { "key": "data.currency", "value": "EUR" },
+                    "currency": {
+                      "key": "data.currency",
+                      "value": "EUR"
+                    },
                     "value": "data.price",
                     "items": {
                       "loop": [
@@ -421,7 +469,10 @@
                           "map": {
                             "item_id": "data.id",
                             "item_name": "data.name",
-                            "quantity": { "key": "data.quantity", "value": 1 }
+                            "quantity": {
+                              "key": "data.quantity",
+                              "value": 1
+                            }
                           }
                         }
                       ]
@@ -448,7 +499,9 @@
             "test-ignored": {
               "in": {
                 "name": "test debug",
-                "data": { "message": "This should be ignored" },
+                "data": {
+                  "message": "This should be ignored"
+                },
                 "entity": "test",
                 "action": "debug"
               },
@@ -465,7 +518,9 @@
             },
             "data": {
               "map": {
-                "sent_at": { "fn": "$code:() => Date.now()" },
+                "sent_at": {
+                  "fn": "$code:() => Date.now()"
+                },
                 "flow_version": "$var.flowVersion"
               }
             },
@@ -479,7 +534,9 @@
                       "currency": "data.currency",
                       "user_email": {
                         "key": "user.email",
-                        "consent": { "marketing": true }
+                        "consent": {
+                          "marketing": true
+                        }
                       },
                       "items": "$def.ga4ItemsLoop"
                     }
@@ -500,7 +557,9 @@
             "push": "$code:(event, ctx) => { ctx.logger.info('[DEBUG]', event.name, event.data); }"
           },
           "config": {
-            "consent": { "functional": true }
+            "consent": {
+              "functional": true
+            }
           }
         }
       },
@@ -520,6 +579,17 @@
         "custom": {
           "campaign": "flow-demo"
         }
+      },
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {},
+          "@walkeros/web-source-browser": {},
+          "@walkeros/web-source-datalayer": {},
+          "@walkeros/source-demo": {},
+          "@walkeros/web-destination-gtag": {},
+          "@walkeros/web-destination-api": {},
+          "@walkeros/transformer-validator": {}
+        }
       }
     },
     "server": {
@@ -527,22 +597,6 @@
       "variables": {
         "metaPixelId": "$env.META_PIXEL_ID:123456789012345",
         "metaAccessToken": "$env.META_ACCESS_TOKEN:demo_token"
-      },
-      "packages": {
-        "@walkeros/core": {
-          "path": "../../core"
-        },
-        "@walkeros/collector": {
-          "path": "../../collector"
-        },
-        "@walkeros/server-source-express": {},
-        "@walkeros/server-destination-meta": {},
-        "@walkeros/destination-demo": {},
-        "@walkeros/transformer-validator": {},
-        "@walkeros/server-transformer-fingerprint": {},
-        "@walkeros/store-memory": {
-          "path": "../../stores/memory"
-        }
       },
       "stores": {
         "cache": {
@@ -571,7 +625,9 @@
                 "key": ["ingest.method", "ingest.path"],
                 "ttl": 300,
                 "update": {
-                  "headers.X-Cache": { "key": "cache.status" }
+                  "headers.X-Cache": {
+                    "key": "cache.status"
+                  }
                 }
               }
             ]
@@ -595,15 +651,23 @@
               "in": {
                 "method": "POST",
                 "path": "/collect",
-                "headers": { "content-type": "application/json" },
+                "headers": {
+                  "content-type": "application/json"
+                },
                 "body": {
                   "name": "page view",
-                  "data": { "title": "Home", "url": "https://example.com" }
+                  "data": {
+                    "title": "Home",
+                    "url": "https://example.com"
+                  }
                 }
               },
               "out": {
                 "name": "page view",
-                "data": { "title": "Home", "url": "https://example.com" },
+                "data": {
+                  "title": "Home",
+                  "url": "https://example.com"
+                },
                 "entity": "page",
                 "action": "view"
               }
@@ -623,13 +687,17 @@
             "passes-normal": {
               "in": {
                 "name": "page view",
-                "data": { "title": "Home" },
+                "data": {
+                  "title": "Home"
+                },
                 "entity": "page",
                 "action": "view"
               },
               "out": {
                 "name": "page view",
-                "data": { "title": "Home" },
+                "data": {
+                  "title": "Home"
+                },
                 "entity": "page",
                 "action": "view"
               }
@@ -654,7 +722,9 @@
                 "context.ip",
                 "context.userAgent",
                 "context.language",
-                { "fn": "$code:() => new Date().toISOString().slice(0, 10)" }
+                {
+                  "fn": "$code:() => new Date().toISOString().slice(0, 10)"
+                }
               ],
               "output": "user.hash",
               "length": 16
@@ -690,10 +760,14 @@
             "policy": {
               "user_data.em": {
                 "key": "user.email",
-                "consent": { "marketing": true }
+                "consent": {
+                  "marketing": true
+                }
               },
               "user_data.external_id": "user.id",
-              "custom_data.server_processed": { "value": true },
+              "custom_data.server_processed": {
+                "value": true
+              },
               "custom_data.request_meta": {
                 "map": {
                   "ip": "context.ip",
@@ -718,7 +792,9 @@
                         "key": "data.currency",
                         "value": "$var.currency"
                       },
-                      "content_type": { "value": "product" },
+                      "content_type": {
+                        "value": "product"
+                      },
                       "content_ids": {
                         "set": ["data.id"]
                       }
@@ -734,14 +810,19 @@
                         "key": "data.currency",
                         "value": "$var.currency"
                       },
-                      "content_type": { "value": "product" },
+                      "content_type": {
+                        "value": "product"
+                      },
                       "contents": {
                         "loop": [
                           "this",
                           {
                             "map": {
                               "id": "data.id",
-                              "quantity": { "key": "data.quantity", "value": 1 }
+                              "quantity": {
+                                "key": "data.quantity",
+                                "value": 1
+                              }
                             }
                           }
                         ]
@@ -796,7 +877,10 @@
                 "data": {
                   "map": {
                     "value": "data.total",
-                    "currency": { "key": "data.currency", "value": "EUR" },
+                    "currency": {
+                      "key": "data.currency",
+                      "value": "EUR"
+                    },
                     "order_id": "data.id"
                   }
                 }
@@ -835,6 +919,24 @@
           "environment": "demo",
           "version": "$var.flowVersion",
           "platform": "server"
+        }
+      },
+      "bundle": {
+        "packages": {
+          "@walkeros/core": {
+            "path": "../../core"
+          },
+          "@walkeros/collector": {
+            "path": "../../collector"
+          },
+          "@walkeros/server-source-express": {},
+          "@walkeros/server-destination-meta": {},
+          "@walkeros/destination-demo": {},
+          "@walkeros/transformer-validator": {},
+          "@walkeros/server-transformer-fingerprint": {},
+          "@walkeros/store-memory": {
+            "path": "../../stores/memory"
+          }
         }
       }
     }

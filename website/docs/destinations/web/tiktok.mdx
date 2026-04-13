@@ -1,0 +1,254 @@
+---
+title: TikTok Pixel
+description: Conversion tracking and Advanced Matching for TikTok Ads
+path: /docs/destinations/web/tiktok
+sidebar_position: 9
+package: '@walkeros/web-destination-tiktok'
+---
+
+import destinationTikTok from '@walkeros/web-destination-tiktok';
+import data from '@walkeros/web-destination-tiktok/walkerOS.json';
+
+export const destination = { ...destinationTikTok, examples: data.examples };
+
+# TikTok Pixel
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/tiktok"
+  npm="@walkeros/web-destination-tiktok"
+/>
+
+The [TikTok Pixel](https://business-api.tiktok.com/portal/docs?id=1739585702922241)
+forwards browser conversions to TikTok Ads for optimization, audience
+building, and reporting. This destination wraps the standard TikTok Pixel
+snippet (loaded from `analytics.tiktok.com/i18n/pixel/events.js`); there is
+no npm SDK for the browser pixel. Events become `ttq.track(name, params, { event_id })`
+calls; identity becomes `ttq.identify({ email, phone_number, external_id })`;
+consent toggles `ttq.enableCookie` / `ttq.disableCookie`.
+
+:::info Where This Fits
+TikTok Pixel is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'TikTok', highlight: true } }}
+/>
+
+Loads the TikTok Pixel SDK, forwards every walkerOS event with a stable
+`event_id` for deduplication, and lets you layer on Advanced Matching and
+consent cookie toggling.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-tiktok`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationTikTok } from '@walkeros/web-destination-tiktok';
+
+await startFlow({
+  consent: { marketing: false },
+  destinations: {
+    tiktok: {
+      code: destinationTikTok,
+      config: {
+        consent: { marketing: true },
+        settings: {
+          apiKey: 'C4XXXXXXXXXXXXXXXXXXX',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "tiktok": {
+    "package": "@walkeros/web-destination-tiktok",
+    "config": {
+      "consent": { "marketing": true },
+      "settings": {
+        "apiKey": "C4XXXXXXXXXXXXXXXXXXX"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## Standard events
+
+TikTok recognizes 14 standard events for ad optimization. Use `mapping.name`
+to flip walkerOS event names into the rigid taxonomy. Custom names still
+work but receive no optimization signal.
+
+| TikTok name            | When to use                                    |
+| ---------------------- | ---------------------------------------------- |
+| `ViewContent`          | Product / content detail view                  |
+| `ClickButton`          | Generic CTA click                              |
+| `Search`               | Site search                                    |
+| `AddToWishlist`        | Item added to a wishlist                       |
+| `AddToCart`            | Item added to cart                             |
+| `InitiateCheckout`     | User started checkout                          |
+| `AddPaymentInfo`       | Payment details entered                        |
+| `CompletePayment`      | Order successfully placed (primary conversion) |
+| `PlaceAnOrder`         | Order placed (alternative)                     |
+| `Contact`              | Lead / contact form                            |
+| `Download`             | Asset download                                 |
+| `SubmitForm`           | Generic form submission                        |
+| `CompleteRegistration` | User signup                                    |
+| `Subscribe`            | Subscription start                             |
+
+## Mapping data.examples
+
+:::tip
+
+The code data.examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### `ViewContent` via `mapping.name`
+
+The canonical TikTok pattern: walkerOS `product view` becomes TikTok's
+`ViewContent` standard event with the native parameter shape.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
+  event={data.examples.step.productViewContent.in}
+  mapping={data.examples.step.productViewContent.mapping}
+  generic={true}
+/>
+
+### `CompleteRegistration` with per-event Advanced Matching
+
+User signup is the moment to fire Advanced Matching for the session.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
+  event={data.examples.step.userRegisterCompleteRegistration.in}
+  mapping={data.examples.step.userRegisterCompleteRegistration.mapping}
+  generic={true}
+/>
+
+### `CompletePayment` with multi-product `contents`
+
+The hero example: `mapping.data` builds the TikTok-native shape; `loop`
+walks `event.nested` to produce one `contents` entry per product;
+`{ key, value: 'EUR' }` provides a fallback currency.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
+  event={data.examples.step.orderCompleteCompletePayment.in}
+  mapping={data.examples.step.orderCompleteCompletePayment.mapping}
+  generic={true}
+/>
+
+### `Search`
+
+Minimal example: a single `mapping.data` field maps the query string.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
+  event={data.examples.step.searchSubmitSearch.in}
+  mapping={data.examples.step.searchSubmitSearch.mapping}
+  generic={true}
+/>
+
+### Destination-level Advanced Matching
+
+Set identity once on the destination and the runtime state diffing skips
+redundant `ttq.identify()` calls when nothing changed.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    apiKey: 'C4XXXXXXXXXXXXXXXXXXX',
+    identify: {
+      map: {
+        email: 'data.email',
+        phone_number: 'data.phone',
+        external_id: 'user.id',
+      },
+    },
+  }}
+  event={data.examples.step.destinationLevelIdentify.in}
+  generic={true}
+/>
+
+## Advanced Matching
+
+TikTok matches conversions back to TikTok users via three optional parameters:
+`email`, `phone_number`, `external_id`. The SDK hashes them with SHA256 before
+sending, so it's safe to pass raw values.
+
+`settings.identify` (destination-level) fires on first push and re-fires only
+when the resolved value changes (runtime state diffing). `mapping.settings.identify`
+(per-event) overrides for one push, which is useful for signup and checkout flows
+where the identity becomes available mid-session.
+
+`ttq.identify()` always fires **before** `ttq.track()` so Advanced Matching
+is set for the conversion event.
+
+## Consent
+
+TikTok is an advertising platform. The typical walkerOS consent key is
+`marketing` (whatever name your CMP reports). The walkerOS `config.consent`
+gate blocks unconsented events from reaching the destination in the first
+place; the destination's `on('consent')` handler then toggles TikTok's own
+cookie state for attribution.
+
+<CodeSnippet
+  code={`config: {
+  consent: { marketing: true },
+  settings: { apiKey: 'C4XXXXXXXXXXXXXXXXXXX' },
+}`}
+  language="typescript"
+/>
+
+The handler iterates every key in `config.consent` and calls
+`ttq.enableCookie()` only when **all** required keys are granted. Otherwise
+it calls `ttq.disableCookie()`. This is the conservative semantic that
+matches walkerOS's gating model.
+
+:::note Auto page view
+TikTok's SDK auto-fires `ttq.page()` once on load. The destination has no
+knob to suppress it. Letting the auto page view fire is the expected
+behavior.
+:::
+
+## Related
+
+- [TikTok Events API documentation](https://business-api.tiktok.com/portal/docs)
+- [Bundled mode →](/docs/getting-started/modes/bundled)

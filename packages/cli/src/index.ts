@@ -38,6 +38,8 @@ export { feedbackCommand } from './commands/feedback/index.js';
 // === Programmatic API ===
 // High-level functions for library usage
 export { bundle, bundleRemote } from './commands/bundle/index.js';
+export { wrapSkeleton } from './commands/bundle/wrap.js';
+export type { WrapSkeletonOptions } from './commands/bundle/wrap.js';
 export {
   push,
   simulateSource,
@@ -112,6 +114,7 @@ export type {
 export type { BundleStats } from './commands/bundle/bundler.js';
 export type { ExampleLookupResult } from './commands/simulate/example-loader.js';
 export type { PushResult } from './commands/push/types.js';
+export type { PrepareInput, PreparedFlow } from './commands/push/prepare.js';
 export type {
   RunCommandOptions,
   RunOptions,

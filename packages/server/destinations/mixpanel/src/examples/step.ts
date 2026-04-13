@@ -1,0 +1,357 @@
+import type { Flow } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
+import type { Settings } from '../types';
+
+/**
+ * Step examples may carry destination-level settings and configInclude.
+ * The test runner reads these to configure the destination.
+ */
+export type MixpanelStepExample = Flow.StepExample & {
+  settings?: Partial<Settings>;
+  configInclude?: string[];
+};
+
+/**
+ * Default event forwarding — every walkerOS event becomes
+ * mp.track(event.name, { distinct_id, ...properties }).
+ * With default settings.identify resolving user.id.
+ */
+export const defaultEventForwarding: MixpanelStepExample = {
+  in: getEvent('product view', { timestamp: 1700000100 }),
+  settings: {
+    identify: {
+      map: {
+        distinctId: 'user.id',
+      },
+    },
+  },
+  out: ['mp.track', 'product view', { distinct_id: 'us3r' }],
+};
+
+/**
+ * Track with include — flattens walkerOS `data` section into
+ * prefixed track() properties.
+ */
+export const trackWithInclude: MixpanelStepExample = {
+  in: getEvent('product view', { timestamp: 1700000101 }),
+  settings: {
+    identify: {
+      map: {
+        distinctId: 'user.id',
+      },
+    },
+  },
+  configInclude: ['data'],
+  out: [
+    'mp.track',
+    'product view',
+    {
+      distinct_id: 'us3r',
+      data_id: 'ers',
+      data_name: 'Everyday Ruck Snack',
+      data_color: 'black',
+      data_size: 'l',
+      data_price: 420,
+    },
+  ],
+};
+
+/**
+ * Per-event identify — mapping-level settings.identify overrides
+ * destination-level default.
+ */
+export const perEventIdentify: MixpanelStepExample = {
+  in: getEvent('user login', {
+    timestamp: 1700000102,
+    data: {
+      user_id: 'resolved-id',
+      plan: 'premium',
+    },
+  }),
+  mapping: {
+    settings: {
+      identify: {
+        map: {
+          distinctId: 'data.user_id',
+        },
+      },
+    },
+  },
+  out: [
+    'mp.track',
+    'user login',
+    {
+      distinct_id: 'resolved-id',
+    },
+  ],
+};
+
+/**
+ * Track with group — group key/id attached as track property.
+ */
+export const trackWithGroup: MixpanelStepExample = {
+  in: getEvent('page view', {
+    timestamp: 1700000103,
+    data: {
+      company_id: 'acme',
+    },
+  }),
+  settings: {
+    identify: {
+      map: {
+        distinctId: 'user.id',
+      },
+    },
+  },
+  mapping: {
+    settings: {
+      group: {
+        map: {
+          key: { value: 'company_id' },
+          id: 'data.company_id',
+        },
+      },
+    },
+  },
+  out: [
+    'mp.track',
+    'page view',
+    {
+      distinct_id: 'us3r',
+      company_id: 'acme',
+    },
+  ],
+};
+
+/**
+ * User login with people operations — skip: true suppresses track,
+ * only identity + people side effects fire.
+ */
+export const userLoginPeopleSet: MixpanelStepExample = {
+  in: getEvent('user login', {
+    timestamp: 1700000104,
+    data: {
+      user_id: 'new-user-123',
+      plan: 'premium',
+      company: 'Acme',
+      email: 'user@acme.com',
+    },
+  }),
+  mapping: {
+    skip: true,
+    settings: {
+      identify: {
+        map: {
+          distinctId: 'data.user_id',
+        },
+      },
+      people: {
+        map: {
+          set: {
+            map: {
+              plan: 'data.plan',
+              company: 'data.company',
+              email: 'data.email',
+            },
+          },
+          set_once: {
+            map: {
+              first_login: 'timestamp',
+            },
+          },
+          increment: {
+            map: {
+              login_count: { value: 1 },
+            },
+          },
+        },
+      },
+    },
+  },
+  out: [
+    [
+      'mp.people.set',
+      'new-user-123',
+      { plan: 'premium', company: 'Acme', email: 'user@acme.com' },
+    ],
+    ['mp.people.set_once', 'new-user-123', { first_login: 1700000104 }],
+    ['mp.people.increment', 'new-user-123', { login_count: 1 }],
+  ],
+};
+
+/**
+ * Full people operation vocabulary — exercises set, set_once, increment,
+ * append, union, remove, unset, delete_user.
+ */
+export const allPeopleOperations: MixpanelStepExample = {
+  in: getEvent('profile update', {
+    timestamp: 1700000105,
+    data: {
+      name: 'Jane Doe',
+      email: 'jane@acme.com',
+      page: '/docs/getting-started',
+      removed_tag: 'trial',
+      source: 'referral',
+    },
+  }),
+  mapping: {
+    skip: true,
+    settings: {
+      identify: {
+        map: {
+          distinctId: 'user.id',
+        },
+      },
+      people: {
+        map: {
+          set: {
+            map: {
+              name: 'data.name',
+              email: 'data.email',
+            },
+          },
+          set_once: {
+            map: {
+              signup_source: 'data.source',
+            },
+          },
+          increment: {
+            map: {
+              page_views: { value: 1 },
+            },
+          },
+          append: {
+            map: {
+              visited_pages: 'data.page',
+            },
+          },
+          union: {
+            map: {
+              unique_tags: { value: ['active'] },
+            },
+          },
+          remove: {
+            map: {
+              tags: 'data.removed_tag',
+            },
+          },
+          unset: { value: ['old_plan'] },
+        },
+      },
+    },
+  },
+  out: [
+    ['mp.people.set', 'us3r', { name: 'Jane Doe', email: 'jane@acme.com' }],
+    ['mp.people.set_once', 'us3r', { signup_source: 'referral' }],
+    ['mp.people.increment', 'us3r', { page_views: 1 }],
+    ['mp.people.append', 'us3r', { visited_pages: '/docs/getting-started' }],
+    ['mp.people.union', 'us3r', { unique_tags: ['active'] }],
+    ['mp.people.remove', 'us3r', { tags: 'trial' }],
+    ['mp.people.unset', 'us3r', ['old_plan']],
+  ],
+};
+
+/**
+ * Group profile operations — settings.groupProfile with set and set_once.
+ */
+export const companyGroupProfile: MixpanelStepExample = {
+  in: getEvent('company update', {
+    timestamp: 1700000106,
+    data: {
+      company_id: 'acme-inc',
+      company_name: 'Acme, Inc.',
+      plan: 'enterprise',
+      employee_count: 250,
+      founded_year: 2010,
+    },
+  }),
+  mapping: {
+    skip: true,
+    settings: {
+      groupProfile: {
+        map: {
+          key: { value: 'company_id' },
+          id: 'data.company_id',
+          set: {
+            map: {
+              name: 'data.company_name',
+              plan: 'data.plan',
+              employee_count: 'data.employee_count',
+            },
+          },
+          set_once: {
+            map: {
+              founded: 'data.founded_year',
+            },
+          },
+        },
+      },
+    },
+  },
+  out: [
+    [
+      'mp.groups.set',
+      'company_id',
+      'acme-inc',
+      { name: 'Acme, Inc.', plan: 'enterprise', employee_count: 250 },
+    ],
+    ['mp.groups.set_once', 'company_id', 'acme-inc', { founded: 2010 }],
+  ],
+};
+
+/**
+ * Historical import — useImport: true uses mp.import() instead of mp.track().
+ */
+export const historicalImport: MixpanelStepExample = {
+  in: getEvent('order complete', {
+    timestamp: 1700000107,
+    data: {
+      total: 99.99,
+    },
+  }),
+  settings: {
+    useImport: true,
+    identify: {
+      map: {
+        distinctId: 'user.id',
+      },
+    },
+  },
+  out: ['mp.import', 'order complete', 1700000107, { distinct_id: 'us3r' }],
+};
+
+/**
+ * Alias — legacy identity merge. Fires mp.alias before track.
+ */
+export const aliasBeforeTrack: MixpanelStepExample = {
+  in: getEvent('user login', {
+    timestamp: 1700000108,
+    data: {
+      user_id: 'new-user-456',
+      anon_id: 'anon-789',
+    },
+  }),
+  mapping: {
+    settings: {
+      identify: {
+        map: {
+          distinctId: 'data.user_id',
+          alias: 'data.anon_id',
+        },
+      },
+    },
+  },
+  out: [
+    ['mp.alias', 'new-user-456', 'anon-789'],
+    ['mp.track', 'user login', { distinct_id: 'new-user-456' }],
+  ],
+};
+
+/**
+ * Wildcard ignore — the rule matches but does nothing.
+ */
+export const wildcardIgnored: MixpanelStepExample = {
+  in: getEvent('debug noise', { timestamp: 1700000109 }),
+  mapping: { ignore: true },
+  out: [],
+};

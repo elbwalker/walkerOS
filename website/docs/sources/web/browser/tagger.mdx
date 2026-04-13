@@ -4,7 +4,7 @@ description: HTML data attribute generator for walkerOS event tracking
 package: '@walkeros/web-source-browser'
 path: packages/web/sources/browser
 ---
-import { schemas } from '@walkeros/web-source-browser/dev';
+import data from '@walkeros/web-source-browser/walkerOS.json';
 
 # Tagger
 
@@ -63,7 +63,7 @@ prefix: 'data-elb',
 
 ## Configuration
 
-<PropertyTable schema={schemas.tagger} />
+<PropertyTable schema={data.schemas.tagger} />
 
 ## Usage examples
 

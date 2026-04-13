@@ -7,9 +7,9 @@ package: '@walkeros/web-destination-gtag'
 
 import { getEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples, schemas } from '@walkeros/web-destination-gtag/dev';
+import data from '@walkeros/web-destination-gtag/walkerOS.json';
 
-export const destination = { ...destinationGtag, examples };
+export const destination = { ...destinationGtag, examples: data.examples };
 
 # Google Tag Manager (GTM)
 
@@ -55,7 +55,7 @@ await startFlow({
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.gtm} />
+<PropertyTable schema={data.schemas.gtm} />
 
 ### Event Mapping
 

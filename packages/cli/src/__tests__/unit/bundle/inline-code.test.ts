@@ -160,10 +160,12 @@ describe('Integration', () => {
   it('should bundle mixed package and inline definitions', () => {
     const flowSettings: Flow.Settings = {
       server: {},
-      packages: {
-        '@walkeros/collector': { imports: ['startFlow'] },
-        '@walkeros/transformer-validator': {
-          imports: ['transformerValidator'],
+      bundle: {
+        packages: {
+          '@walkeros/collector': { imports: ['startFlow'] },
+          '@walkeros/transformer-validator': {
+            imports: ['transformerValidator'],
+          },
         },
       },
       sources: {

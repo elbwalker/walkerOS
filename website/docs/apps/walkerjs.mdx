@@ -5,7 +5,7 @@ sidebar_position: 1
 package: '@walkeros/walker.js'
 ---
 
-import * as schemas from '@walkeros/walker.js/src/dev';
+import data from '@walkeros/walker.js/walkerOS.json';
 
 # walker.js
 
@@ -93,19 +93,19 @@ Walker.js supports multiple configuration approaches with different priorities:
 
 ### Settings
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 #### Browser source settings
 
-<PropertyTable schema={schemas.browserConfig} />
+<PropertyTable schema={data.schemas.browserConfig} />
 
 #### DataLayer settings
 
-<PropertyTable schema={schemas.dataLayerConfig} />
+<PropertyTable schema={data.schemas.dataLayerConfig} />
 
 #### Collector settings
 
-<PropertyTable schema={schemas.collectorConfig} />
+<PropertyTable schema={data.schemas.collectorConfig} />
 
 ### Full configuration object
 

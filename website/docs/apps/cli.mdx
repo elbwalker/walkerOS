@@ -61,6 +61,25 @@ The CLI uses types from `@walkeros/core`:
 
 The CLI transforms `Flow.Config` → `Flow.Settings` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
 
+## The `bundle` section
+
+Build-time concerns for the bundler live under `flow.<name>.bundle`. Two fields are supported:
+
+- **`packages`** — the list of npm packages (or local paths) the bundler should install for this flow.
+- **`overrides`** — pin transitive dependency versions, matching npm's `overrides` semantics. Useful when an upstream package declares an overly narrow version range that conflicts with a newer transitive version in the same tree.
+
+<CodeSnippet
+  code={`"bundle": {
+  "packages": {
+    "@walkeros/collector": {}
+  },
+  "overrides": {
+    "@amplitude/analytics-types": "2.11.1"
+  }
+}`}
+  language="json"
+/>
+
 ## Package imports
 
 ### Implicit collector
@@ -68,10 +87,12 @@ The CLI transforms `Flow.Config` → `Flow.Settings` (per flow) → bundled code
 The collector is added automatically. To pin a specific version (recommended for production), add the collector explicitly:
 
 <CodeSnippet
-  code={`"packages": {
-  "@walkeros/collector": { "version": "1.0.0" },
-  "@walkeros/web-source-browser": {},
-  "@walkeros/destination-demo": {}
+  code={`"bundle": {
+  "packages": {
+    "@walkeros/collector": { "version": "1.0.0" },
+    "@walkeros/web-source-browser": {},
+    "@walkeros/destination-demo": {}
+  }
 }`}
   language="json"
 />
@@ -81,9 +102,11 @@ The collector is added automatically. To pin a specific version (recommended for
 Sources and destinations automatically use their **default export** - no `imports` needed:
 
 <CodeSnippet
-  code={`"packages": {
-  "@walkeros/web-source-browser": {},        // Uses default export
-  "@walkeros/destination-demo": {}           // Uses default export
+  code={`"bundle": {
+  "packages": {
+    "@walkeros/web-source-browser": {},        // Uses default export
+    "@walkeros/destination-demo": {}           // Uses default export
+  }
 }`}
   language="json"
 />
@@ -93,10 +116,12 @@ Sources and destinations automatically use their **default export** - no `import
 Use `imports` when you need specific utility functions from a package:
 
 <CodeSnippet
-  code={`"packages": {
-  "@walkeros/core": { "imports": ["getId", "clone"] },     // Optional utilities
-  "@walkeros/web-source-browser": {
-    "imports": ["createTagger"]                            // Additional utility
+  code={`"bundle": {
+  "packages": {
+    "@walkeros/core": { "imports": ["getId", "clone"] },     // Optional utilities
+    "@walkeros/web-source-browser": {
+      "imports": ["createTagger"]                            // Additional utility
+    }
   }
 }`}
   language="json"
@@ -107,8 +132,10 @@ Use `imports` when you need specific utility functions from a package:
 For packages without a default export, specify both `imports` and `code`:
 
 <CodeSnippet
-  code={`"packages": {
-  "@my/custom-package": { "imports": ["namedExport"] }
+  code={`"bundle": {
+  "packages": {
+    "@my/custom-package": { "imports": ["namedExport"] }
+  }
 },
 "sources": {
   "custom": {
@@ -129,9 +156,11 @@ Add a `path` property to any package to use a local directory instead of npm:
 
 <CodeSnippet
   code={`{
-  "packages": {
-    "@my/custom-destination": {
-      "path": "./my-custom-destination"
+  "bundle": {
+    "packages": {
+      "@my/custom-destination": {
+        "path": "./my-custom-destination"
+      }
     }
   }
 }`}
@@ -151,12 +180,14 @@ When a local package has dependencies on other packages that are also specified 
 
 <CodeSnippet
   code={`{
-  "packages": {
-    "@walkeros/core": {
-      "path": "../packages/core"
-    },
-    "@walkeros/collector": {
-      "path": "../packages/collector"
+  "bundle": {
+    "packages": {
+      "@walkeros/core": {
+        "path": "../packages/core"
+      },
+      "@walkeros/collector": {
+        "path": "../packages/collector"
+      }
     }
   }
 }`}
@@ -170,9 +201,11 @@ In this example, even though `@walkeros/collector` depends on `@walkeros/core`, 
 **Development of custom packages:**
 <CodeSnippet
   code={`{
-  "packages": {
-    "@my-org/destination-custom": {
-      "path": "../my-destination"
+  "bundle": {
+    "packages": {
+      "@my-org/destination-custom": {
+        "path": "../my-destination"
+      }
     }
   }
 }`}
@@ -182,9 +215,11 @@ In this example, even though `@walkeros/collector` depends on `@walkeros/core`, 
 **Testing local changes to walkerOS packages:**
 <CodeSnippet
   code={`{
-  "packages": {
-    "@walkeros/collector": {
-      "path": "../../packages/collector"
+  "bundle": {
+    "packages": {
+      "@walkeros/collector": {
+        "path": "../../packages/collector"
+      }
     }
   }
 }`}
@@ -203,9 +238,11 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
   "flows": {
     "default": {
       "server": {},
-      "packages": {
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/server-source-express": {},
+          "@walkeros/destination-demo": {}
+        },
       },
       "sources": {
         "http": {
@@ -256,7 +293,7 @@ The bundle command handles all of this.
   language="bash"
 />
 
-This creates an optimized bundle at the convention-based output path (`./dist/bundle.mjs` for server, `./dist/walker.js` for web).
+This writes the optimized bundle to stdout. Use `-o` to write to a file (e.g., `-o ./dist/walker.js` for web, `-o ./dist/bundle.mjs` for server).
 
 ### Step-by-Step Guide
 
@@ -270,9 +307,11 @@ Create `server-collect.json`:
   "flows": {
     "default": {
       "server": {},
-      "packages": {
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/server-source-express": {},
+          "@walkeros/destination-demo": {}
+        },
       },
       "sources": {
         "http": {
@@ -413,8 +452,10 @@ Create `api-flow.json` with a destination that makes real HTTP calls:
   "flows": {
     "default": {
       "server": {},
-      "packages": {
-        "@walkeros/web-destination-api": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/web-destination-api": {}
+        },
       },
       "destinations": {
         "api": {
@@ -1261,9 +1302,11 @@ Create `collect.json`:
   "flows": {
     "default": {
       "server": {},
-      "packages": {
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/server-source-express": {},
+          "@walkeros/destination-demo": {}
+        },
       },
       "sources": {
         "http": {
@@ -1433,9 +1476,11 @@ Create `server-collect.json`:
   "flows": {
     "default": {
       "server": {},
-      "packages": {
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/server-source-express": {},
+          "@walkeros/destination-demo": {}
+        },
       },
       "sources": {
         "http": {
@@ -1472,9 +1517,11 @@ Create `web-track.json`:
       "web": {
         "windowElb": "track"
       },
-      "packages": {
-        "@walkeros/web-source-browser": {},
-        "@walkeros/web-destination-api": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/web-source-browser": {},
+          "@walkeros/web-destination-api": {}
+        },
       },
       "sources": {
         "browser": {

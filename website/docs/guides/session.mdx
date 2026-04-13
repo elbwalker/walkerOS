@@ -343,6 +343,60 @@ sessionStart({
   language="typescript"
 />
 
+### Click IDs and platform resolution
+
+When the URL contains a known ad-platform click ID, `getMarketingParameters`
+adds two fields to its result:
+
+- `clickId`: the URL parameter name that was found (e.g. `gclid`).
+- `platform`: the canonical platform identifier (e.g. `google`).
+
+The raw value is also stored under the parameter name itself, so a URL like
+`https://example.com/?gclid=abc` produces:
+
+```ts
+{
+  clickId: 'gclid',
+  gclid: 'abc',
+  platform: 'google',
+}
+```
+
+If a URL contains multiple click IDs, every raw value is preserved, but
+`clickId` and `platform` reference the **highest-priority** match. See
+[`clickIds.ts`](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/clickIds.ts)
+for the full list and priority order.
+
+#### Extending the registry from flow.json
+
+Pass a `clickIds` array in the session source settings. Entries with a `param`
+matching a default override the platform name in place; new params append to
+the end of the priority list.
+
+```json
+{
+  "version": 3,
+  "flows": {
+    "default": {
+      "web": {},
+      "sources": {
+        "session": {
+          "package": "@walkeros/web-source-session",
+          "config": {
+            "settings": {
+              "clickIds": [
+                { "param": "xyzclid", "platform": "xyz" },
+                { "param": "fbclid", "platform": "facebook" }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
 #### Referrer customization
 
 By default the `document.referrer` is used, but it can be overwritten with the

@@ -105,10 +105,8 @@ Before publishing ANY code example:
 **When to use:** Any page documenting package configuration with Zod schemas.
 
 ```mdx
-import { schemas } from '@walkeros/web-destination-gtag/dev';
-<PropertyTable schema={schemas.settings} />;
-
-;
+import data from '@walkeros/web-destination-gtag/walkerOS.json';
+<PropertyTable schema={data.schemas.settings} />;
 ```
 
 **When NOT to use:**
@@ -395,6 +393,16 @@ sidebar_position: [N]
 ---
 
 ## Non-Negotiables
+
+### Punctuation
+
+Never use em dashes (`—`). Use a comma, period, or rephrase the sentence
+instead.
+
+```text
+CORRECT: "free and without sampling caps"
+WRONG:   "free — without sampling caps"
+```
 
 ### Event Naming
 

@@ -1,0 +1,230 @@
+---
+title: PostHog
+description: Product analytics, session replay, feature flags, surveys
+path: /docs/destinations/web/posthog
+sidebar_position: 7
+package: '@walkeros/web-destination-posthog'
+---
+
+import destinationPostHog from '@walkeros/web-destination-posthog';
+import data from '@walkeros/web-destination-posthog/walkerOS.json';
+
+export const destination = { ...destinationPostHog, examples: data.examples };
+
+# PostHog
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/posthog"
+  npm="@walkeros/web-destination-posthog"
+/>
+
+[PostHog](https://posthog.com/) is an open-source product analytics platform
+with session replay, feature flags, A/B testing, surveys, and heatmaps. This
+destination forwards walkerOS events to PostHog via the official
+[`posthog-js`](https://www.npmjs.com/package/posthog-js) SDK, translating
+events into `posthog.capture(...)` calls, resolving identity and group
+assignments, and handling consent opt-in/opt-out. All built-in PostHog
+features (session replay, feature flags, surveys, heatmaps, exception capture)
+are available through SDK init passthrough.
+
+:::info Where This Fits
+PostHog is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'PostHog', highlight: true } }}
+/>
+
+Loads the PostHog SDK, forwards every walkerOS event, and lets you layer on
+identity, person properties, groups, and consent handling.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-posthog`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationPostHog } from '@walkeros/web-destination-posthog';
+
+await startFlow({
+  destinations: {
+    posthog: {
+      code: destinationPostHog,
+      config: {
+        settings: {
+          apiKey: 'phc_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+          api_host: 'https://eu.i.posthog.com',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "posthog": {
+    "package": "@walkeros/web-destination-posthog",
+    "config": {
+      "settings": {
+        "apiKey": "phc_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "api_host": "https://eu.i.posthog.com"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## Mapping data.examples
+
+:::tip
+
+The code data.examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### Default event forwarding
+
+Every walkerOS event becomes `posthog.capture(event.name, properties)`.
+Without `include` config, `properties` is empty. Add `include: ['data']`
+to the destination config to forward event data as properties.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'phc_test' }}
+  event={data.examples.step.defaultEventForwarding.in}
+  mapping={{ include: ['data'] }}
+  generic={true}
+/>
+
+### Identify with `$set` and `$set_once`
+
+Resolve a mapping value into the PostHog identity vocabulary. `distinctId` is
+the new user ID, `$set` overwrites person properties, and `$set_once` only sets
+properties that do not yet exist.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'phc_test' }}
+  event={data.examples.step.userLoginIdentify.in}
+  mapping={data.examples.step.userLoginIdentify.mapping}
+  generic={true}
+/>
+
+### Person properties only (no identity change)
+
+When the resolved identify object has no `distinctId`, the destination calls
+`posthog.setPersonProperties(...)` instead, which is useful for profile updates that
+should not create a new identity.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'phc_test' }}
+  event={data.examples.step.profileUpdateSetPersonProperties.in}
+  mapping={data.examples.step.profileUpdateSetPersonProperties.mapping}
+  generic={true}
+/>
+
+### Group assignment
+
+Resolve a group mapping into `posthog.group(type, key, properties?)` calls for
+B2B analytics by company, team, or any custom group type.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'phc_test' }}
+  event={data.examples.step.groupAssignmentWithProperties.in}
+  mapping={data.examples.step.groupAssignmentWithProperties.mapping}
+  generic={true}
+/>
+
+### Order complete with flattened properties
+
+PostHog has no dedicated revenue API. Revenue events are regular `capture()`
+calls. Use `include: ['data', 'globals']` to flatten walkerOS sections into
+prefixed properties (`data_currency: "EUR"`, `data_total`, etc.).
+
+<DestinationDemo
+  destination={destination}
+  settings={{ apiKey: 'phc_test' }}
+  event={data.examples.step.orderCompleteWithInclude.in}
+  mapping={data.examples.step.orderCompleteWithInclude.mapping}
+  generic={true}
+/>
+
+## Consent
+
+Declare required consent keys via `config.consent`. When a `walker consent`
+event arrives with all declared keys granted, the destination calls
+`posthog.opt_in_capturing()`. When any declared key is revoked, it calls
+`posthog.opt_out_capturing()`, which stops capture, session replay, and
+survey rendering:
+
+<CodeSnippet
+  code={`destinations: {
+  posthog: {
+    code: destinationPostHog,
+    config: {
+      consent: { analytics: true },
+      settings: { apiKey: 'phc_...' },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+Without `config.consent` the destination takes no action on consent changes;
+the walkerOS `config.consent` gate still blocks unconsented events from
+reaching the destination in the first place.
+
+## Built-in features
+
+All these PostHog features work via standard `posthog-js` init options, with no
+destination wiring required:
+
+- **Session replay**: `settings.session_recording: { maskAllInputs: true, ... }`
+- **Feature flags**: `settings.bootstrap: { featureFlags: { ... } }` for SSR
+- **Surveys**: automatic; `settings.disable_surveys: true` to opt out
+- **Heatmaps**: `settings.capture_heatmaps: true`
+- **Exception capture**: `settings.capture_exceptions: true`
+- **Cookieless mode**: `settings.cookieless_mode: 'always' | 'on_reject'`
+- **Person profiles**: `settings.person_profiles: 'identified_only'`
+  (PostHog default, privacy-friendly) or `'always'`
+
+walkerOS sets three defaults that differ from PostHog's built-ins:
+`autocapture: false`, `capture_pageview: false`, `capture_pageleave: false`,
+because walkerOS sources handle event capture. Override them explicitly if you
+want PostHog's autocapture on.
+
+## Related
+
+- [PostHog documentation](https://posthog.com/docs)
+- [`posthog-js` SDK reference](https://posthog.com/docs/libraries/js)

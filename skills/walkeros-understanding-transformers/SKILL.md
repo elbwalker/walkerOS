@@ -40,7 +40,14 @@ import type { Transformer } from '@walkeros/core';
 
 export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
   const { config = {}, env, logger, id } = context;
-  const settings = SettingsSchema.parse(config.settings || {});
+  // Apply defaults inline — flow.json is developer-controlled, so no
+  // runtime validation. Shape checks live in ./schemas and are used by
+  // `walkeros validate` and dev tooling, never at runtime.
+  const userSettings = config.settings || {};
+  const settings = {
+    ...userSettings,
+    // example default: threshold: userSettings.threshold ?? 100,
+  };
 
   return {
     push(event, pushContext) {

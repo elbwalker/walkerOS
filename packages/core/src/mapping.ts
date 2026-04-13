@@ -5,6 +5,7 @@ import { castToProperty } from './property';
 import { tryCatchAsync } from './tryCatch';
 import { getGrantedConsent } from './consent';
 import { assign } from './assign';
+import { flattenIncludeSections } from './include';
 
 /**
  * Gets the mapping for an event.
@@ -223,6 +224,7 @@ export async function processEventMapping<
   mapping?: Mapping.Rule;
   mappingKey?: string;
   ignore: boolean;
+  skip: boolean;
 }> {
   // Step 1: Apply config-level policy (modifies event)
   if (config.policy) {
@@ -254,10 +256,19 @@ export async function processEventMapping<
   let data =
     config.data && (await getMappingValue(event, config.data, { collector }));
 
+  const skip = Boolean(eventMapping?.skip);
+
   if (eventMapping) {
     // Check if event should be ignored
     if (eventMapping.ignore) {
-      return { event, data, mapping: eventMapping, mappingKey, ignore: true };
+      return {
+        event,
+        data,
+        mapping: eventMapping,
+        mappingKey,
+        ignore: true,
+        skip,
+      };
     }
 
     // Override event name if specified
@@ -275,5 +286,27 @@ export async function processEventMapping<
     }
   }
 
-  return { event, data, mapping: eventMapping, mappingKey, ignore: false };
+  // Include: flatten event sections into data. Rule-level replaces config-level.
+  const effectiveInclude = eventMapping?.include ?? config.include;
+  if (effectiveInclude && effectiveInclude.length > 0) {
+    const includeData = flattenIncludeSections(event, effectiveInclude);
+    if (Object.keys(includeData).length > 0) {
+      // Include is the bottom layer — data wins on key conflict.
+      data = isObject(data)
+        ? (assign(
+            includeData,
+            data as Record<string, unknown>,
+          ) as unknown as WalkerOS.Property)
+        : (data ?? (includeData as unknown as WalkerOS.Property));
+    }
+  }
+
+  return {
+    event,
+    data,
+    mapping: eventMapping,
+    mappingKey,
+    ignore: false,
+    skip,
+  };
 }

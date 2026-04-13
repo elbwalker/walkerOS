@@ -1,15 +1,10 @@
 import { z } from '@walkeros/core/dev';
-import { IncludeSchema } from './primitives';
 
 /**
  * GA4 Mapping Schema
  * Event-level mapping for GA4
  */
-export const GA4MappingSchema = z.object({
-  include: IncludeSchema.describe(
-    'Override which event properties to include for this specific event',
-  ).optional(),
-});
+export const GA4MappingSchema = z.object({});
 
 /**
  * Google Ads Mapping Schema

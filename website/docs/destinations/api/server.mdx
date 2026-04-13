@@ -6,7 +6,7 @@ path: packages/server/destinations/api
 sidebar_position: 2
 ---
 
-import { schemas } from '@walkeros/server-destination-api/dev';
+import data from '@walkeros/server-destination-api/walkerOS.json';
 
 # Server API Destination
 
@@ -61,7 +61,7 @@ await startFlow({
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Usage
 

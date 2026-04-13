@@ -1,0 +1,154 @@
+---
+title: Pinterest Conversions API
+description: "Server-side event delivery to Pinterest Conversions API for enhanced conversion tracking"
+path: /docs/destinations/server/pinterest
+sidebar_position: 10
+package: '@walkeros/server-destination-pinterest'
+---
+import data from '@walkeros/server-destination-pinterest/walkerOS.json';
+
+# Pinterest Conversions API
+
+<PackageLink env="server" github="packages/server/destinations/pinterest" npm="@walkeros/server-destination-pinterest" />
+
+Server-side event delivery to Pinterest's Conversions API for enhanced conversion tracking, bypassing browser limitations for improved data quality and privacy compliance.
+
+:::info Where This Fits
+Pinterest Conversions API is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Pinterest CAPI', highlight: true } }}
+/>
+
+Sends events server-side to Pinterest's Conversions API via raw HTTP (`POST https://api.pinterest.com/v5/ad_accounts/{adAccountId}/events`), hashing 12 user_data fields with SHA-256 before transmission. Supports deduplication with the web Pinterest Tag via `event_id` + `event_name`.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-pinterest`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationPinterest } from '@walkeros/server-destination-pinterest';
+
+await startFlow({
+  destinations: {
+    pinterest: {
+      code: destinationPinterest,
+      config: {
+        settings: {
+          accessToken: 'YOUR_ACCESS_TOKEN',
+          adAccountId: 'YOUR_AD_ACCOUNT_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "pinterest": {
+    "package": "@walkeros/server-destination-pinterest",
+    "code": "destinationPinterest",
+    "config": {
+      "settings": {
+        "accessToken": "YOUR_ACCESS_TOKEN",
+        "adAccountId": "YOUR_AD_ACCOUNT_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## Docker Deployment
+
+### Step 1: Create flow configuration
+
+Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "pinterest": {
+      "package": "@walkeros/server-destination-pinterest",
+      "config": {
+        "settings": {
+          "accessToken": "$env.PINTEREST_ACCESS_TOKEN",
+          "adAccountId": "$env.PINTEREST_AD_ACCOUNT_ID",
+          "test": "$env.PINTEREST_TEST_MODE:"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the flow
+
+Bundle your flow configuration before running in Docker:
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e PINTEREST_ACCESS_TOKEN=your-access-token \\
+  -e PINTEREST_AD_ACCOUNT_ID=123456789 \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Docker Compose example
+
+<CodeSnippet
+  code={`services:
+  walkeros:
+    image: walkeros/flow:latest
+    environment:
+      - PINTEREST_ACCESS_TOKEN=\${PINTEREST_ACCESS_TOKEN}
+      - PINTEREST_AD_ACCOUNT_ID=\${PINTEREST_AD_ACCOUNT_ID}
+    volumes:
+      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
+    ports:
+      - "8080:8080"`}
+  language="yaml"
+/>
+
+:::tip Security Best Practice
+Never commit access tokens to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

@@ -1,6 +1,5 @@
 import type { Transformer } from '@walkeros/core';
 import type { Settings, Types } from './types';
-import { SettingsSchema } from './schemas';
 
 /**
  * Transformer initialization using context pattern.
@@ -17,8 +16,14 @@ export const transformerRedact: Transformer.Init<Types> = (context) => {
   // Destructure what you need from context
   const { config = {} } = context;
 
-  // Validate and apply default settings using Zod schema
-  const settings = SettingsSchema.parse(config.settings || {});
+  // Apply defaults inline — flow.json is developer-controlled, so no
+  // runtime validation. Shape checks live in ./schemas and are used by
+  // `walkeros validate` and dev tooling, never at runtime.
+  const userSettings = config.settings || {};
+  const settings: Settings = {
+    fieldsToRedact: userSettings.fieldsToRedact ?? [],
+    logRedactions: userSettings.logRedactions ?? false,
+  };
 
   const fullConfig: Transformer.Config<Types> = {
     ...config,

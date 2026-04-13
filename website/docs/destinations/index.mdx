@@ -10,24 +10,6 @@ Destinations are the endpoints where walkerOS sends your processed events. They
 transform standardized walkerOS events into the specific formats required by
 analytics platforms, marketing tools, data warehouses, and custom APIs.
 
-Destinations handle the final step in the data pipeline by:
-
-* **Format Transformation** - Convert walkerOS events to platform-specific
-  formats
-* **API Integration** - Handle authentication and delivery to external services
-* **Error Handling** - Manage failed requests and retry logic
-* **Data Validation** - Ensure events meet destination requirements
-
-All walkerOS destinations export Zod schemas for configuration validation,
-providing TypeScript type safety and IDE autocomplete for settings and mapping
-options. See the
-[Destination Schemas Guide](https://github.com/elbwalker/walkerOS/blob/main/DESTINATION_SCHEMAS.md)
-for technical details.
-
-## Architecture
-
-Destinations receive events from the collector after processing:
-
 <FlowMap
   sources={{ default: { highlight: false } }}
   collector={{ highlight: false }}
@@ -52,40 +34,43 @@ Destinations receive events from the collector after processing:
 />
 
 Each destination operates independently, so one failed destination won't affect
-others. This ensures reliable data delivery even when individual services have
-issues.
+others.
 
-## Types of destinations
+## Analytics Tools
 
-### Built-in destinations
+| Destination | Web | Server |
+|-------------|-----|--------|
+| **<Link to="/docs/destinations/web/amplitude">Amplitude</Link>** | Yes | <Link to="/docs/destinations/server/amplitude">Yes</Link> |
+| **<Link to="/docs/destinations/web/clarity">Clarity</Link>** | Yes | - |
+| **<Link to="/docs/destinations/web/gtag/ga4">GA4</Link>** | Yes | - |
+| **<Link to="/docs/destinations/web/gtag/gtm">GTM</Link>** | Yes | - |
+| **<Link to="/docs/destinations/web/mixpanel">Mixpanel</Link>** | Yes | <Link to="/docs/destinations/server/mixpanel">Yes</Link> |
+| **<Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>** | Yes | - |
+| **<Link to="/docs/destinations/web/plausible">Plausible</Link>** | Yes | - |
+| **<Link to="/docs/destinations/web/posthog">PostHog</Link>** | Yes | <Link to="/docs/destinations/server/posthog">Yes</Link> |
+| **<Link to="/docs/destinations/web/segment">Segment</Link>** | Yes | <Link to="/docs/destinations/server/segment">Yes</Link> |
+| **<Link to="/docs/destinations/web/snowplow">Snowplow</Link>** | Yes | - |
 
-Platform-agnostic destinations included in the collector:
+## Marketing Tools
 
-* **<Link to="/docs/destinations/code">Code</Link>** - Execute custom JavaScript
-  for maximum flexibility without external dependencies
+| | Web | Server |
+|--|-----|--------|
+| Google | <Link to="/docs/destinations/web/gtag/ads">Google Ads</Link> | <Link to="/docs/destinations/server/datamanager">Google Data Manager</Link> |
+| LinkedIn | <Link to="/docs/destinations/web/linkedin">LinkedIn Insight Tag</Link> | <Link to="/docs/destinations/server/linkedin">LinkedIn Conversions API</Link> |
+| Meta | <Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link> | <Link to="/docs/destinations/server/meta-capi">Meta Conversions API</Link> |
+| Pinterest | <Link to="/docs/destinations/web/pinterest">Pinterest Tag</Link> | <Link to="/docs/destinations/server/pinterest">Pinterest Conversions API</Link> |
+| TikTok | <Link to="/docs/destinations/web/tiktok">TikTok Pixel</Link> | <Link to="/docs/destinations/server/tiktok">TikTok Events API</Link> |
 
-### Web destinations
+## Data Warehouses
 
-Client-side integrations that send events directly from the browser:
+| Destination | Web | Server |
+|-------------|-----|--------|
+| **<Link to="/docs/destinations/api/">API</Link>** | <Link to="/docs/destinations/api/web">Yes</Link> | <Link to="/docs/destinations/api/server">Yes</Link> |
+| **<Link to="/docs/destinations/server/aws">AWS Firehose</Link>** | - | Yes |
+| **<Link to="/docs/destinations/server/gcp">GCP BigQuery</Link>** | - | Yes |
 
-* **<Link to="/docs/destinations/api">API</Link>** - Send events to any HTTP
-  endpoint (also available server-side)
-* **<Link to="/docs/destinations/web/gtag/">Google Analytics & Ads</Link>** -
-  GA4, Google Ads, and GTM integration
-* **<Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link>** - Facebook
-  and Instagram advertising
-* **<Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>** -
-  Privacy-focused web analytics
-* **<Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>** -
-  Privacy-focused analytics platform
+## Create your own
 
-### Server destinations
-
-Server-side integrations for enhanced privacy and data control:
-
-* **<Link to="/docs/destinations/server/aws">AWS Firehose</Link>** - Amazon
-  cloud services integration
-* **<Link to="/docs/destinations/server/gcp">BigQuery</Link>** - GCP services
-  and BigQuery
-* **<Link to="/docs/destinations/server/meta-capi">Meta Conversions
-  API</Link>** - Server-side Facebook/Instagram tracking
+Build a custom destination for any endpoint. See
+[Create your own destination](/docs/destinations/create-your-own) for a
+step-by-step guide.

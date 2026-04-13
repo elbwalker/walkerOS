@@ -5,7 +5,7 @@ sidebar_position: 2
 package: '@walkeros/server-source-fetch'
 ---
 
-import { schemas } from '@walkeros/server-source-fetch/dev';
+import data from '@walkeros/server-source-fetch/walkerOS.json';
 
 <PackageLink env="server" github="packages/server/sources/fetch" npm="@walkeros/server-source-fetch" />
 
@@ -162,7 +162,7 @@ Bun.serve({ fetch: sources.fetch.push, port: 3000 });`}
 
 ## Configuration
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Ingest Metadata
 
