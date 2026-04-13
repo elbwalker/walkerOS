@@ -1,0 +1,76 @@
+{
+  "name": "@walkeros/server-destination-slack",
+  "description": "Slack server destination for walkerOS (Incoming Webhook + @slack/web-api, Block Kit, channel routing, threading, DMs)",
+  "version": "0.0.1",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "import": "./dist/examples/index.mjs",
+      "require": "./dist/examples/index.js"
+    }
+  },
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
+    "test": "jest",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@slack/web-api": "^7.0.0",
+    "@walkeros/core": "^3.2.0",
+    "@walkeros/server-core": "^3.2.0"
+  },
+  "devDependencies": {
+    "@walkeros/collector": "^3.2.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/server/destinations/slack"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "walkerOS": {
+    "type": "destination",
+    "platform": [
+      "server"
+    ],
+    "docs": "https://www.walkeros.io/docs/destinations/server/slack"
+  },
+  "keywords": [
+    "walkerOS",
+    "walkerOS-destination",
+    "destination",
+    "server",
+    "slack",
+    "notifications",
+    "alerts",
+    "incoming-webhook",
+    "block-kit"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}
