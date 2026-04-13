@@ -41,29 +41,15 @@ jobs:
           cache: 'npm'
       - run: corepack enable
       - run: npm ci
-      - name: Restore turbo cache
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ github.workflow }}-${{ github.ref_name }}-
-            turbo-${{ github.workflow }}-main-
-      - name: Run test, typecheck, lint
-        run: |
-          npx turbo run test typecheck lint --concurrency=1 ${{ (github.ref == 'refs/heads/main' || github.base_ref == 'main') && '--force' || '' }}
-        env:
-          CI: true
-          NODE_OPTIONS: '--max-old-space-size=4096'
-      - name: Show test summary
-        if: always()
-        run: |
-          echo "Test run complete. Check logs above for details."
-          if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.base_ref }}" = "main" ]; then
-            echo "Ran with --force (no cache) for main branch accuracy"
-          else
-            echo "Used cache for faster feedback"
-          fi
+      - name: Validate documentation
+        run: npm run validate:links
+      - name: Typecheck
+        run: npx turbo run typecheck
+      - name: Test, lint
+        run: npx turbo run test lint
+      - name: Run integration tests
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        run: npm run test:integration
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -73,13 +59,3 @@ jobs:
             packages/*/coverage/
             packages/*/.tmp/
           retention-days: 7
-      - name: Validate documentation
-        run: npm run validate:links
-        env:
-          CI: true
-          NODE_OPTIONS: '--max-old-space-size=4096'
-      - name: Run integration tests
-        run: npm run test:integration
-        env:
-          CI: true
-          NODE_OPTIONS: '--max-old-space-size=4096'

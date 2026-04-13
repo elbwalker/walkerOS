@@ -45,14 +45,8 @@ jobs:
       - name: Build
         run: npx turbo run build --filter='!@walkeros/website'
 
-      - name: Test
-        run: npm run test
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Integration tests
-        run: npm run test:integration
+      - name: Test, typecheck, lint, integration
+        run: npx turbo run test typecheck lint test:integration
 
       - name: Capture changeset info
         id: changesets
