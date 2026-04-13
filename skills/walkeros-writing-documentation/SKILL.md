@@ -105,10 +105,8 @@ Before publishing ANY code example:
 **When to use:** Any page documenting package configuration with Zod schemas.
 
 ```mdx
-import { schemas } from '@walkeros/web-destination-gtag/dev';
-<PropertyTable schema={schemas.settings} />;
-
-;
+import data from '@walkeros/web-destination-gtag/walkerOS.json';
+<PropertyTable schema={data.schemas.settings} />;
 ```
 
 **When NOT to use:**

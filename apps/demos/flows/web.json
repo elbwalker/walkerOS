@@ -7,7 +7,6 @@
         "windowElb": "elb"
       },
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/web-source-browser": {},
         "@walkeros/destination-demo": {},
         "@walkeros/web-destination-api": {},

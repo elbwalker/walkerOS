@@ -150,6 +150,39 @@ export type Packages = Record<
 >;
 
 /**
+ * Transitive dependency version pins for bundling.
+ *
+ * @remarks
+ * Maps package name → version spec. Applied during bundle package install
+ * to force transitive dependencies to a specific version. Useful for
+ * resolving conflicts between packages that depend on incompatible
+ * versions of a shared dependency.
+ *
+ * @example
+ * ```json
+ * {
+ *   "@amplitude/analytics-types": "2.11.1"
+ * }
+ * ```
+ */
+export type Overrides = Record<string, string>;
+
+/**
+ * Bundle configuration for a flow.
+ *
+ * @remarks
+ * Groups all build-time bundling concerns: NPM packages to include and
+ * transitive dependency overrides. Consumed by the CLI bundler.
+ */
+export interface Bundle {
+  /** NPM packages to bundle. */
+  packages?: Packages;
+
+  /** Transitive dependency version pins. */
+  overrides?: Overrides;
+}
+
+/**
  * Web platform configuration.
  *
  * @remarks
@@ -423,9 +456,12 @@ export interface Settings {
   collector?: Collector.InitConfig;
 
   /**
-   * NPM packages to bundle.
+   * Bundle configuration (packages to include, transitive overrides).
+   *
+   * @remarks
+   * Groups NPM `packages` and dependency `overrides` used at build time.
    */
-  packages?: Packages;
+  bundle?: Bundle;
 
   /**
    * Flow-level variables.

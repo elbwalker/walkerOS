@@ -3,9 +3,6 @@
   "flows": {
     "default": {
       "server": {},
-      "packages": {
-        "@walkeros/collector": {}
-      },
       "sources": {
         "http": {
           "package": "@walkeros/server-source-express",
@@ -18,7 +15,12 @@
           }
         }
       },
-      "destinations": {}
+      "destinations": {},
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {}
+        }
+      }
     }
   }
 }

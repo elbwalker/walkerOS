@@ -15,7 +15,8 @@ describe('createEntryPoint integration', () => {
   it('generates default import even when imports are specified', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
+      bundle: {
+        packages: {},
         '@walkeros/web-source-browser': {
           imports: ['createTagger'],
         },
@@ -59,7 +60,8 @@ describe('createEntryPoint integration', () => {
   it('uses named import only when explicit code is specified', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
+      bundle: {
+        packages: {},
         '@some/no-default-pkg': {
           imports: ['namedSource'],
         },
@@ -101,7 +103,8 @@ describe('createEntryPoint integration', () => {
   it('generates complete entry point with explicit code', async () => {
     const flowSettings: Flow.Settings = {
       server: {},
-      packages: {
+      bundle: {
+        packages: {},
         '@walkeros/collector': { imports: ['startFlow'] },
         '@walkeros/server-source-express': {},
         '@walkeros/destination-demo': {},
@@ -161,7 +164,8 @@ describe('createEntryPoint integration', () => {
   it('generates valid store references in full entry point', async () => {
     const flowSettings: Flow.Settings = {
       server: {},
-      packages: {
+      bundle: {
+        packages: {},
         '@walkeros/collector': { imports: ['startFlow'] },
         '@walkeros/server-source-express': {},
         '@walkeros/server-transformer-fingerprint': {},
@@ -230,7 +234,8 @@ describe('Implicit Collector', () => {
   it('auto-imports startFlow when collector is in packages without imports specified', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
+      bundle: {
+        packages: {},
         '@walkeros/collector': {}, // No imports specified
         '@walkeros/web-source-browser': {},
       },
@@ -269,7 +274,8 @@ describe('Implicit Collector', () => {
   it('auto-imports startFlow when collector has version but no imports', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
+      bundle: {
+        packages: {},
         '@walkeros/collector': { version: '0.5.0' }, // Version only, no imports
         '@walkeros/web-source-browser': {},
       },
@@ -308,7 +314,8 @@ describe('Implicit Collector', () => {
   it('preserves explicit collector imports while adding startFlow', async () => {
     const flowSettings: Flow.Settings = {
       web: {},
-      packages: {
+      bundle: {
+        packages: {},
         '@walkeros/collector': { imports: ['createCollector'] }, // Explicit import, no startFlow
         '@walkeros/web-source-browser': {},
       },
@@ -490,7 +497,9 @@ describe('buildSplitConfigObject', () => {
   it('splits plain config values into data payload', () => {
     const flowSettings = {
       server: {},
-      packages: { '@walkeros/server-source-express': {} },
+      bundle: {
+        packages: { '@walkeros/server-source-express': {} },
+      },
       sources: {
         express: {
           package: '@walkeros/server-source-express',
@@ -511,7 +520,9 @@ describe('buildSplitConfigObject', () => {
   it('keeps $store: env in code skeleton', () => {
     const flowSettings = {
       server: {},
-      packages: { '@walkeros/web-destination-ga4': {} },
+      bundle: {
+        packages: { '@walkeros/web-destination-ga4': {} },
+      },
       sources: {},
       destinations: {
         ga4: {

@@ -34,9 +34,11 @@ Create `flow.json`:
   "flows": {
     "default": {
       "web": {},
-      "packages": {
-        "@walkeros/collector": {},
-        "@walkeros/web-source-browser": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {},
+          "@walkeros/web-source-browser": {}
+        },
       },
       "sources": {
         "browser": {
@@ -65,10 +67,12 @@ Create `flow.json`:
   "flows": {
     "default": {
       "server": {},
-      "packages": {
-        "@walkeros/collector": {},
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {},
+          "@walkeros/server-source-express": {},
+          "@walkeros/destination-demo": {}
+        },
       },
       "sources": {
         "http": {
@@ -148,11 +152,13 @@ Add destinations to your `flow.json`:
   "flows": {
     "default": {
       "web": {},
-      "packages": {
-        "@walkeros/collector": {},
-        "@walkeros/web-source-browser": {},
-        "@walkeros/web-destination-api": {},
-        "@walkeros/web-destination-gtag": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {},
+          "@walkeros/web-source-browser": {},
+          "@walkeros/web-destination-api": {},
+          "@walkeros/web-destination-gtag": {}
+        },
       },
       "sources": {
         "browser": {

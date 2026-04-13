@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-posthog'
 ---
 
 import destinationPostHog from '@walkeros/web-destination-posthog';
-import { examples, schemas } from '@walkeros/web-destination-posthog/dev';
-
-export const destination = { ...destinationPostHog, examples };
+import data from '@walkeros/web-destination-posthog/walkerOS.json';
+export const destination = { ...destinationPostHog, examples: data.examples };
 
 # PostHog
 
@@ -100,13 +99,13 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -120,7 +119,7 @@ to the destination config to forward event data as properties.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'phc_test' }}
-  event={examples.step.defaultEventForwarding.in}
+  event={data.examples.step.defaultEventForwarding.in}
   mapping={{ include: ['data'] }}
   generic={true}
 />
@@ -134,8 +133,8 @@ properties that do not yet exist.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'phc_test' }}
-  event={examples.step.userLoginIdentify.in}
-  mapping={examples.step.userLoginIdentify.mapping}
+  event={data.examples.step.userLoginIdentify.in}
+  mapping={data.examples.step.userLoginIdentify.mapping}
   generic={true}
 />
 
@@ -148,8 +147,8 @@ should not create a new identity.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'phc_test' }}
-  event={examples.step.profileUpdateSetPersonProperties.in}
-  mapping={examples.step.profileUpdateSetPersonProperties.mapping}
+  event={data.examples.step.profileUpdateSetPersonProperties.in}
+  mapping={data.examples.step.profileUpdateSetPersonProperties.mapping}
   generic={true}
 />
 
@@ -161,8 +160,8 @@ B2B analytics by company, team, or any custom group type.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'phc_test' }}
-  event={examples.step.groupAssignmentWithProperties.in}
-  mapping={examples.step.groupAssignmentWithProperties.mapping}
+  event={data.examples.step.groupAssignmentWithProperties.in}
+  mapping={data.examples.step.groupAssignmentWithProperties.mapping}
   generic={true}
 />
 
@@ -175,8 +174,8 @@ prefixed properties (`data_currency: "EUR"`, `data_total`, etc.).
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'phc_test' }}
-  event={examples.step.orderCompleteWithInclude.in}
-  mapping={examples.step.orderCompleteWithInclude.mapping}
+  event={data.examples.step.orderCompleteWithInclude.in}
+  mapping={data.examples.step.orderCompleteWithInclude.mapping}
   generic={true}
 />
 

@@ -292,7 +292,6 @@ walkeros bundle config.json --all
     "ecommerce": {
       "web": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/web-source": {},
         "@walkeros/web-destination-gtag": {}
       },

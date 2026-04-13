@@ -520,3 +520,231 @@ describe('resolveVersionConflicts', () => {
     expect(resolved.get('my-local')!.localPath).toBe('./pkg');
   });
 });
+
+describe('collectAllSpecs — overrides', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('substitutes overridden transitive dependency spec', async () => {
+    mockManifest.mockImplementation(async (spec: string) => {
+      if (spec === '@test/parent@1.0.0') {
+        return {
+          name: '@test/parent',
+          version: '1.0.0',
+          dependencies: { '@test/types': '^1.0.0' },
+        } as any;
+      }
+      if (spec === '@test/types@2.11.1') {
+        return {
+          name: '@test/types',
+          version: '2.11.1',
+          dependencies: {},
+        } as any;
+      }
+      throw new Error(`Unexpected spec: ${spec}`);
+    });
+
+    const packages: Package[] = [{ name: '@test/parent', version: '1.0.0' }];
+    const specs = await collectAllSpecs(packages, logger, undefined, {
+      '@test/types': '2.11.1',
+    });
+
+    const typeSpecs = specs.get('@test/types');
+    expect(typeSpecs).toBeDefined();
+    expect(typeSpecs!.length).toBeGreaterThan(0);
+    // All recorded specs for @test/types should be the override
+    for (const s of typeSpecs!) {
+      expect(s.spec).toBe('2.11.1');
+      expect(s.source).toBe('override');
+      expect(s.from).toMatch(/override \(was \^1\.0\.0 from @test\/parent\)/);
+    }
+  });
+
+  it('does not substitute direct specs (direct wins)', async () => {
+    mockManifest.mockImplementation(async (spec: string) => {
+      if (spec === '@test/types@1.4.0') {
+        return {
+          name: '@test/types',
+          version: '1.4.0',
+          dependencies: {},
+        } as any;
+      }
+      throw new Error(`Unexpected: ${spec}`);
+    });
+
+    const packages: Package[] = [{ name: '@test/types', version: '1.4.0' }];
+    const specs = await collectAllSpecs(packages, logger, undefined, {
+      '@test/types': '2.11.1',
+    });
+
+    const typeSpecs = specs.get('@test/types');
+    expect(typeSpecs).toBeDefined();
+    // Direct spec is recorded as direct, not override
+    expect(typeSpecs!.find((s) => s.source === 'direct')?.spec).toBe('1.4.0');
+  });
+
+  it('substitutes overridden peerDependency spec', async () => {
+    mockManifest.mockImplementation(async (spec: string) => {
+      if (spec === '@test/parent@1.0.0') {
+        return {
+          name: '@test/parent',
+          version: '1.0.0',
+          dependencies: {},
+          peerDependencies: { '@test/types': '^1.0.0' },
+        } as any;
+      }
+      if (spec === '@test/types@2.11.1') {
+        return {
+          name: '@test/types',
+          version: '2.11.1',
+          dependencies: {},
+        } as any;
+      }
+      throw new Error(`Unexpected: ${spec}`);
+    });
+
+    const packages: Package[] = [{ name: '@test/parent', version: '1.0.0' }];
+    const specs = await collectAllSpecs(packages, logger, undefined, {
+      '@test/types': '2.11.1',
+    });
+
+    const typeSpecs = specs.get('@test/types');
+    expect(typeSpecs!.every((s) => s.source === 'override')).toBe(true);
+    expect(typeSpecs!.every((s) => s.spec === '2.11.1')).toBe(true);
+  });
+
+  it('warns when override targets a direct local-path package', async () => {
+    mockPathExists.mockResolvedValue(false as never);
+    const warnSpy = jest.fn();
+    const loggerWithSpy = { ...logger, warn: warnSpy } as typeof logger;
+
+    const packages: Package[] = [
+      { name: 'foo', version: '1.0.0', path: './local-foo' },
+    ];
+    await collectAllSpecs(packages, loggerWithSpy, undefined, {
+      foo: '2.0.0',
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/override.*ignored.*local/i),
+    );
+  });
+
+  it('override for a package not in the graph is a no-op', async () => {
+    mockManifest.mockImplementation(async (spec: string) => {
+      if (spec === '@walkeros/core@1.0.0') {
+        return {
+          name: '@walkeros/core',
+          version: '1.0.0',
+          dependencies: {},
+        } as any;
+      }
+      throw new Error(`Unexpected: ${spec}`);
+    });
+
+    const packages: Package[] = [{ name: '@walkeros/core', version: '1.0.0' }];
+    const specs = await collectAllSpecs(packages, logger, undefined, {
+      '@nowhere/nothing': '1.0.0',
+    });
+
+    expect(specs.has('@nowhere/nothing')).toBe(false);
+    expect(specs.has('@walkeros/core')).toBe(true);
+  });
+
+  it('Amplitude analytics-types real-world case: conflict without override, resolved with override', async () => {
+    // Reproduces: @amplitude/engagement-browser pins @amplitude/analytics-types@^1.0.0
+    // while @amplitude/analytics-client-common requires analytics-types@2.11.1 exact.
+    // Without overrides: bundler throws "Version conflict".
+    // With overrides: bundler succeeds, picks 2.11.1 everywhere.
+    const manifestMap: Record<string, Record<string, unknown>> = {
+      '@amplitude/engagement-browser@1.0.8': {
+        name: '@amplitude/engagement-browser',
+        version: '1.0.8',
+        dependencies: { '@amplitude/analytics-types': '^1.0.0' },
+      },
+      '@amplitude/analytics-client-common@2.3.0': {
+        name: '@amplitude/analytics-client-common',
+        version: '2.3.0',
+        dependencies: { '@amplitude/analytics-types': '2.11.1' },
+      },
+      '@amplitude/analytics-types@^1.0.0': {
+        name: '@amplitude/analytics-types',
+        version: '1.4.0',
+        dependencies: {},
+      },
+      '@amplitude/analytics-types@2.11.1': {
+        name: '@amplitude/analytics-types',
+        version: '2.11.1',
+        dependencies: {},
+      },
+    };
+    mockManifest.mockImplementation(async (spec: string) => {
+      const m = manifestMap[spec];
+      if (!m) throw new Error(`Unexpected: ${spec}`);
+      return m as any;
+    });
+
+    const packages: Package[] = [
+      { name: '@amplitude/engagement-browser', version: '1.0.8' },
+      { name: '@amplitude/analytics-client-common', version: '2.3.0' },
+    ];
+
+    // WITHOUT override: conflict
+    const specsNoOverride = await collectAllSpecs(packages, logger);
+    expect(() => resolveVersionConflicts(specsNoOverride, logger)).toThrow(
+      /Version conflict.*@amplitude\/analytics-types/,
+    );
+
+    // WITH override: resolves to 2.11.1
+    const specsWithOverride = await collectAllSpecs(
+      packages,
+      logger,
+      undefined,
+      {
+        '@amplitude/analytics-types': '2.11.1',
+      },
+    );
+    const resolved = resolveVersionConflicts(specsWithOverride, logger);
+    expect(resolved.get('@amplitude/analytics-types')?.version).toBe('2.11.1');
+  });
+
+  it('resolves to override version in resolveVersionConflicts', async () => {
+    // Simulate a graph where multiple paths reach @test/types via override
+    mockManifest.mockImplementation(async (spec: string) => {
+      if (spec === '@test/parent-a@1.0.0') {
+        return {
+          name: '@test/parent-a',
+          version: '1.0.0',
+          dependencies: { '@test/types': '^1.0.0' },
+        } as any;
+      }
+      if (spec === '@test/parent-b@1.0.0') {
+        return {
+          name: '@test/parent-b',
+          version: '1.0.0',
+          dependencies: { '@test/types': '1.4.0' },
+        } as any;
+      }
+      if (spec === '@test/types@2.11.1') {
+        return {
+          name: '@test/types',
+          version: '2.11.1',
+          dependencies: {},
+        } as any;
+      }
+      throw new Error(`Unexpected: ${spec}`);
+    });
+
+    const packages: Package[] = [
+      { name: '@test/parent-a', version: '1.0.0' },
+      { name: '@test/parent-b', version: '1.0.0' },
+    ];
+    const specs = await collectAllSpecs(packages, logger, undefined, {
+      '@test/types': '2.11.1',
+    });
+
+    const resolved = resolveVersionConflicts(specs, logger);
+    expect(resolved.get('@test/types')?.version).toBe('2.11.1');
+  });
+});

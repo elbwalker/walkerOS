@@ -7,9 +7,8 @@ sidebar_position: 1
 ---
 
 import destinationWebAPI from '@walkeros/web-destination-api';
-import { examples, schemas } from '@walkeros/web-destination-api/dev';
-
-export const destination = { ...destinationWebAPI, examples };
+import data from '@walkeros/web-destination-api/walkerOS.json';
+export const destination = { ...destinationWebAPI, examples: data.examples };
 
 # Web API Destination
 
@@ -91,7 +90,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Usage
 
@@ -258,7 +257,7 @@ is used to send the events to an API.
   }}
   smallText={true}
   height={'128px'}
-  event={examples.step.entityAction.in}
-  mapping={examples.step.entityAction.mapping}
+  event={data.examples.step.entityAction.in}
+  mapping={data.examples.step.entityAction.mapping}
   generic={true}
 />

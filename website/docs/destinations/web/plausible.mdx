@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-plausible'
 ---
 
 import destinationPlausible from '@walkeros/web-destination-plausible';
-import { examples, schemas } from '@walkeros/web-destination-plausible/dev';
-
-export const destination = { ...destinationPlausible, examples };
+import data from '@walkeros/web-destination-plausible/walkerOS.json';
+export const destination = { ...destinationPlausible, examples: data.examples };
 
 # Plausible Analytics
 
@@ -94,7 +93,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 <DestinationInitDemo
   destination={destination}
@@ -103,11 +102,11 @@ Add to your `flow.json` destinations:
   }}
 />
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -122,8 +121,8 @@ events</Link> manually using the JavaScript function
   settings={{
     domain: 'walkeros.io',
   }}
-  event={examples.step.customEvent.in}
-  mapping={examples.step.customEvent.mapping}
+  event={data.examples.step.customEvent.in}
+  mapping={data.examples.step.customEvent.mapping}
   generic={true}
 />
 
@@ -138,7 +137,7 @@ Plausible.
   settings={{
     domain: 'walkeros.io',
   }}
-  event={examples.step.purchase.in}
-  mapping={examples.step.purchase.mapping}
+  event={data.examples.step.purchase.in}
+  mapping={data.examples.step.purchase.mapping}
   generic={true}
 />

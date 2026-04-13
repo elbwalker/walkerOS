@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-tiktok'
 ---
 
 import destinationTikTok from '@walkeros/web-destination-tiktok';
-import { examples, schemas } from '@walkeros/web-destination-tiktok/dev';
-
-export const destination = { ...destinationTikTok, examples };
+import data from '@walkeros/web-destination-tiktok/walkerOS.json';
+export const destination = { ...destinationTikTok, examples: data.examples };
 
 # TikTok Pixel
 
@@ -101,7 +100,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Standard events
 
@@ -126,11 +125,11 @@ work but receive no optimization signal.
 | `CompleteRegistration` | User signup                                    |
 | `Subscribe`            | Subscription start                             |
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -143,8 +142,8 @@ The canonical TikTok pattern: walkerOS `product view` becomes TikTok's
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={examples.step.productViewContent.in}
-  mapping={examples.step.productViewContent.mapping}
+  event={data.examples.step.productViewContent.in}
+  mapping={data.examples.step.productViewContent.mapping}
   generic={true}
 />
 
@@ -155,8 +154,8 @@ User signup is the moment to fire Advanced Matching for the session.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={examples.step.userRegisterCompleteRegistration.in}
-  mapping={examples.step.userRegisterCompleteRegistration.mapping}
+  event={data.examples.step.userRegisterCompleteRegistration.in}
+  mapping={data.examples.step.userRegisterCompleteRegistration.mapping}
   generic={true}
 />
 
@@ -169,8 +168,8 @@ walks `event.nested` to produce one `contents` entry per product;
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={examples.step.orderCompleteCompletePayment.in}
-  mapping={examples.step.orderCompleteCompletePayment.mapping}
+  event={data.examples.step.orderCompleteCompletePayment.in}
+  mapping={data.examples.step.orderCompleteCompletePayment.mapping}
   generic={true}
 />
 
@@ -181,8 +180,8 @@ Minimal example: a single `mapping.data` field maps the query string.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={examples.step.searchSubmitSearch.in}
-  mapping={examples.step.searchSubmitSearch.mapping}
+  event={data.examples.step.searchSubmitSearch.in}
+  mapping={data.examples.step.searchSubmitSearch.mapping}
   generic={true}
 />
 
@@ -203,7 +202,7 @@ redundant `ttq.identify()` calls when nothing changed.
       },
     },
   }}
-  event={examples.step.destinationLevelIdentify.in}
+  event={data.examples.step.destinationLevelIdentify.in}
   generic={true}
 />
 

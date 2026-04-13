@@ -5,8 +5,7 @@ path: /docs/destinations/server/slack
 sidebar_position: 12
 package: '@walkeros/server-destination-slack'
 ---
-import { schemas } from '@walkeros/server-destination-slack/dev';
-
+import data from '@walkeros/server-destination-slack/walkerOS.json';
 # Slack
 
 <PackageLink env="server" github="packages/server/destinations/slack" npm="@walkeros/server-destination-slack" />
@@ -101,7 +100,7 @@ Use **webhooks** for a single firehose channel and minimal setup. Use the **Web 
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Channel routing
 

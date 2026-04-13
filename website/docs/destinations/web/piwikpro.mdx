@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-piwikpro'
 ---
 
 import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
-import { examples, schemas } from '@walkeros/web-destination-piwikpro/dev';
-
-export const destination = { ...destinationPiwikPro, examples };
+import data from '@walkeros/web-destination-piwikpro/walkerOS.json';
+export const destination = { ...destinationPiwikPro, examples: data.examples };
 
 # Piwik PRO
 
@@ -97,7 +96,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 <DestinationInitDemo
   destination={destination}
@@ -111,13 +110,13 @@ Add to your `flow.json` destinations:
 
 For custom event mapping (`mapping.entity.action.settings`):
 
-<PropertyTable schema={schemas.mapping} />
+<PropertyTable schema={data.schemas.mapping} />
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -125,7 +124,7 @@ individual event mapping.
 ### ProductDetailView
 
 Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#examples">ecommerceProductDetailView</Link>
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#data.examples">ecommerceProductDetailView</Link>
 event.
 
 <DestinationDemo
@@ -136,15 +135,15 @@ event.
   }}
   smallText={true}
   height={'512px'}
-  event={examples.step.productDetailView.in}
-  mapping={examples.step.productDetailView.mapping}
+  event={data.examples.step.productDetailView.in}
+  mapping={data.examples.step.productDetailView.mapping}
   generic={true}
 />
 
 ### AddToCart
 
 Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#examples">ecommerceAddToCart</Link>
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#data.examples">ecommerceAddToCart</Link>
 event.
 
 <DestinationDemo
@@ -155,15 +154,15 @@ event.
   }}
   smallText={true}
   height={'512px'}
-  event={examples.step.ecommerceAddToCart.in}
-  mapping={examples.step.ecommerceAddToCart.mapping}
+  event={data.examples.step.ecommerceAddToCart.in}
+  mapping={data.examples.step.ecommerceAddToCart.mapping}
   generic={true}
 />
 
 ### CartUpdate
 
 Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#examples">ecommerceCartUpdate</Link>
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#data.examples">ecommerceCartUpdate</Link>
 event.
 
 <DestinationDemo
@@ -174,15 +173,15 @@ event.
   }}
   smallText={true}
   height={'512px'}
-  event={examples.step.cartUpdate.in}
-  mapping={examples.step.cartUpdate.mapping}
+  event={data.examples.step.cartUpdate.in}
+  mapping={data.examples.step.cartUpdate.mapping}
   generic={true}
 />
 
 ### Order
 
 Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#examples">ecommerceOrder</Link>
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#data.examples">ecommerceOrder</Link>
 event.
 
 <DestinationDemo
@@ -193,7 +192,7 @@ event.
   }}
   smallText={true}
   height={'512px'}
-  event={examples.step.ecommerceOrder.in}
-  mapping={examples.step.ecommerceOrder.mapping}
+  event={data.examples.step.ecommerceOrder.in}
+  mapping={data.examples.step.ecommerceOrder.mapping}
   generic={true}
 />

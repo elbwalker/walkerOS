@@ -44,3 +44,11 @@ export const browserConfig: JSONSchema = browserSchemas.settings;
 export const dataLayerConfig: JSONSchema = dataLayerSchemas.settings;
 export const collectorConfig: JSONSchema =
   coreSchemas.CollectorSchemas.initConfigJsonSchema;
+
+// Aggregate object consumed by buildDev() to populate dist/walkerOS.json
+export const schemas = {
+  settings,
+  browserConfig,
+  dataLayerConfig,
+  collectorConfig,
+};

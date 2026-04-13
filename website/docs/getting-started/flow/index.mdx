@@ -23,10 +23,11 @@ A flow configuration uses the `Flow.Config` format with two required fields:
   "flows": {
     "default": {
       "web": {},
-      "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
-        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+      "bundle": {
+        "packages": {
+          "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
+          "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+        },
       },
       "sources": {
         "browser": {
@@ -153,42 +154,47 @@ The CLI automatically applies platform-specific build defaults:
 
 The bundle is written to stdout by default. Use `-o` to write to a file (e.g., `-o ./dist/walker.js` for web, `-o ./dist/bundle.mjs` for server).
 
-### Packages
+### Bundle
 
-Specifies npm packages to download and bundle:
+Build-time configuration lives under `flow.<name>.bundle`. The `packages` field specifies npm packages to download and bundle, and `overrides` pins transitive dependency versions (npm `overrides` semantics):
 
 <CodeSnippet
   code={`{
-  "packages": {
-    "@walkeros/collector": {
-      "version": "latest",
-      "imports": ["startFlow"]
+  "bundle": {
+    "packages": {
+      "@walkeros/web-source-browser": {
+        "version": "0.4.0",
+        "imports": ["sourceBrowser"]
+      },
+      "@walkeros/web-destination-api": {
+        "imports": ["destinationAPI"]
+      }
     },
-    "@walkeros/web-source-browser": {
-      "version": "0.4.0",
-      "imports": ["sourceBrowser"]
-    },
-    "@walkeros/web-destination-api": {
-      "imports": ["destinationAPI"]
+    "overrides": {
+      "@amplitude/analytics-types": "2.11.1"
     }
   }
 }`}
   language="json"
 />
 
-**Properties:**
+**`packages` properties:**
 - **`version`** - npm version (semver or "latest", defaults to "latest")
 - **`imports`** - Array of named exports to import
 - **`path`** - Local filesystem path (takes precedence over `version`)
+
+**`overrides`** is a `Record<string, string>`: for each named package, the version to use for any transitive reference. Direct package specs always win over overrides; overrides only substitute transitive dependencies during resolution.
 
 For development or custom packages, use `path` to reference a local directory:
 
 <CodeSnippet
   code={`{
-  "packages": {
-    "@my/custom-destination": {
-      "path": "./my-destination",
-      "imports": ["myDestination"]
+  "bundle": {
+    "packages": {
+      "@my/custom-destination": {
+        "path": "./my-destination",
+        "imports": ["myDestination"]
+      }
     }
   }
 }`}
@@ -648,9 +654,10 @@ For managing dev/staging/production flows in one file:
   "flows": {
     "development": {
       "server": {},
-      "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      "bundle": {
+        "packages": {
+          "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        },
       },
       "destinations": {
         "console": {
@@ -664,9 +671,10 @@ For managing dev/staging/production flows in one file:
     },
     "production": {
       "server": {},
-      "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] }
+      "bundle": {
+        "packages": {
+          "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] }
+        },
       },
       "destinations": {
         "bigquery": {
@@ -924,11 +932,12 @@ Here's a production-ready flow that accepts HTTP events and sends them to BigQue
   "flows": {
     "default": {
       "server": {},
-      "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-        "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      "bundle": {
+        "packages": {
+          "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+          "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] },
+          "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        },
       },
       "sources": {
         "http": {

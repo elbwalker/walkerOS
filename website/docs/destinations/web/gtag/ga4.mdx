@@ -6,9 +6,9 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples, schemas } from '@walkeros/web-destination-gtag/dev';
+import data from '@walkeros/web-destination-gtag/walkerOS.json';
 
-export const destination = { ...destinationGtag, examples };
+export const destination = { ...destinationGtag, examples: data.examples };
 
 # Google Analytics 4 (GA4)
 
@@ -57,7 +57,7 @@ await startFlow({
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.ga4} />
+<PropertyTable schema={data.schemas.ga4} />
 
 #### Example
 
@@ -80,7 +80,7 @@ await startFlow({
 
 For custom event mapping (`mapping.entity.action.settings.ga4`):
 
-<PropertyTable schema={schemas.ga4} />
+<PropertyTable schema={data.schemas.ga4} />
 
 You are able to map your walkerOS events to match the respective requirements of
 each vendor. The `mapping` examples are using a
@@ -112,8 +112,8 @@ gtag.js event.
       measurementId: 'G-XXXXXXXXXX',
     },
   }}
-  event={examples.step.addToCart.in}
-  mapping={examples.step.addToCart.mapping}
+  event={data.examples.step.addToCart.in}
+  mapping={data.examples.step.addToCart.mapping}
   generic={true}
   smallText={true}
   height={'512px'}
@@ -132,8 +132,8 @@ gtag.js event.
       measurementId: 'G-XXXXXXXXXX',
     },
   }}
-  event={examples.step.purchase.in}
-  mapping={examples.step.purchase.mapping}
+  event={data.examples.step.purchase.in}
+  mapping={data.examples.step.purchase.mapping}
   generic={true}
   smallText={true}
   height={'512px'}

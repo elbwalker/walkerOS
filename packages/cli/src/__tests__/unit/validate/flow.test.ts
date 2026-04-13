@@ -186,13 +186,15 @@ describe('validateFlow', () => {
       version: 3,
       variables: { gaId: 'G-12345', debug: false },
       definitions: { cleanUrl: { condition: true } },
-      packages: {
-        '@walkeros/web-source-browser': { version: '1.0.0' },
-        '@walkeros/web-destination-gtag': {},
-      },
       flows: {
         production: {
           web: {},
+          bundle: {
+            packages: {
+              '@walkeros/web-source-browser': { version: '1.0.0' },
+              '@walkeros/web-destination-gtag': {},
+            },
+          },
           sources: {
             browser: { package: '@walkeros/web-source-browser' },
           },
@@ -232,19 +234,21 @@ describe('validateFlow', () => {
   it('warns about packages without version', () => {
     const result = validateFlow({
       version: 3,
-      packages: {
-        '@walkeros/collector': {},
-      },
       flows: {
         default: {
           web: {},
+          bundle: {
+            packages: {
+              '@walkeros/collector': {},
+            },
+          },
         },
       },
     });
 
     expect(result.warnings).toContainEqual(
       expect.objectContaining({
-        path: 'packages.@walkeros/collector',
+        path: 'flows.default.bundle.packages.@walkeros/collector',
         suggestion: expect.stringContaining('version'),
       }),
     );

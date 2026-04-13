@@ -403,6 +403,7 @@ export async function bundleCore(
       buildOptions.cache,
       buildOptions.configDir, // For resolving relative local paths
       CACHE_DIR,
+      buildOptions.overrides,
     );
 
     // Fix @walkeros packages to have proper ESM exports

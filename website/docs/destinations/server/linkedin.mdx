@@ -5,8 +5,7 @@ path: /docs/destinations/server/linkedin
 sidebar_position: 11
 package: '@walkeros/server-destination-linkedin'
 ---
-import { schemas } from '@walkeros/server-destination-linkedin/dev';
-
+import data from '@walkeros/server-destination-linkedin/walkerOS.json';
 # LinkedIn Conversions API
 
 <PackageLink env="server" github="packages/server/destinations/linkedin" npm="@walkeros/server-destination-linkedin" />
@@ -85,7 +84,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## User identification
 

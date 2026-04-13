@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-segment'
 ---
 
 import destinationSegment from '@walkeros/web-destination-segment';
-import { examples, schemas } from '@walkeros/web-destination-segment/dev';
-
-export const destination = { ...destinationSegment, examples };
+import data from '@walkeros/web-destination-segment/walkerOS.json';
+export const destination = { ...destinationSegment, examples: data.examples };
 
 # Segment
 
@@ -97,17 +96,17 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 The `Settings` type extends Segment's `InitOptions`, so every passthrough
 option (cookie, storage, integrations, plan, retryQueue, ...) works alongside
 the walkerOS-specific fields above.
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -121,7 +120,7 @@ to the destination config to forward event data as properties.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'test-project' }}
-  event={examples.step.defaultEventForwarding.in}
+  event={data.examples.step.defaultEventForwarding.in}
   mapping={{ include: ['data'] }}
   generic={true}
 />
@@ -135,8 +134,8 @@ only the identity side effect runs.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'test-project' }}
-  event={examples.step.userLoginIdentify.in}
-  mapping={examples.step.userLoginIdentify.mapping}
+  event={data.examples.step.userLoginIdentify.in}
+  mapping={data.examples.step.userLoginIdentify.mapping}
   generic={true}
 />
 
@@ -148,8 +147,8 @@ Attach a user to a company and set the company's traits in a single
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'test-project' }}
-  event={examples.step.companyUpdateGroup.in}
-  mapping={examples.step.companyUpdateGroup.mapping}
+  event={data.examples.step.companyUpdateGroup.in}
+  mapping={data.examples.step.companyUpdateGroup.mapping}
   generic={true}
 />
 
@@ -161,8 +160,8 @@ Segment's `page()` is first-class. Configure it explicitly via
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'test-project' }}
-  event={examples.step.pageViewAsPage.in}
-  mapping={examples.step.pageViewAsPage.mapping}
+  event={data.examples.step.pageViewAsPage.in}
+  mapping={data.examples.step.pageViewAsPage.mapping}
   generic={true}
 />
 
@@ -175,8 +174,8 @@ nested `loop` to build the products array inline.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'test-project' }}
-  event={examples.step.orderCompletedEcommerce.in}
-  mapping={examples.step.orderCompletedEcommerce.mapping}
+  event={data.examples.step.orderCompletedEcommerce.in}
+  mapping={data.examples.step.orderCompletedEcommerce.mapping}
   generic={true}
 />
 

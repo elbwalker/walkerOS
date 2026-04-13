@@ -6,9 +6,8 @@ package: '@walkeros/collector'
 sidebar_position: 2
 ---
 
-import { schemas } from '@walkeros/core/dev';
-
-export const collectorSchema = schemas.CollectorSchemas.initConfigJsonSchema;
+import data from '@walkeros/core/walkerOS.json';
+export const collectorSchema = data.schemas.CollectorSchemas.initConfigJsonSchema;
 
 # Collector
 

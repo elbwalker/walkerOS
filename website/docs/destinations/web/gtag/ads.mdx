@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-gtag'
 
 import { createEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples, schemas } from '@walkeros/web-destination-gtag/dev';
-
-export const destination = { ...destinationGtag, examples };
+import data from '@walkeros/web-destination-gtag/walkerOS.json';
+export const destination = { ...destinationGtag, examples: data.examples };
 
 # Google Ads
 
@@ -78,13 +77,13 @@ elb('order complete', {
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.ads} />
+<PropertyTable schema={data.schemas.ads} />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings.ads`):
 
-<PropertyTable schema={schemas.ads} />
+<PropertyTable schema={data.schemas.ads} />
 
 ## Live Demo
 

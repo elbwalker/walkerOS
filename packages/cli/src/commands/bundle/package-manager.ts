@@ -38,7 +38,7 @@ export interface Package {
 
 export interface VersionSpec {
   spec: string;
-  source: 'direct' | 'dependency' | 'peerDependency';
+  source: 'direct' | 'override' | 'dependency' | 'peerDependency';
   from: string;
   optional: boolean;
   localPath?: string;
@@ -62,6 +62,7 @@ export async function collectAllSpecs(
   packages: Package[],
   logger: Logger.Instance,
   configDir?: string,
+  overrides: Record<string, string> = {},
 ): Promise<Map<string, VersionSpec[]>> {
   const allSpecs = new Map<string, VersionSpec[]>();
   const visited = new Set<string>();
@@ -74,6 +75,39 @@ export async function collectAllSpecs(
     optional: boolean;
     localPath?: string;
   }
+
+  // Warn about overrides targeting direct local-path packages
+  const directLocalNames = new Set(
+    packages.filter((p) => p.path).map((p) => p.name),
+  );
+  for (const overrideName of Object.keys(overrides)) {
+    if (directLocalNames.has(overrideName)) {
+      logger.warn(
+        `Override for ${overrideName} ignored — direct package is a local path`,
+      );
+    }
+  }
+
+  // Helper: substitute a transitive dep spec with its override (if any)
+  const substituteDep = (
+    depName: string,
+    depSpec: string,
+    source: 'dependency' | 'peerDependency',
+    from: string,
+    optional: boolean,
+  ): QueueItem => {
+    const overrideSpec = overrides[depName];
+    if (overrideSpec) {
+      return {
+        name: depName,
+        spec: overrideSpec,
+        source: 'override',
+        from: `override (was ${depSpec} from ${from})`,
+        optional,
+      };
+    }
+    return { name: depName, spec: depSpec, source, from, optional };
+  };
 
   const queue: QueueItem[] = packages.map((pkg) => ({
     name: pkg.name,
@@ -118,13 +152,9 @@ export async function collectAllSpecs(
           const deps = pkgJson.dependencies || {};
           for (const [depName, depSpec] of Object.entries(deps)) {
             if (typeof depSpec === 'string') {
-              queue.push({
-                name: depName,
-                spec: depSpec,
-                source: 'dependency',
-                from: item.name,
-                optional: false,
-              });
+              queue.push(
+                substituteDep(depName, depSpec, 'dependency', item.name, false),
+              );
             }
           }
 
@@ -136,13 +166,15 @@ export async function collectAllSpecs(
               const isOptional =
                 (peerMeta as Record<string, { optional?: boolean }>)[depName]
                   ?.optional === true;
-              queue.push({
-                name: depName,
-                spec: depSpec,
-                source: 'peerDependency',
-                from: item.name,
-                optional: isOptional,
-              });
+              queue.push(
+                substituteDep(
+                  depName,
+                  depSpec,
+                  'peerDependency',
+                  item.name,
+                  isOptional,
+                ),
+              );
             }
           }
         } catch (error) {
@@ -175,13 +207,9 @@ export async function collectAllSpecs(
     const deps = (m.dependencies as Record<string, string> | undefined) || {};
     for (const [depName, depSpec] of Object.entries(deps)) {
       if (typeof depSpec === 'string') {
-        queue.push({
-          name: depName,
-          spec: depSpec,
-          source: 'dependency',
-          from: item.name,
-          optional: false,
-        });
+        queue.push(
+          substituteDep(depName, depSpec, 'dependency', item.name, false),
+        );
       }
     }
 
@@ -195,13 +223,15 @@ export async function collectAllSpecs(
     for (const [depName, depSpec] of Object.entries(peerDeps)) {
       if (typeof depSpec === 'string') {
         const isOptional = peerMeta[depName]?.optional === true;
-        queue.push({
-          name: depName,
-          spec: depSpec,
-          source: 'peerDependency',
-          from: item.name,
-          optional: isOptional,
-        });
+        queue.push(
+          substituteDep(
+            depName,
+            depSpec,
+            'peerDependency',
+            item.name,
+            isOptional,
+          ),
+        );
       }
     }
   }
@@ -215,8 +245,9 @@ export async function collectAllSpecs(
 
 const SOURCE_PRIORITY: Record<VersionSpec['source'], number> = {
   direct: 0,
-  dependency: 1,
-  peerDependency: 2,
+  override: 1,
+  dependency: 2,
+  peerDependency: 3,
 };
 
 export function resolveVersionConflicts(
@@ -344,6 +375,7 @@ export async function downloadPackages(
   useCache = true,
   configDir?: string,
   tmpDir?: string,
+  overrides: Record<string, string> = {},
 ): Promise<Map<string, string>> {
   const packagePaths = new Map<string, string>();
 
@@ -355,7 +387,12 @@ export async function downloadPackages(
 
   // Phase 1: Collect all version specs
   logger.debug('Resolving dependencies');
-  const allSpecs = await collectAllSpecs(packages, logger, configDir);
+  const allSpecs = await collectAllSpecs(
+    packages,
+    logger,
+    configDir,
+    overrides,
+  );
 
   // Phase 2: Resolve conflicts
   const resolved = resolveVersionConflicts(allSpecs, logger);

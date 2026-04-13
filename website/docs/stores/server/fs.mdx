@@ -5,8 +5,7 @@ sidebar_position: 2
 package: '@walkeros/server-store-fs'
 ---
 
-import { schemas } from '@walkeros/server-store-fs/dev';
-
+import data from '@walkeros/server-store-fs/walkerOS.json';
 # Filesystem
 
 <PackageLink env="server" github="packages/server/stores/fs" npm="@walkeros/server-store-fs" />
@@ -70,7 +69,7 @@ Add to your `flow.json`:
 
 ## Configuration
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## API
 

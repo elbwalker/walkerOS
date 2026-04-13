@@ -3,16 +3,6 @@
   "flows": {
     "default": {
       "web": {},
-      "packages": {
-        "@walkeros/collector": {
-          "version": "latest",
-          "imports": ["startFlow"]
-        },
-        "@walkeros/destination-demo": {
-          "version": "latest",
-          "imports": ["destinationDemo"]
-        }
-      },
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
@@ -50,6 +40,18 @@
           "environment": "production",
           "version": "1.0.0",
           "language": "en"
+        }
+      },
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {
+            "version": "latest",
+            "imports": ["startFlow"]
+          },
+          "@walkeros/destination-demo": {
+            "version": "latest",
+            "imports": ["destinationDemo"]
+          }
         }
       }
     }

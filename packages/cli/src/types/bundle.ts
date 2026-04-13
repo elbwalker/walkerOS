@@ -71,6 +71,13 @@ export interface BuildOptions extends CLIBuildOptions {
   packages: Flow.Packages;
 
   /**
+   * Transitive dependency version overrides.
+   * Flat `Record<string, string>` matching npm's `overrides` semantics.
+   * Only substitutes transitive specs; direct package specs always win.
+   */
+  overrides?: Flow.Overrides;
+
+  /**
    * Output format.
    */
   format: 'esm' | 'iife' | 'cjs';

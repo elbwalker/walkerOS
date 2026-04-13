@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-mixpanel'
 ---
 
 import destinationMixpanel from '@walkeros/web-destination-mixpanel';
-import { examples, schemas } from '@walkeros/web-destination-mixpanel/dev';
-
-export const destination = { ...destinationMixpanel, examples };
+import data from '@walkeros/web-destination-mixpanel/walkerOS.json';
+export const destination = { ...destinationMixpanel, examples: data.examples };
 
 # Mixpanel
 
@@ -98,13 +97,13 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -118,7 +117,7 @@ to the destination config to forward event data as properties.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'mp_test' }}
-  event={examples.step.defaultEventForwarding.in}
+  event={data.examples.step.defaultEventForwarding.in}
   mapping={{ include: ['data'] }}
   generic={true}
 />
@@ -132,8 +131,8 @@ on the user's people profile via `mixpanel.people.*`.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'mp_test' }}
-  event={examples.step.userLoginIdentifyAndPeople.in}
-  mapping={examples.step.userLoginIdentifyAndPeople.mapping}
+  event={data.examples.step.userLoginIdentifyAndPeople.in}
+  mapping={data.examples.step.userLoginIdentifyAndPeople.mapping}
   generic={true}
 />
 
@@ -146,8 +145,8 @@ create a new identity.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'mp_test' }}
-  event={examples.step.profileUpdateAllPeopleOperations.in}
-  mapping={examples.step.profileUpdateAllPeopleOperations.mapping}
+  event={data.examples.step.profileUpdateAllPeopleOperations.in}
+  mapping={data.examples.step.profileUpdateAllPeopleOperations.mapping}
   generic={true}
 />
 
@@ -160,16 +159,16 @@ itself via `mixpanel.get_group(key, id).set/setOnce/union/...`.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'mp_test' }}
-  event={examples.step.userGroupAssociation.in}
-  mapping={examples.step.userGroupAssociation.mapping}
+  event={data.examples.step.userGroupAssociation.in}
+  mapping={data.examples.step.userGroupAssociation.mapping}
   generic={true}
 />
 
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'mp_test' }}
-  event={examples.step.companyUpdateGroupProfile.in}
-  mapping={examples.step.companyUpdateGroupProfile.mapping}
+  event={data.examples.step.companyUpdateGroupProfile.in}
+  mapping={data.examples.step.companyUpdateGroupProfile.mapping}
   generic={true}
 />
 
@@ -182,8 +181,8 @@ fire a default `track()` call.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'mp_test' }}
-  event={examples.step.userLogoutReset.in}
-  mapping={examples.step.userLogoutReset.mapping}
+  event={data.examples.step.userLogoutReset.in}
+  mapping={data.examples.step.userLogoutReset.mapping}
   generic={true}
 />
 

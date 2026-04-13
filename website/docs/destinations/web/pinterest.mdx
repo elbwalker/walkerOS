@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-pinterest'
 ---
 
 import destinationPinterest from '@walkeros/web-destination-pinterest';
-import { examples, schemas } from '@walkeros/web-destination-pinterest/dev';
-
-export const destination = { ...destinationPinterest, examples };
+import data from '@walkeros/web-destination-pinterest/walkerOS.json';
+export const destination = { ...destinationPinterest, examples: data.examples };
 
 # Pinterest Tag
 
@@ -120,7 +119,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Standard event taxonomy
 
@@ -138,11 +137,11 @@ auto-maps. Every conversion event needs an explicit `mapping.name`.
 | `user signup`    | `signup`        | Same identify pattern as `lead`.                                                   |
 | (custom)         | `custom`        | Send Pinterest's `custom` event for non-standard conversions.                      |
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -155,8 +154,8 @@ The simplest conversion. The walkerOS event name is renamed to Pinterest's
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: '2612345678901' }}
-  event={examples.step.pageViewRename.in}
-  mapping={examples.step.pageViewRename.mapping}
+  event={data.examples.step.pageViewRename.in}
+  mapping={data.examples.step.pageViewRename.mapping}
   generic={true}
 />
 
@@ -169,8 +168,8 @@ event `id` is auto-attached as `event_id` for cross-channel deduplication.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: '2612345678901' }}
-  event={examples.step.productViewContent.in}
-  mapping={examples.step.productViewContent.mapping}
+  event={data.examples.step.productViewContent.in}
+  mapping={data.examples.step.productViewContent.mapping}
   generic={true}
 />
 
@@ -183,8 +182,8 @@ into N separate SDK calls.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: '2612345678901' }}
-  event={examples.step.orderCompleteCheckout.in}
-  mapping={examples.step.orderCompleteCheckout.mapping}
+  event={data.examples.step.orderCompleteCheckout.in}
+  mapping={data.examples.step.orderCompleteCheckout.mapping}
   generic={true}
 />
 
@@ -197,8 +196,8 @@ emails through and do NOT pre-hash.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: '2612345678901' }}
-  event={examples.step.userLoginLead.in}
-  mapping={examples.step.userLoginLead.mapping}
+  event={data.examples.step.userLoginLead.in}
+  mapping={data.examples.step.userLoginLead.mapping}
   generic={true}
 />
 
@@ -211,8 +210,8 @@ refresh enhanced matching without firing a conversion.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: '2612345678901' }}
-  event={examples.step.identifyOnlySkip.in}
-  mapping={examples.step.identifyOnlySkip.mapping}
+  event={data.examples.step.identifyOnlySkip.in}
+  mapping={data.examples.step.identifyOnlySkip.mapping}
   generic={true}
 />
 

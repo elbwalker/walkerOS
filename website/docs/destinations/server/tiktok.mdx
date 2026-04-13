@@ -5,8 +5,7 @@ path: /docs/destinations/server/tiktok
 sidebar_position: 9
 package: '@walkeros/server-destination-tiktok'
 ---
-import { schemas } from '@walkeros/server-destination-tiktok/dev';
-
+import data from '@walkeros/server-destination-tiktok/walkerOS.json';
 # TikTok Events API
 
 <PackageLink env="server" github="packages/server/destinations/tiktok" npm="@walkeros/server-destination-tiktok" />
@@ -85,7 +84,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Hashing
 

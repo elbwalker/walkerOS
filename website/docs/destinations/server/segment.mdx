@@ -5,8 +5,7 @@ path: /docs/destinations/server/segment
 sidebar_position: 5
 package: '@walkeros/server-destination-segment'
 ---
-import { schemas } from '@walkeros/server-destination-segment/dev';
-
+import data from '@walkeros/server-destination-segment/walkerOS.json';
 # Segment
 
 <PackageLink env="server" github="packages/server/destinations/segment" npm="@walkeros/server-destination-segment" />
@@ -82,7 +81,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 Identity is resolved automatically from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. At least one must be present for a call to be sent. Override these paths in settings to match your event structure.
 

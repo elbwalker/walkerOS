@@ -5,8 +5,7 @@ path: /docs/destinations/server/meta-capi
 sidebar_position: 3
 package: '@walkeros/server-destination-meta'
 ---
-import { schemas } from '@walkeros/server-destination-meta/dev';
-
+import data from '@walkeros/server-destination-meta/walkerOS.json';
 # Meta Conversions API
 
 <PackageLink env="server" github="packages/server/destinations/meta" npm="@walkeros/server-destination-meta" />
@@ -85,7 +84,7 @@ Add to your `flow.json` destinations:
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Docker Deployment
 

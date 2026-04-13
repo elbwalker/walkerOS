@@ -2,6 +2,7 @@ import {
   defineConfig,
   buildModules,
   buildBrowser,
+  buildDev,
   buildES5,
 } from '@walkeros/config/tsup';
 
@@ -18,5 +19,6 @@ export default defineConfig([
       return { js: '.js' };
     },
   }),
+  buildDev(),
   buildES5({ globalName }),
 ]);

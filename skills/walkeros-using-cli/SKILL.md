@@ -100,8 +100,10 @@ runtime override it.
   "flows": {
     "default": {
       "web": {},
-      "packages": {
-        "@walkeros/web-destination-gtag": {}
+      "bundle": {
+        "packages": {
+          "@walkeros/web-destination-gtag": {}
+        }
       },
       "destinations": {
         "gtag": {
@@ -122,7 +124,10 @@ runtime override it.
   "flows": {
     "<flowName>": {
       "web": {} | "server": {},     // Platform (required)
-      "packages": {},               // NPM packages to bundle
+      "bundle": {                   // Build-time config
+        "packages": {},             // NPM packages to bundle
+        "overrides": {}             // Transitive dep version pins (npm-style)
+      },
       "sources": {},                // Event sources
       "destinations": {},           // Event destinations
       "transformers": {},           // Transformer chain (optional)
@@ -132,6 +137,13 @@ runtime override it.
   }
 }
 ```
+
+**`bundle.overrides`** pins transitive dependency versions. Use it when a vendor
+SDK's declared peer/dep range conflicts with another required version in the
+same tree. Example: `{"@amplitude/analytics-types": "2.11.1"}` forces that exact
+version everywhere in the install graph, regardless of what upstream packages
+declare. Direct package specs always win over overrides; overrides only
+substitute transitive resolution.
 
 For detailed configuration options, see
 [flow-configuration.md](flow-configuration.md).
@@ -338,9 +350,11 @@ Use absolute or relative paths:
 
 ```json
 {
-  "packages": {
-    "my-destination": {
-      "path": "./local/my-destination"
+  "bundle": {
+    "packages": {
+      "my-destination": {
+        "path": "./local/my-destination"
+      }
     }
   }
 }

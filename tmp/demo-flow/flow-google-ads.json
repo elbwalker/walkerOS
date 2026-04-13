@@ -6,11 +6,6 @@
         "windowCollector": "collector",
         "windowElb": "elb"
       },
-      "packages": {
-        "@walkeros/collector": {},
-        "@walkeros/source-demo": {},
-        "@walkeros/web-destination-gtag": {}
-      },
       "sources": {
         "demo": {
           "package": "@walkeros/source-demo",
@@ -22,7 +17,7 @@
                   "name": "user sign_up",
                   "data": {
                     "plan": "pro",
-                    "plan_value": 49.0,
+                    "plan_value": 49,
                     "method": "email"
                   },
                   "delay": 0
@@ -68,6 +63,13 @@
         "globals": {
           "environment": "demo",
           "version": "1.0.0"
+        }
+      },
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {},
+          "@walkeros/source-demo": {},
+          "@walkeros/web-destination-gtag": {}
         }
       }
     }

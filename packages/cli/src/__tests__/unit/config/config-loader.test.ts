@@ -22,8 +22,10 @@ describe('Config Loader', () => {
         flows: {
           default: {
             web: {},
-            packages: {
-              '@walkeros/core': { imports: ['getId'] },
+            bundle: {
+              packages: {
+                '@walkeros/core': { imports: ['getId'] },
+              },
             },
             sources: {
               browser: {
@@ -58,7 +60,7 @@ describe('Config Loader', () => {
         flows: {
           default: {
             web: {},
-            packages: {},
+            bundle: { packages: {} },
           },
         },
       };
@@ -81,7 +83,7 @@ describe('Config Loader', () => {
         flows: {
           default: {
             server: {},
-            packages: {},
+            bundle: { packages: {} },
           },
         },
       };
@@ -104,9 +106,13 @@ describe('Config Loader', () => {
         flows: {
           default: {
             web: {},
-            packages: {
-              '@walkeros/core': { imports: ['getId', 'clone'] },
-              '@walkeros/destination-demo': { imports: ['destinationDemo'] },
+            bundle: {
+              packages: {
+                '@walkeros/core': { imports: ['getId', 'clone'] },
+                '@walkeros/destination-demo': {
+                  imports: ['destinationDemo'],
+                },
+              },
             },
           },
         },
@@ -122,13 +128,38 @@ describe('Config Loader', () => {
       });
     });
 
+    test('extracts overrides from bundle.overrides', () => {
+      const config = {
+        version: 3,
+        flows: {
+          default: {
+            web: {},
+            bundle: {
+              packages: { '@walkeros/core': {} },
+              overrides: {
+                '@amplitude/analytics-types': '2.11.1',
+              },
+            },
+          },
+        },
+      };
+
+      const result = loadBundleConfig(config, {
+        configPath: '/test/config.json',
+      });
+
+      expect(result.buildOptions.overrides).toEqual({
+        '@amplitude/analytics-types': '2.11.1',
+      });
+    });
+
     test('respects build overrides from CLI', () => {
       const config = {
         version: 3,
         flows: {
           default: {
             web: {},
-            packages: {},
+            bundle: { packages: {} },
           },
         },
       };
@@ -156,7 +187,7 @@ describe('Config Loader', () => {
       flows: {
         web_prod: {
           web: {},
-          packages: {},
+          bundle: { packages: {} },
           sources: {
             browser: {
               package: '@walkeros/web-source-browser',
@@ -171,7 +202,7 @@ describe('Config Loader', () => {
         },
         web_stage: {
           web: {},
-          packages: {},
+          bundle: { packages: {} },
           sources: {
             browser: {
               package: '@walkeros/web-source-browser',
@@ -186,7 +217,7 @@ describe('Config Loader', () => {
         },
         server_prod: {
           server: {},
-          packages: {},
+          bundle: { packages: {} },
           destinations: {
             api: {
               package: '@walkeros/server-destination-api',
@@ -315,7 +346,7 @@ describe('Config Loader', () => {
         version: 3,
         flows: {
           default: {
-            packages: {},
+            bundle: { packages: {} },
           },
         },
       };
@@ -325,6 +356,24 @@ describe('Config Loader', () => {
           configPath: '/test/config.json',
         }),
       ).toThrow(/web.*or.*server|Exactly one of/i);
+    });
+
+    test('rejects legacy top-level packages with migration error', () => {
+      const legacyConfig = {
+        version: 3,
+        flows: {
+          default: {
+            web: {},
+            packages: { '@walkeros/core': {} },
+          },
+        },
+      };
+
+      expect(() =>
+        loadBundleConfig(legacyConfig, {
+          configPath: '/test/config.json',
+        }),
+      ).toThrow(/bundle\.packages/);
     });
 
     test('returns empty array for non-Flow.Config config', () => {
@@ -354,11 +403,11 @@ describe('Config Loader', () => {
         flows: {
           prod: {
             web: {},
-            packages: {},
+            bundle: { packages: {} },
           },
           stage: {
             web: {},
-            packages: {},
+            bundle: { packages: {} },
           },
         },
       };
@@ -385,7 +434,7 @@ describe('Config Loader', () => {
         flows: {
           default: {
             web: {},
-            packages: {},
+            bundle: { packages: {} },
           },
         },
       };
@@ -419,11 +468,13 @@ describe('Config Loader', () => {
         flows: {
           web_production: {
             web: {},
-            packages: {
-              '@walkeros/collector': { imports: ['startFlow'] },
-              '@walkeros/web-source-browser': { imports: ['sourceBrowser'] },
-              '@walkeros/web-destination-gtag': {
-                imports: ['destinationGtag'],
+            bundle: {
+              packages: {
+                '@walkeros/collector': { imports: ['startFlow'] },
+                '@walkeros/web-source-browser': { imports: ['sourceBrowser'] },
+                '@walkeros/web-destination-gtag': {
+                  imports: ['destinationGtag'],
+                },
               },
             },
             sources: {
@@ -474,7 +525,7 @@ describe('Config Loader', () => {
               windowCollector: 'myCollector',
               windowElb: 'myElb',
             },
-            packages: {},
+            bundle: { packages: {} },
           },
         },
       };

@@ -33,8 +33,10 @@ describe('Programmatic Bundle API', () => {
     flows: {
       default: {
         web: {},
-        packages: {
-          '@walkeros/core': { imports: ['getId', 'trim'] },
+        bundle: {
+          packages: {
+            '@walkeros/core': { imports: ['getId', 'trim'] },
+          },
         },
       },
     },
@@ -117,11 +119,15 @@ describe('Programmatic Bundle API', () => {
       flows: {
         production: {
           web: {},
-          packages: { '@walkeros/core': { imports: ['getId'] } },
+          bundle: {
+            packages: { '@walkeros/core': { imports: ['getId'] } },
+          },
         },
         staging: {
           web: {},
-          packages: { '@walkeros/core': { imports: ['getId'] } },
+          bundle: {
+            packages: { '@walkeros/core': { imports: ['getId'] } },
+          },
         },
       },
     };

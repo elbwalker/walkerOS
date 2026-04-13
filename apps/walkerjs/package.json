@@ -20,7 +20,8 @@
       "default": "./dist/index.es5.js"
     },
     "./src/schemas": "./src/schemas.ts",
-    "./src/dev": "./src/dev.ts"
+    "./src/dev": "./src/dev.ts",
+    "./walkerOS.json": "./dist/walkerOS.json"
   },
   "files": [
     "dist/**",

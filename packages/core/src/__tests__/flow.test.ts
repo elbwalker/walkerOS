@@ -230,8 +230,10 @@ describe('Flow Schemas', () => {
             currency: 'USD',
           },
         },
-        packages: {
-          '@walkeros/collector': { version: 'latest' },
+        bundle: {
+          packages: {
+            '@walkeros/collector': { version: 'latest' },
+          },
         },
         variables: {
           API_KEY: 'secret',
@@ -259,8 +261,10 @@ describe('Flow Schemas', () => {
             config: { measurementId: 'G-123' },
           },
         },
-        packages: {
-          '@walkeros/collector': { imports: ['startFlow'] },
+        bundle: {
+          packages: {
+            '@walkeros/collector': { imports: ['startFlow'] },
+          },
         },
         variables: { GA_ID: 'G-123' },
         definitions: { mapping: {} },
@@ -333,16 +337,21 @@ describe('Flow Schemas', () => {
       });
     });
 
-    test('accepts packages at config level', () => {
+    test('accepts bundle.packages at flow level', () => {
       const config = {
         web: {},
-        packages: {
-          '@walkeros/collector': { version: 'latest', imports: ['startFlow'] },
-          '@walkeros/web-source-browser': { version: '^2.0.0' },
+        bundle: {
+          packages: {
+            '@walkeros/collector': {
+              version: 'latest',
+              imports: ['startFlow'],
+            },
+            '@walkeros/web-source-browser': { version: '^2.0.0' },
+          },
         },
       };
       const parsed = SettingsSchema.parse(config);
-      expect(parsed.packages).toBeDefined();
+      expect(parsed.bundle?.packages).toBeDefined();
     });
   });
 
@@ -1030,24 +1039,30 @@ describe('Flow Schemas', () => {
     test('accepts packages with version only', () => {
       const config = {
         web: {},
-        packages: {
-          '@walkeros/collector': { version: 'latest' },
-          '@walkeros/web-source-browser': { version: '^2.0.0' },
+        bundle: {
+          packages: {
+            '@walkeros/collector': { version: 'latest' },
+            '@walkeros/web-source-browser': { version: '^2.0.0' },
+          },
         },
       };
       const parsed = SettingsSchema.parse(config);
-      expect(parsed.packages?.['@walkeros/collector'].version).toBe('latest');
+      expect(parsed.bundle?.packages?.['@walkeros/collector'].version).toBe(
+        'latest',
+      );
     });
 
     test('accepts packages with imports only', () => {
       const config = {
         web: {},
-        packages: {
-          '@walkeros/collector': { imports: ['startFlow', 'Collector'] },
+        bundle: {
+          packages: {
+            '@walkeros/collector': { imports: ['startFlow', 'Collector'] },
+          },
         },
       };
       const parsed = SettingsSchema.parse(config);
-      expect(parsed.packages?.['@walkeros/collector'].imports).toEqual([
+      expect(parsed.bundle?.packages?.['@walkeros/collector'].imports).toEqual([
         'startFlow',
         'Collector',
       ]);
@@ -1056,19 +1071,21 @@ describe('Flow Schemas', () => {
     test('accepts packages with both version and imports', () => {
       const config = {
         web: {},
-        packages: {
-          '@walkeros/collector': {
-            version: '2.0.0',
-            imports: ['startFlow'],
-          },
-          '@walkeros/web-destination-gtag': {
-            version: 'latest',
-            imports: ['destinationGtag'],
+        bundle: {
+          packages: {
+            '@walkeros/collector': {
+              version: '2.0.0',
+              imports: ['startFlow'],
+            },
+            '@walkeros/web-destination-gtag': {
+              version: 'latest',
+              imports: ['destinationGtag'],
+            },
           },
         },
       };
       const parsed = SettingsSchema.parse(config);
-      expect(parsed.packages?.['@walkeros/collector']).toEqual({
+      expect(parsed.bundle?.packages?.['@walkeros/collector']).toEqual({
         version: '2.0.0',
         imports: ['startFlow'],
       });
@@ -1077,8 +1094,10 @@ describe('Flow Schemas', () => {
     test('accepts packages with no properties (empty object)', () => {
       const config = {
         web: {},
-        packages: {
-          '@walkeros/collector': {},
+        bundle: {
+          packages: {
+            '@walkeros/collector': {},
+          },
         },
       };
       expect(() => SettingsSchema.parse(config)).not.toThrow();
@@ -1090,17 +1109,19 @@ describe('Flow Schemas', () => {
         flows: {
           prod: {
             web: { windowCollector: 'tracker' },
-            packages: {
-              '@walkeros/collector': {
-                version: '2.0.0',
-                imports: ['startFlow'],
-              },
-              '@walkeros/web-source-browser': {
-                version: '^2.0.0',
-                imports: ['sourceBrowser'],
-              },
-              '@walkeros/web-destination-gtag': {
-                imports: ['destinationGtag'],
+            bundle: {
+              packages: {
+                '@walkeros/collector': {
+                  version: '2.0.0',
+                  imports: ['startFlow'],
+                },
+                '@walkeros/web-source-browser': {
+                  version: '^2.0.0',
+                  imports: ['sourceBrowser'],
+                },
+                '@walkeros/web-destination-gtag': {
+                  imports: ['destinationGtag'],
+                },
               },
             },
           },
@@ -1180,7 +1201,7 @@ describe('getFlowSettings', () => {
         flows: {
           default: {
             server: {},
-            packages: {}, // Empty packages
+            bundle: { packages: {} }, // Empty packages
             sources: {
               http: {
                 package: '@walkeros/server-source-express',
@@ -1200,9 +1221,11 @@ describe('getFlowSettings', () => {
         flows: {
           default: {
             server: {},
-            packages: {
-              '@walkeros/server-source-express': {
-                version: 'latest',
+            bundle: {
+              packages: {
+                '@walkeros/server-source-express': {
+                  version: 'latest',
+                },
               },
             },
             sources: {
@@ -1224,10 +1247,12 @@ describe('getFlowSettings', () => {
         flows: {
           default: {
             server: {},
-            packages: {
-              '@walkeros/server-source-express': {},
-              '@walkeros/destination-demo': {},
-              '@walkeros/server-destination-gcp': {},
+            bundle: {
+              packages: {
+                '@walkeros/server-source-express': {},
+                '@walkeros/destination-demo': {},
+                '@walkeros/server-destination-gcp': {},
+              },
             },
             sources: {
               http: {
@@ -2135,8 +2160,10 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       flows: {
         default: {
           server: {},
-          packages: {
-            '@walkeros/server-destination-api': {}, // No imports specified
+          bundle: {
+            packages: {
+              '@walkeros/server-destination-api': {}, // No imports specified
+            },
           },
           destinations: {
             api: {
@@ -2157,8 +2184,10 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       flows: {
         default: {
           server: {},
-          packages: {
-            '@walkeros/server-destination-api': {},
+          bundle: {
+            packages: {
+              '@walkeros/server-destination-api': {},
+            },
           },
           destinations: {
             api: {
@@ -2180,8 +2209,10 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       flows: {
         default: {
           server: {},
-          packages: {
-            '@walkeros/server-destination-gcp': {},
+          bundle: {
+            packages: {
+              '@walkeros/server-destination-gcp': {},
+            },
           },
           destinations: {
             bq: {
@@ -2203,8 +2234,10 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       flows: {
         default: {
           web: {},
-          packages: {
-            '@walkeros/web-destination-api': {},
+          bundle: {
+            packages: {
+              '@walkeros/web-destination-api': {},
+            },
           },
           destinations: {
             api1: {

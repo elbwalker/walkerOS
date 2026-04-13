@@ -106,7 +106,8 @@ describeIfBuilt('CLI E2E', () => {
         flows: {
           default: {
             web: {},
-            packages: {
+            bundle: {
+              packages: {},
               '@walkeros/core': { imports: ['getId'] },
             },
           },
@@ -156,7 +157,8 @@ describeIfBuilt('CLI E2E', () => {
         flows: {
           default: {
             web: {},
-            packages: {
+            bundle: {
+              packages: {},
               '@walkeros/nonexistent-package-xyz': {
                 imports: ['nonexistent'],
               },
@@ -194,7 +196,8 @@ describeIfBuilt('CLI E2E', () => {
         flows: {
           default: {
             web: {},
-            packages: {
+            bundle: {
+              packages: {},
               '@walkeros/core': { imports: ['getId'] },
             },
           },

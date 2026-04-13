@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-amplitude'
 ---
 
 import destinationAmplitude from '@walkeros/web-destination-amplitude';
-import { examples, schemas } from '@walkeros/web-destination-amplitude/dev';
-
-export const destination = { ...destinationAmplitude, examples };
+import data from '@walkeros/web-destination-amplitude/walkerOS.json';
+export const destination = { ...destinationAmplitude, examples: data.examples };
 
 # Amplitude
 
@@ -103,13 +102,13 @@ Add to your `flow.json` destinations:
 All fields of Amplitude's `BrowserOptions` pass through to
 `amplitude.init(apiKey, options)`. walkerOS-specific additions are:
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -123,7 +122,7 @@ to the destination config to forward event data as properties.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={examples.step.defaultEventForwarding.in}
+  event={data.examples.step.defaultEventForwarding.in}
   mapping={{ include: ['data'] }}
   generic={true}
 />
@@ -137,8 +136,8 @@ the default track call.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={examples.step.userLoginIdentify.in}
-  mapping={examples.step.userLoginIdentify.mapping}
+  event={data.examples.step.userLoginIdentify.in}
+  mapping={data.examples.step.userLoginIdentify.mapping}
   generic={true}
 />
 
@@ -150,8 +149,8 @@ call per nested product. The order-level `track()` still fires once.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={examples.step.orderCompleteMultiProduct.in}
-  mapping={examples.step.orderCompleteMultiProduct.mapping}
+  event={data.examples.step.orderCompleteMultiProduct.in}
+  mapping={data.examples.step.orderCompleteMultiProduct.mapping}
   generic={true}
 />
 
@@ -163,8 +162,8 @@ renewals. Currency falls back to `"EUR"` when `data.currency` is missing.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={examples.step.subscriptionRenewRevenue.in}
-  mapping={examples.step.subscriptionRenewRevenue.mapping}
+  event={data.examples.step.subscriptionRenewRevenue.in}
+  mapping={data.examples.step.subscriptionRenewRevenue.mapping}
   generic={true}
 />
 
@@ -175,8 +174,8 @@ Assign a user to a group and enrich group properties in one rule.
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={examples.step.groupAssignmentWithProperties.in}
-  mapping={examples.step.groupAssignmentWithProperties.mapping}
+  event={data.examples.step.groupAssignmentWithProperties.in}
+  mapping={data.examples.step.groupAssignmentWithProperties.mapping}
   generic={true}
 />
 

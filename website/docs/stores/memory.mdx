@@ -5,8 +5,7 @@ sidebar_position: 2
 package: '@walkeros/store-memory'
 ---
 
-import { schemas } from '@walkeros/store-memory/dev';
-
+import data from '@walkeros/store-memory/walkerOS.json';
 # Memory
 
 <PackageLink github="packages/stores/memory" npm="@walkeros/store-memory" />
@@ -82,7 +81,7 @@ Add to your `flow.json`:
 
 ## Configuration
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 Both limits can be used together. When either is exceeded, the least-recently-used entry is evicted first.
 

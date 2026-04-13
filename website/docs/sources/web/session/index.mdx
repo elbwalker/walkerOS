@@ -4,8 +4,7 @@ description: Standalone session detection and management for walkerOS
 sidebar_position: 1
 package: '@walkeros/web-source-session'
 ---
-import { schemas } from '@walkeros/web-source-session/dev';
-
+import data from '@walkeros/web-source-session/walkerOS.json';
 <PackageLink github="packages/web/sources/session" npm="@walkeros/web-source-session" />
 
 # Session source
@@ -217,7 +216,7 @@ A returning visitor starting their second session has `isStart: true` but `isNew
 
 ## Configuration
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Consent integration
 

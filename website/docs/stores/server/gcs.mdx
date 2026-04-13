@@ -5,8 +5,7 @@ sidebar_position: 2
 package: '@walkeros/server-store-gcs'
 ---
 
-import { schemas } from '@walkeros/server-store-gcs/dev';
-
+import data from '@walkeros/server-store-gcs/walkerOS.json';
 # GCS
 
 <PackageLink env="server" github="packages/server/stores/gcs" npm="@walkeros/server-store-gcs" />
@@ -73,7 +72,7 @@ Add to your `flow.json`:
 
 ## Configuration
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 ## Authentication
 

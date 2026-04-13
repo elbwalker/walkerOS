@@ -7,9 +7,8 @@ package: '@walkeros/web-destination-snowplow'
 ---
 
 import destinationSnowplow from '@walkeros/web-destination-snowplow';
-import { examples, schemas } from '@walkeros/web-destination-snowplow/dev';
-
-export const destination = { ...destinationSnowplow, examples };
+import data from '@walkeros/web-destination-snowplow/walkerOS.json';
+export const destination = { ...destinationSnowplow, examples: data.examples };
 
 # Snowplow
 
@@ -171,22 +170,24 @@ const { elb } = await startFlow({
 
 <CodeSnippet
   code={`{
-  "packages": {
-    "@snowplow/browser-tracker": {
-      "imports": [
-        "newTracker",
-        "trackSelfDescribingEvent",
-        "trackPageView",
-        "enableActivityTracking",
-        "addPlugin",
-        "addGlobalContexts"
-      ]
-    },
-    "@snowplow/browser-plugin-snowplow-ecommerce": {
-      "imports": ["SnowplowEcommercePlugin", "setPageType"]
-    },
-    "@snowplow/browser-plugin-link-click-tracking": {
-      "imports": ["LinkClickTrackingPlugin"]
+  "bundle": {
+    "packages": {
+      "@snowplow/browser-tracker": {
+        "imports": [
+          "newTracker",
+          "trackSelfDescribingEvent",
+          "trackPageView",
+          "enableActivityTracking",
+          "addPlugin",
+          "addGlobalContexts"
+        ]
+      },
+      "@snowplow/browser-plugin-snowplow-ecommerce": {
+        "imports": ["SnowplowEcommercePlugin", "setPageType"]
+      },
+      "@snowplow/browser-plugin-link-click-tracking": {
+        "imports": ["LinkClickTrackingPlugin"]
+      }
     }
   },
   "destinations": {
@@ -227,7 +228,7 @@ const { elb } = await startFlow({
 
 ## Configuration reference
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 #### Example
 
@@ -243,7 +244,7 @@ const { elb } = await startFlow({
 
 For custom event mapping (`mapping.entity.action.settings`):
 
-<PropertyTable schema={schemas.mapping} />
+<PropertyTable schema={data.schemas.mapping} />
 
 ## User Identity & Privacy
 
@@ -356,7 +357,7 @@ await elb('walker consent', { analytics: false, marketing: false });
 
 ## Media Tracking
 
-Track video and audio playback events using Snowplow's [media tracking schemas](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/media/). The destination supports all media events and contexts.
+Track video and audio playback events using Snowplow's [media tracking data.schemas](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/media/). The destination supports all media events and contexts.
 
 ### Basic Usage
 
@@ -491,7 +492,7 @@ The package exports pre-defined Snowplow schema URIs for use in custom mappings:
   MEDIA_SCHEMAS, MEDIA_ACTIONS
 } from '@walkeros/web-destination-snowplow';
 
-// Ecommerce schemas
+// Ecommerce data.schemas
 SCHEMAS.PRODUCT;     // product/jsonschema/1-0-0
 SCHEMAS.TRANSACTION; // transaction/jsonschema/1-0-0
 
@@ -499,20 +500,20 @@ SCHEMAS.TRANSACTION; // transaction/jsonschema/1-0-0
 ACTIONS.ADD_TO_CART; // 'add_to_cart'
 ACTIONS.TRANSACTION; // 'transaction'
 
-// Web event schemas
+// Web event data.schemas
 WEB_SCHEMAS.LINK_CLICK;  // link_click/jsonschema/1-0-1
 WEB_SCHEMAS.SUBMIT_FORM; // submit_form/jsonschema/1-0-0
 WEB_SCHEMAS.SITE_SEARCH; // site_search/jsonschema/1-0-0
 WEB_SCHEMAS.TIMING;      // timing/jsonschema/1-0-0
 WEB_SCHEMAS.WEB_VITALS;  // web_vitals/jsonschema/1-0-0
 
-// Web context schemas
+// Web context data.schemas
 WEB_SCHEMAS.WEB_PAGE;       // web_page/jsonschema/1-0-0
 WEB_SCHEMAS.BROWSER;        // browser_context/jsonschema/2-0-0
 WEB_SCHEMAS.CLIENT_SESSION; // client_session/jsonschema/1-0-2
 WEB_SCHEMAS.GEOLOCATION;    // geolocation_context/jsonschema/1-1-0
 
-// Media event schemas
+// Media event data.schemas
 MEDIA_SCHEMAS.PLAY;             // play_event/jsonschema/1-0-0
 MEDIA_SCHEMAS.PAUSE;            // pause_event/jsonschema/1-0-0
 MEDIA_SCHEMAS.END;              // end_event/jsonschema/1-0-0
@@ -522,19 +523,19 @@ MEDIA_SCHEMAS.QUALITY_CHANGE;   // quality_change_event/jsonschema/1-0-0
 MEDIA_SCHEMAS.PERCENT_PROGRESS; // percent_progress_event/jsonschema/1-0-0
 MEDIA_SCHEMAS.ERROR;            // error_event/jsonschema/1-0-0
 
-// Media context schemas
+// Media context data.schemas
 MEDIA_SCHEMAS.MEDIA_PLAYER; // media_player/jsonschema/1-0-0
 MEDIA_SCHEMAS.SESSION;      // session/jsonschema/1-0-0
 MEDIA_SCHEMAS.AD;           // ad/jsonschema/1-0-0
 MEDIA_SCHEMAS.AD_BREAK;     // ad_break/jsonschema/1-0-0
 
-// Media ad schemas
+// Media ad data.schemas
 MEDIA_SCHEMAS.AD_BREAK_START; // ad_break_start_event/jsonschema/1-0-0
 MEDIA_SCHEMAS.AD_START;       // ad_start_event/jsonschema/1-0-0
 MEDIA_SCHEMAS.AD_COMPLETE;    // ad_complete_event/jsonschema/1-0-0
 MEDIA_SCHEMAS.AD_SKIP;        // ad_skip_event/jsonschema/1-0-0
 
-// Consent schemas (Enhanced Consent plugin)
+// Consent data.schemas (Enhanced Consent plugin)
 CONSENT_SCHEMAS.PREFERENCES; // consent_preferences/jsonschema/1-0-0
 CONSENT_SCHEMAS.CMP_VISIBLE; // cmp_visible/jsonschema/1-0-0
 CONSENT_SCHEMAS.DOCUMENT;    // consent_document/jsonschema/1-0-0
@@ -727,11 +728,11 @@ await startFlow({
   language="typescript"
 />
 
-## Mapping examples
+## Mapping data.examples
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
+The code data.examples are interactive. You can edit the code to generate your
 individual event mapping.
 
 :::
@@ -750,8 +751,8 @@ Map your walkerOS event to get a Snowplow `product_view` ecommerce event with pr
   }}
   smallText={true}
   height={'512px'}
-  event={examples.step.productView.in}
-  mapping={examples.step.productView.mapping}
+  event={data.examples.step.productView.in}
+  mapping={data.examples.step.productView.mapping}
   generic={true}
   initFirst={true}
 />
@@ -767,8 +768,8 @@ Map your walkerOS event to get a Snowplow `add_to_cart` ecommerce event with pro
   }}
   smallText={true}
   height={'512px'}
-  event={examples.step.addToCart.in}
-  mapping={examples.step.addToCart.mapping}
+  event={data.examples.step.addToCart.in}
+  mapping={data.examples.step.addToCart.mapping}
   generic={true}
   initFirst={true}
 />
@@ -784,8 +785,8 @@ Map your walkerOS event to get a Snowplow `transaction` ecommerce event with tra
   }}
   smallText={true}
   height={'512px'}
-  event={examples.step.transaction.in}
-  mapping={examples.step.transaction.mapping}
+  event={data.examples.step.transaction.in}
+  mapping={data.examples.step.transaction.mapping}
   generic={true}
   initFirst={true}
 />
@@ -801,8 +802,8 @@ Map your walkerOS event to get a Snowplow `promo_view` ecommerce event with prom
   }}
   smallText={true}
   height={'512px'}
-  event={examples.step.promoView.in}
-  mapping={examples.step.promoView.mapping}
+  event={data.examples.step.promoView.in}
+  mapping={data.examples.step.promoView.mapping}
   generic={true}
   initFirst={true}
 />

@@ -5,8 +5,7 @@ sidebar_position: 1
 package: '@walkeros/transformer-validator'
 ---
 
-import { schemas } from '@walkeros/transformer-validator/dev';
-
+import data from '@walkeros/transformer-validator/walkerOS.json';
 # Validator
 
 <PackageLink env="server" github="packages/transformers/validator" npm="@walkeros/transformer-validator" />
@@ -110,7 +109,7 @@ Add to your `flow.json`:
 
 ## Configuration
 
-<PropertyTable schema={schemas.settings} />
+<PropertyTable schema={data.schemas.settings} />
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -154,7 +153,7 @@ Event → Format check → Contract check → Next transformer/Destination
 <details>
 <summary>Conditional rules</summary>
 
-Apply different schemas based on event data:
+Apply different data.schemas based on event data:
 
 <CodeSnippet
   code={`contract: {

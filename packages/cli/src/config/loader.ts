@@ -103,8 +103,9 @@ export function loadBundleConfig(
   // Get static build defaults based on platform
   const buildDefaults = getBuildDefaults(platform);
 
-  // Extract packages from flowSettings (if present)
-  const packages = flowSettings.packages || {};
+  // Extract packages + overrides from flowSettings.bundle (if present)
+  const packages = flowSettings.bundle?.packages || {};
+  const overrides = flowSettings.bundle?.overrides || {};
 
   // Output path: use --output if provided, otherwise default
   // Always relative to cwd, no dynamic resolution
@@ -129,6 +130,7 @@ export function loadBundleConfig(
   const buildOptions: BuildOptions = {
     ...buildDefaults,
     packages,
+    overrides,
     output,
     include: includes,
     configDir,

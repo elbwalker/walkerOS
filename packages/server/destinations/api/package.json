@@ -17,6 +17,7 @@
       "import": "./dist/dev.mjs",
       "require": "./dist/dev.js"
     },
+    "./walkerOS.json": "./dist/walkerOS.json",
     "./examples": {
       "types": "./dist/examples/index.d.ts",
       "import": "./dist/examples/index.mjs",
