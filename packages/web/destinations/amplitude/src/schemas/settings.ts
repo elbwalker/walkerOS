@@ -5,7 +5,7 @@ export const SettingsSchema = z.object({
     .string()
     .min(1)
     .describe(
-      'Your Amplitude project API key. Find it in your Amplitude project settings under "General" → "API Keys".',
+      'Your Amplitude project API key. Find it in your Amplitude project settings under "General" → "API Keys" (like a1b2c3d4e5f6789012345678abcdef12).',
     ),
   serverZone: z
     .enum(['US', 'EU'])

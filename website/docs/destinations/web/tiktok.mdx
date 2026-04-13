@@ -215,7 +215,7 @@ sending, so it's safe to pass raw values.
 
 `settings.identify` (destination-level) fires on first push and re-fires only
 when the resolved value changes (runtime state diffing). `mapping.settings.identify`
-(per-event) overrides for one push — useful for signup and checkout flows
+(per-event) overrides for one push, which is useful for signup and checkout flows
 where the identity becomes available mid-session.
 
 `ttq.identify()` always fires **before** `ttq.track()` so Advanced Matching
@@ -223,7 +223,7 @@ is set for the conversion event.
 
 ## Consent
 
-TikTok is an advertising platform — the typical walkerOS consent key is
+TikTok is an advertising platform. The typical walkerOS consent key is
 `marketing` (whatever name your CMP reports). The walkerOS `config.consent`
 gate blocks unconsented events from reaching the destination in the first
 place; the destination's `on('consent')` handler then toggles TikTok's own
@@ -244,7 +244,7 @@ matches walkerOS's gating model.
 
 :::note Auto page view
 TikTok's SDK auto-fires `ttq.page()` once on load. The destination has no
-knob to suppress it — letting the auto page view fire is the expected
+knob to suppress it. Letting the auto page view fire is the expected
 behavior.
 :::
 

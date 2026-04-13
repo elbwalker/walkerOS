@@ -1,0 +1,24 @@
+{
+  "name": "page view",
+  "data": {
+    "title": "Home",
+    "category": "marketing"
+  },
+  "user": {
+    "id": "user_abc123"
+  },
+  "source": {
+    "id": "https://example.com/",
+    "previous_id": "",
+    "type": "web"
+  },
+  "consent": {
+    "functional": true
+  },
+  "globals": {
+    "language": "en"
+  },
+  "context": {
+    "session": ["sess_xyz789", 1]
+  }
+}

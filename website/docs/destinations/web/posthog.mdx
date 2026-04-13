@@ -113,21 +113,22 @@ individual event mapping.
 
 ### Default event forwarding
 
-Every walkerOS event becomes `posthog.capture(event.name, properties)` without
-any mapping.
+Every walkerOS event becomes `posthog.capture(event.name, properties)`.
+Without `include` config, `properties` is empty. Add `include: ['data']`
+to the destination config to forward event data as properties.
 
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'phc_test' }}
   event={examples.step.defaultEventForwarding.in}
-  mapping={examples.step.defaultEventForwarding.mapping}
+  mapping={{ include: ['data'] }}
   generic={true}
 />
 
 ### Identify with `$set` and `$set_once`
 
-Resolve a mapping value into the PostHog identity vocabulary — `distinctId` is
-the new user ID, `$set` overwrites person properties, `$set_once` only sets
+Resolve a mapping value into the PostHog identity vocabulary. `distinctId` is
+the new user ID, `$set` overwrites person properties, and `$set_once` only sets
 properties that do not yet exist.
 
 <DestinationDemo
@@ -141,7 +142,7 @@ properties that do not yet exist.
 ### Person properties only (no identity change)
 
 When the resolved identify object has no `distinctId`, the destination calls
-`posthog.setPersonProperties(...)` instead — useful for profile updates that
+`posthog.setPersonProperties(...)` instead, which is useful for profile updates that
 should not create a new identity.
 
 <DestinationDemo
@@ -167,7 +168,7 @@ B2B analytics by company, team, or any custom group type.
 
 ### Order complete with flattened properties
 
-PostHog has no dedicated revenue API — revenue events are regular `capture()`
+PostHog has no dedicated revenue API. Revenue events are regular `capture()`
 calls. Use `include: ['data', 'globals']` to flatten walkerOS sections into
 prefixed properties (`data_currency: "EUR"`, `data_total`, etc.).
 
@@ -206,20 +207,20 @@ reaching the destination in the first place.
 
 ## Built-in features
 
-All these PostHog features work via standard `posthog-js` init options — no
+All these PostHog features work via standard `posthog-js` init options, with no
 destination wiring required:
 
-- **Session replay** — `settings.session_recording: { maskAllInputs: true, ... }`
-- **Feature flags** — `settings.bootstrap: { featureFlags: { ... } }` for SSR
-- **Surveys** — automatic; `settings.disable_surveys: true` to opt out
-- **Heatmaps** — `settings.capture_heatmaps: true`
-- **Exception capture** — `settings.capture_exceptions: true`
-- **Cookieless mode** — `settings.cookieless_mode: 'always' | 'on_reject'`
-- **Person profiles** — `settings.person_profiles: 'identified_only'`
+- **Session replay**: `settings.session_recording: { maskAllInputs: true, ... }`
+- **Feature flags**: `settings.bootstrap: { featureFlags: { ... } }` for SSR
+- **Surveys**: automatic; `settings.disable_surveys: true` to opt out
+- **Heatmaps**: `settings.capture_heatmaps: true`
+- **Exception capture**: `settings.capture_exceptions: true`
+- **Cookieless mode**: `settings.cookieless_mode: 'always' | 'on_reject'`
+- **Person profiles**: `settings.person_profiles: 'identified_only'`
   (PostHog default, privacy-friendly) or `'always'`
 
 walkerOS sets three defaults that differ from PostHog's built-ins:
-`autocapture: false`, `capture_pageview: false`, `capture_pageleave: false` —
+`autocapture: false`, `capture_pageview: false`, `capture_pageleave: false`,
 because walkerOS sources handle event capture. Override them explicitly if you
 want PostHog's autocapture on.
 
@@ -227,4 +228,3 @@ want PostHog's autocapture on.
 
 - [PostHog documentation](https://posthog.com/docs)
 - [`posthog-js` SDK reference](https://posthog.com/docs/libraries/js)
-- [walkerOS destinations](/docs/destinations)

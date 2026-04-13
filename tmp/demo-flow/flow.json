@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "packages": {
+        "@walkeros/collector": {
+          "version": "latest",
+          "imports": ["startFlow"]
+        },
+        "@walkeros/destination-demo": {
+          "version": "latest",
+          "imports": ["destinationDemo"]
+        }
+      },
+      "destinations": {
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Demo Destination",
+              "values": [
+                "name",
+                "data",
+                "user",
+                "consent",
+                "globals",
+                "context"
+              ]
+            },
+            "mapping": {
+              "page": {
+                "view": {
+                  "name": "page_view",
+                  "data": {
+                    "map": {
+                      "page_url": "source.id",
+                      "page_title": "data.title",
+                      "language": "globals.language"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "collector": {
+        "globals": {
+          "environment": "production",
+          "version": "1.0.0",
+          "language": "en"
+        }
+      }
+    }
+  }
+}

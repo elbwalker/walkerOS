@@ -6,7 +6,7 @@ sidebar_position: 5
 
 # Contract
 
-A contract defines what your events should look like — which fields are required,
+A contract defines what your events should look like: which fields are required,
 what types they have, and what values are allowed. Contracts are named entries
 with optional inheritance via `extends`.
 
@@ -36,11 +36,11 @@ with optional inheritance via `extends`.
 Without contracts, validation rules live inside each transformer config,
 duplicated across flows. Contracts solve this:
 
-- **Single source of truth** — Define event requirements once at the config level
-- **Named and composable** — Multiple contracts with inheritance via `extends`
-- **Self-documenting** — JSON Schema `description` and `examples` annotate your events
-- **Versioned** — `tagging` tracks contract versions alongside your events
-- **Dot-path access** — Reference any part with `$contract.name.section`
+- **Single source of truth**: Define event requirements once at the config level
+- **Named and composable**: Multiple contracts with inheritance via `extends`
+- **Self-documenting**: JSON Schema `description` and `examples` annotate your events
+- **Versioned**: `tagging` tracks contract versions alongside your events
+- **Dot-path access**: Reference any part with `$contract.name.section`
 
 ## Named contracts
 
@@ -92,12 +92,12 @@ metadata (`tagging`, `description`), and an optional `extends` reference:
 
 ## Inheritance with `extends`
 
-Use `extends` to inherit from another named contract. Inheritance is additive —
+Use `extends` to inherit from another named contract. Inheritance is additive:
 the child contract merges on top of the parent:
 
 - **Sections** (`globals`, `consent`, etc.) merge additively
 - **Events** merge at the entity-action level
-- **Scalars** (`tagging`) — child wins
+- **Scalars** (`tagging`): child wins
 - **Chains** work: `web_loggedin` extends `web` extends `default`
 - **Circular references** are detected and throw an error
 
@@ -198,8 +198,8 @@ All matching levels combine. For `product add`, levels 1, 3, and 4 all apply:
 />
 
 :::warning Contracts vs mapping wildcards
-Contract wildcards use **additive merging** — all matching levels combine.
-Mapping wildcards use **fallback matching** — the first match wins.
+Contract wildcards use **additive merging**: all matching levels combine.
+Mapping wildcards use **fallback matching**: the first match wins.
 
 This difference is intentional. Contracts define cumulative requirements (entity-level
 rules always apply to all actions), while mappings select a single transformation
@@ -216,8 +216,8 @@ When multiple levels match, schemas merge with these rules:
 
 | JSON Schema keyword | Merge behavior |
 |---------------------|----------------|
-| `required` | Union (deduplicated) — can only add requirements, never remove |
-| `properties` | Deep merge — child wins on conflict for scalar values |
+| `required` | Union (deduplicated): can only add requirements, never remove |
+| `properties` | Deep merge: child wins on conflict for scalar values |
 | Scalar keywords (`minimum`, `maximum`, `pattern`, etc.) | Child overrides parent |
 | Annotations (`description`, `examples`) | Stripped from resolved event schemas |
 
@@ -298,10 +298,10 @@ The contract is fully resolved (extends + wildcards) before path access:
 
 Access nested values with dot notation:
 
-- `$contract.web.events` — all event schemas for the "web" contract
-- `$contract.web.events.product.add` — single event schema
-- `$contract.web.consent` — consent section
-- `$contract.web.tagging` — tagging version number
+- `$contract.web.events`: all event schemas for the "web" contract
+- `$contract.web.events.product.add`: single event schema
+- `$contract.web.consent`: consent section
+- `$contract.web.tagging`: tagging version number
 
 <details>
 <summary>Advanced: `$def` aliasing</summary>
@@ -601,6 +601,6 @@ In the `web-shop` flow, `product add` merges these levels:
 
 ## Next steps
 
-- **[Validator transformer](/docs/transformers/validator)** — Enforce contracts at runtime
-- **[Mapping](/docs/mapping)** — Transform events for destinations
-- **[Flow configuration](/docs/getting-started/modes/bundled)** — Full flow config reference
+- **[Validator transformer](/docs/transformers/validator)**: Enforce contracts at runtime
+- **[Mapping](/docs/mapping)**: Transform events for destinations
+- **[Flow configuration](/docs/getting-started/modes/bundled)**: Full flow config reference

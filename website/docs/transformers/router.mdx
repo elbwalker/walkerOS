@@ -78,7 +78,7 @@ interface Route {
 }
 ```
 
-Routes are evaluated **in order** — first match wins. Use `'*'` as a catch-all wildcard at the end.
+Routes are evaluated **in order**. The first match wins. Use `'*'` as a catch-all wildcard at the end.
 
 Match operators, logical combinators (`and`/`or`), and negation (`not: true`) work exactly as before. See the match expression reference for details.
 
@@ -86,9 +86,9 @@ Match operators, logical combinators (`and`/`or`), and negation (`not: true`) wo
 
 Conditional `Route[]` routing works on:
 
-- **`source.next`** — route events before the collector based on ingest data (path, method, headers)
-- **`transformer.next`** — route after a transformer based on ingest data
-- **`destination.before`** — route before a destination based on ingest data
+- **`source.next`**: route events before the collector based on ingest data (path, method, headers)
+- **`transformer.next`**: route after a transformer based on ingest data
+- **`destination.before`**: route before a destination based on ingest data
 
 ## Nested routes
 

@@ -1,0 +1,23 @@
+{
+  "name": "user sign_up",
+  "data": {
+    "plan": "pro",
+    "plan_value": 49.0,
+    "method": "email"
+  },
+  "user": {
+    "id": "user_new123"
+  },
+  "source": {
+    "id": "https://example.com/signup",
+    "previous_id": "",
+    "type": "web"
+  },
+  "consent": {
+    "marketing": true
+  },
+  "globals": {
+    "language": "en"
+  },
+  "context": {}
+}

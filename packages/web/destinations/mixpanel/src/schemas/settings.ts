@@ -5,7 +5,7 @@ export const SettingsSchema = z.object({
     .string()
     .min(1)
     .describe(
-      'Your Mixpanel project token. Find it in your Mixpanel project settings under "Project Settings" → "Access Keys". Passed to mixpanel.init() as the first argument.',
+      'Your Mixpanel project token. Find it in your Mixpanel project settings under "Project Settings" and "Access Keys". Passed to mixpanel.init() as the first argument (like a1b2c3d4e5f6789012345678abcdef12).',
     ),
   api_host: z
     .string()

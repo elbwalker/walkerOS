@@ -5,7 +5,7 @@ export const SettingsSchema = z.object({
     .string()
     .min(1)
     .describe(
-      'Your PostHog project API key (starts with "phc_"). Find it in your PostHog project settings under "Project API Key".',
+      'Your PostHog project API key (starts with "phc_"). Find it in your PostHog project settings under "Project API Key" (like phc_a1b2c3d4e5f6789012345678abcdef12).',
     ),
   api_host: z
     .string()

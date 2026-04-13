@@ -9,7 +9,7 @@ package: '@walkeros/server-transformer-fingerprint'
 
 <PackageLink env="server" github="packages/server/transformers/fingerprint" npm="@walkeros/server-transformer-fingerprint" />
 
-Hashes configurable request fields (IP address, user agent, date, etc.) into a deterministic identifier and stores it on the event. No cookies, no PII stored — the same combination of inputs always produces the same hash.
+Hashes configurable request fields (IP address, user agent, date, etc.) into a deterministic identifier and stores it on the event. No cookies, no PII stored. The same combination of inputs always produces the same hash.
 
 ## When to use
 
@@ -82,7 +82,7 @@ await startFlow({
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `fields` | `Mapping.Value[]` | required | Fields to include in the hash. Order matters — the same fields in a different order produce a different hash. |
+| `fields` | `Mapping.Value[]` | required | Fields to include in the hash. Order matters: the same fields in a different order produce a different hash. |
 | `output` | `string` | `"user.hash"` | Dot-notation path where the hash is stored on the event. |
 | `length` | `number` | full (64 chars) | Truncate the SHA-256 hash to this length. |
 
@@ -90,7 +90,7 @@ Fields are resolved from `{ event, ingest }` using walkerOS mapping. String valu
 
 ## Daily rotation
 
-Without rotation, the same IP + user agent always produce the same hash — indefinitely. To limit persistence, add a daily rotation field:
+Without rotation, the same IP + user agent always produce the same hash, indefinitely. To limit persistence, add a daily rotation field:
 
 <CodeSnippet
   code={`settings: {
@@ -135,4 +135,4 @@ The hash is stored at the configured `output` path on the event:
   language="typescript"
 />
 
-If any field is missing (e.g., `ingest.ip` is undefined), it is treated as an empty string — the transformer never throws.
+If any field is missing (e.g., `ingest.ip` is undefined), it is treated as an empty string. The transformer never throws.

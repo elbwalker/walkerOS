@@ -80,19 +80,19 @@ Add to your `flow.json`:
 ## How it works
 
 1. Reads `ingest.path` from the request context
-2. Strips the configured `prefix` (if set) — e.g. `/static/image.png` becomes `image.png`
+2. Strips the configured `prefix` (if set), e.g. `/static/image.png` becomes `image.png`
 3. Looks up the remaining path in the store via `store.get(key)`
 4. If found, derives the Content-Type from the file extension and responds with the content
-5. Returns `false` to stop the chain — no further transformers or destinations run
+5. Returns `false` to stop the chain. No further transformers or destinations run.
 6. If the file is not found or the path doesn't match the prefix, the event passes through unchanged
 
 ## Settings
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `prefix` | `string` | — | URL prefix to strip (e.g., `/static`) |
-| `headers` | `Record<string, string>` | — | Default response headers (e.g., `Cache-Control`) |
-| `mimeTypes` | `Record<string, string>` | — | Extension overrides (e.g., `{ ".wasm": "application/wasm" }`) |
+| `prefix` | `string` | none | URL prefix to strip (e.g., `/static`) |
+| `headers` | `Record<string, string>` | none | Default response headers (e.g., `Cache-Control`) |
+| `mimeTypes` | `Record<string, string>` | none | Extension overrides (e.g., `{ ".wasm": "application/wasm" }`) |
 
 ## Environment
 
@@ -149,14 +149,14 @@ Use native cache on the file transformer to serve cached files from memory, avoi
 
 ## Behavior notes
 
-- **Requires a store** — without `env.store`, every request logs a warning and passes through
-- **Prefix matching** — if `prefix` is set and the path doesn't start with it, the event passes through (not an error)
-- **Returns `false`** — a served file stops the chain; no destinations receive the event
-- **Content-Length** — automatically set for string and Buffer content
+- **Requires a store**: without `env.store`, every request logs a warning and passes through
+- **Prefix matching**: if `prefix` is set and the path doesn't start with it, the event passes through (not an error)
+- **Returns `false`**: a served file stops the chain; no destinations receive the event
+- **Content-Length**: automatically set for string and Buffer content
 
 ## Next steps
 
 - **[Cache](./cache)** - Add response caching before file serving
 - **[Router](./router)** - Route requests to the file chain
 - **[Stores](/docs/getting-started/stores)** - Configure store backends
-- **[Docker — Including files](/docs/apps/docker#including-files)** - Bake files into Docker images
+- **[Docker: Including files](/docs/apps/docker#including-files)** - Bake files into Docker images

@@ -22,14 +22,14 @@ Examples are test fixtures, documentation, and simulation data in one place. The
 
 ## What are step examples
 
-Every source, transformer, and destination in a walkerOS flow is a **step**. Each step receives input and produces output. Step examples are named `{ in, out }` pairs that capture concrete data for each step — what goes in, what comes out.
+Every source, transformer, and destination in a walkerOS flow is a **step**. Each step receives input and produces output. Step examples are named `{ in, out }` pairs that capture concrete data for each step: what goes in, what comes out.
 
 They serve multiple purposes simultaneously:
 
-- **Documentation** — developers see real data shapes, not just type signatures
-- **Testing** — CI runs examples as regression tests via `walkeros push --simulate`
-- **Simulation** — debug your pipeline before deployment
-- **LLM context** — AI tools use examples to suggest correct mappings
+- **Documentation**: developers see real data shapes, not just type signatures
+- **Testing**: CI runs examples as regression tests via `walkeros push --simulate`
+- **Simulation**: debug your pipeline before deployment
+- **LLM context**: AI tools use examples to suggest correct mappings
 
 ## The `{ in, out }` format
 
@@ -94,7 +94,7 @@ Some destinations need to react to walker commands (consent updates, user identi
   language="json"
 />
 
-Supported commands: \`config\`, \`consent\`, \`user\`, \`run\`. When `command` is set, `mapping` is ignored — commands don't flow through event mapping. See the [walkeros-using-step-examples skill](https://github.com/elbwalker/walkerOS/blob/main/skills/walkeros-using-step-examples/SKILL.md#command-step-example) for the full test-runner pattern.
+Supported commands: \`config\`, \`consent\`, \`user\`, \`run\`. When `command` is set, `mapping` is ignored, because commands don't flow through event mapping. See the [walkeros-using-step-examples skill](https://github.com/elbwalker/walkerOS/blob/main/skills/walkeros-using-step-examples/SKILL.md#command-step-example) for the full test-runner pattern.
 
 You can add as many named examples as you need. Each name becomes addressable from the CLI with `--example`.
 
@@ -112,9 +112,9 @@ A walkerOS flow has three distinct type zones. The shape of `in` and `out` depen
   specific        varying properties          specific
 ```
 
-- **Source `in`** — raw HTTP request body, DOM event, dataLayer push (package-specific)
-- **Source `out` through destination `in`** — `walkerOS.Event` (known structure, varying properties)
-- **Destination `out`** — `gtag()` args, `fbq()` args, HTTP POST body (vendor-specific)
+- **Source `in`**: raw HTTP request body, DOM event, dataLayer push (package-specific)
+- **Source `out` through destination `in`**: `walkerOS.Event` (known structure, varying properties)
+- **Destination `out`**: `gtag()` args, `fbq()` args, HTTP POST body (vendor-specific)
 
 Transformers that filter events use `out: false` to indicate rejection.
 
@@ -278,7 +278,7 @@ These are included in the package's `walkerOS.json` metadata and discoverable vi
 
 ## Next steps
 
-- **[CLI](/docs/apps/cli)** — Bundle and simulate flows with examples
-- **[Flow](/docs/getting-started/flow)** — Learn the full flow configuration format
-- **[Mapping](/docs/mapping)** — Transform events between steps
-- **[Event model](/docs/getting-started/event-model)** — Understand the walkerOS event structure
+- **[CLI](/docs/apps/cli)**: Bundle and simulate flows with examples
+- **[Flow](/docs/getting-started/flow)**: Learn the full flow configuration format
+- **[Mapping](/docs/mapping)**: Transform events between steps
+- **[Event model](/docs/getting-started/event-model)**: Understand the walkerOS event structure

@@ -44,19 +44,22 @@ export const userLoginIdentify: ClarityStepExample = {
   in: getEvent('user login', {
     timestamp: 1700000102,
     data: { id: 'u-123', name: 'Jane Doe' },
+    globals: { pagegroup: 'shop', pagetype: 'home' },
   }),
   mapping: {
     settings: {
       identify: {
         map: {
           customId: 'data.id',
+          customSessionId: 'user.session',
+          customPageId: 'globals.pagetype',
           friendlyName: 'data.name',
         },
       },
     },
   },
   out: [
-    ['clarity.identify', 'u-123', undefined, undefined, 'Jane Doe'],
+    ['clarity.identify', 'u-123', 's3ss10n', 'home', 'Jane Doe'],
     ['clarity.event', 'user login'],
   ],
 };

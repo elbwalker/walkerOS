@@ -251,9 +251,9 @@ await getMappingEvent(
 
 Two related but distinct rule flags control destination behavior:
 
-- `ignore: true` — the rule matched but **nothing happens**. No data
+- `ignore: true`: the rule matched but **nothing happens**. No data
   transformation, no destination call, no side effects. Use for suppression.
-- `skip: true` — the rule matched and the destination's `push()` **is** called.
+- `skip: true`: the rule matched and the destination's `push()` **is** called.
   `settings.identify`, `settings.revenue`, `settings.group`, etc. still run.
   Only the destination's default forwarding call (e.g. `track()`, `capture()`,
   `event()`) is suppressed. Use for "identify without an event" style flows.

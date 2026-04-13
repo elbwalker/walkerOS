@@ -3,6 +3,37 @@ import type { Env, MixpanelGroup } from '../types';
 const noop = () => {};
 
 /**
+ * A recording group handle that accumulates calls for display in DestinationDemo.
+ * Each method records its arguments and returns `this` for chaining.
+ */
+class RecordingGroup implements MixpanelGroup {
+  _calls: Array<{ method: string; args: unknown[] }> = [];
+
+  private _record(method: string, ...args: unknown[]) {
+    this._calls.push({ method, args });
+  }
+
+  set(...args: unknown[]) {
+    this._record('set', ...args);
+  }
+  set_once(...args: unknown[]) {
+    this._record('set_once', ...args);
+  }
+  unset(...args: unknown[]) {
+    this._record('unset', ...args);
+  }
+  union(...args: unknown[]) {
+    this._record('union', ...args);
+  }
+  remove(...args: unknown[]) {
+    this._record('remove', ...args);
+  }
+  delete(...args: unknown[]) {
+    this._record('delete', ...args);
+  }
+}
+
+/**
  * A no-op group handle returned by the stub get_group(). Tests replace the
  * get_group function in the spy runner so this stub is never actually seen.
  */

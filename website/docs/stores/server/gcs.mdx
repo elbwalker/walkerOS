@@ -11,7 +11,7 @@ import { schemas } from '@walkeros/server-store-gcs/dev';
 
 <PackageLink env="server" github="packages/server/stores/gcs" npm="@walkeros/server-store-gcs" />
 
-Google Cloud Storage store with zero runtime dependencies. Uses raw `fetch` against the GCS JSON API with built-in auth — Application Default Credentials (ADC) on Cloud Run / GKE, or explicit service account JWT for non-GCP environments.
+Google Cloud Storage store with zero runtime dependencies. Uses raw `fetch` against the GCS JSON API with built-in auth: Application Default Credentials (ADC) on Cloud Run / GKE, or explicit service account JWT for non-GCP environments.
 
 ## Setup
 
@@ -79,7 +79,7 @@ Add to your `flow.json`:
 
 ### Cloud Run / GKE (ADC)
 
-When running on GCP infrastructure, omit `credentials`. The store fetches access tokens from the metadata server automatically — no configuration needed.
+When running on GCP infrastructure, omit `credentials`. The store fetches access tokens from the metadata server automatically, with no configuration needed.
 
 ### Non-GCP (Service Account)
 

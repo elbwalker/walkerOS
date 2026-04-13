@@ -1,6 +1,6 @@
 ---
 title: Segment
-description: Segment CDP — route events to 400+ downstream destinations
+description: Segment CDP, routing events to 400+ downstream destinations
 path: /docs/destinations/web/segment
 sidebar_position: 8
 package: '@walkeros/web-destination-segment'
@@ -24,7 +24,7 @@ event data to 400+ downstream destinations (analytics, marketing,
 warehouses, ...). This destination forwards walkerOS events to Segment via
 the official
 [`@segment/analytics-next`](https://www.npmjs.com/package/@segment/analytics-next)
-(Analytics.js 2.0) SDK, implementing the full Segment Spec surface — `track`,
+(Analytics.js 2.0) SDK, implementing the full Segment Spec surface: `track`,
 `identify`, `group`, `page`, and `reset`.
 
 :::info Where This Fits
@@ -114,14 +114,15 @@ individual event mapping.
 
 ### Default event forwarding
 
-Every walkerOS event becomes `analytics.track(name, properties)` without any
-mapping.
+Every walkerOS event becomes `analytics.track(name, properties)`.
+Without `include` config, `properties` is empty. Add `include: ['data']`
+to the destination config to forward event data as properties.
 
 <DestinationDemo
   destination={destination}
   settings={{ apiKey: 'test-project' }}
   event={examples.step.defaultEventForwarding.in}
-  mapping={examples.step.defaultEventForwarding.mapping}
+  mapping={{ include: ['data'] }}
   generic={true}
 />
 
@@ -154,7 +155,7 @@ Attach a user to a company and set the company's traits in a single
 
 ### Page views
 
-Segment's `page()` is first-class — configure it explicitly via
+Segment's `page()` is first-class. Configure it explicitly via
 `mapping.settings.page`.
 
 <DestinationDemo
@@ -202,7 +203,7 @@ to Segment category names:
 **Deferred-load consent pattern.** When `config.consent` is declared,
 `AnalyticsBrowser.load()` is held until the first `walker consent` command
 that grants all required keys. This is Segment's primary consent mechanism
-— Analytics.js has no `optOut()` method, so the only way to enforce consent
+Analytics.js has no `optOut()` method, so the only way to enforce consent
 is to avoid loading the SDK in the first place.
 
 <CodeSnippet
