@@ -3,9 +3,9 @@ import type {
   Destination as CoreDestination,
 } from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
-import type { Types as AmplitudeTypes } from '@amplitude/analytics-browser';
+import type { Types as AmplitudeTypes } from '@amplitude/unified';
 import type { SessionReplayOptions } from '@amplitude/plugin-session-replay-browser';
-import type { ExperimentConfig } from '@amplitude/experiment-js-client';
+import type { ExperimentPluginConfig } from '@amplitude/plugin-experiment-browser';
 import type { InitOptions as EngagementInitOptions } from '@amplitude/engagement-browser';
 
 // Amplitude's BrowserOptions has an `identify` field that conflicts with our
@@ -28,7 +28,7 @@ export interface Settings extends BrowserOptions {
   apiKey: string;
   identify?: WalkerOSMapping.Value;
   sessionReplay?: SessionReplayOptions;
-  experiment?: ExperimentConfig & { deploymentKey: string };
+  experiment?: ExperimentPluginConfig & { deploymentKey: string };
   engagement?: boolean | EngagementInitOptions;
   /** Runtime state — populated by init() and mutated by push(). Not user-facing. */
   _state?: RuntimeState;
@@ -41,8 +41,6 @@ export interface RuntimeState {
     device?: string;
     session?: number;
   };
-  /** The Experiment client returned by initializeWithAmplitudeAnalytics, stored so on('consent') can stop it (v2). */
-  experimentClient?: unknown;
 }
 
 export type InitSettings = Partial<Settings>;
@@ -61,15 +59,12 @@ export interface Mapping {
 }
 
 /**
- * Amplitude SDK surface — the subset of @amplitude/analytics-browser the
+ * Amplitude SDK surface — the subset of @amplitude/unified the
  * destination actually uses. Mirrors the real module's named exports so
  * tests can mock each method individually via env.amplitude.
  */
 export interface AmplitudeSDK {
-  init: (
-    apiKey: string,
-    options?: AmplitudeBrowserOptions,
-  ) => { promise: Promise<void> };
+  initAll: (apiKey: string, options?: Record<string, unknown>) => Promise<void>;
   track: (eventType: string, eventProperties?: Record<string, unknown>) => void;
   identify: (identify: IdentifyInstance) => void;
   revenue: (revenue: RevenueInstance) => void;
@@ -90,7 +85,7 @@ export interface AmplitudeSDK {
   Revenue: new () => RevenueInstance;
 }
 
-/** Chainable Identify — mirrors @amplitude/analytics-browser Identify class. */
+/** Chainable Identify — mirrors @amplitude/unified Identify class. */
 export interface IdentifyInstance {
   set: (property: string, value: unknown) => IdentifyInstance;
   setOnce: (property: string, value: unknown) => IdentifyInstance;
@@ -104,7 +99,7 @@ export interface IdentifyInstance {
   clearAll: () => IdentifyInstance;
 }
 
-/** Chainable Revenue — mirrors @amplitude/analytics-browser Revenue class. */
+/** Chainable Revenue — mirrors @amplitude/unified Revenue class. */
 export interface RevenueInstance {
   setProductId: (id: string) => RevenueInstance;
   setPrice: (price: number) => RevenueInstance;
@@ -119,7 +114,7 @@ export interface RevenueInstance {
 
 /**
  * Env — optional SDK override. Production leaves this undefined and the
- * destination falls back to the real @amplitude/analytics-browser module
+ * destination falls back to the real @amplitude/unified module
  * import. Tests provide a mock via env.amplitude = { ... }.
  */
 export interface Env extends DestinationWeb.Env {

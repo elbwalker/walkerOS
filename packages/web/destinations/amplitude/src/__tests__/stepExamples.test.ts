@@ -1,23 +1,5 @@
-// @amplitude/analytics-browser is ESM-style and Jest's CJS transformer
-// can't parse it at import time. Tests always wire their own mock via
-// env.amplitude, so the real module is never touched — we stub the
-// import with an empty namespace to satisfy Jest's loader.
-jest.mock('@amplitude/analytics-browser', () => ({
+jest.mock('@amplitude/unified', () => ({
   __esModule: true,
-}));
-jest.mock('@amplitude/plugin-session-replay-browser', () => ({
-  __esModule: true,
-  sessionReplayPlugin: () => ({}),
-}));
-jest.mock('@amplitude/experiment-js-client', () => ({
-  __esModule: true,
-  Experiment: {
-    initializeWithAmplitudeAnalytics: jest.fn(() => ({ stop: jest.fn() })),
-  },
-}));
-jest.mock('@amplitude/engagement-browser', () => ({
-  __esModule: true,
-  plugin: () => ({}),
 }));
 
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
@@ -143,9 +125,9 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
       calls.push([`amplitude.${name}`, ...args]);
     };
   env.amplitude = {
-    init: ((_apiKey: string, _opts?: unknown) => ({
-      promise: Promise.resolve(),
-    })) as NonNullable<Env['amplitude']>['init'],
+    initAll: (async (...args: unknown[]) => {
+      calls.push(['amplitude.initAll', ...args]);
+    }) as NonNullable<Env['amplitude']>['initAll'],
     track: ((eventType: string, props?: Record<string, unknown>) => {
       calls.push(['amplitude.track', eventType, props ?? {}]);
     }) as NonNullable<Env['amplitude']>['track'],
@@ -242,7 +224,7 @@ describe('amplitude destination — step examples', () => {
 
     // Drop init — every example triggers init once; it's not part of `out`.
     const expected = flatten(example.out as ExpectedOut);
-    const actual = collected().filter(([path]) => path !== 'amplitude.init');
+    const actual = collected().filter(([path]) => path !== 'amplitude.initAll');
 
     expect(actual).toEqual(expected);
   });

@@ -5,7 +5,7 @@ import type { Env, IdentifyInstance, RevenueInstance } from '../types';
  *
  * Tests clone `push` and replace individual methods with jest spies.
  * Production leaves `env.amplitude` undefined — the destination falls back
- * to the real `@amplitude/analytics-browser` module namespace.
+ * to the real `@amplitude/unified` module namespace.
  */
 
 const noop = () => {};
@@ -112,7 +112,7 @@ class MockRevenue implements RevenueInstance {
  */
 export const init: Env | undefined = {
   amplitude: {
-    init: noopPromise,
+    initAll: () => Promise.resolve(),
     track: noop,
     identify: noop,
     revenue: noop,
@@ -136,7 +136,7 @@ export const init: Env | undefined = {
  */
 export const push: Env = {
   amplitude: {
-    init: noopPromise,
+    initAll: () => Promise.resolve(),
     track: noop,
     identify: noop,
     revenue: noop,
@@ -156,7 +156,7 @@ export const push: Env = {
 
 /** Simulation tracking paths for CLI --simulate. */
 export const simulation = [
-  'call:amplitude.init',
+  'call:amplitude.initAll',
   'call:amplitude.track',
   'call:amplitude.identify',
   'call:amplitude.revenue',

@@ -52,19 +52,19 @@ export const SettingsSchema = z.object({
   sessionReplay: z
     .unknown()
     .describe(
-      'Session Replay plugin options. When present, the @amplitude/plugin-session-replay-browser plugin is loaded with these options.',
+      'Session Replay options. When present, session replay is enabled via @amplitude/unified with the provided options.',
     )
     .optional(),
   experiment: z
     .unknown()
     .describe(
-      'Feature Experiment SDK config. Must include `deploymentKey`. When present, the @amplitude/experiment-js-client SDK is initialized with Amplitude Analytics wiring.',
+      'Feature Experiment config. Must include `deploymentKey`. When present, the experiment plugin from @amplitude/unified is configured with the provided options.',
     )
     .optional(),
   engagement: z
     .unknown()
     .describe(
-      'Guides & Surveys plugin config. Pass `true` for defaults, or an options object for custom configuration.',
+      'Guides & Surveys config. Pass `true` for defaults, or an options object for custom configuration. Enabled via @amplitude/unified.',
     )
     .optional(),
 });

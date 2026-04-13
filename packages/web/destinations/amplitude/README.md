@@ -14,8 +14,8 @@
 This package forwards walkerOS events to [Amplitude](https://amplitude.com/) —
 product analytics with identity, revenue, groups, and optional session replay,
 experiments, and guides & surveys. Built on the official
-[`@amplitude/analytics-browser`](https://www.npmjs.com/package/@amplitude/analytics-browser)
-SDK plus three optional plugin packages.
+[`@amplitude/unified`](https://www.npmjs.com/package/@amplitude/unified) SDK
+which bundles analytics, session replay, experiments, and engagement.
 
 walkerOS follows a **source → collector → destination** architecture. This
 Amplitude destination receives processed events from the walkerOS collector and
@@ -37,10 +37,9 @@ forwards them as Amplitude track, identify, revenue, group, and consent calls.
 - **Groups** — `settings.group` and `settings.groupIdentify` for B2B flows
 - **Consent** — `on('consent')` handler derives the consent keys from
   `config.consent` and toggles `amplitude.setOptOut()`
-- **Optional plugins** (all npm-bundled, opt-in via settings): Session Replay,
-  Feature Experiments (via `initializeWithAmplitudeAnalytics`), Engagement
-  (Guides & Surveys)
-- **Async init** — awaits `amplitude.init(...).promise` so downstream pushes are
+- **Optional plugins** (all npm-bundled via `@amplitude/unified`, opt-in via
+  settings): Session Replay, Feature Experiments, Engagement (Guides & Surveys)
+- **Async init** — awaits `amplitude.initAll(...)` so downstream pushes are
   truly ready before returning
 
 > **Bundle cost:** All three plugin packages are statically imported and
@@ -86,8 +85,8 @@ All fields of Amplitude's `BrowserOptions` pass through to
 | `apiKey`        | `string`                             | Your Amplitude project API key                                                                                                            | Yes      |
 | `identify`      | `Mapping.Value`                      | Destination-level identity mapping; see Identity section                                                                                  | No       |
 | `include`       | `string[]`                           | walkerOS event sections to flatten into `event_properties` (`data`, `globals`, `context`, `user`, `source`, `version`, `event`, or `all`) | No       |
-| `sessionReplay` | `SessionReplayOptions`               | If set, loads `@amplitude/plugin-session-replay-browser` with these options                                                               | No       |
-| `experiment`    | `ExperimentConfig` + `deploymentKey` | If `deploymentKey` set, initializes `@amplitude/experiment-js-client` via `initializeWithAmplitudeAnalytics`                              | No       |
+| `sessionReplay` | `SessionReplayOptions`               | If set, enables session replay via `@amplitude/unified` with these options                                                                | No       |
+| `experiment`    | `ExperimentConfig` + `deploymentKey` | If `deploymentKey` set, configures the experiment plugin from `@amplitude/unified`                                                        | No       |
 | `engagement`    | `boolean \| InitOptions`             | Pass `true` for default Guides & Surveys plugin, or an options object                                                                     | No       |
 
 ### Mapping (`rule.settings`)
@@ -247,7 +246,8 @@ config: {
 
 ## Plugins
 
-All three plugins are npm-bundled and opt-in via destination settings:
+All three plugins are bundled via `@amplitude/unified` and opt-in via
+destination settings:
 
 ```typescript
 settings: {
@@ -256,7 +256,7 @@ settings: {
   // Session Replay
   sessionReplay: { sampleRate: 1 },
 
-  // Feature Experiments (separate SDK, wired via Analytics)
+  // Feature Experiments (via @amplitude/unified)
   experiment: { deploymentKey: 'DEPLOYMENT_KEY' },
 
   // Guides & Surveys (true for defaults, object for custom)

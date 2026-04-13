@@ -7,10 +7,7 @@ import {
   isObject,
   isString,
 } from '@walkeros/core';
-import * as amplitudeSDK from '@amplitude/analytics-browser';
-import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
-import { plugin as engagementPlugin } from '@amplitude/engagement-browser';
-import { Experiment } from '@amplitude/experiment-js-client';
+import * as amplitudeSDK from '@amplitude/unified';
 import type {
   AmplitudeSDK,
   Destination,
@@ -24,7 +21,7 @@ export * as DestinationAmplitude from './types';
 
 /**
  * Resolve the Amplitude SDK: use the caller-provided mock when available
- * (tests), otherwise fall back to the real @amplitude/analytics-browser
+ * (tests), otherwise fall back to the real @amplitude/unified
  * namespace. Matches @walkeros/web-destination-clarity and
  * @walkeros/server-destination-gcp (BigQuery).
  */
@@ -210,8 +207,7 @@ export const destinationAmplitude: Destination = {
     if (!settings?.apiKey) return false;
 
     const amp = getAmplitude(env as Env | undefined);
-    // Destructure walkerOS-specific keys out; the rest flow through to
-    // Amplitude's BrowserOptions.
+
     const {
       apiKey,
       identify: _identify,
@@ -222,41 +218,23 @@ export const destinationAmplitude: Destination = {
       ...browserOptions
     } = settings;
 
-    // Apply walkerOS defaults that differ from Amplitude defaults.
-    const options = {
+    const analyticsOptions = {
       autocapture: false,
       identityStorage: 'none' as const,
       ...browserOptions,
     };
 
-    // Await the SDK's init promise so downstream pushes are truly ready.
-    await amp.init(apiKey, options).promise;
+    await amp.initAll(apiKey, {
+      serverZone: analyticsOptions.serverZone,
+      analytics: analyticsOptions,
+      ...(sessionReplay ? { sessionReplay } : {}),
+      ...(experiment?.deploymentKey ? { experiment } : {}),
+      ...(engagement
+        ? { engagement: engagement === true ? undefined : engagement }
+        : {}),
+    });
 
-    // Initialize runtime state.
     const _state: RuntimeState = { lastIdentity: {} };
-
-    // Plugin: Session Replay
-    if (sessionReplay) {
-      await amp.add(sessionReplayPlugin(sessionReplay)).promise;
-    }
-
-    // Plugin: Engagement (Guides & Surveys)
-    if (engagement) {
-      const engagementOptions = engagement === true ? undefined : engagement;
-      await amp.add(engagementPlugin(engagementOptions)).promise;
-    }
-
-    // Plugin: Feature Experiments (separate SDK, wires into Analytics)
-    if (experiment?.deploymentKey) {
-      const { deploymentKey, ...experimentConfig } = experiment;
-      const experimentClient = Experiment.initializeWithAmplitudeAnalytics(
-        deploymentKey,
-        experimentConfig,
-      );
-      // Store in runtime state so on('consent') can stop it (v2 feature).
-      _state.experimentClient = experimentClient;
-    }
-
     return { ...config, settings: { ...settings, _state } };
   },
 
@@ -371,10 +349,6 @@ export const destinationAmplitude: Destination = {
   on(type, context) {
     if (type !== 'consent' || !context.data) return;
     const amp = getAmplitude(context.env as Env | undefined);
-
-    // TODO(v2): If consent is revoked and settings.experiment was
-    // configured, also call context.config.settings._state.experimentClient.stop()
-    // — setOptOut() does not affect the Experiment SDK.
 
     const consent = context.data as WalkerOS.Consent;
     // Derive the consent key from config.consent — iterate every key the
