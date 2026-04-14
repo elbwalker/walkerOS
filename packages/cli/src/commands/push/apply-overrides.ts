@@ -29,6 +29,11 @@ export function applyOverrides(
     }
   }
 
+  // Both push and simulate need a running collector by default.
+  // Collector settings are spread onto the root config (not nested),
+  // so `run` is a top-level key when the flow declares collector.run.
+  config.run = true;
+
   // Transformer path-specific mocks
   if (overrides.transformerMocks) {
     const transformers = config.transformers as
