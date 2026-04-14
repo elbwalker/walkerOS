@@ -110,9 +110,9 @@ export default function Features() {
     <div
       style={{ backgroundColor: 'var(--ifm-background-color)' }}
       className="py-24 sm:py-32"
-      {...tagger.entity('features').get()}
-      {...tagger.action('visible', 'impression').get()}
-      {...tagger.context('component', 'features').get()}
+      {...tagger.entity('features')}
+      {...tagger.action('visible:impression')}
+      {...tagger.context('component', 'features')}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">

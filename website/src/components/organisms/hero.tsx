@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import { ChevronRightIcon } from '@heroicons/react/20/solid';
 import Link from '@docusaurus/Link';
 import { ArchitectureFlow, Icon } from '@walkeros/explorer';
 import type { FlowColumn } from '@walkeros/explorer';
@@ -11,18 +12,49 @@ const walkerOSSources: FlowColumn = {
     {
       title: 'Client-side',
       items: [
-        { icon: <Icon icon="mdi:web" />, label: 'Browser' },
-        { icon: <Icon icon="mdi:layers-outline" />, label: 'dataLayer' },
+        {
+          icon: <Icon icon="mdi:web" />,
+          label: 'Browser',
+          link: '/docs/sources/web/browser',
+        },
+        {
+          icon: <Icon icon="mdi:layers-outline" />,
+          label: 'dataLayer',
+          link: '/docs/sources/web/dataLayer',
+        },
+        {
+          icon: <Icon icon="mdi:shield-check-outline" />,
+          label: 'CMP',
+          link: '/docs/sources/web/cmps',
+        },
       ],
+      moreLink: '/docs/sources',
     },
     {
       title: 'Server-side',
       items: [
-        { icon: <Icon icon="simple-icons:express" />, label: 'Express' },
-        { icon: <Icon icon="mdi:api" />, label: 'Fetch' },
-        { icon: <Icon icon="logos:aws-lambda" />, label: 'AWS Lambda' },
-        { icon: <Icon icon="logos:google-cloud" />, label: 'GCP Functions' },
+        {
+          icon: <Icon icon="simple-icons:express" />,
+          label: 'Express',
+          link: '/docs/sources/server/express',
+        },
+        {
+          icon: <Icon icon="mdi:api" />,
+          label: 'Fetch',
+          link: '/docs/sources/server/fetch',
+        },
+        {
+          icon: <Icon icon="logos:aws-lambda" />,
+          label: 'AWS Lambda',
+          link: '/docs/sources/server/aws',
+        },
+        {
+          icon: <Icon icon="logos:google-cloud" />,
+          label: 'GCP Functions',
+          link: '/docs/sources/server/gcp',
+        },
       ],
+      moreLink: '/docs/sources',
     },
   ],
 };
@@ -33,29 +65,59 @@ const walkerOSDestinations: FlowColumn = {
     {
       title: 'Client-side',
       items: [
-        { icon: <Icon icon="logos:google-analytics" />, label: 'GA4' },
-        { icon: <Icon icon="logos:google-ads" />, label: 'Google Ads' },
-        { icon: <Icon icon="logos:meta-icon" />, label: 'Meta Pixel' },
         {
-          icon: (
-            <Icon
-              icon="simple-icons:plausibleanalytics"
-              style={{ color: '#5850EC' }}
-            />
-          ),
-          label: 'Plausible',
+          icon: <Icon icon="logos:google-analytics" />,
+          label: 'GA4',
+          link: '/docs/destinations/web/gtag/ga4',
         },
-        { icon: <Icon icon="walkeros:piwik-pro" />, label: 'Piwik PRO' },
-        { icon: <Icon icon="mdi:api" />, label: 'API' },
+        {
+          icon: <Icon icon="logos:google-ads" />,
+          label: 'Google Ads',
+          link: '/docs/destinations/web/gtag/ads',
+        },
+        {
+          icon: <Icon icon="logos:amplitude-icon" />,
+          label: 'Amplitude',
+          link: '/docs/destinations/web/amplitude',
+        },
+        {
+          icon: <Icon icon="logos:pinterest" />,
+          label: 'Pinterest',
+          link: '/docs/destinations/web/pinterest',
+        },
+        {
+          icon: <Icon icon="logos:posthog-icon" />,
+          label: 'PostHog',
+          link: '/docs/destinations/web/posthog',
+        },
+        {
+          icon: <Icon icon="logos:tiktok-icon" />,
+          label: 'TikTok',
+          link: '/docs/destinations/web/tiktok',
+        },
       ],
+      moreLink: '/docs/destinations',
     },
     {
       title: 'Server-side',
       items: [
-        { icon: <Icon icon="logos:aws" />, label: 'AWS' },
-        { icon: <Icon icon="logos:google-cloud" />, label: 'BigQuery' },
-        { icon: <Icon icon="logos:meta-icon" />, label: 'Meta CAPI' },
+        {
+          icon: <Icon icon="logos:aws" />,
+          label: 'AWS',
+          link: '/docs/destinations/server/aws',
+        },
+        {
+          icon: <Icon icon="logos:google-cloud" />,
+          label: 'BigQuery',
+          link: '/docs/destinations/server/gcp',
+        },
+        {
+          icon: <Icon icon="logos:meta-icon" />,
+          label: 'Meta CAPI',
+          link: '/docs/destinations/server/meta-capi',
+        },
       ],
+      moreLink: '/docs/destinations',
     },
   ],
 };
@@ -91,15 +153,36 @@ export default function Hero({
       style={{
         backgroundColor: 'var(--ifm-background-color)',
       }}
-      {...tagger.entity('hero').get()}
-      {...tagger.action('visible', 'impression').get()}
-      {...tagger.context('component', 'hero').get()}
+      {...tagger.entity('hero')}
+      {...tagger.action('visible:impression')}
+      {...tagger.context('component', 'hero')}
     >
       <div className="relative isolate overflow-hidden bg-gradient-to-b from-[#01b5e2]/10">
         <div className="mx-auto max-w-7xl pb-24 pt-10 sm:pb-32 xl:grid xl:grid-cols-2 xl:gap-x-8 xl:px-8 xl:py-40">
           <div className="px-6 xl:px-0 xl:pt-4">
             <div className="mx-auto max-w-2xl">
               <div className="max-w-lg">
+                <div className="mt-24 sm:mt-32 xl:mt-16">
+                  <a
+                    href="https://github.com/elbwalker/walkerOS/releases"
+                    className="inline-flex space-x-6"
+                  >
+                    <span className="rounded-full bg-[#01b5e2]/10 px-3 py-1 text-sm/6 font-semibold text-[#01b5e2] ring-1 ring-inset ring-[#01b5e2]/20 dark:bg-[#01b5e2]/10 dark:text-[#01b5e2] dark:ring-[#01b5e2]/25">
+                      What's new
+                    </span>
+                    <span
+                      className="inline-flex items-center space-x-2 text-sm/6 font-medium"
+                      style={{ color: 'var(--color-base-content)' }}
+                    >
+                      <span>Just shipped v3.3</span>
+                      <ChevronRightIcon
+                        aria-hidden="true"
+                        className="size-5"
+                        style={{ color: 'var(--color-gray-400)' }}
+                      />
+                    </span>
+                  </a>
+                </div>
                 <h1
                   className="mt-10 text-pretty text-5xl font-semibold tracking-tight sm:text-7xl"
                   style={{ color: 'var(--color-base-content)' }}
@@ -118,8 +201,7 @@ export default function Hero({
                   <p
                     className="mt-8 text-pretty text-lg font-medium sm:text-xl/8"
                     style={{ color: 'var(--color-gray-500)' }}
-                    {...(elbTitle &&
-                      tagger.property('hero', 'title', elbTitle).get())}
+                    {...(elbTitle && tagger.property('title', elbTitle))}
                   >
                     {text}
                   </p>
@@ -129,9 +211,9 @@ export default function Hero({
                     <Link
                       to={primaryButton.link}
                       className="rounded-md bg-[#01b5e2] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#01b5e2]/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#01b5e2]"
-                      {...tagger
-                        .action(primaryButton.elbAction || 'click')
-                        .get()}
+                      {...tagger.action(
+                        `click:${primaryButton.elbAction || 'click'}`,
+                      )}
                     >
                       {primaryButton.children}
                     </Link>
@@ -141,9 +223,9 @@ export default function Hero({
                       to={secondaryButton.link}
                       className="text-sm/6 font-semibold"
                       style={{ color: 'var(--color-base-content)' }}
-                      {...tagger
-                        .action(secondaryButton.elbAction || 'click')
-                        .get()}
+                      {...tagger.action(
+                        `click:${secondaryButton.elbAction || 'click'}`,
+                      )}
                     >
                       {secondaryButton.children}{' '}
                       <span aria-hidden="true">→</span>
@@ -166,7 +248,7 @@ export default function Hero({
               centerTitle="Collector"
               center={
                 <img
-                  src="/img/walkerOS_logo_new.svg"
+                  src="/img/walkerOS_logo.svg"
                   alt="walkerOS"
                   className="w-24 h-24 xl:w-32 xl:h-32"
                 />
