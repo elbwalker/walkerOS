@@ -6,11 +6,13 @@ import { cn } from '../../../lib/utils';
 export interface FlowItem {
   icon: ReactNode;
   label: string;
+  link?: string;
 }
 
 export interface FlowSection {
   title: string;
   items: FlowItem[];
+  moreLink?: string;
 }
 
 export interface FlowColumn {
@@ -106,17 +108,41 @@ function FlowSectionBox({ section }: { section: FlowSection }) {
         {section.title}
       </span>
       <div className="elb-architecture-flow__items">
-        {section.items.map((item) => (
-          <div key={item.label} className="elb-architecture-flow__item">
-            <span className="elb-architecture-flow__item-icon">
-              {item.icon}
-            </span>
-            <span className="elb-architecture-flow__item-label">
-              {item.label}
-            </span>
-          </div>
-        ))}
-        <span className="elb-architecture-flow__more">and more…</span>
+        {section.items.map((item) => {
+          const content = (
+            <>
+              <span className="elb-architecture-flow__item-icon">
+                {item.icon}
+              </span>
+              <span className="elb-architecture-flow__item-label">
+                {item.label}
+              </span>
+            </>
+          );
+          return item.link ? (
+            <a
+              key={item.label}
+              href={item.link}
+              className="elb-architecture-flow__item elb-architecture-flow__item--link"
+            >
+              {content}
+            </a>
+          ) : (
+            <div key={item.label} className="elb-architecture-flow__item">
+              {content}
+            </div>
+          );
+        })}
+        {section.moreLink ? (
+          <a
+            href={section.moreLink}
+            className="elb-architecture-flow__more elb-architecture-flow__more--link"
+          >
+            and more…
+          </a>
+        ) : (
+          <span className="elb-architecture-flow__more">and more…</span>
+        )}
       </div>
     </div>
   );
