@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
+import type { Collector, Source } from '@walkeros/core';
 import { startFlow } from '..';
 
 describe('on() helper — recursion and contract tests', () => {
@@ -12,7 +12,7 @@ describe('on() helper — recursion and contract tests', () => {
         config: {},
         push: jest.fn(),
         on: sourceOnSpy,
-      } as unknown as WalkerOS.Source,
+      } as unknown as Source.Instance,
     };
 
     const cb = jest.fn();
