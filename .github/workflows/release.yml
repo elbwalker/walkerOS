@@ -43,6 +43,9 @@ jobs:
         run: npm run clean
 
       - name: Build
+        # Needed for test/typecheck/lint/integration. A second rebuild runs
+        # after `changeset version` so the published dist embeds the bumped
+        # __VERSION__ (see walkerOS/packages/config/tsup/index.mjs).
         run: npx turbo run build --filter='!@walkeros/website'
 
       - name: Test, typecheck, lint, integration
@@ -116,6 +119,9 @@ jobs:
 
       - name: Update lock file
         run: npm install --package-lock-only
+
+      - name: Rebuild packages with bumped versions
+        run: npx turbo run build --filter='!@walkeros/website'
 
       - name: Publish to npm
         run: |

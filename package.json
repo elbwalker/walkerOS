@@ -38,7 +38,6 @@
     "format": "prettier --write .",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "publish-packages": "npm run clean && npm run build && npm run lint && npm run test && npm run test:integration && changeset version && changeset publish",
     "reset": "rm -rf .turbo && rm -rf node_modules && npm ci",
     "publish-docker": "npm run -w @walkeros/cli docker:publish",
     "test": "turbo run test",
