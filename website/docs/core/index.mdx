@@ -106,12 +106,14 @@ octet to zero.
 
 ### Hashing
 
-`getId(length?: number): string` generates random alphanumeric strings for
-unique identifiers.
+`getId(length?: number, charset?: string): string` generates random identifier
+strings. Defaults to a 6-character alphanumeric id; pass `charset` to restrict
+the allowed characters.
 
 <CodeSnippet
   code={`getId(); // Returns random 6-char string like 'a1b2c3'
-getId(10); // Returns 10-character string`}
+getId(10); // Returns 10-character alphanumeric string
+getId(5, 'abcdefghijklmnopqrstuvwxyz'); // Lowercase letters only`}
   language="javascript"
 />
 

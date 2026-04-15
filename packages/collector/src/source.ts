@@ -1,5 +1,5 @@
 import type { Collector, Elb, Ingest, Source, WalkerOS } from '@walkeros/core';
-import type { RespondOptions } from '@walkeros/core';
+import type { RespondFn, RespondOptions } from '@walkeros/core';
 import {
   createIngest,
   getMappingValue,
@@ -42,8 +42,7 @@ export async function initSource(
   // Track current ingest metadata (set per-request by setIngest)
   let currentIngest: Ingest = createIngest(sourceId);
   // Track current respond function (set per-request by setRespond)
-  let currentRespond: import('@walkeros/core').RespondFn | undefined =
-    undefined;
+  let currentRespond: RespondFn | undefined = undefined;
 
   // Compile source cache config (if configured)
   const compiledSourceCache = cache
@@ -79,6 +78,7 @@ export async function initSource(
     options: Collector.PushOptions = {},
   ) => {
     let event = rawEvent;
+    let pendingRespond: Promise<void> | undefined;
 
     // Resolve before chain (static or conditional)
     const beforeChain =
@@ -110,7 +110,9 @@ export async function initSource(
       }
       if (beforeResult.respond) currentRespond = beforeResult.respond;
       // Before chains use first result if fan-out occurred
-      event = Array.isArray(beforeResult.event) ? beforeResult.event[0] : beforeResult.event;
+      event = Array.isArray(beforeResult.event)
+        ? beforeResult.event[0]
+        : beforeResult.event;
     }
 
     // Source cache check (full=true by default for sources)
@@ -149,33 +151,43 @@ export async function initSource(
             currentRespond
           ) {
             // full=true MISS: wrap respond to intercept and cache the value.
-            // Store original value in cache, apply update rules with MISS status
-            // before responding (mirrors HIT path which applies with HIT status).
+            // Store original in cache, then apply update rules with MISS
+            // status before responding (mirrors HIT path which applies
+            // with HIT status).
+            //
+            // When `update` is configured the update step is async, so
+            // the wrapper captures its promise in `pendingRespond`.
+            // `wrappedPush` awaits that promise before returning, so
+            // any source fallback that runs after `await env.push(...)`
+            // (e.g. the express source's transparent-GIF default) sees
+            // `createRespond`'s first-call-wins flag already set and
+            // correctly no-ops. Without this, the fallback would win
+            // the race and the real response would be lost.
             const unwrappedRespond = currentRespond;
             const missUpdate = cacheResult.rule.update;
             const missContext = { ...cacheContext, cache: { status: 'MISS' } };
-            currentRespond = ((respondOptions?: Record<string, unknown>) => {
-              // Store original (without update) in cache so HIT can apply its own status
-              storeCache(
-                cacheStore,
-                cacheResult.key,
-                respondOptions,
-                cacheResult.rule.ttl,
-              );
+            const missKey = cacheResult.key;
+            const missTtl = cacheResult.rule.ttl;
 
-              // Apply update rules with MISS status, then respond
-              if (missUpdate) {
-                applyUpdate(
+            const missRespond: RespondFn = (respondOptions) => {
+              storeCache(cacheStore, missKey, respondOptions, missTtl);
+
+              if (!missUpdate) {
+                unwrappedRespond(respondOptions);
+                return;
+              }
+
+              pendingRespond = (async () => {
+                const updated = await applyUpdate(
                   respondOptions,
                   missUpdate as Record<string, unknown>,
                   missContext,
-                ).then((updated) =>
-                  unwrappedRespond(updated as Record<string, unknown>),
                 );
-              } else {
-                unwrappedRespond(respondOptions);
-              }
-            }) as import('@walkeros/core').RespondFn;
+                unwrappedRespond(updated as RespondOptions);
+              })();
+            };
+
+            currentRespond = missRespond;
           }
 
           // full=false MISS: store sentinel so subsequent requests get a HIT
@@ -196,7 +208,7 @@ export async function initSource(
           )
         : []);
 
-    return collector.push(event, {
+    const pushResult = await collector.push(event, {
       ...options,
       id: sourceId,
       ingest: currentIngest,
@@ -204,6 +216,14 @@ export async function initSource(
       mapping: config,
       preChain,
     });
+
+    // Wait for any deferred MISS update work to land on the source's
+    // respond sender before returning control to the source. This
+    // ensures source-level fallbacks (e.g. transparent GIFs) run after
+    // the real response has been committed via first-call-wins.
+    if (pendingRespond) await pendingRespond;
+
+    return pushResult;
   };
 
   // Create initial logger scoped to sourceId (type will be added after init)

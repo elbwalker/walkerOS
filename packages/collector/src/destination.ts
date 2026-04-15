@@ -104,9 +104,9 @@ export async function addDestination(
 
   let id = destination.config.id; // Use given id
   if (!id) {
-    // Generate a new id if none was given
+    // Generate a new id if none was given (lowercase alpha only for readability)
     do {
-      id = getId(4);
+      id = getId(5, 'abcdefghijklmnopqrstuvwxyz');
     } while (collector.destinations[id]);
   }
 

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-api",
   "description": "API server destination for walkerOS",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -37,8 +37,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "3.3.0",
-    "@walkeros/server-core": "3.3.0"
+    "@walkeros/core": "3.3.1",
+    "@walkeros/server-core": "3.3.1"
   },
   "devDependencies": {},
   "repository": {

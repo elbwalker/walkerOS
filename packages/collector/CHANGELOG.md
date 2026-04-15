@@ -1,5 +1,26 @@
 # @walkeros/collector
 
+## 3.3.1
+
+### Patch Changes
+
+- b10144a: Collector auto-generated destination keys now use lowercase letters
+  only (a-z, length 5) instead of base-36 (0-9a-z, length 4). `getId` gains an
+  optional charset parameter; default behavior is unchanged so session IDs and
+  other existing callers stay bit-for-bit identical.
+- 206185a: Fix infinite recursion when registering `on('consent', ...)`
+  handlers. The collector's `on()` helper previously re-broadcast to all source
+  `on` handlers, causing self-re-registering consent handlers to recurse
+  unbounded and crash the tab. `on()` now fires only the newly-registered
+  callback against current state.
+- 50e5d09: Fix release pipeline to embed the correct `__VERSION__` in published
+  packages.
+- 32ff626: Fix race in source cache MISS wrapper: `applyUpdate` promise was
+  fire-and-forget, so a source fallback (e.g. express GIF default) could win
+  `createRespond`'s first-call-wins race on the first request. `wrappedPush` now
+  awaits the pending update before returning.
+  - @walkeros/core@3.3.1
+
 ## 3.3.0
 
 ### Minor Changes

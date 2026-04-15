@@ -5,7 +5,7 @@ export default function HomeHero() {
   return (
     <Hero
       title="Open-source data collection and tag management"
-      text="Collect and route your behavioral data with full control and ownership. Privacy-first, vendor-free, and built for developers."
+      text="Collect and route your behavioral data with full control and ownership. Add, or swap any analytics or marketing tool in config, no re-instrumentation, no vendor lock-in."
       primaryButton={{
         link: '/docs/',
         children: 'Get started',

@@ -29,7 +29,7 @@ export async function on(
   (on[type] as typeof onType) = onType;
 
   // Execute the on function directly
-  await onApply(collector, type, options);
+  fireCallbacks(collector, type, options);
 }
 
 /**
@@ -61,6 +61,81 @@ export function callDestinationOn(
 }
 
 /**
+ * Fire a set of registered `on` callbacks against current collector state.
+ *
+ * Used by both `on()` (when registering a new callback, to fire it against
+ * current state) and `onApply()` (when dispatching a state-change command to
+ * every registered callback of that type). Separating this from `onApply`
+ * ensures `on()` does NOT trigger `onApply`'s source/destination broadcast,
+ * which would cause infinite recursion if a source's `on` handler registers
+ * another callback of the same type.
+ */
+function fireCallbacks(
+  collector: Collector.Instance,
+  type: On.Types,
+  options: Array<On.Options>,
+  config?: unknown,
+): void {
+  // Calculate context data once for all sources and destinations
+  let contextData: unknown;
+
+  switch (type) {
+    case Const.Commands.Consent:
+      contextData = config || collector.consent;
+      break;
+    case Const.Commands.Session:
+      contextData = collector.session;
+      break;
+    case Const.Commands.User:
+      contextData = config || collector.user;
+      break;
+    case Const.Commands.Custom:
+      contextData = config || collector.custom;
+      break;
+    case Const.Commands.Globals:
+      contextData = config || collector.globals;
+      break;
+    case Const.Commands.Config:
+      contextData = config || collector.config;
+      break;
+    case Const.Commands.Ready:
+    case Const.Commands.Run:
+    default:
+      contextData = undefined;
+      break;
+  }
+
+  if (!options.length) return;
+
+  switch (type) {
+    case Const.Commands.Consent:
+      onConsent(
+        collector,
+        options as Array<On.ConsentConfig>,
+        config as WalkerOS.Consent,
+      );
+      break;
+    case Const.Commands.Ready:
+      onReady(collector, options as Array<On.ReadyConfig>);
+      break;
+    case Const.Commands.Run:
+      onRun(collector, options as Array<On.RunConfig>);
+      break;
+    case Const.Commands.Session:
+      onSession(collector, options as Array<On.SessionConfig>);
+      break;
+    default:
+      // Generic handler for user, custom, globals, config, and custom events
+      options.forEach((func) => {
+        if (typeof func === 'function') {
+          tryCatch(func as On.GenericFn)(collector, contextData);
+        }
+      });
+      break;
+  }
+}
+
+/**
  * Applies all registered callbacks for a specific event type.
  *
  * @param collector The walkerOS collector instance.
@@ -82,7 +157,7 @@ export async function onApply(
     onConfig = collector.on[type] || [];
   }
 
-  // Calculate context data once for all sources and destinations
+  // Calculate context data once for source/destination broadcast
   let contextData: unknown;
 
   switch (type) {
@@ -141,34 +216,7 @@ export async function onApply(
     await activatePending(collector, type);
   }
 
-  if (!onConfig.length) return !vetoed;
-
-  switch (type) {
-    case Const.Commands.Consent:
-      onConsent(
-        collector,
-        onConfig as Array<On.ConsentConfig>,
-        config as WalkerOS.Consent,
-      );
-      break;
-    case Const.Commands.Ready:
-      onReady(collector, onConfig as Array<On.ReadyConfig>);
-      break;
-    case Const.Commands.Run:
-      onRun(collector, onConfig as Array<On.RunConfig>);
-      break;
-    case Const.Commands.Session:
-      onSession(collector, onConfig as Array<On.SessionConfig>);
-      break;
-    default:
-      // Generic handler for user, custom, globals, config, and custom events
-      onConfig.forEach((func) => {
-        if (typeof func === 'function') {
-          tryCatch(func as On.GenericFn)(collector, contextData);
-        }
-      });
-      break;
-  }
+  fireCallbacks(collector, type, onConfig, config);
 
   return !vetoed;
 }

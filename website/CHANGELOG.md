@@ -1,5 +1,53 @@
 # @walkeros/website
 
+## 3.3.1
+
+### Patch Changes
+
+- Updated dependencies [b10144a]
+- Updated dependencies [206185a]
+- Updated dependencies [50e5d09]
+- Updated dependencies [32ff626]
+  - @walkeros/collector@3.3.1
+  - @walkeros/explorer@3.3.1
+  - @walkeros/walker.js@3.3.1
+  - @walkeros/server-destination-amplitude@3.3.1
+  - @walkeros/server-destination-datamanager@3.3.1
+  - @walkeros/server-destination-linkedin@3.3.1
+  - @walkeros/server-destination-meta@3.3.1
+  - @walkeros/server-destination-mixpanel@3.3.1
+  - @walkeros/server-destination-pinterest@3.3.1
+  - @walkeros/server-destination-posthog@3.3.1
+  - @walkeros/server-destination-segment@3.3.1
+  - @walkeros/server-destination-slack@3.3.1
+  - @walkeros/server-destination-tiktok@3.3.1
+  - @walkeros/server-source-express@3.3.1
+  - @walkeros/server-source-fetch@3.3.1
+  - @walkeros/web-destination-amplitude@3.3.1
+  - @walkeros/web-destination-api@3.3.1
+  - @walkeros/web-destination-clarity@3.3.1
+  - @walkeros/web-destination-linkedin@3.3.1
+  - @walkeros/web-destination-meta@3.3.1
+  - @walkeros/web-destination-mixpanel@3.3.1
+  - @walkeros/web-destination-pinterest@3.3.1
+  - @walkeros/web-destination-piwikpro@3.3.1
+  - @walkeros/web-destination-plausible@3.3.1
+  - @walkeros/web-destination-posthog@3.3.1
+  - @walkeros/web-destination-segment@3.3.1
+  - @walkeros/web-destination-snowplow@3.3.1
+  - @walkeros/web-destination-tiktok@3.3.1
+  - @walkeros/web-source-browser@3.3.1
+  - @walkeros/core@3.3.1
+  - @walkeros/server-destination-api@3.3.1
+  - @walkeros/server-destination-aws@3.3.1
+  - @walkeros/server-destination-gcp@3.3.1
+  - @walkeros/server-store-fs@3.3.1
+  - @walkeros/server-store-gcs@3.3.1
+  - @walkeros/server-store-s3@3.3.1
+  - @walkeros/store-memory@3.3.1
+  - @walkeros/transformer-validator@3.3.1
+  - @walkeros/web-destination-gtag@3.3.1
+
 ## 3.3.0
 
 ### Patch Changes

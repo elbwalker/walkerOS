@@ -686,6 +686,23 @@ describe('Destination', () => {
     });
   });
 
+  describe('auto-generated id charset', () => {
+    test('auto-generated destination id uses lowercase alpha charset (a-z, length 5)', async () => {
+      const autoIdDestination: Destination.Instance = {
+        push: jest.fn(),
+        config: { init: true },
+      };
+
+      const { elb, collector } = await startFlow({});
+
+      await elb('walker destination', { code: autoIdDestination });
+
+      const keys = Object.keys(collector.destinations);
+      expect(keys).toHaveLength(1);
+      expect(keys[0]).toMatch(/^[a-z]{5}$/);
+    });
+  });
+
   describe('skip flag', () => {
     test('still calls destination.push when rule.skip is true', async () => {
       const skipDestination: Destination.Instance = {

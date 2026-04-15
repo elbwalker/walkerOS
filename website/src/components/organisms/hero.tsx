@@ -12,18 +12,49 @@ const walkerOSSources: FlowColumn = {
     {
       title: 'Client-side',
       items: [
-        { icon: <Icon icon="mdi:web" />, label: 'Browser' },
-        { icon: <Icon icon="mdi:layers-outline" />, label: 'dataLayer' },
+        {
+          icon: <Icon icon="mdi:web" />,
+          label: 'Browser',
+          link: '/docs/sources/web/browser',
+        },
+        {
+          icon: <Icon icon="mdi:layers-outline" />,
+          label: 'dataLayer',
+          link: '/docs/sources/web/dataLayer',
+        },
+        {
+          icon: <Icon icon="mdi:shield-check-outline" />,
+          label: 'CMP',
+          link: '/docs/sources/web/cmps',
+        },
       ],
+      moreLink: '/docs/sources',
     },
     {
       title: 'Server-side',
       items: [
-        { icon: <Icon icon="simple-icons:express" />, label: 'Express' },
-        { icon: <Icon icon="mdi:api" />, label: 'Fetch' },
-        { icon: <Icon icon="logos:aws-lambda" />, label: 'AWS Lambda' },
-        { icon: <Icon icon="logos:google-cloud" />, label: 'GCP Functions' },
+        {
+          icon: <Icon icon="simple-icons:express" />,
+          label: 'Express',
+          link: '/docs/sources/server/express',
+        },
+        {
+          icon: <Icon icon="mdi:api" />,
+          label: 'Fetch',
+          link: '/docs/sources/server/fetch',
+        },
+        {
+          icon: <Icon icon="logos:aws-lambda" />,
+          label: 'AWS Lambda',
+          link: '/docs/sources/server/aws',
+        },
+        {
+          icon: <Icon icon="logos:google-cloud" />,
+          label: 'GCP Functions',
+          link: '/docs/sources/server/gcp',
+        },
       ],
+      moreLink: '/docs/sources',
     },
   ],
 };
@@ -34,29 +65,59 @@ const walkerOSDestinations: FlowColumn = {
     {
       title: 'Client-side',
       items: [
-        { icon: <Icon icon="logos:google-analytics" />, label: 'GA4' },
-        { icon: <Icon icon="logos:google-ads" />, label: 'Google Ads' },
-        { icon: <Icon icon="logos:meta-icon" />, label: 'Meta Pixel' },
         {
-          icon: (
-            <Icon
-              icon="simple-icons:plausibleanalytics"
-              style={{ color: '#5850EC' }}
-            />
-          ),
-          label: 'Plausible',
+          icon: <Icon icon="logos:google-analytics" />,
+          label: 'GA4',
+          link: '/docs/destinations/web/gtag/ga4',
         },
-        { icon: <Icon icon="walkeros:piwik-pro" />, label: 'Piwik PRO' },
-        { icon: <Icon icon="mdi:api" />, label: 'API' },
+        {
+          icon: <Icon icon="logos:google-ads" />,
+          label: 'Google Ads',
+          link: '/docs/destinations/web/gtag/ads',
+        },
+        {
+          icon: <Icon icon="logos:amplitude-icon" />,
+          label: 'Amplitude',
+          link: '/docs/destinations/web/amplitude',
+        },
+        {
+          icon: <Icon icon="logos:pinterest" />,
+          label: 'Pinterest',
+          link: '/docs/destinations/web/pinterest',
+        },
+        {
+          icon: <Icon icon="logos:posthog-icon" />,
+          label: 'PostHog',
+          link: '/docs/destinations/web/posthog',
+        },
+        {
+          icon: <Icon icon="logos:tiktok-icon" />,
+          label: 'TikTok',
+          link: '/docs/destinations/web/tiktok',
+        },
       ],
+      moreLink: '/docs/destinations',
     },
     {
       title: 'Server-side',
       items: [
-        { icon: <Icon icon="logos:aws" />, label: 'AWS' },
-        { icon: <Icon icon="logos:google-cloud" />, label: 'BigQuery' },
-        { icon: <Icon icon="logos:meta-icon" />, label: 'Meta CAPI' },
+        {
+          icon: <Icon icon="logos:aws" />,
+          label: 'AWS',
+          link: '/docs/destinations/server/aws',
+        },
+        {
+          icon: <Icon icon="logos:google-cloud" />,
+          label: 'BigQuery',
+          link: '/docs/destinations/server/gcp',
+        },
+        {
+          icon: <Icon icon="logos:meta-icon" />,
+          label: 'Meta CAPI',
+          link: '/docs/destinations/server/meta-capi',
+        },
       ],
+      moreLink: '/docs/destinations',
     },
   ],
 };
