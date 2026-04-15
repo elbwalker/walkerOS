@@ -1,5 +1,13 @@
 # @walkeros/mcp
 
+## 3.3.1
+
+### Patch Changes
+
+- Updated dependencies [62f6a38]
+  - @walkeros/cli@3.3.1
+  - @walkeros/core@3.3.1
+
 ## 3.3.0
 
 ### Patch Changes

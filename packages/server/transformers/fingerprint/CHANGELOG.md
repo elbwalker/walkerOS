@@ -1,5 +1,12 @@
 # @walkeros/server-transformer-fingerprint
 
+## 3.3.1
+
+### Patch Changes
+
+- @walkeros/server-core@3.3.1
+- @walkeros/core@3.3.1
+
 ## 3.3.0
 
 ### Patch Changes

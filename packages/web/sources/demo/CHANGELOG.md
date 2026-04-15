@@ -1,5 +1,11 @@
 # @walkeros/source-demo
 
+## 3.3.1
+
+### Patch Changes
+
+- @walkeros/core@3.3.1
+
 ## 3.3.0
 
 ### Patch Changes
