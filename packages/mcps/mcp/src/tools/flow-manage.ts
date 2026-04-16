@@ -57,9 +57,9 @@ export function registerFlowManageTool(server: McpServer) {
             'Dot-path selectors for get to return only specific fields.',
           ),
         sort: z
-          .string()
+          .enum(['name', 'updated_at', 'created_at'])
           .optional()
-          .describe('Sort field for list (e.g. name, updated_at, created_at).'),
+          .describe('Sort field for list.'),
         order: z
           .enum(['asc', 'desc'])
           .optional()
