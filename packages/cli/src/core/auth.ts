@@ -1,4 +1,8 @@
-import { resolveToken, resolveDeployToken } from '../lib/config-file.js';
+import {
+  resolveToken,
+  resolveDeployToken,
+  getDefaultProject,
+} from '../lib/config-file.js';
 
 export function getToken(): string | undefined {
   const result = resolveToken();
@@ -20,7 +24,10 @@ export function resolveRunToken(): string | null {
 }
 
 export function requireProjectId(): string {
-  const projectId = process.env.WALKEROS_PROJECT_ID;
-  if (!projectId) throw new Error('WALKEROS_PROJECT_ID not set.');
+  const projectId = process.env.WALKEROS_PROJECT_ID || getDefaultProject();
+  if (!projectId)
+    throw new Error(
+      'No project selected. Set WALKEROS_PROJECT_ID or configure a default project.',
+    );
   return projectId;
 }

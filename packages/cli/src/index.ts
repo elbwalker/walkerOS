@@ -4,7 +4,17 @@ export { bundleCommand } from './commands/bundle/index.js';
 export { pushCommand } from './commands/push/index.js';
 export { runCommand } from './commands/run/index.js';
 export { validateCommand } from './commands/validate/index.js';
-export { loginCommand } from './commands/login/index.js';
+export {
+  loginCommand,
+  requestDeviceCode,
+  pollForToken,
+} from './commands/login/index.js';
+export type {
+  DeviceCodeResult,
+  DeviceCodeOptions,
+  PollOptions,
+  PollResult,
+} from './commands/login/index.js';
 export { logoutCommand } from './commands/logout/index.js';
 export { whoamiCommand } from './commands/auth/index.js';
 export {
@@ -74,6 +84,7 @@ export { whoami } from './commands/auth/index.js';
 export { feedback } from './commands/feedback/index.js';
 export {
   listFlows,
+  listAllFlows,
   getFlow,
   createFlow,
   updateFlow,
@@ -88,9 +99,18 @@ export {
   deleteDeployment,
 } from './commands/deployments/index.js';
 export type { FeedbackOptions } from './commands/feedback/index.js';
-export { readConfig, writeConfig } from './lib/config-file.js';
+export {
+  readConfig,
+  writeConfig,
+  deleteConfig,
+  resolveToken,
+  setDefaultProject,
+  getDefaultProject,
+  setFeedbackPreference,
+  getFeedbackPreference,
+} from './lib/config-file.js';
 export type { WalkerOSConfig } from './lib/config-file.js';
-export type { ListFlowsOptions } from './commands/flows/index.js';
+export type { ListFlowsOptions, ProjectFlows } from './commands/flows/index.js';
 export type { DeployOptions } from './commands/deploy/index.js';
 export type { ListDeploymentsOptions } from './commands/deployments/index.js';
 export { parseSSEEvents } from './core/sse.js';

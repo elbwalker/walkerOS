@@ -1,0 +1,14 @@
+---
+'@walkeros/mcp': minor
+'@walkeros/cli': patch
+---
+
+Replace `api` mega-tool with four focused management tools: `auth` (device code
+login), `project_manage`, `flow_manage`, and `deploy`. Enforce strict CLI/MCP
+separation of concern — MCP no longer reads config files or checks env vars
+directly. All tools are always registered regardless of auth state.
+
+CLI exports new functions: `requestDeviceCode`, `pollForToken`,
+`setDefaultProject`, `getDefaultProject`, `listAllFlows`,
+`setFeedbackPreference`, `getFeedbackPreference`, `resolveToken`,
+`deleteConfig`.

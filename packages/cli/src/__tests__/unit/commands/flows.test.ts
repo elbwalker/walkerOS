@@ -1,12 +1,14 @@
 import { requireProjectId } from '../../../core/auth.js';
 import {
   listFlows,
+  listAllFlows,
   getFlow,
   createFlow,
   updateFlow,
   deleteFlow,
   duplicateFlow,
 } from '../../../commands/flows/index.js';
+import { listProjects } from '../../../commands/projects/index.js';
 import { setupMockApiClient } from '../../helpers/mock-api-client.js';
 
 jest.mock('../../../core/api-client.js');
@@ -14,6 +16,11 @@ jest.mock('../../../core/auth.js', () => ({
   ...jest.requireActual('../../../core/auth.js'),
   requireProjectId: jest.fn().mockReturnValue('proj_default'),
 }));
+jest.mock('../../../commands/projects/index.js', () => ({
+  listProjects: jest.fn(),
+}));
+
+const mockListProjects = jest.mocked(listProjects);
 
 const {
   GET: mockGet,
@@ -254,6 +261,117 @@ describe('flows', () => {
           body: { name: undefined },
         },
       );
+    });
+  });
+
+  describe('listAllFlows', () => {
+    const mockFlowSummary = {
+      id: 'flow_1',
+      name: 'Test Flow',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      deletedAt: null,
+    };
+
+    it('returns flows grouped by project', async () => {
+      mockListProjects.mockResolvedValue({
+        projects: [
+          {
+            id: 'proj_a',
+            name: 'Project A',
+            role: 'owner',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'proj_b',
+            name: 'Project B',
+            role: 'member',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        total: 2,
+      });
+      mockGet
+        .mockResolvedValueOnce({
+          data: { flows: [mockFlowSummary], total: 1 },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            flows: [{ ...mockFlowSummary, id: 'flow_2', name: 'Other Flow' }],
+            total: 1,
+          },
+        });
+
+      const result = await listAllFlows();
+
+      expect(result).toEqual([
+        {
+          project: { id: 'proj_a', name: 'Project A' },
+          flows: [mockFlowSummary],
+        },
+        {
+          project: { id: 'proj_b', name: 'Project B' },
+          flows: [{ ...mockFlowSummary, id: 'flow_2', name: 'Other Flow' }],
+        },
+      ]);
+    });
+
+    it('returns empty array when no projects', async () => {
+      mockListProjects.mockResolvedValue({ projects: [], total: 0 });
+
+      const result = await listAllFlows();
+
+      expect(result).toEqual([]);
+      expect(mockGet).not.toHaveBeenCalled();
+    });
+
+    it('passes sort/order/includeDeleted to each listFlows call', async () => {
+      mockListProjects.mockResolvedValue({
+        projects: [
+          {
+            id: 'proj_a',
+            name: 'Project A',
+            role: 'owner',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'proj_b',
+            name: 'Project B',
+            role: 'member',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        total: 2,
+      });
+      mockGet.mockResolvedValue({ data: { flows: [], total: 0 } });
+
+      await listAllFlows({ sort: 'name', order: 'asc', includeDeleted: true });
+
+      expect(mockGet).toHaveBeenCalledTimes(2);
+      expect(mockGet).toHaveBeenCalledWith('/api/projects/{projectId}/flows', {
+        params: {
+          path: { projectId: 'proj_a' },
+          query: {
+            sort: 'name',
+            order: 'asc',
+            include_deleted: 'true',
+          },
+        },
+      });
+      expect(mockGet).toHaveBeenCalledWith('/api/projects/{projectId}/flows', {
+        params: {
+          path: { projectId: 'proj_b' },
+          query: {
+            sort: 'name',
+            order: 'asc',
+            include_deleted: 'true',
+          },
+        },
+      });
     });
   });
 });

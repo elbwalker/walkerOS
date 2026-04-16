@@ -45,10 +45,7 @@ manually:
   "mcpServers": {
     "walkeros-flow": {
       "command": "npx",
-      "args": ["@walkeros/mcp"],
-      "env": {
-        "WALKEROS_TOKEN": "sk-walkeros-..."
-      }
+      "args": ["@walkeros/mcp"]
     },
     "walkeros-source-browser": {
       "command": "npx",
@@ -65,12 +62,13 @@ Each server starts on STDIO and registers its tools automatically.
 
 | Variable | Used by | Required | Default | Purpose |
 |----------|---------|----------|---------|---------|
-| `WALKEROS_TOKEN` | mcp | No | none | Bearer token for cloud API and remote bundling |
+| `WALKEROS_TOKEN` | mcp | No | none | Bearer token fallback (alternative to `auth` tool login) |
 | `WALKEROS_PROJECT_ID` | mcp | No | none | Active project ID (`proj_...`) |
 | `WALKEROS_APP_URL` | mcp | No | `https://app.walkeros.io` | Base URL override |
 
 `@walkeros/mcp-source-browser` works without any environment variables.
-When `WALKEROS_TOKEN` is set, the `api` tool is registered for cloud operations.
+All tools are always registered. To authenticate with the walkerOS cloud, use
+the `auth` tool (device code flow) or set `WALKEROS_TOKEN` as a fallback.
 
 ---
 
@@ -87,7 +85,7 @@ and `@walkeros/mcp-api` packages.
   language="bash"
 />
 
-### Tools (9)
+### Tools (12)
 
 #### `flow_load`
 
@@ -120,7 +118,7 @@ Bundle a walkerOS flow configuration into deployable JavaScript.
 | `flow` | string | No | Flow name for multi-flow configs |
 | `stats` | boolean | No | Return bundle statistics (default: `true`) |
 | `output` | string | No | Output file path |
-| `remote` | boolean | No | Use remote cloud bundling (requires `WALKEROS_TOKEN`). Default: `false` |
+| `remote` | boolean | No | Use remote cloud bundling (requires authentication). Default: `false` |
 | `content` | object | No | Flow.Config JSON content (required when `remote: true`) |
 
 #### `flow_simulate`
@@ -184,23 +182,46 @@ example summaries. Use `section` parameter for full content.
 | `version` | string | No | Package version (default: latest) |
 | `section` | `"hints"` \| `"examples"` \| `"all"` | No | Section to expand with full content |
 
-#### `api`
+#### `auth`
 
-Unified walkerOS cloud API. Only available when `WALKEROS_TOKEN` is set.
+Authenticate with the walkerOS cloud. Uses device code flow — the user receives
+a URL to open in a browser to complete login.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | enum | Yes | API action (see below) |
-| `projectId` | string | No | Project ID (`proj_...`). Required for: project.get/update/delete, flow.create, flow.list. Falls back to `WALKEROS_PROJECT_ID` env. |
-| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: flow.get/update/delete/duplicate, deploy. For deployment.get/delete: can be a deployment slug. |
+| `action` | `"status"` \| `"login"` \| `"logout"` | Yes | Auth action |
+
+#### `project_manage`
+
+Manage walkerOS projects in the cloud.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"set_default"` | Yes | Project action |
+| `projectId` | string | No | Project ID (`proj_...`). Required for: get, update, delete, set_default. Falls back to `WALKEROS_PROJECT_ID` env. |
+| `name` | string | No | Name for create/update operations |
+
+#### `flow_manage`
+
+Manage walkerOS flow configurations in the cloud.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"duplicate"` | Yes | Flow action |
+| `projectId` | string | No | Project ID (`proj_...`). Required for: list, create. Falls back to `WALKEROS_PROJECT_ID` env. |
+| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: get, update, delete, duplicate. |
 | `name` | string | No | Name for create/update operations |
 | `content` | object | No | Flow.Config JSON for flow operations |
-| `wait` | boolean | No | Wait for deploy to complete (default: `true`) |
 
-**Actions:** `whoami`, `project.list`, `project.get`, `project.create`,
-`project.update`, `project.delete`, `flow.list`, `flow.get`, `flow.create`,
-`flow.update`, `flow.delete`, `flow.duplicate`, `deploy`, `deployment.get`,
-`deployment.list`, `deployment.create`, `deployment.delete`
+#### `deploy`
+
+Deploy walkerOS flows and manage deployments.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"deploy"` \| `"list"` \| `"get"` \| `"delete"` | Yes | Deployment action |
+| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: deploy. For get/delete: can be a deployment slug. |
+| `wait` | boolean | No | Wait for deploy to complete (default: `true`) |
 
 ### Resources
 
@@ -311,8 +332,8 @@ which destinations received the event.
 
 > "Deploy flow cfg_abc123 and wait for it to finish."
 
-The assistant calls `api({ action: "deploy", id: "cfg_abc123" })` and streams
-progress updates through bundling, publishing, and activation.
+The assistant calls `deploy({ action: "deploy", flowId: "cfg_abc123" })` and
+streams progress updates through bundling, publishing, and activation.
 
 ### Set up event mapping
 
@@ -345,7 +366,8 @@ unified in `@walkeros/mcp`. Key changes:
 | Old | New |
 |-----|-----|
 | `@walkeros/mcp-cli` | `@walkeros/mcp` |
-| `@walkeros/mcp-api` (17 tools) | `api` tool in `@walkeros/mcp` |
+| `@walkeros/mcp-api` (17 tools) | `auth` + `project_manage` + `flow_manage` + `deploy` tools |
+| `api` (single mega-tool) | `auth`, `project_manage`, `flow_manage`, `deploy` (4 focused tools) |
 | `validate` | `flow_validate` |
 | `bundle` | `flow_bundle` |
 | `simulate` | `flow_simulate` |

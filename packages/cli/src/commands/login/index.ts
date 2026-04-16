@@ -29,7 +29,42 @@ export interface LoginOptions {
   maxPollAttempts?: number;
 }
 
+export interface DeviceCodeResult {
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  verificationUriComplete?: string;
+  expiresIn: number;
+  interval: number;
+}
+
+export interface DeviceCodeOptions {
+  url?: string;
+  fetch?: typeof globalThis.fetch;
+}
+
+export interface PollOptions {
+  url?: string;
+  fetch?: typeof globalThis.fetch;
+  /** Timeout in milliseconds. Defaults to 60000 (60s). */
+  timeoutMs?: number;
+  /** Poll interval in milliseconds. Defaults to 5000. */
+  intervalMs?: number;
+}
+
+export type PollResult =
+  | {
+      success: true;
+      status: 'authenticated';
+      email: string;
+      configPath: string;
+    }
+  | { success: false; status: 'pending' }
+  | { success: false; status: 'error'; error: string };
+
 const POLL_TIMEOUT_BUFFER_MS = 5000;
+const DEFAULT_POLL_TIMEOUT_MS = 60000;
+const DEFAULT_POLL_INTERVAL_MS = 5000;
 
 async function openInBrowser(url: string): Promise<void> {
   const { default: open } = await import('open');
@@ -65,29 +100,123 @@ export async function loginCommand(
   }
 }
 
-export async function login(options: LoginOptions = {}): Promise<LoginResult> {
+/**
+ * Request a device code from the auth server.
+ * First step of the device code flow — returns data needed to show
+ * the user a code and URL, then poll for the token.
+ */
+export async function requestDeviceCode(
+  options: DeviceCodeOptions = {},
+): Promise<DeviceCodeResult> {
   const appUrl = options.url || resolveAppUrl();
   const f = options.fetch ?? globalThis.fetch;
 
-  // 1. Request device code
-  const codeResponse = await f(`${appUrl}/api/auth/device/code`, {
+  const response = await f(`${appUrl}/api/auth/device/code`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
   });
 
-  if (!codeResponse.ok) {
+  if (!response.ok) {
+    throw new Error('Failed to request device code');
+  }
+
+  const data = await response.json();
+
+  return {
+    deviceCode: data.deviceCode,
+    userCode: data.userCode,
+    verificationUri: data.verificationUri,
+    verificationUriComplete: data.verificationUriComplete,
+    expiresIn: data.expiresIn,
+    interval: data.interval,
+  };
+}
+
+/**
+ * Poll the auth server until the device code is authorized, times out, or fails.
+ * Second step of the device code flow.
+ *
+ * On success: writes config and returns authenticated result.
+ * On timeout: returns pending (NOT an error — caller can retry).
+ * On real error (denied, expired): returns error result.
+ */
+export async function pollForToken(
+  deviceCode: string,
+  options: PollOptions = {},
+): Promise<PollResult> {
+  const appUrl = options.url || resolveAppUrl();
+  const f = options.fetch ?? globalThis.fetch;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_POLL_TIMEOUT_MS;
+  let intervalMs = options.intervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+
+    // Check if we've exceeded the deadline after sleeping
+    if (Date.now() >= deadline) break;
+
+    const tokenResponse = await f(`${appUrl}/api/auth/device/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceCode, hostname: hostname() }),
+    });
+
+    const data = await tokenResponse.json();
+
+    if (tokenResponse.ok && data.token) {
+      writeConfig({ token: data.token, email: data.email, appUrl });
+      const configPath = getConfigPath();
+      return {
+        success: true,
+        status: 'authenticated',
+        email: data.email,
+        configPath,
+      };
+    }
+
+    if (data.error === 'authorization_pending') continue;
+    if (data.error === 'slow_down') {
+      intervalMs += 5000;
+      continue;
+    }
+
+    // Any other error: expired, denied, etc.
+    return {
+      success: false,
+      status: 'error',
+      error: data.error || 'Authorization failed',
+    };
+  }
+
+  return { success: false, status: 'pending' };
+}
+
+export async function login(options: LoginOptions = {}): Promise<LoginResult> {
+  const fetchOption = options.fetch ?? globalThis.fetch;
+  const urlOption = options.url;
+
+  // 1. Request device code
+  let codeResult: DeviceCodeResult;
+  try {
+    codeResult = await requestDeviceCode({
+      url: urlOption,
+      fetch: fetchOption,
+    });
+  } catch {
     return { success: false, error: 'Failed to request device code' };
   }
 
   const {
-    deviceCode,
     userCode,
     verificationUri,
     verificationUriComplete,
     expiresIn,
     interval,
-  } = await codeResponse.json();
+    deviceCode,
+  } = codeResult;
 
   // 2. Display code and open browser
   const prompt = (msg: string) => process.stderr.write(msg + '\n');
@@ -105,38 +234,69 @@ export async function login(options: LoginOptions = {}): Promise<LoginResult> {
   prompt('  Waiting for authorization... (press Ctrl+C to cancel)\n');
 
   // 3. Poll for token
-  const deadline = Date.now() + expiresIn * 1000 + POLL_TIMEOUT_BUFFER_MS;
-  let pollInterval = (interval ?? 5) * 1000;
-  const maxAttempts = options.maxPollAttempts ?? Infinity;
-  let attempts = 0;
+  // Use expiresIn-based timeout (original behavior) with maxPollAttempts support
+  const timeoutMs = expiresIn * 1000 + POLL_TIMEOUT_BUFFER_MS;
+  const intervalMs = (interval ?? 5) * 1000;
 
-  while (Date.now() < deadline && attempts < maxAttempts) {
-    attempts++;
-    await new Promise((r) => setTimeout(r, pollInterval));
+  if (options.maxPollAttempts !== undefined) {
+    // Legacy path: use attempt-based polling for backward compat with tests
+    const appUrl = urlOption || resolveAppUrl();
+    const f = fetchOption;
+    let pollInterval = intervalMs;
+    let attempts = 0;
+    const deadline = Date.now() + timeoutMs;
 
-    const tokenResponse = await f(`${appUrl}/api/auth/device/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceCode, hostname: hostname() }),
-    });
+    while (Date.now() < deadline && attempts < options.maxPollAttempts) {
+      attempts++;
+      await new Promise((r) => setTimeout(r, pollInterval));
 
-    const data = await tokenResponse.json();
+      const tokenResponse = await f(`${appUrl}/api/auth/device/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceCode, hostname: hostname() }),
+      });
 
-    if (tokenResponse.ok && data.token) {
-      // 4. Store config
-      writeConfig({ token: data.token, email: data.email, appUrl });
-      const configPath = getConfigPath();
-      return { success: true, email: data.email, configPath };
+      const data = await tokenResponse.json();
+
+      if (tokenResponse.ok && data.token) {
+        writeConfig({ token: data.token, email: data.email, appUrl });
+        const configPath = getConfigPath();
+        return { success: true, email: data.email, configPath };
+      }
+
+      if (data.error === 'authorization_pending') continue;
+      if (data.error === 'slow_down') {
+        pollInterval += 5000;
+        continue;
+      }
+
+      return { success: false, error: data.error || 'Authorization failed' };
     }
 
-    if (data.error === 'authorization_pending') continue;
-    if (data.error === 'slow_down') {
-      pollInterval += 5000;
-      continue;
-    }
+    return {
+      success: false,
+      error: 'Authorization timed out. Please try again.',
+    };
+  }
 
-    // Any other error: expired, denied, etc.
-    return { success: false, error: data.error || 'Authorization failed' };
+  // Standard path: delegate to pollForToken
+  const pollResult = await pollForToken(deviceCode, {
+    url: urlOption,
+    fetch: fetchOption,
+    timeoutMs,
+    intervalMs,
+  });
+
+  if (pollResult.success) {
+    return {
+      success: true,
+      email: pollResult.email,
+      configPath: pollResult.configPath,
+    };
+  }
+
+  if (pollResult.status === 'error') {
+    return { success: false, error: pollResult.error };
   }
 
   return {

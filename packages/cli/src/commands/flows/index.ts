@@ -4,7 +4,22 @@ import { requireProjectId } from '../../core/auth.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import { isStdinPiped, readStdin } from '../../core/stdin.js';
+import type { paths } from '../../types/api.gen.js';
 import type { GlobalOptions } from '../../types/global.js';
+import { listProjects } from '../projects/index.js';
+
+// === Types extracted from API spec ===
+
+type FlowSummary =
+  paths['/api/projects/{projectId}/flows']['get']['responses']['200']['content']['application/json']['flows'][number];
+
+type Project =
+  paths['/api/projects']['get']['responses']['200']['content']['application/json']['projects'][number];
+
+export interface ProjectFlows {
+  project: { id: Project['id']; name: Project['name'] };
+  flows: FlowSummary[];
+}
 
 // === Programmatic API ===
 
@@ -30,6 +45,23 @@ export async function listFlows(options: ListFlowsOptions = {}) {
   });
   if (error) throwApiError(error, 'Failed to list flows');
   return data;
+}
+
+export async function listAllFlows(
+  options?: Omit<ListFlowsOptions, 'projectId'>,
+): Promise<ProjectFlows[]> {
+  const { projects } = await listProjects();
+  const results: ProjectFlows[] = [];
+
+  for (const project of projects) {
+    const data = await listFlows({ ...options, projectId: project.id });
+    results.push({
+      project: { id: project.id, name: project.name },
+      flows: data.flows,
+    });
+  }
+
+  return results;
 }
 
 export async function getFlow(options: {

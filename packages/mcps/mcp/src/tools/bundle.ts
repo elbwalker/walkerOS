@@ -21,7 +21,7 @@ export function registerFlowBundleTool(server: McpServer) {
           .boolean()
           .optional()
           .describe(
-            'Use remote cloud bundling (requires WALKEROS_TOKEN). Default: false (local)',
+            'Use remote cloud bundling (requires authentication). Default: false (local)',
           ),
         content: z
           .record(z.string(), z.unknown())
