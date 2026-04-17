@@ -7,6 +7,7 @@ package: '@walkeros/web-source-browser'
 import data from '@walkeros/web-source-browser/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 <PackageLink github="packages/web/sources/browser" npm="@walkeros/web-source-browser" />
 
 # Browser source
@@ -92,6 +93,8 @@ Add to your `flow.json` sources:
   type="source"
   configHref="/docs/sources#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 ## Enhanced elb function
 

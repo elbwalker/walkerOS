@@ -10,6 +10,7 @@ import destinationClarity from '@walkeros/web-destination-clarity';
 import data from '@walkeros/web-destination-clarity/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationClarity, examples: data.examples };
 
 # Microsoft Clarity
@@ -109,7 +110,9 @@ Add to your `flow.json` destinations:
   configHref="/docs/destinations#configuration"
 />
 
-## Mapping data.examples
+<Mapping schema={data.schemas.mapping} />
+
+## Examples
 
 :::tip
 

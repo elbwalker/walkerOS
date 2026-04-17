@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-mparticle'
 import data from '@walkeros/server-destination-mparticle/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 # mParticle
 
 <PackageLink env="server" github="packages/server/destinations/mparticle" npm="@walkeros/server-destination-mparticle" status="beta" />
@@ -92,6 +93,8 @@ Add to your `flow.json` destinations:
   type="destination"
   configHref="/docs/destinations#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 The `apiKey` and `apiSecret` come from an mParticle **input feed** (Setup → Inputs → Feeds → Custom Feed). Each batch posts to `https://s2s.{pod}.mparticle.com/v2/events` using HTTP Basic auth.
 

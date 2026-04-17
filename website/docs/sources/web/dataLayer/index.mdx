@@ -8,6 +8,7 @@ package: '@walkeros/web-source-datalayer'
 import data from '@walkeros/web-source-datalayer/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 <PackageLink github="packages/web/sources/datalayer" npm="@walkeros/web-source-datalayer" />
 
 # DataLayer Source
@@ -110,6 +111,8 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
   type="source"
   configHref="/docs/sources#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 ## Custom Filtering
 

@@ -8,6 +8,7 @@ package: '@walkeros/server-source-fetch'
 import data from '@walkeros/server-source-fetch/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 <PackageLink env="server" github="packages/server/sources/fetch" npm="@walkeros/server-source-fetch" />
 
 # Fetch
@@ -166,6 +167,8 @@ Bun.serve({ fetch: sources.fetch.push, port: 3000 });`}
   type="source"
   configHref="/docs/sources#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 ## Ingest Metadata
 

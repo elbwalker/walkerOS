@@ -8,6 +8,7 @@ package: '@walkeros/server-source-express'
 import data from '@walkeros/server-source-express/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 <PackageLink env="server" github="packages/server/sources/express" npm="@walkeros/server-source-express" />
 
 # Express
@@ -141,6 +142,8 @@ Server sources require platform-specific handlers. For containerized deployments
   type="source"
   configHref="/docs/sources#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 ## HTTP methods
 

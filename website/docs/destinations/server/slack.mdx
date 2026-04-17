@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-slack'
 import data from '@walkeros/server-destination-slack/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 # Slack
 
 <PackageLink env="server" github="packages/server/destinations/slack" npm="@walkeros/server-destination-slack" />
@@ -105,6 +106,8 @@ Use **webhooks** for a single firehose channel and minimal setup. Use the **Web 
   type="destination"
   configHref="/docs/destinations#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 ## Channel routing
 

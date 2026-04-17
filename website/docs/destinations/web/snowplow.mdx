@@ -10,6 +10,7 @@ import destinationSnowplow from '@walkeros/web-destination-snowplow';
 import data from '@walkeros/web-destination-snowplow/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationSnowplow, examples: data.examples };
 
 # Snowplow
@@ -244,11 +245,7 @@ const { elb } = await startFlow({
   }}
 />
 
-### Event Mapping
-
-For custom event mapping (`mapping.entity.action.settings`):
-
-<PropertyTable schema={data.schemas.mapping} />
+<Mapping schema={data.schemas.mapping} />
 
 ## User Identity & Privacy
 
@@ -732,7 +729,7 @@ await startFlow({
   language="typescript"
 />
 
-## Mapping data.examples
+## Examples
 
 :::tip
 

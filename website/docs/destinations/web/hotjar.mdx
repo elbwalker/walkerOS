@@ -10,6 +10,7 @@ import destinationHotjar from '@walkeros/web-destination-hotjar';
 import data from '@walkeros/web-destination-hotjar/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationHotjar, examples: data.examples };
 
 # Hotjar
@@ -102,7 +103,9 @@ Add to your `flow.json` destinations:
   configHref="/docs/destinations#configuration"
 />
 
-## Mapping examples
+<Mapping schema={data.schemas.mapping} />
+
+## Examples
 
 :::tip
 

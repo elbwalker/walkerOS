@@ -8,6 +8,7 @@ sidebar_position: 2
 
 import data from '@walkeros/server-destination-api/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 # Server API Destination
 
@@ -65,6 +66,8 @@ await startFlow({
   type="destination"
   configHref="/docs/destinations#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 ## Usage
 

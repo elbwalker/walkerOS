@@ -7,6 +7,7 @@ package: '@walkeros/web-destination-gtag'
 
 import destinationGtag from '@walkeros/web-destination-gtag';
 import data from '@walkeros/web-destination-gtag/walkerOS.json';
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 export const destination = { ...destinationGtag, examples: data.examples };
 
@@ -76,17 +77,13 @@ await startFlow({
   }}
 />
 
-### Event Mapping
-
-For custom event mapping (`mapping.entity.action.settings.ga4`):
-
-<PropertyTable schema={data.schemas.ga4} />
+<Mapping schema={data.schemas.mapping} />
 
 You are able to map your walkerOS events to match the respective requirements of
 each vendor. The `mapping` examples are using a
 live&nbsp;<Link to="#configuration-reference">configuration</Link>.
 
-## Mapping examples
+## Examples
 
 :::tip
 

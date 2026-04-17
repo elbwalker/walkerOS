@@ -9,6 +9,7 @@ package: '@walkeros/server-destination-sqlite'
 import data from '@walkeros/server-destination-sqlite/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 # SQLite
 
 <PackageLink env="server" github="packages/server/destinations/sqlite" npm="@walkeros/server-destination-sqlite" status="beta" />
@@ -124,9 +125,7 @@ CREATE TABLE IF NOT EXISTS events (
 
 Nested objects (`data`, `globals`, `consent`) are stored as JSON strings. `page_url` maps from `source.id`; `page_title` from `data.title`; `referrer_url` from `source.previous_id`.
 
-## Per-rule overrides
-
-<PropertyTable schema={data.schemas.mapping} />
+<Mapping schema={data.schemas.mapping} />
 
 Use `mapping.settings.table` to route specific events to a dedicated table (for example orders to `orders`, identities to `identities`).
 

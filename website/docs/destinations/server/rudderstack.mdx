@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-rudderstack'
 import data from '@walkeros/server-destination-rudderstack/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 # RudderStack
 
 <PackageLink env="server" github="packages/server/destinations/rudderstack" npm="@walkeros/server-destination-rudderstack" status="beta" />
@@ -88,6 +89,8 @@ Add to your `flow.json` destinations:
   type="destination"
   configHref="/docs/destinations#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 Identity is resolved automatically from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. At least one must be present for a call to be sent. Override these paths in settings to match your event structure.
 

@@ -9,6 +9,7 @@ sidebar_position: 1
 import destinationWebAPI from '@walkeros/web-destination-api';
 import data from '@walkeros/web-destination-api/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 export const destination = { ...destinationWebAPI, examples: data.examples };
 
@@ -249,7 +250,9 @@ const { collector, elb } = await startFlow({
 - **beacon**: Uses Navigator.sendBeacon() for reliable data transmission during
   page unload
 
-## Mapping
+<Mapping schema={data.schemas.mapping} />
+
+## Examples: Live Demo
 
 By default the&nbsp;<Link to="/docs/core/web#sendweb">`sendWeb`</Link> function
 is used to send the events to an API.

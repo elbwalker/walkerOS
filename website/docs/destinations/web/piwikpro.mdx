@@ -10,6 +10,7 @@ import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
 import data from '@walkeros/web-destination-piwikpro/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationPiwikPro, examples: data.examples };
 
 # Piwik PRO
@@ -110,13 +111,9 @@ Add to your `flow.json` destinations:
   }}
 />
 
-### Event Mapping
+<Mapping schema={data.schemas.mapping} />
 
-For custom event mapping (`mapping.entity.action.settings`):
-
-<PropertyTable schema={data.schemas.mapping} />
-
-## Mapping data.examples
+## Examples
 
 :::tip
 

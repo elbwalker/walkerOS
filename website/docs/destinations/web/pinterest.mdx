@@ -10,6 +10,7 @@ import destinationPinterest from '@walkeros/web-destination-pinterest';
 import data from '@walkeros/web-destination-pinterest/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationPinterest, examples: data.examples };
 
 # Pinterest Tag
@@ -141,7 +142,9 @@ auto-maps. Every conversion event needs an explicit `mapping.name`.
 | `user signup`    | `signup`        | Same identify pattern as `lead`.                                                   |
 | (custom)         | `custom`        | Send Pinterest's `custom` event for non-standard conversions.                      |
 
-## Mapping data.examples
+<Mapping schema={data.schemas.mapping} />
+
+## Examples
 
 :::tip
 

@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-gtag'
 import { getEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import data from '@walkeros/web-destination-gtag/walkerOS.json';
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 export const destination = { ...destinationGtag, examples: data.examples };
 
@@ -57,8 +58,4 @@ await startFlow({
 
 <PropertyTable schema={data.schemas.gtm} />
 
-### Event Mapping
-
-GTM specific event mapping (`mapping.entity.action.settings.gtm`) currently has
-no configurable properties. The GTMMapping interface is empty, so events are
-passed through to GTM without additional transformation options.
+<Mapping schema={data.schemas.mapping} />

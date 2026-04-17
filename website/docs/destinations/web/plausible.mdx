@@ -10,6 +10,7 @@ import destinationPlausible from '@walkeros/web-destination-plausible';
 import data from '@walkeros/web-destination-plausible/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationPlausible, examples: data.examples };
 
 # Plausible Analytics
@@ -106,7 +107,9 @@ Add to your `flow.json` destinations:
   }}
 />
 
-## Mapping data.examples
+<Mapping schema={data.schemas.mapping} />
+
+## Examples
 
 :::tip
 

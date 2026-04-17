@@ -10,6 +10,7 @@ import destinationMatomo from '@walkeros/web-destination-matomo';
 import data from '@walkeros/web-destination-matomo/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationMatomo, examples: data.examples };
 
 # Matomo
@@ -113,13 +114,9 @@ Add to your `flow.json` destinations:
   }}
 />
 
-### Event Mapping
+<Mapping schema={data.schemas.mapping} />
 
-For custom event mapping (`mapping.entity.action.settings`):
-
-<PropertyTable schema={data.schemas.mapping} />
-
-## Mapping Examples
+## Examples
 
 :::tip
 

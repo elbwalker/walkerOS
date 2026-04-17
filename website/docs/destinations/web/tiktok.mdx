@@ -10,6 +10,7 @@ import destinationTikTok from '@walkeros/web-destination-tiktok';
 import data from '@walkeros/web-destination-tiktok/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationTikTok, examples: data.examples };
 
 # TikTok Pixel
@@ -129,7 +130,9 @@ work but receive no optimization signal.
 | `CompleteRegistration` | User signup                                    |
 | `Subscribe`            | Subscription start                             |
 
-## Mapping data.examples
+<Mapping schema={data.schemas.mapping} />
+
+## Examples
 
 :::tip
 

@@ -9,6 +9,7 @@ package: '@walkeros/web-destination-amplitude'
 import destinationAmplitude from '@walkeros/web-destination-amplitude';
 import data from '@walkeros/web-destination-amplitude/walkerOS.json';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationAmplitude, examples: data.examples };
 
 # Amplitude
@@ -108,7 +109,9 @@ fields shared across all destinations (consent, mapping, data, env, …), see
 
 <PropertyTable schema={data.schemas.settings} />
 
-## Mapping data.examples
+<Mapping schema={data.schemas.mapping} />
+
+## Examples
 
 :::tip
 

@@ -10,6 +10,7 @@ import destinationFullStory from '@walkeros/web-destination-fullstory';
 import data from '@walkeros/web-destination-fullstory/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationFullStory, examples: data.examples };
 
 # FullStory
@@ -103,7 +104,9 @@ Add to your `flow.json` destinations:
   configHref="/docs/destinations#configuration"
 />
 
-## Mapping examples
+<Mapping schema={data.schemas.mapping} />
+
+## Examples
 
 :::tip
 

@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-hubspot'
 import data from '@walkeros/server-destination-hubspot/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 # HubSpot
 
 <PackageLink env="server" github="packages/server/destinations/hubspot" npm="@walkeros/server-destination-hubspot" status="beta" />
@@ -88,6 +89,8 @@ Add to your `flow.json` destinations:
   type="destination"
   configHref="/docs/destinations#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 Every event must be associated with a contact via `email` or `objectId`. The `email` path defaults to `user.email`. Events where neither value can be resolved are skipped with a warning.
 

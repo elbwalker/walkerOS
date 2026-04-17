@@ -9,6 +9,7 @@ package: '@walkeros/server-destination-file'
 import data from '@walkeros/server-destination-file/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 # File
 
 <PackageLink env="server" github="packages/server/destinations/file" npm="@walkeros/server-destination-file" status="beta" />
@@ -87,6 +88,8 @@ Add to your `flow.json` destinations:
   type="destination"
   configHref="/docs/destinations#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 The destination opens one long-lived `WriteStream` per resolved filename during `init()` (for static filenames) or on first matching event (for dynamic filenames). On flow hot-swap or server shutdown, `destroy()` closes all cached streams.
 

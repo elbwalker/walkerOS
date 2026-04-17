@@ -10,6 +10,7 @@ import destinationMetaPixel from '@walkeros/web-destination-meta';
 import data from '@walkeros/web-destination-meta/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationMetaPixel, examples: data.examples };
 
 # Meta Pixel
@@ -111,7 +112,9 @@ Add to your `flow.json` destinations:
   }}
 />
 
-## Mapping data.examples
+<Mapping schema={data.schemas.mapping} />
+
+## Examples
 
 :::tip
 

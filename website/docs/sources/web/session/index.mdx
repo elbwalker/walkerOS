@@ -7,6 +7,7 @@ package: '@walkeros/web-source-session'
 import data from '@walkeros/web-source-session/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 <PackageLink github="packages/web/sources/session" npm="@walkeros/web-source-session" />
 
 # Session source
@@ -221,6 +222,8 @@ A returning visitor starting their second session has `isStart: true` but `isNew
   type="source"
   configHref="/docs/sources#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 ## Consent integration
 

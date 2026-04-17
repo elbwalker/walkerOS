@@ -9,6 +9,7 @@ package: '@walkeros/server-destination-redis'
 import data from '@walkeros/server-destination-redis/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 # Redis Streams
 
 <PackageLink env="server" github="packages/server/destinations/redis" npm="@walkeros/server-destination-redis" status="beta" />
@@ -105,9 +106,7 @@ Each event is appended via `XADD <streamKey> [MAXLEN [~] <n>] * <field> <value> 
 - **fields** -- in `json` mode: single `event` field with the full event JSON-stringified; in `flat` mode: top-level event keys as separate fields (nested objects JSON-encoded)
 - **MAXLEN** -- when `settings.redis.maxLen` is set, trims the stream to ~N entries. Approximate (`~`) by default; set `exactTrimming: true` to trim exactly (slower)
 
-## Per-rule overrides
-
-<PropertyTable schema={data.schemas.mapping} />
+<Mapping schema={data.schemas.mapping} />
 
 Use `mapping.settings.streamKey` to route specific events to dedicated streams (e.g. orders to `walkeros:orders`, identities to `walkeros:identities`).
 

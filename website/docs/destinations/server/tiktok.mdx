@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-tiktok'
 import data from '@walkeros/server-destination-tiktok/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 # TikTok Events API
 
 <PackageLink env="server" github="packages/server/destinations/tiktok" npm="@walkeros/server-destination-tiktok" />
@@ -89,6 +90,8 @@ Add to your `flow.json` destinations:
   type="destination"
   configHref="/docs/destinations#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 ## Hashing
 

@@ -127,6 +127,36 @@ on package pages — use the snippet.
 `## Config` on package pages. Those are reserved for the group-level
 shared-config reference (see below).
 
+### Mapping snippet (package pages)
+
+**When to use:** Every package page that describes a package users will
+configure through the flow (destinations, sources). Add a `<Mapping />` block so
+every page has a consistent `## Mapping` section — whether or not the package
+defines custom rule-level settings.
+
+```mdx
+import data from '@walkeros/web-destination-gtag/walkerOS.json';
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
+
+<Mapping schema={data.schemas.mapping} />
+```
+
+The snippet owns the `## Mapping` heading and a short notice. If `schema` is
+passed and exists, it renders a `<PropertyTable>`. If the package does not
+export `schemas.mapping`, the expression `data.schemas.mapping` evaluates to
+`undefined` and the snippet's ternary renders a fallback sentence ("This package
+does not define any custom rule-level settings"). Use the uniform callsite
+`<Mapping schema={data.schemas.mapping} />` on every page — no special casing.
+
+**Placement:** directly after the `<Settings />` block, before any
+`## Next Steps` / `## Related` tail section. Keep `<DestinationDemo>`
+interactive example blocks under a separate `## Examples` heading below the
+`<Mapping />` block — examples are explicitly out of scope of the snippet.
+
+**Never** hand-author `## Event Mapping`, `## Mapping examples`,
+`## Mapping data.examples`, `## Configuration reference`, or `### Event Mapping`
+on package pages. The snippet is the only sanctioned mapping section.
+
 ### Shared configuration reference (group index pages)
 
 On group index pages (`docs/destinations/index.mdx`, `sources/index.mdx`,

@@ -10,6 +10,7 @@ import destinationPostHog from '@walkeros/web-destination-posthog';
 import data from '@walkeros/web-destination-posthog/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 export const destination = { ...destinationPostHog, examples: data.examples };
 
 # PostHog
@@ -105,7 +106,9 @@ Add to your `flow.json` destinations:
   configHref="/docs/destinations#configuration"
 />
 
-## Mapping data.examples
+<Mapping schema={data.schemas.mapping} />
+
+## Examples
 
 :::tip
 

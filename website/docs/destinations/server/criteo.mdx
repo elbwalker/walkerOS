@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-criteo'
 import data from '@walkeros/server-destination-criteo/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
+import Mapping from '@site/src/components/snippets/_mapping.mdx';
 # Criteo Events API
 
 <PackageLink env="server" github="packages/server/destinations/criteo" npm="@walkeros/server-destination-criteo" status="beta" />
@@ -89,6 +90,8 @@ Add to your `flow.json` destinations:
   type="destination"
   configHref="/docs/destinations#configuration"
 />
+
+<Mapping schema={data.schemas.mapping} />
 
 ## Event mapping
 
