@@ -522,6 +522,7 @@ export async function bundleCore(
           ? generateWebEntry(stage1Path, dataPayload, {
               windowCollector: buildOptions.windowCollector,
               windowElb: buildOptions.windowElb,
+              platform: buildOptions.platform as 'browser' | 'node',
             })
           : generateServerEntry(stage1Path, dataPayload);
 
@@ -1183,8 +1184,14 @@ export async function createEntryPoint(
     validateComponentNames(flowWithSections.stores, 'stores');
 
   // Generate import statements.
-  // withDev only for skipWrapper bundles (push/simulate/flow-context); production
-  // IIFE bundles get a clean stage 1 without dev imports — see generateImportStatements.
+  // withDev is resolved from the BundleTarget preset by the public `bundle()`
+  // entry point. When called directly via `bundleCore` (push, simulate, tests),
+  // we fall back to `skipWrapper === true` for backward compatibility — those
+  // call sites historically relied on skipWrapper to pull in /dev schemas.
+  const withDev =
+    buildOptions.withDev !== undefined
+      ? buildOptions.withDev === true
+      : buildOptions.skipWrapper === true;
   const { importStatements, devExportEntries } = await generateImportStatements(
     buildOptions.packages,
     destinationPackages,
@@ -1193,7 +1200,7 @@ export async function createEntryPoint(
     storePackages,
     explicitCodeImports,
     packagePaths,
-    buildOptions.skipWrapper === true,
+    withDev,
   );
 
   const importsCode = importStatements.join('\n');
@@ -1646,7 +1653,12 @@ export default async function(context = {}) {
 export function generateWebEntry(
   stage1Path: string,
   dataPayload: string,
-  options: { windowCollector?: string; windowElb?: string } = {},
+  options: {
+    windowCollector?: string;
+    windowElb?: string;
+    /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
+    platform?: 'browser' | 'node';
+  } = {},
 ): string {
   const assignments: string[] = [];
   if (options.windowCollector) {
@@ -1662,12 +1674,28 @@ export function generateWebEntry(
   const assignmentCode =
     assignments.length > 0 ? '\n' + assignments.join('\n') : '';
 
+  const platform = options.platform ?? 'browser';
+  const envBlock =
+    platform === 'browser'
+      ? `
+  if (config.sources) {
+    for (const key of Object.keys(config.sources)) {
+      const source = config.sources[key];
+      if (!source) continue;
+      const env = source.env ?? (source.env = {});
+      env.window = env.window ?? (typeof window !== 'undefined' ? window : undefined);
+      env.document = env.document ?? (typeof document !== 'undefined' ? document : undefined);
+    }
+  }`
+      : '';
+
   return `import { startFlow, wireConfig } from '${stage1Path}';
 
 const __configData = ${dataPayload};
 
 (async () => {
-  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
+  const config = wireConfig(__configData);${envBlock}
+  const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
 }
 
@@ -1687,6 +1715,8 @@ export function generateWrapEntry(
     windowElb?: string;
     previewOrigin?: string;
     previewScope?: string;
+    /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
+    platform?: 'browser' | 'node';
   } = {},
 ): string {
   const assignments: string[] = [];
@@ -1737,10 +1767,26 @@ export function generateWrapEntry(
 `
     : '';
 
+  const platform = options.platform ?? 'browser';
+  const envBlock =
+    platform === 'browser'
+      ? `
+  if (config.sources) {
+    for (const key of Object.keys(config.sources)) {
+      const source = config.sources[key];
+      if (!source) continue;
+      const env = source.env ?? (source.env = {});
+      env.window = env.window ?? (typeof window !== 'undefined' ? window : undefined);
+      env.document = env.document ?? (typeof document !== 'undefined' ? document : undefined);
+    }
+  }`
+      : '';
+
   return `import { startFlow, wireConfig, __configData } from '${stage1Path}';
 
 (async () => {${preflightBlock}
-  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
+  const config = wireConfig(__configData);${envBlock}
+  const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
 }
 

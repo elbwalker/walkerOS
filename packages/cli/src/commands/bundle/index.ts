@@ -28,6 +28,8 @@ import {
 import { isUrl } from '../../config/utils.js';
 import type { BuildOptions } from '../../types/bundle.js';
 import { bundleCore } from './bundler.js';
+import type { BundleTarget } from './targets.js';
+import { resolveTarget } from './targets.js';
 import { uploadBundleToUrl, sanitizeUrl } from './upload.js';
 import { displayStats, createStatsSummary } from './stats.js';
 import { createApiClient } from '../../core/api-client.js';
@@ -327,9 +329,42 @@ export async function bundle(
     stats?: boolean;
     cache?: boolean;
     flowName?: string;
+    /**
+     * Named bundle target. If omitted, falls back to
+     * `buildOverrides.skipWrapper` mapping (deprecated) or `'cdn'`.
+     */
+    target?: BundleTarget;
     buildOverrides?: Partial<BuildOptions>;
   } = {},
 ): Promise<import('./bundler').BundleStats | void> {
+  // Resolve effective target: explicit target > legacy skipWrapper mapping > default 'cdn'.
+  let effectiveTarget: BundleTarget;
+  if (options.target) {
+    effectiveTarget = options.target;
+  } else if (options.buildOverrides?.skipWrapper === true) {
+    // Conservative mapping: preserves /dev inclusion for existing callers that
+    // historically used skipWrapper to get schemas (push/simulate shape).
+    effectiveTarget = 'simulate';
+  } else {
+    effectiveTarget = 'cdn';
+  }
+
+  const preset = resolveTarget(effectiveTarget);
+
+  // Deprecation warning for legacy skipWrapper usage without explicit target.
+  if (
+    options.buildOverrides?.skipWrapper !== undefined &&
+    !options.target &&
+    process.env.WALKEROS_SUPPRESS_DEPRECATIONS !== '1'
+  ) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[@walkeros/cli] buildOverrides.skipWrapper is deprecated. ' +
+        "Pass `target: 'cdn' | 'cdn-skeleton' | 'runner' | 'simulate' | 'push'` instead. " +
+        'Set WALKEROS_SUPPRESS_DEPRECATIONS=1 to silence this warning.',
+    );
+  }
+
   // 1. Load config if path provided
   let rawConfig: unknown;
   // Use current working directory as base when config is passed as object
@@ -342,11 +377,17 @@ export async function bundle(
     rawConfig = configOrPath;
   }
 
-  // 2. Load and resolve config using Flow.Config format
+  // 2. Load and resolve config using Flow.Config format.
+  // Merge target-derived flags into buildOverrides so loadBundleConfig sees them.
+  const mergedOverrides: Partial<BuildOptions> = {
+    ...(options.buildOverrides ?? {}),
+    skipWrapper: preset.skipWrapper,
+    withDev: preset.withDev,
+  };
   const { flowSettings, buildOptions } = loadBundleConfig(rawConfig, {
     configPath,
     flowName: options.flowName,
-    buildOverrides: options.buildOverrides,
+    buildOverrides: mergedOverrides,
   });
 
   // 3. Handle cache option
