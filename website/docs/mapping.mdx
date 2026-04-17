@@ -7,6 +7,7 @@ sidebar_position: 4
 import { getMappingEvent, getMappingValue } from '@walkeros/core';
 
 export const parseInput = (code, scope = {}) => {
+
   const codeStr = String(code);
   return new Function(
     ...Object.keys(scope),

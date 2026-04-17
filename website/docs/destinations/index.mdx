@@ -8,6 +8,7 @@ import { schemas } from '@walkeros/core/dev';
 import { omitSchemaProperties } from '@site/src/utils/schema';
 
 export const destinationConfig = omitSchemaProperties(
+
   schemas.DestinationSchemas.configJsonSchema,
   ['settings', 'init', 'mock', 'onError', 'onLog'],
 );
