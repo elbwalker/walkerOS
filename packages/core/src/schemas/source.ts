@@ -5,7 +5,6 @@ import {
   ValuesSchema,
 } from './mapping';
 import { Identifier } from './primitives';
-import { ErrorHandlerSchema } from './utilities';
 
 /**
  * Source Schemas
@@ -93,7 +92,6 @@ export const ConfigSchema = MappingConfigSchema.extend({
   id: Identifier.describe(
     'Source identifier (defaults to source key)',
   ).optional(),
-  onError: ErrorHandlerSchema.optional(),
   primary: z
     .boolean()
     .describe('Mark as primary (only one can be primary)')

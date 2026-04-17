@@ -8,7 +8,6 @@ import {
   PolicySchema,
 } from './mapping';
 import { Identifier } from './primitives';
-import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
 import { RoutableNextSchema } from './matcher';
 import { CacheSchema } from './cache';
 
@@ -63,6 +62,10 @@ export const ConfigSchema = z
       .describe(
         'Global data transformation applied to all events for this destination',
       ),
+    include: z
+      .array(z.string())
+      .optional()
+      .describe('Event sections to flatten into context.data'),
     env: z
       .any()
       .describe('Environment dependencies (platform-specific)')
@@ -122,9 +125,6 @@ export const ConfigSchema = z
       .describe(
         'Return this value instead of calling push(). Dev/testing only.',
       ),
-    // Handler functions
-    onError: ErrorHandlerSchema.optional(),
-    onLog: LogHandlerSchema.optional(),
   })
   .describe('Destination configuration');
 

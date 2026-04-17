@@ -287,6 +287,10 @@ export const ConfigSchema = z
       .union([ValueSchema, ValuesSchema])
       .optional()
       .describe('Global data transformation applied to all events'),
+    include: z
+      .array(z.string())
+      .optional()
+      .describe('Event sections to flatten into context.data'),
     mapping: RulesSchema.optional().describe(
       'Entity-action specific mapping rules',
     ),
