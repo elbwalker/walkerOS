@@ -6,6 +6,7 @@ sidebar_position: 4
 package: '@walkeros/server-destination-datamanager'
 ---
 import data from '@walkeros/server-destination-datamanager/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # Google Data Manager
 
@@ -105,6 +106,8 @@ mapping:
 
 **Consent mapping**: Map your consent field names (string) or use static values (boolean). Event mappings always override Settings helpers.
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>

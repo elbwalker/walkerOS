@@ -6,6 +6,7 @@ sidebar_position: 14
 package: '@walkeros/server-destination-klaviyo'
 ---
 import data from '@walkeros/server-destination-klaviyo/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # Klaviyo
 
@@ -80,9 +81,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 Identity is resolved automatically from each event: `email` defaults to `user.email` and `externalId` defaults to `user.id`. Klaviyo requires at least one identifier (`email`, `phoneNumber`, or `externalId`) per event -- events without any identifier are skipped with a warning.
 

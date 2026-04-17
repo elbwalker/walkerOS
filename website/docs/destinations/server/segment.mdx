@@ -6,6 +6,7 @@ sidebar_position: 5
 package: '@walkeros/server-destination-segment'
 ---
 import data from '@walkeros/server-destination-segment/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # Segment
 
@@ -80,9 +81,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 Identity is resolved automatically from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. At least one must be present for a call to be sent. Override these paths in settings to match your event structure.
 

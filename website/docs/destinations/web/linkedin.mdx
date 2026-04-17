@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-linkedin'
 
 import destinationLinkedIn from '@walkeros/web-destination-linkedin';
 import data from '@walkeros/web-destination-linkedin/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 export const destination = { ...destinationLinkedIn, examples: data.examples };
 
@@ -117,9 +118,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 ## Opt-in conversion model
 

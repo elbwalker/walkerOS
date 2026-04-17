@@ -8,6 +8,7 @@ sidebar_position: 1
 
 import destinationWebAPI from '@walkeros/web-destination-api';
 import data from '@walkeros/web-destination-api/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 export const destination = { ...destinationWebAPI, examples: data.examples };
 
@@ -89,9 +90,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 ## Usage
 

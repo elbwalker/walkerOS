@@ -6,6 +6,7 @@ package: '@walkeros/server-store-s3'
 ---
 
 import data from '@walkeros/server-store-s3/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # S3
 
@@ -78,9 +79,11 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="store"
+  configHref="/docs/stores#configuration"
+/>
 
 ## Provider examples
 

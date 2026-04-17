@@ -6,6 +6,7 @@ package: '@walkeros/store-memory'
 ---
 
 import data from '@walkeros/store-memory/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # Memory
 
@@ -80,9 +81,11 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="store"
+  configHref="/docs/stores#configuration"
+/>
 
 Both limits can be used together. When either is exceeded, the least-recently-used entry is evicted first.
 

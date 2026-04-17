@@ -6,6 +6,7 @@ package: '@walkeros/transformer-validator'
 ---
 
 import data from '@walkeros/transformer-validator/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # Validator
 
@@ -108,9 +109,11 @@ Add to your `flow.json`:
 | `ERROR` | Validation failures only |
 | `DEBUG` | All validation results (pass and fail) |
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="transformer"
+  configHref="/docs/transformers#configuration"
+/>
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|

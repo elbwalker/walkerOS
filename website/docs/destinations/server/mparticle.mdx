@@ -6,6 +6,7 @@ sidebar_position: 16
 package: '@walkeros/server-destination-mparticle'
 ---
 import data from '@walkeros/server-destination-mparticle/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # mParticle
 
@@ -86,9 +87,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 The `apiKey` and `apiSecret` come from an mParticle **input feed** (Setup → Inputs → Feeds → Custom Feed). Each batch posts to `https://s2s.{pod}.mparticle.com/v2/events` using HTTP Basic auth.
 

@@ -5,6 +5,7 @@ sidebar_position: 1
 package: '@walkeros/web-source-browser'
 ---
 import data from '@walkeros/web-source-browser/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 <PackageLink github="packages/web/sources/browser" npm="@walkeros/web-source-browser" />
 
@@ -86,9 +87,11 @@ Add to your `flow.json` sources:
   </TabItem>
 </Tabs>
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="source"
+  configHref="/docs/sources#configuration"
+/>
 
 ## Enhanced elb function
 

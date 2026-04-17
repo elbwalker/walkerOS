@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-sqlite'
 ---
 
 import data from '@walkeros/server-destination-sqlite/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # SQLite
 
@@ -89,9 +90,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 The destination opens the connection during `init()`, runs `CREATE TABLE IF NOT EXISTS` with the canonical schema (unless `schema: 'manual'`), and prepares the INSERT statement once. On `destroy()` the connection is closed cleanly. User-provided clients (wired via `env.client` or `settings.sqlite._client`) are left untouched.
 

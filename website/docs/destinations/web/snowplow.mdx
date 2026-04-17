@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-snowplow'
 
 import destinationSnowplow from '@walkeros/web-destination-snowplow';
 import data from '@walkeros/web-destination-snowplow/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 export const destination = { ...destinationSnowplow, examples: data.examples };
 
@@ -227,9 +228,11 @@ const { elb } = await startFlow({
 
 [See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 #### Example
 

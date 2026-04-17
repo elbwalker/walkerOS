@@ -6,6 +6,7 @@ package: '@walkeros/server-store-fs'
 ---
 
 import data from '@walkeros/server-store-fs/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # Filesystem
 
@@ -68,9 +69,11 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="store"
+  configHref="/docs/stores#configuration"
+/>
 
 ## API
 

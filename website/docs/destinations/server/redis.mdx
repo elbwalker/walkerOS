@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-redis'
 ---
 
 import data from '@walkeros/server-destination-redis/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # Redis Streams
 
@@ -87,9 +88,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 The destination creates a single long-lived `ioredis` client during `init()`. On flow hot-swap or server shutdown, `destroy()` calls `client.quit()` to flush in-flight commands and close the TCP connection gracefully. User-provided clients (wired in via `_client`) are left untouched.
 

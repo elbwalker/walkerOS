@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-optimizely'
 
 import destinationOptimizely from '@walkeros/web-destination-optimizely';
 import data from '@walkeros/web-destination-optimizely/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 export const destination = { ...destinationOptimizely, examples: data.examples };
 
@@ -95,9 +96,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 ## Mapping examples
 

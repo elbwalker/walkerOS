@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-matomo'
 
 import destinationMatomo from '@walkeros/web-destination-matomo';
 import data from '@walkeros/web-destination-matomo/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 export const destination = { ...destinationMatomo, examples: data.examples };
 
@@ -98,9 +99,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 <DestinationInitDemo
   destination={destination}

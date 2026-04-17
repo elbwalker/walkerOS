@@ -6,6 +6,7 @@ sidebar_position: 2
 package: '@walkeros/web-source-datalayer'
 ---
 import data from '@walkeros/web-source-datalayer/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 <PackageLink github="packages/web/sources/datalayer" npm="@walkeros/web-source-datalayer" />
 
@@ -104,9 +105,11 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
   language="javascript"
 />
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="source"
+  configHref="/docs/sources#configuration"
+/>
 
 ## Custom Filtering
 

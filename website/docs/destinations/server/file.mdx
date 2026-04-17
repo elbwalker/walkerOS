@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-file'
 ---
 
 import data from '@walkeros/server-destination-file/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # File
 
@@ -81,9 +82,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 The destination opens one long-lived `WriteStream` per resolved filename during `init()` (for static filenames) or on first matching event (for dynamic filenames). On flow hot-swap or server shutdown, `destroy()` closes all cached streams.
 

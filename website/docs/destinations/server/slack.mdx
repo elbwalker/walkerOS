@@ -6,6 +6,7 @@ sidebar_position: 12
 package: '@walkeros/server-destination-slack'
 ---
 import data from '@walkeros/server-destination-slack/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # Slack
 
@@ -99,9 +100,11 @@ Pick exactly one auth method per destination. Each mode trades capability for si
 
 Use **webhooks** for a single firehose channel and minimal setup. Use the **Web API** whenever you need routing, threading, DMs, or ephemeral messages.
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 ## Channel routing
 

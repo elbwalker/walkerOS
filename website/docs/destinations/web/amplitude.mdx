@@ -98,10 +98,13 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
+## Settings
 
-All fields of Amplitude's `BrowserOptions` pass through to
-`amplitude.init(apiKey, options)`. walkerOS-specific additions are:
+Settings configure this package and go under `config.settings` in the flow. All
+fields of Amplitude's `BrowserOptions` pass through to
+`amplitude.init(apiKey, options)`. walkerOS-specific additions are below. For
+fields shared across all destinations (consent, mapping, data, env, …), see
+[destination configuration](/docs/destinations#configuration).
 
 <PropertyTable schema={data.schemas.settings} />
 

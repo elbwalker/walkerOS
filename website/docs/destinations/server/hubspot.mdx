@@ -6,6 +6,7 @@ sidebar_position: 13
 package: '@walkeros/server-destination-hubspot'
 ---
 import data from '@walkeros/server-destination-hubspot/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
 
 # HubSpot
 
@@ -82,9 +83,11 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 Every event must be associated with a contact via `email` or `objectId`. The `email` path defaults to `user.email`. Events where neither value can be resolved are skipped with a warning.
 
