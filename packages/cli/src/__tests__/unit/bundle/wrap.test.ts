@@ -52,8 +52,9 @@ export const __configData = { test: true };
 
     // Self-executing IIFE wrapper
     expect(output).toContain('(async () =>');
-    // Bootstrap call
-    expect(output).toMatch(/startFlow\s*\(\s*wireConfig\s*\(/);
+    // Bootstrap call — config is built via wireConfig then passed to startFlow
+    expect(output).toMatch(/wireConfig\s*\(/);
+    expect(output).toMatch(/startFlow\s*\(\s*config\s*\)/);
     // Window assignments (esbuild may normalize quote style, so match both)
     expect(output).toMatch(/window\[['"]walker['"]\]/);
     expect(output).toMatch(/window\[['"]elb['"]\]/);

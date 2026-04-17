@@ -184,11 +184,11 @@ export async function pollForToken(
     }
 
     // Any other error: expired, denied, etc.
-    return {
-      success: false,
-      status: 'error',
-      error: data.error || 'Authorization failed',
-    };
+    const errorMsg =
+      typeof data.error === 'string'
+        ? data.error
+        : data.error?.message || 'Authorization failed';
+    return { success: false, status: 'error', error: errorMsg };
   }
 
   return { success: false, status: 'pending' };

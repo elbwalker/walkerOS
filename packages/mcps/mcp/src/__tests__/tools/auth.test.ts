@@ -116,7 +116,7 @@ describe('auth tool', () => {
   });
 
   describe('login', () => {
-    it('calls requestDeviceCode and pollForToken on fresh login', async () => {
+    it('returns URL and deviceCode immediately on fresh login without polling', async () => {
       mockRequestDeviceCode.mockResolvedValue({
         deviceCode: 'dev_abc',
         userCode: 'ABCD-1234',
@@ -126,22 +126,16 @@ describe('auth tool', () => {
         expiresIn: 900,
         interval: 5,
       });
-      mockPollForToken.mockResolvedValue({
-        success: true,
-        status: 'authenticated',
-        email: 'user@example.com',
-        configPath: '/home/.config/walkeros/config.json',
-      });
 
       const tool = server.getTool('auth');
       const result = await tool.handler({ action: 'login' });
 
       expect(mockRequestDeviceCode).toHaveBeenCalled();
-      expect(mockPollForToken).toHaveBeenCalledWith('dev_abc', {
-        timeoutMs: 60000,
-      });
-      expect(result.structuredContent.authenticated).toBe(true);
-      expect(result.structuredContent.email).toBe('user@example.com');
+      expect(mockPollForToken).not.toHaveBeenCalled();
+      expect(result.structuredContent.authenticated).toBe(false);
+      expect(result.structuredContent.status).toBe('awaiting_authorization');
+      expect(result.structuredContent.loginUrl).toContain('walkeros.io');
+      expect(result.structuredContent.deviceCode).toBe('dev_abc');
     });
 
     it('only calls pollForToken when deviceCode is provided (retry)', async () => {
@@ -165,28 +159,25 @@ describe('auth tool', () => {
       expect(result.structuredContent.authenticated).toBe(true);
     });
 
-    it('returns pending with deviceCode on timeout', async () => {
-      mockRequestDeviceCode.mockResolvedValue({
-        deviceCode: 'dev_timeout',
-        userCode: 'WXYZ-9999',
-        verificationUri: 'https://app.walkeros.io/device',
-        verificationUriComplete:
-          'https://app.walkeros.io/device?code=WXYZ-9999',
-        expiresIn: 900,
-        interval: 5,
-      });
+    it('returns pending with deviceCode on retry timeout', async () => {
       mockPollForToken.mockResolvedValue({
         success: false,
         status: 'pending',
       });
 
       const tool = server.getTool('auth');
-      const result = await tool.handler({ action: 'login' });
+      const result = await tool.handler({
+        action: 'login',
+        deviceCode: 'dev_timeout',
+      });
 
+      expect(mockRequestDeviceCode).not.toHaveBeenCalled();
+      expect(mockPollForToken).toHaveBeenCalledWith('dev_timeout', {
+        timeoutMs: 60000,
+      });
       expect(result.structuredContent.authenticated).toBe(false);
       expect(result.structuredContent.status).toBe('pending');
       expect(result.structuredContent.deviceCode).toBe('dev_timeout');
-      expect(result.structuredContent.loginUrl).toContain('walkeros.io');
     });
 
     it('returns error when poll fails with error status', async () => {

@@ -1667,7 +1667,17 @@ export function generateWebEntry(
 const __configData = ${dataPayload};
 
 (async () => {
-  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
+  const config = wireConfig(__configData);
+  if (config.sources) {
+    for (const key of Object.keys(config.sources)) {
+      const source = config.sources[key];
+      if (!source) continue;
+      const env = source.env ?? (source.env = {});
+      env.window = env.window ?? (typeof window !== 'undefined' ? window : undefined);
+      env.document = env.document ?? (typeof document !== 'undefined' ? document : undefined);
+    }
+  }
+  const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
 }
 
@@ -1740,7 +1750,17 @@ export function generateWrapEntry(
   return `import { startFlow, wireConfig, __configData } from '${stage1Path}';
 
 (async () => {${preflightBlock}
-  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
+  const config = wireConfig(__configData);
+  if (config.sources) {
+    for (const key of Object.keys(config.sources)) {
+      const source = config.sources[key];
+      if (!source) continue;
+      const env = source.env ?? (source.env = {});
+      env.window = env.window ?? (typeof window !== 'undefined' ? window : undefined);
+      env.document = env.document ?? (typeof document !== 'undefined' ? document : undefined);
+    }
+  }
+  const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
 }
 

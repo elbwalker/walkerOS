@@ -5,6 +5,7 @@ import {
   detectExplicitCodeImports,
   serializeWithCode,
   generateSplitWireConfigModule,
+  generateWebEntry,
   generateWrapEntry,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
@@ -781,14 +782,16 @@ describe('generateWrapEntry preview preflight', () => {
       previewScope: 'proj_abc123',
     });
     const previewIdx = output.indexOf('elbPreview');
-    const startFlowIdx = output.indexOf('startFlow(wireConfig');
+    const startFlowIdx = output.indexOf('startFlow(config)');
     expect(previewIdx).toBeLessThan(startFlowIdx);
   });
 
   it('omits preflight entirely when previewOrigin is absent', () => {
     const output = generateWrapEntry('./skeleton.mjs', {});
     expect(output).not.toContain('elbPreview');
-    expect(output).toContain('startFlow(wireConfig(__configData))');
+    // Config is built from __configData via wireConfig, then passed to startFlow
+    expect(output).toContain('wireConfig(__configData)');
+    expect(output).toContain('startFlow(config)');
   });
 
   it('omits preflight when previewScope is empty string', () => {
@@ -809,6 +812,71 @@ describe('generateWrapEntry preview preflight', () => {
     expect(output).toContain("window['collector']");
     expect(output).toContain("window['elb']");
     expect(output).toContain('elbPreview');
+  });
+});
+
+describe('generateWebEntry env injection', () => {
+  it('injects env.window and env.document for all sources before startFlow', () => {
+    const output = generateWebEntry('./stage1.mjs', '{"flows":{}}', {
+      windowCollector: 'walkerOS',
+      windowElb: 'elb',
+    });
+
+    // Must walk sources and inject env.window / env.document
+    expect(output).toContain('for');
+    expect(output).toMatch(/config\.sources[\s\S]*env\s*=/);
+    expect(output).toContain(
+      "typeof window !== 'undefined' ? window : undefined",
+    );
+    expect(output).toContain(
+      "typeof document !== 'undefined' ? document : undefined",
+    );
+
+    // Must happen BEFORE startFlow call
+    const injectIdx = output.search(/env\.window\s*=/);
+    const startIdx = output.indexOf('startFlow(');
+    expect(injectIdx).toBeGreaterThan(-1);
+    expect(injectIdx).toBeLessThan(startIdx);
+  });
+
+  it('preserves existing source env fields without overwriting', () => {
+    const output = generateWebEntry('./stage1.mjs', '{}', {});
+    // Injection should use fallback assignment (??) or explicit check,
+    // not clobber user-provided env values
+    expect(output).toMatch(
+      /env\.window\s*=\s*env\.window\s*\?\?|env\.window\s*\|\|=/,
+    );
+  });
+});
+
+describe('generateWrapEntry env injection', () => {
+  it('injects env.window/env.document for all sources', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {});
+    expect(output).toContain(
+      "typeof window !== 'undefined' ? window : undefined",
+    );
+    expect(output).toContain(
+      "typeof document !== 'undefined' ? document : undefined",
+    );
+    const injectIdx = output.search(/env\.window\s*=/);
+    const startIdx = output.indexOf('startFlow(');
+    expect(injectIdx).toBeGreaterThan(-1);
+    expect(injectIdx).toBeLessThan(startIdx);
+  });
+
+  it('env injection runs even when preview preflight is enabled', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      previewOrigin: 'preview.example.com',
+      previewScope: 'scope1',
+    });
+    expect(output).toContain(
+      "typeof window !== 'undefined' ? window : undefined",
+    );
+    // Preview preflight exits with `return;` — env injection must be AFTER the preflight
+    const previewReturnIdx = output.indexOf('document.head.appendChild');
+    const injectIdx = output.search(/env\.window\s*=/);
+    expect(previewReturnIdx).toBeGreaterThan(-1);
+    expect(injectIdx).toBeGreaterThan(previewReturnIdx);
   });
 });
 

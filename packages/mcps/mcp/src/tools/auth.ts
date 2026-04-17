@@ -62,7 +62,7 @@ export function registerAuthTool(server: McpServer) {
                   { authenticated: true, email: pollResult.email },
                   {
                     next: [
-                      'Use api with action "project.list" to see your projects',
+                      'Use project_manage with action "list" to see your projects',
                     ],
                   },
                 );
@@ -78,40 +78,26 @@ export function registerAuthTool(server: McpServer) {
                 });
               }
 
-              return mcpError(new Error(pollResult.error));
+              const errMsg =
+                typeof pollResult.error === 'string'
+                  ? pollResult.error
+                  : pollResult.error?.message || 'Authorization failed';
+              return mcpError(new Error(errMsg));
             }
 
-            // Fresh login: request a new device code, then poll
+            // Fresh login: return URL immediately, do NOT poll
+            // The user needs to see and open the URL first
             const code = await requestDeviceCode();
             const loginUrl =
               code.verificationUriComplete || code.verificationUri;
 
-            const result = await pollForToken(code.deviceCode, {
-              timeoutMs: 60000,
+            return mcpResult({
+              authenticated: false,
+              status: 'awaiting_authorization',
+              loginUrl,
+              message: `Open this link to authorize: ${loginUrl}`,
+              deviceCode: code.deviceCode,
             });
-
-            if (result.success) {
-              return mcpResult(
-                { authenticated: true, email: result.email, loginUrl },
-                {
-                  next: [
-                    'Use api with action "project.list" to see your projects',
-                  ],
-                },
-              );
-            }
-
-            if (result.status === 'pending') {
-              return mcpResult({
-                authenticated: false,
-                status: 'pending',
-                loginUrl,
-                message: `Open this link to authorize: ${loginUrl}`,
-                deviceCode: code.deviceCode,
-              });
-            }
-
-            return mcpError(new Error(result.error));
           }
 
           case 'logout': {
