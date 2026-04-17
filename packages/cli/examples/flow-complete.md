@@ -11,19 +11,24 @@ complete event tracking architecture.
 │ WEB FLOW                                                                    │
 │                                                                             │
 │   Browser Source ─┐                                                         │
-│   DataLayer Source ──▶ [Validator] ──▶ Collector ──▶ GA4 Destination        │
-│   Demo Source ────┘                               └──▶ API Destination      │
-│                                                              │              │
-└──────────────────────────────────────────────────────────────│──────────────┘
-                                                               ▼
+│   DataLayer Source ──▶ [Enricher] ──▶ [Validator] ──▶ Collector ──▶ GA4     │
+│   Demo Source ────┘                                             ├──▶ API    │
+│                                                                 └──▶ Debug  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ SERVER FLOW                                                                 │
 │                                                                             │
-│   HTTP Request ──▶ Express Source ──▶ Collector ──▶ [Fingerprint] ──────┐   │
-│                         │                          [Validator]          │   │
-│                         │                                               ▼   │
-│                         └── ingest: IP, user-agent ────────▶ Meta Destination
-│                                     language, referer       Demo Destination│
+│   HTTP Source ──▶ [Filter] ──▶ [Fingerprint] ──▶ [Validator] ──▶ Collector  │
+│        │              │                                          │          │
+│        │ ingest:      │ env:                    before:          ▼          │
+│        │ IP, UA,      │ $store:cache    [Fingerprint]+[Validator]           │
+│        │ lang, ref,   │                                          │          │
+│        │ anon-IP(fn)  │                                          ▼          │
+│        │              │                                   Meta Destination  │
+│        └──────────────┘                                   Demo Destination  │
+│                                                                             │
+│   Store: cache (memory, 10MB, 1000 entries)                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,7 +76,7 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 
 ## Feature Inventory
 
-### Features Used (55)
+### Features Used (68)
 
 #### Mapping - Value Extraction
 
@@ -106,67 +111,81 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 
 #### Definitions & Variables
 
-| Feature              | Location           | Example                                      |
-| -------------------- | ------------------ | -------------------------------------------- |
-| Root-level variables | Root               | `"currency": "EUR"`                          |
-| Flow-level variables | server.variables   | `"metaPixelId": "${META_PIXEL_ID:...}"`      |
-| Environment variable | Variables          | `"${GA4_MEASUREMENT_ID:G-DEMO123456}"`       |
-| Env with default     | Variables          | `"${API_URL:http://localhost:8080/collect}"` |
-| $variables reference | GA4 settings       | `"$variables.ga4MeasurementId"`              |
-| Definition (complex) | Root definitions   | `"ga4ItemsLoop": { "loop": [...] }`          |
-| $ref reference       | GA4 purchase items | `{ "$ref": "#/definitions/ga4ItemsLoop" }`   |
+| Feature              | Location           | Example                                        |
+| -------------------- | ------------------ | ---------------------------------------------- |
+| Root-level variables | Root               | `"currency": "EUR"`                            |
+| Flow-level variables | server.variables   | `"metaPixelId": "$env.META_PIXEL_ID:..."`      |
+| Environment variable | Variables          | `"$env.GA4_MEASUREMENT_ID:G-DEMO123456"`       |
+| Env with default     | Variables          | `"$env.API_URL:http://localhost:8080/collect"` |
+| $var reference       | GA4 settings       | `"$var.ga4MeasurementId"`                      |
+| Definition (complex) | Root definitions   | `"ga4ItemsLoop": { "loop": [...] }`            |
+| $def reference       | GA4 purchase items | `"$def.ga4ItemsLoop"`                          |
+| $contract reference  | serverValidator    | `"$contract.default.events"`                   |
+| $store reference     | filter transformer | `"env": { "store": "$store:cache" }`           |
 
 #### Sources
 
-| Feature                 | Location  | Example                               |
-| ----------------------- | --------- | ------------------------------------- |
-| Primary source          | browser   | `"primary": true`                     |
-| Multiple sources        | web flow  | browser + dataLayer + demo            |
-| Source-level mapping    | dataLayer | `"mapping": { "add_to_cart": {...} }` |
-| Pre-collector chain     | dataLayer | `"next": "dataLayerValidator"`        |
-| Require (deferred init) | dataLayer | `"require": ["session"]`              |
-| Demo source events      | demo      | Pre-configured test events            |
+| Feature                 | Location      | Example                               |
+| ----------------------- | ------------- | ------------------------------------- |
+| Primary source          | browser       | `"primary": true`                     |
+| Multiple sources        | web flow      | browser + dataLayer + demo            |
+| Source-level mapping    | dataLayer     | `"mapping": { "add_to_cart": {...} }` |
+| Pre-collector chain     | dataLayer     | `"next": "enricher"`                  |
+| Pre-collector array     | http (server) | `"next": ["filter"]` (array form)     |
+| Require (deferred init) | dataLayer     | `"require": ["session"]`              |
+| Demo source events      | demo          | Pre-configured test events            |
 
 #### Transformers
 
-| Feature                 | Location           | Example                            |
-| ----------------------- | ------------------ | ---------------------------------- |
-| Validator transformer   | dataLayerValidator | JSON Schema validation             |
-| Fingerprint transformer | server             | Hash context fields to `user.hash` |
-| Transformer chaining    | server             | `"next": "serverValidator"`        |
-| Post-collector chain    | Meta               | `"before": "fingerprint"`          |
-| Contract validation     | serverValidator    | Entity/action schemas              |
-| Format option           | serverValidator    | `"format": true`                   |
+| Feature                 | Location           | Example                                        |
+| ----------------------- | ------------------ | ---------------------------------------------- |
+| Validator transformer   | dataLayerValidator | JSON Schema validation                         |
+| Fingerprint transformer | server             | Hash context fields to `user.hash`             |
+| Transformer chaining    | server             | `"next": "serverValidator"`                    |
+| Post-collector chain    | Meta               | `"before": ["fingerprint", "serverValidator"]` |
+| Contract validation     | serverValidator    | Entity/action schemas                          |
+| Format option           | serverValidator    | `"format": true`                               |
 
 #### Destinations
 
-| Feature                 | Location         | Example                            |
-| ----------------------- | ---------------- | ---------------------------------- |
-| Require (deferred init) | GA4              | `"require": ["consent", "user"]`   |
-| Destination consent     | GA4              | `"consent": { "marketing": true }` |
-| Destination mapping     | All destinations | Entity/action to vendor events     |
-| Multiple destinations   | Both flows       | GA4 + API, Meta + Demo             |
-| Batch option            | API              | `"batch": 5`                       |
+| Feature                 | Location         | Example                                 |
+| ----------------------- | ---------------- | --------------------------------------- |
+| Require (deferred init) | GA4              | `"require": ["consent", "user"]`        |
+| Destination consent     | GA4              | `"consent": { "marketing": true }`      |
+| Destination mapping     | All destinations | Entity/action to vendor events          |
+| Multiple destinations   | Both flows       | GA4 + API, Meta + Demo                  |
+| Batch option            | API              | `"batch": 5`                            |
+| Transform function      | API              | `"transform": "$code:(data) => ..."`    |
+| Empty consent (always)  | debug            | `"consent": {}` (fires without consent) |
 
 #### Collector
 
-| Feature           | Location        | Example                                 |
-| ----------------- | --------------- | --------------------------------------- |
-| Tagging           | Both collectors | `"tagging": 1`                          |
-| Consent defaults  | Both collectors | `"consent": { "functional": true }`     |
-| Globals           | Both collectors | `"environment": "demo"`                 |
-| Custom properties | web collector   | `"custom": { "campaign": "flow-demo" }` |
-| User defaults     | web collector   | `"user": { "id": "anonymous" }`         |
+| Feature           | Location         | Example                                 |
+| ----------------- | ---------------- | --------------------------------------- |
+| Tagging           | Both collectors  | `"tagging": 1`                          |
+| Consent defaults  | Both collectors  | `"consent": { "functional": true }`     |
+| Globals           | Both collectors  | `"environment": "demo"`                 |
+| Custom properties | web collector    | `"custom": { "campaign": "flow-demo" }` |
+| User defaults     | web collector    | `"user": { "id": "anonymous" }`         |
+| Dynamic global    | server collector | `"startedAt": "$code:Date.now()"`       |
 
 #### Server-Specific
 
-| Feature              | Location    | Example                                         |
-| -------------------- | ----------- | ----------------------------------------------- |
-| Ingest metadata      | http source | `"context.ip": "ip"`                            |
-| Language header      | ingest      | `"context.language": "headers.accept-language"` |
-| Policy               | Meta        | Pre-processing field transformation             |
-| Policy consent-gated | Meta        | `"user_data.em"` with consent                   |
-| Policy nested map    | Meta        | `"custom_data.request_meta": { "map": {...} }`  |
+| Feature               | Location        | Example                                                                 |
+| --------------------- | --------------- | ----------------------------------------------------------------------- |
+| Ingest metadata       | http source     | `"context.ip": "ip"`                                                    |
+| Language header       | ingest          | `"context.language": "headers.accept-language"`                         |
+| Ingest computed field | http source     | `"fn": "$code:(ip) => ip.replace(...)"`                                 |
+| Policy                | Meta            | Pre-processing field transformation                                     |
+| Policy consent-gated  | Meta            | `"user_data.em"` with consent                                           |
+| Policy nested map     | Meta            | `"custom_data.request_meta": { "map": {...} }`                          |
+| Local package path    | server packages | `"path": "../../core"` (resolve from filesystem)                        |
+| Source cache          | http source     | `"cache": { "store": "cache", "rules": [...] }`                         |
+| Cache match rule      | http source     | `"match": { "key": "ingest.method", "operator": "eq", "value": "GET" }` |
+| Cache TTL             | http source     | `"ttl": 300` (seconds)                                                  |
+| Cache response update | http source     | `"update": { "headers.X-Cache": { "key": "cache.status" } }`            |
+| Store definition      | server stores   | `"cache": { "package": "@walkeros/store-memory", ... }`                 |
+| Store settings        | cache store     | `"maxSize": 10485760, "maxEntries": 1000`                               |
 
 #### Browser Source
 

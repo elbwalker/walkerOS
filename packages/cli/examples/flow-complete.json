@@ -514,7 +514,8 @@
           "config": {
             "settings": {
               "url": "$var.apiUrl",
-              "batch": 5
+              "batch": 5,
+              "transform": "$code:(data) => JSON.stringify(data)"
             },
             "data": {
               "map": {
@@ -557,9 +558,7 @@
             "push": "$code:(event, ctx) => { ctx.logger.info('[DEBUG]', event.name, event.data); }"
           },
           "config": {
-            "consent": {
-              "functional": true
-            }
+            "consent": {}
           }
         }
       },
@@ -613,6 +612,7 @@
         "http": {
           "package": "@walkeros/server-source-express",
           "primary": true,
+          "next": ["filter"],
           "cache": {
             "store": "cache",
             "rules": [
@@ -643,7 +643,11 @@
               "context.ip": "ip",
               "context.userAgent": "headers.user-agent",
               "context.language": "headers.accept-language",
-              "context.referer": "headers.referer"
+              "context.referer": "headers.referer",
+              "context.anonymizedIp": {
+                "key": "ip",
+                "fn": "$code:(ip) => ip ? ip.replace(/\\.\\d+$/, '.0') : ''"
+              }
             }
           },
           "examples": {
@@ -682,6 +686,9 @@
             "push": "$code:(event) => event.name.startsWith('internal_') || event.name.startsWith('debug_') ? false : event"
           },
           "next": "fingerprint",
+          "env": {
+            "store": "$store:cache"
+          },
           "config": {},
           "examples": {
             "passes-normal": {
@@ -746,7 +753,7 @@
       "destinations": {
         "meta": {
           "package": "@walkeros/server-destination-meta",
-          "before": "fingerprint",
+          "before": ["fingerprint", "serverValidator"],
           "config": {
             "settings": {
               "pixelId": "$var.metaPixelId",
@@ -918,7 +925,8 @@
         "globals": {
           "environment": "demo",
           "version": "$var.flowVersion",
-          "platform": "server"
+          "platform": "server",
+          "startedAt": "$code:Date.now()"
         }
       },
       "bundle": {
