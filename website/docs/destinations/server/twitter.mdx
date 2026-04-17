@@ -1,0 +1,200 @@
+---
+title: X (Twitter) Conversions API
+description: "Server-side conversion event delivery to X (Twitter) for enhanced ad attribution"
+path: /docs/destinations/server/twitter
+sidebar_position: 22
+package: '@walkeros/server-destination-twitter'
+---
+import data from '@walkeros/server-destination-twitter/walkerOS.json';
+
+# X (Twitter) Conversions API
+
+<PackageLink env="server" github="packages/server/destinations/twitter" npm="@walkeros/server-destination-twitter" status="beta" />
+
+Server-side event delivery to X's (Twitter's) Conversions API for enhanced ad attribution and privacy-compliant conversion tracking.
+
+:::info Where This Fits
+X Conversions API is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'X CAPI', highlight: true } }}
+/>
+
+Sends conversion events server-side to X's Conversions API, bypassing browser limitations for improved data quality. Deduplicates with the browser-side X Pixel via `conversion_id`.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-twitter`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationTwitter } from '@walkeros/server-destination-twitter';
+
+await startFlow({
+  destinations: {
+    twitter: {
+      code: destinationTwitter,
+      config: {
+        settings: {
+          pixelId: 'YOUR_PIXEL_ID',
+          eventId: 'tw-xxxxx-xxxxx',
+          consumerKey: 'YOUR_CONSUMER_KEY',
+          consumerSecret: 'YOUR_CONSUMER_SECRET',
+          accessToken: 'YOUR_ACCESS_TOKEN',
+          accessTokenSecret: 'YOUR_ACCESS_TOKEN_SECRET',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "twitter": {
+    "package": "@walkeros/server-destination-twitter",
+    "code": "destinationTwitter",
+    "config": {
+      "settings": {
+        "pixelId": "YOUR_PIXEL_ID",
+        "eventId": "tw-xxxxx-xxxxx",
+        "consumerKey": "YOUR_CONSUMER_KEY",
+        "consumerSecret": "YOUR_CONSUMER_SECRET",
+        "accessToken": "YOUR_ACCESS_TOKEN",
+        "accessTokenSecret": "YOUR_ACCESS_TOKEN_SECRET"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## User identification
+
+The destination builds an `identifiers` array. Each identifier is a separate single-key object in the payload. At least one **primary** identifier is required -- events without one are silently skipped.
+
+**Primary identifiers:**
+
+- **`hashed_email`** -- Resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending. Set `doNotHash: ['email']` if you are pre-hashing upstream.
+- **`hashed_phone_number`** -- Resolved from `event.user.phone` or a `user_data.phone` mapping. SHA-256 hashed. Use `doNotHash: ['phone']` to skip.
+- **`twclid`** -- X click ID (pass-through, **not** hashed). Typically forwarded from the browser session:
+
+<CodeSnippet
+  code={`"settings": {
+  "pixelId": "$env.TWITTER_PIXEL_ID",
+  "eventId": "$env.TWITTER_EVENT_ID",
+  "user_data": {
+    "twclid": "context.twclid"
+  }
+}`}
+  language="json"
+/>
+
+**Secondary identifiers** (optional): `ip_address`, `user_agent` -- pass-through.
+
+## Per-event overrides
+
+The default `eventId` from settings applies to all events. Override it per event via mapping to route different events to different pre-registered conversion events:
+
+<CodeSnippet
+  code={`"mapping": {
+  "order": {
+    "complete": {
+      "settings": {
+        "eventId": { "value": "tw-o8z6j-purchase01" },
+        "value": "data.total",
+        "currency": { "key": "data.currency", "value": "EUR" },
+        "number_items": "data.count"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Browser deduplication
+
+When running both the browser-side X Pixel and this server destination, the walkerOS event `id` is sent as `conversion_id` on both sides. X deduplicates conversions that share the same `conversion_id` and conversion event, so only one conversion is counted.
+
+## Docker deployment
+
+### Step 1: Create flow configuration
+
+Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "twitter": {
+      "package": "@walkeros/server-destination-twitter",
+      "config": {
+        "settings": {
+          "pixelId": "$env.TWITTER_PIXEL_ID",
+          "eventId": "$env.TWITTER_EVENT_ID",
+          "consumerKey": "$env.TWITTER_CONSUMER_KEY",
+          "consumerSecret": "$env.TWITTER_CONSUMER_SECRET",
+          "accessToken": "$env.TWITTER_ACCESS_TOKEN",
+          "accessTokenSecret": "$env.TWITTER_ACCESS_TOKEN_SECRET"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the flow
+
+Bundle your flow configuration before running in Docker:
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e TWITTER_PIXEL_ID=o8z6j \\
+  -e TWITTER_EVENT_ID=tw-o8z6j-o8z21 \\
+  -e TWITTER_CONSUMER_KEY=your-consumer-key \\
+  -e TWITTER_CONSUMER_SECRET=your-consumer-secret \\
+  -e TWITTER_ACCESS_TOKEN=your-access-token \\
+  -e TWITTER_ACCESS_TOKEN_SECRET=your-access-token-secret \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+:::tip Security best practice
+Never commit OAuth 1.0a credentials to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

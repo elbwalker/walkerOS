@@ -1,0 +1,234 @@
+---
+title: Matomo
+description: Self-hosted or cloud privacy-first web analytics (GA alternative)
+path: /docs/destinations/web/matomo
+sidebar_position: 4
+package: '@walkeros/web-destination-matomo'
+---
+
+import destinationMatomo from '@walkeros/web-destination-matomo';
+import data from '@walkeros/web-destination-matomo/walkerOS.json';
+
+export const destination = { ...destinationMatomo, examples: data.examples };
+
+# Matomo
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/matomo"
+  npm="@walkeros/web-destination-matomo"
+  status="beta"
+/>
+
+[Matomo](https://matomo.org/) is an open-source, privacy-focused web analytics
+platform that works self-hosted or in Matomo Cloud. This destination forwards
+walkerOS events to Matomo via the `_paq` command queue with support for page
+views, custom events, ecommerce, goals, site search, content tracking, and
+custom dimensions.
+
+:::info Where This Fits
+Matomo is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Matomo', highlight: true } }}
+/>
+
+Loads the Matomo tracking script, configures the tracker URL and site ID, and
+sends page views and custom events with GDPR-compliant analytics.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-matomo`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationMatomo } from '@walkeros/web-destination-matomo';
+
+await startFlow({
+  destinations: {
+    matomo: {
+      code: destinationMatomo,
+      config: {
+        loadScript: true,
+        settings: {
+          siteId: '1', // Required
+          url: 'https://analytics.example.com/', // Required
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "matomo": {
+    "package": "@walkeros/web-destination-matomo",
+    "config": {
+      "loadScript": true,
+      "settings": {
+        "siteId": "1",
+        "url": "https://analytics.example.com/"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+<DestinationInitDemo
+  destination={destination}
+  settings={{
+    siteId: '1',
+    url: 'https://analytics.example.com/',
+  }}
+/>
+
+### Event Mapping
+
+For custom event mapping (`mapping.entity.action.settings`):
+
+<PropertyTable schema={data.schemas.mapping} />
+
+## Mapping Examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### Page View
+
+Default handling -- no mapping needed.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    siteId: '1',
+    url: 'https://analytics.example.com/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={data.examples.step.pageView.in}
+  mapping={data.examples.step.pageView.mapping}
+  generic={true}
+/>
+
+### Custom Event with Goal
+
+Map a walkerOS event to a Matomo `trackEvent` call with a `trackGoal` alongside.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    siteId: '1',
+    url: 'https://analytics.example.com/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={data.examples.step.customEvent.in}
+  mapping={data.examples.step.customEvent.mapping}
+  generic={true}
+/>
+
+### Product Detail View
+
+Map a walkerOS product view to an
+&nbsp;<Link to="https://developer.matomo.org/api-reference/tracking-javascript#ecommerce">ecommerceProductDetailView</Link>
+call.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    siteId: '1',
+    url: 'https://analytics.example.com/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={data.examples.step.productDetailView.in}
+  mapping={data.examples.step.productDetailView.mapping}
+  generic={true}
+/>
+
+### Ecommerce Cart Update
+
+Map a walkerOS `cart view` event to an
+&nbsp;<Link to="https://developer.matomo.org/api-reference/tracking-javascript#ecommerce">trackEcommerceCartUpdate</Link>
+call.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    siteId: '1',
+    url: 'https://analytics.example.com/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={data.examples.step.ecommerceCartUpdate.in}
+  mapping={data.examples.step.ecommerceCartUpdate.mapping}
+  generic={true}
+/>
+
+### Ecommerce Order
+
+Map a walkerOS `order complete` event to an
+&nbsp;<Link to="https://developer.matomo.org/api-reference/tracking-javascript#ecommerce">trackEcommerceOrder</Link>
+call.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    siteId: '1',
+    url: 'https://analytics.example.com/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={data.examples.step.ecommerceOrder.in}
+  mapping={data.examples.step.ecommerceOrder.mapping}
+  generic={true}
+/>
+
+### Site Search
+
+Track internal site search via `trackSiteSearch`.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    siteId: '1',
+    url: 'https://analytics.example.com/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={data.examples.step.siteSearch.in}
+  mapping={data.examples.step.siteSearch.mapping}
+  generic={true}
+/>

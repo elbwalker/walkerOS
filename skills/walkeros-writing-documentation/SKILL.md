@@ -100,14 +100,73 @@ Before publishing ANY code example:
 
 ## DRY Patterns
 
-### PropertyTable for Configuration
+### Settings snippet (package pages)
 
-**When to use:** Any page documenting package configuration with Zod schemas.
+**When to use:** Any package page documenting the package-specific `settings`
+schema (destinations, sources, transformers, stores).
+
+Use the shared `<Settings />` MDX snippet so heading, notice, and PropertyTable
+stay consistent across all packages:
 
 ```mdx
 import data from '@walkeros/web-destination-gtag/walkerOS.json';
-<PropertyTable schema={data.schemas.settings} />;
+import Settings from '@site/src/components/snippets/_settings.mdx';
+
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 ```
+
+The snippet renders `## Settings`, a short notice linking to shared fields, and
+`<PropertyTable schema={...} />`. Do not hand-roll the heading or PropertyTable
+on package pages — use the snippet.
+
+**Never** use headings like `## Configuration`, `## Configuration reference`, or
+`## Config` on package pages. Those are reserved for the group-level
+shared-config reference (see below).
+
+### Shared configuration reference (group index pages)
+
+On group index pages (`docs/destinations/index.mdx`, `sources/index.mdx`,
+`transformers/index.mdx`, `stores/index.mdx`), add a `## Configuration` section
+that documents the wrapper fields around `settings` — fields shared across all
+packages of that type (consent, mapping, env, id, …).
+
+Drive the table from the core Zod schemas, filtering dev-only fields at the
+representation layer:
+
+```mdx
+import { schemas } from '@walkeros/core/dev';
+import { omitSchemaProperties } from '@site/src/utils/schema';
+
+export const destinationConfig = omitSchemaProperties(
+  schemas.DestinationSchemas.configJsonSchema,
+  ['settings', 'init', 'mock', 'onError', 'onLog'],
+);
+
+## Configuration
+
+<PropertyTable schema={destinationConfig} />
+```
+
+Available schemas:
+
+- `schemas.DestinationSchemas.configJsonSchema`
+- `schemas.SourceSchemas.configJsonSchema`
+- `schemas.TransformerSchemas.configJsonSchema`
+- `schemas.StoreSchemas.configJsonSchema`
+
+Use `omitSchemaProperties` to hide `settings` (documented per-package) and any
+dev-only fields (`init`, `mock`, `chainMocks`, `onError`, `onLog`) from the
+user-facing table.
+
+### PropertyTable component
+
+`<PropertyTable schema={...} />` from `@walkeros/explorer` is the primitive. It
+renders a pure table — no heading, no captions. Never wrap it in a custom
+heading on package pages; use the `<Settings />` snippet instead.
 
 **When NOT to use:**
 

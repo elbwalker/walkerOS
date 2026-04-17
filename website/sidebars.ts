@@ -152,12 +152,32 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/web/fullstory',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/web/gtag/ga4',
                   className: 'sidebar-badge-web',
                 },
                 {
                   type: 'doc',
                   id: 'destinations/web/gtag/gtm',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/heap',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/hotjar',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/matomo',
                   className: 'sidebar-badge-web',
                 },
                 {
@@ -175,6 +195,16 @@ const sidebars: SidebarsConfig = {
                       className: 'sidebar-badge-server',
                     },
                   ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/mparticle',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/optimizely',
+                  className: 'sidebar-badge-web',
                 },
                 {
                   type: 'doc',
@@ -201,6 +231,11 @@ const sidebars: SidebarsConfig = {
                       className: 'sidebar-badge-server',
                     },
                   ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/rudderstack',
+                  className: 'sidebar-badge-server',
                 },
                 {
                   type: 'category',
@@ -237,7 +272,32 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/bing',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/criteo',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/customerio',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/datamanager',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/hubspot',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/klaviyo',
                   className: 'sidebar-badge-server',
                 },
                 {
@@ -272,12 +332,27 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/reddit',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/snapchat',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/web/tiktok',
                   className: 'sidebar-badge-web',
                 },
                 {
                   type: 'doc',
                   id: 'destinations/server/tiktok',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/twitter',
                   className: 'sidebar-badge-server',
                 },
               ],
@@ -314,7 +389,27 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/file',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/gcp',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/kafka',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/redis',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/sqlite',
                   className: 'sidebar-badge-server',
                 },
               ],

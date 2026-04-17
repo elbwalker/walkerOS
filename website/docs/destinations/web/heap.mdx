@@ -1,0 +1,194 @@
+---
+title: Heap
+description: Product analytics with auto-capture and retroactive events
+path: /docs/destinations/web/heap
+sidebar_position: 13
+package: '@walkeros/web-destination-heap'
+---
+
+import destinationHeap from '@walkeros/web-destination-heap';
+import data from '@walkeros/web-destination-heap/walkerOS.json';
+
+export const destination = { ...destinationHeap, examples: data.examples };
+
+# Heap
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/heap"
+  npm="@walkeros/web-destination-heap"
+  status="beta"
+/>
+
+[Heap](https://www.heap.io/) (now part of Contentsquare) is a product
+analytics platform with auto-capture and retroactive event definitions.
+This destination loads the Heap snippet from Heap's CDN and forwards
+walkerOS events through `heap.track(name, properties)`, plus identity,
+user properties, persistent event properties, and runtime consent.
+
+:::info Where This Fits
+Heap is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Heap', highlight: true } }}
+/>
+
+Loads the Heap snippet, forwards every walkerOS event as
+`heap.track(name, properties)`, and lets you layer on identity, user
+properties, and consent translation.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-heap`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationHeap } from '@walkeros/web-destination-heap';
+
+await startFlow({
+  destinations: {
+    heap: {
+      code: destinationHeap,
+      config: {
+        loadScript: true,
+        settings: {
+          appId: 'YOUR_HEAP_APP_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "heap": {
+    "package": "@walkeros/web-destination-heap",
+    "config": {
+      "loadScript": true,
+      "settings": {
+        "appId": "YOUR_HEAP_APP_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### Default event forwarding
+
+Every walkerOS event becomes `heap.track(name, {})` without any mapping.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
+  event={data.examples.step.defaultEventForwarding.in}
+  mapping={data.examples.step.defaultEventForwarding.mapping}
+  generic={true}
+/>
+
+### Rename + map event properties
+
+Use `mapping.name` to emit a different name and `mapping.data.map` to
+shape the properties argument.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
+  event={data.examples.step.destinationLevelInclude.in}
+  mapping={data.examples.step.destinationLevelInclude.mapping}
+  generic={true}
+/>
+
+### Identify on login
+
+Resolve a mapping value into a string identity and call `heap.identify(id)`
+with user properties. `skip: true` suppresses the default track call.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
+  event={data.examples.step.userLoginIdentify.in}
+  mapping={data.examples.step.userLoginIdentify.mapping}
+  generic={true}
+/>
+
+### Reset on logout
+
+Truthy `mapping.settings.reset` triggers `heap.resetIdentity()`.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
+  event={data.examples.step.userLogoutReset.in}
+  mapping={data.examples.step.userLogoutReset.mapping}
+  generic={true}
+/>
+
+### Persistent event properties
+
+`heap.addEventProperties(...)` stores properties on every subsequent
+event until cleared. Combine with `skip: true` when the event itself is
+only a trigger for the property update.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
+  event={data.examples.step.globalEventProperties.in}
+  mapping={data.examples.step.globalEventProperties.mapping}
+  generic={true}
+/>
+
+## Consent
+
+The destination wires walkerOS `config.consent` to Heap's runtime consent
+API. `heap.startTracking()` fires when all required consent keys are
+granted; `heap.stopTracking()` fires otherwise.
+
+<CodeSnippet
+  code={`destinations: {
+  heap: {
+    code: destinationHeap,
+    config: {
+      consent: { analytics: true },
+      settings: { appId: 'YOUR_HEAP_APP_ID' },
+    },
+  },
+}`}
+  language="typescript"
+/>

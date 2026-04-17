@@ -4,6 +4,14 @@ description: "Send events to analytics tools, marketing platforms, and custom en
 sidebar_position: 5
 ---
 
+import { schemas } from '@walkeros/core/dev';
+import { omitSchemaProperties } from '@site/src/utils/schema';
+
+export const destinationConfig = omitSchemaProperties(
+  schemas.DestinationSchemas.configJsonSchema,
+  ['settings', 'init', 'mock', 'onError', 'onLog'],
+);
+
 # Destinations
 
 Destinations are the endpoints where walkerOS sends your processed events. They
@@ -74,3 +82,12 @@ others.
 Build a custom destination for any endpoint. See
 [Create your own destination](/docs/destinations/create-your-own) for a
 step-by-step guide.
+
+## Configuration
+
+These fields are available on every destination, regardless of package. They
+wrap the package-specific `settings` field, which is documented on each
+destination's page.
+
+<PropertyTable schema={destinationConfig} />
+

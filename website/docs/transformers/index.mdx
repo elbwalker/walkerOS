@@ -4,6 +4,14 @@ description: Event processing middleware for walkerOS collector
 sidebar_position: 5
 ---
 
+import { schemas } from '@walkeros/core/dev';
+import { omitSchemaProperties } from '@site/src/utils/schema';
+
+export const transformerConfig = omitSchemaProperties(
+  schemas.TransformerSchemas.configJsonSchema,
+  ['settings', 'init', 'mock', 'chainMocks'],
+);
+
 # Transformers
 
 Transformers are middleware for **validating**, **enriching**, and **redacting** events in the walkerOS pipeline. Together with [Mapping](/docs/mapping), they give you full control over how events are shaped before reaching destinations.
@@ -28,7 +36,7 @@ Transformers are middleware for **validating**, **enriching**, and **redacting**
 | **Enrich** | Add server-side data (user segments, geo) |
 | **Redact** | Remove PII before sending to destinations |
 
-## Configuration
+## Basic setup
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -57,6 +65,14 @@ Validates events using JSON Schema:
 * Configurable logging for validation results
 
 [Learn more →](./validator)
+
+## Configuration
+
+These fields are available on every transformer, regardless of package. They
+wrap the package-specific `settings` field, which is documented on each
+transformer's page.
+
+<PropertyTable schema={transformerConfig} />
 
 ## Next steps
 

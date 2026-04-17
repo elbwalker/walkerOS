@@ -1,0 +1,241 @@
+---
+title: Redis Streams
+description: 'Server-side event streaming to Redis Streams via ioredis with XADD, MAXLEN trimming, and JSON or flat serialization'
+path: /docs/destinations/server/redis
+sidebar_position: 17
+package: '@walkeros/server-destination-redis'
+---
+
+import data from '@walkeros/server-destination-redis/walkerOS.json';
+
+# Redis Streams
+
+<PackageLink env="server" github="packages/server/destinations/redis" npm="@walkeros/server-destination-redis" status="beta" />
+
+Server-side event streaming to [Redis Streams](https://redis.io/docs/latest/develop/data-types/streams/) via the [`ioredis`](https://github.com/redis/ioredis) client. Each event is appended to a configurable stream via `XADD`, with optional approximate MAXLEN trimming for bounded memory usage, JSON or flat serialization modes, and graceful shutdown via `destroy()`.
+
+:::info Where This Fits
+Redis Streams is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Redis Streams', highlight: true } }}
+/>
+
+Receives events server-side from the collector, serializes them as JSON (or flat fields), and appends them to a Redis Stream for downstream consumers (stream processors, worker queues, pub/sub fan-out, XREAD consumer groups).
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-redis`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationRedis } from '@walkeros/server-destination-redis';
+
+await startFlow({
+  destinations: {
+    redis: {
+      code: destinationRedis,
+      config: {
+        settings: {
+          redis: {
+            streamKey: 'walkeros:events',
+            url: 'redis://localhost:6379',
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "redis": {
+    "package": "@walkeros/server-destination-redis",
+    "config": {
+      "settings": {
+        "redis": {
+          "streamKey": "walkeros:events",
+          "url": "redis://localhost:6379"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+The destination creates a single long-lived `ioredis` client during `init()`. On flow hot-swap or server shutdown, `destroy()` calls `client.quit()` to flush in-flight commands and close the TCP connection gracefully. User-provided clients (wired in via `_client`) are left untouched.
+
+## Stream entry format
+
+Each event is appended via `XADD <streamKey> [MAXLEN [~] <n>] * <field> <value> ...`:
+
+- **streamKey** -- from `settings.redis.streamKey` (or `mapping.settings.streamKey` override)
+- **`*`** -- auto-generated entry ID (ms-timestamp + sequence)
+- **fields** -- in `json` mode: single `event` field with the full event JSON-stringified; in `flat` mode: top-level event keys as separate fields (nested objects JSON-encoded)
+- **MAXLEN** -- when `settings.redis.maxLen` is set, trims the stream to ~N entries. Approximate (`~`) by default; set `exactTrimming: true` to trim exactly (slower)
+
+## Per-rule overrides
+
+<PropertyTable schema={data.schemas.mapping} />
+
+Use `mapping.settings.streamKey` to route specific events to dedicated streams (e.g. orders to `walkeros:orders`, identities to `walkeros:identities`).
+
+## Serialization modes
+
+### JSON (default)
+
+Stores the full walkerOS event as a single `event` field. Easiest to consume -- decode with `JSON.parse()`.
+
+```
+XADD walkeros:events * event '{"entity":"page","action":"view",...}'
+```
+
+### Flat
+
+Stores top-level event fields as separate stream entry fields. Nested objects are JSON-encoded. Useful when downstream consumers want to filter or project specific fields without parsing the full event.
+
+```
+XADD walkeros:events * entity page action view timestamp 1700000100 data '{"id":"Home"}'
+```
+
+Configure via `settings.redis.serialization: 'flat'`.
+
+## Authentication
+
+### Redis Cloud / Upstash (TLS + password)
+
+<CodeSnippet
+  code={`{
+  "redis": {
+    "streamKey": "walkeros:events",
+    "url": "rediss://default:$env.REDIS_PASSWORD@my-endpoint.upstash.io:6380"
+  }
+}`}
+  language="json"
+/>
+
+### AWS ElastiCache (in-VPC, no auth)
+
+<CodeSnippet
+  code={`{
+  "redis": {
+    "streamKey": "walkeros:events",
+    "url": "redis://my-cluster.cache.amazonaws.com:6379"
+  }
+}`}
+  language="json"
+/>
+
+### Custom options (ACL user, non-default db)
+
+<CodeSnippet
+  code={`{
+  "redis": {
+    "streamKey": "walkeros:events",
+    "options": {
+      "host": "redis.example.com",
+      "port": 6379,
+      "username": "$env.REDIS_USER",
+      "password": "$env.REDIS_PASSWORD",
+      "db": 1,
+      "tls": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+## MAXLEN trimming
+
+Redis Streams grow unbounded by default. For high-volume pipelines, cap stream length with `maxLen`:
+
+<CodeSnippet
+  code={`{
+  "redis": {
+    "streamKey": "walkeros:events",
+    "url": "redis://localhost:6379",
+    "maxLen": 50000
+  }
+}`}
+  language="json"
+/>
+
+Approximate trimming (`~`) is used by default -- Redis trims to "about N" entries with minimal overhead. For exact trimming, set `exactTrimming: true` (slower, use only when strict bounds are required).
+
+## Docker deployment
+
+### Step 1: Create flow configuration
+
+Use the `$env.NAME` syntax to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "redis": {
+      "package": "@walkeros/server-destination-redis",
+      "config": {
+        "settings": {
+          "redis": {
+            "streamKey": "$env.REDIS_STREAM",
+            "url": "$env.REDIS_URL",
+            "maxLen": 100000
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the flow
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e REDIS_URL=rediss://default:your-pass@host:6380 \\
+  -e REDIS_STREAM=walkeros:events \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+:::tip Security Best Practice
+Never commit Redis credentials to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

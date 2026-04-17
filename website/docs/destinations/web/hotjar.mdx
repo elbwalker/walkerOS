@@ -1,0 +1,181 @@
+---
+title: Hotjar
+description: Session recordings, heatmaps, and on-page feedback
+path: /docs/destinations/web/hotjar
+sidebar_position: 12
+package: '@walkeros/web-destination-hotjar'
+---
+
+import destinationHotjar from '@walkeros/web-destination-hotjar';
+import data from '@walkeros/web-destination-hotjar/walkerOS.json';
+
+export const destination = { ...destinationHotjar, examples: data.examples };
+
+# Hotjar
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/hotjar"
+  npm="@walkeros/web-destination-hotjar"
+  status="beta"
+/>
+
+[Hotjar](https://www.hotjar.com/) provides session recordings, heatmaps, and
+on-page feedback for web products. This destination forwards walkerOS events to
+Hotjar via the official
+[`@hotjar/browser`](https://www.npmjs.com/package/@hotjar/browser) SDK,
+translating events into `Hotjar.event(...)` calls and handling identity and
+SPA state changes.
+
+:::info Where This Fits
+Hotjar is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Hotjar', highlight: true } }}
+/>
+
+Loads the Hotjar SDK, forwards every walkerOS event as `Hotjar.event(name)`,
+and lets you layer on identity and SPA route tracking.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-hotjar`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationHotjar } from '@walkeros/web-destination-hotjar';
+
+await startFlow({
+  destinations: {
+    hotjar: {
+      code: destinationHotjar,
+      config: {
+        settings: {
+          siteId: 1234567,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "hotjar": {
+    "package": "@walkeros/web-destination-hotjar",
+    "config": {
+      "settings": {
+        "siteId": 1234567
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### Default event forwarding
+
+Every walkerOS event becomes `Hotjar.event(name)` without any mapping.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ siteId: 1234567 }}
+  event={data.examples.step.defaultEventForwarding.in}
+  mapping={data.examples.step.defaultEventForwarding.mapping}
+  generic={true}
+/>
+
+### Rename the forwarded event
+
+Use `mapping.name` to emit a different name to Hotjar.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ siteId: 1234567 }}
+  event={data.examples.step.renamedEvent.in}
+  mapping={data.examples.step.renamedEvent.mapping}
+  generic={true}
+/>
+
+### Identify
+
+Resolve a mapping value into `{ userId, ...attributes }` and call
+`Hotjar.identify(userId, attributes)` before the event.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ siteId: 1234567 }}
+  event={data.examples.step.userLoginIdentify.in}
+  mapping={data.examples.step.userLoginIdentify.mapping}
+  generic={true}
+/>
+
+### SPA state change
+
+For single-page applications, emit `Hotjar.stateChange(path)` so heatmaps
+aggregate by virtual URL. Combine with `skip: true` to suppress the default
+`Hotjar.event(...)` call.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ siteId: 1234567 }}
+  event={data.examples.step.pageViewStateChange.in}
+  mapping={data.examples.step.pageViewStateChange.mapping}
+  generic={true}
+/>
+
+## Consent
+
+Hotjar has no runtime consent API. Consent is gated at the walkerOS level via
+`config.consent`:
+
+<CodeSnippet
+  code={`destinations: {
+  hotjar: {
+    code: destinationHotjar,
+    config: {
+      consent: { marketing: true },
+      settings: { siteId: 1234567 },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+Unconsented events are blocked by the collector before reaching the
+destination.

@@ -1,0 +1,229 @@
+---
+title: SQLite
+description: 'Server-side event persistence to a local SQLite file (better-sqlite3) or remote libSQL / Turso (@libsql/client). Driver picked automatically from the URL.'
+path: /docs/destinations/server/sqlite
+sidebar_position: 19
+package: '@walkeros/server-destination-sqlite'
+---
+
+import data from '@walkeros/server-destination-sqlite/walkerOS.json';
+
+# SQLite
+
+<PackageLink env="server" github="packages/server/destinations/sqlite" npm="@walkeros/server-destination-sqlite" status="beta" />
+
+Persists walkerOS events to SQLite. One destination, two drivers behind a single interface: [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3) for local files (and `:memory:`), and [`@libsql/client`](https://github.com/tursodatabase/libsql-client-ts) for remote Turso / libSQL / sqld over HTTP or WebSocket. Driver selection is URL-driven; both SDKs are optional peer dependencies so you install only the one you need.
+
+:::info Where This Fits
+SQLite is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'SQLite', highlight: true } }}
+/>
+
+Receives events server-side from the collector, serializes them into a canonical row, and inserts them into a SQLite-compatible database. Good fit for single-host deployments (local file), embedded analytics (in-memory), and edge-deployed Turso databases.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`# Local file / :memory:
+npm install @walkeros/server-destination-sqlite better-sqlite3
+
+# Remote Turso / libSQL
+npm install @walkeros/server-destination-sqlite @libsql/client`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationSQLite } from '@walkeros/server-destination-sqlite';
+
+await startFlow({
+  destinations: {
+    sqlite: {
+      code: destinationSQLite,
+      config: {
+        settings: {
+          sqlite: {
+            url: './events.db',
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "sqlite": {
+    "package": "@walkeros/server-destination-sqlite",
+    "config": {
+      "settings": {
+        "sqlite": {
+          "url": "./events.db"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+The destination opens the connection during `init()`, runs `CREATE TABLE IF NOT EXISTS` with the canonical schema (unless `schema: 'manual'`), and prepares the INSERT statement once. On `destroy()` the connection is closed cleanly. User-provided clients (wired via `env.client` or `settings.sqlite._client`) are left untouched.
+
+## Auto schema
+
+With the default `schema: 'auto'`, the first `init()` creates an events table mirroring the canonical walkerOS event shape:
+
+```sql
+CREATE TABLE IF NOT EXISTS events (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  timestamp    INTEGER,
+  event_id     TEXT,
+  name         TEXT,
+  entity       TEXT,
+  action       TEXT,
+  session_id   TEXT,
+  user_id      TEXT,
+  page_url     TEXT,
+  page_title   TEXT,
+  referrer_url TEXT,
+  data         TEXT,
+  globals      TEXT,
+  consent      TEXT
+)
+```
+
+Nested objects (`data`, `globals`, `consent`) are stored as JSON strings. `page_url` maps from `source.id`; `page_title` from `data.title`; `referrer_url` from `source.previous_id`.
+
+## Per-rule overrides
+
+<PropertyTable schema={data.schemas.mapping} />
+
+Use `mapping.settings.table` to route specific events to a dedicated table (for example orders to `orders`, identities to `identities`).
+
+## Drivers
+
+### Local -- `better-sqlite3`
+
+Sync native driver, fastest option for single-host deployments. The URL is treated as a filesystem path; `:memory:` works too.
+
+<CodeSnippet
+  code={`{
+  "sqlite": {
+    "url": "/var/lib/walkeros/events.db"
+  }
+}`}
+  language="json"
+/>
+
+### Remote -- `@libsql/client`
+
+Async HTTP/WSS driver for [Turso](https://turso.tech/), self-hosted [sqld](https://github.com/tursodatabase/libsql), or any libSQL-compatible endpoint. Auth via `authToken`.
+
+<CodeSnippet
+  code={`{
+  "sqlite": {
+    "url": "libsql://my-db.turso.io",
+    "authToken": "$env.TURSO_TOKEN"
+  }
+}`}
+  language="json"
+/>
+
+URL prefixes `libsql://`, `http://`, `https://`, `ws://`, `wss://` route to the libSQL driver. Anything else (bare paths, `:memory:`) routes to `better-sqlite3`.
+
+## Manual schema
+
+Set `schema: 'manual'` to skip the auto `CREATE TABLE`. The user brings their own table and mapping. Useful when migrating from an existing schema (for example an older PHP-era events table) and you want the destination to insert into the same columns.
+
+<CodeSnippet
+  code={`{
+  "sqlite": {
+    "url": "./legacy.db",
+    "table": "siteEvents",
+    "schema": "manual"
+  }
+}`}
+  language="json"
+/>
+
+## Docker deployment
+
+### Step 1: Flow configuration
+
+Use `$env.NAME` for runtime secrets:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "sqlite": {
+      "package": "@walkeros/server-destination-sqlite",
+      "config": {
+        "settings": {
+          "sqlite": {
+            "url": "$env.SQLITE_URL",
+            "authToken": "$env.SQLITE_AUTH_TOKEN"
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e SQLITE_URL=libsql://my-db.turso.io \\
+  -e SQLITE_AUTH_TOKEN=your-token \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+:::tip Security
+Never commit database paths or auth tokens. Use environment variables or a secrets manager to inject at runtime.
+:::
+
+## Limitations
+
+- v1 issues one `INSERT` per event. A `pushBatch` path is planned for v2.
+- Connection death is not auto-retried; a fatal driver error logs and drops events until the flow restarts.
+- `schema: 'manual'` skips `CREATE TABLE` but still uses the canonical column layout for the prepared INSERT. If your custom table has a different shape, also provide a mapping that produces matching args.

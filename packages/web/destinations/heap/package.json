@@ -1,0 +1,76 @@
+{
+  "name": "@walkeros/web-destination-heap",
+  "description": "Heap web destination for walkerOS (product analytics, auto-capture)",
+  "version": "3.3.1",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "import": "./dist/examples/index.mjs",
+      "require": "./dist/examples/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    },
+    "./walkerOS.json": "./dist/walkerOS.json"
+  },
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
+    "test": "jest",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@walkeros/web-core": "3.3.1"
+  },
+  "devDependencies": {
+    "@walkeros/collector": "3.3.1"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/web/destinations/heap"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "walkerOS": {
+    "type": "destination",
+    "platform": [
+      "web"
+    ],
+    "docs": "https://www.walkeros.io/docs/destinations/web/heap"
+  },
+  "keywords": [
+    "walkerOS",
+    "walkerOS-destination",
+    "destination",
+    "web",
+    "heap",
+    "analytics",
+    "contentsquare"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

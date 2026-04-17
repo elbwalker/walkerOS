@@ -1,0 +1,158 @@
+---
+title: RudderStack
+description: "Server-side event delivery to RudderStack CDP (open-source Segment alternative) with full Segment Spec support"
+path: /docs/destinations/server/rudderstack
+sidebar_position: 6
+package: '@walkeros/server-destination-rudderstack'
+---
+import data from '@walkeros/server-destination-rudderstack/walkerOS.json';
+
+# RudderStack
+
+<PackageLink env="server" github="packages/server/destinations/rudderstack" npm="@walkeros/server-destination-rudderstack" status="beta" />
+
+Server-side event delivery to [RudderStack](https://rudderstack.com/) via the official [`@rudderstack/rudder-sdk-node`](https://www.npmjs.com/package/@rudderstack/rudder-sdk-node) SDK. Implements the full Segment Spec surface -- `track`, `identify`, `group`, `page`, `screen`, and `alias` -- with automatic identity deduplication and graceful shutdown via `flush()`.
+
+:::info Where This Fits
+RudderStack is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'RudderStack', highlight: true } }}
+/>
+
+Receives events server-side from the collector, resolves identity, and forwards them to RudderStack's data plane for routing to downstream destinations.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-rudderstack`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationRudderStack } from '@walkeros/server-destination-rudderstack';
+
+await startFlow({
+  destinations: {
+    rudderstack: {
+      code: destinationRudderStack,
+      config: {
+        settings: {
+          writeKey: 'YOUR_RUDDERSTACK_WRITE_KEY',
+          dataPlaneUrl: 'https://your-data-plane.rudderstack.com',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "rudderstack": {
+    "package": "@walkeros/server-destination-rudderstack",
+    "config": {
+      "settings": {
+        "writeKey": "YOUR_RUDDERSTACK_WRITE_KEY",
+        "dataPlaneUrl": "https://your-data-plane.rudderstack.com"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+Identity is resolved automatically from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. At least one must be present for a call to be sent. Override these paths in settings to match your event structure.
+
+## Alias support
+
+Unlike Segment, RudderStack also supports per-event `alias()` calls, useful for linking an anonymous identity to an identified user after signup or login. Configure via `mapping.settings.alias` with a `previousId` field.
+
+## Docker deployment
+
+### Step 1: Create flow configuration
+
+Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "rudderstack": {
+      "package": "@walkeros/server-destination-rudderstack",
+      "config": {
+        "settings": {
+          "writeKey": "$env.RUDDERSTACK_WRITE_KEY",
+          "dataPlaneUrl": "$env.RUDDERSTACK_DATA_PLANE_URL"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the flow
+
+Bundle your flow configuration before running in Docker:
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e RUDDERSTACK_WRITE_KEY=your-write-key \\
+  -e RUDDERSTACK_DATA_PLANE_URL=https://your-data-plane.rudderstack.com \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Docker Compose example
+
+<CodeSnippet
+  code={`services:
+  walkeros:
+    image: walkeros/flow:latest
+    environment:
+      - RUDDERSTACK_WRITE_KEY=\${RUDDERSTACK_WRITE_KEY}
+      - RUDDERSTACK_DATA_PLANE_URL=\${RUDDERSTACK_DATA_PLANE_URL}
+    volumes:
+      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
+    ports:
+      - "8080:8080"`}
+  language="yaml"
+/>
+
+:::tip Security Best Practice
+Never commit write keys to version control. Use environment variables or a secrets manager to inject credentials at runtime. The `dataPlaneUrl` comes from your RudderStack workspace (self-hosted or cloud).
+:::

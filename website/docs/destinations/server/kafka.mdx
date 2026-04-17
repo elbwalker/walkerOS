@@ -1,0 +1,205 @@
+---
+title: Apache Kafka
+description: 'Server-side event streaming to Apache Kafka topics via kafkajs with JSON serialization and compression'
+path: /docs/destinations/server/kafka
+sidebar_position: 16
+package: '@walkeros/server-destination-kafka'
+---
+
+import data from '@walkeros/server-destination-kafka/walkerOS.json';
+
+# Apache Kafka
+
+<PackageLink env="server" github="packages/server/destinations/kafka" npm="@walkeros/server-destination-kafka" status="beta" />
+
+Server-side event streaming to [Apache Kafka](https://kafka.apache.org/) via the [`kafkajs`](https://kafka.js.org/) client. Each event is serialized as JSON, keyed for partition-friendly ordering, and produced to a configurable topic. Supports SASL/SSL authentication (Confluent Cloud, AWS MSK, SCRAM), configurable compression (gzip, snappy, lz4, zstd), per-rule topic and key overrides, and graceful shutdown via `destroy()`.
+
+:::info Where This Fits
+Kafka is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Apache Kafka', highlight: true } }}
+/>
+
+Receives events server-side from the collector, serializes them as JSON with a partition-friendly message key, and produces them to a Kafka topic for downstream stream processing (Flink, Spark, ksqlDB, Kafka Connect, consumers).
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-kafka`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationKafka } from '@walkeros/server-destination-kafka';
+
+await startFlow({
+  destinations: {
+    kafka: {
+      code: destinationKafka,
+      config: {
+        settings: {
+          kafka: {
+            brokers: ['kafka1:9092', 'kafka2:9092'],
+            topic: 'walkeros-events',
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "kafka": {
+    "package": "@walkeros/server-destination-kafka",
+    "config": {
+      "settings": {
+        "kafka": {
+          "brokers": ["kafka1:9092", "kafka2:9092"],
+          "topic": "walkeros-events"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+The destination creates a single long-lived `kafkajs` producer during `init()` and calls `producer.connect()` before accepting events. On flow hot-swap or server shutdown, `destroy()` calls `producer.disconnect()` to flush in-flight messages and close TCP connections.
+
+## Message format
+
+Events are serialized as JSON and produced with the following structure:
+
+- **topic** -- from `settings.kafka.topic` (or `mapping.settings.topic` override)
+- **key** -- resolved from `settings.kafka.key` (or `mapping.settings.key` override) mapping path; defaults to the event name with spaces replaced by `_` (e.g. `page_view`, `order_complete`) for partition-based ordering
+- **value** -- mapped payload (when `data.map` is configured) or the full walkerOS event, `JSON.stringify()`-ed
+- **headers** -- `content-type: application/json` plus any static `settings.kafka.headers`
+- **timestamp** -- event timestamp as string (ms since epoch)
+
+## Per-rule overrides
+
+<PropertyTable schema={data.schemas.mapping} />
+
+Use `mapping.settings.topic` to route specific events to dedicated topics (e.g. orders to `orders-stream`, identities to `identity-stream`). Use `mapping.settings.key` to set a key path per rule (e.g. `data.order_id` for order events).
+
+## Authentication
+
+### Confluent Cloud (SASL/PLAIN)
+
+<CodeSnippet
+  code={`{
+  "kafka": {
+    "brokers": ["pkc-xxxxx.us-east-1.aws.confluent.cloud:9092"],
+    "topic": "walkeros-events",
+    "ssl": true,
+    "sasl": {
+      "mechanism": "plain",
+      "username": "$env.CONFLUENT_API_KEY",
+      "password": "$env.CONFLUENT_API_SECRET"
+    }
+  }
+}`}
+  language="json"
+/>
+
+### AWS MSK (IAM)
+
+<CodeSnippet
+  code={`{
+  "kafka": {
+    "brokers": ["broker.msk.us-east-1.amazonaws.com:9098"],
+    "topic": "walkeros-events",
+    "ssl": true,
+    "sasl": {
+      "mechanism": "aws",
+      "accessKeyId": "$env.AWS_ACCESS_KEY",
+      "secretAccessKey": "$env.AWS_SECRET_KEY"
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Docker deployment
+
+### Step 1: Create flow configuration
+
+Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "kafka": {
+      "package": "@walkeros/server-destination-kafka",
+      "config": {
+        "settings": {
+          "kafka": {
+            "brokers": ["$env.KAFKA_BROKERS"],
+            "topic": "$env.KAFKA_TOPIC",
+            "ssl": true,
+            "sasl": {
+              "mechanism": "plain",
+              "username": "$env.KAFKA_USERNAME",
+              "password": "$env.KAFKA_PASSWORD"
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the flow
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e KAFKA_BROKERS=kafka1:9092,kafka2:9092 \\
+  -e KAFKA_TOPIC=walkeros-events \\
+  -e KAFKA_USERNAME=your-key \\
+  -e KAFKA_PASSWORD=your-secret \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+:::tip Security Best Practice
+Never commit SASL credentials to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

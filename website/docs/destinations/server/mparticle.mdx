@@ -1,0 +1,147 @@
+---
+title: mParticle
+description: "Server-side event delivery to mParticle CDP via input feed batches"
+path: /docs/destinations/server/mparticle
+sidebar_position: 16
+package: '@walkeros/server-destination-mparticle'
+---
+import data from '@walkeros/server-destination-mparticle/walkerOS.json';
+
+# mParticle
+
+<PackageLink env="server" github="packages/server/destinations/mparticle" npm="@walkeros/server-destination-mparticle" status="beta" />
+
+Server-side event delivery to [mParticle](https://www.mparticle.com/) via the HTTP Events API. Events are packaged into batches and POSTed to the regional mParticle pod using HTTP Basic auth (`apiKey` / `apiSecret`). Supports user identities, user attributes, consent state, and environment targeting.
+
+:::info Where This Fits
+mParticle is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'mParticle', highlight: true } }}
+/>
+
+Receives events server-side from the collector and forwards them to mParticle's input feed for fan-out to downstream destinations.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-mparticle`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationMParticle } from '@walkeros/server-destination-mparticle';
+
+await startFlow({
+  destinations: {
+    mparticle: {
+      code: destinationMParticle,
+      config: {
+        settings: {
+          apiKey: 'YOUR_MPARTICLE_API_KEY',
+          apiSecret: 'YOUR_MPARTICLE_API_SECRET',
+          pod: 'us1',
+          environment: 'production',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "mparticle": {
+    "package": "@walkeros/server-destination-mparticle",
+    "config": {
+      "settings": {
+        "apiKey": "YOUR_MPARTICLE_API_KEY",
+        "apiSecret": "YOUR_MPARTICLE_API_SECRET",
+        "pod": "us1",
+        "environment": "production"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+The `apiKey` and `apiSecret` come from an mParticle **input feed** (Setup → Inputs → Feeds → Custom Feed). Each batch posts to `https://s2s.{pod}.mparticle.com/v2/events` using HTTP Basic auth.
+
+## Identities and attributes
+
+- `userIdentities` — map walkerOS event fields to mParticle identity types (`customer_id`, `email`, `other`, …).
+- `userAttributes` — resolved from each event and placed on the batch's `user_attributes` object.
+- `consent` — forwarded verbatim as `consent_state` on the batch.
+- `sourceRequestId` — defaults to `event.id` if unset; used by mParticle for deduplication.
+
+## Docker deployment
+
+### Step 1: Create flow configuration
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "mparticle": {
+      "package": "@walkeros/server-destination-mparticle",
+      "config": {
+        "settings": {
+          "apiKey": "$env.MPARTICLE_API_KEY",
+          "apiSecret": "$env.MPARTICLE_API_SECRET",
+          "pod": "us1",
+          "environment": "production"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the flow
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e MPARTICLE_API_KEY=your-api-key \\
+  -e MPARTICLE_API_SECRET=your-api-secret \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+:::tip Security Best Practice
+Never commit API keys or secrets to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

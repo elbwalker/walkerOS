@@ -122,6 +122,10 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .describe(
       'Ingest metadata extraction mapping. Extracts values from raw request objects (Express req, Lambda event) using mapping syntax.',
     ),
+  disabled: z
+    .boolean()
+    .describe('Completely skip this source (no init, no event capture)')
+    .optional(),
 }).describe('Source configuration with mapping and environment');
 
 /**

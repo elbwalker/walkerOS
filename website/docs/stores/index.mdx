@@ -4,6 +4,14 @@ description: Key-value storage for walkerOS flows
 sidebar_position: 6
 ---
 
+import { schemas } from '@walkeros/core/dev';
+import { omitSchemaProperties } from '@site/src/utils/schema';
+
+export const storeConfig = omitSchemaProperties(
+  schemas.StoreSchemas.configJsonSchema,
+  ['settings'],
+);
+
 # Stores
 
 Without stores, each event in a flow is processed in isolation: no shared state, no caching, no persisted data between requests. Stores add a **shared memory layer** that any component in your flow (transformers, destinations) can read from and write to.
@@ -136,3 +144,10 @@ S3-compatible object storage. Works with AWS S3, Cloudflare R2, Scaleway, Digita
 Google Cloud Storage with zero runtime dependencies. Built-in auth supports Application Default Credentials (ADC) on Cloud Run / GKE and explicit service account JSON for non-GCP environments. The recommended store for GCP-native deployments.
 
 [Learn more &rarr;](./server/gcs)
+
+## Configuration
+
+These fields are available on every store, regardless of package. They wrap the
+package-specific `settings` field, which is documented on each store's page.
+
+<PropertyTable schema={storeConfig} />

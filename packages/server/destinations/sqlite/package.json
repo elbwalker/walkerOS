@@ -1,0 +1,92 @@
+{
+  "name": "@walkeros/server-destination-sqlite",
+  "description": "SQLite server destination for walkerOS (local via better-sqlite3, remote via libSQL/Turso)",
+  "version": "3.3.1",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    },
+    "./walkerOS.json": "./dist/walkerOS.json",
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "import": "./dist/examples/index.mjs",
+      "require": "./dist/examples/index.js"
+    }
+  },
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
+    "test": "jest",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@walkeros/core": "3.3.1",
+    "@walkeros/server-core": "3.3.1"
+  },
+  "peerDependencies": {
+    "better-sqlite3": "^11.0.0",
+    "@libsql/client": "^0.14.0"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    },
+    "@libsql/client": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@walkeros/collector": "3.3.1",
+    "better-sqlite3": "^11.0.0",
+    "@libsql/client": "^0.14.0",
+    "@types/better-sqlite3": "^7.6.11"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/server/destinations/sqlite"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "walkerOS": {
+    "type": "destination",
+    "platform": [
+      "server"
+    ],
+    "docs": "https://www.walkeros.io/docs/destinations/server/sqlite"
+  },
+  "keywords": [
+    "walkerOS",
+    "walkerOS-destination",
+    "destination",
+    "server",
+    "sqlite",
+    "turso",
+    "libsql"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

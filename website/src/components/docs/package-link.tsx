@@ -9,6 +9,7 @@ type PackageLinkProps = {
   es5?: string;
   github?: string;
   npm?: string;
+  status?: 'beta';
 };
 
 export function PackageButton({
@@ -32,12 +33,27 @@ export function PackageButton({
   );
 }
 
+export function StatusBadge({ status }: { status: 'beta' }): React.JSX.Element {
+  const classes = clsx(
+    'inline-flex items-center justify-center h-9 mr-3 px-3 mb-6',
+    'text-xs font-semibold uppercase tracking-wide',
+    'border rounded-lg',
+    status === 'beta' &&
+      'text-amber-700 bg-amber-50 border-amber-400 dark:text-amber-300 dark:bg-amber-950/40 dark:border-amber-600',
+  );
+
+  const label = { beta: 'Beta' }[status];
+
+  return <span className={classes}>{label}</span>;
+}
+
 export default function PackageLink({
   env,
   browser,
   es5,
   github,
   npm,
+  status,
 }: PackageLinkProps): React.JSX.Element {
   const envText = {
     web: 'Web',
@@ -50,6 +66,7 @@ export default function PackageLink({
       {env && (
         <PackageButton icon="mdi:package-variant" to="#" text={envText[env]} />
       )}
+      {status && <StatusBadge status={status} />}
       {github && (
         <PackageButton
           icon="mdi:github"

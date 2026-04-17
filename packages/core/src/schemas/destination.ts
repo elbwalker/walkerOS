@@ -9,6 +9,8 @@ import {
 } from './mapping';
 import { Identifier } from './primitives';
 import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
+import { RoutableNextSchema } from './matcher';
+import { CacheSchema } from './cache';
 
 /**
  * Destination Schemas
@@ -100,6 +102,25 @@ export const ConfigSchema = z
       .optional()
       .describe(
         'Logger configuration (level, handler) to override the collector defaults',
+      ),
+    before: RoutableNextSchema.optional().describe(
+      'Post-collector transformer chain applied before this destination receives the event',
+    ),
+    next: RoutableNextSchema.optional().describe(
+      'Post-push transformer chain. Runs after destination push completes; push response is available at ingest._response',
+    ),
+    cache: CacheSchema.optional().describe(
+      'Cache configuration for deduplication; skip push on cache HIT',
+    ),
+    disabled: z
+      .boolean()
+      .describe('Completely skip this destination (no init, no push, no queue)')
+      .optional(),
+    mock: z
+      .unknown()
+      .optional()
+      .describe(
+        'Return this value instead of calling push(). Dev/testing only.',
       ),
     // Handler functions
     onError: ErrorHandlerSchema.optional(),

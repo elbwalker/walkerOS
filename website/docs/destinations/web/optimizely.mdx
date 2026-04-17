@@ -1,0 +1,214 @@
+---
+title: Optimizely
+description: Feature experimentation, A/B testing, and conversion tracking
+path: /docs/destinations/web/optimizely
+sidebar_position: 15
+package: '@walkeros/web-destination-optimizely'
+---
+
+import destinationOptimizely from '@walkeros/web-destination-optimizely';
+import data from '@walkeros/web-destination-optimizely/walkerOS.json';
+
+export const destination = { ...destinationOptimizely, examples: data.examples };
+
+# Optimizely
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/optimizely"
+  npm="@walkeros/web-destination-optimizely"
+  status="beta"
+/>
+
+[Optimizely Feature Experimentation](https://www.optimizely.com/products/experiment/feature-experimentation/) runs A/B tests and feature rollouts. This destination forwards walkerOS events to Optimizely as conversion events via the official
+[`@optimizely/optimizely-sdk`](https://www.npmjs.com/package/@optimizely/optimizely-sdk)
+v6 modular API, calling `userContext.trackEvent(eventKey, eventTags)` with optional revenue/value tags and user attributes.
+
+:::info Where This Fits
+Optimizely is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Optimizely', highlight: true } }}
+/>
+
+Initializes the Optimizely client with polling datafile + batched event
+processor, resolves a per-event `userId` into a cached user context, and
+sends each walkerOS event as a conversion `trackEvent` call.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-optimizely`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationOptimizely } from '@walkeros/web-destination-optimizely';
+
+await startFlow({
+  destinations: {
+    optimizely: {
+      code: destinationOptimizely,
+      config: {
+        settings: {
+          sdkKey: 'YOUR_SDK_KEY',
+          userId: 'user.id',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "optimizely": {
+    "package": "@walkeros/web-destination-optimizely",
+    "config": {
+      "settings": {
+        "sdkKey": "YOUR_SDK_KEY",
+        "userId": "user.id"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### Default event forwarding
+
+Every walkerOS event becomes `userContext.trackEvent(event.name, {})`
+without any mapping.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
+  event={data.examples.step.defaultEventForwarding.in}
+  mapping={data.examples.step.defaultEventForwarding.mapping}
+  generic={true}
+/>
+
+### Rename the forwarded event
+
+Use `mapping.name` to emit a different event key to Optimizely. The key
+must match an event you created in your Optimizely project.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
+  event={data.examples.step.mappedEventName.in}
+  mapping={data.examples.step.mappedEventName.mapping}
+  generic={true}
+/>
+
+### Revenue tracking
+
+Map `revenue` (integer cents) and `value` (float) into `eventTags`, plus
+any additional tags. Revenue must be provided in cents — the destination
+does no conversion.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
+  event={data.examples.step.orderCompleteRevenue.in}
+  mapping={data.examples.step.orderCompleteRevenue.mapping}
+  generic={true}
+/>
+
+### Per-event user attributes
+
+Use `settings.attributes` to set user attributes (audience targeting)
+before the `trackEvent` call.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
+  event={data.examples.step.signupWithAttributes.in}
+  mapping={data.examples.step.signupWithAttributes.mapping}
+  generic={true}
+/>
+
+### Attributes only (skip track)
+
+Use `skip: true` to fire `setAttribute` calls without a `trackEvent`.
+Useful for enriching user context without logging a conversion.
+
+<DestinationDemo
+  destination={destination}
+  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
+  event={data.examples.step.attributesOnlySkipTrack.in}
+  mapping={data.examples.step.attributesOnlySkipTrack.mapping}
+  generic={true}
+/>
+
+## Revenue
+
+Optimizely expects revenue as an **integer in cents** (e.g. `7281` =
+`$72.81`). The destination passes the resolved value through without
+conversion — the caller must provide cents.
+
+## Consent
+
+Two layers protect event delivery:
+
+1. **`config.consent`** — walkerOS gates delivery. Events are queued
+   until required consent keys resolve to `true`.
+2. **`on('consent')`** — the destination closes the Optimizely client
+   (flushing queued events and stopping datafile polling) when any
+   required key flips to `false`. On re-grant, the next push re-initializes
+   the client.
+
+<CodeSnippet
+  code={`destinations: {
+  optimizely: {
+    code: destinationOptimizely,
+    config: {
+      consent: { analytics: true },
+      settings: {
+        sdkKey: 'YOUR_SDK_KEY',
+        userId: 'user.id',
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+## Feature flags / decide()
+
+This destination intentionally does **not** expose `decide()` — experiment
+decisions belong in application code where UI branching happens. This
+package covers the outbound conversion-tracking use case.

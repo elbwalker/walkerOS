@@ -1,0 +1,157 @@
+---
+title: Customer.io
+description: "Server-side event delivery to Customer.io for email, SMS, push, and in-app messaging automation"
+path: /docs/destinations/server/customerio
+sidebar_position: 15
+package: '@walkeros/server-destination-customerio'
+---
+import data from '@walkeros/server-destination-customerio/walkerOS.json';
+
+# Customer.io
+
+<PackageLink env="server" github="packages/server/destinations/customerio" npm="@walkeros/server-destination-customerio" status="beta" />
+
+Server-side event delivery to [Customer.io](https://customer.io/) via the official [`customerio-node`](https://www.npmjs.com/package/customerio-node) SDK. Tracks events with `TrackClient.track()`, manages identities with `identify()`, and supports the full lifecycle: page views, device registration, suppress/unsuppress, profile merging, and transactional messaging via `APIClient.sendEmail()` / `sendPush()`.
+
+:::info Where This Fits
+Customer.io is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Customer.io', highlight: true } }}
+/>
+
+Receives events server-side from the collector, resolves a `customerId` (or falls back to `anonymousId`), optionally fires `identify()`, then forwards the event to Customer.io for campaigns, broadcasts, and transactional messaging.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-customerio`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationCustomerIo } from '@walkeros/server-destination-customerio';
+
+await startFlow({
+  destinations: {
+    customerio: {
+      code: destinationCustomerIo,
+      config: {
+        settings: {
+          siteId: 'YOUR_SITE_ID',
+          apiKey: 'YOUR_API_KEY',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "customerio": {
+    "package": "@walkeros/server-destination-customerio",
+    "config": {
+      "settings": {
+        "siteId": "YOUR_SITE_ID",
+        "apiKey": "YOUR_API_KEY"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+Identity is resolved automatically from each event: `customerId` defaults to `user.id` and `anonymousId` defaults to `user.session`. Customer.io requires a `customerId` or `anonymousId` per event -- when `customerId` is missing, the destination automatically falls back to `trackAnonymous()` so anonymous visitor data is preserved.
+
+## Customer lifecycle
+
+Per-rule mapping settings control which lifecycle methods are called in addition to the default `track()`:
+
+| Mapping Setting | SDK Call                  | Use For                         |
+| --------------- | ------------------------- | ------------------------------- |
+| `identify`      | `identify()`              | Login, signup, profile updates  |
+| `page`          | `trackPageView()`         | Page view events                |
+| `destroy`       | `destroy()`               | GDPR delete / user removal      |
+| `suppress`      | `suppress()`              | Stop messaging (keep data)      |
+| `unsuppress`    | `unsuppress()`            | Resume messaging                |
+| `addDevice`     | `addDevice()`             | Register push notification token|
+| `deleteDevice`  | `deleteDevice()`          | Remove push token               |
+| `merge`         | `mergeCustomers()`        | Consolidate duplicate profiles  |
+
+Use `skip: true` on the rule to fire only the lifecycle call without tracking a second `track()` event.
+
+## Transactional messaging
+
+Set `settings.appApiKey` to enable `sendEmail` / `sendPush` via Customer.io's App API. These mappings resolve to the full request body expected by the SDK.
+
+## Docker deployment
+
+### Step 1: Create flow configuration
+
+Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "customerio": {
+      "package": "@walkeros/server-destination-customerio",
+      "config": {
+        "settings": {
+          "siteId": "$env.CUSTOMERIO_SITE_ID",
+          "apiKey": "$env.CUSTOMERIO_API_KEY"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the flow
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e CUSTOMERIO_SITE_ID=your-site-id \\
+  -e CUSTOMERIO_API_KEY=your-api-key \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+:::tip Security Best Practice
+Never commit API credentials to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

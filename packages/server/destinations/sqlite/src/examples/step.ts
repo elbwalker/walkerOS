@@ -1,0 +1,175 @@
+import type { Flow } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
+import type { Settings } from '../types';
+
+/**
+ * Extended step example that may carry destination-level settings overrides.
+ */
+export type SqliteStepExample = Flow.StepExample & {
+  settings?: Partial<Settings>;
+};
+
+/**
+ * Canonical insert into the default `events` table. `out` records the
+ * column args the prepared INSERT is bound with.
+ */
+export const defaultInsert: SqliteStepExample = {
+  in: getEvent('page view', {
+    timestamp: 1700000100,
+    id: 'evt-1',
+    user: { session: 'sess-1', id: 'user-42' },
+    data: { title: 'Home' },
+    source: {
+      type: 'server',
+      id: 'https://example.com/',
+      previous_id: 'https://example.com/prev',
+    },
+    globals: { env: 'prod' },
+    consent: { analytics: true },
+  }),
+  out: [
+    'client.runInsert',
+    [
+      1700000100,
+      'evt-1',
+      'page view',
+      'page',
+      'view',
+      'sess-1',
+      'user-42',
+      'https://example.com/',
+      'Home',
+      'https://example.com/prev',
+      JSON.stringify({ title: 'Home' }),
+      JSON.stringify({ env: 'prod' }),
+      JSON.stringify({ analytics: true }),
+    ],
+  ],
+};
+
+/**
+ * Custom table name. Verifies table overrides while using the canonical column set.
+ */
+export const customTable: SqliteStepExample = {
+  in: getEvent('form submit', {
+    timestamp: 1700000101,
+    id: 'evt-2',
+    user: { session: 'sess-99', id: '' },
+    data: { type: 'contact' },
+    source: {
+      type: 'server',
+      id: 'https://example.com/contact',
+      previous_id: '',
+    },
+    globals: {},
+    consent: {},
+  }),
+  settings: {
+    sqlite: {
+      url: ':memory:',
+      table: 'siteEvents',
+    },
+  },
+  out: [
+    'client.runInsert',
+    [
+      1700000101,
+      'evt-2',
+      'form submit',
+      'form',
+      'submit',
+      'sess-99',
+      '',
+      'https://example.com/contact',
+      '',
+      '',
+      JSON.stringify({ type: 'contact' }),
+      JSON.stringify({}),
+      JSON.stringify({}),
+    ],
+  ],
+};
+
+/**
+ * Order event with numeric data. Confirms JSON serialization of nested values.
+ */
+export const orderComplete: SqliteStepExample = {
+  in: getEvent('order complete', {
+    timestamp: 1700000102,
+    id: 'evt-3',
+    user: { session: '', id: '' },
+    data: { id: 'ORD-1', total: 99 },
+    source: { type: 'server', id: '', previous_id: '' },
+    globals: {},
+    consent: {},
+  }),
+  out: [
+    'client.runInsert',
+    [
+      1700000102,
+      'evt-3',
+      'order complete',
+      'order',
+      'complete',
+      '',
+      '',
+      '',
+      '',
+      '',
+      JSON.stringify({ id: 'ORD-1', total: 99 }),
+      JSON.stringify({}),
+      JSON.stringify({}),
+    ],
+  ],
+};
+
+/**
+ * Table override per rule -- routes this event to a dedicated table.
+ */
+export const tableOverride: SqliteStepExample = {
+  in: getEvent('order complete', {
+    timestamp: 1700000103,
+    id: 'evt-4',
+    user: { session: '', id: '' },
+    data: { id: 'ORD-2', total: 42 },
+    source: { type: 'server', id: '', previous_id: '' },
+    globals: {},
+    consent: {},
+  }),
+  mapping: {
+    settings: {
+      table: 'orders',
+    },
+  },
+  out: [
+    'client.runInsert',
+    [
+      1700000103,
+      'evt-4',
+      'order complete',
+      'order',
+      'complete',
+      '',
+      '',
+      '',
+      '',
+      '',
+      JSON.stringify({ id: 'ORD-2', total: 42 }),
+      JSON.stringify({}),
+      JSON.stringify({}),
+    ],
+  ],
+};
+
+/**
+ * Ignored event -- mapping.ignore: true produces no insert call.
+ */
+export const ignoredEvent: SqliteStepExample = {
+  in: getEvent('debug noise', {
+    timestamp: 1700000104,
+    id: 'evt-5',
+    source: { type: 'server', id: '', previous_id: '' },
+  }),
+  mapping: { ignore: true },
+  out: [],
+};

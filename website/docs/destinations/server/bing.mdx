@@ -1,0 +1,213 @@
+---
+title: Bing UET Conversions API
+description: "Server-side event delivery to Microsoft Advertising (Bing) UET Conversions API for enhanced conversion tracking"
+path: /docs/destinations/server/bing
+sidebar_position: 21
+package: '@walkeros/server-destination-bing'
+---
+import data from '@walkeros/server-destination-bing/walkerOS.json';
+
+# Bing UET Conversions API
+
+<PackageLink env="server" github="packages/server/destinations/bing" npm="@walkeros/server-destination-bing" status="beta" />
+
+Server-side event delivery to Microsoft Advertising's Universal Event Tracking (UET) Conversions API for enhanced conversion tracking in Microsoft Ads campaigns, bypassing browser limitations and improving match quality.
+
+:::info Where This Fits
+Bing UET CAPI is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Bing UET CAPI', highlight: true } }}
+/>
+
+Sends events server-side to Microsoft's UET Conversions API using raw HTTP (no SDK). Identity fields (`em`, `ph`) are SHA-256 hashed before sending with Microsoft-specific email normalization. Events include a stable `eventId` for deduplication with the UET JavaScript tag.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-bing`}
+  language="bash"
+/>
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationBing } from '@walkeros/server-destination-bing';
+
+await startFlow({
+  destinations: {
+    bing: {
+      code: destinationBing,
+      config: {
+        settings: {
+          accessToken: 'YOUR_ACCESS_TOKEN',
+          tagId: 'YOUR_UET_TAG_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "bing": {
+    "package": "@walkeros/server-destination-bing",
+    "code": "destinationBing",
+    "config": {
+      "settings": {
+        "accessToken": "YOUR_ACCESS_TOKEN",
+        "tagId": "YOUR_UET_TAG_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration reference
+
+<PropertyTable schema={data.schemas.settings} />
+
+## Event types
+
+Bing UET distinguishes two event types. Set the type via `mapping.settings.eventType`:
+
+| `eventType` | When to use                                                      |
+| ----------- | ---------------------------------------------------------------- |
+| `pageLoad`  | Page view events (no `eventName` required)                       |
+| `custom`    | All other conversion events (default, requires `eventName`)      |
+
+<CodeSnippet
+  code={`"mapping": {
+  "page": {
+    "view": {
+      "settings": { "eventType": "pageLoad" }
+    }
+  },
+  "order": {
+    "complete": {
+      "name": "purchase",
+      "data": {
+        "map": {
+          "customData": {
+            "map": {
+              "value": "data.total",
+              "currency": "data.currency",
+              "transactionId": "data.id",
+              "pageType": { "value": "purchase" }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### customData structure
+
+Event properties must be nested under `customData`. Common fields include `value`, `currency`, `transactionId`, `items`, `itemIds`, `pageType`, `eventCategory`, `eventLabel`, `eventValue`, `searchTerm`.
+
+## Hashing
+
+Only `em` (email) and `ph` (phone) are SHA-256 hashed before sending. All other identity fields pass through as-is: `anonymousId`, `externalId`, `msclkid`, `clientIpAddress`, `clientUserAgent`, `idfa`, `gaid`.
+
+### Microsoft-specific email normalization
+
+Before hashing, emails are normalized to match Microsoft's canonicalization:
+
+1. Trim whitespace
+2. Lowercase the entire address
+3. Remove dots from the user portion (`a.b.c@example.com` → `abc@example.com`)
+4. Strip `+alias` suffix (`user+promo@example.com` → `user@example.com`)
+
+Pass raw values and hashing is handled for you. If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`:
+
+<CodeSnippet
+  code={`"settings": {
+  "accessToken": "YOUR_ACCESS_TOKEN",
+  "tagId": "YOUR_UET_TAG_ID",
+  "doNotHash": ["em"]
+}`}
+  language="json"
+/>
+
+## Deduplication
+
+Each event is sent with `eventId` set to the walkerOS event `id`. If you also run the UET JavaScript tag in the browser, Microsoft deduplicates server and browser events that share the same `eventId` and `eventName`, so conversions are not double-counted.
+
+## Consent
+
+All events sent to this destination include `adStorageConsent: "G"` (granted). Gate the destination via walkerOS consent rules at the collector level rather than sending denied events.
+
+## Docker deployment
+
+### Step 1: Create flow configuration
+
+Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "bing": {
+      "package": "@walkeros/server-destination-bing",
+      "config": {
+        "settings": {
+          "accessToken": "$env.BING_ACCESS_TOKEN",
+          "tagId": "$env.BING_TAG_ID"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the flow
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e BING_ACCESS_TOKEN=your-access-token \\
+  -e BING_TAG_ID=YOUR_UET_TAG_ID \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+:::tip Security best practice
+Never commit access tokens to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::
+
+## Links
+
+- [Microsoft UET Conversions API documentation](https://learn.microsoft.com/en-us/advertising/guides/universal-event-tracking-capi)
+- [Microsoft Advertising CAPI reference](https://help.ads.microsoft.com/)
