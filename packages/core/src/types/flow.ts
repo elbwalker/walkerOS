@@ -491,10 +491,15 @@ export interface Settings {
  */
 export type StepCommand = 'config' | 'consent' | 'user' | 'run';
 
+/** One observable effect: function/method call (`[callable, ...args]`) or return value (`['return', value]`). */
+export type StepEffect = readonly [callable: string, ...args: unknown[]];
+
+/** The effects a step produces, in execution order. Empty = no observable effect (filtered, passthrough). */
+export type StepOut = readonly StepEffect[];
+
 /**
  * Named example pair for a step.
  * `in` is the input to the step, `out` is the expected output.
- * `out: false` indicates the step filters/drops this event.
  *
  * When `command` is set, the test runner invokes
  * `elb('walker <command>', in)` instead of pushing `in` as a regular event.
@@ -512,7 +517,7 @@ export interface StepExample {
     options?: unknown;
   };
   mapping?: unknown;
-  out?: unknown;
+  out?: StepOut;
   /**
    * Invoke a walker command with `in` instead of pushing `in` as an event.
    * When set, the test runner calls `elb('walker <command>', in)`.

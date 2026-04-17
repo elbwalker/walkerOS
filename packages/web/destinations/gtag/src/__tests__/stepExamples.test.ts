@@ -4,6 +4,37 @@ import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 import { resetConsentState } from '../index';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+/**
+ * Init-time effects are not part of the mapped-step behavior and are filtered
+ * from the captured sequence before comparison with `example.out`.
+ *
+ * Destination init emits:
+ *   - gtag('js', <Date>)
+ *   - gtag('config', <measurementId>, ...)
+ *   - gtag('consent', 'default', ...)
+ *   - dataLayer.push({ event: 'gtm.js', 'gtm.start': <number> })
+ */
+function isInitEffect(effect: Captured): boolean {
+  const [callable, a, b] = effect;
+  if (callable === 'gtag') {
+    if (a === 'js') return true;
+    if (a === 'config') return true;
+    if (a === 'consent' && b === 'default') return true;
+  }
+  if (callable === 'dataLayer.push') {
+    if (
+      a &&
+      typeof a === 'object' &&
+      (a as Record<string, unknown>).event === 'gtm.js'
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 describe('Step Examples', () => {
   beforeEach(() => {
     resetConsentState();
@@ -19,6 +50,8 @@ describe('Step Examples', () => {
     const mockGtag = jest.fn();
     const env = clone(examples.env.push);
     env.window.gtag = mockGtag;
+    // Ensure a fresh dataLayer per example run.
+    env.window.dataLayer = [];
 
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow({ tagging: 2 });
@@ -27,7 +60,7 @@ describe('Step Examples', () => {
     // of pushing it as an event. Wire a minimal destination first so the
     // command handler has at least one tool registered.
     if (example.command) {
-      elb(
+      await elb(
         'walker destination',
         { ...dest, env },
         { settings: { ga4: { measurementId: 'G-XXXXXX-1' } } },
@@ -36,12 +69,14 @@ describe('Step Examples', () => {
       const cmd = `walker ${example.command}` as 'walker consent';
       await elb(cmd, example.in as WalkerOS.Consent);
 
-      const outArgs = example.out as unknown[];
-      const matchingCall = mockGtag.mock.calls.find(
-        (call) => call[0] === outArgs[0] && call[1] === outArgs[1],
-      );
-      expect(matchingCall).toBeDefined();
-      expect(matchingCall![2]).toEqual(outArgs[2]);
+      const captured: Captured[] = [
+        ...mockGtag.mock.calls.map((args) => ['gtag', ...args] as Captured),
+        ...(env.window.dataLayer as unknown[]).map(
+          (entry) => ['dataLayer.push', entry] as Captured,
+        ),
+      ].filter((effect) => !isInitEffect(effect));
+
+      expect(captured).toEqual(example.out);
       return;
     }
 
@@ -68,7 +103,7 @@ describe('Step Examples', () => {
         })()
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env },
       {
@@ -77,73 +112,16 @@ describe('Step Examples', () => {
       },
     );
 
-    if (
-      example.out &&
-      typeof example.out === 'object' &&
-      !Array.isArray(example.out) &&
-      ('ga4' in (example.out as object) ||
-        'ads' in (example.out as object) ||
-        'gtm' in (example.out as object))
-    ) {
-      // Multi-tool examples: out is { ga4: [...], ads: [...], gtm: {...} }
-      const event = example.in as WalkerOS.Event;
-      await elb(event);
+    const event = example.in as WalkerOS.Event;
+    await elb(event);
 
-      const multiOut = example.out as Record<string, unknown>;
+    const captured: Captured[] = [
+      ...mockGtag.mock.calls.map((args) => ['gtag', ...args] as Captured),
+      ...(env.window.dataLayer as unknown[]).map(
+        (entry) => ['dataLayer.push', entry] as Captured,
+      ),
+    ].filter((effect) => !isInitEffect(effect));
 
-      if (multiOut.ga4) {
-        const ga4Args = multiOut.ga4 as unknown[];
-        const ga4Call = mockGtag.mock.calls.find(
-          (call) => call[0] === 'event' && call[1] === ga4Args[1],
-        );
-        expect(ga4Call).toBeDefined();
-        expect(ga4Call![2]).toEqual(
-          expect.objectContaining(ga4Args[2] as object),
-        );
-      }
-
-      if (multiOut.ads) {
-        const adsArgs = multiOut.ads as unknown[];
-        const adsCall = mockGtag.mock.calls.find(
-          (call) => call[0] === 'event' && call[1] === 'conversion',
-        );
-        expect(adsCall).toBeDefined();
-        expect(adsCall![2]).toEqual(
-          expect.objectContaining(adsArgs[2] as object),
-        );
-      }
-
-      if (multiOut.gtm) {
-        const gtmExpected = multiOut.gtm as object;
-        expect(env.window.dataLayer).toEqual(
-          expect.arrayContaining([expect.objectContaining(gtmExpected)]),
-        );
-      }
-    } else if (
-      example.out &&
-      typeof example.out === 'object' &&
-      !Array.isArray(example.out)
-    ) {
-      // Plain object out: dataLayer push (GTM)
-      const event = example.in as WalkerOS.Event;
-      await elb(event);
-
-      const gtmExpected = example.out as object;
-      expect(env.window.dataLayer).toEqual(
-        expect.arrayContaining([expect.objectContaining(gtmExpected)]),
-      );
-    } else {
-      // Standard gtag call (existing behavior)
-      const event = example.in as WalkerOS.Event;
-      await elb(event);
-
-      const outArgs = example.out as unknown[];
-      const lastCall = mockGtag.mock.calls[mockGtag.mock.calls.length - 1];
-      expect(lastCall[0]).toBe(outArgs[0]); // 'event' or 'consent'
-      expect(lastCall[1]).toBe(outArgs[1]); // event name
-      expect(lastCall[2]).toEqual(
-        expect.objectContaining(outArgs[2] as object),
-      );
-    }
+    expect(captured).toEqual(example.out);
   });
 });

@@ -13,10 +13,15 @@ describe('Step Examples', () => {
             examples: {
               pageview: {
                 in: { url: 'https://example.com' },
-                out: {
-                  name: 'page view',
-                  data: { url: 'https://example.com' },
-                },
+                out: [
+                  [
+                    'elb',
+                    {
+                      name: 'page view',
+                      data: { url: 'https://example.com' },
+                    },
+                  ],
+                ],
               },
             },
           },
@@ -31,14 +36,17 @@ describe('Step Examples', () => {
                   data: { id: 'ORD-123', total: 149.97 },
                 },
                 out: [
-                  'event',
-                  'purchase',
-                  { transaction_id: 'ORD-123', value: 149.97 },
+                  [
+                    'gtag',
+                    'event',
+                    'purchase',
+                    { transaction_id: 'ORD-123', value: 149.97 },
+                  ],
                 ],
               },
               filtered: {
                 in: { name: 'internal click', data: {} },
-                out: false,
+                out: [],
               },
             },
           },

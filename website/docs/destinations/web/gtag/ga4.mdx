@@ -102,19 +102,7 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga4/reference/events?sjid=10736118709897970414-EU&client_type=gtag#add_to_cart">add_to_cart</Link>
 gtag.js event.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    ga4: {
-      measurementId: 'G-XXXXXXXXXX',
-    },
-  }}
-  event={data.examples.step.addToCart.in}
-  mapping={data.examples.step.addToCart.mapping}
-  generic={true}
-  smallText={true}
-  height={'512px'}
-/>
+<StepExample example={data.examples.step.addToCart} />
 
 ### purchase
 

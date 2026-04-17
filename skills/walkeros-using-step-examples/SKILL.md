@@ -47,27 +47,46 @@ the walkerOS event model:
 
 ## The `in`/`out`/`trigger` Format
 
-Every step example is an object with `in` (input), `out` (expected output), and
-optional `trigger` (how to invoke):
+Every step example is an object with `in` (input), `out` (array of observable
+effects), and optional `trigger` (how to invoke):
 
 ```typescript
+type StepEffect = readonly [callable: string, ...args: unknown[]];
+type StepOut = readonly StepEffect[];
+
 interface StepExample {
   in: unknown; // Platform-specific input
-  out: unknown; // Expected output
+  out: StepOut; // Array of effect tuples — see shape rules below
   trigger?: { type?: string; options?: unknown }; // How to invoke
   mapping?: unknown; // Destination mapping rule
   command?: 'config' | 'consent' | 'user' | 'run'; // Route to walker command
 }
 ```
 
-The `trigger` field tells `createTrigger` what kind of stimulus to simulate. For
-browser sources, `type` is the event type (`'load'`, `'click'`, `'submit'`) and
-`options` varies (CSS selector for click, URL/title for load). For server
-sources, `type` is the HTTP method (`'POST'`, `'GET'`).
+`out` is **always an array of effect tuples**, even for a single effect. Each
+tuple is `[callable, ...args]`. The first element is the callable's public name
+(the SDK function users would write). Remaining elements are the arguments.
+
+### Callable conventions
+
+| Component type                 | Callable                                | Notes                                                                                   |
+| ------------------------------ | --------------------------------------- | --------------------------------------------------------------------------------------- |
+| Destination (SDK function)     | `'gtag'`, `'fbq'`, `'ttq.track'`        | Public SDK name. Dotted paths render literally.                                         |
+| Destination (method on global) | `'analytics.track'`, `'dataLayer.push'` | Method notation.                                                                        |
+| Destination (HTTP)             | `'fetch'`, `'sendServer'`               | The actual call users would make. NOT `env.*` prop names — those are internal plumbing. |
+| Source                         | `'elb'`                                 | The walker public push API.                                                             |
+| Transformer                    | `'return'`                              | Reserved keyword. Renders as `return <value>` (no parens).                              |
+
+`'return'` is reserved. Don't use it for anything else.
+
+Empty `out: []` means the step produced no observable effect (filtered input,
+transformer passthrough, validator rejection). Reserved only for cases where the
+destination/source deliberately emits nothing.
 
 ### Source Step Example — Server (Express)
 
-`in` is an HTTP request shape, `out` is a walkerOS event:
+`in` is an HTTP request shape, `out` is a tuple of the `elb()` call the source
+makes:
 
 ```typescript
 export const checkoutPost: Flow.StepExample = {
@@ -77,41 +96,53 @@ export const checkoutPost: Flow.StepExample = {
     path: '/collect',
     body: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
   },
-  out: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+  out: [
+    ['elb', { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } }],
+  ],
 };
 ```
 
 ### Source Step Example — Browser
 
-`in` is an HTML string (the DOM content), `out` is a walkerOS event:
+`in` is an HTML string, `out` is a tuple of the `elb()` call:
 
 ```typescript
 export const clickEvent: Flow.StepExample = {
   trigger: { type: 'click', options: 'button' },
   in: '<button data-elb="cta" data-elb-cta="label:Sign Up" data-elbaction="click:click">Sign Up</button>',
-  out: {
-    name: 'cta click',
-    data: { label: 'Sign Up' },
-    trigger: 'click',
-    entity: 'cta',
-    action: 'click',
-  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'cta click',
+        data: { label: 'Sign Up' },
+        trigger: 'click',
+        entity: 'cta',
+        action: 'click',
+      },
+    ],
+  ],
 };
 ```
 
 ### Transformer Step Example
 
-`in` is a walkerOS event, `out` is a walkerOS event or `false`:
+`in` is a walkerOS event, `out` is a `['return', value]` tuple. An empty array
+means the transformer passed the event through unchanged:
 
 ```typescript
 export const step = {
   orderPasses: {
     in: { name: 'order complete', data: { id: 'ORD-123' } },
-    out: { name: 'order complete', data: { id: 'ORD-123' } },
+    out: [['return', { name: 'order complete', data: { id: 'ORD-123' } }]],
   },
   debugFiltered: {
     in: { name: 'debug test', data: { message: 'noise' } },
-    out: false, // Transformer rejects this event
+    out: [['return', false]], // Transformer rejects
+  },
+  passthrough: {
+    in: { name: 'page view' },
+    out: [], // No modification
   },
 };
 ```
@@ -119,7 +150,9 @@ export const step = {
 ### Destination Step Example
 
 `in` is a walkerOS event, `mapping` is the mapping rule that transforms it,
-`out` is vendor-specific:
+`out` is an array of call tuples — one per observable effect the destination
+produces. Multi-call events (e.g., GA4 + Ads + GTM for a single walker event)
+flatten into a single array in execution order:
 
 ```typescript
 import type { Flow } from '@walkeros/core';
@@ -132,12 +165,25 @@ export const purchase: Flow.StepExample = {
     data: { map: { value: 'data.total', currency: { value: 'EUR' } } },
   },
   out: [
-    'track',
-    'Purchase',
-    { value: 555, currency: 'EUR' },
-    { eventID: '1700000000-gr0up-1' },
+    [
+      'fbq',
+      'track',
+      'Purchase',
+      { value: 555, currency: 'EUR' },
+      { eventID: '1700000000-gr0up-1' },
+    ],
   ],
 };
+```
+
+Multi-tool example (one walker event produces GA4, Ads, GTM in order):
+
+```typescript
+out: [
+  ['gtag', 'event', 'purchase', { transaction_id: 'o1', value: 555 }],
+  ['gtag', 'event', 'conversion', { send_to: 'AW-123', value: 555 }],
+  ['dataLayer.push', { event: 'purchase', ecommerce: { ... } }],
+],
 ```
 
 Each export is a self-contained `Flow.StepExample` — no intermediate variables,
