@@ -15,7 +15,7 @@ export type OptimizelyStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: OptimizelyStepExample = {
   in: getEvent('page view', { timestamp: 1700000100 }),
-  out: ['optimizely.trackEvent', 'page view', {}],
+  out: [['optimizely.trackEvent', 'page view', {}]],
 };
 
 /**
@@ -27,7 +27,7 @@ export const mappedEventName: OptimizelyStepExample = {
   mapping: {
     name: 'product_viewed',
   },
-  out: ['optimizely.trackEvent', 'product_viewed', {}],
+  out: [['optimizely.trackEvent', 'product_viewed', {}]],
 };
 
 /**
@@ -59,9 +59,11 @@ export const orderCompleteRevenue: OptimizelyStepExample = {
     },
   },
   out: [
-    'optimizely.trackEvent',
-    'purchase',
-    { revenue: 55500, value: 555, currency: 'EUR', item_count: 3 },
+    [
+      'optimizely.trackEvent',
+      'purchase',
+      { revenue: 55500, value: 555, currency: 'EUR', item_count: 3 },
+    ],
   ],
 };
 
@@ -142,7 +144,7 @@ export const consentRevoked: OptimizelyStepExample = {
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['optimizely.close'],
+  out: [['optimizely.close']],
 };
 
 /**

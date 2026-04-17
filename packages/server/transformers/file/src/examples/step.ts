@@ -17,5 +17,16 @@ export const serveStaticFile: Flow.StepExample = {
     version: { tagging: 1 },
     source: { type: 'server', id: '', previous_id: '' },
   },
-  out: false,
+  out: [
+    [
+      'respond',
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/javascript',
+          'Cache-Control': 'public, max-age=3600',
+        },
+      },
+    ],
+  ],
 };

@@ -3,6 +3,16 @@ import { clone } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+/**
+ * mParticle Events API invokes `env.sendServer(url, body, options)` exactly
+ * once per push. Stateless — no init-time calls to filter.
+ *
+ * The base settings pin `apiKey`/`apiSecret` and resolve `customer_id` from
+ * `user.id`; when `user.email` is present we also map `email`. Every example
+ * is compared byte-for-byte against the stringified batch in `example.out`.
+ */
 describe('Step Examples', () => {
   const mockSendServer = jest.fn();
 
@@ -11,11 +21,9 @@ describe('Step Examples', () => {
     mockSendServer.mockResolvedValue({ ok: true, data: {} });
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
     const event = example.in as WalkerOS.Event;
-    const mapping = example.mapping as
-      | { settings?: Record<string, unknown> }
-      | undefined;
+    const mapping = example.mapping;
 
     const testEnv = clone(examples.env.push);
     testEnv.sendServer = mockSendServer;
@@ -27,7 +35,7 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env: testEnv },
       {
@@ -45,46 +53,10 @@ describe('Step Examples', () => {
 
     await elb(event);
 
-    expect(mockSendServer).toHaveBeenCalled();
-    const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const expected = example.out as {
-      events: Array<{ event_type: string; data: Record<string, unknown> }>;
-      user_identities?: Record<string, unknown>;
-      environment?: string;
-    };
+    const captured: Captured[] = mockSendServer.mock.calls.map(
+      (args) => ['sendServer', ...args] as Captured,
+    );
 
-    expect(requestBody.events).toHaveLength(1);
-    const actualEvent = requestBody.events[0];
-    const expectedEvent = expected.events[0];
-
-    expect(actualEvent.event_type).toBe(expectedEvent.event_type);
-    if ('event_name' in expectedEvent.data) {
-      expect(actualEvent.data.event_name).toBe(expectedEvent.data.event_name);
-    }
-    if ('screen_name' in expectedEvent.data) {
-      expect(actualEvent.data.screen_name).toBe(expectedEvent.data.screen_name);
-    }
-    if ('custom_event_type' in expectedEvent.data) {
-      expect(actualEvent.data.custom_event_type).toBe(
-        expectedEvent.data.custom_event_type,
-      );
-    }
-    if ('currency_code' in expectedEvent.data) {
-      expect(actualEvent.data.currency_code).toBe(
-        expectedEvent.data.currency_code,
-      );
-    }
-    if ('product_action' in expectedEvent.data) {
-      expect(actualEvent.data.product_action).toEqual(
-        expectedEvent.data.product_action,
-      );
-    }
-
-    if (expected.user_identities) {
-      expect(requestBody.user_identities).toEqual(expected.user_identities);
-    }
-    if (expected.environment) {
-      expect(requestBody.environment).toBe(expected.environment);
-    }
+    expect(captured).toEqual(example.out);
   });
 });

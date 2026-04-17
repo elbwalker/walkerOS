@@ -16,7 +16,7 @@ export const passthrough: Flow.StepExample = {
     version: { tagging: 1 },
     source: { type: 'web', id: '', previous_id: '' },
   },
-  out: undefined,
+  out: [],
 };
 
 /** addProcessedFlag enriches the event with _processed metadata. */
@@ -36,24 +36,27 @@ export const addProcessedFlag: Flow.StepExample = {
     version: { tagging: 1 },
     source: { type: 'web', id: '', previous_id: '' },
   },
-  out: {
-    event: {
-      name: 'product add',
-      data: {
-        name: 'Everyday Ruck Snack',
-        price: 420,
-        _processed: true,
-        _processedBy: 'transformer-demo',
+  out: [
+    [
+      'return',
+      {
+        name: 'product add',
+        data: {
+          name: 'Everyday Ruck Snack',
+          price: 420,
+          _processed: true,
+          _processedBy: 'transformer-demo',
+        },
+        id: '1700000601-gr0up-2',
+        trigger: 'click',
+        entity: 'product',
+        action: 'add',
+        timestamp: 1700000601,
+        group: 'gr0up',
+        count: 2,
+        version: { tagging: 1 },
+        source: { type: 'web', id: '', previous_id: '' },
       },
-      id: '1700000601-gr0up-2',
-      trigger: 'click',
-      entity: 'product',
-      action: 'add',
-      timestamp: 1700000601,
-      group: 'gr0up',
-      count: 2,
-      version: { tagging: 1 },
-      source: { type: 'web', id: '', previous_id: '' },
-    },
-  },
+    ],
+  ],
 };

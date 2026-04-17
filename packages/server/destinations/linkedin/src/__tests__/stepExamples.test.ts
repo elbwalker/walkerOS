@@ -2,8 +2,13 @@ import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
-import type { ConversionEventsRequest } from '../types';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+/**
+ * LinkedIn Conversions API invokes `env.sendServer(url, body, options)`
+ * exactly once per push. Stateless — no init-time calls to filter.
+ */
 describe('Step Examples', () => {
   const mockSendServer = jest.fn();
 
@@ -15,7 +20,7 @@ describe('Step Examples', () => {
     });
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
     const event = example.in as WalkerOS.Event;
     const mapping = example.mapping;
 
@@ -29,7 +34,7 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env: testEnv },
       {
@@ -43,32 +48,10 @@ describe('Step Examples', () => {
 
     await elb(event);
 
-    expect(mockSendServer).toHaveBeenCalled();
-    const requestBody: ConversionEventsRequest = JSON.parse(
-      mockSendServer.mock.calls[0][1],
+    const captured: Captured[] = mockSendServer.mock.calls.map(
+      (args) => ['sendServer', ...args] as Captured,
     );
-    expect(requestBody.elements).toHaveLength(1);
 
-    const actual = requestBody.elements[0];
-    const expected = (example.out as ConversionEventsRequest).elements[0];
-
-    // Verify conversion URN
-    expect(actual.conversion).toBe(expected.conversion);
-
-    // Verify timestamp
-    expect(actual.conversionHappenedAt).toBe(expected.conversionHappenedAt);
-
-    // Verify eventId
-    expect(actual.eventId).toBe(expected.eventId);
-
-    // Verify userIds
-    expect(actual.user.userIds).toEqual(expected.user.userIds);
-
-    // Verify conversionValue if present
-    if (expected.conversionValue) {
-      expect(actual.conversionValue).toEqual(expected.conversionValue);
-    } else {
-      expect(actual.conversionValue).toBeUndefined();
-    }
+    expect(captured).toEqual(example.out);
   });
 });

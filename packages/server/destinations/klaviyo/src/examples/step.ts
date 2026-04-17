@@ -3,6 +3,21 @@ import { getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
+ * Klaviyo SDK step examples.
+ *
+ * At push time, the destination invokes the `klaviyo-api` SDK. The public
+ * method paths users see on the client are:
+ *
+ *   - `eventsApi.createEvent(body)` — fires a metric event with inline profile
+ *   - `profilesApi.createOrUpdateProfile(body)` — upserts a profile
+ *
+ * Each `out` is therefore `[['method.path', ...args], ...]` matching the
+ * actual SDK call order. `identify` fires before the event. When the rule
+ * uses `skip: true` or `ignore: true`, `out` is `[]` or the identify-only
+ * list.
+ */
+
+/**
  * Extended step example that may carry destination-level settings overrides.
  */
 export type KlaviyoStepExample = Flow.StepExample & {
@@ -19,31 +34,33 @@ export const defaultEvent: KlaviyoStepExample = {
     user: { id: 'us3r', email: 'user@example.com' },
   }),
   out: [
-    'eventsApi.createEvent',
-    {
-      data: {
-        type: 'event',
-        attributes: {
-          profile: {
-            data: {
-              type: 'profile',
-              attributes: {
-                email: 'user@example.com',
-                externalId: 'us3r',
+    [
+      'eventsApi.createEvent',
+      {
+        data: {
+          type: 'event',
+          attributes: {
+            profile: {
+              data: {
+                type: 'profile',
+                attributes: {
+                  email: 'user@example.com',
+                  externalId: 'us3r',
+                },
               },
             },
-          },
-          metric: {
-            data: {
-              type: 'metric',
-              attributes: { name: 'product view' },
+            metric: {
+              data: {
+                type: 'metric',
+                attributes: { name: 'product view' },
+              },
             },
+            properties: {},
+            time: new Date(1700000100).toISOString(),
           },
-          properties: {},
-          time: new Date(1700000100).toISOString(),
         },
       },
-    },
+    ],
   ],
 };
 
@@ -72,35 +89,37 @@ export const mappedEventName: KlaviyoStepExample = {
     },
   },
   out: [
-    'eventsApi.createEvent',
-    {
-      data: {
-        type: 'event',
-        attributes: {
-          profile: {
-            data: {
-              type: 'profile',
-              attributes: {
-                email: 'user@example.com',
-                externalId: 'us3r',
+    [
+      'eventsApi.createEvent',
+      {
+        data: {
+          type: 'event',
+          attributes: {
+            profile: {
+              data: {
+                type: 'profile',
+                attributes: {
+                  email: 'user@example.com',
+                  externalId: 'us3r',
+                },
               },
             },
-          },
-          metric: {
-            data: {
-              type: 'metric',
-              attributes: { name: 'Viewed Product' },
+            metric: {
+              data: {
+                type: 'metric',
+                attributes: { name: 'Viewed Product' },
+              },
             },
+            properties: {
+              ProductName: 'USB Cable',
+              ProductID: 'PROD-1',
+              Price: 9.99,
+            },
+            time: new Date(1700000101).toISOString(),
           },
-          properties: {
-            ProductName: 'USB Cable',
-            ProductID: 'PROD-1',
-            Price: 9.99,
-          },
-          time: new Date(1700000101).toISOString(),
         },
       },
-    },
+    ],
   ],
 };
 
@@ -135,36 +154,38 @@ export const revenueEvent: KlaviyoStepExample = {
     },
   },
   out: [
-    'eventsApi.createEvent',
-    {
-      data: {
-        type: 'event',
-        attributes: {
-          profile: {
-            data: {
-              type: 'profile',
-              attributes: {
-                email: 'user@example.com',
-                externalId: 'us3r',
+    [
+      'eventsApi.createEvent',
+      {
+        data: {
+          type: 'event',
+          attributes: {
+            profile: {
+              data: {
+                type: 'profile',
+                attributes: {
+                  email: 'user@example.com',
+                  externalId: 'us3r',
+                },
               },
             },
-          },
-          metric: {
-            data: {
-              type: 'metric',
-              attributes: { name: 'Placed Order' },
+            metric: {
+              data: {
+                type: 'metric',
+                attributes: { name: 'Placed Order' },
+              },
             },
+            properties: {
+              OrderId: 'ORD-123',
+              value: 99.99,
+              ItemNames: ['Widget A', 'Widget B'],
+            },
+            time: new Date(1700000102).toISOString(),
+            valueCurrency: 'EUR',
           },
-          properties: {
-            OrderId: 'ORD-123',
-            value: 99.99,
-            ItemNames: ['Widget A', 'Widget B'],
-          },
-          time: new Date(1700000102).toISOString(),
-          valueCurrency: 'EUR',
         },
       },
-    },
+    ],
   ],
 };
 
@@ -201,22 +222,24 @@ export const userLoginIdentify: KlaviyoStepExample = {
     },
   },
   out: [
-    'profilesApi.createOrUpdateProfile',
-    {
-      data: {
-        type: 'profile',
-        attributes: {
-          email: 'user@acme.com',
-          externalId: 'us3r',
-          firstName: 'Jane',
-          lastName: 'Doe',
-          organization: 'Acme Corp',
-          properties: {
-            plan: 'premium',
+    [
+      'profilesApi.createOrUpdateProfile',
+      {
+        data: {
+          type: 'profile',
+          attributes: {
+            email: 'user@acme.com',
+            externalId: 'us3r',
+            firstName: 'Jane',
+            lastName: 'Doe',
+            organization: 'Acme Corp',
+            properties: {
+              plan: 'premium',
+            },
           },
         },
       },
-    },
+    ],
   ],
 };
 
@@ -292,30 +315,32 @@ export const emailOnly: KlaviyoStepExample = {
     externalId: undefined,
   },
   out: [
-    'eventsApi.createEvent',
-    {
-      data: {
-        type: 'event',
-        attributes: {
-          profile: {
-            data: {
-              type: 'profile',
-              attributes: {
-                email: 'subscriber@example.com',
+    [
+      'eventsApi.createEvent',
+      {
+        data: {
+          type: 'event',
+          attributes: {
+            profile: {
+              data: {
+                type: 'profile',
+                attributes: {
+                  email: 'subscriber@example.com',
+                },
               },
             },
-          },
-          metric: {
-            data: {
-              type: 'metric',
-              attributes: { name: 'newsletter signup' },
+            metric: {
+              data: {
+                type: 'metric',
+                attributes: { name: 'newsletter signup' },
+              },
             },
+            properties: {},
+            time: new Date(1700000105).toISOString(),
           },
-          properties: {},
-          time: new Date(1700000105).toISOString(),
         },
       },
-    },
+    ],
   ],
 };
 

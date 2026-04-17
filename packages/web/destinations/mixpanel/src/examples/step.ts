@@ -19,7 +19,7 @@ export type MixpanelStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: MixpanelStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: ['mixpanel.track', 'product view', {}],
+  out: [['mixpanel.track', 'product view', {}]],
 };
 
 /**
@@ -40,15 +40,17 @@ export const destinationLevelInclude: MixpanelStepExample = {
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
-    'mixpanel.track',
-    'product view',
-    {
-      data_id: 'ers',
-      data_name: 'Everyday Ruck Snack',
-      data_color: 'black',
-      data_size: 'l',
-      data_price: 420,
-    },
+    [
+      'mixpanel.track',
+      'product view',
+      {
+        data_id: 'ers',
+        data_name: 'Everyday Ruck Snack',
+        data_color: 'black',
+        data_size: 'l',
+        data_price: 420,
+      },
+    ],
   ],
 };
 
@@ -64,11 +66,13 @@ export const ruleIncludeReplaces: MixpanelStepExample = {
     include: ['globals'],
   },
   out: [
-    'mixpanel.track',
-    'order complete',
-    {
-      globals_pagegroup: 'shop',
-    },
+    [
+      'mixpanel.track',
+      'order complete',
+      {
+        globals_pagegroup: 'shop',
+      },
+    ],
   ],
 };
 
@@ -248,7 +252,7 @@ export const accountDeleteUser: MixpanelStepExample = {
       },
     },
   },
-  out: ['mixpanel.people.delete_user'],
+  out: [['mixpanel.people.delete_user']],
 };
 
 /**
@@ -263,7 +267,7 @@ export const userLogoutReset: MixpanelStepExample = {
       reset: true,
     },
   },
-  out: ['mixpanel.reset'],
+  out: [['mixpanel.reset']],
 };
 
 /**
@@ -357,7 +361,7 @@ export const consentRevokeOptOut: MixpanelStepExample = {
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['mixpanel.opt_out_tracking'],
+  out: [['mixpanel.opt_out_tracking']],
 };
 
 /**
@@ -367,5 +371,5 @@ export const consentGrantOptIn: MixpanelStepExample = {
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['mixpanel.opt_in_tracking'],
+  out: [['mixpanel.opt_in_tracking']],
 };

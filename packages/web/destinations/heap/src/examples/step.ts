@@ -17,7 +17,7 @@ export type HeapStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: HeapStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: ['track', 'product view', {}],
+  out: [['heap.track', 'product view', {}]],
 };
 
 /**
@@ -37,9 +37,11 @@ export const destinationLevelInclude: HeapStepExample = {
     },
   },
   out: [
-    'track',
-    'purchase',
-    { order_id: '0rd3r1d', total: 555, currency: 'EUR' },
+    [
+      'heap.track',
+      'purchase',
+      { order_id: '0rd3r1d', total: 555, currency: 'EUR' },
+    ],
   ],
 };
 
@@ -53,8 +55,8 @@ export const destinationLevelIdentify: HeapStepExample = {
     identify: 'user.id',
   },
   out: [
-    ['identify', 'us3r'],
-    ['track', 'page view', {}],
+    ['heap.identify', 'us3r'],
+    ['heap.track', 'page view', {}],
   ],
 };
 
@@ -84,8 +86,8 @@ export const userLoginIdentify: HeapStepExample = {
     },
   },
   out: [
-    ['identify', 'user@example.com'],
-    ['addUserProperties', { plan: 'premium', company: 'Acme' }],
+    ['heap.identify', 'user@example.com'],
+    ['heap.addUserProperties', { plan: 'premium', company: 'Acme' }],
   ],
 };
 
@@ -100,7 +102,7 @@ export const userLogoutReset: HeapStepExample = {
       reset: true,
     },
   },
-  out: [['resetIdentity']],
+  out: [['heap.resetIdentity']],
 };
 
 /**
@@ -128,10 +130,10 @@ export const eventWithUserProperties: HeapStepExample = {
   },
   out: [
     [
-      'addUserProperties',
+      'heap.addUserProperties',
       { last_order_value: 555, last_order_currency: 'EUR' },
     ],
-    ['track', 'order complete', {}],
+    ['heap.track', 'order complete', {}],
   ],
 };
 
@@ -154,7 +156,7 @@ export const globalEventProperties: HeapStepExample = {
       },
     },
   },
-  out: [['addEventProperties', { page_category: 'docs' }]],
+  out: [['heap.addEventProperties', { page_category: 'docs' }]],
 };
 
 /**
@@ -164,7 +166,7 @@ export const globalEventProperties: HeapStepExample = {
 export const consentRevokeStopTracking: HeapStepExample = {
   command: 'consent',
   in: { analytics: false },
-  out: ['stopTracking'],
+  out: [['heap.stopTracking']],
 };
 
 /**
@@ -174,5 +176,5 @@ export const consentRevokeStopTracking: HeapStepExample = {
 export const consentGrantStartTracking: HeapStepExample = {
   command: 'consent',
   in: { analytics: true },
-  out: ['startTracking'],
+  out: [['heap.startTracking']],
 };

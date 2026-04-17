@@ -43,7 +43,7 @@ export const simpleConversionId: LinkedInStepExample = {
       },
     },
   },
-  out: ['lintrk', 'track', { conversion_id: 12345 }],
+  out: [['lintrk', 'track', { conversion_id: 12345 }]],
 };
 
 /**
@@ -76,14 +76,16 @@ export const orderCompleteFullConversion: LinkedInStepExample = {
     },
   },
   out: [
-    'lintrk',
-    'track',
-    {
-      conversion_id: 67890,
-      conversion_value: 555,
-      currency: 'EUR',
-      event_id: '1700000102-gr0up-1',
-    },
+    [
+      'lintrk',
+      'track',
+      {
+        conversion_id: 67890,
+        conversion_value: 555,
+        currency: 'EUR',
+        event_id: '1700000102-gr0up-1',
+      },
+    ],
   ],
 };
 
@@ -110,12 +112,14 @@ export const pageViewConversion: LinkedInStepExample = {
     },
   },
   out: [
-    'lintrk',
-    'track',
-    {
-      conversion_id: 11111,
-      event_id: '1700000103-gr0up-1',
-    },
+    [
+      'lintrk',
+      'track',
+      {
+        conversion_id: 11111,
+        event_id: '1700000103-gr0up-1',
+      },
+    ],
   ],
 };
 
@@ -140,12 +144,14 @@ export const demoRequestLead: LinkedInStepExample = {
     },
   },
   out: [
-    'lintrk',
-    'track',
-    {
-      conversion_id: 44444,
-      event_id: '1700000104-gr0up-1',
-    },
+    [
+      'lintrk',
+      'track',
+      {
+        conversion_id: 44444,
+        event_id: '1700000104-gr0up-1',
+      },
+    ],
   ],
 };
 
@@ -217,11 +223,13 @@ export const partialFieldsOmitted: LinkedInStepExample = {
     },
   },
   out: [
-    'lintrk',
-    'track',
-    {
-      conversion_id: 67890,
-      event_id: '1700000107-gr0up-1',
-    },
+    [
+      'lintrk',
+      'track',
+      {
+        conversion_id: 67890,
+        event_id: '1700000107-gr0up-1',
+      },
+    ],
   ],
 };

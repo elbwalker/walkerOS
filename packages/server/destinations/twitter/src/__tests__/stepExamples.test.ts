@@ -1,9 +1,17 @@
 import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, isObject } from '@walkeros/core';
 import { examples } from '../dev';
-import type { ConversionsRequest } from '../types';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+/**
+ * X (Twitter) Conversions API destination invokes
+ * `env.sendServer(url, body, options)` once per push. OAuth 1.0a signing is
+ * non-deterministic (fresh nonce + timestamp per call), so we normalize the
+ * `Authorization` header to a stable marker before comparing. Other header
+ * fields and the request body are byte-compared.
+ */
 describe('Step Examples', () => {
   const mockSendServer = jest.fn();
 
@@ -15,7 +23,7 @@ describe('Step Examples', () => {
     });
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
     const event = example.in as WalkerOS.Event;
     const mapping = example.mapping;
 
@@ -29,7 +37,7 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env: testEnv },
       {
@@ -47,33 +55,27 @@ describe('Step Examples', () => {
 
     await elb(event);
 
-    expect(mockSendServer).toHaveBeenCalled();
-    const requestBody: ConversionsRequest = JSON.parse(
-      mockSendServer.mock.calls[0][1],
-    );
-    expect(requestBody.conversions).toHaveLength(1);
+    // Normalize the OAuth Authorization header (non-deterministic) to the
+    // stable placeholder used in the example's expected `out`.
+    const captured: Captured[] = mockSendServer.mock.calls.map((args) => {
+      const [url, body, options] = args as [unknown, unknown, unknown];
+      if (isObject(options) && isObject(options.headers)) {
+        const headers = options.headers as Record<string, unknown>;
+        if (typeof headers.Authorization === 'string') {
+          return [
+            'sendServer',
+            url,
+            body,
+            {
+              ...options,
+              headers: { ...headers, Authorization: '<OAUTH_SIGNATURE>' },
+            },
+          ] as Captured;
+        }
+      }
+      return ['sendServer', url, body, options] as Captured;
+    });
 
-    const actual = requestBody.conversions[0];
-    const expected = (example.out as ConversionsRequest).conversions[0];
-
-    // Verify conversion time (ISO 8601)
-    expect(actual.conversion_time).toBe(expected.conversion_time);
-
-    // Verify event_id
-    expect(actual.event_id).toBe(expected.event_id);
-
-    // Verify identifiers array
-    expect(actual.identifiers).toEqual(expected.identifiers);
-
-    // Verify conversion_id (dedup key)
-    expect(actual.conversion_id).toBe(expected.conversion_id);
-
-    // Verify value if present
-    if (expected.value !== undefined) {
-      expect(actual.value).toBe(expected.value);
-      expect(typeof actual.value).toBe('string');
-    } else {
-      expect(actual.value).toBeUndefined();
-    }
+    expect(captured).toEqual(example.out);
   });
 });

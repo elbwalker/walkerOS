@@ -16,7 +16,7 @@ export const jsonDefault: RedisStepExample = {
   in: getEvent('page view', {
     timestamp: 1700000100,
   }),
-  out: ['client.xadd', ['walkeros:events', '*', 'event', 'json:event']],
+  out: [['client.xadd', ['walkeros:events', '*', 'event', 'json:event']]],
 };
 
 /**
@@ -27,7 +27,7 @@ export const orderComplete: RedisStepExample = {
     timestamp: 1700000101,
     data: { id: 'ORD-400', total: 99.99, currency: 'EUR' },
   }),
-  out: ['client.xadd', ['walkeros:events', '*', 'event', 'json:event']],
+  out: [['client.xadd', ['walkeros:events', '*', 'event', 'json:event']]],
 };
 
 /**
@@ -45,8 +45,10 @@ export const withMaxLen: RedisStepExample = {
     },
   },
   out: [
-    'client.xadd',
-    ['walkeros:events', 'MAXLEN', '~', 50000, '*', 'event', 'json:event'],
+    [
+      'client.xadd',
+      ['walkeros:events', 'MAXLEN', '~', 50000, '*', 'event', 'json:event'],
+    ],
   ],
 };
 
@@ -65,8 +67,10 @@ export const withExactTrim: RedisStepExample = {
     },
   },
   out: [
-    'client.xadd',
-    ['walkeros:events', 'MAXLEN', 5000, '*', 'event', 'json:event'],
+    [
+      'client.xadd',
+      ['walkeros:events', 'MAXLEN', 5000, '*', 'event', 'json:event'],
+    ],
   ],
 };
 
@@ -83,7 +87,7 @@ export const streamKeyOverride: RedisStepExample = {
       streamKey: 'walkeros:orders',
     },
   },
-  out: ['client.xadd', ['walkeros:orders', '*', 'event', 'json:event']],
+  out: [['client.xadd', ['walkeros:orders', '*', 'event', 'json:event']]],
 };
 
 /**

@@ -14,13 +14,6 @@ import { examples } from '../dev';
 import type { Env, Pintrk } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
 
 /**
  * Install a spy on env.window.pintrk that records every call as a
@@ -29,7 +22,7 @@ function flatten(out: unknown): CallRecord[] {
 function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
   const calls: CallRecord[] = [];
   const spy = ((...args: unknown[]) => {
-    calls.push(['window.pintrk', ...args]);
+    calls.push(['pintrk', ...args]);
   }) as unknown as Pintrk;
   spy.queue = [];
   spy.version = '3.0';
@@ -42,7 +35,7 @@ describe('pinterest destination — step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
     };
 
@@ -81,7 +74,7 @@ describe('pinterest destination — step examples', () => {
     }
 
     // Drop init-time calls (load + page) — covered by init.test.ts.
-    const expected = flatten(example.out as ExpectedOut);
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
     const actual = collected().filter((call) => {
       const cmd = call[1];
       return cmd !== 'load' && cmd !== 'page';

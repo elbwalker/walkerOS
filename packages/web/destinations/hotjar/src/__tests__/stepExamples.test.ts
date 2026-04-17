@@ -11,15 +11,6 @@ import { examples } from '../dev';
 import type { Env, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  // Single call: out[0] is a string method path
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  // Multi-call: array of [path, ...args] tuples
-  return out as CallRecord[];
-}
 
 /**
  * Install spies onto an Env's hotjar methods. Calls are collected into
@@ -51,7 +42,7 @@ describe('hotjar destination -- step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
     };
@@ -86,7 +77,7 @@ describe('hotjar destination -- step examples', () => {
 
     // Drop the init call -- every example triggers init once, it is not part
     // of the declared `out`.
-    const expected = flatten(example.out as ExpectedOut);
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
     const actual = collected().filter(([path]) => path !== 'hotjar.init');
 
     expect(actual).toEqual(expected);

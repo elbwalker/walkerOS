@@ -12,18 +12,19 @@ describe('Step Examples', () => {
 
   it('getHit — read an existing key', () => {
     const example = examples.step.getHit;
-    const input = example.in as {
-      operation: string;
-      key: string;
-    };
-    const output = example.out as { value: unknown };
+    const input = example.in as { operation: string; key: string };
+    const [, expectedKey, expectedValue] = example.out![0] as readonly [
+      string,
+      string,
+      unknown,
+    ];
 
     const store = createMemoryStore();
     // Pre-populate the store with the expected value
-    store.set(input.key, output.value);
+    store.set(input.key, expectedValue);
 
-    const result = store.get(input.key);
-    expect(result).toEqual(output.value);
+    const result = store.get(expectedKey);
+    expect(result).toEqual(expectedValue);
   });
 
   it('setAndGet — write then read back', () => {
@@ -33,17 +34,17 @@ describe('Step Examples', () => {
       key: string;
       value: unknown;
     };
-    const output = example.out as {
-      operation: string;
-      key: string;
-      value: unknown;
-    };
+    const [, getKey, getValue] = example.out![1] as readonly [
+      string,
+      string,
+      unknown,
+    ];
 
     const store = createMemoryStore();
     store.set(input.key, input.value);
 
-    const result = store.get(output.key);
-    expect(result).toEqual(output.value);
+    const result = store.get(getKey);
+    expect(result).toEqual(getValue);
   });
 
   it('ttlExpiration — entry expires after TTL', () => {
@@ -54,11 +55,11 @@ describe('Step Examples', () => {
       value: unknown;
       ttl: number;
     };
-    const output = example.out as {
-      operation: string;
-      key: string;
-      value: unknown;
-    };
+    const [, getKey, getValue] = example.out![1] as readonly [
+      string,
+      string,
+      unknown,
+    ];
 
     const store = createMemoryStore();
     store.set(input.key, input.value, input.ttl);
@@ -66,7 +67,7 @@ describe('Step Examples', () => {
     // Advance past the TTL
     jest.advanceTimersByTime(input.ttl + 1);
 
-    const result = store.get(output.key);
-    expect(result).toEqual(output.value);
+    const result = store.get(getKey);
+    expect(result).toEqual(getValue);
   });
 });

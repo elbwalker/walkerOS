@@ -17,13 +17,16 @@ export const purchase: Flow.StepExample = {
     },
   },
   out: [
-    'purchase',
-    {
-      revenue: {
-        currency: 'EUR',
-        amount: 555,
+    [
+      'plausible',
+      'purchase',
+      {
+        revenue: {
+          currency: 'EUR',
+          amount: 555,
+        },
       },
-    },
+    ],
   ],
 };
 
@@ -39,15 +42,18 @@ export const customEvent: Flow.StepExample = {
     },
   },
   out: [
-    'Custom Event',
-    {
-      props: {
-        string: 'foo',
-        number: 1,
-        boolean: true,
-        array: [0, 'text', false],
+    [
+      'plausible',
+      'Custom Event',
+      {
+        props: {
+          string: 'foo',
+          number: 1,
+          boolean: true,
+          array: [0, 'text', false],
+        },
+        revenue: 1,
       },
-      revenue: 1,
-    },
+    ],
   ],
 };

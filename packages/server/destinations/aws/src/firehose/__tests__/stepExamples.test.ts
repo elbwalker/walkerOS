@@ -1,22 +1,16 @@
-import type { Config, Destination, Env } from '../types';
 import type { Collector, WalkerOS } from '@walkeros/core';
+import type { Config, Destination, Env } from '../types';
 import { createMockContext, createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 
 const { env } = examples;
 
+type CallRecord = [string, ...unknown[]];
+
 describe('Step Examples', () => {
-  let mockSend: jest.Mock;
+  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
+    const calls: CallRecord[] = [];
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSend = jest.fn().mockResolvedValue({
-      RecordId: 'mock-record-id',
-      ResponseMetadata: { RequestId: 'mock-request-id' },
-    });
-  });
-
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
     const destination: Destination = jest.requireActual('../').default;
     destination.config = {};
 
@@ -26,25 +20,31 @@ describe('Step Examples', () => {
         ...env.push.AWS,
         FirehoseClient: class MockFirehoseClient {
           config: unknown;
-          send = mockSend;
           constructor(config?: unknown) {
             this.config = config;
+          }
+          async send(command: unknown) {
+            const input = (command as { input: unknown }).input;
+            calls.push(['client.send', input]);
+            return {
+              RecordId: 'mock-record-id',
+              ResponseMetadata: { RequestId: 'mock-request-id' },
+            };
           }
         } as unknown as Env['AWS']['FirehoseClient'],
       },
     };
 
-    const expectedOut = example.out as {
-      DeliveryStreamName: string;
-      Records: Array<{ Data: string }>;
-    };
+    const expectedCalls = example.out as CallRecord[];
+    const firstCall = expectedCalls[0];
+    const firstInput = firstCall[1] as { DeliveryStreamName: string };
 
     const config = (await destination.init({
       config: {
         settings: {
           firehose: {
             region: 'eu-central-1',
-            streamName: expectedOut.DeliveryStreamName,
+            streamName: firstInput.DeliveryStreamName,
           },
         },
       },
@@ -63,18 +63,6 @@ describe('Step Examples', () => {
       }),
     );
 
-    expect(mockSend).toHaveBeenCalledTimes(1);
-    const command = mockSend.mock.calls[0][0];
-    expect(command.input.DeliveryStreamName).toBe(
-      expectedOut.DeliveryStreamName,
-    );
-    expect(command.input.Records).toHaveLength(expectedOut.Records.length);
-
-    // Firehose sends full event; step example Data shows event.data
-    for (let i = 0; i < expectedOut.Records.length; i++) {
-      const actualEvent = JSON.parse(command.input.Records[i].Data.toString());
-      const expectedData = JSON.parse(expectedOut.Records[i].Data);
-      expect(actualEvent.data).toEqual(expect.objectContaining(expectedData));
-    }
+    expect(calls).toEqual(expectedCalls);
   });
 });

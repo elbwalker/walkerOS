@@ -5,10 +5,15 @@ export const pageView: Flow.StepExample = {
     name: 'page view',
     data: { title: 'Home' },
   },
-  out: {
-    name: 'page view',
-    data: { title: 'Home' },
-  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: { title: 'Home' },
+      },
+    ],
+  ],
 };
 
 export const delayedEvent: Flow.StepExample = {
@@ -17,8 +22,13 @@ export const delayedEvent: Flow.StepExample = {
     data: { id: 'abc', name: 'Test Product' },
     delay: 100,
   },
-  out: {
-    name: 'product add',
-    data: { id: 'abc', name: 'Test Product' },
-  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'product add',
+        data: { id: 'abc', name: 'Test Product' },
+      },
+    ],
+  ],
 };

@@ -10,7 +10,7 @@ export const pageView: Flow.StepExample = {
   mapping: {
     data: 'data.title',
   },
-  out: [['trackPageView', 'walkerOS documentation']],
+  out: [['_paq.push', ['trackPageView', 'walkerOS documentation']]],
 };
 
 /**
@@ -29,8 +29,8 @@ export const customEvent: Flow.StepExample = {
     },
   },
   out: [
-    ['trackEvent', 'Setting up tracking easily', 'hero'],
-    ['trackGoal', 'goal_1', undefined],
+    ['_paq.push', ['trackEvent', 'Setting up tracking easily', 'hero']],
+    ['_paq.push', ['trackGoal', 'goal_1', undefined]],
   ],
 };
 
@@ -72,29 +72,32 @@ export const ecommerceOrder: Flow.StepExample = {
   },
   out: [
     [
-      'trackEcommerceOrder',
+      '_paq.push',
       [
+        'trackEcommerceOrder',
+        [
+          {
+            sku: 'ers',
+            name: 'Everyday Ruck Snack',
+            category: '',
+            price: 420,
+            quantity: 1,
+          },
+          {
+            sku: 'cc',
+            name: 'Cool Cap',
+            category: '',
+            price: 42,
+            quantity: 1,
+          },
+        ],
         {
-          sku: 'ers',
-          name: 'Everyday Ruck Snack',
-          category: '',
-          price: 420,
-          quantity: 1,
-        },
-        {
-          sku: 'cc',
-          name: 'Cool Cap',
-          category: '',
-          price: 42,
-          quantity: 1,
+          orderId: '0rd3r1d',
+          grandTotal: 555,
+          tax: 73.76,
+          shipping: 5.22,
         },
       ],
-      {
-        orderId: '0rd3r1d',
-        grandTotal: 555,
-        tax: 73.76,
-        shipping: 5.22,
-      },
     ],
   ],
 };
@@ -131,17 +134,20 @@ export const ecommerceCartUpdate: Flow.StepExample = {
   },
   out: [
     [
-      'trackEcommerceCartUpdate',
+      '_paq.push',
       [
-        {
-          sku: 'ers',
-          name: 'Everyday Ruck Snack',
-          category: '',
-          price: 420,
-          quantity: 1,
-        },
+        'trackEcommerceCartUpdate',
+        [
+          {
+            sku: 'ers',
+            name: 'Everyday Ruck Snack',
+            category: '',
+            price: 420,
+            quantity: 1,
+          },
+        ],
+        840,
       ],
-      840,
     ],
   ],
 };
@@ -172,14 +178,17 @@ export const productDetailView: Flow.StepExample = {
   },
   out: [
     [
-      'ecommerceProductDetailView',
+      '_paq.push',
       [
-        {
-          sku: 'ers',
-          name: 'Everyday Ruck Snack',
-          price: 420,
-          quantity: 1,
-        },
+        'ecommerceProductDetailView',
+        [
+          {
+            sku: 'ers',
+            name: 'Everyday Ruck Snack',
+            price: 420,
+            quantity: 1,
+          },
+        ],
       ],
     ],
   ],
@@ -202,7 +211,7 @@ export const siteSearch: Flow.StepExample = {
       set: ['data.query', 'data.category', 'data.resultsCount'],
     },
   },
-  out: [['trackSiteSearch', 'shoes', 'products', 42]],
+  out: [['_paq.push', ['trackSiteSearch', 'shoes', 'products', 42]]],
 };
 
 /**
@@ -225,7 +234,7 @@ export const goalTracking: Flow.StepExample = {
     },
   },
   out: [
-    ['trackEvent', 'Setting up tracking easily'],
-    ['trackGoal', '1', 50],
+    ['_paq.push', ['trackEvent', 'Setting up tracking easily']],
+    ['_paq.push', ['trackGoal', '1', 50]],
   ],
 };

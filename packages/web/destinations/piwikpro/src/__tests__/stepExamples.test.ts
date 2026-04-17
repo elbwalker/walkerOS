@@ -36,7 +36,7 @@ describe('Step Examples', () => {
     );
     await elb(event);
 
-    const expected = example.out as unknown[][];
+    const expected = (example.out ?? []) as readonly (readonly unknown[])[];
     const actual = paqCommands.slice(-expected.length);
     expect(actual).toEqual(expected);
   });

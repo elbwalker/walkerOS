@@ -14,13 +14,6 @@ import type {
 } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
 
 /**
  * Records a chained Identify instance's operations as a plain-object map
@@ -173,7 +166,7 @@ describe('amplitude destination — step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
       configInclude?: string[];
@@ -223,7 +216,7 @@ describe('amplitude destination — step examples', () => {
     }
 
     // Drop init — every example triggers init once; it's not part of `out`.
-    const expected = flatten(example.out as ExpectedOut);
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
     const actual = collected().filter(([path]) => path !== 'amplitude.initAll');
 
     expect(actual).toEqual(expected);

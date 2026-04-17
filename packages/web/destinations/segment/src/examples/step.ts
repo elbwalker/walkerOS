@@ -18,7 +18,7 @@ export type SegmentStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: SegmentStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: ['analytics.track', 'product view', {}],
+  out: [['analytics.track', 'product view', {}]],
 };
 
 /**
@@ -39,15 +39,17 @@ export const destinationLevelInclude: SegmentStepExample = {
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
-    'analytics.track',
-    'product view',
-    {
-      data_id: 'ers',
-      data_name: 'Everyday Ruck Snack',
-      data_color: 'black',
-      data_size: 'l',
-      data_price: 420,
-    },
+    [
+      'analytics.track',
+      'product view',
+      {
+        data_id: 'ers',
+        data_name: 'Everyday Ruck Snack',
+        data_color: 'black',
+        data_size: 'l',
+        data_price: 420,
+      },
+    ],
   ],
 };
 
@@ -63,11 +65,13 @@ export const ruleIncludeReplaces: SegmentStepExample = {
     include: ['globals'],
   },
   out: [
-    'analytics.track',
-    'order complete',
-    {
-      globals_pagegroup: 'shop',
-    },
+    [
+      'analytics.track',
+      'order complete',
+      {
+        globals_pagegroup: 'shop',
+      },
+    ],
   ],
 };
 
@@ -134,14 +138,16 @@ export const userLoginIdentify: SegmentStepExample = {
     },
   },
   out: [
-    'analytics.identify',
-    'new-user-123',
-    {
-      email: 'user@acme.com',
-      name: 'Jane Doe',
-      plan: 'premium',
-      company: { name: 'Acme', id: 'comp-456' },
-    },
+    [
+      'analytics.identify',
+      'new-user-123',
+      {
+        email: 'user@acme.com',
+        name: 'Jane Doe',
+        plan: 'premium',
+        company: { name: 'Acme', id: 'comp-456' },
+      },
+    ],
   ],
 };
 
@@ -175,13 +181,15 @@ export const profileUpdateTraitsOnly: SegmentStepExample = {
     },
   },
   out: [
-    'analytics.identify',
-    undefined,
-    {
-      name: 'Jane Q. Doe',
-      avatar: 'https://example.com/avatar.png',
-      phone: '+1234567890',
-    },
+    [
+      'analytics.identify',
+      undefined,
+      {
+        name: 'Jane Q. Doe',
+        avatar: 'https://example.com/avatar.png',
+        phone: '+1234567890',
+      },
+    ],
   ],
 };
 
@@ -198,7 +206,7 @@ export const userLogoutReset: SegmentStepExample = {
       reset: true,
     },
   },
-  out: ['analytics.reset'],
+  out: [['analytics.reset']],
 };
 
 /**
@@ -235,14 +243,16 @@ export const companyUpdateGroup: SegmentStepExample = {
     },
   },
   out: [
-    'analytics.group',
-    'comp-456',
-    {
-      name: 'Acme',
-      industry: 'tech',
-      employees: 50,
-      plan: 'enterprise',
-    },
+    [
+      'analytics.group',
+      'comp-456',
+      {
+        name: 'Acme',
+        industry: 'tech',
+        employees: 50,
+        plan: 'enterprise',
+      },
+    ],
   ],
 };
 
@@ -277,12 +287,14 @@ export const pageViewAsPage: SegmentStepExample = {
     },
   },
   out: [
-    'analytics.page',
-    'docs',
-    'Getting Started',
-    {
-      section: 'tutorials',
-    },
+    [
+      'analytics.page',
+      'docs',
+      'Getting Started',
+      {
+        section: 'tutorials',
+      },
+    ],
   ],
 };
 
@@ -298,7 +310,7 @@ export const pageViewMinimal: SegmentStepExample = {
       page: true,
     },
   },
-  out: ['analytics.page'],
+  out: [['analytics.page']],
 };
 
 /**
@@ -340,31 +352,33 @@ export const orderCompletedEcommerce: SegmentStepExample = {
     },
   },
   out: [
-    'analytics.track',
-    'Order Completed',
-    {
-      order_id: '0rd3r1d',
-      currency: 'EUR',
-      shipping: 5.22,
-      tax: 73.76,
-      total: 555,
-      products: [
-        {
-          product_id: 'ers',
-          name: 'Everyday Ruck Snack',
-          price: 420,
-          quantity: 1,
-          currency: 'EUR',
-        },
-        {
-          product_id: 'cc',
-          name: 'Cool Cap',
-          price: 42,
-          quantity: 1,
-          currency: 'EUR',
-        },
-      ],
-    },
+    [
+      'analytics.track',
+      'Order Completed',
+      {
+        order_id: '0rd3r1d',
+        currency: 'EUR',
+        shipping: 5.22,
+        tax: 73.76,
+        total: 555,
+        products: [
+          {
+            product_id: 'ers',
+            name: 'Everyday Ruck Snack',
+            price: 420,
+            quantity: 1,
+            currency: 'EUR',
+          },
+          {
+            product_id: 'cc',
+            name: 'Cool Cap',
+            price: 42,
+            quantity: 1,
+            currency: 'EUR',
+          },
+        ],
+      },
+    ],
   ],
 };
 
@@ -386,19 +400,21 @@ export const consentContextForwarded: SegmentStepExample = {
     },
   },
   out: [
-    'analytics.track',
-    'product view',
-    {},
-    {
-      context: {
-        consent: {
-          categoryPreferences: {
-            Analytics: true,
-            Advertising: true,
+    [
+      'analytics.track',
+      'product view',
+      {},
+      {
+        context: {
+          consent: {
+            categoryPreferences: {
+              Analytics: true,
+              Advertising: true,
+            },
           },
         },
       },
-    },
+    ],
   ],
 };
 
@@ -414,9 +430,11 @@ export const consentGrantDeferredLoad: SegmentStepExample = {
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   out: [
-    'analytics.load',
-    { writeKey: 'test-project' },
-    { initialPageview: false },
+    [
+      'analytics.load',
+      { writeKey: 'test-project' },
+      { initialPageview: false },
+    ],
   ],
 };
 

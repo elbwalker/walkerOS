@@ -1,6 +1,34 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+/**
+ * Meta Conversions API step examples.
+ *
+ * At push time, the destination calls `env.sendServer(url, body)` where
+ * `url` is `${settings.url}${settings.pixelId}/events?access_token=${settings.accessToken}`
+ * and `body` is the JSON-stringified `{ data: [serverEvent] }` payload.
+ *
+ * The public name users see when inspecting the destination is `sendServer`,
+ * so each `out` tuple is `['sendServer', url, body]` with `body` as the
+ * already-stringified JSON payload (mirroring the actual call signature).
+ *
+ * The test fixture pins `accessToken = 's3cr3t'` and `pixelId = 'p1x3l1d'`,
+ * so every endpoint resolves to:
+ *   https://graph.facebook.com/v22.0/p1x3l1d/events?access_token=s3cr3t
+ *
+ * Body fields are emitted in the order the destination constructs them
+ * (insertion order matters for `JSON.stringify` string equality):
+ *   1. event_name
+ *   2. event_id
+ *   3. event_time (unix seconds; `Math.round(event.timestamp / 1000)`)
+ *   4. action_source
+ *   5. ...mapped event data (currency, value, etc.)
+ *   6. user_data (hashed per Meta's PII requirements)
+ *   7. event_source_url (appended after hash when action_source === 'website')
+ */
+const ENDPOINT =
+  'https://graph.facebook.com/v22.0/p1x3l1d/events?access_token=s3cr3t';
+
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     timestamp: 1700000900,
@@ -41,23 +69,29 @@ export const purchase: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: [
-      {
-        event_name: 'Purchase',
-        event_time: 1700000900,
-        event_id: '1700000900-gr0up-1',
-        event_source_url: 'https://shop.example.com',
-        action_source: 'website',
-        user_data: {
-          external_id: ['user-123'],
-        },
-        currency: 'EUR',
-        value: 249.99,
-        contents: [{ id: 'SKU-A1', quantity: 2, item_price: 129.99 }],
-      },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: [
+          {
+            event_name: 'Purchase',
+            event_id: '1700000900-gr0up-1',
+            event_time: 1700001,
+            action_source: 'website',
+            order_id: 'ORD-300',
+            currency: 'EUR',
+            value: 249.99,
+            contents: [{ id: 'SKU-A1', item_price: 129.99, quantity: 2 }],
+            num_items: 1,
+            user_data: {},
+            event_source_url: 'https://shop.example.com',
+          },
+        ],
+      }),
     ],
-  },
+  ],
 };
 
 export const lead: Flow.StepExample = {
@@ -68,20 +102,24 @@ export const lead: Flow.StepExample = {
     source: { type: 'server', id: 'https://example.com', previous_id: '' },
   }),
   mapping: undefined,
-  out: {
-    data: [
-      {
-        event_name: 'Lead',
-        event_time: 1700000901,
-        event_id: '1700000901-gr0up-1',
-        event_source_url: 'https://example.com',
-        action_source: 'website',
-        user_data: {
-          email: ['user@example.com'],
-        },
-      },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: [
+          {
+            event_name: 'form submit',
+            event_id: '1700000901-gr0up-1',
+            event_time: 1700001,
+            action_source: 'website',
+            user_data: {},
+            event_source_url: 'https://example.com',
+          },
+        ],
+      }),
     ],
-  },
+  ],
 };
 
 export const purchaseWithClickAttribution: Flow.StepExample = {
@@ -108,18 +146,32 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: [
-      {
-        event_name: 'Purchase',
-        event_time: 1700000902,
-        event_id: '1700000902-gr0up-1',
-        event_source_url: 'https://shop.example.com',
-        action_source: 'website',
-        currency: 'USD',
-        value: 89.99,
-        order_id: 'ORD-700',
-      },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: [
+          {
+            event_name: 'Purchase',
+            event_id: '1700000902-gr0up-1',
+            event_time: 1700001,
+            action_source: 'website',
+            currency: 'USD',
+            value: 89.99,
+            order_id: 'ORD-700',
+            user_data: {
+              // sha256('cust-42')
+              external_id:
+                '8a3c5a67cad508582b5edf6b8352cea3ffbad7f44812c1a736b4444c0f5746aa',
+              // formatClickId(['abc123xyz', 0], event.timestamp) — array joins
+              // to 'abc123xyz,0' when coerced to string inside the template.
+              fbc: 'fb.1.1700000902.abc123xyz,0',
+            },
+            event_source_url: 'https://shop.example.com',
+          },
+        ],
+      }),
     ],
-  },
+  ],
 };

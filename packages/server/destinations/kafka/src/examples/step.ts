@@ -18,20 +18,22 @@ export const defaultEvent: KafkaStepExample = {
     timestamp: 1700000100,
   }),
   out: [
-    'producer.send',
-    {
-      topic: 'walkeros-events',
-      messages: [
-        {
-          key: 'page_view',
-          value: 'json:event',
-          headers: { 'content-type': 'application/json' },
-          timestamp: '1700000100',
-        },
-      ],
-      acks: -1,
-      compression: 1,
-    },
+    [
+      'producer.send',
+      {
+        topic: 'walkeros-events',
+        messages: [
+          {
+            key: 'page_view',
+            value: 'json:event',
+            headers: { 'content-type': 'application/json' },
+            timestamp: '1700000100',
+          },
+        ],
+        acks: -1,
+        compression: 1,
+      },
+    ],
   ],
 };
 
@@ -47,20 +49,22 @@ export const mappedEventName: KafkaStepExample = {
     name: 'purchase',
   },
   out: [
-    'producer.send',
-    {
-      topic: 'walkeros-events',
-      messages: [
-        {
-          key: 'purchase',
-          value: 'json:event',
-          headers: { 'content-type': 'application/json' },
-          timestamp: '1700000101',
-        },
-      ],
-      acks: -1,
-      compression: 1,
-    },
+    [
+      'producer.send',
+      {
+        topic: 'walkeros-events',
+        messages: [
+          {
+            key: 'purchase',
+            value: 'json:event',
+            headers: { 'content-type': 'application/json' },
+            timestamp: '1700000101',
+          },
+        ],
+        acks: -1,
+        compression: 1,
+      },
+    ],
   ],
 };
 
@@ -84,20 +88,22 @@ export const mappedData: KafkaStepExample = {
     },
   },
   out: [
-    'producer.send',
-    {
-      topic: 'walkeros-events',
-      messages: [
-        {
-          key: 'purchase',
-          value: 'json:data',
-          headers: { 'content-type': 'application/json' },
-          timestamp: '1700000102',
-        },
-      ],
-      acks: -1,
-      compression: 1,
-    },
+    [
+      'producer.send',
+      {
+        topic: 'walkeros-events',
+        messages: [
+          {
+            key: 'purchase',
+            value: 'json:data',
+            headers: { 'content-type': 'application/json' },
+            timestamp: '1700000102',
+          },
+        ],
+        acks: -1,
+        compression: 1,
+      },
+    ],
   ],
 };
 
@@ -119,20 +125,22 @@ export const keyFromUser: KafkaStepExample = {
     },
   },
   out: [
-    'producer.send',
-    {
-      topic: 'walkeros-events',
-      messages: [
-        {
-          key: 'usr-789',
-          value: 'json:event',
-          headers: { 'content-type': 'application/json' },
-          timestamp: '1700000103',
-        },
-      ],
-      acks: -1,
-      compression: 1,
-    },
+    [
+      'producer.send',
+      {
+        topic: 'walkeros-events',
+        messages: [
+          {
+            key: 'usr-789',
+            value: 'json:event',
+            headers: { 'content-type': 'application/json' },
+            timestamp: '1700000103',
+          },
+        ],
+        acks: -1,
+        compression: 1,
+      },
+    ],
   ],
 };
 
@@ -151,20 +159,22 @@ export const topicOverride: KafkaStepExample = {
     },
   },
   out: [
-    'producer.send',
-    {
-      topic: 'orders-stream',
-      messages: [
-        {
-          key: 'order_complete',
-          value: 'json:event',
-          headers: { 'content-type': 'application/json' },
-          timestamp: '1700000104',
-        },
-      ],
-      acks: -1,
-      compression: 1,
-    },
+    [
+      'producer.send',
+      {
+        topic: 'orders-stream',
+        messages: [
+          {
+            key: 'order_complete',
+            value: 'json:event',
+            headers: { 'content-type': 'application/json' },
+            timestamp: '1700000104',
+          },
+        ],
+        acks: -1,
+        compression: 1,
+      },
+    ],
   ],
 };
 

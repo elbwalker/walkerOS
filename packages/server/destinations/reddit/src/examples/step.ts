@@ -1,6 +1,36 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+/**
+ * Reddit Conversions API step examples.
+ *
+ * At push time, the destination calls
+ * `env.sendServer(endpoint, JSON.stringify(body), options)` where
+ * `endpoint = ${settings.url}${settings.pixelId}` and
+ * `body = { data: { events: [hashedServerEvent] } }`.
+ *
+ * Test fixture pins `pixelId = 'a2_abcdef123456'` and the default url, so
+ * every endpoint resolves to:
+ *   https://ads-api.reddit.com/api/v2.0/conversions/events/a2_abcdef123456
+ *
+ * The serverEvent keys are assembled in this order (insertion order matters
+ * for `JSON.stringify` string equality):
+ *   1. event_at (ISO timestamp)
+ *   2. event_at_ms
+ *   3. event_type ({ tracking_type, custom_event_name? })
+ *   4. ...restEventData (mapped event data minus user/event_metadata/click_id)
+ *   5. user (hashed — email, external_id, ip_address, user_agent, idfa, aaid)
+ *   6. event_metadata (conversion_id first, then merged metadata)
+ *   7. click_id (only when a string is present)
+ *
+ * `options` carries the Authorization: Bearer <accessToken> header.
+ */
+const ENDPOINT =
+  'https://ads-api.reddit.com/api/v2.0/conversions/events/a2_abcdef123456';
+const OPTIONS = {
+  headers: { Authorization: 'Bearer s3cr3t' },
+};
+
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     timestamp: 1700000900,
@@ -53,33 +83,38 @@ export const purchase: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: {
-      events: [
-        {
-          event_at: new Date(1700000900).toISOString(),
-          event_at_ms: 1700000900,
-          event_type: { tracking_type: 'Purchase' },
-          event_metadata: {
-            conversion_id: '1700000900-gr0up-1',
-            value_decimal: 249.99,
-            currency: 'EUR',
-            item_count: 1,
-            products: [
-              {
-                id: 'SKU-A1',
-                name: 'Everyday Ruck Snack',
-                category: 'bags',
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: {
+          events: [
+            {
+              event_at: '1970-01-20T16:13:20.900Z',
+              event_at_ms: 1700000900,
+              event_type: { tracking_type: 'Purchase' },
+              user: {},
+              event_metadata: {
+                conversion_id: '1700000900-gr0up-1',
+                value_decimal: 249.99,
+                currency: 'EUR',
+                item_count: 1,
+                products: [
+                  {
+                    id: 'SKU-A1',
+                    name: 'Everyday Ruck Snack',
+                    category: 'bags',
+                  },
+                ],
               },
-            ],
-          },
-          user: {
-            external_id: 'user-123',
-          },
+            },
+          ],
         },
-      ],
-    },
-  },
+      }),
+      OPTIONS,
+    ],
+  ],
 };
 
 export const addToCart: Flow.StepExample = {
@@ -124,33 +159,34 @@ export const addToCart: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: {
-      events: [
-        {
-          event_at: new Date(1700000901).toISOString(),
-          event_at_ms: 1700000901,
-          event_type: { tracking_type: 'AddToCart' },
-          event_metadata: {
-            conversion_id: '1700000901-gr0up-1',
-            value_decimal: '42.00',
-            currency: 'EUR',
-            item_count: 1,
-            products: [
-              {
-                id: 'SKU-B2',
-                name: 'Cool Cap',
-                category: 'hats',
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: {
+          events: [
+            {
+              event_at: '1970-01-20T16:13:20.901Z',
+              event_at_ms: 1700000901,
+              event_type: { tracking_type: 'AddToCart' },
+              user: {},
+              event_metadata: {
+                conversion_id: '1700000901-gr0up-1',
+                value_decimal: '42.00',
+                currency: 'EUR',
+                item_count: 1,
+                products: [
+                  { id: 'SKU-B2', name: 'Cool Cap', category: 'hats' },
+                ],
               },
-            ],
-          },
-          user: {
-            external_id: 'user-456',
-          },
+            },
+          ],
         },
-      ],
-    },
-  },
+      }),
+      OPTIONS,
+    ],
+  ],
 };
 
 export const pageVisit: Flow.StepExample = {
@@ -166,23 +202,26 @@ export const pageVisit: Flow.StepExample = {
   mapping: {
     name: 'PageVisit',
   },
-  out: {
-    data: {
-      events: [
-        {
-          event_at: new Date(1700000902).toISOString(),
-          event_at_ms: 1700000902,
-          event_type: { tracking_type: 'PageVisit' },
-          event_metadata: {
-            conversion_id: '1700000902-gr0up-1',
-          },
-          user: {
-            external_id: 'user-789',
-          },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: {
+          events: [
+            {
+              event_at: '1970-01-20T16:13:20.902Z',
+              event_at_ms: 1700000902,
+              event_type: { tracking_type: 'PageVisit' },
+              user: {},
+              event_metadata: { conversion_id: '1700000902-gr0up-1' },
+            },
+          ],
         },
-      ],
-    },
-  },
+      }),
+      OPTIONS,
+    ],
+  ],
 };
 
 export const lead: Flow.StepExample = {
@@ -209,24 +248,33 @@ export const lead: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: {
-      events: [
-        {
-          event_at: new Date(1700000903).toISOString(),
-          event_at_ms: 1700000903,
-          event_type: { tracking_type: 'Lead' },
-          event_metadata: {
-            conversion_id: '1700000903-gr0up-1',
-          },
-          user: {
-            email: 'lead@example.com',
-            external_id: 'user-lead-1',
-          },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: {
+          events: [
+            {
+              event_at: '1970-01-20T16:13:20.903Z',
+              event_at_ms: 1700000903,
+              event_type: { tracking_type: 'Lead' },
+              user: {
+                // sha256('lead@example.com')
+                email:
+                  '9fbdefe2837a03c9225be80e741f316f4d174d1732b719b6abb6477efc1ae9d2',
+                // sha256('user-lead-1')
+                external_id:
+                  'ee818eebb052cf288ffeeb2e09ee35c9946e1a7f53a959cb3ef06d5d4adb78e8',
+              },
+              event_metadata: { conversion_id: '1700000903-gr0up-1' },
+            },
+          ],
         },
-      ],
-    },
-  },
+      }),
+      OPTIONS,
+    ],
+  ],
 };
 
 export const signUp: Flow.StepExample = {
@@ -253,24 +301,33 @@ export const signUp: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: {
-      events: [
-        {
-          event_at: new Date(1700000904).toISOString(),
-          event_at_ms: 1700000904,
-          event_type: { tracking_type: 'SignUp' },
-          event_metadata: {
-            conversion_id: '1700000904-gr0up-1',
-          },
-          user: {
-            email: 'new@example.com',
-            external_id: 'new-user-1',
-          },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: {
+          events: [
+            {
+              event_at: '1970-01-20T16:13:20.904Z',
+              event_at_ms: 1700000904,
+              event_type: { tracking_type: 'SignUp' },
+              user: {
+                // sha256('new@example.com')
+                email:
+                  'f0030501023327437b06e5c6f87df7871b8e704ae608d1d0b7b24fdd2a06c716',
+                // sha256('new-user-1')
+                external_id:
+                  'b45cf5f6ebc2c6974ea3bd9fab19f8cc3a7cf63054727a9fcd22f1fda97d6dde',
+              },
+              event_metadata: { conversion_id: '1700000904-gr0up-1' },
+            },
+          ],
         },
-      ],
-    },
-  },
+      }),
+      OPTIONS,
+    ],
+  ],
 };
 
 export const search: Flow.StepExample = {
@@ -296,22 +353,27 @@ export const search: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: {
-      events: [
-        {
-          event_at: new Date(1700000905).toISOString(),
-          event_at_ms: 1700000905,
-          event_type: { tracking_type: 'Search' },
-          event_metadata: {
-            conversion_id: '1700000905-gr0up-1',
-            item_count: 1,
-          },
-          user: {
-            external_id: 'user-101',
-          },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: {
+          events: [
+            {
+              event_at: '1970-01-20T16:13:20.905Z',
+              event_at_ms: 1700000905,
+              event_type: { tracking_type: 'Search' },
+              user: {},
+              event_metadata: {
+                conversion_id: '1700000905-gr0up-1',
+                item_count: 1,
+              },
+            },
+          ],
         },
-      ],
-    },
-  },
+      }),
+      OPTIONS,
+    ],
+  ],
 };

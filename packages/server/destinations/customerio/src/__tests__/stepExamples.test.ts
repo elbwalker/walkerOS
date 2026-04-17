@@ -55,15 +55,6 @@ import type {
 } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  // Single call: ['trackClient.track', ...]
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  // Multiple calls: [['trackClient.identify', ...], ['trackClient.track', ...]]
-  return out as CallRecord[];
-}
 
 /**
  * Builds a recording Env where every SDK method appends to a shared
@@ -162,9 +153,6 @@ describe('customerio server destination -- step examples', () => {
 
     await elb(event);
 
-    const expected = flatten(example.out as ExpectedOut);
-    const actual = collected();
-
-    expect(actual).toEqual(expected);
+    expect(collected()).toEqual(example.out);
   });
 });

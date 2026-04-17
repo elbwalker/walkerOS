@@ -5,13 +5,6 @@ import { examples } from '../dev';
 import type { Env, Settings, TTQ } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
 
 /**
  * Wrap every method on the mock ttq with a spy that records
@@ -46,7 +39,7 @@ describe('tiktok destination — step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
       configInclude?: string[];
@@ -95,7 +88,7 @@ describe('tiktok destination — step examples', () => {
     }
 
     // Drop ttq.load — it's an init-time call, not part of per-push `out`.
-    const expected = flatten(example.out as ExpectedOut);
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
     const actual = collected().filter(([path]) => path !== 'ttq.load');
 
     expect(actual).toEqual(expected);

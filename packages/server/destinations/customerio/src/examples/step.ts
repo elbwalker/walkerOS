@@ -19,13 +19,15 @@ export const defaultTrack: CustomerIoStepExample = {
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   out: [
-    'trackClient.track',
-    'us3r',
-    {
-      name: 'product view',
-      data: {},
-      timestamp: 1700000,
-    },
+    [
+      'trackClient.track',
+      'us3r',
+      {
+        name: 'product view',
+        data: {},
+        timestamp: 1700000,
+      },
+    ],
   ],
 };
 
@@ -41,13 +43,15 @@ export const mappedEventName: CustomerIoStepExample = {
     name: 'purchase',
   },
   out: [
-    'trackClient.track',
-    'us3r',
-    {
-      name: 'purchase',
-      data: {},
-      timestamp: 1700000,
-    },
+    [
+      'trackClient.track',
+      'us3r',
+      {
+        name: 'purchase',
+        data: {},
+        timestamp: 1700000,
+      },
+    ],
   ],
 };
 
@@ -71,13 +75,15 @@ export const mappedData: CustomerIoStepExample = {
     },
   },
   out: [
-    'trackClient.track',
-    'us3r',
-    {
-      name: 'purchase',
-      data: { order_id: '0rd3r1d', value: 555, currency: 'EUR' },
-      timestamp: 1700000,
-    },
+    [
+      'trackClient.track',
+      'us3r',
+      {
+        name: 'purchase',
+        data: { order_id: '0rd3r1d', value: 555, currency: 'EUR' },
+        timestamp: 1700000,
+      },
+    ],
   ],
 };
 
@@ -93,13 +99,15 @@ export const anonymousTrack: CustomerIoStepExample = {
     customerId: undefined,
   },
   out: [
-    'trackClient.trackAnonymous',
-    's3ss10n',
-    {
-      name: 'product view',
-      data: {},
-      timestamp: 1700000,
-    },
+    [
+      'trackClient.trackAnonymous',
+      's3ss10n',
+      {
+        name: 'product view',
+        data: {},
+        timestamp: 1700000,
+      },
+    ],
   ],
 };
 
@@ -159,9 +167,11 @@ export const userLoginIdentify: CustomerIoStepExample = {
     },
   },
   out: [
-    'trackClient.identify',
-    'us3r',
-    { email: 'user@acme.com', first_name: 'Jane', plan: 'premium' },
+    [
+      'trackClient.identify',
+      'us3r',
+      { email: 'user@acme.com', first_name: 'Jane', plan: 'premium' },
+    ],
   ],
 };
 
@@ -190,10 +200,12 @@ export const pageView: CustomerIoStepExample = {
     },
   },
   out: [
-    'trackClient.trackPageView',
-    'us3r',
-    'https://example.com/pricing',
-    { referrer: 'https://google.com' },
+    [
+      'trackClient.trackPageView',
+      'us3r',
+      'https://example.com/pricing',
+      { referrer: 'https://google.com' },
+    ],
   ],
 };
 
@@ -211,7 +223,7 @@ export const destroyPerson: CustomerIoStepExample = {
       destroy: true,
     },
   },
-  out: ['trackClient.destroy', 'us3r'],
+  out: [['trackClient.destroy', 'us3r']],
 };
 
 /**
@@ -228,7 +240,7 @@ export const suppressPerson: CustomerIoStepExample = {
       suppress: true,
     },
   },
-  out: ['trackClient.suppress', 'us3r'],
+  out: [['trackClient.suppress', 'us3r']],
 };
 
 /**
@@ -245,7 +257,7 @@ export const unsuppressPerson: CustomerIoStepExample = {
       unsuppress: true,
     },
   },
-  out: ['trackClient.unsuppress', 'us3r'],
+  out: [['trackClient.unsuppress', 'us3r']],
 };
 
 /**

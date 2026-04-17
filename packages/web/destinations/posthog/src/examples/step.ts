@@ -19,7 +19,7 @@ export type PostHogStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: PostHogStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: ['posthog.capture', 'product view', {}],
+  out: [['posthog.capture', 'product view', {}]],
 };
 
 /**
@@ -40,15 +40,17 @@ export const destinationLevelInclude: PostHogStepExample = {
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
-    'posthog.capture',
-    'product view',
-    {
-      data_id: 'ers',
-      data_name: 'Everyday Ruck Snack',
-      data_color: 'black',
-      data_size: 'l',
-      data_price: 420,
-    },
+    [
+      'posthog.capture',
+      'product view',
+      {
+        data_id: 'ers',
+        data_name: 'Everyday Ruck Snack',
+        data_color: 'black',
+        data_size: 'l',
+        data_price: 420,
+      },
+    ],
   ],
 };
 
@@ -64,11 +66,13 @@ export const ruleIncludeReplaces: PostHogStepExample = {
     include: ['globals'],
   },
   out: [
-    'posthog.capture',
-    'order complete',
-    {
-      globals_pagegroup: 'shop',
-    },
+    [
+      'posthog.capture',
+      'order complete',
+      {
+        globals_pagegroup: 'shop',
+      },
+    ],
   ],
 };
 
@@ -140,17 +144,19 @@ export const userLoginIdentify: PostHogStepExample = {
     },
   },
   out: [
-    'posthog.identify',
-    'new-user-123',
-    {
-      email: 'user@acme.com',
-      plan: 'premium',
-      company: 'Acme',
-    },
-    {
-      first_login: 1700000105,
-      signup_source: 'organic',
-    },
+    [
+      'posthog.identify',
+      'new-user-123',
+      {
+        email: 'user@acme.com',
+        plan: 'premium',
+        company: 'Acme',
+      },
+      {
+        first_login: 1700000105,
+        signup_source: 'organic',
+      },
+    ],
   ],
 };
 
@@ -211,7 +217,7 @@ export const userLogoutReset: PostHogStepExample = {
       reset: true,
     },
   },
-  out: ['posthog.reset'],
+  out: [['posthog.reset']],
 };
 
 /**
@@ -250,14 +256,16 @@ export const groupAssignmentWithProperties: PostHogStepExample = {
     },
   },
   out: [
-    'posthog.group',
-    'company',
-    'company_123',
-    {
-      name: 'Acme',
-      plan: 'enterprise',
-      employee_count: 50,
-    },
+    [
+      'posthog.group',
+      'company',
+      'company_123',
+      {
+        name: 'Acme',
+        plan: 'enterprise',
+        employee_count: 50,
+      },
+    ],
   ],
 };
 
@@ -274,16 +282,18 @@ export const orderCompleteWithInclude: PostHogStepExample = {
     include: ['data', 'globals'],
   },
   out: [
-    'posthog.capture',
-    'order complete',
-    {
-      data_id: '0rd3r1d',
-      data_currency: 'EUR',
-      data_shipping: 5.22,
-      data_taxes: 73.76,
-      data_total: 555,
-      globals_pagegroup: 'shop',
-    },
+    [
+      'posthog.capture',
+      'order complete',
+      {
+        data_id: '0rd3r1d',
+        data_currency: 'EUR',
+        data_shipping: 5.22,
+        data_taxes: 73.76,
+        data_total: 555,
+        globals_pagegroup: 'shop',
+      },
+    ],
   ],
 };
 
@@ -301,7 +311,7 @@ export const consentRevokeOptOut: PostHogStepExample = {
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['posthog.opt_out_capturing'],
+  out: [['posthog.opt_out_capturing']],
 };
 
 /**
@@ -312,5 +322,5 @@ export const consentGrantOptIn: PostHogStepExample = {
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['posthog.opt_in_capturing'],
+  out: [['posthog.opt_in_capturing']],
 };

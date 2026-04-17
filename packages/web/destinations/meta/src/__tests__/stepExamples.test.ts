@@ -3,6 +3,18 @@ import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 
+type CallRecord = [string, ...unknown[]];
+
+/**
+ * Meta Pixel init emits fbq('init', pixelId) and fbq('set', ...) on first
+ * load. Filter those — they are not part of the mapped step behavior.
+ */
+function isInitEffect(call: CallRecord): boolean {
+  if (call[0] !== 'fbq') return false;
+  const action = call[1];
+  return action === 'init' || action === 'set' || action === 'consent';
+}
+
 describe('Step Examples', () => {
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
     const event = example.in as WalkerOS.Event;
@@ -31,11 +43,10 @@ describe('Step Examples', () => {
 
     await elb(event);
 
-    const outArgs = example.out as unknown[];
-    const lastCall = mockFbq.mock.calls[mockFbq.mock.calls.length - 1];
-    expect(lastCall[0]).toBe(outArgs[0]); // 'track' or 'trackCustom'
-    expect(lastCall[1]).toBe(outArgs[1]); // event name
-    expect(lastCall[2]).toEqual(expect.objectContaining(outArgs[2] as object));
-    expect(lastCall[3]).toEqual(outArgs[3]); // { eventID: ... }
+    const captured: CallRecord[] = mockFbq.mock.calls
+      .map((args) => ['fbq', ...args] as CallRecord)
+      .filter((call) => !isInitEffect(call));
+
+    expect(captured).toEqual(example.out);
   });
 });

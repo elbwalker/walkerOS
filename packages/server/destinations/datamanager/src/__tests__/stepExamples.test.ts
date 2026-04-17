@@ -1,9 +1,13 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
-import type { Config, Settings } from '../types';
+import type { WalkerOS } from '@walkeros/core';
 import type { OAuth2Client } from 'google-auth-library';
-import { createMockContext, createMockLogger } from '@walkeros/core';
-import * as examples from '../examples';
+import { startFlow } from '@walkeros/collector';
+import { clone } from '@walkeros/core';
+import { examples } from '../dev';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+// Mock auth so init() doesn't perform real Google OAuth and push() receives a
+// deterministic access token (used in the Authorization header).
 jest.mock('../auth', () => ({
   createAuthClient: jest.fn(),
   getAccessToken: jest.fn(),
@@ -20,105 +24,73 @@ jest.mock('../auth', () => ({
 
 import { createAuthClient, getAccessToken } from '../auth';
 
+/**
+ * Data Manager destination invokes `env.fetch(url, init)` exactly once per
+ * push. Each event becomes one HTTP request. The test mocks `createAuthClient`
+ * + `getAccessToken` so the Bearer token is stable.
+ */
 describe('Step Examples', () => {
-  let mockFetch: jest.Mock;
+  const mockFetch = jest.fn();
   const mockAccessToken = 'ya29.c.test_token';
   const mockAuthClient = {
     getAccessToken: jest.fn(),
   } as unknown as OAuth2Client;
 
-  const defaultSettings: Settings = {
-    destinations: [
-      {
-        operatingAccount: {
-          accountId: '123-456-7890',
-          accountType: 'GOOGLE_ADS',
-        },
-        productDestinationId: 'AW-CONVERSION-123',
-      },
-    ],
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
     (createAuthClient as jest.Mock).mockResolvedValue(mockAuthClient);
     (getAccessToken as jest.Mock).mockResolvedValue(mockAccessToken);
-    mockFetch = jest.fn().mockResolvedValue({
+    mockFetch.mockResolvedValue({
       ok: true,
+      status: 200,
       json: async () => ({
-        requestId: 'test-request-id',
+        requestId: 'mock-request-id',
         validationErrors: [],
       }),
+      text: async () => '',
     });
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const destination = jest.requireActual('../').default;
-    destination.config = {};
+  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
+    const event = example.in as WalkerOS.Event;
+    const mapping = example.mapping;
 
-    const expectedOut = example.out as {
-      events: Record<string, unknown>[];
-    };
+    const testEnv = clone(examples.env.push);
+    testEnv.fetch = mockFetch as unknown as typeof fetch;
+    testEnv.authClient = mockAuthClient;
 
-    // Build config.data from example mapping, with transactionId fallback
-    const mappingMap =
-      (
-        (example.mapping as Record<string, unknown>)?.data as
-          | { map?: Record<string, unknown> }
-          | undefined
-      )?.map || {};
-    const configData = {
-      map: {
-        transactionId: 'id', // fallback to event ID
-        ...mappingMap,
+    const dest = jest.requireActual('../').default;
+    const { elb } = await startFlow({ tagging: 2 });
+
+    const mappingConfig = mapping
+      ? { [event.entity]: { [event.action]: mapping } }
+      : undefined;
+
+    await elb(
+      'walker destination',
+      { ...dest, env: testEnv },
+      {
+        settings: {
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+        },
+        mapping: mappingConfig,
       },
-    };
-
-    const config = (await destination.init({
-      config: {
-        settings: defaultSettings,
-        data: configData,
-      },
-      collector: {} as Collector.Instance,
-      env: {},
-      logger: createMockLogger(),
-      id: 'test-dm',
-    })) as Config;
-
-    await destination.push(
-      example.in as WalkerOS.Event,
-      createMockContext({
-        config: { ...config, data: configData },
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        id: 'test-dm',
-      }),
     );
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(requestBody.events).toHaveLength(1);
+    await elb(event);
 
-    const actual = requestBody.events[0];
-    const expected = expectedOut.events[0];
+    const captured: Captured[] = mockFetch.mock.calls.map(
+      (args) => ['fetch', ...args] as Captured,
+    );
 
-    // Verify mapped business fields
-    expect(actual.eventSource).toBe(expected.eventSource ?? 'WEB');
-
-    if (expected.eventName) {
-      expect(actual.eventName).toBe(expected.eventName);
-    }
-    if (expected.conversionValue !== undefined) {
-      expect(actual.conversionValue).toBe(expected.conversionValue);
-    }
-    if (expected.currency) {
-      expect(actual.currency).toBe(expected.currency);
-    }
-    if (expected.userId) {
-      expect(actual.userId).toBe(expected.userId);
-    }
-    // Email is SHA-256 hashed in userData — verify when mapping includes email
-    if (expected.email && actual.userData) {
-      expect(actual.userData.userIdentifiers.length).toBeGreaterThan(0);
-    }
+    expect(captured).toEqual(example.out);
   });
 });

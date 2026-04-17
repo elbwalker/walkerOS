@@ -10,12 +10,15 @@ export const postEvent: Flow.StepExample = {
       data: { title: 'Home', url: 'https://example.com/' },
     },
   },
-  out: {
-    name: 'page view',
-    data: { title: 'Home', url: 'https://example.com/' },
-    entity: 'page',
-    action: 'view',
-  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: { title: 'Home', url: 'https://example.com/' },
+      },
+    ],
+  ],
 };
 
 export const pixelGet: Flow.StepExample = {
@@ -25,10 +28,13 @@ export const pixelGet: Flow.StepExample = {
     path: '/collect',
     query: { e: 'page view', d: '{"title":"Home"}' },
   },
-  out: {
-    name: 'page view',
-    data: { title: 'Home' },
-    entity: 'page',
-    action: 'view',
-  },
+  out: [
+    [
+      'elb',
+      {
+        e: 'page view',
+        d: '{"title":"Home"}',
+      },
+    ],
+  ],
 };

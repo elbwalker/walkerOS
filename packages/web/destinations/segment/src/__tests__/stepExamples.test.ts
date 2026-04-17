@@ -25,13 +25,6 @@ import { examples } from '../dev';
 import type { Env, SegmentAnalytics, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
 
 /**
  * Builds a recording Env where analytics.load() returns an instance
@@ -82,7 +75,20 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
 }
 
 /**
+ * Init-time effects (analytics.load() on non-consent examples) are not
+ * part of the mapped-step behavior and are filtered from the captured
+ * sequence before comparison with `example.out`. For consent examples
+ * the load() call IS the feature under test, so it's kept.
+ */
+function isInitEffect(effect: CallRecord): boolean {
+  return effect[0] === 'analytics.load';
+}
+
+/**
  * Normalize a call record so trailing undefined args are trimmed.
+ * Matches how the example's `out` is authored (args like
+ * `'analytics.identify', undefined, traits` intentionally carry a
+ * positional undefined, but trailing ones are stripped).
  */
 function trimUndefined(call: CallRecord): CallRecord {
   const trimmed = [...call];
@@ -97,7 +103,7 @@ describe('segment destination — step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
       configInclude?: string[];
@@ -150,9 +156,11 @@ describe('segment destination — step examples', () => {
     // not part of the example's `out`. For consent examples, keep the
     // load() call because the deferred-load pattern is the feature we
     // are testing.
-    const expected = flatten(example.out as ExpectedOut).map(trimUndefined);
+    const expected = (example.out ?? []).map((call) =>
+      trimUndefined(call as CallRecord),
+    );
     const actual = collected()
-      .filter(([path]) => (isConsent ? true : path !== 'analytics.load'))
+      .filter((effect) => (isConsent ? true : !isInitEffect(effect)))
       .map(trimUndefined);
 
     expect(actual).toEqual(expected);

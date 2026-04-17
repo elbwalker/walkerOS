@@ -22,26 +22,33 @@ export interface FileSettingsJson {
 
 /**
  * Extended step example that carries destination-level settings for the
- * file destination. The test derives settings from example.settings and
- * asserts against example.out (filename + optional exact line).
+ * file destination.
+ *
+ * `out` is modeled at intent level as a single `['fs.writeFile', path, line]`
+ * tuple per event (even though the destination internally uses a persistent
+ * createWriteStream + write). This matches the design doc's preference for
+ * readable intent-level callable tuples over stream-chain fidelity.
+ *
+ * Dropped / ignored events produce `out: []`.
  */
 export type FileStepExample = Flow.StepExample & {
   settings: FileSettingsJson;
-  out: {
-    filename: string;
-    line?: string;
-    format?: Format;
-  };
 };
 
 /** Default JSONL append. Static filename, all defaults. */
 export const jsonlDefault: FileStepExample = {
   in: getEvent('page view', { timestamp: 1700000000000 }),
   settings: { filename: 'events.jsonl' },
-  out: {
-    filename: 'events.jsonl',
-    format: 'jsonl',
-  },
+  out: [
+    [
+      'fs.writeFile',
+      'events.jsonl',
+      // JSONL framework contract: JSON.stringify(event) + '\n'.
+      // The test recomputes this from example.in for the jsonl default to
+      // avoid duplicating the full event shape here.
+      'jsonl:event',
+    ],
+  ],
 };
 
 /** Baersch-style TSV log: PHP parity case. */
@@ -68,10 +75,13 @@ export const tsvBaerschLog: FileStepExample = {
       'source.previous_id',
     ],
   },
-  out: {
-    filename: 'storage/mblog.txt',
-    line: '1700000000000\tsess-1\tpage view\thttps://example.com/docs\tDocs\thttps://example.com/\n',
-  },
+  out: [
+    [
+      'fs.writeFile',
+      'storage/mblog.txt',
+      '1700000000000\tsess-1\tpage view\thttps://example.com/docs\tDocs\thttps://example.com/\n',
+    ],
+  ],
 };
 
 /** Tenant sharding via plain key extraction. */
@@ -84,10 +94,7 @@ export const jsonlTenantShardKey: FileStepExample = {
     filename: { key: 'data.tenant' },
     format: 'jsonl',
   },
-  out: {
-    filename: 'acme',
-    format: 'jsonl',
-  },
+  out: [['fs.writeFile', 'acme', 'jsonl:event']],
 };
 
 /**
@@ -111,10 +118,7 @@ export const jsonlDailyRotation: FileStepExample = {
     },
     format: 'jsonl',
   },
-  out: {
-    filename: 'events-2026-04-15.jsonl',
-    format: 'jsonl',
-  },
+  out: [['fs.writeFile', 'events-2026-04-15.jsonl', 'jsonl:event']],
 };
 
 /** CSV with an object cell. data is JSON-stringified, properly quoted. */
@@ -128,8 +132,11 @@ export const csvObjectCell: FileStepExample = {
     format: 'csv',
     fields: ['timestamp', 'name', 'data'],
   },
-  out: {
-    filename: 'events.csv',
-    line: '1700000000000,page view,"{""title"":""Hello, \\""World\\"""",""count"":3}"\n',
-  },
+  out: [
+    [
+      'fs.writeFile',
+      'events.csv',
+      '1700000000000,page view,"{""title"":""Hello, \\""World\\"""",""count"":3}"\n',
+    ],
+  ],
 };

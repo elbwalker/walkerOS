@@ -15,7 +15,7 @@ export type FullStoryStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: FullStoryStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: ['fullstory.trackEvent', { name: 'product view', properties: {} }],
+  out: [['fullstory.trackEvent', { name: 'product view', properties: {} }]],
 };
 
 /**
@@ -36,7 +36,7 @@ export const mappedEventName: FullStoryStepExample = {
   mapping: {
     name: 'Purchase',
   },
-  out: ['fullstory.trackEvent', { name: 'Purchase', properties: {} }],
+  out: [['fullstory.trackEvent', { name: 'Purchase', properties: {} }]],
 };
 
 /**

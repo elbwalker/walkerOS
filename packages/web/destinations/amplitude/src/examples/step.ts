@@ -21,7 +21,7 @@ export type AmplitudeStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: AmplitudeStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: ['amplitude.track', 'product view', {}],
+  out: [['amplitude.track', 'product view', {}]],
 };
 
 /**
@@ -42,15 +42,17 @@ export const destinationLevelInclude: AmplitudeStepExample = {
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
-    'amplitude.track',
-    'product view',
-    {
-      data_id: 'ers',
-      data_name: 'Everyday Ruck Snack',
-      data_color: 'black',
-      data_size: 'l',
-      data_price: 420,
-    },
+    [
+      'amplitude.track',
+      'product view',
+      {
+        data_id: 'ers',
+        data_name: 'Everyday Ruck Snack',
+        data_color: 'black',
+        data_size: 'l',
+        data_price: 420,
+      },
+    ],
   ],
 };
 
@@ -66,11 +68,13 @@ export const ruleIncludeReplaces: AmplitudeStepExample = {
     include: ['globals'],
   },
   out: [
-    'amplitude.track',
-    'order complete',
-    {
-      globals_pagegroup: 'shop',
-    },
+    [
+      'amplitude.track',
+      'order complete',
+      {
+        globals_pagegroup: 'shop',
+      },
+    ],
   ],
 };
 
@@ -184,7 +188,7 @@ export const userLogoutReset: AmplitudeStepExample = {
       reset: true,
     },
   },
-  out: ['amplitude.reset'],
+  out: [['amplitude.reset']],
 };
 
 /**
@@ -216,13 +220,15 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
     },
   },
   out: [
-    'amplitude.revenue',
-    {
-      productId: 'plan-pro',
-      price: 9.99,
-      revenueType: 'renewal',
-      currency: 'EUR',
-    },
+    [
+      'amplitude.revenue',
+      {
+        productId: 'plan-pro',
+        price: 9.99,
+        revenueType: 'renewal',
+        currency: 'EUR',
+      },
+    ],
   ],
 };
 
@@ -374,7 +380,7 @@ export const consentRevokeOptOut: AmplitudeStepExample = {
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['amplitude.setOptOut', true],
+  out: [['amplitude.setOptOut', true]],
 };
 
 /**
@@ -384,5 +390,5 @@ export const consentGrantOptIn: AmplitudeStepExample = {
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['amplitude.setOptOut', false],
+  out: [['amplitude.setOptOut', false]],
 };

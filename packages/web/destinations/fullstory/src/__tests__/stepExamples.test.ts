@@ -13,15 +13,6 @@ import { examples } from '../dev';
 import type { Env, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  // Single call: out[0] is a string method path
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  // Multi-call: array of [path, ...args] tuples
-  return out as CallRecord[];
-}
 
 /**
  * Install recording spies onto an Env's fullstory methods. Calls are
@@ -60,7 +51,7 @@ describe('fullstory destination -- step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
     };
@@ -111,7 +102,7 @@ describe('fullstory destination -- step examples', () => {
 
     // Drop init + priming trackEvent calls -- every example triggers init
     // once, and consent examples push a priming event that fires trackEvent.
-    const expected = flatten(example.out as ExpectedOut);
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
     const actual = collected().filter(([path, arg]) => {
       if (path === 'fullstory.init') return false;
       if (

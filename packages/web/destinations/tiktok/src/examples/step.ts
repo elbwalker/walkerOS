@@ -26,10 +26,12 @@ export type TikTokStepExample = Flow.StepExample & {
 export const defaultEventForwarding: TikTokStepExample = {
   in: getEvent('product view'),
   out: [
-    'ttq.track',
-    'product view',
-    {},
-    { event_id: getEvent('product view').id },
+    [
+      'ttq.track',
+      'product view',
+      {},
+      { event_id: getEvent('product view').id },
+    ],
   ],
 };
 
@@ -67,18 +69,20 @@ export const productViewContent: TikTokStepExample = {
     include: [],
   },
   out: [
-    'ttq.track',
-    'ViewContent',
-    {
-      content_type: 'product',
-      content_id: 'ers',
-      content_name: 'Everyday Ruck Snack',
-      // content_category is absent from the default product view fixture;
-      // the mapper skips undefined resolutions.
-      value: 420,
-      currency: 'EUR', // fallback — default fixture has no globals.currency
-    },
-    { event_id: getEvent('product view').id },
+    [
+      'ttq.track',
+      'ViewContent',
+      {
+        content_type: 'product',
+        content_id: 'ers',
+        content_name: 'Everyday Ruck Snack',
+        // content_category is absent from the default product view fixture;
+        // the mapper skips undefined resolutions.
+        value: 420,
+        currency: 'EUR', // fallback — default fixture has no globals.currency
+      },
+      { event_id: getEvent('product view').id },
+    ],
   ],
 };
 
@@ -92,16 +96,18 @@ export const destinationLevelInclude: TikTokStepExample = {
   in: getEvent('product view'),
   configInclude: ['data'],
   out: [
-    'ttq.track',
-    'product view',
-    {
-      data_id: 'ers',
-      data_name: 'Everyday Ruck Snack',
-      data_color: 'black',
-      data_size: 'l',
-      data_price: 420,
-    },
-    { event_id: getEvent('product view').id },
+    [
+      'ttq.track',
+      'product view',
+      {
+        data_id: 'ers',
+        data_name: 'Everyday Ruck Snack',
+        data_color: 'black',
+        data_size: 'l',
+        data_price: 420,
+      },
+      { event_id: getEvent('product view').id },
+    ],
   ],
 };
 
@@ -117,12 +123,14 @@ export const ruleIncludeReplaces: TikTokStepExample = {
     include: ['globals'],
   },
   out: [
-    'ttq.track',
-    'order complete',
-    {
-      globals_pagegroup: 'shop',
-    },
-    { event_id: getEvent('order complete').id },
+    [
+      'ttq.track',
+      'order complete',
+      {
+        globals_pagegroup: 'shop',
+      },
+      { event_id: getEvent('order complete').id },
+    ],
   ],
 };
 
@@ -259,35 +267,37 @@ export const orderCompleteCompletePayment: TikTokStepExample = {
     include: [],
   },
   out: [
-    'ttq.track',
-    'CompletePayment',
-    {
-      content_type: 'product',
-      value: 555,
-      currency: 'EUR',
-      order_id: '0rd3r1d',
-      contents: [
-        {
-          content_id: 'ers',
-          content_name: 'Everyday Ruck Snack',
-          quantity: 1, // fallback — fixture has no data.quantity
-          price: 420,
-        },
-        {
-          content_id: 'cc',
-          content_name: 'Cool Cap',
-          quantity: 1,
-          price: 42,
-        },
-        {
-          // gift entry — { name: 'Surprise' }, no id and no price.
-          // walkerOS map skips keys whose resolved value is undefined.
-          content_name: 'Surprise',
-          quantity: 1,
-        },
-      ],
-    },
-    { event_id: getEvent('order complete').id },
+    [
+      'ttq.track',
+      'CompletePayment',
+      {
+        content_type: 'product',
+        value: 555,
+        currency: 'EUR',
+        order_id: '0rd3r1d',
+        contents: [
+          {
+            content_id: 'ers',
+            content_name: 'Everyday Ruck Snack',
+            quantity: 1, // fallback — fixture has no data.quantity
+            price: 420,
+          },
+          {
+            content_id: 'cc',
+            content_name: 'Cool Cap',
+            quantity: 1,
+            price: 42,
+          },
+          {
+            // gift entry — { name: 'Surprise' }, no id and no price.
+            // walkerOS map skips keys whose resolved value is undefined.
+            content_name: 'Surprise',
+            quantity: 1,
+          },
+        ],
+      },
+      { event_id: getEvent('order complete').id },
+    ],
   ],
 };
 
@@ -312,12 +322,14 @@ export const searchSubmitSearch: TikTokStepExample = {
     include: [],
   },
   out: [
-    'ttq.track',
-    'Search',
-    {
-      query: 'hiking backpack',
-    },
-    { event_id: getEvent('search submit').id },
+    [
+      'ttq.track',
+      'Search',
+      {
+        query: 'hiking backpack',
+      },
+      { event_id: getEvent('search submit').id },
+    ],
   ],
 };
 
@@ -334,7 +346,7 @@ export const consentGrantEnableCookie: TikTokStepExample = {
   command: 'consent',
   in: { marketing: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>, // consent key is derived from config.consent
-  out: ['ttq.enableCookie'],
+  out: [['ttq.enableCookie']],
 };
 
 /**
@@ -345,5 +357,5 @@ export const consentRevokeDisableCookie: TikTokStepExample = {
   command: 'consent',
   in: { marketing: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['ttq.disableCookie'],
+  out: [['ttq.disableCookie']],
 };

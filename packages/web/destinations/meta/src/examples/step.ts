@@ -33,19 +33,22 @@ export const purchase: Flow.StepExample = {
     },
   },
   out: [
-    'track',
-    'Purchase',
-    {
-      value: 555,
-      currency: 'EUR',
-      contents: [
-        { id: 'ers', quantity: 1 },
-        { id: 'cc', quantity: 1 },
-      ],
-      content_type: 'product',
-      num_items: 2,
-    },
-    { eventID: '1700000000-gr0up-1' },
+    [
+      'fbq',
+      'track',
+      'Purchase',
+      {
+        value: 555,
+        currency: 'EUR',
+        contents: [
+          { id: 'ers', quantity: 1 },
+          { id: 'cc', quantity: 1 },
+        ],
+        content_type: 'product',
+        num_items: 2,
+      },
+      { eventID: '1700000000-gr0up-1' },
+    ],
   ],
 };
 
@@ -72,15 +75,18 @@ export const addToCart: Flow.StepExample = {
     },
   },
   out: [
-    'track',
-    'AddToCart',
-    {
-      currency: 'EUR',
-      value: 420,
-      contents: [{ id: 'ers', quantity: 1 }],
-      content_type: 'product',
-    },
-    { eventID: '1700000001-gr0up-1' },
+    [
+      'fbq',
+      'track',
+      'AddToCart',
+      {
+        currency: 'EUR',
+        value: 420,
+        contents: [{ id: 'ers', quantity: 1 }],
+        content_type: 'product',
+      },
+      { eventID: '1700000001-gr0up-1' },
+    ],
   ],
 };
 
@@ -107,15 +113,18 @@ export const viewContent: Flow.StepExample = {
     },
   },
   out: [
-    'track',
-    'ViewContent',
-    {
-      currency: 'EUR',
-      value: 420,
-      contents: [{ id: 'ers', quantity: 1 }],
-      content_type: 'product',
-    },
-    { eventID: '1700000002-gr0up-1' },
+    [
+      'fbq',
+      'track',
+      'ViewContent',
+      {
+        currency: 'EUR',
+        value: 420,
+        contents: [{ id: 'ers', quantity: 1 }],
+        content_type: 'product',
+      },
+      { eventID: '1700000002-gr0up-1' },
+    ],
   ],
 };
 
@@ -150,22 +159,25 @@ export const initiateCheckout: Flow.StepExample = {
     },
   },
   out: [
-    'track',
-    'InitiateCheckout',
-    {
-      currency: 'EUR',
-      value: 840,
-      contents: [{ id: 'ers', quantity: 2 }],
-      num_items: 1,
-    },
-    { eventID: '1700000003-gr0up-1' },
+    [
+      'fbq',
+      'track',
+      'InitiateCheckout',
+      {
+        currency: 'EUR',
+        value: 840,
+        contents: [{ id: 'ers', quantity: 2 }],
+        num_items: 1,
+      },
+      { eventID: '1700000003-gr0up-1' },
+    ],
   ],
 };
 
 export const pageView: Flow.StepExample = {
   in: getEvent('page view', { timestamp: 1700000004 }),
   mapping: undefined,
-  out: ['track', 'PageView', {}, { eventID: '1700000004-gr0up-1' }],
+  out: [['fbq', 'track', 'PageView', {}, { eventID: '1700000004-gr0up-1' }]],
 };
 
 export const customEventWithTrackCustom: Flow.StepExample = {
@@ -183,9 +195,12 @@ export const customEventWithTrackCustom: Flow.StepExample = {
     },
   },
   out: [
-    'trackCustom',
-    'VideoComplete',
-    { video_id: 'v1d30', duration: 120 },
-    { eventID: '1700000005-gr0up-1' },
+    [
+      'fbq',
+      'trackCustom',
+      'VideoComplete',
+      { video_id: 'v1d30', duration: 120 },
+      { eventID: '1700000005-gr0up-1' },
+    ],
   ],
 };

@@ -1,6 +1,32 @@
 import type { Flow } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+/**
+ * TikTok Events API step examples.
+ *
+ * At push time, the destination calls
+ * `env.sendServer(url, body, { headers })` where `url` is the fixed
+ * TikTok Events API endpoint and `body` is the JSON-stringified payload
+ * `{ pixel_code, partner_name, data: [tiktokEvent] }`.
+ *
+ * The test fixture pins `accessToken = 's3cr3t'` and `pixelCode = 'PIXEL_CODE'`.
+ *
+ * Body fields are emitted in the order the destination constructs them
+ * (insertion order matters for `JSON.stringify` string equality):
+ *   pixel_code, partner_name, data[] with { event, event_id, timestamp,
+ *   context: { user?, page }, properties }.
+ *
+ * User identity fields (`email`, `phone_number`, `external_id`) are hashed
+ * with SHA-256.
+ */
+const ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/event/track/';
+const HEADERS = {
+  headers: {
+    'Access-Token': 's3cr3t',
+    'Content-Type': 'application/json',
+  },
+};
+
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     timestamp: 1700000900000,
@@ -49,39 +75,47 @@ export const purchase: Flow.StepExample = {
       },
     },
   },
-  out: {
-    pixel_code: 'PIXEL_CODE',
-    partner_name: 'walkerOS',
-    data: [
-      {
-        event: 'CompletePayment',
-        event_id: '1700000900000-gr0up-1',
-        timestamp: '2023-11-14T22:28:20.000Z',
-        context: {
-          user: {
-            external_id: 'user-123',
-          },
-          page: {
-            url: 'https://shop.example.com/checkout/complete',
-          },
-        },
-        properties: {
-          value: 249.99,
-          currency: 'EUR',
-          order_id: 'ORD-300',
-          content_type: 'product',
-          contents: [
-            {
-              content_id: 'SKU-A1',
-              content_name: 'Widget Pro',
-              quantity: 2,
-              price: 124.99,
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        pixel_code: 'PIXEL_CODE',
+        partner_name: 'walkerOS',
+        data: [
+          {
+            event: 'CompletePayment',
+            event_id: '1700000900000-gr0up-1',
+            timestamp: '2023-11-14T22:28:20.000Z',
+            context: {
+              user: {
+                external_id:
+                  'fcdec6df4d44dbc637c7c5b58efface52a7f8a88535423430255be0bb89bedd8',
+              },
+              page: {
+                url: 'https://shop.example.com/checkout/complete',
+              },
             },
-          ],
-        },
-      },
+            properties: {
+              value: 249.99,
+              currency: 'EUR',
+              order_id: 'ORD-300',
+              content_type: 'product',
+              contents: [
+                {
+                  content_id: 'SKU-A1',
+                  content_name: 'Widget Pro',
+                  quantity: 2,
+                  price: 124.99,
+                },
+              ],
+            },
+          },
+        ],
+      }),
+      HEADERS,
     ],
-  },
+  ],
 };
 
 export const addToCart: Flow.StepExample = {
@@ -135,35 +169,42 @@ export const addToCart: Flow.StepExample = {
       },
     },
   },
-  out: {
-    pixel_code: 'PIXEL_CODE',
-    partner_name: 'walkerOS',
-    data: [
-      {
-        event: 'AddToCart',
-        event_id: '1700000901000-gr0up-1',
-        timestamp: '2023-11-14T22:28:21.000Z',
-        context: {
-          page: {
-            url: 'https://shop.example.com/products/running-shoes',
-          },
-        },
-        properties: {
-          content_type: 'product',
-          value: 89.99,
-          currency: 'EUR',
-          contents: [
-            {
-              content_id: 'SKU-B2',
-              content_name: 'Running Shoes',
-              quantity: 1,
-              price: 89.99,
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        pixel_code: 'PIXEL_CODE',
+        partner_name: 'walkerOS',
+        data: [
+          {
+            event: 'AddToCart',
+            event_id: '1700000901000-gr0up-1',
+            timestamp: '2023-11-14T22:28:21.000Z',
+            context: {
+              page: {
+                url: 'https://shop.example.com/products/running-shoes',
+              },
             },
-          ],
-        },
-      },
+            properties: {
+              content_type: 'product',
+              value: 89.99,
+              currency: 'EUR',
+              contents: [
+                {
+                  content_id: 'SKU-B2',
+                  content_name: 'Running Shoes',
+                  quantity: 1,
+                  price: 89.99,
+                },
+              ],
+            },
+          },
+        ],
+      }),
+      HEADERS,
     ],
-  },
+  ],
 };
 
 export const pageView: Flow.StepExample = {
@@ -176,23 +217,30 @@ export const pageView: Flow.StepExample = {
     },
   }),
   mapping: undefined,
-  out: {
-    pixel_code: 'PIXEL_CODE',
-    partner_name: 'walkerOS',
-    data: [
-      {
-        event: 'page view',
-        event_id: '1700000902000-gr0up-1',
-        timestamp: '2023-11-14T22:28:22.000Z',
-        context: {
-          page: {
-            url: 'https://example.com/docs/',
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        pixel_code: 'PIXEL_CODE',
+        partner_name: 'walkerOS',
+        data: [
+          {
+            event: 'page view',
+            event_id: '1700000902000-gr0up-1',
+            timestamp: '2023-11-14T22:28:22.000Z',
+            context: {
+              page: {
+                url: 'https://example.com/docs/',
+              },
+            },
+            properties: {},
           },
-        },
-        properties: {},
-      },
+        ],
+      }),
+      HEADERS,
     ],
-  },
+  ],
 };
 
 export const lead: Flow.StepExample = {
@@ -218,24 +266,33 @@ export const lead: Flow.StepExample = {
       },
     },
   },
-  out: {
-    pixel_code: 'PIXEL_CODE',
-    partner_name: 'walkerOS',
-    data: [
-      {
-        event: 'SubmitForm',
-        event_id: '1700000903000-gr0up-1',
-        timestamp: '2023-11-14T22:28:23.000Z',
-        context: {
-          user: {
-            email: 'user@example.com',
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        pixel_code: 'PIXEL_CODE',
+        partner_name: 'walkerOS',
+        data: [
+          {
+            event: 'SubmitForm',
+            event_id: '1700000903000-gr0up-1',
+            timestamp: '2023-11-14T22:28:23.000Z',
+            context: {
+              user: {
+                // sha256('user@example.com')
+                email:
+                  'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514',
+              },
+              page: {
+                url: 'https://example.com/contact',
+              },
+            },
+            properties: {},
           },
-          page: {
-            url: 'https://example.com/contact',
-          },
-        },
-        properties: {},
-      },
+        ],
+      }),
+      HEADERS,
     ],
-  },
+  ],
 };

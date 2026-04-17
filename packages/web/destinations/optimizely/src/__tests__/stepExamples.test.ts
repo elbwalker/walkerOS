@@ -8,13 +8,6 @@ import { examples } from '../dev';
 import type { Env, OptimizelyUserContext, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
 
 /**
  * Builds a recording Env where SDK methods append to a shared call log.
@@ -53,7 +46,7 @@ describe('optimizely destination -- step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
     };
@@ -106,7 +99,7 @@ describe('optimizely destination -- step examples', () => {
       await elb(event);
     }
 
-    const expected = flatten(example.out as ExpectedOut);
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
     const actual = collected();
 
     expect(actual).toEqual(expected);

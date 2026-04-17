@@ -14,12 +14,15 @@ export const lambdaPost: Flow.StepExample = {
     }),
     isBase64Encoded: false,
   },
-  out: {
-    name: 'page view',
-    data: { title: 'Home' },
-    entity: 'page',
-    action: 'view',
-  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: { title: 'Home' },
+      },
+    ],
+  ],
 };
 
 export const apiGatewayV1Post: Flow.StepExample = {
@@ -38,12 +41,15 @@ export const apiGatewayV1Post: Flow.StepExample = {
     }),
     isBase64Encoded: false,
   },
-  out: {
-    name: 'page view',
-    data: { title: 'Home' },
-    entity: 'page',
-    action: 'view',
-  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: { title: 'Home' },
+      },
+    ],
+  ],
 };
 
 export const lambdaGet: Flow.StepExample = {
@@ -57,10 +63,13 @@ export const lambdaGet: Flow.StepExample = {
     rawQueryString: 'e=page+view&d=%7B%22title%22%3A%22Home%22%7D',
     isBase64Encoded: false,
   },
-  out: {
-    name: 'page view',
-    data: { title: 'Home' },
-    entity: 'page',
-    action: 'view',
-  },
+  out: [
+    [
+      'elb',
+      {
+        e: 'page view',
+        d: '{"title":"Home"}',
+      },
+    ],
+  ],
 };

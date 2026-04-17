@@ -5,15 +5,6 @@ import { examples } from '../dev';
 import type { Env, HeapSDK, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  // Single call: ['track', 'event name', {...}]
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  // Multi-call: array of [path, ...args] tuples
-  return out as CallRecord[];
-}
 
 /**
  * Install spies onto an Env's window.heap methods. Calls are collected
@@ -24,7 +15,7 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
   const record =
     (name: string) =>
     (...args: unknown[]) => {
-      calls.push([name, ...args]);
+      calls.push([`heap.${name}`, ...args]);
     };
 
   const heap: HeapSDK = {
@@ -53,7 +44,7 @@ describe('heap destination — step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
     };
@@ -99,8 +90,9 @@ describe('heap destination — step examples', () => {
       await elb(event);
     }
 
-    const expected = flatten(example.out as ExpectedOut);
-    const actual = collected();
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+    // Filter init-time load() call.
+    const actual = collected().filter(([path]) => path !== 'heap.load');
     expect(actual).toEqual(expected);
   });
 });

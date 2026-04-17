@@ -6,36 +6,20 @@ jest.mock('posthog-node', () => ({
 
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 import type { Env, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
 
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
-
-interface MockPostHogInstance {
-  apiKey: string;
-  options: Record<string, unknown>;
-  capture: jest.Mock;
-  identify: jest.Mock;
-  groupIdentify: jest.Mock;
-  flush: jest.Mock;
-  shutdown: jest.Mock;
-  enable: jest.Mock;
-  disable: jest.Mock;
-}
-
-let lastInstance: MockPostHogInstance | undefined;
-
+/**
+ * PostHog destination is stateful — `env.PostHog` is a constructor, so the
+ * `new PostHogClass(...)` call happens at init time. We record only the
+ * method calls on the resulting client (capture / identify / groupIdentify /
+ * enable / disable), which is what `out` describes. The constructor call
+ * and `shutdown()` on destroy are intentionally filtered.
+ */
 function spyEnv(): { env: Env; collected: () => CallRecord[] } {
   const calls: CallRecord[] = [];
-  lastInstance = undefined;
 
   const MockPostHog = class {
     apiKey: string;
@@ -60,20 +44,15 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
       this.groupIdentify = jest.fn((params: Record<string, unknown>) => {
         calls.push(['client.groupIdentify', params]);
       });
-      this.flush = jest.fn(() => {
-        calls.push(['client.flush']);
-        return Promise.resolve();
-      });
-      this.shutdown = jest.fn(async () => {
-        calls.push(['client.shutdown']);
-      });
-      this.enable = jest.fn(async () => {
+      // flush / shutdown are lifecycle — not captured (not in out)
+      this.flush = jest.fn(() => Promise.resolve());
+      this.shutdown = jest.fn(async () => {});
+      this.enable = jest.fn(() => {
         calls.push(['client.enable']);
       });
-      this.disable = jest.fn(async () => {
+      this.disable = jest.fn(() => {
         calls.push(['client.disable']);
       });
-      lastInstance = this;
     }
   };
 
@@ -84,7 +63,7 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('posthog server destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, rawExample) => {
+  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
@@ -105,7 +84,7 @@ describe('posthog server destination — step examples', () => {
     };
 
     if (example.command === 'consent') {
-      elb(
+      await elb(
         'walker destination',
         { ...dest, env },
         {
@@ -122,7 +101,7 @@ describe('posthog server destination — step examples', () => {
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
 
-      elb(
+      await elb(
         'walker destination',
         { ...dest, env },
         {
@@ -134,9 +113,6 @@ describe('posthog server destination — step examples', () => {
       await elb(event);
     }
 
-    const expected = flatten(example.out as ExpectedOut);
-    const actual = collected();
-
-    expect(actual).toEqual(expected);
+    expect(collected()).toEqual(example.out);
   });
 });

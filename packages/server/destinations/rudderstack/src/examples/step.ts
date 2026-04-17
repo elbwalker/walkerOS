@@ -10,6 +10,17 @@ export type RudderStackStepExample = Flow.StepExample & {
 };
 
 /**
+ * RudderStack server destination invokes the injected `env.analytics` SDK
+ * methods (`track`, `identify`, `group`, `page`, `screen`, `alias`) — not a
+ * raw HTTP endpoint. Each `out` entry is therefore
+ * `[callable, params]` where `callable` is the dotted method name
+ * (e.g. `'analytics.track'`) and `params` is the object passed to the SDK.
+ *
+ * Examples may emit multiple calls in order (e.g. identify + track), so
+ * every `out` is wrapped as `[[callable, params], ...]`.
+ */
+
+/**
  * Default event forwarding -- analytics.track() with event name and empty
  * properties. userId resolved from default settings.userId = 'user.id'.
  */
@@ -19,14 +30,16 @@ export const defaultTrack: RudderStackStepExample = {
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   out: [
-    'analytics.track',
-    {
-      userId: 'us3r',
-      anonymousId: 's3ss10n',
-      event: 'product view',
-      properties: {},
-      timestamp: new Date(1700000100),
-    },
+    [
+      'analytics.track',
+      {
+        userId: 'us3r',
+        anonymousId: 's3ss10n',
+        event: 'product view',
+        properties: {},
+        timestamp: new Date(1700000100),
+      },
+    ],
   ],
 };
 
@@ -42,14 +55,16 @@ export const mappedEventName: RudderStackStepExample = {
     name: 'Order Completed',
   },
   out: [
-    'analytics.track',
-    {
-      userId: 'us3r',
-      anonymousId: 's3ss10n',
-      event: 'Order Completed',
-      properties: {},
-      timestamp: new Date(1700000101),
-    },
+    [
+      'analytics.track',
+      {
+        userId: 'us3r',
+        anonymousId: 's3ss10n',
+        event: 'Order Completed',
+        properties: {},
+        timestamp: new Date(1700000101),
+      },
+    ],
   ],
 };
 
@@ -128,13 +143,15 @@ export const userLoginIdentify: RudderStackStepExample = {
     },
   },
   out: [
-    'analytics.identify',
-    {
-      userId: 'new-user-123',
-      anonymousId: 's3ss10n',
-      traits: { email: 'user@acme.com', name: 'Jane Doe', plan: 'premium' },
-      timestamp: new Date(1700000103),
-    },
+    [
+      'analytics.identify',
+      {
+        userId: 'new-user-123',
+        anonymousId: 's3ss10n',
+        traits: { email: 'user@acme.com', name: 'Jane Doe', plan: 'premium' },
+        timestamp: new Date(1700000103),
+      },
+    ],
   ],
 };
 
@@ -170,14 +187,16 @@ export const companyGroup: RudderStackStepExample = {
     },
   },
   out: [
-    'analytics.group',
-    {
-      userId: 'us3r',
-      anonymousId: 's3ss10n',
-      groupId: 'comp-456',
-      traits: { name: 'Acme', industry: 'tech', employees: 50 },
-      timestamp: new Date(1700000104),
-    },
+    [
+      'analytics.group',
+      {
+        userId: 'us3r',
+        anonymousId: 's3ss10n',
+        groupId: 'comp-456',
+        traits: { name: 'Acme', industry: 'tech', employees: 50 },
+        timestamp: new Date(1700000104),
+      },
+    ],
   ],
 };
 
@@ -210,14 +229,16 @@ export const pageView: RudderStackStepExample = {
     },
   },
   out: [
-    'analytics.page',
-    {
-      userId: 'us3r',
-      anonymousId: 's3ss10n',
-      name: 'Getting Started',
-      properties: { section: 'tutorials' },
-      timestamp: new Date(1700000105),
-    },
+    [
+      'analytics.page',
+      {
+        userId: 'us3r',
+        anonymousId: 's3ss10n',
+        name: 'Getting Started',
+        properties: { section: 'tutorials' },
+        timestamp: new Date(1700000105),
+      },
+    ],
   ],
 };
 
@@ -251,14 +272,16 @@ export const screenView: RudderStackStepExample = {
     },
   },
   out: [
-    'analytics.screen',
-    {
-      userId: 'us3r',
-      anonymousId: 's3ss10n',
-      name: 'Welcome',
-      properties: { build: '1.2.3' },
-      timestamp: new Date(1700000106),
-    },
+    [
+      'analytics.screen',
+      {
+        userId: 'us3r',
+        anonymousId: 's3ss10n',
+        name: 'Welcome',
+        properties: { build: '1.2.3' },
+        timestamp: new Date(1700000106),
+      },
+    ],
   ],
 };
 
@@ -285,12 +308,14 @@ export const aliasUser: RudderStackStepExample = {
     },
   },
   out: [
-    'analytics.alias',
-    {
-      userId: 'registered-456',
-      previousId: 'anonymous-123',
-      timestamp: new Date(1700000107),
-    },
+    [
+      'analytics.alias',
+      {
+        userId: 'registered-456',
+        previousId: 'anonymous-123',
+        timestamp: new Date(1700000107),
+      },
+    ],
   ],
 };
 
@@ -306,13 +331,15 @@ export const anonymousOnly: RudderStackStepExample = {
     userId: undefined,
   },
   out: [
-    'analytics.track',
-    {
-      anonymousId: 's3ss10n',
-      event: 'product view',
-      properties: {},
-      timestamp: new Date(1700000108),
-    },
+    [
+      'analytics.track',
+      {
+        anonymousId: 's3ss10n',
+        event: 'product view',
+        properties: {},
+        timestamp: new Date(1700000108),
+      },
+    ],
   ],
 };
 

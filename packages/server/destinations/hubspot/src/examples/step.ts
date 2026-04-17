@@ -3,6 +3,22 @@ import { getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
+ * HubSpot SDK step examples.
+ *
+ * At push time, the destination invokes the `@hubspot/api-client` SDK. The
+ * public method paths users see on the client are:
+ *
+ *   - `events.send.basicApi.send(eventRequest)` — fires an event
+ *   - `events.send.batchApi.send({ inputs: [...] })` — flushes a batch
+ *   - `crm.contacts.basicApi.update(id, data, idProperty)` — contact upsert
+ *
+ * Each `out` is therefore a list of tuples `[['method.path', ...args], ...]`
+ * matching the actual SDK call order. `identify` fires before the event.
+ * When the destination skips an event (`skip: true`, `ignore: true`, or
+ * missing identity), `out` is `[]`.
+ */
+
+/**
  * Extended step example that may carry destination-level settings overrides.
  */
 export type HubSpotStepExample = Flow.StepExample & {
@@ -19,13 +35,15 @@ export const defaultEvent: HubSpotStepExample = {
     user: { email: 'user@example.com' },
   }),
   out: [
-    'events.send.basicApi.send',
-    {
-      eventName: 'pe12345678_product_view',
-      email: 'user@example.com',
-      occurredAt: new Date(1700000100),
-      properties: {},
-    },
+    [
+      'events.send.basicApi.send',
+      {
+        eventName: 'pe12345678_product_view',
+        email: 'user@example.com',
+        occurredAt: new Date(1700000100),
+        properties: {},
+      },
+    ],
   ],
 };
 
@@ -53,17 +71,19 @@ export const mappedEventName: HubSpotStepExample = {
     },
   },
   out: [
-    'events.send.basicApi.send',
-    {
-      eventName: 'pe12345678_purchase_completed',
-      email: 'user@example.com',
-      occurredAt: new Date(1700000101),
-      properties: {
-        revenue: '99.5',
-        currency: 'EUR',
-        order_id: 'ord-123',
+    [
+      'events.send.basicApi.send',
+      {
+        eventName: 'pe12345678_purchase_completed',
+        email: 'user@example.com',
+        occurredAt: new Date(1700000101),
+        properties: {
+          revenue: '99.5',
+          currency: 'EUR',
+          order_id: 'ord-123',
+        },
       },
-    },
+    ],
   ],
 };
 
@@ -83,16 +103,18 @@ export const defaultProperties: HubSpotStepExample = {
     },
   },
   out: [
-    'events.send.basicApi.send',
-    {
-      eventName: 'pe12345678_page_view',
-      email: 'user@example.com',
-      occurredAt: new Date(1700000102),
-      properties: {
-        hs_touchpoint_source: 'walkerOS',
-        hs_page_content_type: 'STANDARD_PAGE',
+    [
+      'events.send.basicApi.send',
+      {
+        eventName: 'pe12345678_page_view',
+        email: 'user@example.com',
+        occurredAt: new Date(1700000102),
+        properties: {
+          hs_touchpoint_source: 'walkerOS',
+          hs_page_content_type: 'STANDARD_PAGE',
+        },
       },
-    },
+    ],
   ],
 };
 
@@ -170,16 +192,18 @@ export const userLoginIdentify: HubSpotStepExample = {
     },
   },
   out: [
-    'crm.contacts.basicApi.update',
-    'login@acme.com',
-    {
-      properties: {
-        firstname: 'Jane',
-        lastname: 'Doe',
-        lifecyclestage: 'lead',
+    [
+      'crm.contacts.basicApi.update',
+      'login@acme.com',
+      {
+        properties: {
+          firstname: 'Jane',
+          lastname: 'Doe',
+          lifecyclestage: 'lead',
+        },
       },
-    },
-    'email',
+      'email',
+    ],
   ],
 };
 
@@ -197,13 +221,15 @@ export const objectIdAssociation: HubSpotStepExample = {
     objectId: 'user.id',
   },
   out: [
-    'events.send.basicApi.send',
-    {
-      eventName: 'pe12345678_product_view',
-      objectId: 'hs-contact-789',
-      occurredAt: new Date(1700000105),
-      properties: {},
-    },
+    [
+      'events.send.basicApi.send',
+      {
+        eventName: 'pe12345678_product_view',
+        objectId: 'hs-contact-789',
+        occurredAt: new Date(1700000105),
+        properties: {},
+      },
+    ],
   ],
 };
 

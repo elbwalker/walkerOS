@@ -3,6 +3,12 @@ import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+/**
+ * Reddit Conversions API destination invokes `env.sendServer(url, body, options)`
+ * exactly once per push. Stateless — no init-time calls to filter.
+ */
 describe('Step Examples', () => {
   const mockSendServer = jest.fn();
 
@@ -14,7 +20,7 @@ describe('Step Examples', () => {
     });
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
     const event = example.in as WalkerOS.Event;
     const mapping = example.mapping;
 
@@ -28,7 +34,7 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env: testEnv },
       {
@@ -39,45 +45,10 @@ describe('Step Examples', () => {
 
     await elb(event);
 
-    expect(mockSendServer).toHaveBeenCalled();
-    const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data.events).toHaveLength(1);
-
-    const actual = requestBody.data.events[0];
-    const expected = (
-      example.out as {
-        data: { events: Record<string, unknown>[] };
-      }
-    ).data.events[0];
-
-    const expectedEventType = expected.event_type as {
-      tracking_type: string;
-      custom_event_name?: string;
-    };
-    const expectedMetadata = expected.event_metadata as
-      | Record<string, unknown>
-      | undefined;
-
-    // Verify tracking_type matches expected (from mapping)
-    expect(actual.event_type.tracking_type).toBe(
-      expectedEventType.tracking_type,
+    const captured: Captured[] = mockSendServer.mock.calls.map(
+      (args) => ['sendServer', ...args] as Captured,
     );
 
-    // Verify timestamps
-    expect(actual.event_at).toBe(expected.event_at);
-    expect(actual.event_at_ms).toBe(expected.event_at_ms);
-
-    // Verify conversion_id (event dedup ID)
-    expect(actual.event_metadata.conversion_id).toBe(
-      expectedMetadata?.conversion_id,
-    );
-
-    // Verify event_metadata fields when present (beyond conversion_id)
-    if (expectedMetadata) {
-      for (const [key, value] of Object.entries(expectedMetadata)) {
-        if (key === 'conversion_id') continue;
-        expect(actual.event_metadata[key]).toEqual(value);
-      }
-    }
+    expect(captured).toEqual(example.out);
   });
 });

@@ -1,6 +1,28 @@
 import type { Flow } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+/**
+ * Criteo Events API step examples.
+ *
+ * At push time, the destination calls `env.sendServer(url, body)` where
+ * `url` is the configured Criteo endpoint (default:
+ * `https://widget.criteo.com/m/event?version=s2s_v0`) and `body` is the
+ * JSON-stringified request payload.
+ *
+ * Test fixture pins `partnerId = 'PARTNER_ID'` and `callerId = 'CALLER_ID'`,
+ * so every call targets the default URL above.
+ *
+ * Body is emitted with keys in the order the destination assembles them:
+ *   1. version
+ *   2. site_type
+ *   3. account
+ *   4. id (identity block)
+ *   5. events (always a single-element array)
+ *   6. full_url (only when event.source.id is set)
+ *   7. previous_url (only when event.source.previous_id is set)
+ */
+const ENDPOINT = 'https://widget.criteo.com/m/event?version=s2s_v0';
+
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     timestamp: 1700000900000,
@@ -40,30 +62,36 @@ export const purchase: Flow.StepExample = {
       },
     },
   },
-  out: {
-    version: 'walkeros_criteo_1.0.0',
-    site_type: 'd',
-    account: 'PARTNER_ID',
-    id: {
-      mapping_key: 'CALLER_ID',
-    },
-    full_url: 'https://shop.example.com/checkout/complete',
-    previous_url: 'https://shop.example.com/cart',
-    events: [
-      {
-        event: 'trackTransaction',
-        timestamp: '2023-11-14T22:28:20.000Z',
-        id: 'ORD-300',
-        item: [
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        version: 'walkeros_criteo_1.0.0',
+        site_type: 'd',
+        account: 'PARTNER_ID',
+        id: {
+          mapping_key: 'CALLER_ID',
+        },
+        events: [
           {
-            id: 'SKU-A1',
-            price: 124.99,
-            quantity: 2,
+            event: 'trackTransaction',
+            timestamp: '2023-11-14T22:28:20.000Z',
+            id: 'ORD-300',
+            item: [
+              {
+                id: 'SKU-A1',
+                price: 124.99,
+                quantity: 2,
+              },
+            ],
           },
         ],
-      },
+        full_url: 'https://shop.example.com/checkout/complete',
+        previous_url: 'https://shop.example.com/cart',
+      }),
     ],
-  },
+  ],
 };
 
 export const addToCart: Flow.StepExample = {
@@ -112,28 +140,34 @@ export const addToCart: Flow.StepExample = {
       },
     },
   },
-  out: {
-    version: 'walkeros_criteo_1.0.0',
-    site_type: 'd',
-    account: 'PARTNER_ID',
-    id: {
-      mapping_key: 'CALLER_ID',
-    },
-    full_url: 'https://shop.example.com/products/running-shoes',
-    events: [
-      {
-        event: 'addToCart',
-        timestamp: '2023-11-14T22:28:21.000Z',
-        item: [
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        version: 'walkeros_criteo_1.0.0',
+        site_type: 'd',
+        account: 'PARTNER_ID',
+        id: {
+          mapping_key: 'CALLER_ID',
+        },
+        events: [
           {
-            id: 'SKU-B2',
-            price: 89.99,
-            quantity: 1,
+            event: 'addToCart',
+            timestamp: '2023-11-14T22:28:21.000Z',
+            item: [
+              {
+                id: 'SKU-B2',
+                price: 89.99,
+                quantity: 1,
+              },
+            ],
           },
         ],
-      },
+        full_url: 'https://shop.example.com/products/running-shoes',
+      }),
     ],
-  },
+  ],
 };
 
 export const viewItem: Flow.StepExample = {
@@ -171,26 +205,32 @@ export const viewItem: Flow.StepExample = {
       },
     },
   },
-  out: {
-    version: 'walkeros_criteo_1.0.0',
-    site_type: 'd',
-    account: 'PARTNER_ID',
-    id: {
-      mapping_key: 'CALLER_ID',
-    },
-    full_url: 'https://shop.example.com/products/coffee-maker',
-    events: [
-      {
-        event: 'viewItem',
-        timestamp: '2023-11-14T22:28:22.000Z',
-        item: [
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        version: 'walkeros_criteo_1.0.0',
+        site_type: 'd',
+        account: 'PARTNER_ID',
+        id: {
+          mapping_key: 'CALLER_ID',
+        },
+        events: [
           {
-            id: 'SKU-C3',
+            event: 'viewItem',
+            timestamp: '2023-11-14T22:28:22.000Z',
+            item: [
+              {
+                id: 'SKU-C3',
+              },
+            ],
           },
         ],
-      },
+        full_url: 'https://shop.example.com/products/coffee-maker',
+      }),
     ],
-  },
+  ],
 };
 
 export const pageView: Flow.StepExample = {
@@ -205,19 +245,25 @@ export const pageView: Flow.StepExample = {
   mapping: {
     name: 'viewHome',
   },
-  out: {
-    version: 'walkeros_criteo_1.0.0',
-    site_type: 'd',
-    account: 'PARTNER_ID',
-    id: {
-      mapping_key: 'CALLER_ID',
-    },
-    full_url: 'https://example.com/',
-    events: [
-      {
-        event: 'viewHome',
-        timestamp: '2023-11-14T22:28:23.000Z',
-      },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        version: 'walkeros_criteo_1.0.0',
+        site_type: 'd',
+        account: 'PARTNER_ID',
+        id: {
+          mapping_key: 'CALLER_ID',
+        },
+        events: [
+          {
+            event: 'viewHome',
+            timestamp: '2023-11-14T22:28:23.000Z',
+          },
+        ],
+        full_url: 'https://example.com/',
+      }),
     ],
-  },
+  ],
 };

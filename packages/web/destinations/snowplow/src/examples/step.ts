@@ -24,28 +24,30 @@ export const productView: Flow.StepExample = {
     },
   },
   out: [
-    'trackSelfDescribingEvent',
-    {
-      event: {
-        schema:
-          'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
-        data: {
-          type: 'product_view',
-        },
-      },
-      context: [
-        {
+    [
+      'snowplow.trackSelfDescribingEvent',
+      {
+        event: {
           schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
           data: {
-            id: 'ers',
-            name: 'Everyday Ruck Snack',
-            price: 420,
-            currency: 'USD',
+            type: 'product_view',
           },
         },
-      ],
-    },
+        context: [
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+            data: {
+              id: 'ers',
+              name: 'Everyday Ruck Snack',
+              price: 420,
+              currency: 'USD',
+            },
+          },
+        ],
+      },
+    ],
   ],
 };
 
@@ -97,49 +99,51 @@ export const addToCart: Flow.StepExample = {
     },
   },
   out: [
-    'trackSelfDescribingEvent',
-    {
-      event: {
-        schema:
-          'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
-        data: {
-          type: 'add_to_cart',
+    [
+      'snowplow.trackSelfDescribingEvent',
+      {
+        event: {
+          schema:
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
+          data: {
+            type: 'add_to_cart',
+          },
         },
+        context: [
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+            data: {
+              id: 'ers',
+              name: 'Everyday Ruck Snack',
+              price: 420,
+              currency: 'USD',
+              quantity: 1,
+            },
+          },
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/cart/jsonschema/1-0-0',
+            data: {
+              currency: 'USD',
+            },
+          },
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/page/jsonschema/1-0-0',
+            data: {},
+          },
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/user/jsonschema/1-0-0',
+            data: {
+              id: 'us3r',
+              is_guest: true,
+            },
+          },
+        ],
       },
-      context: [
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-          data: {
-            id: 'ers',
-            name: 'Everyday Ruck Snack',
-            price: 420,
-            currency: 'USD',
-            quantity: 1,
-          },
-        },
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/cart/jsonschema/1-0-0',
-          data: {
-            currency: 'USD',
-          },
-        },
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/page/jsonschema/1-0-0',
-          data: {},
-        },
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/user/jsonschema/1-0-0',
-          data: {
-            id: 'us3r',
-            is_guest: true,
-          },
-        },
-      ],
-    },
+    ],
   ],
 };
 
@@ -164,30 +168,32 @@ export const transaction: Flow.StepExample = {
     },
   },
   out: [
-    'trackSelfDescribingEvent',
-    {
-      event: {
-        schema:
-          'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
-        data: {
-          type: 'transaction',
-        },
-      },
-      context: [
-        {
+    [
+      'snowplow.trackSelfDescribingEvent',
+      {
+        event: {
           schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
           data: {
-            transaction_id: '0rd3r1d',
-            revenue: 555,
-            currency: 'EUR',
-            payment_method: 'credit_card',
-            tax: 73.76,
-            shipping: 5.22,
+            type: 'transaction',
           },
         },
-      ],
-    },
+        context: [
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
+            data: {
+              transaction_id: '0rd3r1d',
+              revenue: 555,
+              currency: 'EUR',
+              payment_method: 'credit_card',
+              tax: 73.76,
+              shipping: 5.22,
+            },
+          },
+        ],
+      },
+    ],
   ],
 };
 
@@ -212,33 +218,35 @@ export const promoView: Flow.StepExample = {
     },
   },
   out: [
-    'trackSelfDescribingEvent',
-    {
-      event: {
-        schema:
-          'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
-        data: {
-          type: 'promo_view',
-        },
-      },
-      context: [
-        {
+    [
+      'snowplow.trackSelfDescribingEvent',
+      {
+        event: {
           schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/promotion/jsonschema/1-0-0',
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
           data: {
-            name: 'Setting up tracking easily',
-            position: 'hero',
+            type: 'promo_view',
           },
         },
-      ],
-    },
+        context: [
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/promotion/jsonschema/1-0-0',
+            data: {
+              name: 'Setting up tracking easily',
+              position: 'hero',
+            },
+          },
+        ],
+      },
+    ],
   ],
 };
 
 export const pageView: Flow.StepExample = {
   in: getEvent('page view', { timestamp: 1700000404 }),
   mapping: undefined,
-  out: ['trackPageView'],
+  out: [['snowplow.trackPageView']],
 };
 
 export const checkoutStep: Flow.StepExample = {
@@ -258,25 +266,27 @@ export const checkoutStep: Flow.StepExample = {
     },
   },
   out: [
-    'trackSelfDescribingEvent',
-    {
-      event: {
-        schema:
-          'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
-        data: {
-          type: 'checkout_step',
-        },
-      },
-      context: [
-        {
+    [
+      'snowplow.trackSelfDescribingEvent',
+      {
+        event: {
           schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/checkout_step/jsonschema/1-0-0',
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
           data: {
-            step: 'payment',
+            type: 'checkout_step',
           },
         },
-      ],
-    },
+        context: [
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/checkout_step/jsonschema/1-0-0',
+            data: {
+              step: 'payment',
+            },
+          },
+        ],
+      },
+    ],
   ],
 };
 
@@ -294,14 +304,16 @@ export const structuredEvent: Flow.StepExample = {
     },
   },
   out: [
-    'trackStructEvent',
-    {
-      category: 'ecommerce',
-      action: 'impression',
-      label: 'Everyday Ruck Snack',
-      property: 'black',
-      value: 420,
-    },
+    [
+      'snowplow.trackStructEvent',
+      {
+        category: 'ecommerce',
+        action: 'impression',
+        label: 'Everyday Ruck Snack',
+        property: 'black',
+        value: 420,
+      },
+    ],
   ],
 };
 
@@ -338,51 +350,53 @@ export const contextLoop: Flow.StepExample = {
     },
   },
   out: [
-    'trackSelfDescribingEvent',
-    {
-      event: {
-        schema:
-          'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
-        data: {
-          type: 'transaction',
+    [
+      'snowplow.trackSelfDescribingEvent',
+      {
+        event: {
+          schema:
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
+          data: {
+            type: 'transaction',
+          },
         },
+        context: [
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
+            data: {
+              transaction_id: '0rd3r1d',
+              revenue: 555,
+              currency: 'EUR',
+            },
+          },
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+            data: {
+              id: 'ers',
+              name: 'Everyday Ruck Snack',
+              price: 420,
+            },
+          },
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+            data: {
+              id: 'cc',
+              name: 'Cool Cap',
+              price: 42,
+            },
+          },
+          {
+            schema:
+              'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+            data: {
+              name: 'Surprise',
+            },
+          },
+        ],
       },
-      context: [
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
-          data: {
-            transaction_id: '0rd3r1d',
-            revenue: 555,
-            currency: 'EUR',
-          },
-        },
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-          data: {
-            id: 'ers',
-            name: 'Everyday Ruck Snack',
-            price: 420,
-          },
-        },
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-          data: {
-            id: 'cc',
-            name: 'Cool Cap',
-            price: 42,
-          },
-        },
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-          data: {
-            name: 'Surprise',
-          },
-        },
-      ],
-    },
+    ],
   ],
 };

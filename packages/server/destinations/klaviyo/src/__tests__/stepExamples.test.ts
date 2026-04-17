@@ -27,20 +27,15 @@ import type {
   Settings,
 } from '../types';
 
-type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  // Single call: ['eventsApi.createEvent', {...}]
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  // Multiple calls: [['profilesApi...', {...}], ['eventsApi...', {...}]]
-  return out as CallRecord[];
-}
+type CallRecord = [callable: string, ...args: unknown[]];
 
 /**
- * Builds a recording Env where every API method appends to a shared
- * call log as ['className.method', params].
+ * Klaviyo wraps the `klaviyo-api` SDK. We build fake api instances whose
+ * methods push `[method.path, ...args]` onto a shared call log, then compare
+ * against `example.out` which is always `[[callable, ...args], ...]`.
+ *
+ * No init-time calls to filter — the destination only touches the SDK when
+ * an event is pushed and identity resolves.
  */
 function spyEnv(): { env: Env; collected: () => CallRecord[] } {
   const calls: CallRecord[] = [];
@@ -89,7 +84,7 @@ describe('klaviyo server destination -- step examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env },
       {
@@ -100,9 +95,6 @@ describe('klaviyo server destination -- step examples', () => {
 
     await elb(event);
 
-    const expected = flatten(example.out as ExpectedOut);
-    const actual = collected();
-
-    expect(actual).toEqual(expected);
+    expect(collected()).toEqual(example.out);
   });
 });

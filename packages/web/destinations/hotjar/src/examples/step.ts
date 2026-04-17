@@ -15,7 +15,7 @@ export type HotjarStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: HotjarStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: ['hotjar.event', 'product view'],
+  out: [['hotjar.event', 'product view']],
 };
 
 /**
@@ -36,7 +36,7 @@ export const renamedEvent: HotjarStepExample = {
   mapping: {
     name: 'completed_purchase',
   },
-  out: ['hotjar.event', 'completed_purchase'],
+  out: [['hotjar.event', 'completed_purchase']],
 };
 
 /**
@@ -101,7 +101,7 @@ export const pageViewStateChange: HotjarStepExample = {
       stateChange: 'data.id',
     },
   },
-  out: ['hotjar.stateChange', '/docs/'],
+  out: [['hotjar.stateChange', '/docs/']],
 };
 
 /**

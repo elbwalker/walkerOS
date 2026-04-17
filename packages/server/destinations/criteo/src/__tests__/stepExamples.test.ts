@@ -2,8 +2,13 @@ import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
-import type { CriteoRequestBody } from '../types';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+/**
+ * Criteo Events API invokes `env.sendServer(url, body)` exactly once per push.
+ * Stateless — no init-time calls to filter.
+ */
 describe('Step Examples', () => {
   const mockSendServer = jest.fn();
 
@@ -29,7 +34,7 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env: testEnv },
       {
@@ -40,36 +45,10 @@ describe('Step Examples', () => {
 
     await elb(event);
 
-    expect(mockSendServer).toHaveBeenCalled();
-    const actual = JSON.parse(
-      mockSendServer.mock.calls[0][1],
-    ) as CriteoRequestBody;
-    const expected = example.out as CriteoRequestBody;
+    const captured: Captured[] = mockSendServer.mock.calls.map(
+      (args) => ['sendServer', ...args] as Captured,
+    );
 
-    // Top-level fields
-    expect(actual.version).toBe(expected.version);
-    expect(actual.site_type).toBe(expected.site_type);
-    expect(actual.account).toBe(expected.account);
-    expect(actual.id.mapping_key).toBe(expected.id.mapping_key);
-    if (expected.id.mapped_user_id !== undefined) {
-      expect(actual.id.mapped_user_id).toBe(expected.id.mapped_user_id);
-    }
-    expect(actual.full_url).toBe(expected.full_url);
-    if (expected.previous_url !== undefined) {
-      expect(actual.previous_url).toBe(expected.previous_url);
-    }
-
-    // Events array
-    expect(actual.events).toHaveLength(expected.events.length);
-    const actualEvent = actual.events[0];
-    const expectedEvent = expected.events[0];
-    expect(actualEvent.event).toBe(expectedEvent.event);
-    expect(actualEvent.timestamp).toBe(expectedEvent.timestamp);
-    if (expectedEvent.id !== undefined) {
-      expect(actualEvent.id).toBe(expectedEvent.id);
-    }
-    if (expectedEvent.item !== undefined) {
-      expect(actualEvent.item).toEqual(expectedEvent.item);
-    }
+    expect(captured).toEqual(example.out);
   });
 });
