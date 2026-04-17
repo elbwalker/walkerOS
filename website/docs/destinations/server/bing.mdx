@@ -163,53 +163,6 @@ Each event is sent with `eventId` set to the walkerOS event `id`. If you also ru
 
 All events sent to this destination include `adStorageConsent: "G"` (granted). Gate the destination via walkerOS consent rules at the collector level rather than sending denied events.
 
-## Docker deployment
-
-### Step 1: Create flow configuration
-
-Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "bing": {
-      "package": "@walkeros/server-destination-bing",
-      "config": {
-        "settings": {
-          "accessToken": "$env.BING_ACCESS_TOKEN",
-          "tagId": "$env.BING_TAG_ID"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-  title="flow.json"
-/>
-
-### Step 2: Bundle the flow
-
-<CodeSnippet
-  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
-  language="bash"
-/>
-
-### Step 3: Run with Docker
-
-<CodeSnippet
-  code={`docker run -d \\
-  -e BING_ACCESS_TOKEN=your-access-token \\
-  -e BING_TAG_ID=YOUR_UET_TAG_ID \\
-  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
-  -p 8080:8080 \\
-  walkeros/flow`}
-  language="bash"
-/>
-
-:::tip Security best practice
-Never commit access tokens to version control. Use environment variables or a secrets manager to inject credentials at runtime.
-:::
-
 ## Links
 
 - [Microsoft UET Conversions API documentation](https://learn.microsoft.com/en-us/advertising/guides/universal-event-tracking-capi)

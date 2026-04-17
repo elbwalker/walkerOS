@@ -105,55 +105,6 @@ Server sources require platform-specific handlers. For containerized deployments
   </TabItem>
 </Tabs>
 
-## Deployment
-
-### Lambda Function URL (simplest)
-
-<CodeSnippet
-  code={`import * as lambda from 'aws-cdk-lib/aws-lambda';
-
-const fn = new lambda.Function(this, 'Walker', {
-  runtime: lambda.Runtime.NODEJS_20_X,
-  handler: 'index.handler',
-  code: lambda.Code.fromAsset('./dist'),
-});
-
-fn.addFunctionUrl({
-  authType: lambda.FunctionUrlAuthType.NONE,
-  cors: {
-    allowedOrigins: ['*'],
-    allowedMethods: [lambda.HttpMethod.GET, lambda.HttpMethod.POST],
-  },
-});`}
-  language="typescript"
-/>
-
-### Serverless Framework
-
-<CodeSnippet
-  code={`# serverless.yml
-service: walkeros-flow
-
-provider:
-  name: aws
-  runtime: nodejs20.x
-
-functions:
-  collector:
-    handler: dist/index.handler
-    events:
-      - httpApi:
-          path: /collect
-          method: post
-      - httpApi:
-          path: /collect
-          method: get
-      - httpApi:
-          path: /health
-          method: get`}
-  language="yaml"
-/>
-
 ## Configuration
 
 | Setting | Type | Default | Description |

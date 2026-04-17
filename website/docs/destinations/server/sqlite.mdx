@@ -176,55 +176,6 @@ Set `schema: 'manual'` to skip the auto `CREATE TABLE`. The user brings their ow
   language="json"
 />
 
-## Docker deployment
-
-### Step 1: Flow configuration
-
-Use `$env.NAME` for runtime secrets:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "sqlite": {
-      "package": "@walkeros/server-destination-sqlite",
-      "config": {
-        "settings": {
-          "sqlite": {
-            "url": "$env.SQLITE_URL",
-            "authToken": "$env.SQLITE_AUTH_TOKEN"
-          }
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-  title="flow.json"
-/>
-
-### Step 2: Bundle
-
-<CodeSnippet
-  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
-  language="bash"
-/>
-
-### Step 3: Run
-
-<CodeSnippet
-  code={`docker run -d \\
-  -e SQLITE_URL=libsql://my-db.turso.io \\
-  -e SQLITE_AUTH_TOKEN=your-token \\
-  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
-  -p 8080:8080 \\
-  walkeros/flow`}
-  language="bash"
-/>
-
-:::tip Security
-Never commit database paths or auth tokens. Use environment variables or a secrets manager to inject at runtime.
-:::
-
 ## Limitations
 
 - v1 issues one `INSERT` per event. A `pushBatch` path is planned for v2.

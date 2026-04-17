@@ -159,15 +159,3 @@ Extract request metadata and forward it through the pipeline.
 | `headers.*` | HTTP headers (user-agent, origin, etc.) |
 | `method` | HTTP method |
 | `hostname` | Request hostname |
-
-## Deployment
-
-<CodeSnippet
-  code={`gcloud functions deploy walker-collector \\
-  --runtime nodejs20 \\
-  --trigger-http \\
-  --allow-unauthenticated \\
-  --entry-point walkerHandler`}
-  language="bash"
-/>
-

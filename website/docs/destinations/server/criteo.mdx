@@ -171,53 +171,6 @@ Pre-hashed values (detected by hex length — 32 chars for MD5, 64 for SHA-256) 
 
 Criteo Events API supports deduplication with Criteo OneTag by sharing a `deduplication_page_view_id` across channels. Wire it via `data.map.deduplication_page_view_id` in the event mapping.
 
-## Docker deployment
-
-### Step 1: Create flow configuration
-
-Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "criteo": {
-      "package": "@walkeros/server-destination-criteo",
-      "config": {
-        "settings": {
-          "partnerId": "$env.CRITEO_PARTNER_ID",
-          "callerId": "$env.CRITEO_CALLER_ID"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-  title="flow.json"
-/>
-
-### Step 2: Bundle the flow
-
-<CodeSnippet
-  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
-  language="bash"
-/>
-
-### Step 3: Run with Docker
-
-<CodeSnippet
-  code={`docker run -d \\
-  -e CRITEO_PARTNER_ID=12345 \\
-  -e CRITEO_CALLER_ID=YOUR_CALLER_ID \\
-  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
-  -p 8080:8080 \\
-  walkeros/flow`}
-  language="bash"
-/>
-
-:::tip Security best practice
-Never commit credentials to version control. Inject them at runtime via environment variables or a secrets manager.
-:::
-
 ## Links
 
 - [Criteo Events API Guide](https://guides.criteotilt.com/events-api/)

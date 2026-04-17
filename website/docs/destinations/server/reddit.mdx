@@ -175,53 +175,6 @@ Set `test_mode: true` in settings to send `"test_mode": true` as a **top-level b
   language="json"
 />
 
-## Docker deployment
-
-### Step 1: Create flow configuration
-
-Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "reddit": {
-      "package": "@walkeros/server-destination-reddit",
-      "config": {
-        "settings": {
-          "accessToken": "$env.REDDIT_ACCESS_TOKEN",
-          "pixelId": "$env.REDDIT_PIXEL_ID"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-  title="flow.json"
-/>
-
-### Step 2: Bundle the flow
-
-<CodeSnippet
-  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
-  language="bash"
-/>
-
-### Step 3: Run with Docker
-
-<CodeSnippet
-  code={`docker run -d \\
-  -e REDDIT_ACCESS_TOKEN=your-access-token \\
-  -e REDDIT_PIXEL_ID=YOUR_PIXEL_ID \\
-  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
-  -p 8080:8080 \\
-  walkeros/flow`}
-  language="bash"
-/>
-
-:::tip Security best practice
-Never commit access tokens to version control. Use environment variables or a secrets manager to inject credentials at runtime.
-:::
-
 ## Links
 
 - [Reddit Conversions API documentation](https://ads-api.reddit.com/docs/v2/#tag/Conversions-API)

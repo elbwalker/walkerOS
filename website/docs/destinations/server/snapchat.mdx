@@ -154,53 +154,6 @@ Set `testMode: true` to send events to Snapchat's `/events/validate` endpoint fo
   language="json"
 />
 
-## Docker deployment
-
-### Step 1: Create flow configuration
-
-Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "snapchat": {
-      "package": "@walkeros/server-destination-snapchat",
-      "config": {
-        "settings": {
-          "accessToken": "$env.SNAPCHAT_ACCESS_TOKEN",
-          "pixelId": "$env.SNAPCHAT_PIXEL_ID"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-  title="flow.json"
-/>
-
-### Step 2: Bundle the flow
-
-<CodeSnippet
-  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
-  language="bash"
-/>
-
-### Step 3: Run with Docker
-
-<CodeSnippet
-  code={`docker run -d \\
-  -e SNAPCHAT_ACCESS_TOKEN=your-access-token \\
-  -e SNAPCHAT_PIXEL_ID=YOUR_PIXEL_ID \\
-  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
-  -p 8080:8080 \\
-  walkeros/flow`}
-  language="bash"
-/>
-
-:::tip Security best practice
-Never commit access tokens to version control. Use environment variables or a secrets manager to inject credentials at runtime.
-:::
-
 ## Links
 
 - [Snapchat Conversions API documentation](https://businesshelp.snapchat.com/s/article/conversions-api)
