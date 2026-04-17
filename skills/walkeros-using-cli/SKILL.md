@@ -360,6 +360,18 @@ Use absolute or relative paths:
 }
 ```
 
+### CLI Prints "Upgrade Required" and Exits With Code 2
+
+The walkerOS app requires a newer `@walkeros/cli` version for the endpoint you
+just called. Upgrade and retry:
+
+```bash
+npm install -g @walkeros/cli@latest
+```
+
+See [Upgrading](https://walkeros.io/docs/upgrading) for the full
+version-negotiation rules.
+
 ---
 
 ## Where CLI Lives

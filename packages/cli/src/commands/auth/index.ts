@@ -1,4 +1,5 @@
 import { createApiClient } from '../../core/api-client.js';
+import { handleCliError } from '../../core/api-error.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import type { GlobalOptions } from '../../types/global.js';
@@ -34,7 +35,6 @@ export async function whoamiCommand(
       if (data.projectId) logger.info(`Project: ${data.projectId}`);
     }
   } catch (error) {
-    logger.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    handleCliError(error);
   }
 }

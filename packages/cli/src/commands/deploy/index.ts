@@ -1,7 +1,11 @@
 import { createApiClient } from '../../core/api-client.js';
 import { requireProjectId } from '../../core/auth.js';
 import { apiFetch } from '../../core/http.js';
-import { ApiError, throwApiError } from '../../core/api-error.js';
+import {
+  ApiError,
+  handleCliError,
+  throwApiError,
+} from '../../core/api-error.js';
 import { parseSSEEvents } from '../../core/sse.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
@@ -318,8 +322,7 @@ export async function deployCommand(
       log.info(`Status: ${r.status}`);
     }
   } catch (err) {
-    log.error(err instanceof Error ? err.message : 'Deploy failed');
-    process.exit(1);
+    handleCliError(err);
   }
 }
 
@@ -354,7 +357,6 @@ export async function getDeploymentCommand(
     if (r.publicUrl) log.info(`URL: ${r.publicUrl}`);
     if (r.errorMessage) log.error(`Error: ${r.errorMessage}`);
   } catch (err) {
-    log.error(err instanceof Error ? err.message : 'Failed to get deployment');
-    process.exit(1);
+    handleCliError(err);
   }
 }

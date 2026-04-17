@@ -1,7 +1,7 @@
 import { getPlatform } from '@walkeros/core';
 import { requireProjectId } from '../../core/auth.js';
 import { apiFetch } from '../../core/http.js';
-import { throwApiError } from '../../core/api-error.js';
+import { handleCliError, throwApiError } from '../../core/api-error.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import { loadFlowConfig } from '../../config/loader.js';
@@ -100,13 +100,11 @@ async function handleResult(
   fn: () => Promise<unknown>,
   options: DeploymentsCommandOptions,
 ): Promise<void> {
-  const logger = createCLILogger(options);
   try {
     const result = await fn();
     await writeResult(JSON.stringify(result, null, 2), options);
   } catch (error) {
-    logger.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    handleCliError(error);
   }
 }
 
@@ -243,9 +241,6 @@ export async function createDeployCommand(
     log.info('             -e WALKEROS_APP_URL=https://app.walkeros.io \\');
     log.info('             walkeros/flow:latest');
   } catch (err) {
-    log.error(
-      err instanceof Error ? err.message : 'Failed to create deployment',
-    );
-    process.exit(1);
+    handleCliError(err);
   }
 }

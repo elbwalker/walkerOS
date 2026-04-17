@@ -1,6 +1,7 @@
 import { createInterface } from 'readline';
 import { readConfig, writeConfig } from '../../lib/config-file.js';
 import { publicFetch } from '../../core/http.js';
+import { handleCliError } from '../../core/api-error.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 
 // === Programmatic API ===
@@ -84,8 +85,7 @@ export async function feedbackCommand(text: string): Promise<void> {
     await feedback(text, { anonymous });
     logger.info('Feedback sent. Thanks!');
   } catch (error) {
-    logger.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    handleCliError(error);
   }
 }
 

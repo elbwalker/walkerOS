@@ -1714,6 +1714,35 @@ These options work with all commands:
 | `WALKEROS_PROJECT_ID` | Default project ID for `projects`, `flows`, and `deploy` commands |
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
 | `WALKEROS_DEPLOY_TOKEN` | Deploy token for container heartbeat authentication |
+| `WALKEROS_CLIENT_TYPE` | Override client identity sent to the app. Defaults to `cli`; set to `runner` for long-lived flow runners. Used by the runtime image. |
+
+## API version compatibility
+
+Official clients (CLI, MCP, runner image) send three headers on every request
+to the walkerOS app so the server can tell them apart and enforce minimum
+versions per endpoint:
+
+- `User-Agent` — e.g. `walkeros-cli/1.4.0 (node/18.19.0; linux)`
+- `X-WalkerOS-Client` — `cli`, `mcp`, or `runner`
+- `X-WalkerOS-Client-Version` — the installed package version
+
+If you call an endpoint that has been updated in a way that requires a newer
+client, the app responds with `426 Upgrade Required`. The CLI prints the
+required minimum version and the upgrade command, then exits with code 2:
+
+```
+Error: This walkerOS app endpoint requires @walkeros/cli >= 1.5.0
+(you have 1.4.0). Upgrade with: npm install -g @walkeros/cli@latest
+See https://walkeros.io/docs/upgrading for details.
+```
+
+The MCP server surfaces the same information in tool error responses so AI
+assistants can tell the user to upgrade. See
+[Upgrading](/docs/upgrading) for the full version-negotiation rules.
+
+Set `WALKEROS_CLIENT_TYPE=runner` to identify the CLI binary as a long-lived
+flow runner instead of an interactive CLI session. The official runner Docker
+image sets this automatically.
 
 ## CI/CD integration
 

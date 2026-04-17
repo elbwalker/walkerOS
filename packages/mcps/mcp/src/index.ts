@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { setClientContext } from '@walkeros/cli';
 
 import { registerFlowValidateTool } from './tools/validate.js';
 import { registerFlowBundleTool } from './tools/bundle.js';
@@ -21,6 +22,10 @@ import { registerManageContractPrompt } from './prompts/manage-contract.js';
 import { registerUseDefinitionsPrompt } from './prompts/use-definitions.js';
 
 declare const __VERSION__: string;
+
+// Identify this process as the MCP client for the walkerOS app's version
+// gate. Must run before any code that constructs an API client or fetches.
+setClientContext({ type: 'mcp', version: __VERSION__ });
 
 const server = new McpServer(
   {
