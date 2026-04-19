@@ -2,6 +2,30 @@ import type { Flow } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
 /**
+ * Destination bootstrap.
+ * Given the canonical settings, init loads the Matomo script and configures
+ * the tracker URL, site ID, and link tracking. Reproduce by passing the same
+ * settings to `startFlow` as the destination config.
+ */
+export const init: Flow.StepExample = {
+  in: {
+    loadScript: true,
+    settings: {
+      siteId: '1',
+      url: 'https://analytics.example.com/',
+    },
+  },
+  out: [
+    [
+      '_paq.push',
+      ['setTrackerUrl', 'https://analytics.example.com/matomo.php'],
+    ],
+    ['_paq.push', ['setSiteId', '1']],
+    ['_paq.push', ['enableLinkTracking']],
+  ],
+};
+
+/**
  * Default page view -- no mapping name needed.
  * Destination auto-calls trackPageView with the page title.
  */

@@ -6,12 +6,10 @@ sidebar_position: 9
 package: '@walkeros/web-destination-tiktok'
 ---
 
-import destinationTikTok from '@walkeros/web-destination-tiktok';
 import data from '@walkeros/web-destination-tiktok/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationTikTok, examples: data.examples };
 
 # TikTok Pixel
 
@@ -136,8 +134,7 @@ work but receive no optimization signal.
 
 :::tip
 
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -146,25 +143,13 @@ individual event mapping.
 The canonical TikTok pattern: walkerOS `product view` becomes TikTok's
 `ViewContent` standard event with the native parameter shape.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={data.examples.step.productViewContent.in}
-  mapping={data.examples.step.productViewContent.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.productViewContent} />
 
 ### `CompleteRegistration` with per-event Advanced Matching
 
 User signup is the moment to fire Advanced Matching for the session.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={data.examples.step.userRegisterCompleteRegistration.in}
-  mapping={data.examples.step.userRegisterCompleteRegistration.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userRegisterCompleteRegistration} />
 
 ### `CompletePayment` with multi-product `contents`
 
@@ -172,46 +157,20 @@ The hero example: `mapping.data` builds the TikTok-native shape; `loop`
 walks `event.nested` to produce one `contents` entry per product;
 `{ key, value: 'EUR' }` provides a fallback currency.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={data.examples.step.orderCompleteCompletePayment.in}
-  mapping={data.examples.step.orderCompleteCompletePayment.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.orderCompleteCompletePayment} />
 
 ### `Search`
 
 Minimal example: a single `mapping.data` field maps the query string.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={data.examples.step.searchSubmitSearch.in}
-  mapping={data.examples.step.searchSubmitSearch.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.searchSubmitSearch} />
 
 ### Destination-level Advanced Matching
 
 Set identity once on the destination and the runtime state diffing skips
 redundant `ttq.identify()` calls when nothing changed.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    apiKey: 'C4XXXXXXXXXXXXXXXXXXX',
-    identify: {
-      map: {
-        email: 'data.email',
-        phone_number: 'data.phone',
-        external_id: 'user.id',
-      },
-    },
-  }}
-  event={data.examples.step.destinationLevelIdentify.in}
-  generic={true}
-/>
+<StepExample example={data.examples.step.destinationLevelIdentify} />
 
 ## Advanced Matching
 

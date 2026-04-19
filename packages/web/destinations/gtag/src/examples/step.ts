@@ -1,6 +1,67 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+/**
+ * Fixed system time used by the step-examples test so init calls
+ * that reference `new Date()` produce deterministic output.
+ * Inlined (not exported) so it isn't surfaced as a step example.
+ */
+const INIT_DATE_MS = 1700000000000;
+const INIT_DATE = new Date(INIT_DATE_MS);
+
+/**
+ * GA4 destination bootstrap.
+ * Initializes gtag infrastructure and configures the GA4 measurementId.
+ */
+export const ga4Init: Flow.StepExample = {
+  in: {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXX-1' },
+    },
+  },
+  out: [
+    ['gtag', 'js', INIT_DATE],
+    ['gtag', 'config', 'G-XXXXXX-1', {}],
+  ],
+};
+
+/**
+ * Google Ads destination bootstrap.
+ * Initializes gtag infrastructure and configures the Ads conversionId.
+ */
+export const adsInit: Flow.StepExample = {
+  in: {
+    settings: {
+      ads: { conversionId: 'AW-123456789', currency: 'EUR' },
+    },
+  },
+  out: [
+    ['gtag', 'js', INIT_DATE],
+    ['gtag', 'config', 'AW-123456789'],
+  ],
+};
+
+/**
+ * GTM destination bootstrap.
+ * Initializes the dataLayer and pushes the gtm.js start event.
+ */
+export const gtmInit: Flow.StepExample = {
+  in: {
+    settings: {
+      gtm: { containerId: 'GTM-XXXXXXX' },
+    },
+  },
+  out: [
+    [
+      'dataLayer.push',
+      {
+        'gtm.start': INIT_DATE_MS,
+        event: 'gtm.js',
+      },
+    ],
+  ],
+};
+
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000100 }),
   mapping: {
@@ -186,6 +247,18 @@ export const consentModeV2: Flow.StepExample = {
   command: 'consent',
   in: { marketing: true, functional: true },
   out: [
+    // First consent call sets default to denied for all mapped parameters.
+    [
+      'gtag',
+      'consent',
+      'default',
+      {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied',
+      },
+    ],
     [
       'gtag',
       'consent',

@@ -6,12 +6,10 @@ sidebar_position: 7
 package: '@walkeros/web-destination-posthog'
 ---
 
-import destinationPostHog from '@walkeros/web-destination-posthog';
 import data from '@walkeros/web-destination-posthog/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationPostHog, examples: data.examples };
 
 # PostHog
 
@@ -112,8 +110,7 @@ Add to your `flow.json` destinations:
 
 :::tip
 
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -123,13 +120,7 @@ Every walkerOS event becomes `posthog.capture(event.name, properties)`.
 Without `include` config, `properties` is empty. Add `include: ['data']`
 to the destination config to forward event data as properties.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'phc_test' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={{ include: ['data'] }}
-  generic={true}
-/>
+<StepExample example={data.examples.step.defaultEventForwarding} />
 
 ### Identify with `$set` and `$set_once`
 
@@ -137,13 +128,7 @@ Resolve a mapping value into the PostHog identity vocabulary. `distinctId` is
 the new user ID, `$set` overwrites person properties, and `$set_once` only sets
 properties that do not yet exist.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'phc_test' }}
-  event={data.examples.step.userLoginIdentify.in}
-  mapping={data.examples.step.userLoginIdentify.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLoginIdentify} />
 
 ### Person properties only (no identity change)
 
@@ -151,26 +136,14 @@ When the resolved identify object has no `distinctId`, the destination calls
 `posthog.setPersonProperties(...)` instead, which is useful for profile updates that
 should not create a new identity.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'phc_test' }}
-  event={data.examples.step.profileUpdateSetPersonProperties.in}
-  mapping={data.examples.step.profileUpdateSetPersonProperties.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.profileUpdateSetPersonProperties} />
 
 ### Group assignment
 
 Resolve a group mapping into `posthog.group(type, key, properties?)` calls for
 B2B analytics by company, team, or any custom group type.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'phc_test' }}
-  event={data.examples.step.groupAssignmentWithProperties.in}
-  mapping={data.examples.step.groupAssignmentWithProperties.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.groupAssignmentWithProperties} />
 
 ### Order complete with flattened properties
 
@@ -178,13 +151,7 @@ PostHog has no dedicated revenue API. Revenue events are regular `capture()`
 calls. Use `include: ['data', 'globals']` to flatten walkerOS sections into
 prefixed properties (`data_currency: "EUR"`, `data_total`, etc.).
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'phc_test' }}
-  event={data.examples.step.orderCompleteWithInclude.in}
-  mapping={data.examples.step.orderCompleteWithInclude.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.orderCompleteWithInclude} />
 
 ## Consent
 

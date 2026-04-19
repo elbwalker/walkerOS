@@ -6,12 +6,10 @@ sidebar_position: 12
 package: '@walkeros/web-destination-hotjar'
 ---
 
-import destinationHotjar from '@walkeros/web-destination-hotjar';
 import data from '@walkeros/web-destination-hotjar/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationHotjar, examples: data.examples };
 
 # Hotjar
 
@@ -109,8 +107,7 @@ Add to your `flow.json` destinations:
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -118,38 +115,20 @@ individual event mapping.
 
 Every walkerOS event becomes `Hotjar.event(name)` without any mapping.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ siteId: 1234567 }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={data.examples.step.defaultEventForwarding.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.defaultEventForwarding} />
 
 ### Rename the forwarded event
 
 Use `mapping.name` to emit a different name to Hotjar.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ siteId: 1234567 }}
-  event={data.examples.step.renamedEvent.in}
-  mapping={data.examples.step.renamedEvent.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.renamedEvent} />
 
 ### Identify
 
 Resolve a mapping value into `{ userId, ...attributes }` and call
 `Hotjar.identify(userId, attributes)` before the event.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ siteId: 1234567 }}
-  event={data.examples.step.userLoginIdentify.in}
-  mapping={data.examples.step.userLoginIdentify.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLoginIdentify} />
 
 ### SPA state change
 
@@ -157,13 +136,7 @@ For single-page applications, emit `Hotjar.stateChange(path)` so heatmaps
 aggregate by virtual URL. Combine with `skip: true` to suppress the default
 `Hotjar.event(...)` call.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ siteId: 1234567 }}
-  event={data.examples.step.pageViewStateChange.in}
-  mapping={data.examples.step.pageViewStateChange.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.pageViewStateChange} />
 
 ## Consent
 

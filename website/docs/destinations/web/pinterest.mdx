@@ -6,12 +6,10 @@ sidebar_position: 11
 package: '@walkeros/web-destination-pinterest'
 ---
 
-import destinationPinterest from '@walkeros/web-destination-pinterest';
 import data from '@walkeros/web-destination-pinterest/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationPinterest, examples: data.examples };
 
 # Pinterest Tag
 
@@ -148,8 +146,7 @@ auto-maps. Every conversion event needs an explicit `mapping.name`.
 
 :::tip
 
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -158,13 +155,7 @@ individual event mapping.
 The simplest conversion. The walkerOS event name is renamed to Pinterest's
 `pagevisit` standard.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.pageViewRename.in}
-  mapping={data.examples.step.pageViewRename.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.pageViewRename} />
 
 ### Single-product viewcontent
 
@@ -172,13 +163,7 @@ The simplest conversion. The walkerOS event name is renamed to Pinterest's
 flow into a single `pintrk('track', 'viewcontent', { ... })` call. The walkerOS
 event `id` is auto-attached as `event_id` for cross-channel deduplication.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.productViewContent.in}
-  mapping={data.examples.step.productViewContent.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.productViewContent} />
 
 ### Multi-product checkout with `line_items`
 
@@ -186,13 +171,7 @@ Pinterest sends a SINGLE `pintrk('track', 'checkout', { line_items: [...] })`
 call. The walkerOS `loop` mapping resolves a nested array INTO the data, NOT
 into N separate SDK calls.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.orderCompleteCheckout.in}
-  mapping={data.examples.step.orderCompleteCheckout.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.orderCompleteCheckout} />
 
 ### Lead with enhanced matching
 
@@ -200,13 +179,7 @@ into N separate SDK calls.
 data)` BEFORE the track call. The Pinterest JS tag auto-hashes `em`, so pass raw
 emails through and do NOT pre-hash.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.userLoginLead.in}
-  mapping={data.examples.step.userLoginLead.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLoginLead} />
 
 ### Identify-only via `mapping.skip`
 
@@ -214,13 +187,7 @@ emails through and do NOT pre-hash.
 suppresses the default `pintrk('track', ...)` call. Useful when you want to
 refresh enhanced matching without firing a conversion.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.identifyOnlySkip.in}
-  mapping={data.examples.step.identifyOnlySkip.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.identifyOnlySkip} />
 
 ## Enhanced matching
 

@@ -2,6 +2,39 @@ import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 import { ACTIONS, SCHEMAS } from '../types';
 
+/**
+ * Destination bootstrap.
+ * Given the canonical settings, init sets up the Snowplow queue and creates
+ * a tracker pointed at the collector URL. Reproduce by passing the same
+ * settings to `startFlow` as the destination config.
+ */
+export const init: Flow.StepExample = {
+  in: {
+    loadScript: true,
+    settings: {
+      collectorUrl: 'https://collector.example.com',
+      appId: 'my-app',
+      pageViewEvent: 'page view',
+    },
+  },
+  out: [
+    [
+      'snowplow.newTracker',
+      'sp',
+      'https://collector.example.com',
+      {
+        appId: 'my-app',
+        platform: 'web',
+        discoverRootDomain: undefined,
+        cookieSameSite: undefined,
+        appVersion: undefined,
+        contexts: undefined,
+        anonymousTracking: undefined,
+      },
+    ],
+  ],
+};
+
 export const productView: Flow.StepExample = {
   in: getEvent('product view', { timestamp: 1700000400 }),
   mapping: {

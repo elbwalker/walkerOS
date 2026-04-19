@@ -19,12 +19,29 @@ jest.mock('@segment/analytics-next', () => ({
   },
 }));
 
-import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
+import type {
+  Destination,
+  WalkerOS,
+  Mapping as WalkerOSMapping,
+} from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { Env, SegmentAnalytics, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
+
+const initConfig = examples.step.init.in as Destination.Config;
+const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
+
+const noopLogger = {
+  log: () => {},
+  warn: () => {},
+  error: () => {},
+  debug: () => {},
+  throw: (msg: string) => {
+    throw new Error(msg);
+  },
+} as unknown as Destination.Context['logger'];
 
 /**
  * Builds a recording Env where analytics.load() returns an instance
@@ -75,20 +92,8 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
 }
 
 /**
- * Init-time effects (analytics.load() on non-consent examples) are not
- * part of the mapped-step behavior and are filtered from the captured
- * sequence before comparison with `example.out`. For consent examples
- * the load() call IS the feature under test, so it's kept.
- */
-function isInitEffect(effect: CallRecord): boolean {
-  return effect[0] === 'analytics.load';
-}
-
-/**
  * Normalize a call record so trailing undefined args are trimmed.
- * Matches how the example's `out` is authored (args like
- * `'analytics.identify', undefined, traits` intentionally carry a
- * positional undefined, but trailing ones are stripped).
+ * Matches how the example's `out` is authored.
  */
 function trimUndefined(call: CallRecord): CallRecord {
   const trimmed = [...call];
@@ -99,7 +104,28 @@ function trimUndefined(call: CallRecord): CallRecord {
 }
 
 describe('segment destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
+  const stepEntries = Object.entries(examples.step).filter(
+    ([name]) => name !== 'init',
+  );
+
+  it('init', async () => {
+    const { env, collected } = spyEnv();
+    const dest = jest.requireActual('../').default;
+
+    await dest.init({
+      id: 'segment',
+      config: initConfig,
+      env,
+      logger: noopLogger,
+      collector: {} as Destination.Context['collector'],
+    });
+
+    expect(collected().map(trimUndefined)).toEqual(
+      initOut.map((c) => trimUndefined(c as CallRecord)),
+    );
+  });
+
+  it.each(stepEntries)('%s', async (_name, rawExample) => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
@@ -113,8 +139,11 @@ describe('segment destination — step examples', () => {
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow({ tagging: 2 });
 
+    const baseInitSettings = (initConfig.settings || {}) as Partial<Settings>;
     const baseSettings: Partial<Settings> & { apiKey: string } = {
-      apiKey: 'test-project',
+      ...baseInitSettings,
+      apiKey:
+        (baseInitSettings as { apiKey?: string }).apiKey ?? 'test-project',
       ...(example.settings || {}),
     };
 
@@ -122,7 +151,9 @@ describe('segment destination — step examples', () => {
 
     if (isConsent) {
       // Consent examples need config.consent declared so the destination's
-      // on('consent') handler defers load() until the first grant.
+      // on('consent') handler defers load() until the first grant. Because
+      // load() is deferred, no init-time effect is captured — the load()
+      // fired by consent IS the feature under test.
       await elb(
         'walker destination',
         { ...dest, env },
@@ -133,36 +164,36 @@ describe('segment destination — step examples', () => {
         },
       );
       await elb('walker consent', example.in as WalkerOS.Consent);
-    } else {
-      const event = example.in as WalkerOS.Event;
-      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-      const mappingConfig = mapping
-        ? { [event.entity]: { [event.action]: mapping } }
-        : undefined;
 
-      await elb(
-        'walker destination',
-        { ...dest, env },
-        {
-          include: example.configInclude,
-          settings: baseSettings,
-          mapping: mappingConfig,
-        },
+      const expected = (example.out ?? []).map((call) =>
+        trimUndefined(call as CallRecord),
       );
-      await elb(event);
+      const actual = collected().map(trimUndefined);
+      expect(actual).toEqual(expected);
+      return;
     }
 
-    // For non-consent examples, drop the init-time load() call — it's
-    // not part of the example's `out`. For consent examples, keep the
-    // load() call because the deferred-load pattern is the feature we
-    // are testing.
+    const event = example.in as WalkerOS.Event;
+    const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+    const mappingConfig = mapping
+      ? { [event.entity]: { [event.action]: mapping } }
+      : undefined;
+
+    await elb(
+      'walker destination',
+      { ...dest, env },
+      {
+        include: example.configInclude,
+        settings: baseSettings,
+        mapping: mappingConfig,
+      },
+    );
+    await elb(event);
+
     const expected = (example.out ?? []).map((call) =>
       trimUndefined(call as CallRecord),
     );
-    const actual = collected()
-      .filter((effect) => (isConsent ? true : !isInitEffect(effect)))
-      .map(trimUndefined);
-
+    const actual = collected().slice(initOut.length).map(trimUndefined);
     expect(actual).toEqual(expected);
   });
 });

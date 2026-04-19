@@ -6,12 +6,10 @@ sidebar_position: 8
 package: '@walkeros/web-destination-mixpanel'
 ---
 
-import destinationMixpanel from '@walkeros/web-destination-mixpanel';
 import data from '@walkeros/web-destination-mixpanel/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationMixpanel, examples: data.examples };
 
 # Mixpanel
 
@@ -110,8 +108,7 @@ Add to your `flow.json` destinations:
 
 :::tip
 
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -121,13 +118,7 @@ Every walkerOS event becomes `mixpanel.track(event.name, properties)`.
 Without `include` config, `properties` is empty. Add `include: ['data']`
 to the destination config to forward event data as properties.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'mp_test' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={{ include: ['data'] }}
-  generic={true}
-/>
+<StepExample example={data.examples.step.defaultEventForwarding} />
 
 ### Identify with people properties
 
@@ -135,13 +126,7 @@ Resolve a mapping value into Mixpanel's identity vocabulary. `distinctId` is
 the new user identity, and `set`/`setOnce`/`increment`/`append`/`union` operate
 on the user's people profile via `mixpanel.people.*`.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'mp_test' }}
-  event={data.examples.step.userLoginIdentifyAndPeople.in}
-  mapping={data.examples.step.userLoginIdentifyAndPeople.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLoginIdentifyAndPeople} />
 
 ### People profile operations only
 
@@ -149,13 +134,7 @@ When the resolved object has no `distinctId`, identity is unchanged but the
 people operations still fire, which is useful for profile updates that should not
 create a new identity.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'mp_test' }}
-  event={data.examples.step.profileUpdateAllPeopleOperations.in}
-  mapping={data.examples.step.profileUpdateAllPeopleOperations.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.profileUpdateAllPeopleOperations} />
 
 ### Group association and group profiles
 
@@ -163,21 +142,9 @@ create a new identity.
 with a group. `settings.groupIdentify` writes properties on the group profile
 itself via `mixpanel.get_group(key, id).set/setOnce/union/...`.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'mp_test' }}
-  event={data.examples.step.userGroupAssociation.in}
-  mapping={data.examples.step.userGroupAssociation.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userGroupAssociation} />
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'mp_test' }}
-  event={data.examples.step.companyUpdateGroupProfile.in}
-  mapping={data.examples.step.companyUpdateGroupProfile.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.companyUpdateGroupProfile} />
 
 ### Logout
 
@@ -185,13 +152,7 @@ itself via `mixpanel.get_group(key, id).set/setOnce/union/...`.
 super properties on logout. Combine with `skip: true` so the rule does not
 fire a default `track()` call.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'mp_test' }}
-  event={data.examples.step.userLogoutReset.in}
-  mapping={data.examples.step.userLogoutReset.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLogoutReset} />
 
 ## Consent
 

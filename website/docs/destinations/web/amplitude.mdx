@@ -6,11 +6,9 @@ sidebar_position: 6
 package: '@walkeros/web-destination-amplitude'
 ---
 
-import destinationAmplitude from '@walkeros/web-destination-amplitude';
 import data from '@walkeros/web-destination-amplitude/walkerOS.json';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationAmplitude, examples: data.examples };
 
 # Amplitude
 
@@ -115,8 +113,7 @@ fields shared across all destinations (consent, mapping, data, env, …), see
 
 :::tip
 
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -126,13 +123,7 @@ Every walkerOS event becomes `amplitude.track(event.name, event_properties)`.
 Without `include` config, `event_properties` is empty. Add `include: ['data']`
 to the destination config to forward event data as properties.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={{ include: ['data'] }}
-  generic={true}
-/>
+<StepExample example={data.examples.step.defaultEventForwarding} />
 
 ### User login identify
 
@@ -140,51 +131,27 @@ Set the user ID and enrich user properties with the full operation
 vocabulary (`set`, `setOnce`, `add`, ...). Use `skip: true` to suppress
 the default track call.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={data.examples.step.userLoginIdentify.in}
-  mapping={data.examples.step.userLoginIdentify.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLoginIdentify} />
 
 ### Multi-product order with revenue loop
 
 Use `loop` inside `settings.revenue` to fire one `amplitude.revenue()`
 call per nested product. The order-level `track()` still fires once.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={data.examples.step.orderCompleteMultiProduct.in}
-  mapping={data.examples.step.orderCompleteMultiProduct.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.orderCompleteMultiProduct} />
 
 ### Subscription revenue
 
 Single-object revenue mapping for non-cart flows like subscription
 renewals. Currency falls back to `"EUR"` when `data.currency` is missing.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={data.examples.step.subscriptionRenewRevenue.in}
-  mapping={data.examples.step.subscriptionRenewRevenue.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.subscriptionRenewRevenue} />
 
 ### Group assignment with properties
 
 Assign a user to a group and enrich group properties in one rule.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'YOUR_AMPLITUDE_API_KEY' }}
-  event={data.examples.step.groupAssignmentWithProperties.in}
-  mapping={data.examples.step.groupAssignmentWithProperties.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.groupAssignmentWithProperties} />
 
 ## Consent
 

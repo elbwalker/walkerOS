@@ -12,6 +12,27 @@ export type SegmentStepExample = Flow.StepExample & {
 };
 
 /**
+ * Destination bootstrap.
+ * Given the canonical apiKey setting, init calls analytics.load() with the
+ * Segment writeKey and the walkerOS defaults (initialPageview: false).
+ * Reproduce by passing the same settings as the destination config.
+ */
+export const init: Flow.StepExample = {
+  in: {
+    settings: {
+      apiKey: 'test-project',
+    },
+  },
+  out: [
+    [
+      'analytics.load',
+      { writeKey: 'test-project' },
+      { initialPageview: false },
+    ],
+  ],
+};
+
+/**
  * Default event forwarding — every walkerOS event becomes
  * analytics.track(event.name, properties). With no mapping and no
  * destination-level include, properties is `{}`.

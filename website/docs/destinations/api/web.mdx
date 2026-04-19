@@ -6,12 +6,9 @@ path: packages/web/destinations/api
 sidebar_position: 1
 ---
 
-import destinationWebAPI from '@walkeros/web-destination-api';
 import data from '@walkeros/web-destination-api/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-
-export const destination = { ...destinationWebAPI, examples: data.examples };
 
 # Web API Destination
 
@@ -257,14 +254,4 @@ const { collector, elb } = await startFlow({
 By default the&nbsp;<Link to="/docs/core/web#sendweb">`sendWeb`</Link> function
 is used to send the events to an API.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    url: 'https://api.example.com/events',
-  }}
-  smallText={true}
-  height={'128px'}
-  event={data.examples.step.entityAction.in}
-  mapping={data.examples.step.entityAction.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.entityAction} />

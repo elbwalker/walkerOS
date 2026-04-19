@@ -6,12 +6,10 @@ sidebar_position: 5
 package: '@walkeros/web-destination-clarity'
 ---
 
-import destinationClarity from '@walkeros/web-destination-clarity';
 import data from '@walkeros/web-destination-clarity/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationClarity, examples: data.examples };
 
 # Microsoft Clarity
 
@@ -116,8 +114,7 @@ Add to your `flow.json` destinations:
 
 :::tip
 
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -125,61 +122,31 @@ individual event mapping.
 
 Every walkerOS event becomes `Clarity.event(name)` without any mapping.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={data.examples.step.defaultEventForwarding.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.defaultEventForwarding} />
 
 ### Custom tags via `set`
 
 Resolve explicit key/value pairs into `Clarity.setTag(key, value)` calls.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.productViewWithTags.in}
-  mapping={data.examples.step.productViewWithTags.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.productViewWithTags} />
 
 ### Flatten sections with `include`
 
 Forward entire walkerOS event sections as prefixed Clarity tags.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.orderCompleteInclude.in}
-  mapping={data.examples.step.orderCompleteInclude.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.orderCompleteInclude} />
 
 ### Identify
 
 Resolve a mapping value into positional `Clarity.identify(...)` arguments.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.userLoginIdentify.in}
-  mapping={data.examples.step.userLoginIdentify.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLoginIdentify} />
 
 ### Session priority upgrade
 
 Flag important sessions so Clarity retains them beyond sampling.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.orderCompleteUpgrade.in}
-  mapping={data.examples.step.orderCompleteUpgrade.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.orderCompleteUpgrade} />
 
 ## Consent translation
 

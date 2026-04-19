@@ -1,51 +1,68 @@
-import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
+import type {
+  Destination,
+  WalkerOS,
+  Mapping as WalkerOSMapping,
+} from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 
 type CallRecord = [string, ...unknown[]];
 
-/**
- * Init-time effects are the Matomo tracker bootstrap calls that run before
- * any event is pushed (setTrackerUrl, setSiteId, trackPageView-on-init if
- * auto-tracking is enabled, etc). They are not part of the mapped step's
- * `out` shape, so they are filtered before comparison.
- */
-function isInitEffect(call: CallRecord): boolean {
-  if (call[0] !== '_paq.push') return false;
-  const inner = call[1];
-  if (!Array.isArray(inner) || inner.length === 0) return false;
-  const method = inner[0];
-  return (
-    method === 'setTrackerUrl' ||
-    method === 'setSiteId' ||
-    method === 'enableLinkTracking' ||
-    method === 'enableHeartBeatTimer' ||
-    method === 'requireConsent' ||
-    method === 'setConsentGiven' ||
-    method === 'requireCookieConsent' ||
-    method === 'setCookieConsentGiven' ||
-    method === 'setDocumentTitle' ||
-    method === 'setCustomUrl' ||
-    method === 'setReferrerUrl' ||
-    method === 'setUserId' ||
-    (method === 'trackPageView' && inner.length === 1)
-  );
+const initConfig = examples.step.init.in as Destination.Config;
+const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
+
+const noopLogger = {
+  log: () => {},
+  warn: () => {},
+  error: () => {},
+  debug: () => {},
+  throw: (msg: string) => {
+    throw new Error(msg);
+  },
+} as unknown as Destination.Context['logger'];
+
+function makeMockPaq(): {
+  mockPaq: Array<unknown> & { push: jest.Mock };
+  calls: CallRecord[];
+} {
+  const calls: CallRecord[] = [];
+  const mockPaq = [] as unknown as Array<unknown> & { push: jest.Mock };
+  mockPaq.push = jest.fn((...args: unknown[]) => {
+    calls.push(['_paq.push', args[0]]);
+    return calls.length;
+  });
+  return { mockPaq, calls };
 }
 
 describe('matomo web destination -- step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
+  const stepEntries = Object.entries(examples.step).filter(
+    ([name]) => name !== 'init',
+  );
+
+  it('init', async () => {
+    const { mockPaq, calls } = makeMockPaq();
+    const env = clone(examples.env.push);
+    env.window._paq = mockPaq;
+
+    const dest = jest.requireActual('../').default;
+
+    await dest.init({
+      id: 'matomo',
+      config: initConfig,
+      env,
+      logger: noopLogger,
+      collector: {} as Destination.Context['collector'],
+    });
+
+    expect(calls).toEqual(initOut);
+  });
+
+  it.each(stepEntries)('%s', async (_name, example) => {
     const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
     const event = example.in as WalkerOS.Event;
 
-    // Create a recording _paq mock that accepts a single array argument per push.
-    const calls: CallRecord[] = [];
-    const mockPaq = [] as unknown as Array<unknown> & { push: jest.Mock };
-    mockPaq.push = jest.fn((...args: unknown[]) => {
-      calls.push(['_paq.push', args[0]]);
-      return calls.length;
-    });
-
+    const { mockPaq, calls } = makeMockPaq();
     const env = clone(examples.env.push);
     env.window._paq = mockPaq;
 
@@ -59,16 +76,13 @@ describe('matomo web destination -- step examples', () => {
     await elb(
       'walker destination',
       { ...dest, env },
-      {
-        settings: { siteId: '1', url: 'https://analytics.example.com/' },
-        mapping: mappingConfig,
-      },
+      { ...initConfig, mapping: mappingConfig },
     );
 
     await elb(event);
 
     const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    const actual = calls.filter((call) => !isInitEffect(call));
+    const actual = calls.slice(initOut.length);
     expect(actual).toEqual(expected);
   });
 });

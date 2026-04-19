@@ -6,12 +6,10 @@ sidebar_position: 4
 package: '@walkeros/web-destination-matomo'
 ---
 
-import destinationMatomo from '@walkeros/web-destination-matomo';
 import data from '@walkeros/web-destination-matomo/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationMatomo, examples: data.examples };
 
 # Matomo
 
@@ -106,58 +104,29 @@ Add to your `flow.json` destinations:
   configHref="/docs/destinations#configuration"
 />
 
-<DestinationInitDemo
-  destination={destination}
-  settings={{
-    siteId: '1',
-    url: 'https://analytics.example.com/',
-  }}
-/>
+#### Init example
+
+`In` is the destination config you pass to `startFlow`; `Out` is what the destination emits when it bootstraps.
+
+<StepExample example={data.examples.step.init} />
 
 <Mapping schema={data.schemas.mapping} />
 
 ## Examples
 
-:::tip
-
-The code examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
+The examples below show input, mapping, and the resulting vendor calls.
 
 ### Page View
 
 Default handling -- no mapping needed.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    siteId: '1',
-    url: 'https://analytics.example.com/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.pageView.in}
-  mapping={data.examples.step.pageView.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.pageView} />
 
 ### Custom Event with Goal
 
 Map a walkerOS event to a Matomo `trackEvent` call with a `trackGoal` alongside.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    siteId: '1',
-    url: 'https://analytics.example.com/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.customEvent.in}
-  mapping={data.examples.step.customEvent.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.customEvent} />
 
 ### Product Detail View
 
@@ -165,18 +134,7 @@ Map a walkerOS product view to an
 &nbsp;<Link to="https://developer.matomo.org/api-reference/tracking-javascript#ecommerce">ecommerceProductDetailView</Link>
 call.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    siteId: '1',
-    url: 'https://analytics.example.com/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.productDetailView.in}
-  mapping={data.examples.step.productDetailView.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.productDetailView} />
 
 ### Ecommerce Cart Update
 
@@ -184,18 +142,7 @@ Map a walkerOS `cart view` event to an
 &nbsp;<Link to="https://developer.matomo.org/api-reference/tracking-javascript#ecommerce">trackEcommerceCartUpdate</Link>
 call.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    siteId: '1',
-    url: 'https://analytics.example.com/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.ecommerceCartUpdate.in}
-  mapping={data.examples.step.ecommerceCartUpdate.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.ecommerceCartUpdate} />
 
 ### Ecommerce Order
 
@@ -203,32 +150,10 @@ Map a walkerOS `order complete` event to an
 &nbsp;<Link to="https://developer.matomo.org/api-reference/tracking-javascript#ecommerce">trackEcommerceOrder</Link>
 call.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    siteId: '1',
-    url: 'https://analytics.example.com/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.ecommerceOrder.in}
-  mapping={data.examples.step.ecommerceOrder.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.ecommerceOrder} />
 
 ### Site Search
 
 Track internal site search via `trackSiteSearch`.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    siteId: '1',
-    url: 'https://analytics.example.com/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.siteSearch.in}
-  mapping={data.examples.step.siteSearch.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.siteSearch} />

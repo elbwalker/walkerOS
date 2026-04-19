@@ -57,11 +57,6 @@ export const customEvent: Flow.StepExample = {
             data: {
               event_name: 'product view',
               custom_event_type: 'other',
-              custom_attributes: {
-                id: 'SKU-A1',
-                name: 'Shoe',
-                price: 129.99,
-              },
               timestamp_unixtime_ms: 1700000100000,
               source_message_id: '1700000100000-gr0up-1',
             },
@@ -102,10 +97,6 @@ export const screenView: Flow.StepExample = {
             event_type: 'screen_view',
             data: {
               screen_name: 'page view',
-              custom_attributes: {
-                title: 'Checkout',
-                path: '/checkout',
-              },
               timestamp_unixtime_ms: 1700000200000,
               source_message_id: '1700000200000-gr0up-1',
             },
@@ -166,11 +157,6 @@ export const commercePurchase: Flow.StepExample = {
                 transaction_id: 'ORD-300',
                 total_amount: 249.99,
               },
-              custom_attributes: {
-                id: 'ORD-300',
-                total: 249.99,
-                currency: 'EUR',
-              },
               timestamp_unixtime_ms: 1700000300000,
               source_message_id: '1700000300000-gr0up-1',
             },
@@ -213,9 +199,6 @@ export const identityAndAttributes: Flow.StepExample = {
             data: {
               event_name: 'form submit',
               custom_event_type: 'other',
-              custom_attributes: {
-                type: 'newsletter',
-              },
               timestamp_unixtime_ms: 1700000400000,
               source_message_id: '1700000400000-gr0up-1',
             },

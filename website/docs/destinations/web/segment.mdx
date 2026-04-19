@@ -6,12 +6,10 @@ sidebar_position: 8
 package: '@walkeros/web-destination-segment'
 ---
 
-import destinationSegment from '@walkeros/web-destination-segment';
 import data from '@walkeros/web-destination-segment/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationSegment, examples: data.examples };
 
 # Segment
 
@@ -113,8 +111,7 @@ the walkerOS-specific fields above.
 
 :::tip
 
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -124,13 +121,7 @@ Every walkerOS event becomes `analytics.track(name, properties)`.
 Without `include` config, `properties` is empty. Add `include: ['data']`
 to the destination config to forward event data as properties.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={{ include: ['data'] }}
-  generic={true}
-/>
+<StepExample example={data.examples.step.defaultEventForwarding} />
 
 ### User login identify
 
@@ -138,39 +129,21 @@ Per-event identity with reserved Segment Spec traits (`email`, `name`,
 `plan`, `company`). `skip: true` suppresses the default `track()` call so
 only the identity side effect runs.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.userLoginIdentify.in}
-  mapping={data.examples.step.userLoginIdentify.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLoginIdentify} />
 
 ### Group assignment
 
 Attach a user to a company and set the company's traits in a single
 `group()` call.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.companyUpdateGroup.in}
-  mapping={data.examples.step.companyUpdateGroup.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.companyUpdateGroup} />
 
 ### Page views
 
 Segment's `page()` is first-class. Configure it explicitly via
 `mapping.settings.page`.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.pageViewAsPage.in}
-  mapping={data.examples.step.pageViewAsPage.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.pageViewAsPage} />
 
 ### Order Completed (Segment Ecommerce Spec)
 
@@ -178,13 +151,7 @@ A single `track('Order Completed', { products: [...] })` call using
 `mapping.name` for the PascalCase event name and `mapping.data` with a
 nested `loop` to build the products array inline.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.orderCompletedEcommerce.in}
-  mapping={data.examples.step.orderCompletedEcommerce.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.orderCompletedEcommerce} />
 
 ## Consent
 

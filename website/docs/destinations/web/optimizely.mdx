@@ -6,12 +6,10 @@ sidebar_position: 15
 package: '@walkeros/web-destination-optimizely'
 ---
 
-import destinationOptimizely from '@walkeros/web-destination-optimizely';
 import data from '@walkeros/web-destination-optimizely/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationOptimizely, examples: data.examples };
 
 # Optimizely
 
@@ -109,8 +107,7 @@ Add to your `flow.json` destinations:
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -119,26 +116,14 @@ individual event mapping.
 Every walkerOS event becomes `userContext.trackEvent(event.name, {})`
 without any mapping.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={data.examples.step.defaultEventForwarding.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.defaultEventForwarding} />
 
 ### Rename the forwarded event
 
 Use `mapping.name` to emit a different event key to Optimizely. The key
 must match an event you created in your Optimizely project.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
-  event={data.examples.step.mappedEventName.in}
-  mapping={data.examples.step.mappedEventName.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.mappedEventName} />
 
 ### Revenue tracking
 
@@ -146,39 +131,21 @@ Map `revenue` (integer cents) and `value` (float) into `eventTags`, plus
 any additional tags. Revenue must be provided in cents — the destination
 does no conversion.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
-  event={data.examples.step.orderCompleteRevenue.in}
-  mapping={data.examples.step.orderCompleteRevenue.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.orderCompleteRevenue} />
 
 ### Per-event user attributes
 
 Use `settings.attributes` to set user attributes (audience targeting)
 before the `trackEvent` call.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
-  event={data.examples.step.signupWithAttributes.in}
-  mapping={data.examples.step.signupWithAttributes.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.signupWithAttributes} />
 
 ### Attributes only (skip track)
 
 Use `skip: true` to fire `setAttribute` calls without a `trackEvent`.
 Useful for enriching user context without logging a conversion.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ sdkKey: 'YOUR_SDK_KEY', userId: 'user.id' }}
-  event={data.examples.step.attributesOnlySkipTrack.in}
-  mapping={data.examples.step.attributesOnlySkipTrack.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.attributesOnlySkipTrack} />
 
 ## Revenue
 

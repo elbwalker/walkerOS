@@ -6,12 +6,10 @@ sidebar_position: 14
 package: '@walkeros/web-destination-fullstory'
 ---
 
-import destinationFullStory from '@walkeros/web-destination-fullstory';
 import data from '@walkeros/web-destination-fullstory/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationFullStory, examples: data.examples };
 
 # FullStory
 
@@ -110,8 +108,7 @@ Add to your `flow.json` destinations:
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -120,63 +117,33 @@ individual event mapping.
 Every walkerOS event becomes `FullStory('trackEvent', { name, properties })`
 without any mapping.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ orgId: 'o-XXXXXX-na1' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={data.examples.step.defaultEventForwarding.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.defaultEventForwarding} />
 
 ### Rename the forwarded event
 
 Use `mapping.name` to emit a different name to FullStory.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ orgId: 'o-XXXXXX-na1' }}
-  event={data.examples.step.mappedEventName.in}
-  mapping={data.examples.step.mappedEventName.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.mappedEventName} />
 
 ### Identify
 
 Resolve a mapping value into `{ uid, properties }` and call
 `FullStory('setIdentity', ...)` before the event.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ orgId: 'o-XXXXXX-na1' }}
-  event={data.examples.step.userLoginIdentify.in}
-  mapping={data.examples.step.userLoginIdentify.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLoginIdentify} />
 
 ### Set user properties
 
 Persist user-level properties across sessions via `FullStory('setProperties', { type: 'user', ... })`.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ orgId: 'o-XXXXXX-na1' }}
-  event={data.examples.step.setUserProperties.in}
-  mapping={data.examples.step.setUserProperties.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.setUserProperties} />
 
 ### Set page properties
 
 Use `setType: 'page'` with `skip: true` to push page-scoped metadata
 without firing an extra event.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ orgId: 'o-XXXXXX-na1' }}
-  event={data.examples.step.setPageProperties.in}
-  mapping={data.examples.step.setPageProperties.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.setPageProperties} />
 
 ## Consent
 

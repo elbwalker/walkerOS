@@ -149,9 +149,14 @@ does not define any custom rule-level settings"). Use the uniform callsite
 `<Mapping schema={data.schemas.mapping} />` on every page — no special casing.
 
 **Placement:** directly after the `<Settings />` block, before any
-`## Next Steps` / `## Related` tail section. Keep `<DestinationDemo>`
-interactive example blocks under a separate `## Examples` heading below the
-`<Mapping />` block — examples are explicitly out of scope of the snippet.
+`## Next Steps` / `## Related` tail section. Keep
+`<StepExample example={data.examples.step.<key>} />` interactive example blocks
+under a separate `## Examples` heading below the `<Mapping />` block — examples
+are explicitly out of scope of the snippet. Each step example (including
+`examples.step.init`, or tool-prefixed inits like `ga4Init` / `adsInit` /
+`gtmInit` for multi-tool packages) renders on its own via `<StepExample>`; the
+app derives vendor-call output from `formatOut(example.out)` in
+`@walkeros/core`.
 
 **Never** hand-author `## Event Mapping`, `## Mapping examples`,
 `## Mapping data.examples`, `## Configuration reference`, or `### Event Mapping`

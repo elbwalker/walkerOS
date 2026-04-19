@@ -5,12 +5,8 @@ sidebar_position: 3
 package: '@walkeros/web-destination-gtag'
 ---
 
-import { createEvent } from '@walkeros/core';
-import destinationGtag from '@walkeros/web-destination-gtag';
 import data from '@walkeros/web-destination-gtag/walkerOS.json';
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-
-export const destination = { ...destinationGtag, examples: data.examples };
 
 # Google Ads
 
@@ -24,8 +20,8 @@ export const destination = { ...destinationGtag, examples: data.examples };
 enables you to track conversions and measure the effectiveness of your Google
 Ads campaigns. The destination automatically sends events to Google Ads via
 `gtag` function. All you need to do is install the destination, and optionally
-map events to GA4's format. walkerOS takes care of loading the script and the
-function calls.
+map events to Google Ads' format. walkerOS takes care of loading the script and
+the function calls.
 
 ## Installation
 
@@ -83,47 +79,14 @@ elb('order complete', {
 
 <Mapping schema={data.schemas.mapping} />
 
-## Live Demo
+## Examples
 
-Try the Google Ads destination with real events:
+#### Init example
 
-### Initialize Google Ads
+`In` is the destination config you pass to `startFlow`; `Out` is what the destination emits when it bootstraps.
 
-<DestinationInitDemo
-  destination={destination}
-  custom={{
-    ads: {
-      conversionId: 'AW-123456789',
-      currency: 'EUR',
-    },
-  }}
-/>
+<StepExample example={data.examples.step.adsInit} />
 
 ### Track a Conversion Event
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    ads: {
-      conversionId: 'AW-123456789',
-      currency: 'EUR',
-    },
-  }}
-  event={createEvent({
-    name: 'order complete',
-    data: {
-      id: 'order-123',
-      value: 49.99,
-      currency: 'EUR',
-    },
-  })}
-  mapping={{
-    name: 'purchase_conversion',
-    settings: {
-      ads: {},
-    },
-  }}
-  generic={true}
-  smallText={true}
-  height="300px"
-/>
+<StepExample example={data.examples.step.googleAdsConversion} />

@@ -6,12 +6,10 @@ sidebar_position: 4
 package: '@walkeros/web-destination-snowplow'
 ---
 
-import destinationSnowplow from '@walkeros/web-destination-snowplow';
 import data from '@walkeros/web-destination-snowplow/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationSnowplow, examples: data.examples };
 
 # Snowplow
 
@@ -235,15 +233,11 @@ const { elb } = await startFlow({
   configHref="/docs/destinations#configuration"
 />
 
-#### Example
+#### Init example
 
-<DestinationInitDemo
-  destination={destination}
-  settings={{
-    collectorUrl: 'https://collector.example.com',
-    appId: 'my-app',
-  }}
-/>
+`In` is the destination config you pass to `startFlow`; `Out` is what the destination emits when it bootstraps.
+
+<StepExample example={data.examples.step.init} />
 
 <Mapping schema={data.schemas.mapping} />
 
@@ -731,12 +725,7 @@ await startFlow({
 
 ## Examples
 
-:::tip
-
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
+The examples below show input, mapping, and the resulting vendor calls.
 
 Learn more about
 [Snowplow Ecommerce tracking](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/ecommerce/).
@@ -745,69 +734,25 @@ Learn more about
 
 Map your walkerOS event to get a Snowplow `product_view` ecommerce event with product context.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    collectorUrl: 'https://collector.example.com',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.productView.in}
-  mapping={data.examples.step.productView.mapping}
-  generic={true}
-  initFirst={true}
-/>
+<StepExample example={data.examples.step.productView} />
 
 ### Add to Cart
 
 Map your walkerOS event to get a Snowplow `add_to_cart` ecommerce event with product, cart, page, and user context entities.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    collectorUrl: 'https://collector.example.com',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.addToCart.in}
-  mapping={data.examples.step.addToCart.mapping}
-  generic={true}
-  initFirst={true}
-/>
+<StepExample example={data.examples.step.addToCart} />
 
 ### Transaction
 
 Map your walkerOS event to get a Snowplow `transaction` ecommerce event with transaction context.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    collectorUrl: 'https://collector.example.com',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.transaction.in}
-  mapping={data.examples.step.transaction.mapping}
-  generic={true}
-  initFirst={true}
-/>
+<StepExample example={data.examples.step.transaction} />
 
 ### Promotion Visible
 
 Map your walkerOS event to get a Snowplow `promo_view` ecommerce event with promotion context.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    collectorUrl: 'https://collector.example.com',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.promoView.in}
-  mapping={data.examples.step.promoView.mapping}
-  generic={true}
-  initFirst={true}
-/>
+<StepExample example={data.examples.step.promoView} />
 
 ## Testing with Snowplow Micro
 

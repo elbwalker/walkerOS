@@ -1,6 +1,22 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+/**
+ * Destination bootstrap.
+ * Given the canonical settings, init loads the Meta Pixel script and calls
+ * fbq('init', pixelId). Reproduce by passing the same settings to
+ * `startFlow` as the destination config.
+ */
+export const init: Flow.StepExample = {
+  in: {
+    loadScript: true,
+    settings: {
+      pixelId: '1234567890',
+    },
+  },
+  out: [['fbq', 'init', '1234567890']],
+};
+
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000000 }),
   mapping: {

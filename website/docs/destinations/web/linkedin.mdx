@@ -6,12 +6,10 @@ sidebar_position: 10
 package: '@walkeros/web-destination-linkedin'
 ---
 
-import destinationLinkedIn from '@walkeros/web-destination-linkedin';
 import data from '@walkeros/web-destination-linkedin/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationLinkedIn, examples: data.examples };
 
 # LinkedIn Insight Tag
 
@@ -142,8 +140,7 @@ attribution.
 
 :::tip
 
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -152,13 +149,7 @@ individual event mapping.
 The minimum conversion: just the Campaign Manager `conversion_id`. Form
 submissions, signups, downloads, or anything that's a one-shot Conversion Rule.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '123456' }}
-  event={data.examples.step.simpleConversionId.in}
-  mapping={data.examples.step.simpleConversionId.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.simpleConversionId} />
 
 ### Full e-commerce conversion
 
@@ -167,13 +158,7 @@ fallback, and `eventId` from the walkerOS `event.id` for cross-channel
 deduplication. Short walkerOS keys (`id`, `value`, `currency`, `eventId`)
 translate to LinkedIn's vendor parameter names at call time.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '123456' }}
-  event={data.examples.step.orderCompleteFullConversion.in}
-  mapping={data.examples.step.orderCompleteFullConversion.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.orderCompleteFullConversion} />
 
 ### Page view as a key conversion
 
@@ -182,13 +167,7 @@ retargeting. This pattern fires an **additional** explicit conversion when a
 page view matches a Campaign Manager KEY_PAGE_VIEW rule (e.g., a high-intent
 landing page). Both calls live in the LinkedIn pipeline; they do not collide.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '123456' }}
-  event={data.examples.step.pageViewConversion.in}
-  mapping={data.examples.step.pageViewConversion.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.pageViewConversion} />
 
 ### Skipping a fully configured rule
 
@@ -197,13 +176,7 @@ quick reactivation, which is useful for A/B testing which conversions fire or pa
 a rule mid-campaign without redeploying. Equivalent to omitting
 `settings.conversion` entirely under the opt-in model.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '123456' }}
-  event={data.examples.step.conversionSkipped.in}
-  mapping={data.examples.step.conversionSkipped.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.conversionSkipped} />
 
 ## Falsy guards
 

@@ -1,26 +1,64 @@
-import type { WalkerOS } from '@walkeros/core';
+import type {
+  Destination,
+  WalkerOS,
+  Mapping as WalkerOSMapping,
+} from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 
 type CallRecord = [string, ...unknown[]];
 
-/**
- * Meta Pixel init emits fbq('init', pixelId) and fbq('set', ...) on first
- * load. Filter those — they are not part of the mapped step behavior.
- */
-function isInitEffect(call: CallRecord): boolean {
-  if (call[0] !== 'fbq') return false;
-  const action = call[1];
-  return action === 'init' || action === 'set' || action === 'consent';
-}
+const initConfig = examples.step.init.in as Destination.Config;
+const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
 
-describe('Step Examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+const noopLogger = {
+  log: () => {},
+  warn: () => {},
+  error: () => {},
+  debug: () => {},
+  throw: (msg: string) => {
+    throw new Error(msg);
+  },
+} as unknown as Destination.Context['logger'];
+
+describe('meta web destination -- step examples', () => {
+  const stepEntries = Object.entries(examples.step).filter(
+    ([name]) => name !== 'init',
+  );
+
+  it('init', async () => {
+    const mockFbq = jest.fn();
+    const calls: CallRecord[] = [];
+    mockFbq.mockImplementation((...args: unknown[]) => {
+      calls.push(['fbq', ...args] as CallRecord);
+    });
+    const env = clone(examples.env.push);
+    env.window.fbq = mockFbq;
+    env.window._fbq = mockFbq;
+
+    const dest = jest.requireActual('../').default;
+
+    await dest.init({
+      id: 'meta',
+      config: initConfig,
+      env,
+      logger: noopLogger,
+      collector: {} as Destination.Context['collector'],
+    });
+
+    expect(calls).toEqual(initOut);
+  });
+
+  it.each(stepEntries)('%s', async (_name, example) => {
     const event = example.in as WalkerOS.Event;
-    const mapping = example.mapping;
+    const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
 
     const mockFbq = jest.fn();
+    const calls: CallRecord[] = [];
+    mockFbq.mockImplementation((...args: unknown[]) => {
+      calls.push(['fbq', ...args] as CallRecord);
+    });
     const env = clone(examples.env.push);
     env.window.fbq = mockFbq;
     env.window._fbq = mockFbq;
@@ -32,21 +70,16 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env },
-      {
-        settings: { pixelId: '1234567890' },
-        mapping: mappingConfig,
-      },
+      { ...initConfig, mapping: mappingConfig },
     );
 
     await elb(event);
 
-    const captured: CallRecord[] = mockFbq.mock.calls
-      .map((args) => ['fbq', ...args] as CallRecord)
-      .filter((call) => !isInitEffect(call));
-
-    expect(captured).toEqual(example.out);
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+    const actual = calls.slice(initOut.length);
+    expect(actual).toEqual(expected);
   });
 });

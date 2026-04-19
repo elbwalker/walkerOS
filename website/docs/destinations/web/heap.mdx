@@ -6,12 +6,10 @@ sidebar_position: 13
 package: '@walkeros/web-destination-heap'
 ---
 
-import destinationHeap from '@walkeros/web-destination-heap';
 import data from '@walkeros/web-destination-heap/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationHeap, examples: data.examples };
 
 # Heap
 
@@ -111,8 +109,7 @@ Add to your `flow.json` destinations:
 
 :::tip
 
-The code examples are interactive. You can edit the code to generate your
-individual event mapping.
+The examples below show input, mapping, and the resulting vendor calls.
 
 :::
 
@@ -120,51 +117,27 @@ individual event mapping.
 
 Every walkerOS event becomes `heap.track(name, {})` without any mapping.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={data.examples.step.defaultEventForwarding.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.defaultEventForwarding} />
 
 ### Rename + map event properties
 
 Use `mapping.name` to emit a different name and `mapping.data.map` to
 shape the properties argument.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
-  event={data.examples.step.destinationLevelInclude.in}
-  mapping={data.examples.step.destinationLevelInclude.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.destinationLevelInclude} />
 
 ### Identify on login
 
 Resolve a mapping value into a string identity and call `heap.identify(id)`
 with user properties. `skip: true` suppresses the default track call.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
-  event={data.examples.step.userLoginIdentify.in}
-  mapping={data.examples.step.userLoginIdentify.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLoginIdentify} />
 
 ### Reset on logout
 
 Truthy `mapping.settings.reset` triggers `heap.resetIdentity()`.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
-  event={data.examples.step.userLogoutReset.in}
-  mapping={data.examples.step.userLogoutReset.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.userLogoutReset} />
 
 ### Persistent event properties
 
@@ -172,13 +145,7 @@ Truthy `mapping.settings.reset` triggers `heap.resetIdentity()`.
 event until cleared. Combine with `skip: true` when the event itself is
 only a trigger for the property update.
 
-<DestinationDemo
-  destination={destination}
-  settings={{ appId: 'YOUR_HEAP_APP_ID' }}
-  event={data.examples.step.globalEventProperties.in}
-  mapping={data.examples.step.globalEventProperties.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.globalEventProperties} />
 
 ## Consent
 

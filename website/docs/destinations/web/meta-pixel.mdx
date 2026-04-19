@@ -6,12 +6,10 @@ sidebar_position: 2
 package: '@walkeros/web-destination-meta'
 ---
 
-import destinationMetaPixel from '@walkeros/web-destination-meta';
 import data from '@walkeros/web-destination-meta/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationMetaPixel, examples: data.examples };
 
 # Meta Pixel
 
@@ -103,73 +101,33 @@ Add to your `flow.json` destinations:
   configHref="/docs/destinations#configuration"
 />
 
-#### Example
+#### Init example
 
-<DestinationInitDemo
-  destination={destination}
-  settings={{
-    pixelId: '1234567890',
-  }}
-/>
+`In` is the destination config you pass to `startFlow`; `Out` is what the destination emits when it bootstraps.
+
+<StepExample example={data.examples.step.init} />
 
 <Mapping schema={data.schemas.mapping} />
 
 ## Examples
 
-:::tip
+The examples below show input, mapping, and the resulting vendor calls.
 
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
-
-Learn more aboot
+Learn more about
 [Meta Pixel's Standard-Events.](https://developers.facebook.com/docs/meta-pixel/reference#standard-events)
 
 ### ViewContent
 
-<DestinationDemo
-  destination={destination}
-  settings={{ pixelId: '1234567890' }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.viewContent.in}
-  mapping={data.examples.step.viewContent.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.viewContent} />
 
 ### AddToCart
 
-<DestinationDemo
-  destination={destination}
-  settings={{ pixelId: '1234567890' }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.addToCart.in}
-  mapping={data.examples.step.addToCart.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.addToCart} />
 
 ### InitiateCheckout
 
-<DestinationDemo
-  destination={destination}
-  settings={{ pixelId: '1234567890' }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.initiateCheckout.in}
-  mapping={data.examples.step.initiateCheckout.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.initiateCheckout} />
 
 ### Purchase
 
-<DestinationDemo
-  destination={destination}
-  settings={{ pixelId: '1234567890' }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.purchase.in}
-  mapping={data.examples.step.purchase.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.purchase} />

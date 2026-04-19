@@ -1,10 +1,27 @@
-import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
+import type {
+  Destination,
+  WalkerOS,
+  Mapping as WalkerOSMapping,
+} from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
-import type { Env, Settings } from '../types';
+import type { Env } from '../types';
 
 type CallRecord = [string, ...unknown[]];
+
+const initConfig = examples.step.init.in as Destination.Config;
+const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
+
+const noopLogger = {
+  log: () => {},
+  warn: () => {},
+  error: () => {},
+  debug: () => {},
+  throw: (msg: string) => {
+    throw new Error(msg);
+  },
+} as unknown as Destination.Context['logger'];
 
 /**
  * Snowplow's queue API is `window.snowplow(method, ...args)`. We record
@@ -25,7 +42,28 @@ function spySnowplow(env: Env): {
 }
 
 describe('snowplow destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
+  const stepEntries = Object.entries(examples.step).filter(
+    ([name]) => name !== 'init',
+  );
+
+  it('init', async () => {
+    const env = clone(examples.env.push) as Env;
+    const { env: spiedEnv, collected } = spySnowplow(env);
+
+    const dest = jest.requireActual('../').default;
+
+    await dest.init({
+      id: 'snowplow',
+      config: initConfig,
+      env: spiedEnv,
+      logger: noopLogger,
+      collector: {} as Destination.Context['collector'],
+    });
+
+    expect(collected()).toEqual(initOut);
+  });
+
+  it.each(stepEntries)('%s', async (_name, rawExample) => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
@@ -39,19 +77,8 @@ describe('snowplow destination — step examples', () => {
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow({ tagging: 2 });
 
-    const baseSettings: Partial<Settings> & { collectorUrl: string } = {
-      collectorUrl: 'https://collector.example.com',
-      pageViewEvent: 'page view',
-    };
-
     if (example.command === 'consent') {
-      await elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
-          settings: baseSettings,
-        },
-      );
+      await elb('walker destination', { ...dest, env: spiedEnv }, initConfig);
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
       const event = example.in as WalkerOS.Event;
@@ -63,20 +90,13 @@ describe('snowplow destination — step examples', () => {
       await elb(
         'walker destination',
         { ...dest, env: spiedEnv },
-        {
-          settings: baseSettings,
-          mapping: mappingConfig,
-        },
+        { ...initConfig, mapping: mappingConfig },
       );
       await elb(event);
     }
 
-    // Drop init-time calls — every example triggers newTracker once
-    // and it's not part of `out`.
     const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    const actual = collected().filter(
-      ([path]) => path !== 'snowplow.newTracker',
-    );
+    const actual = collected().slice(initOut.length);
 
     expect(actual).toEqual(expected);
   });

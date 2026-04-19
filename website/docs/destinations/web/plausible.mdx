@@ -6,12 +6,10 @@ sidebar_position: 4
 package: '@walkeros/web-destination-plausible'
 ---
 
-import destinationPlausible from '@walkeros/web-destination-plausible';
 import data from '@walkeros/web-destination-plausible/walkerOS.json';
 import Settings from '@site/src/components/snippets/_settings.mdx';
 
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
-export const destination = { ...destinationPlausible, examples: data.examples };
 
 # Plausible Analytics
 
@@ -100,38 +98,24 @@ Add to your `flow.json` destinations:
   configHref="/docs/destinations#configuration"
 />
 
-<DestinationInitDemo
-  destination={destination}
-  settings={{
-    domain: 'walkeros.io',
-  }}
-/>
+#### Init example
+
+`In` is the destination config you pass to `startFlow`; `Out` is what the destination emits when it bootstraps.
+
+<StepExample example={data.examples.step.init} />
 
 <Mapping schema={data.schemas.mapping} />
 
 ## Examples
 
-:::tip
-
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
+The examples below show input, mapping, and the resulting vendor calls.
 
 Send&nbsp;<Link to="https://plausible.io/docs/custom-event-goals#trigger-custom-events-manually-with-a-javascript-function">custom
 events</Link> manually using the JavaScript function
 
 ### CustomEvent
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    domain: 'walkeros.io',
-  }}
-  event={data.examples.step.customEvent.in}
-  mapping={data.examples.step.customEvent.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.customEvent} />
 
 ### Purchase
 
@@ -139,12 +123,4 @@ Checkout&nbsp;<Link to="https://plausible.io/docs/ecommerce-revenue-tracking">Pl
 E-commerce revenue tracking</Link> guide to learn more about the setup within
 Plausible.
 
-<DestinationDemo
-  destination={destination}
-  settings={{
-    domain: 'walkeros.io',
-  }}
-  event={data.examples.step.purchase.in}
-  mapping={data.examples.step.purchase.mapping}
-  generic={true}
-/>
+<StepExample example={data.examples.step.purchase} />
