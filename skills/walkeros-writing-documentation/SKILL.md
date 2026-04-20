@@ -174,6 +174,23 @@ Use `omitSchemaProperties` to hide `settings` (documented per-package) and any
 dev-only fields (`init`, `mock`, `chainMocks`, `onError`, `onLog`) from the
 user-facing table.
 
+### Code display: CodeView vs CodeBox
+
+`@walkeros/explorer` exports two components for code display:
+
+- **`<CodeBox>`** renders Monaco, the full editor. Use when the user can edit
+  the code (playgrounds, interactive demos). Ships the IDE.
+- **`<CodeView>`** renders Shiki, read-only. Use for static code in docs,
+  marketing pages, and anywhere editing is not a requirement. Same `<Box>` frame
+  as `<CodeBox>` (traffic lights, header, copy button, tabs) so visuals match.
+  Zero Monaco runtime cost.
+
+Tokens match because Shiki uses the same TextMate grammars as VS Code / Monaco,
+with the matching `dark-plus` / `light-plus` themes.
+
+**Rule:** default to `<CodeView>`. Only reach for `<CodeBox>` when the code must
+be editable.
+
 ### PropertyTable component
 
 `<PropertyTable schema={...} />` from `@walkeros/explorer` is the primitive. It

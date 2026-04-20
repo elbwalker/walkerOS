@@ -1,5 +1,5 @@
 import React from 'react';
-import CodeBlock from '@theme/CodeBlock';
+import { CodeView, Grid } from '@walkeros/explorer';
 import { formatOut } from '@walkeros/core';
 
 type StepEffect = readonly [callable: string, ...args: unknown[]];
@@ -14,31 +14,39 @@ type Props = {
   example: Example;
 };
 
+function formatOutContent(out: Example['out']): {
+  code: string;
+  language: string;
+} {
+  if (Array.isArray(out)) {
+    return {
+      code: formatOut(out as readonly StepEffect[]),
+      language: 'javascript',
+    };
+  }
+  return { code: JSON.stringify(out, null, 2), language: 'json' };
+}
+
 export default function StepExample({ example }: Props): React.ReactElement {
+  const hasMapping = example.mapping !== undefined;
+  const out = formatOutContent(example.out);
+  const columns = hasMapping ? 3 : 2;
+
   return (
-    <>
-      <h4>In</h4>
-      <CodeBlock language="json">
-        {JSON.stringify(example.in, null, 2)}
-      </CodeBlock>
-      {example.mapping !== undefined && (
-        <>
-          <h4>Mapping</h4>
-          <CodeBlock language="json">
-            {JSON.stringify(example.mapping, null, 2)}
-          </CodeBlock>
-        </>
+    <Grid columns={columns} rowHeight="synced">
+      <CodeView
+        label="Event"
+        code={JSON.stringify(example.in, null, 2)}
+        language="json"
+      />
+      {hasMapping && (
+        <CodeView
+          label="Mapping"
+          code={JSON.stringify(example.mapping, null, 2)}
+          language="json"
+        />
       )}
-      <h4>Out</h4>
-      {Array.isArray(example.out) ? (
-        <CodeBlock language="javascript">
-          {formatOut(example.out as readonly StepEffect[])}
-        </CodeBlock>
-      ) : (
-        <CodeBlock language="json">
-          {JSON.stringify(example.out, null, 2)}
-        </CodeBlock>
-      )}
-    </>
+      <CodeView label="Out" code={out.code} language={out.language} />
+    </Grid>
   );
 }

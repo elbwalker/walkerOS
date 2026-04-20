@@ -35,12 +35,26 @@ import {
 } from '../../utils/monaco-json-schema';
 import { useMonacoHeight } from '../../hooks/useMonacoHeight';
 import { useGridHeight } from '../../contexts/GridHeightContext';
+import { isMonacoCancellation } from '../../utils/is-monaco-cancellation';
 
 // Monaco Editor configuration
 // NOTE: MonacoEnvironment.getWorker and loader.config() should be configured
 // by the consuming application. See examples in the explorer app's main.tsx
 import type * as monaco from 'monaco-editor';
 import type { IntelliSenseContext } from '../../types/intellisense';
+
+// Suppress Monaco loader cancellation rejections at the window level. See
+// `isMonacoCancellation` for the full rationale. ES modules evaluate once, so
+// the listener registers once per module graph. HMR re-execution may add a
+// duplicate in dev, which is harmless (preventDefault on an already-prevented
+// event is a no-op).
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    if (isMonacoCancellation(event.reason)) {
+      event.preventDefault();
+    }
+  });
+}
 
 // Run Monaco base setup exactly once at module load — before any <Editor>
 // mounts. Doing this during `beforeMount` of an editor invalidates any

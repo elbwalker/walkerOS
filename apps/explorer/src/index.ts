@@ -28,6 +28,11 @@ export type {
   FlowItem,
 } from './components/molecules/architecture-flow';
 export type { CodeBoxProps, CodeBoxTab } from './components/molecules/code-box';
+export { CodeView } from './components/molecules/code-view';
+export type {
+  CodeViewProps,
+  CodeViewTab,
+} from './components/molecules/code-view';
 export type { CodeSnippetProps } from './components/molecules/code-snippet';
 export type {
   FlowMapProps,
@@ -45,6 +50,7 @@ export type { PreviewProps } from './components/molecules/preview';
 
 // Atoms
 export { Code } from './components/atoms/code';
+export { CodeStatic } from './components/atoms/code-static';
 export { Box } from './components/atoms/box';
 export { Grid } from './components/atoms/grid';
 export { Header } from './components/atoms/header';
@@ -56,6 +62,7 @@ export { Spinner } from './components/atoms/spinner';
 
 export { Icon } from './components/atoms/icons';
 export type { CodeProps } from './components/atoms/code';
+export type { CodeStaticProps } from './components/atoms/code-static';
 export type { BoxProps, BoxTab } from './components/atoms/box';
 export type { GridProps } from './components/atoms/grid';
 export type { HeaderProps } from './components/atoms/header';
@@ -64,6 +71,9 @@ export type { ButtonProps } from './components/atoms/button';
 export type { ButtonGroupProps } from './components/atoms/button-group';
 export type { ButtonLinkProps } from './components/atoms/button-link';
 export type { SpinnerProps } from './components/atoms/spinner';
+
+// Utils
+export { isMonacoCancellation } from './utils/is-monaco-cancellation';
 
 // MDX Integration
 export { MDXProvider } from './providers/MDXProvider';

@@ -8,6 +8,7 @@ import { Icon } from '@iconify/react';
 import {
   CodeBox,
   CodeSnippet,
+  CodeView,
   FlowMap,
   LiveCode,
   PropertyTable,
@@ -29,6 +30,7 @@ export default {
   // Explorer components (no import needed in MDX files)
   CodeBox,
   CodeSnippet,
+  CodeView,
   FlowMap,
   LiveCode,
   PropertyTable,

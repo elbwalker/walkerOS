@@ -18,7 +18,7 @@
 
 :::info Where this fits
 
-{props.pre}
+<p>{props.pre}</p>
 
 <FlowMap
   sources={{ default: { highlight: false } }}
@@ -27,6 +27,6 @@
   {...(props.flowMap || {})}
 />
 
-{props.post}
+{props.post && <p>{props.post}</p>}
 
 :::

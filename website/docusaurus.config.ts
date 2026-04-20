@@ -205,6 +205,7 @@ const config: Config = {
 
   plugins: [
     tailwindPlugin,
+    devOverlayFilterPlugin,
     [
       '@docusaurus/plugin-client-redirects',
       {
@@ -254,6 +255,41 @@ async function tailwindPlugin() {
               use: ['style-loader', 'css-loader', 'sass-loader'],
             },
           ],
+        },
+      };
+    },
+  };
+}
+
+// Filter Monaco's cancelation rejection out of the webpack-dev-server
+// overlay. The browser-side listener in @walkeros/explorer silences the
+// raw rejection, but the overlay hooks rejections independently.
+//
+// webpack-dev-server stringifies this function with `.toString()` and
+// eval's it in the browser, so it must be self-contained with no
+// closed-over references. Logic mirrors `isMonacoCancellation` in
+// @walkeros/explorer — keep the two in sync.
+async function devOverlayFilterPlugin() {
+  return {
+    name: 'walkeros-dev-overlay-filter',
+    configureWebpack() {
+      return {
+        devServer: {
+          client: {
+            overlay: {
+              runtimeErrors: (error: unknown) => {
+                const seen = new Set<unknown>();
+                const check = (v: unknown): boolean => {
+                  if (!v || typeof v !== 'object' || seen.has(v)) return false;
+                  seen.add(v);
+                  const o = v as { type?: string; cause?: unknown };
+                  if (o.type === 'cancelation') return true;
+                  return check(o.cause);
+                };
+                return !check(error);
+              },
+            },
+          },
         },
       };
     },
