@@ -6,7 +6,7 @@ package: '@walkeros/store-memory'
 ---
 
 import data from '@walkeros/store-memory/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Memory
 
@@ -14,24 +14,12 @@ import Settings from '@site/src/components/snippets/_settings.mdx';
 
 In-process key-value store with LRU eviction, TTL expiration, and namespace support. Platform-agnostic: works in both browser and server flows.
 
-## When to use
-
-| Scenario | Recommended store |
-|----------|-------------------|
-| Caching API responses within a request cycle | **Memory**: fastest, no I/O |
-| Deduplicating events (seen-key tracking) | **Memory**: in-process, zero overhead |
-| Ephemeral session or user state | **Memory**: TTL support, auto-expiry |
-| Sharing state across browser tabs | Not memory: use a server store |
-| Persisting data across server restarts | [Filesystem](./server/fs) or [S3](./server/s3) |
-
 ## Installation
 
 <CodeSnippet
   code={`npm install @walkeros/store-memory`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -79,13 +67,19 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="store"
-  configHref="/docs/stores#configuration"
-/>
+<Configuration type="store" data={data} />
 
-Both limits can be used together. When either is exceeded, the least-recently-used entry is evicted first.
+## When to use
+
+| Scenario | Recommended store |
+|----------|-------------------|
+| Caching API responses within a request cycle | **Memory**: fastest, no I/O |
+| Deduplicating events (seen-key tracking) | **Memory**: in-process, zero overhead |
+| Ephemeral session or user state | **Memory**: TTL support, auto-expiry |
+| Sharing state across browser tabs | Not memory: use a server store |
+| Persisting data across server restarts | [Filesystem](./server/fs) or [S3](./server/s3) |
+
+Both `maxSize` and `maxEntries` can be used together. When either is exceeded, the least-recently-used entry is evicted first.
 
 ## API
 

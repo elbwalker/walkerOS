@@ -6,7 +6,7 @@ package: '@walkeros/server-store-s3'
 ---
 
 import data from '@walkeros/server-store-s3/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # S3
 
@@ -20,8 +20,6 @@ S3-compatible object storage store using [s3mini](https://github.com/good-lly/s3
   code={`npm install @walkeros/server-store-s3`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -77,11 +75,7 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="store"
-  configHref="/docs/stores#configuration"
-/>
+<Configuration type="store" data={data} />
 
 ## Provider examples
 

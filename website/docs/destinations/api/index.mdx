@@ -4,22 +4,20 @@ description: Send events to any HTTP endpoint - browser or server-side
 sidebar_position: 1
 ---
 
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
 # API Destination
 
 Send walkerOS events to any HTTP(S) endpoint with customizable data
 transformation and flexible transport options.
 
-:::info Where This Fits
-API is a **destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'API', highlight: true } }}
+<WhereThisFits
+  pre={<>API is a <strong>destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'API', highlight: true } },
+  }}
+  post={<>Sends events to any HTTP endpoint with customizable headers, data transformation, and multiple transport options.</>}
 />
-
-Sends events to any HTTP endpoint with customizable headers, data transformation, and multiple transport options.
-:::
 
 ## Environments
 

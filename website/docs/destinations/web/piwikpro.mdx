@@ -7,9 +7,9 @@ package: '@walkeros/web-destination-piwikpro'
 ---
 
 import data from '@walkeros/web-destination-piwikpro/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Piwik PRO
 
@@ -19,24 +19,17 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
   npm="@walkeros/web-destination-piwikpro"
 />
 
-[Piwik PRO](https://piwik.pro/) is a European, privacy-focused web analytics and
-marketing platform that helps businesses track website traffic and user
-behavior. The destination automatically sends events to Piwik Pro via `push`
-function. All you need to do is install the destination, and optionally map
-events to Piwik Pro's format. walkerOS takes care of loading the script and the
-function calls.
+[Piwik PRO](https://piwik.pro/) is a European, privacy-focused web analytics
+and marketing platform. The destination sends events to Piwik PRO via the
+`_paq` command queue, loading the tracking container script and forwarding
+page views, custom events, and ecommerce calls.
 
-:::info Where This Fits
-Piwik PRO is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Piwik PRO', highlight: true } }}
+<WhereThisFits
+  pre={<>Piwik PRO is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Piwik PRO', highlight: true } },
+  }}
 />
-
-Loads Piwik PRO script, initializes the tracking container, and sends page views and custom events with GDPR-compliant analytics.
-:::
 
 ## Installation
 
@@ -44,8 +37,6 @@ Loads Piwik PRO script, initializes the tracking container, and sends page views
   code={`npm install @walkeros/web-destination-piwikpro`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -60,8 +51,8 @@ await startFlow({
       code: destinationPiwikPro,
       config: {
         settings: {
-          appId: 'XXX-XXX-XXX-XXX-XXX', // Required
-          url: 'https://your_account_name.piwik.pro/', // Required
+          appId: 'XXX-XXX-XXX-XXX-XXX',
+          url: 'https://your_account_name.piwik.pro/',
         },
       },
     },
@@ -90,57 +81,9 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-#### Init example
-
-`In` is the destination config you pass to `startFlow`; `Out` is what the destination emits when it bootstraps.
-
-<StepExample example={data.examples.step.init} />
-
-<Mapping schema={data.schemas.mapping} />
-
-## Examples
-
-The examples below show input, mapping, and the resulting vendor calls.
-
-### ProductDetailView
-
-Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#data.examples">ecommerceProductDetailView</Link>
-event.
-
-<StepExample example={data.examples.step.productDetailView} />
-
-### AddToCart
-
-Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#data.examples">ecommerceAddToCart</Link>
-event.
-
-<StepExample example={data.examples.step.ecommerceAddToCart} />
-
-### CartUpdate
-
-Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#data.examples">ecommerceCartUpdate</Link>
-event.
-
-<StepExample example={data.examples.step.cartUpdate} />
-
-### Order
-
-Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#data.examples">ecommerceOrder</Link>
-event.
-
-<StepExample example={data.examples.step.ecommerceOrder} />
+<Configuration type="destination" data={data} />

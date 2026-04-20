@@ -7,7 +7,7 @@ type StepEffect = readonly [callable: string, ...args: unknown[]];
 type Example = {
   in: unknown;
   mapping?: unknown;
-  out: readonly StepEffect[];
+  out: readonly StepEffect[] | unknown;
 };
 
 type Props = {
@@ -30,7 +30,15 @@ export default function StepExample({ example }: Props): React.ReactElement {
         </>
       )}
       <h4>Out</h4>
-      <CodeBlock language="javascript">{formatOut(example.out)}</CodeBlock>
+      {Array.isArray(example.out) ? (
+        <CodeBlock language="javascript">
+          {formatOut(example.out as readonly StepEffect[])}
+        </CodeBlock>
+      ) : (
+        <CodeBlock language="json">
+          {JSON.stringify(example.out, null, 2)}
+        </CodeBlock>
+      )}
     </>
   );
 }

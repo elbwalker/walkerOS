@@ -6,9 +6,9 @@ sidebar_position: 13
 package: '@walkeros/server-destination-hubspot'
 ---
 import data from '@walkeros/server-destination-hubspot/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # HubSpot
 
@@ -16,17 +16,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Server-side event delivery to [HubSpot](https://www.hubspot.com/) via the official [`@hubspot/api-client`](https://www.npmjs.com/package/@hubspot/api-client) SDK. Sends custom behavioral events, upserts contacts via the CRM API, and supports optional batch mode with graceful shutdown.
 
-:::info Where This Fits
-HubSpot is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'HubSpot', highlight: true } }}
+<WhereThisFits
+  pre={<>HubSpot is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'HubSpot', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector, resolves contact identity (email or objectId), optionally upserts contact properties, then sends the custom event to HubSpot.</>}
 />
-
-Receives events server-side from the collector, resolves contact identity (email or objectId), optionally upserts contact properties, then sends the custom event to HubSpot.
-:::
 
 ## Installation
 
@@ -34,8 +30,6 @@ Receives events server-side from the collector, resolves contact identity (email
   code={`npm install @walkeros/server-destination-hubspot`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -80,18 +74,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
+<Configuration type="destination" data={data} />
 
 Every event must be associated with a contact via `email` or `objectId`. The `email` path defaults to `user.email`. Events where neither value can be resolved are skipped with a warning.
 

@@ -6,9 +6,9 @@ sidebar_position: 8
 package: '@walkeros/server-destination-mixpanel'
 ---
 import data from '@walkeros/server-destination-mixpanel/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Mixpanel
 
@@ -16,17 +16,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Server-side event delivery to Mixpanel for product analytics, people profiles, and group analytics via the official [`mixpanel`](https://www.npmjs.com/package/mixpanel) Node.js SDK.
 
-:::info Where This Fits
-Mixpanel is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Mixpanel', highlight: true } }}
+<WhereThisFits
+  pre={<>Mixpanel is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Mixpanel', highlight: true } },
+  }}
+  post={<>Sends events server-side to Mixpanel via `/track` (real-time, up to 5 days old) or `/import` (historical, any age). Supports people profile operations, group analytics, and identity resolution.</>}
 />
-
-Sends events server-side to Mixpanel via `/track` (real-time, up to 5 days old) or `/import` (historical, any age). Supports people profile operations, group analytics, and identity resolution.
-:::
 
 ## Installation
 
@@ -34,8 +30,6 @@ Sends events server-side to Mixpanel via `/track` (real-time, up to 5 days old) 
   code={`npm install @walkeros/server-destination-mixpanel`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -79,15 +73,9 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
+<Configuration type="destination" data={data} />

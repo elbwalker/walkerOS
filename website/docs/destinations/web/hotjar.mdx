@@ -7,9 +7,9 @@ package: '@walkeros/web-destination-hotjar'
 ---
 
 import data from '@walkeros/web-destination-hotjar/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Hotjar
 
@@ -27,18 +27,12 @@ Hotjar via the official
 translating events into `Hotjar.event(...)` calls and handling identity and
 SPA state changes.
 
-:::info Where This Fits
-Hotjar is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Hotjar', highlight: true } }}
+<WhereThisFits
+  pre={<>Hotjar is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Hotjar', highlight: true } },
+  }}
 />
-
-Loads the Hotjar SDK, forwards every walkerOS event as `Hotjar.event(name)`,
-and lets you layer on identity and SPA route tracking.
-:::
 
 ## Installation
 
@@ -46,8 +40,6 @@ and lets you layer on identity and SPA route tracking.
   code={`npm install @walkeros/web-destination-hotjar`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -90,53 +82,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
-
-## Examples
-
-:::tip
-
-The examples below show input, mapping, and the resulting vendor calls.
-
-:::
-
-### Default event forwarding
-
-Every walkerOS event becomes `Hotjar.event(name)` without any mapping.
-
-<StepExample example={data.examples.step.defaultEventForwarding} />
-
-### Rename the forwarded event
-
-Use `mapping.name` to emit a different name to Hotjar.
-
-<StepExample example={data.examples.step.renamedEvent} />
-
-### Identify
-
-Resolve a mapping value into `{ userId, ...attributes }` and call
-`Hotjar.identify(userId, attributes)` before the event.
-
-<StepExample example={data.examples.step.userLoginIdentify} />
-
-### SPA state change
-
-For single-page applications, emit `Hotjar.stateChange(path)` so heatmaps
-aggregate by virtual URL. Combine with `skip: true` to suppress the default
-`Hotjar.event(...)` call.
-
-<StepExample example={data.examples.step.pageViewStateChange} />
+<Configuration type="destination" data={data} />
 
 ## Consent
 

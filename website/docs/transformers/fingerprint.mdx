@@ -6,23 +6,17 @@ package: '@walkeros/server-transformer-fingerprint'
 ---
 
 import data from '@walkeros/server-transformer-fingerprint/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Fingerprint
 
-<PackageLink env="server" github="packages/server/transformers/fingerprint" npm="@walkeros/server-transformer-fingerprint" />
+<PackageLink
+  env="server"
+  github="packages/server/transformers/fingerprint"
+  npm="@walkeros/server-transformer-fingerprint"
+/>
 
-Hashes configurable request fields (IP address, user agent, date, etc.) into a deterministic identifier and stores it on the event. No cookies, no PII stored. The same combination of inputs always produces the same hash.
-
-## When to use
-
-Server-side tracking without cookies requires a way to consistently identify a user across requests. The fingerprint transformer creates that identifier from data already available in the request context: IP address, user agent string, and optionally a daily rotation to limit persistence.
-
-Typical use cases:
-
-- **Session continuity**: Generate a consistent `user.hash` across requests from the same client without relying on client-side IDs
-- **Cookie-free analytics**: Identify returning visitors server-side when no consent has been given for cookies
-- **Cross-domain stitching**: Combine fields that are consistent across domains into a shared identity signal
+Hashes configurable request fields (IP address, user agent, date, etc.) into a deterministic identifier and stores it on the event. No cookies, no PII stored. The same combination of inputs always produces the same hash, enabling server-side session continuity, cookie-free analytics, and cross-domain stitching without client-side IDs.
 
 ## Installation
 
@@ -30,8 +24,6 @@ Typical use cases:
   code={`npm install @walkeros/server-transformer-fingerprint`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -60,6 +52,8 @@ await startFlow({
   </TabItem>
   <TabItem value="bundled" label="Bundled">
 
+Add to your `flow.json`:
+
 <CodeSnippet
   code={`"transformers": {
   "fingerprint": {
@@ -76,14 +70,12 @@ await startFlow({
   language="json"
 />
 
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="transformer"
-  configHref="/docs/transformers#configuration"
-/>
+<Configuration type="transformer" data={data} />
 
 Fields are resolved from `{ event, ingest }` using walkerOS mapping. String values use dot notation (`"ingest.ip"`). Function values compute dynamically (`{ fn: () => new Date().getDate() }`).
 

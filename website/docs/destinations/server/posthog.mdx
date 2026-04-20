@@ -6,9 +6,9 @@ sidebar_position: 7
 package: '@walkeros/server-destination-posthog'
 ---
 import data from '@walkeros/server-destination-posthog/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # PostHog
 
@@ -16,17 +16,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Server-side event delivery to PostHog for product analytics, identity resolution, group analytics, and feature flags via the official `posthog-node` SDK.
 
-:::info Where This Fits
-PostHog is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'PostHog', highlight: true } }}
+<WhereThisFits
+  pre={<>PostHog is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'PostHog', highlight: true } },
+  }}
+  post={<>Sends events server-side to PostHog's ingestion API, translating walkerOS events into `capture`, `identify`, and `groupIdentify` calls with full control over identity and group resolution.</>}
 />
-
-Sends events server-side to PostHog's ingestion API, translating walkerOS events into `capture`, `identify`, and `groupIdentify` calls with full control over identity and group resolution.
-:::
 
 ## Installation
 
@@ -34,8 +30,6 @@ Sends events server-side to PostHog's ingestion API, translating walkerOS events
   code={`npm install @walkeros/server-destination-posthog`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -81,15 +75,9 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
+<Configuration type="destination" data={data} />

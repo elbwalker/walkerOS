@@ -5,29 +5,24 @@ sidebar_position: 4
 package: '@walkeros/server-source-gcp'
 ---
 
+import data from '@walkeros/server-source-gcp/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
 <PackageLink env="server" github="packages/server/sources/gcp" npm="@walkeros/server-source-gcp" />
 
 # GCP Cloud Functions
 
-Google Cloud Functions source for walkerOS - lightweight runtime adapter for GCP services.
+Google Cloud Functions source for walkerOS. Lightweight runtime adapter with plug-and-play assignment to a Cloud Functions handler, batch processing for multiple events per request, and configurable CORS.
 
-:::info Where This Fits
-The GCP Cloud Functions Source is a **server source** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { label: 'Source', text: 'GCP', highlight: true } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { highlight: false } }}
+<WhereThisFits
+  pre={<>The GCP Cloud Functions source is a <strong>server source</strong> in the walkerOS flow:</>}
+  flowMap={{
+    sources: { default: { label: 'Source', text: 'GCP', highlight: true } },
+  }}
+  post={<>It receives events via HTTP and forwards them to your destinations.</>}
 />
-
-It receives events via HTTP and forwards them to your destinations.
-:::
-
-## Features
-
-* **Plug-and-play**: Direct assignment to Cloud Functions handler
-* **Batch processing**: Handle multiple events in single request
-* **CORS support**: Configurable cross-origin resource sharing
 
 ## Installation
 
@@ -35,8 +30,6 @@ It receives events via HTTP and forwards them to your destinations.
   code={`npm install @walkeros/server-source-gcp @google-cloud/functions-framework`}
   language="bash"
 />
-
-## Quick start
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -85,21 +78,14 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+Server sources require platform-specific handlers. For containerized deployments, see [Docker](/docs/apps/docker).
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `cors` | `boolean \| object` | `true` | CORS configuration |
-| `batch` | `boolean` | `true` | Enable batch processing |
-| `maxBatchSize` | `number` | `100` | Max events per batch |
-| `timeout` | `number` | `30000` | Request timeout (ms) |
+<Configuration type="source" data={data} />
 
 ## Request format
 
@@ -128,7 +114,7 @@ Server sources require platform-specific handlers. For containerized deployments
   language="json"
 />
 
-## Ingest Metadata
+## Ingest metadata
 
 Extract request metadata and forward it through the pipeline.
 
@@ -151,7 +137,7 @@ Extract request metadata and forward it through the pipeline.
   language="typescript"
 />
 
-### Available Ingest Paths
+### Available ingest paths
 
 | Path | Description |
 |------|-------------|

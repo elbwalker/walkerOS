@@ -7,9 +7,9 @@ package: '@walkeros/web-destination-optimizely'
 ---
 
 import data from '@walkeros/web-destination-optimizely/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Optimizely
 
@@ -20,23 +20,19 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
   status="beta"
 />
 
-[Optimizely Feature Experimentation](https://www.optimizely.com/products/experiment/feature-experimentation/) runs A/B tests and feature rollouts. This destination forwards walkerOS events to Optimizely as conversion events via the official
+[Optimizely Feature Experimentation](https://www.optimizely.com/products/experiment/feature-experimentation/)
+runs A/B tests and feature rollouts. This destination forwards walkerOS events
+to Optimizely as conversion events via the official
 [`@optimizely/optimizely-sdk`](https://www.npmjs.com/package/@optimizely/optimizely-sdk)
-v6 modular API, calling `userContext.trackEvent(eventKey, eventTags)` with optional revenue/value tags and user attributes.
+v6 modular API, calling `userContext.trackEvent(eventKey, eventTags)` with
+optional revenue/value tags and user attributes.
 
-:::info Where This Fits
-Optimizely is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Optimizely', highlight: true } }}
+<WhereThisFits
+  pre={<>Optimizely is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Optimizely', highlight: true } },
+  }}
 />
-
-Initializes the Optimizely client with polling datafile + batched event
-processor, resolves a per-event `userId` into a cached user context, and
-sends each walkerOS event as a conversion `trackEvent` call.
-:::
 
 ## Installation
 
@@ -44,8 +40,6 @@ sends each walkerOS event as a conversion `trackEvent` call.
   code={`npm install @walkeros/web-destination-optimizely`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -90,62 +84,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
-
-## Examples
-
-:::tip
-
-The examples below show input, mapping, and the resulting vendor calls.
-
-:::
-
-### Default event forwarding
-
-Every walkerOS event becomes `userContext.trackEvent(event.name, {})`
-without any mapping.
-
-<StepExample example={data.examples.step.defaultEventForwarding} />
-
-### Rename the forwarded event
-
-Use `mapping.name` to emit a different event key to Optimizely. The key
-must match an event you created in your Optimizely project.
-
-<StepExample example={data.examples.step.mappedEventName} />
-
-### Revenue tracking
-
-Map `revenue` (integer cents) and `value` (float) into `eventTags`, plus
-any additional tags. Revenue must be provided in cents. The destination
-does no conversion.
-
-<StepExample example={data.examples.step.orderCompleteRevenue} />
-
-### Per-event user attributes
-
-Use `settings.attributes` to set user attributes (audience targeting)
-before the `trackEvent` call.
-
-<StepExample example={data.examples.step.signupWithAttributes} />
-
-### Attributes only (skip track)
-
-Use `skip: true` to fire `setAttribute` calls without a `trackEvent`.
-Useful for enriching user context without logging a conversion.
-
-<StepExample example={data.examples.step.attributesOnlySkipTrack} />
+<Configuration type="destination" data={data} />
 
 ## Revenue
 

@@ -7,9 +7,9 @@ package: '@walkeros/server-destination-kafka'
 ---
 
 import data from '@walkeros/server-destination-kafka/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Apache Kafka
 
@@ -17,17 +17,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Server-side event streaming to [Apache Kafka](https://kafka.apache.org/) via the [`kafkajs`](https://kafka.js.org/) client. Each event is serialized as JSON, keyed for partition-friendly ordering, and produced to a configurable topic. Supports SASL/SSL authentication (Confluent Cloud, AWS MSK, SCRAM), configurable compression (gzip, snappy, lz4, zstd), per-rule topic and key overrides, and graceful shutdown via `destroy()`.
 
-:::info Where This Fits
-Kafka is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Apache Kafka', highlight: true } }}
+<WhereThisFits
+  pre={<>Kafka is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Apache Kafka', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector, serializes them as JSON with a partition-friendly message key, and produces them to a Kafka topic for downstream stream processing (Flink, Spark, ksqlDB, Kafka Connect, consumers).</>}
 />
-
-Receives events server-side from the collector, serializes them as JSON with a partition-friendly message key, and produces them to a Kafka topic for downstream stream processing (Flink, Spark, ksqlDB, Kafka Connect, consumers).
-:::
 
 ## Installation
 
@@ -35,8 +31,6 @@ Receives events server-side from the collector, serializes them as JSON with a p
   code={`npm install @walkeros/server-destination-kafka`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -85,16 +79,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
+<Configuration type="destination" data={data} />
 
 The destination creates a single long-lived `kafkajs` producer during `init()` and calls `producer.connect()` before accepting events. On flow hot-swap or server shutdown, `destroy()` calls `producer.disconnect()` to flush in-flight messages and close TCP connections.
 
@@ -102,13 +92,11 @@ The destination creates a single long-lived `kafkajs` producer during `init()` a
 
 Events are serialized as JSON and produced with the following structure:
 
-- **topic** -- from `settings.kafka.topic` (or `mapping.settings.topic` override)
-- **key** -- resolved from `settings.kafka.key` (or `mapping.settings.key` override) mapping path; defaults to the event name with spaces replaced by `_` (e.g. `page_view`, `order_complete`) for partition-based ordering
-- **value** -- mapped payload (when `data.map` is configured) or the full walkerOS event, `JSON.stringify()`-ed
-- **headers** -- `content-type: application/json` plus any static `settings.kafka.headers`
-- **timestamp** -- event timestamp as string (ms since epoch)
-
-<Mapping schema={data.schemas.mapping} />
+- **topic**, from `settings.kafka.topic` (or `mapping.settings.topic` override)
+- **key**, resolved from `settings.kafka.key` (or `mapping.settings.key` override) mapping path; defaults to the event name with spaces replaced by `_` (e.g. `page_view`, `order_complete`) for partition-based ordering
+- **value**, mapped payload (when `data.map` is configured) or the full walkerOS event, `JSON.stringify()`-ed
+- **headers**, `content-type: application/json` plus any static `settings.kafka.headers`
+- **timestamp**, event timestamp as string (ms since epoch)
 
 Use `mapping.settings.topic` to route specific events to dedicated topics (e.g. orders to `orders-stream`, identities to `identity-stream`). Use `mapping.settings.key` to set a key path per rule (e.g. `data.order_id` for order events).
 

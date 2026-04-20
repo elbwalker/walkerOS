@@ -6,13 +6,17 @@ package: '@walkeros/server-transformer-file'
 ---
 
 import data from '@walkeros/server-transformer-file/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # File
 
-<PackageLink env="server" github="packages/server/transformers/file" npm="@walkeros/server-transformer-file" />
+<PackageLink
+  env="server"
+  github="packages/server/transformers/file"
+  npm="@walkeros/server-transformer-file"
+/>
 
-Serves static files from a [store](/docs/getting-started/stores) backend. Reads the file by `ingest.path`, derives the Content-Type from the file extension, and responds directly. Returns `false` to stop the transformer chain.
+Serves static files from a [store](/docs/getting-started/stores) backend. Reads the file by `ingest.path`, derives the Content-Type from the file extension, and responds directly. Returns `false` to stop the transformer chain so no further transformers or destinations run for the request.
 
 ## Installation
 
@@ -20,8 +24,6 @@ Serves static files from a [store](/docs/getting-started/stores) backend. Reads 
   code={`npm install @walkeros/server-transformer-file`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -73,16 +75,12 @@ Add to your `flow.json`:
   language="json"
 />
 
-[See Bundled Mode setup &rarr;](/docs/getting-started/modes/bundled) | [CLI reference &rarr;](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="transformer"
-  configHref="/docs/transformers#configuration"
-/>
+<Configuration type="transformer" data={data} />
 
 ## How it works
 
@@ -99,9 +97,7 @@ Add to your `flow.json`:
 |-----|------|----------|-------------|
 | `store` | `Store.Instance` | Yes | Store providing file content. Without one, the transformer warns and passes through. |
 
-## Examples
-
-### Cache + file chain
+## Cache and file chain
 
 Use native cache on the file transformer to serve cached files from memory, avoiding repeated store reads:
 
@@ -132,7 +128,7 @@ Use native cache on the file transformer to serve cached files from memory, avoi
   language="json"
 />
 
-### Custom MIME types
+## Custom MIME types
 
 <CodeSnippet
   code={`{
@@ -157,4 +153,4 @@ Use native cache on the file transformer to serve cached files from memory, avoi
 
 - **[Cache](./cache)** - Add response caching before file serving
 - **[Stores](/docs/getting-started/stores)** - Configure store backends
-- **[Docker: Including files](/docs/apps/docker#including-files)** - Bake files into Docker images
+- **[Docker: including files](/docs/apps/docker#including-files)** - Bake files into Docker images

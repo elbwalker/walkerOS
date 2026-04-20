@@ -6,33 +6,23 @@ package: '@walkeros/server-source-express'
 ---
 
 import data from '@walkeros/server-source-express/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/sources/express" npm="@walkeros/server-source-express" />
 
 # Express
 
-Turn-key HTTP event collection server with Express.js. Handles JSON POST events, pixel tracking (GET), and CORS.
+Turn-key HTTP event collection server with Express.js. Runs standalone or embeds inside an existing Express app, handles JSON POST events, pixel tracking via GET with a 1x1 transparent GIF, and configurable CORS.
 
-## Features
-
-* **Standalone or embedded**: Start server automatically or integrate with existing Express app
-* **CORS support**: Configurable cross-origin resource sharing
-* **Pixel tracking**: 1x1 transparent GIF for GET requests
-
-:::info Where This Fits
-The Express Source is a **server source** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { label: 'Source', text: 'Express', highlight: true } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { highlight: false } }}
+<WhereThisFits
+  pre={<>The Express source is a <strong>server source</strong> in the walkerOS flow:</>}
+  flowMap={{
+    sources: { default: { label: 'Source', text: 'Express', highlight: true } },
+  }}
+  post={<>It receives events via HTTP (POST/GET) and forwards them to configured destinations.</>}
 />
-
-It receives events via HTTP (POST/GET) and forwards them to configured destinations.
-:::
 
 ## Installation
 
@@ -52,8 +42,6 @@ settings: { path: '/events' }
 settings: { paths: ['/events'] }
 ```
 :::
-
-## Quick start
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -87,7 +75,7 @@ const { collector } = await startFlow({
   language="typescript"
 />
 
-### App-Only Mode
+### App-only mode
 
 <CodeSnippet
   code={`const { collector } = await startFlow({
@@ -131,20 +119,14 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+Server sources require platform-specific handlers. For containerized deployments, see [Docker](/docs/apps/docker).
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="source"
-  configHref="/docs/sources#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
+<Configuration type="source" data={data} />
 
 ## HTTP methods
 
@@ -154,11 +136,11 @@ Server sources require platform-specific handlers. For containerized deployments
 | GET | `/collect` | Pixel tracking (returns 1x1 GIF) |
 | OPTIONS | `/collect` | CORS preflight |
 
-:::tip Health Checks
+:::tip Health checks
 Health check endpoints (`/health` and `/ready`) are provided by the [runner](/docs/apps/runner), not by individual sources. This means health checks work regardless of which source type you use.
 :::
 
-## Ingest Metadata
+## Ingest metadata
 
 Extract request metadata (IP, user agent, headers) and forward it through the pipeline to transformers and destinations.
 
@@ -185,7 +167,7 @@ const { collector } = await startFlow({
   language="typescript"
 />
 
-### Available Ingest Paths
+## Available ingest paths
 
 | Path | Description |
 |------|-------------|
@@ -196,7 +178,7 @@ const { collector } = await startFlow({
 | `hostname` | Request hostname |
 | `url` | Full request URL |
 
-### Advanced Mapping
+## Advanced mapping
 
 Use walkerOS mapping features for complex extraction:
 

@@ -7,9 +7,9 @@ package: '@walkeros/web-destination-amplitude'
 ---
 
 import data from '@walkeros/web-destination-amplitude/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Settings from '@site/src/components/snippets/_settings.mdx';
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Amplitude
 
@@ -25,21 +25,16 @@ experiments, and guides & surveys. This destination forwards walkerOS events
 to Amplitude via the official
 [`@amplitude/unified`](https://www.npmjs.com/package/@amplitude/unified)
 SDK, translating events into `amplitude.track(...)`, `identify(...)`,
-`revenue(...)`, `setGroup(...)`, and `setOptOut(...)` calls.
+`revenue(...)`, `setGroup(...)`, and `setOptOut(...)` calls. Loads the
+Amplitude Analytics SDK, forwards every walkerOS event, and lets you layer
+on identity, revenue, groups, consent toggling, and optional plugins.
 
-:::info Where This Fits
-Amplitude is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Amplitude', highlight: true } }}
+<WhereThisFits
+  pre={<>Amplitude is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Amplitude', highlight: true } },
+  }}
 />
-
-Loads the Amplitude Analytics SDK, forwards every walkerOS event, and lets
-you layer on identity, revenue, groups, consent toggling, and optional
-plugins.
-:::
 
 ## Installation
 
@@ -47,8 +42,6 @@ plugins.
   code={`npm install @walkeros/web-destination-amplitude`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -93,79 +86,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-All fields of Amplitude's `BrowserOptions` pass through to
-`amplitude.init(apiKey, options)`. walkerOS-specific additions are below.
-
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
-
-## Examples
-
-:::tip
-
-The examples below show input, mapping, and the resulting vendor calls.
-
-:::
-
-### Default event forwarding
-
-Every walkerOS event becomes `amplitude.track(event.name, event_properties)`.
-Without `include` config, `event_properties` is empty. Add `include: ['data']`
-to the destination config to forward event data as properties.
-
-<StepExample example={data.examples.step.defaultEventForwarding} />
-
-### User login identify
-
-Set the user ID and enrich user properties with the full operation
-vocabulary (`set`, `setOnce`, `add`, ...). Use `skip: true` to suppress
-the default track call.
-
-<StepExample example={data.examples.step.userLoginIdentify} />
-
-### Multi-product order with revenue loop
-
-Use `loop` inside `settings.revenue` to fire one `amplitude.revenue()`
-call per nested product. The order-level `track()` still fires once.
-
-<StepExample example={data.examples.step.orderCompleteMultiProduct} />
-
-### Subscription revenue
-
-Single-object revenue mapping for non-cart flows like subscription
-renewals. Currency falls back to `"EUR"` when `data.currency` is missing.
-
-<StepExample example={data.examples.step.subscriptionRenewRevenue} />
-
-### Group assignment with properties
-
-Assign a user to a group and enrich group properties in one rule.
-
-<StepExample example={data.examples.step.groupAssignmentWithProperties} />
-
-## Consent
-
-Declare the required consent keys on `config.consent`. When a walker
-consent event arrives, the destination's `on('consent')` handler toggles
-`amplitude.setOptOut()` with strict semantics: all required keys must be
-granted for opt-in, any missing grant opts out.
-
-```typescript
-config: {
-  consent: { analytics: true },
-  settings: { apiKey: 'YOUR_KEY' },
-}
-```
+<Configuration type="destination" data={data} />
 
 ## Plugins
 

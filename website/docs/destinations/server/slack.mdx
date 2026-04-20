@@ -6,9 +6,9 @@ sidebar_position: 12
 package: '@walkeros/server-destination-slack'
 ---
 import data from '@walkeros/server-destination-slack/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Slack
 
@@ -16,17 +16,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Send walkerOS events to Slack as formatted messages. Supports both Incoming Webhooks (simple, single-channel) and the Web API (multi-channel routing, threading, DMs, ephemeral messages, Block Kit).
 
-:::info Where This Fits
-Slack is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Slack', highlight: true } }}
+<WhereThisFits
+  pre={<>Slack is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Slack', highlight: true } },
+  }}
+  post={<>Turns events into Slack messages for real-time alerts, sales notifications, moderation queues, or incident routing, without coupling your product code to Slack.</>}
 />
-
-Turns events into Slack messages for real-time alerts, sales notifications, moderation queues, or incident routing, without coupling your product code to Slack.
-:::
 
 ## Installation
 
@@ -34,8 +30,6 @@ Turns events into Slack messages for real-time alerts, sales notifications, mode
   code={`npm install @walkeros/server-destination-slack`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -81,10 +75,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
+
+<Configuration type="destination" data={data} />
 
 ## Webhook vs Web API modes
 
@@ -101,14 +97,6 @@ Pick exactly one auth method per destination. Each mode trades capability for si
 | Block Kit | Yes | Yes |
 
 Use **webhooks** for a single firehose channel and minimal setup. Use the **Web API** whenever you need routing, threading, DMs, or ephemeral messages.
-
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
 
 ## Channel routing
 

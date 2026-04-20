@@ -100,67 +100,44 @@ Before publishing ANY code example:
 
 ## DRY Patterns
 
-### Settings snippet (package pages)
+### Configuration snippet (package pages)
 
-**When to use:** Any package page documenting the package-specific `settings`
-schema (destinations, sources, transformers, stores).
-
-Use the shared `<Settings />` MDX snippet so heading, notice, and PropertyTable
-stay consistent across all packages:
+**When to use:** Every package page for destinations, sources, transformers, and
+stores. The `<Configuration>` snippet owns the `## Configuration`,
+`## Settings`, `## Mapping`, and `## Examples` H2 sections. One callsite per
+page, after `## Installation`.
 
 ```mdx
 import data from '@walkeros/web-destination-gtag/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-gtag`}
+  language="bash"
 />
+
+<Configuration type="destination" data={data} />
 ```
 
-The snippet renders `## Settings`, a short notice linking to shared fields, and
-`<PropertyTable schema={...} />`. Do not hand-roll the heading or PropertyTable
-on package pages — use the snippet.
+`type` must be one of `destination`, `source`, `transformer`, `store`. `data` is
+the full `walkerOS.json` import. The snippet:
 
-**Never** use headings like `## Configuration`, `## Configuration reference`, or
-`## Config` on package pages. Those are reserved for the group-level
-shared-config reference (see below).
+- emits `## Configuration` with a short pointer to the shared group-level
+  configuration reference,
+- emits `## Settings` using `<PropertyTable schema={data.schemas.settings} />`
+  when the schema is present, otherwise a "no package-specific settings" note,
+- emits `## Mapping` using `<PropertyTable schema={data.schemas.mapping} />`
+  when present, otherwise a pointer to the standard rule fields,
+- emits `## Examples` only if `data.examples.env.init` or `data.examples.step.*`
+  is present; iterates `examples.step` and renders each through `<StepExample>`.
 
-### Mapping snippet (package pages)
-
-**When to use:** Every package page that describes a package users will
-configure through the flow (destinations, sources). Add a `<Mapping />` block so
-every page has a consistent `## Mapping` section — whether or not the package
-defines custom rule-level settings.
-
-```mdx
-import data from '@walkeros/web-destination-gtag/walkerOS.json';
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
-
-<Mapping schema={data.schemas.mapping} />
-```
-
-The snippet owns the `## Mapping` heading and a short notice. If `schema` is
-passed and exists, it renders a `<PropertyTable>`. If the package does not
-export `schemas.mapping`, the expression `data.schemas.mapping` evaluates to
-`undefined` and the snippet's ternary renders a fallback sentence ("This package
-does not define any custom rule-level settings"). Use the uniform callsite
-`<Mapping schema={data.schemas.mapping} />` on every page — no special casing.
-
-**Placement:** directly after the `<Settings />` block, before any
-`## Next Steps` / `## Related` tail section. Keep
-`<StepExample example={data.examples.step.<key>} />` interactive example blocks
-under a separate `## Examples` heading below the `<Mapping />` block — examples
-are explicitly out of scope of the snippet. Each step example (including
-`examples.step.init`, or tool-prefixed inits like `ga4Init` / `adsInit` /
-`gtmInit` for multi-tool packages) renders on its own via `<StepExample>`; the
-app derives vendor-call output from `formatOut(example.out)` in
-`@walkeros/core`.
-
-**Never** hand-author `## Event Mapping`, `## Mapping examples`,
-`## Mapping data.examples`, `## Configuration reference`, or `### Event Mapping`
-on package pages. The snippet is the only sanctioned mapping section.
+**Never** hand-roll `## Configuration`, `## Settings`, `## Mapping`, or
+`## Examples` on a package page. Place package-specific content (vendor quirks,
+advanced usage, platform-specific setup) BELOW the `<Configuration>` block with
+its own sentence-case H2 heading. Fold `## Features` bullet lists into the intro
+paragraph as prose — no `## Features` heading on package pages.
 
 ### Shared configuration reference (group index pages)
 
@@ -429,6 +406,8 @@ the package's role in the walkerOS ecosystem.
 
 ### Website Doc Template (MDX)
 
+Website docs fold features into the intro paragraph (no `## Features` heading). READMEs keep `## Features` — this template is website-only.
+
 ```mdx
 ---
 title: [Title]
@@ -436,37 +415,28 @@ description: [SEO description]
 sidebar_position: [N]
 ---
 
+import data from '@walkeros/[package]/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
 # [Title]
 
 <PackageLink package="@walkeros/[package]" />
 
-[1-sentence description]
+[1-sentence description that folds in key features as prose — no separate `## Features` heading on website docs.]
 
-## Quick Start
+## Quick start
 
 ```json
 // Flow config example (<15 lines)
 ````
 
-## Features
-
-- **Feature 1**: Description
-
 ## Installation
 
-<Tabs>
-  <TabItem value="npm" label="npm">
-    ```bash
-    npm install @walkeros/[package]
-    ```
-  </TabItem>
-</Tabs>
+<CodeSnippet code={`npm install @walkeros/[package]`} language="bash" />
 
-## Configuration
+<Configuration type="destination" data={data} />
 
-<PropertyTable schema={schemas.settings} />
-
-## Next Steps
+## Next steps
 
 - [Related guide 1](/docs/...)
 

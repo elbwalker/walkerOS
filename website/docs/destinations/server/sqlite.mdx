@@ -7,9 +7,9 @@ package: '@walkeros/server-destination-sqlite'
 ---
 
 import data from '@walkeros/server-destination-sqlite/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # SQLite
 
@@ -17,17 +17,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Persists walkerOS events to SQLite. One destination, two drivers behind a single interface: [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3) for local files (and `:memory:`), and [`@libsql/client`](https://github.com/tursodatabase/libsql-client-ts) for remote Turso / libSQL / sqld over HTTP or WebSocket. Driver selection is URL-driven; both SDKs are optional peer dependencies so you install only the one you need.
 
-:::info Where This Fits
-SQLite is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'SQLite', highlight: true } }}
+<WhereThisFits
+  pre={<>SQLite is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'SQLite', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector, serializes them into a canonical row, and inserts them into a SQLite-compatible database. Good fit for single-host deployments (local file), embedded analytics (in-memory), and edge-deployed Turso databases.</>}
 />
-
-Receives events server-side from the collector, serializes them into a canonical row, and inserts them into a SQLite-compatible database. Good fit for single-host deployments (local file), embedded analytics (in-memory), and edge-deployed Turso databases.
-:::
 
 ## Installation
 
@@ -39,8 +35,6 @@ npm install @walkeros/server-destination-sqlite better-sqlite3
 npm install @walkeros/server-destination-sqlite @libsql/client`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -87,16 +81,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
+<Configuration type="destination" data={data} />
 
 The destination opens the connection during `init()`, runs `CREATE TABLE IF NOT EXISTS` with the canonical schema (unless `schema: 'manual'`), and prepares the INSERT statement once. On `destroy()` the connection is closed cleanly. User-provided clients (wired via `env.client` or `settings.sqlite._client`) are left untouched.
 
@@ -126,13 +116,11 @@ CREATE TABLE IF NOT EXISTS events (
 
 Nested objects (`data`, `globals`, `consent`) are stored as JSON strings. `page_url` maps from `source.id`; `page_title` from `data.title`; `referrer_url` from `source.previous_id`.
 
-<Mapping schema={data.schemas.mapping} />
-
 Use `mapping.settings.table` to route specific events to a dedicated table (for example orders to `orders`, identities to `identities`).
 
 ## Drivers
 
-### Local -- `better-sqlite3`
+### Local, `better-sqlite3`
 
 Sync native driver, fastest option for single-host deployments. The URL is treated as a filesystem path; `:memory:` works too.
 
@@ -145,7 +133,7 @@ Sync native driver, fastest option for single-host deployments. The URL is treat
   language="json"
 />
 
-### Remote -- `@libsql/client`
+### Remote, `@libsql/client`
 
 Async HTTP/WSS driver for [Turso](https://turso.tech/), self-hosted [sqld](https://github.com/tursodatabase/libsql), or any libSQL-compatible endpoint. Auth via `authToken`.
 

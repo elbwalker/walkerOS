@@ -6,7 +6,7 @@ package: '@walkeros/server-store-gcs'
 ---
 
 import data from '@walkeros/server-store-gcs/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # GCS
 
@@ -20,8 +20,6 @@ Google Cloud Storage store with zero runtime dependencies. Uses raw `fetch` agai
   code={`npm install @walkeros/server-store-gcs`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -70,11 +68,7 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="store"
-  configHref="/docs/stores#configuration"
-/>
+<Configuration type="store" data={data} />
 
 ## Authentication
 
@@ -82,7 +76,7 @@ Add to your `flow.json`:
 
 When running on GCP infrastructure, omit `credentials`. The store fetches access tokens from the metadata server automatically, with no configuration needed.
 
-### Non-GCP (Service Account)
+### Non-GCP (service account)
 
 Pass a service account JSON via `$env.` reference. The store signs JWTs locally using `node:crypto` and exchanges them for access tokens via Google's OAuth2 endpoint.
 

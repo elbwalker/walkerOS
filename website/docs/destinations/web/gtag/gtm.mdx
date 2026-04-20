@@ -5,12 +5,8 @@ sidebar_position: 4
 package: '@walkeros/web-destination-gtag'
 ---
 
-import { getEvent } from '@walkeros/core';
-import destinationGtag from '@walkeros/web-destination-gtag';
 import data from '@walkeros/web-destination-gtag/walkerOS.json';
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
-
-export const destination = { ...destinationGtag, examples: data.examples };
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Google Tag Manager (GTM)
 
@@ -21,7 +17,8 @@ export const destination = { ...destinationGtag, examples: data.examples };
 />
 
 [Google Tag Manager (GTM)](https://tagmanager.google.com/) is a tool to manage
-and add third-party integrations to your website.
+and add third-party integrations to your website, configured within the
+unified gtag destination.
 
 ## Installation
 
@@ -29,8 +26,6 @@ and add third-party integrations to your website.
   code={`npm install @walkeros/web-destination-gtag`}
   language="bash"
 />
-
-## Configuration
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -43,8 +38,8 @@ await startFlow({
       config: {
         settings: {
           gtm: {
-            containerId: 'GTM-XXXXXXX', // Required
-            dataLayer: 'dataLayer', // Optional custom dataLayer name
+            containerId: 'GTM-XXXXXXX',
+            dataLayer: 'dataLayer',
           },
         },
       },
@@ -54,6 +49,4 @@ await startFlow({
   language="typescript"
 />
 
-<PropertyTable schema={data.schemas.gtm} />
-
-<Mapping schema={data.schemas.mapping} />
+<Configuration type="destination" data={data} />

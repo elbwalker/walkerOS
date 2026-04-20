@@ -6,9 +6,9 @@ sidebar_position: 18
 package: '@walkeros/server-destination-snapchat'
 ---
 import data from '@walkeros/server-destination-snapchat/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Snapchat Conversions API
 
@@ -16,17 +16,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Server-side event delivery to Snapchat's Conversions API v3 for enhanced conversion tracking, bypassing browser limitations and improving match quality for ad optimization.
 
-:::info Where This Fits
-Snapchat Conversions API is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Snapchat CAPI', highlight: true } }}
+<WhereThisFits
+  pre={<>Snapchat Conversions API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Snapchat CAPI', highlight: true } },
+  }}
+  post={<>Sends events server-side to Snapchat's Conversions API using raw HTTP (no SDK). Identity fields (`em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id`) are SHA-256 hashed before sending. Events include a stable `event_id` for deduplication with the Snap Pixel.</>}
 />
-
-Sends events server-side to Snapchat's Conversions API using raw HTTP (no SDK). Identity fields (`em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id`) are SHA-256 hashed before sending. Events include a stable `event_id` for deduplication with the Snap Pixel.
-:::
 
 ## Installation
 
@@ -34,8 +30,6 @@ Sends events server-side to Snapchat's Conversions API using raw HTTP (no SDK). 
   code={`npm install @walkeros/server-destination-snapchat`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -81,18 +75,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
+<Configuration type="destination" data={data} />
 
 ## Event mapping
 

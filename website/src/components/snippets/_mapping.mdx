@@ -1,8 +1,0 @@
-## Mapping
-
-{props.schema
-  ? 'Mapping configures per-event rules for this package and goes under config.mapping in the flow.'
-  : 'This package does not define any custom rule-level settings.'
-} For the standard rule fields (consent, condition, data, batch, name, policy) see [mapping](/docs/mapping).
-
-{props.schema && <PropertyTable schema={props.schema} />}

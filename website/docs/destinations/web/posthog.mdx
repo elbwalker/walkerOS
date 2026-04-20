@@ -7,9 +7,9 @@ package: '@walkeros/web-destination-posthog'
 ---
 
 import data from '@walkeros/web-destination-posthog/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # PostHog
 
@@ -28,18 +28,12 @@ assignments, and handling consent opt-in/opt-out. All built-in PostHog
 features (session replay, feature flags, surveys, heatmaps, exception capture)
 are available through SDK init passthrough.
 
-:::info Where This Fits
-PostHog is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'PostHog', highlight: true } }}
+<WhereThisFits
+  pre={<>PostHog is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'PostHog', highlight: true } },
+  }}
 />
-
-Loads the PostHog SDK, forwards every walkerOS event, and lets you layer on
-identity, person properties, groups, and consent handling.
-:::
 
 ## Installation
 
@@ -47,8 +41,6 @@ identity, person properties, groups, and consent handling.
   code={`npm install @walkeros/web-destination-posthog`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -93,90 +85,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
-
-## Examples
-
-:::tip
-
-The examples below show input, mapping, and the resulting vendor calls.
-
-:::
-
-### Default event forwarding
-
-Every walkerOS event becomes `posthog.capture(event.name, properties)`.
-Without `include` config, `properties` is empty. Add `include: ['data']`
-to the destination config to forward event data as properties.
-
-<StepExample example={data.examples.step.defaultEventForwarding} />
-
-### Identify with `$set` and `$set_once`
-
-Resolve a mapping value into the PostHog identity vocabulary. `distinctId` is
-the new user ID, `$set` overwrites person properties, and `$set_once` only sets
-properties that do not yet exist.
-
-<StepExample example={data.examples.step.userLoginIdentify} />
-
-### Person properties only (no identity change)
-
-When the resolved identify object has no `distinctId`, the destination calls
-`posthog.setPersonProperties(...)` instead, which is useful for profile updates that
-should not create a new identity.
-
-<StepExample example={data.examples.step.profileUpdateSetPersonProperties} />
-
-### Group assignment
-
-Resolve a group mapping into `posthog.group(type, key, properties?)` calls for
-B2B analytics by company, team, or any custom group type.
-
-<StepExample example={data.examples.step.groupAssignmentWithProperties} />
-
-### Order complete with flattened properties
-
-PostHog has no dedicated revenue API. Revenue events are regular `capture()`
-calls. Use `include: ['data', 'globals']` to flatten walkerOS sections into
-prefixed properties (`data_currency: "EUR"`, `data_total`, etc.).
-
-<StepExample example={data.examples.step.orderCompleteWithInclude} />
-
-## Consent
-
-Declare required consent keys via `config.consent`. When a `walker consent`
-event arrives with all declared keys granted, the destination calls
-`posthog.opt_in_capturing()`. When any declared key is revoked, it calls
-`posthog.opt_out_capturing()`, which stops capture, session replay, and
-survey rendering:
-
-<CodeSnippet
-  code={`destinations: {
-  posthog: {
-    code: destinationPostHog,
-    config: {
-      consent: { analytics: true },
-      settings: { apiKey: 'phc_...' },
-    },
-  },
-}`}
-  language="typescript"
-/>
-
-Without `config.consent` the destination takes no action on consent changes;
-the walkerOS `config.consent` gate still blocks unconsented events from
-reaching the destination in the first place.
+<Configuration type="destination" data={data} />
 
 ## Built-in features
 

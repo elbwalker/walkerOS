@@ -6,7 +6,7 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import data from '@walkeros/web-destination-gtag/walkerOS.json';
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Google Ads
 
@@ -18,10 +18,7 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 [Google Ads conversion tracking](https://support.google.com/google-ads/answer/1722022?hl=en)
 enables you to track conversions and measure the effectiveness of your Google
-Ads campaigns. The destination automatically sends events to Google Ads via
-`gtag` function. All you need to do is install the destination, and optionally
-map events to Google Ads' format. walkerOS takes care of loading the script and
-the function calls.
+Ads campaigns via the unified gtag destination.
 
 ## Installation
 
@@ -29,8 +26,6 @@ the function calls.
   code={`npm install @walkeros/web-destination-gtag`}
   language="bash"
 />
-
-## Configuration
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -43,8 +38,8 @@ const { elb } = await startFlow({
       config: {
         settings: {
           ads: {
-            conversionId: 'AW-XXXXXXXXX', // Required
-            currency: 'EUR', // Default currency for conversions
+            conversionId: 'AW-XXXXXXXXX',
+            currency: 'EUR',
           },
         },
         mapping: {
@@ -52,7 +47,7 @@ const { elb } = await startFlow({
             complete: {
               settings: {
                 ads: {
-                  label: 'purchase_conversion', // Conversion label for order complete
+                  label: 'purchase_conversion',
                 },
               },
             },
@@ -61,30 +56,8 @@ const { elb } = await startFlow({
       },
     },
   },
-});
-
-// Track an order complete event
-elb('order complete', {
-  id: 'order-123',
-  value: 49.99,
-  currency: 'EUR',
-  items: 2,
 });`}
   language="typescript"
 />
 
-<PropertyTable schema={data.schemas.ads} />
-
-<Mapping schema={data.schemas.mapping} />
-
-## Examples
-
-#### Init example
-
-`In` is the destination config you pass to `startFlow`; `Out` is what the destination emits when it bootstraps.
-
-<StepExample example={data.examples.step.adsInit} />
-
-### Track a Conversion Event
-
-<StepExample example={data.examples.step.googleAdsConversion} />
+<Configuration type="destination" data={data} />

@@ -59,5 +59,18 @@
       "type": "GitHub Sponsors",
       "url": "https://github.com/sponsors/elbwalker"
     }
-  ]
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    },
+    "./walkerOS.json": "./dist/walkerOS.json"
+  }
 }

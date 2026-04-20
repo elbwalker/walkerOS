@@ -7,9 +7,9 @@ package: '@walkeros/server-destination-redis'
 ---
 
 import data from '@walkeros/server-destination-redis/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Redis Streams
 
@@ -17,17 +17,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Server-side event streaming to [Redis Streams](https://redis.io/docs/latest/develop/data-types/streams/) via the [`ioredis`](https://github.com/redis/ioredis) client. Each event is appended to a configurable stream via `XADD`, with optional approximate MAXLEN trimming for bounded memory usage, JSON or flat serialization modes, and graceful shutdown via `destroy()`.
 
-:::info Where This Fits
-Redis Streams is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Redis Streams', highlight: true } }}
+<WhereThisFits
+  pre={<>Redis Streams is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Redis Streams', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector, serializes them as JSON (or flat fields), and appends them to a Redis Stream for downstream consumers (stream processors, worker queues, pub/sub fan-out, XREAD consumer groups).</>}
 />
-
-Receives events server-side from the collector, serializes them as JSON (or flat fields), and appends them to a Redis Stream for downstream consumers (stream processors, worker queues, pub/sub fan-out, XREAD consumer groups).
-:::
 
 ## Installation
 
@@ -35,8 +31,6 @@ Receives events server-side from the collector, serializes them as JSON (or flat
   code={`npm install @walkeros/server-destination-redis`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -85,16 +79,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
+<Configuration type="destination" data={data} />
 
 The destination creates a single long-lived `ioredis` client during `init()`. On flow hot-swap or server shutdown, `destroy()` calls `client.quit()` to flush in-flight commands and close the TCP connection gracefully. User-provided clients (wired in via `_client`) are left untouched.
 
@@ -102,12 +92,10 @@ The destination creates a single long-lived `ioredis` client during `init()`. On
 
 Each event is appended via `XADD <streamKey> [MAXLEN [~] <n>] * <field> <value> ...`:
 
-- **streamKey** -- from `settings.redis.streamKey` (or `mapping.settings.streamKey` override)
-- **`*`** -- auto-generated entry ID (ms-timestamp + sequence)
-- **fields** -- in `json` mode: single `event` field with the full event JSON-stringified; in `flat` mode: top-level event keys as separate fields (nested objects JSON-encoded)
-- **MAXLEN** -- when `settings.redis.maxLen` is set, trims the stream to ~N entries. Approximate (`~`) by default; set `exactTrimming: true` to trim exactly (slower)
-
-<Mapping schema={data.schemas.mapping} />
+- **streamKey**: from `settings.redis.streamKey` (or `mapping.settings.streamKey` override)
+- **`*`**: auto-generated entry ID (ms-timestamp + sequence)
+- **fields**: in `json` mode, a single `event` field with the full event JSON-stringified; in `flat` mode, top-level event keys as separate fields (nested objects JSON-encoded)
+- **MAXLEN**: when `settings.redis.maxLen` is set, trims the stream to ~N entries. Approximate (`~`) by default; set `exactTrimming: true` to trim exactly (slower)
 
 Use `mapping.settings.streamKey` to route specific events to dedicated streams (e.g. orders to `walkeros:orders`, identities to `walkeros:identities`).
 
@@ -115,7 +103,7 @@ Use `mapping.settings.streamKey` to route specific events to dedicated streams (
 
 ### JSON (default)
 
-Stores the full walkerOS event as a single `event` field. Easiest to consume -- decode with `JSON.parse()`.
+Stores the full walkerOS event as a single `event` field. Easiest to consume, decode with `JSON.parse()`.
 
 ```
 XADD walkeros:events * event '{"entity":"page","action":"view",...}'
@@ -191,4 +179,4 @@ Redis Streams grow unbounded by default. For high-volume pipelines, cap stream l
   language="json"
 />
 
-Approximate trimming (`~`) is used by default -- Redis trims to "about N" entries with minimal overhead. For exact trimming, set `exactTrimming: true` (slower, use only when strict bounds are required).
+Approximate trimming (`~`) is used by default. Redis trims to "about N" entries with minimal overhead. For exact trimming, set `exactTrimming: true` (slower, use only when strict bounds are required).

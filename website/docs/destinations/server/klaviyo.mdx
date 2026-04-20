@@ -6,9 +6,9 @@ sidebar_position: 14
 package: '@walkeros/server-destination-klaviyo'
 ---
 import data from '@walkeros/server-destination-klaviyo/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Klaviyo
 
@@ -16,17 +16,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Server-side event delivery to [Klaviyo](https://www.klaviyo.com/) via the official [`klaviyo-api`](https://www.npmjs.com/package/klaviyo-api) SDK. Tracks events with `EventsApi.createEvent()` and manages profiles with `ProfilesApi.createOrUpdateProfile()`, including revenue tracking, ecommerce metric name mapping, and identify state diffing.
 
-:::info Where This Fits
-Klaviyo is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Klaviyo', highlight: true } }}
+<WhereThisFits
+  pre={<>Klaviyo is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Klaviyo', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector, resolves a profile identifier (email, externalId, or phoneNumber), optionally upserts the profile, then forwards the event to Klaviyo for flows, segmentation, and campaigns.</>}
 />
-
-Receives events server-side from the collector, resolves a profile identifier (email, externalId, or phoneNumber), optionally upserts the profile, then forwards the event to Klaviyo for flows, segmentation, and campaigns.
-:::
 
 ## Installation
 
@@ -34,8 +30,6 @@ Receives events server-side from the collector, resolves a profile identifier (e
   code={`npm install @walkeros/server-destination-klaviyo`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -78,22 +72,16 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
+<Configuration type="destination" data={data} />
 
-<Mapping schema={data.schemas.mapping} />
+Identity is resolved automatically from each event: `email` defaults to `user.email` and `externalId` defaults to `user.id`. Klaviyo requires at least one identifier (`email`, `phoneNumber`, or `externalId`) per event. Events without any identifier are skipped with a warning.
 
-Identity is resolved automatically from each event: `email` defaults to `user.email` and `externalId` defaults to `user.id`. Klaviyo requires at least one identifier (`email`, `phoneNumber`, or `externalId`) per event -- events without any identifier are skipped with a warning.
-
-## Revenue Tracking
+## Revenue tracking
 
 Map a mapping rule's `settings.value` to a numeric event property. When `settings.currency` is also set, the destination adds `valueCurrency` on the Klaviyo event for revenue reporting.
 

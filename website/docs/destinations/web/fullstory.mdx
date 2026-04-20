@@ -7,9 +7,9 @@ package: '@walkeros/web-destination-fullstory'
 ---
 
 import data from '@walkeros/web-destination-fullstory/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # FullStory
 
@@ -27,19 +27,12 @@ FullStory via the official
 v2, calling `FullStory('trackEvent', ...)` for events and supporting
 identity, user/page properties, and consent gating via `start`/`shutdown`.
 
-:::info Where This Fits
-FullStory is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'FullStory', highlight: true } }}
+<WhereThisFits
+  pre={<>FullStory is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'FullStory', highlight: true } },
+  }}
 />
-
-Loads the FullStory SDK, forwards every walkerOS event as
-`FullStory('trackEvent', { name, properties })`, and lets you layer on
-identity, user/page properties, and consent.
-:::
 
 ## Installation
 
@@ -47,8 +40,6 @@ identity, user/page properties, and consent.
   code={`npm install @walkeros/web-destination-fullstory`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -91,59 +82,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
-
-## Examples
-
-:::tip
-
-The examples below show input, mapping, and the resulting vendor calls.
-
-:::
-
-### Default event forwarding
-
-Every walkerOS event becomes `FullStory('trackEvent', { name, properties })`
-without any mapping.
-
-<StepExample example={data.examples.step.defaultEventForwarding} />
-
-### Rename the forwarded event
-
-Use `mapping.name` to emit a different name to FullStory.
-
-<StepExample example={data.examples.step.mappedEventName} />
-
-### Identify
-
-Resolve a mapping value into `{ uid, properties }` and call
-`FullStory('setIdentity', ...)` before the event.
-
-<StepExample example={data.examples.step.userLoginIdentify} />
-
-### Set user properties
-
-Persist user-level properties across sessions via `FullStory('setProperties', { type: 'user', ... })`.
-
-<StepExample example={data.examples.step.setUserProperties} />
-
-### Set page properties
-
-Use `setType: 'page'` with `skip: true` to push page-scoped metadata
-without firing an extra event.
-
-<StepExample example={data.examples.step.setPageProperties} />
+<Configuration type="destination" data={data} />
 
 ## Consent
 

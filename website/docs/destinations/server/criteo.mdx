@@ -6,9 +6,9 @@ sidebar_position: 19
 package: '@walkeros/server-destination-criteo'
 ---
 import data from '@walkeros/server-destination-criteo/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Criteo Events API
 
@@ -16,17 +16,13 @@ import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 Server-side event delivery to Criteo's Events API (S2S v0) for reliable retargeting, bypassing browser limitations and providing consistent user matching for ad optimization.
 
-:::info Where This Fits
-Criteo Events API is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Criteo Events API', highlight: true } }}
+<WhereThisFits
+  pre={<>Criteo Events API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Criteo Events API', highlight: true } },
+  }}
+  post={<>Sends events server-side to Criteo using raw HTTP (no SDK). Authentication is in-payload (`account` = Partner ID, `id.mapping_key` = Caller ID). Emails are hashed into MD5, SHA-256, and SHA-256(MD5) before sending.</>}
 />
-
-Sends events server-side to Criteo using raw HTTP (no SDK). Authentication is in-payload (`account` = Partner ID, `id.mapping_key` = Caller ID). Emails are hashed into MD5, SHA-256, and SHA-256(MD5) before sending.
-:::
 
 ## Installation
 
@@ -34,8 +30,6 @@ Sends events server-side to Criteo using raw HTTP (no SDK). Authentication is in
   code={`npm install @walkeros/server-destination-criteo`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -81,18 +75,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
+<Configuration type="destination" data={data} />
 
 ## Event mapping
 

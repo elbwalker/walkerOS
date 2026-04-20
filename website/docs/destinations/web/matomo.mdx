@@ -7,9 +7,9 @@ package: '@walkeros/web-destination-matomo'
 ---
 
 import data from '@walkeros/web-destination-matomo/walkerOS.json';
-import Settings from '@site/src/components/snippets/_settings.mdx';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-import Mapping from '@site/src/components/snippets/_mapping.mdx';
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Matomo
 
@@ -26,18 +26,12 @@ walkerOS events to Matomo via the `_paq` command queue with support for page
 views, custom events, ecommerce, goals, site search, content tracking, and
 custom dimensions.
 
-:::info Where This Fits
-Matomo is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Matomo', highlight: true } }}
+<WhereThisFits
+  pre={<>Matomo is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Matomo', highlight: true } },
+  }}
 />
-
-Loads the Matomo tracking script, configures the tracker URL and site ID, and
-sends page views and custom events with GDPR-compliant analytics.
-:::
 
 ## Installation
 
@@ -45,8 +39,6 @@ sends page views and custom events with GDPR-compliant analytics.
   code={`npm install @walkeros/web-destination-matomo`}
   language="bash"
 />
-
-## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -62,8 +54,8 @@ await startFlow({
       config: {
         loadScript: true,
         settings: {
-          siteId: '1', // Required
-          url: 'https://analytics.example.com/', // Required
+          siteId: '1',
+          url: 'https://analytics.example.com/',
         },
       },
     },
@@ -93,67 +85,9 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-#### Init example
-
-`In` is the destination config you pass to `startFlow`; `Out` is what the destination emits when it bootstraps.
-
-<StepExample example={data.examples.step.init} />
-
-<Mapping schema={data.schemas.mapping} />
-
-## Examples
-
-The examples below show input, mapping, and the resulting vendor calls.
-
-### Page View
-
-Default handling -- no mapping needed.
-
-<StepExample example={data.examples.step.pageView} />
-
-### Custom Event with Goal
-
-Map a walkerOS event to a Matomo `trackEvent` call with a `trackGoal` alongside.
-
-<StepExample example={data.examples.step.customEvent} />
-
-### Product Detail View
-
-Map a walkerOS product view to an
-&nbsp;<Link to="https://developer.matomo.org/api-reference/tracking-javascript#ecommerce">ecommerceProductDetailView</Link>
-call.
-
-<StepExample example={data.examples.step.productDetailView} />
-
-### Ecommerce Cart Update
-
-Map a walkerOS `cart view` event to an
-&nbsp;<Link to="https://developer.matomo.org/api-reference/tracking-javascript#ecommerce">trackEcommerceCartUpdate</Link>
-call.
-
-<StepExample example={data.examples.step.ecommerceCartUpdate} />
-
-### Ecommerce Order
-
-Map a walkerOS `order complete` event to an
-&nbsp;<Link to="https://developer.matomo.org/api-reference/tracking-javascript#ecommerce">trackEcommerceOrder</Link>
-call.
-
-<StepExample example={data.examples.step.ecommerceOrder} />
-
-### Site Search
-
-Track internal site search via `trackSiteSearch`.
-
-<StepExample example={data.examples.step.siteSearch} />
+<Configuration type="destination" data={data} />
