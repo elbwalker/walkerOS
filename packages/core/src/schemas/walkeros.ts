@@ -91,7 +91,13 @@ export const SourceTypeSchema = z
  */
 export const ConsentSchema = z
   .record(z.string(), z.boolean())
-  .describe('Consent requirement mapping (group name → state)');
+  .meta({
+    id: 'WalkerOSConsent',
+    title: 'WalkerOS.Consent',
+    description:
+      'Consent state mapping. Keys are consent groups (e.g. marketing, functional), values are booleans for granted/denied.',
+  })
+  .describe('Consent requirement mapping (group name to state)');
 
 /**
  * User - User identification and attributes

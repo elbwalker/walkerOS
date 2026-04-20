@@ -14,19 +14,17 @@ import Settings from '@site/src/components/snippets/_settings.mdx';
 
 Validates events using JSON Schema with two modes: **format** (structure) and **contract** (business rules).
 
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-Install the package:
+## Installation
 
 <CodeSnippet
   code={`npm install @walkeros/transformer-validator`}
   language="bash"
 />
 
-Configure in your code:
+## Configuration
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';

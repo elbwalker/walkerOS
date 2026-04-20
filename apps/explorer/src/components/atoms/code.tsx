@@ -8,7 +8,11 @@ import React, {
 import { Editor, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { registerAllThemes } from '../../themes';
-import { registerWalkerOSTypes } from '../../utils/monaco-types';
+import {
+  configureMonacoTypeScript,
+  registerWalkerOSAmbients,
+  registerWalkerOSTypes,
+} from '../../utils/monaco-types';
 import {
   applyDataElbDecorations,
   registerDataElbStyles,
@@ -37,6 +41,24 @@ import { useGridHeight } from '../../contexts/GridHeightContext';
 // by the consuming application. See examples in the explorer app's main.tsx
 import type * as monaco from 'monaco-editor';
 import type { IntelliSenseContext } from '../../types/intellisense';
+
+// Run Monaco base setup exactly once at module load — before any <Editor>
+// mounts. Doing this during `beforeMount` of an editor invalidates any
+// in-flight TypeScript worker operations from sibling editors mounted in
+// parallel, which leak as `{ type: 'cancelation' }` unhandled rejections.
+if (typeof window !== 'undefined') {
+  loader
+    .init()
+    .then((m) => {
+      configureMonacoTypeScript(m);
+      registerWalkerOSAmbients(m);
+    })
+    .catch((err) => {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[walkerOS] Monaco loader.init() failed:', err);
+      }
+    });
+}
 
 export interface CodeProps {
   code: string;
@@ -284,9 +306,12 @@ export function Code({
   const onMarkerCountsRef = useRef(onMarkerCounts);
   onMarkerCountsRef.current = onMarkerCounts;
 
-  // Generate stable model path on first render if jsonSchema is provided
-  if ((jsonSchema || intellisenseContext) && !modelPathRef.current) {
-    modelPathRef.current = generateModelPath();
+  // Always generate a stable model path with a language-appropriate extension.
+  // Monaco's TypeScript worker uses the extension to decide TS vs TSX vs JS
+  // parsing. Without this, all snippets default to `.json` paths and TS
+  // diagnostics misbehave on any non-JSON content.
+  if (!modelPathRef.current) {
+    modelPathRef.current = generateModelPath(language);
   }
 
   // Register/update JSON schema when it changes
@@ -329,6 +354,10 @@ export function Code({
     // Always run built-in setup
     registerAllThemes(monaco);
     registerFormatters(monaco);
+
+    // Monaco base setup (compiler options + ambient globals) runs once at
+    // module load via `loader.init()`. The WeakSet guards inside those
+    // functions make them no-ops here even if called again.
 
     if (packages && packages.length > 0) {
       registerWalkerOSTypes(monaco);

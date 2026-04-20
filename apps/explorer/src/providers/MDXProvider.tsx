@@ -3,8 +3,6 @@ import { MDXProvider as BaseMDXProvider } from '@mdx-js/react';
 import { MDXCode } from '../components/atoms/mdx-code';
 import { CodeBox } from '../components/molecules/code-box';
 import { PropertyTable } from '../components/molecules/property-table';
-import { DestinationInitDemo } from '../components/demos/DestinationInitDemo';
-import { DestinationDemo } from '../components/demos/DestinationDemo';
 
 /**
  * MDXProvider - Makes components available in MDX files without explicit imports
@@ -21,8 +19,6 @@ import { DestinationDemo } from '../components/demos/DestinationDemo';
  * Available components (no import needed):
  * - CodeBox: Monaco editor for code display (also auto-used for ```code blocks)
  * - PropertyTable: Display schema-based property documentation
- * - DestinationInitDemo: Interactive demo for destination initialization
- * - DestinationDemo: Interactive demo for destination event processing
  *
  * @example
  * // Wrap your app
@@ -51,8 +47,6 @@ export const MDXProvider: FC<PropsWithChildren> = ({ children }) => {
     // Explorer components (no import needed in MDX)
     CodeBox,
     PropertyTable,
-    DestinationInitDemo,
-    DestinationDemo,
   };
 
   return <BaseMDXProvider components={components}>{children}</BaseMDXProvider>;

@@ -45,7 +45,7 @@ sends each walkerOS event as a conversion `trackEvent` call.
   language="bash"
 />
 
-## Setup
+## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -128,7 +128,7 @@ must match an event you created in your Optimizely project.
 ### Revenue tracking
 
 Map `revenue` (integer cents) and `value` (float) into `eventTags`, plus
-any additional tags. Revenue must be provided in cents — the destination
+any additional tags. Revenue must be provided in cents. The destination
 does no conversion.
 
 <StepExample example={data.examples.step.orderCompleteRevenue} />
@@ -151,15 +151,15 @@ Useful for enriching user context without logging a conversion.
 
 Optimizely expects revenue as an **integer in cents** (e.g. `7281` =
 `$72.81`). The destination passes the resolved value through without
-conversion — the caller must provide cents.
+conversion. The caller must provide cents.
 
 ## Consent
 
 Two layers protect event delivery:
 
-1. **`config.consent`** — walkerOS gates delivery. Events are queued
+1. **`config.consent`**: walkerOS gates delivery. Events are queued
    until required consent keys resolve to `true`.
-2. **`on('consent')`** — the destination closes the Optimizely client
+2. **`on('consent')`**: the destination closes the Optimizely client
    (flushing queued events and stopping datafile polling) when any
    required key flips to `false`. On re-grant, the next push re-initializes
    the client.
@@ -182,6 +182,6 @@ Two layers protect event delivery:
 
 ## Feature flags / decide()
 
-This destination intentionally does **not** expose `decide()` — experiment
+This destination intentionally does **not** expose `decide()`. Experiment
 decisions belong in application code where UI branching happens. This
 package covers the outbound conversion-tracking use case.

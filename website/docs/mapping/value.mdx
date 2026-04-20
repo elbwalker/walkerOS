@@ -1,0 +1,295 @@
+---
+title: Value
+description: The polymorphic primitive you put into any mapping field
+sidebar_position: 1
+---
+
+import { getMappingValue } from '@walkeros/core';
+
+export const parseInput = (code, scope = {}) => {
+  const codeStr = String(code);
+  return new Function(
+    ...Object.keys(scope),
+    `"use strict"; return (async () => { return ${codeStr} })()`,
+  )(...Object.values(scope));
+};
+
+export const logValue = async (input, config, log) => {
+  log(await parseInput(input, { getMappingValue }));
+};
+
+# Mapping.Value
+
+`Mapping.Value` is what you put into any mapping field that expects a value:
+`data`, every entry under `map`, entries in `set[]`, keys under `policy`, and
+anywhere a destination rule field accepts `any`. It is polymorphic: a value can
+be a simple string path, an object with one of several transforming keys, or an
+array of those. The shape is defined in
+[`packages/core/src/types/mapping.ts`](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/types/mapping.ts)
+as `Value = ValueType | Array<ValueType>`, where `ValueType` is either a string
+(path) or a `ValueConfig` object.
+
+## Options
+
+| Form                            | Shape                                     | What / When                                                                                   |
+| ------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [Path](#path)                   | `string`                                  | Reads a dot-path from the event. Use for copying raw fields straight into the output.         |
+| [Constant](#constant)           | `{ value }`                               | Emits a fixed value. Use when the destination needs a literal like a currency, ID, or label.  |
+| [Map](#map)                     | `{ map: { key: Value, … } }`              | Builds an object from multiple paths. Use when the destination expects a structured payload.  |
+| [Loop](#loop)                   | `{ loop: [source, Value] }`               | Iterates an array source and transforms each item. Use for nested product, cart, or item lists. |
+| [Set](#set)                     | `{ set: [Value, Value, …] }`              | Picks the first defined value from a list. Use as a fallback chain like email then user_id.   |
+| [Fn](#fn)                       | `{ fn: (event, mapping, options) => … }` | Runs a custom function on the event. Use only when no declarative form fits.                  |
+| [Condition](#condition)         | `{ condition, value }`                    | Gates the value on a predicate. Use for branching logic inside a single rule.                 |
+| [Consent](#consent)             | `{ consent: {…}, value }`                 | Gates the value on consent states. Use to make individual fields privacy-aware.               |
+
+All `ValueConfig` keys can be combined on the same object: `key`, `condition`,
+`consent`, `validate` act as filters; `value`, `fn`, `map`, `loop`, `set`
+produce output.
+
+## Path
+
+Extract a value by dot-path from the event.
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`
+await getMappingValue(
+  { user: { id: '12345', name: 'John' } },
+  'user.id'
+);`}
+  output={`"12345"`}
+  fn={logValue}
+/>
+
+Paths also index into arrays:
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`
+await getMappingValue(
+  { products: ['laptop', 'mouse', 'keyboard'] },
+  'products.0'
+);`}
+  output={`"laptop"`}
+  fn={logValue}
+/>
+
+## Constant
+
+Return a fixed value, independent of the event.
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`
+await getMappingValue(
+  { name: 'page view' },
+  { value: 'pageview' }
+);`}
+  output={`"pageview"`}
+  fn={logValue}
+/>
+
+## Map
+
+Build an object by mapping keys to their own `Mapping.Value`.
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`await getMappingValue(
+  {
+    product: { id: 'P123', name: 'Laptop', price: 999 },
+    user: { id: 'U456' }
+  },
+  {
+    map: {
+      item_id: 'product.id',
+      item_name: 'product.name',
+      value: 'product.price',
+      user_id: 'user.id',
+      currency: { value: 'USD' },
+    }
+  }
+);`}
+  output={`{
+  item_id: "P123",
+  item_name: "Laptop",
+  value: 999,
+  user_id: "U456",
+  currency: "USD"
+}`}
+  fn={logValue}
+/>
+
+## Loop
+
+Iterate an array source and transform each element. `loop: [source, value]`:
+`source` selects the array (a path, or `'this'` for the event itself), `value`
+transforms each item.
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`await getMappingValue(
+  {
+    products: [
+      { id: 'P1', name: 'Laptop' },
+      { id: 'P2', name: 'Mouse' }
+    ]
+  },
+  {
+    loop: [
+      'products',
+      { map: { item_id: 'id', item_name: 'name' } }
+    ]
+  }
+);`}
+  output={`[
+  { item_id: "P1", item_name: "Laptop" },
+  { item_id: "P2", item_name: "Mouse" }
+]`}
+  fn={logValue}
+/>
+
+## Set
+
+Try each value in order and return the first defined result. Useful as a
+fallback chain.
+
+```typescript
+{ set: ['data.email', 'user.email', { value: 'anonymous' }] }
+```
+
+## Fn
+
+Run a custom function. The handler receives `(event, mapping, options)` and may
+return a promise.
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`await getMappingValue(
+  { user: { email: 'john@example.com' } },
+  {
+    fn: (event) => event.user.email.split('@')[1]
+  }
+);`}
+  output={`"example.com"`}
+  fn={logValue}
+/>
+
+## Condition
+
+Only produce output when `condition(event)` returns truthy.
+
+```typescript
+{
+  condition: (event) => event.data?.value > 50,
+  value: 'high_value',
+}
+```
+
+## Consent
+
+Only produce output when the required consent states are granted on the event.
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`await getMappingValue(
+  {
+    email: 'john@example.com',
+    consent: { marketing: false, functional: true }
+  },
+  {
+    key: 'email',
+    consent: { marketing: true }
+  }
+);`}
+  emptyText={`// undefined
+// 'marketing' consent is false on the event, so the value is dropped.
+// Flip consent.marketing to true in the input to see 'john@example.com'.`}
+  outputLanguage="javascript"
+  fn={logValue}
+/>
+
+## Validate
+
+`validate` is a filter, not a form. Combine it with any value-producing key.
+The function runs on the produced value; if it returns falsy the result is
+dropped (`undefined`).
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`await getMappingValue(
+  { email: 'john@example.com' },
+  {
+    key: 'email',
+    validate: (value) => typeof value === 'string' && value.includes('@')
+  }
+);`}
+  output={`"john@example.com"`}
+  fn={logValue}
+/>
+
+## Policy
+
+A policy is a record of `Mapping.Value`s applied to the event before the rule
+runs. The key is the path the result writes into; the value is any form above.
+
+**Config-level policy** applies to every event handled by the source or
+destination:
+
+<CodeSnippet
+  code={`{
+  config: {
+    policy: {
+      'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
+      'data.timestamp': { fn: () => Date.now() },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+**Event-level policy** applies only inside the matched rule:
+
+<CodeSnippet
+  code={`{
+  config: {
+    mapping: {
+      product: {
+        view: {
+          name: 'view_item',
+          policy: {
+            'data.id': { fn: (e) => \`PRODUCT_\${e.data?.id}\` },
+          },
+        },
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+Processing order: config policy → event matching → event policy → data
+transformation.
+
+## See also
+
+- [Mapping.Rule](./rule.mdx): the rule object that composes values
+- [`getMappingValue` API](./rule.mdx#getmappingvalue): programmatic value
+  resolution
+- [Consent guide](/docs/guides/consent): consent model in depth

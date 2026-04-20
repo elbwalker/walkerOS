@@ -24,19 +24,17 @@ In-process key-value store with LRU eviction, TTL expiration, and namespace supp
 | Sharing state across browser tabs | Not memory: use a server store |
 | Persisting data across server restarts | [Filesystem](./server/fs) or [S3](./server/s3) |
 
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-Install the package:
+## Installation
 
 <CodeSnippet
   code={`npm install @walkeros/store-memory`}
   language="bash"
 />
 
-Configure in your code:
+## Configuration
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';

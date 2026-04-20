@@ -35,7 +35,7 @@ Receives events server-side from the collector and forwards them to mParticle's 
   language="bash"
 />
 
-## Setup
+## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -101,7 +101,7 @@ The `apiKey` and `apiSecret` come from an mParticle **input feed** (Setup → In
 
 ## Identities and attributes
 
-- `userIdentities` — map walkerOS event fields to mParticle identity types (`customer_id`, `email`, `other`, …).
-- `userAttributes` — resolved from each event and placed on the batch's `user_attributes` object.
-- `consent` — forwarded verbatim as `consent_state` on the batch.
-- `sourceRequestId` — defaults to `event.id` if unset; used by mParticle for deduplication.
+- `userIdentities`: map walkerOS event fields to mParticle identity types (`customer_id`, `email`, `other`, …).
+- `userAttributes`: resolved from each event and placed on the batch's `user_attributes` object.
+- `consent`: forwarded verbatim as `consent_state` on the batch.
+- `sourceRequestId`: defaults to `event.id` if unset; used by mParticle for deduplication.

@@ -46,12 +46,27 @@ export function resetMonacoJson(): void {
   idCounter = 0;
 }
 
+const EXTENSION_BY_LANGUAGE: Record<string, string> = {
+  typescript: 'ts',
+  javascript: 'js',
+  typescriptreact: 'tsx',
+  javascriptreact: 'jsx',
+  json: 'json',
+  html: 'html',
+  css: 'css',
+  markdown: 'md',
+};
+
 /**
  * Generate a unique model path for a Code instance.
+ * Extension matches the language so Monaco's TypeScript worker treats `.tsx`
+ * files as TSX, `.ts` files as TS, etc. Without this, all snippets live on
+ * `.json` paths and TypeScript diagnostics misbehave.
  * Used as the `path` prop for @monaco-editor/react Editor.
  */
-export function generateModelPath(): string {
-  return `inmemory://walkeros/json-${++idCounter}.json`;
+export function generateModelPath(language = 'json'): string {
+  const ext = EXTENSION_BY_LANGUAGE[language] ?? 'txt';
+  return `inmemory://walkeros/model-${++idCounter}.${ext}`;
 }
 
 /**

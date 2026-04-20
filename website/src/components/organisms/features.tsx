@@ -28,7 +28,7 @@ const tagger = createTagger();
 
 type Product = { id: string; name: string };
 
-function ProductDetail({ product }: { product: Product }) {
+export function ProductDetail({ product }: { product: Product }) {
   return (
     <div
       {...tagger()
@@ -48,9 +48,7 @@ function ProductDetail({ product }: { product: Product }) {
 }`;
 
 const webCode = `// Map GA4 dataLayer event to walkerOS
-import type { Mapping } from '@walkeros/core';
-
-export const add_to_cart: Mapping.Rule = {
+const add_to_cart = {
   name: 'product add',
   data: {
     map: {
@@ -63,9 +61,7 @@ export const add_to_cart: Mapping.Rule = {
 
 const serverCode = `// Map Express /collect request to walkerOS
 // GET /collect?event=addToCart&data[itemId]=123&data[amount]=49.99
-import type { Mapping } from '@walkeros/core';
-
-export const addToCart: Mapping.Rule = {
+const addToCart = {
   name: 'product add',
   data: {
     map: {

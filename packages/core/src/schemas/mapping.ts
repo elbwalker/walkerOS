@@ -39,15 +39,22 @@ let ValueConfigSchemaLazy: z.ZodTypeAny;
  *
  * Recursive structure allows nested transformations
  */
-export const ValueSchema: z.ZodTypeAny = z.lazy(() =>
-  z.union([
-    z.string().describe('String value or property path (e.g., "data.id")'),
-    z.number().describe('Numeric value'),
-    z.boolean().describe('Boolean value'),
-    z.lazy(() => ValueConfigSchemaLazy),
-    z.array(ValueSchema).describe('Array of values'),
-  ]),
-);
+export const ValueSchema: z.ZodTypeAny = z
+  .lazy(() =>
+    z.union([
+      z.string().describe('String value or property path (e.g., "data.id")'),
+      z.number().describe('Numeric value'),
+      z.boolean().describe('Boolean value'),
+      z.lazy(() => ValueConfigSchemaLazy),
+      z.array(ValueSchema).describe('Array of values'),
+    ]),
+  )
+  .meta({
+    id: 'MappingValue',
+    title: 'Mapping.Value',
+    description:
+      'Polymorphic transform primitive used in every mapping field. A string path, constant, operator object (map/loop/set/condition/consent), or array of values.',
+  });
 
 /**
  * Values - Array of Value objects
@@ -203,11 +210,20 @@ export const PolicySchema = z
  */
 export const RuleSchema = z
   .object({
-    batch: z
-      .number()
+    name: z
+      .string()
       .optional()
-      .describe('Batch size: bundle N events for batch processing'),
-    // Note: batchFn and batched are runtime functions, not serializable
+      .describe(
+        'Custom event name override (e.g., "view_item" for "product view")',
+      ),
+    data: z
+      .union([ValueSchema, ValuesSchema])
+      .optional()
+      .describe('Data transformation rules for event'),
+    settings: z
+      .any()
+      .optional()
+      .describe('Destination-specific settings for this event mapping'),
     condition: z
       .string()
       .optional()
@@ -215,27 +231,38 @@ export const RuleSchema = z
     consent: ConsentSchema.optional().describe(
       'Required consent states to process this event',
     ),
-    settings: z
-      .any()
-      .optional()
-      .describe('Destination-specific settings for this event mapping'),
-    data: z
-      .union([ValueSchema, ValuesSchema])
-      .optional()
-      .describe('Data transformation rules for event'),
-    ignore: z
-      .boolean()
-      .optional()
-      .describe('Set to true to skip processing this event'),
-    name: z
-      .string()
-      .optional()
-      .describe(
-        'Custom event name override (e.g., "view_item" for "product view")',
-      ),
     policy: PolicySchema.optional().describe(
       'Event-level policy overrides (applied after config-level policy)',
     ),
+    batch: z
+      .number()
+      .optional()
+      .describe('Batch size: bundle N events for batch processing'),
+    // Note: batchFn and batched are runtime functions, not serializable
+    include: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Event sections (e.g. ["context", "globals"]) flattened into context.data',
+      ),
+    ignore: z
+      .boolean()
+      .optional()
+      .describe(
+        'Skip the event entirely. No push, no side effects. Use for suppression.',
+      ),
+    skip: z
+      .boolean()
+      .optional()
+      .describe(
+        'Run side effects (settings.identify, ...) but skip the default push call.',
+      ),
+  })
+  .meta({
+    id: 'MappingRule',
+    title: 'Mapping.Rule',
+    description:
+      'Configuration for transforming a single event at one stage of the flow (source or destination).',
   })
   .describe('Mapping rule for specific entity-action combination');
 

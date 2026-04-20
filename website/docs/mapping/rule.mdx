@@ -1,0 +1,274 @@
+---
+title: Rule
+description: How a destination rule composes values into a complete transform
+sidebar_position: 2
+---
+
+import { getMappingEvent, getMappingValue } from '@walkeros/core';
+import { schemas } from '@walkeros/core/dev';
+
+export const parseInput = (code, scope = {}) => {
+  const codeStr = String(code);
+  return new Function(
+    ...Object.keys(scope),
+    `"use strict"; return (async () => { return ${codeStr} })()`,
+  )(...Object.values(scope));
+};
+
+export const logEvent = async (input, config, log) => {
+  log(await parseInput(input, { getMappingEvent }));
+};
+
+# Mapping.Rule
+
+A `Mapping.Rule` is the object that sits at
+`config.mapping[entity][action]` on a source or destination. It decides whether
+an event applies, renames it, reshapes its data, gates it by consent, and can
+emit side effects (batching, custom settings). The shape is defined in
+[`packages/core/src/types/mapping.ts`](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/types/mapping.ts).
+
+## Configuration
+
+<PropertyTable schema={schemas.ruleJsonSchema} />
+
+Every value-shaped field (`data`, entries in `policy`, entries in `settings`
+that take values) accepts any form documented in
+[Mapping.Value](./value.mdx).
+
+## How destinations consume a rule
+
+When an event reaches a destination, the collector looks up
+`mapping[event.entity][event.action]`. An array means "try each in order, first
+matching rule wins". A wildcard `'*'` on either entity or action acts as a
+fallback.
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`
+await getMappingEvent(
+  { name: 'product click' },
+  {
+    product: {
+      '*': { name: 'product_interaction' },
+    },
+    '*': {
+      click: { name: 'generic_click' },
+    },
+  }
+);`}
+  output={`{
+  eventMapping: {
+    name: "product_interaction"
+  },
+  mappingKey: "product *"
+}`}
+  fn={logEvent}
+/>
+
+Once a rule matches, the collector runs `policy` (event-level), resolves `data`,
+checks `consent` and `condition`, then hands the result to the destination's
+`push` (or buffers it when `batch` is set).
+
+## Conditional rules
+
+Use an array with conditions to branch by event contents; the first matching
+rule wins.
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`
+await getMappingEvent(
+  {
+    name: 'order complete',
+    data: { value: 100 },
+  },
+  {
+    order: {
+      complete: [
+        {
+          condition: (event) => event.data?.value > 50,
+          name: 'high_value_purchase',
+        },
+        { name: 'purchase' },
+      ],
+    },
+  }
+);`}
+  output={`{
+  eventMapping: {
+    name: "high_value_purchase"
+  },
+  mappingKey: "order complete"
+}`}
+  fn={logEvent}
+/>
+
+## Ignore vs skip
+
+Two flags control destination behaviour and they are not interchangeable:
+
+- `ignore: true`: the rule matched but **nothing happens**. No data transform,
+  no destination call, no side effects. Use for suppression.
+- `skip: true`: the rule matched and the destination's `push()` **is** called.
+  `settings.identify`, `settings.revenue`, `settings.group`, and other side
+  effects still run. Only the destination's default forwarding call (e.g.
+  `track()`, `capture()`, `event()`) is suppressed. Use for "identify without
+  an event" style flows.
+
+If both are set on the same rule, `ignore` wins.
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`
+await getMappingEvent(
+  { name: 'test event' },
+  {
+    test: {
+      event: { ignore: true },
+    },
+  }
+);`}
+  output={`{
+  eventMapping: {
+    ignore: true
+  },
+  mappingKey: "test event"
+}`}
+  fn={logEvent}
+/>
+
+```typescript
+{
+  user: {
+    login: {
+      skip: true,
+      settings: { identify: { map: { user: 'data.id' } } },
+    },
+  },
+}
+```
+
+The example runs the destination's `identify()` side effect on `user login`
+events but skips the default forwarding call.
+
+## API reference
+
+The two functions below power mapping resolution. Destinations and sources call
+them through the collector, but they are exported for direct use in custom
+transformers or tests.
+
+### getMappingEvent
+
+```typescript
+getMappingEvent(
+  event: WalkerOS.PartialEvent,
+  mapping?: Mapping.Rules,
+): Promise<Mapping.Result>
+```
+
+Resolves the matching rule for an event based on `event.name` (the
+`"entity action"` string). Returns `{ eventMapping, mappingKey }` where
+`eventMapping` is the matched `Mapping.Rule` and `mappingKey` is the lookup key
+that matched (including wildcards).
+
+### getMappingValue
+
+```typescript
+getMappingValue(
+  value: unknown,
+  mapping: Mapping.Data,
+  options?: Mapping.Options,
+): Promise<WalkerOS.Property | undefined>
+```
+
+Resolves a `Mapping.Value` against an input. Used internally for every `data`,
+`policy`, and `set` resolution. The companion reference for each value form
+lives in [Mapping.Value](./value.mdx).
+
+## Rule-level examples
+
+### Source mapping
+
+Normalize events before they reach the collector:
+
+<CodeSnippet
+  code={`await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        mapping: {
+          product: {
+            click: {
+              name: 'product view',
+              policy: {
+                'data.id': { fn: (e) => e.data?.id?.toUpperCase() },
+              },
+            },
+          },
+          test: { '*': { ignore: true } },
+        },
+        policy: {
+          'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Destination mapping
+
+Transform for a specific destination API:
+
+<CodeSnippet
+  code={`await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        mapping: {
+          product: {
+            view: {
+              name: 'view_item',
+              data: {
+                map: {
+                  item_id: 'data.id',
+                  value: 'data.price',
+                  currency: { value: 'USD' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Combined flow
+
+The same event can be transformed at both stations:
+
+```text
+1. Browser sends: "product click"
+2. Source mapping:       "product click" → "product view"
+3. Destination mapping:  "product view"  → "view_item"
+4. GA4 receives:         "view_item"
+```
+
+## See also
+
+- [Mapping.Value](./value.mdx): the eight value forms used in every rule field
+- [Consent guide](/docs/guides/consent): consent model and gating
+- [Destinations reference](/docs/destinations): destination-specific `settings`
+- [`mapping.ts` source](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/types/mapping.ts)

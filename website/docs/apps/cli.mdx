@@ -65,8 +65,8 @@ The CLI transforms `Flow.Config` → `Flow.Settings` (per flow) → bundled code
 
 Build-time concerns for the bundler live under `flow.<name>.bundle`. Two fields are supported:
 
-- **`packages`** — the list of npm packages (or local paths) the bundler should install for this flow.
-- **`overrides`** — pin transitive dependency versions, matching npm's `overrides` semantics. Useful when an upstream package declares an overly narrow version range that conflicts with a newer transitive version in the same tree.
+- **`packages`**: the list of npm packages (or local paths) the bundler should install for this flow.
+- **`overrides`**: pin transitive dependency versions, matching npm's `overrides` semantics. Useful when an upstream package declares an overly narrow version range that conflicts with a newer transitive version in the same tree.
 
 <CodeSnippet
   code={`"bundle": {
@@ -1722,9 +1722,9 @@ Official clients (CLI, MCP, runner image) send three headers on every request
 to the walkerOS app so the server can tell them apart and enforce minimum
 versions per endpoint:
 
-- `User-Agent` — e.g. `walkeros-cli/1.4.0 (node/18.19.0; linux)`
-- `X-WalkerOS-Client` — `cli`, `mcp`, or `runner`
-- `X-WalkerOS-Client-Version` — the installed package version
+- `User-Agent`: e.g. `walkeros-cli/1.4.0 (node/18.19.0; linux)`
+- `X-WalkerOS-Client`: `cli`, `mcp`, or `runner`
+- `X-WalkerOS-Client-Version`: the installed package version
 
 If you call an endpoint that has been updated in a way that requires a newer
 client, the app responds with `426 Upgrade Required`. The CLI prints the

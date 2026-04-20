@@ -1,17 +1,6 @@
 // Ready-to-use demos
-export {
-  DestinationDemo,
-  createCaptureFn,
-} from './components/demos/DestinationDemo';
-export { DestinationInitDemo } from './components/demos/DestinationInitDemo';
 export { PromotionPlayground } from './components/demos/PromotionPlayground';
-export type { DestinationDemoProps } from './components/demos/DestinationDemo';
-export type { DestinationInitDemoProps } from './components/demos/DestinationInitDemo';
 export type { PromotionPlaygroundProps } from './components/demos/PromotionPlayground';
-
-// Alias for backward compatibility with website
-export { DestinationDemo as DestinationPush } from './components/demos/DestinationDemo';
-export { DestinationInitDemo as DestinationInit } from './components/demos/DestinationInitDemo';
 
 // Organisms
 export { LiveCode } from './components/organisms/live-code';
@@ -149,10 +138,3 @@ export {
   createFbqDestination,
   createPlausibleDestination,
 } from './helpers/destinations';
-
-// Capture utilities for destination demos (captureDestinationPush still exported for DestinationDemo)
-export {
-  captureDestinationPush,
-  formatCapturedCalls,
-  createRawCapture,
-} from './helpers/capture';

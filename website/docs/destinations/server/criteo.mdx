@@ -35,7 +35,7 @@ Sends events server-side to Criteo using raw HTTP (no SDK). Authentication is in
   language="bash"
 />
 
-## Setup
+## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -145,7 +145,7 @@ Criteo matches users via three signals. Wire them through `user_data` in setting
 | Field                 | Description                                           |
 | --------------------- | ----------------------------------------------------- |
 | `mapped_user_id`      | Criteo GUM ID                                         |
-| `email`               | Raw email — hashed into MD5, SHA-256 and SHA-256(MD5) |
+| `email`               | Raw email. Hashed into MD5, SHA-256 and SHA-256(MD5)  |
 | `retailer_visitor_id` | Stable retailer visitor identifier                    |
 
 <CodeSnippet
@@ -165,11 +165,11 @@ Criteo matches users via three signals. Wire them through `user_data` in setting
 
 Raw emails are lowercased and trimmed, then hashed into all three formats Criteo expects:
 
-- `md5` — MD5 hex digest
-- `sha256` — SHA-256 hex digest
-- `sha256_md5` — SHA-256 hex of the MD5 hex string
+- `md5`: MD5 hex digest
+- `sha256`: SHA-256 hex digest
+- `sha256_md5`: SHA-256 hex of the MD5 hex string
 
-Pre-hashed values (detected by hex length — 32 chars for MD5, 64 for SHA-256) are passed through without re-hashing.
+Pre-hashed values (detected by hex length: 32 chars for MD5, 64 for SHA-256) are passed through without re-hashing.
 
 ## Deduplication
 

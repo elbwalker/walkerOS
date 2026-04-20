@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-amplitude'
 
 import data from '@walkeros/web-destination-amplitude/walkerOS.json';
 
+import Settings from '@site/src/components/snippets/_settings.mdx';
 import Mapping from '@site/src/components/snippets/_mapping.mdx';
 
 # Amplitude
@@ -47,7 +48,7 @@ plugins.
   language="bash"
 />
 
-## Setup
+## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -97,15 +98,14 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
-## Settings
+All fields of Amplitude's `BrowserOptions` pass through to
+`amplitude.init(apiKey, options)`. walkerOS-specific additions are below.
 
-Settings configure this package and go under `config.settings` in the flow. All
-fields of Amplitude's `BrowserOptions` pass through to
-`amplitude.init(apiKey, options)`. walkerOS-specific additions are below. For
-fields shared across all destinations (consent, mapping, data, env, …), see
-[destination configuration](/docs/destinations#configuration).
-
-<PropertyTable schema={data.schemas.settings} />
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
 
 <Mapping schema={data.schemas.mapping} />
 

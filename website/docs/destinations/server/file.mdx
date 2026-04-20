@@ -26,7 +26,7 @@ File is a **server destination** in the walkerOS flow:
   destinations={{ default: { label: 'Destination', text: 'Local file', highlight: true } }}
 />
 
-Receives events server-side from the collector, serialises each event, and appends a line to a local file. No network calls, no SDKs — just `fs.createWriteStream` with `flag: 'a'`.
+Receives events server-side from the collector, serialises each event, and appends a line to a local file. No network calls, no SDKs, just `fs.createWriteStream` with `flag: 'a'`.
 :::
 
 ## Installation
@@ -36,7 +36,7 @@ Receives events server-side from the collector, serialises each event, and appen
   language="bash"
 />
 
-## Setup
+## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -120,7 +120,7 @@ Each event lands in a file named after the tenant value (e.g. `acme`, `venti`). 
   language="json"
 />
 
-Inside the `$code:` function, `value` is the event being processed. One file per UTC day, created automatically — no `logrotate`, no cron.
+Inside the `$code:` function, `value` is the event being processed. One file per UTC day, created automatically. No `logrotate`, no cron.
 
 ## Formats
 
@@ -143,7 +143,7 @@ Specify `fields: string[]` listing the event paths to extract as columns. Object
 
 ## Limits
 
-- One file handle is opened per resolved filename and kept open until `destroy()`. Sharding by high-cardinality keys (e.g. `user.session`) can exhaust the OS file descriptor table — be deliberate about cardinality.
+- One file handle is opened per resolved filename and kept open until `destroy()`. Sharding by high-cardinality keys (e.g. `user.session`) can exhaust the OS file descriptor table. Be deliberate about cardinality.
 - External rotation (e.g. `logrotate`) leaves the cached handle pointing at the rotated inode. Use the date-token pattern above instead.
 - No batching. Each event is written individually; Node's stream layer buffers under the hood.
-- Write errors log a warning and drop the event — they never fail the flow.
+- Write errors log a warning and drop the event. They never fail the flow.

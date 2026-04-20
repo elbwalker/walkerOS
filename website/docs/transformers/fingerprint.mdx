@@ -5,6 +5,9 @@ sidebar_position: 4
 package: '@walkeros/server-transformer-fingerprint'
 ---
 
+import data from '@walkeros/server-transformer-fingerprint/walkerOS.json';
+import Settings from '@site/src/components/snippets/_settings.mdx';
+
 # Fingerprint
 
 <PackageLink env="server" github="packages/server/transformers/fingerprint" npm="@walkeros/server-transformer-fingerprint" />
@@ -21,19 +24,17 @@ Typical use cases:
 - **Cookie-free analytics**: Identify returning visitors server-side when no consent has been given for cookies
 - **Cross-domain stitching**: Combine fields that are consistent across domains into a shared identity signal
 
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-Install the package:
+## Installation
 
 <CodeSnippet
   code={`npm install @walkeros/server-transformer-fingerprint`}
   language="bash"
 />
 
-Configure in your flow:
+## Configuration
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -78,13 +79,11 @@ await startFlow({
   </TabItem>
 </Tabs>
 
-## Configuration
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `fields` | `Mapping.Value[]` | required | Fields to include in the hash. Order matters: the same fields in a different order produce a different hash. |
-| `output` | `string` | `"user.hash"` | Dot-notation path where the hash is stored on the event. |
-| `length` | `number` | full (64 chars) | Truncate the SHA-256 hash to this length. |
+<Settings
+  schema={data.schemas.settings}
+  type="transformer"
+  configHref="/docs/transformers#configuration"
+/>
 
 Fields are resolved from `{ event, ingest }` using walkerOS mapping. String values use dot notation (`"ingest.ip"`). Function values compute dynamically (`{ fn: () => new Date().getDate() }`).
 

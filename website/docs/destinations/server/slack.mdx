@@ -25,7 +25,7 @@ Slack is a **server destination** in the walkerOS flow:
   destinations={{ default: { label: 'Destination', text: 'Slack', highlight: true } }}
 />
 
-Turns events into Slack messages for real-time alerts, sales notifications, moderation queues, or incident routing — without coupling your product code to Slack.
+Turns events into Slack messages for real-time alerts, sales notifications, moderation queues, or incident routing, without coupling your product code to Slack.
 :::
 
 ## Installation
@@ -35,7 +35,7 @@ Turns events into Slack messages for real-time alerts, sales notifications, mode
   language="bash"
 />
 
-## Setup
+## Configuration
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -129,7 +129,7 @@ With Web API mode, route events to different channels using nested `entity > act
           "complete": {
             "settings": {
               "channel": "#sales",
-              "text": "New order \${data.id} — \${data.total} \${data.currency}"
+              "text": "New order \${data.id}: \${data.total} \${data.currency}"
             }
           }
         },
@@ -161,7 +161,7 @@ Events that don't match any rule fall back to the default `channel` in `settings
 
 Messages support two formatting styles, set at destination level or per rule:
 
-- **Text templates** — `${data.field}` placeholders interpolate against the walkerOS event. Good for terse alerts.
-- **Block Kit** — structured layouts via Slack's [Block Kit](https://api.slack.com/block-kit) (headers, sections, buttons, context). Use the `blocks` setting when you need rich formatting.
+- **Text templates**: `${data.field}` placeholders interpolate against the walkerOS event. Good for terse alerts.
+- **Block Kit**: structured layouts via Slack's [Block Kit](https://api.slack.com/block-kit) (headers, sections, buttons, context). Use the `blocks` setting when you need rich formatting.
 
 When neither `text` nor `blocks` is provided, the destination generates a default message with an event-name header (toggle via `includeHeader`).

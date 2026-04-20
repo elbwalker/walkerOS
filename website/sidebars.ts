@@ -87,6 +87,20 @@ const sidebars: SidebarsConfig = {
               ],
             },
             'sources/web/dataLayer/index',
+            'sources/web/session/index',
+            {
+              type: 'category',
+              label: 'CMPs',
+              link: {
+                type: 'doc',
+                id: 'sources/web/cmps/index',
+              },
+              items: [
+                'sources/web/cmps/cookiefirst/index',
+                'sources/web/cmps/cookiepro/index',
+                'sources/web/cmps/usercentrics/index',
+              ],
+            },
             'sources/server/express',
             'sources/server/fetch',
             'sources/server/aws',
@@ -111,9 +125,50 @@ const sidebars: SidebarsConfig = {
             id: 'transformers/index',
           },
           items: [
-            'mapping',
+            {
+              type: 'category',
+              label: 'Mapping',
+              link: {
+                type: 'doc',
+                id: 'mapping/index',
+              },
+              items: ['mapping/value', 'mapping/rule'],
+            },
+            'transformers/cache',
+            'transformers/file',
+            'transformers/fingerprint',
             'transformers/validator',
             'transformers/create-your-own',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Stores',
+          link: {
+            type: 'doc',
+            id: 'stores/index',
+          },
+          items: [
+            {
+              type: 'doc',
+              id: 'stores/memory',
+              className: 'sidebar-badge-web',
+            },
+            {
+              type: 'doc',
+              id: 'stores/server/fs',
+              className: 'sidebar-badge-server',
+            },
+            {
+              type: 'doc',
+              id: 'stores/server/gcs',
+              className: 'sidebar-badge-server',
+            },
+            {
+              type: 'doc',
+              id: 'stores/server/s3',
+              className: 'sidebar-badge-server',
+            },
           ],
         },
         {
@@ -333,6 +388,11 @@ const sidebars: SidebarsConfig = {
                 {
                   type: 'doc',
                   id: 'destinations/server/reddit',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/slack',
                   className: 'sidebar-badge-server',
                 },
                 {

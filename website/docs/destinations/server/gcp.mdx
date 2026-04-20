@@ -37,6 +37,67 @@ Streams events to Google BigQuery for data warehousing, analytics dashboards, an
   language="bash"
 />
 
+## Configuration
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationBigQuery } from '@walkeros/server-destination-gcp';
+
+await startFlow({
+  destinations: {
+    bigquery: {
+      code: destinationBigQuery,
+      config: {
+        settings: {
+          projectId: 'YOUR_PROJECT_ID',
+          datasetId: 'YOUR_DATASET_ID',
+          tableId: 'YOUR_TABLE_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "bigquery": {
+    "package": "@walkeros/server-destination-gcp",
+    "code": "destinationBigQuery",
+    "config": {
+      "settings": {
+        "projectId": "YOUR_PROJECT_ID",
+        "datasetId": "YOUR_DATASET_ID",
+        "tableId": "YOUR_TABLE_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Settings
+  schema={data.schemas.settings}
+  type="destination"
+  configHref="/docs/destinations#configuration"
+/>
+
+<Mapping schema={data.schemas.mapping} />
+
 ## Prerequisites
 
 - [Google Cloud account](https://cloud.google.com/) with billing enabled
@@ -134,67 +195,6 @@ See [Workload Identity documentation](https://cloud.google.com/iam/docs/workload
 | `BQ_TABLE` | BigQuery table name | `events` |
 | `BQ_LOCATION` | BigQuery dataset location | `EU` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key | Required (unless using Workload Identity) |
-
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationBigQuery } from '@walkeros/server-destination-gcp';
-
-await startFlow({
-  destinations: {
-    bigquery: {
-      code: destinationBigQuery,
-      config: {
-        settings: {
-          projectId: 'YOUR_PROJECT_ID',
-          datasetId: 'YOUR_DATASET_ID',
-          tableId: 'YOUR_TABLE_ID',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "bigquery": {
-    "package": "@walkeros/server-destination-gcp",
-    "code": "destinationBigQuery",
-    "config": {
-      "settings": {
-        "projectId": "YOUR_PROJECT_ID",
-        "datasetId": "YOUR_DATASET_ID",
-        "tableId": "YOUR_TABLE_ID"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[CLI reference →](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
-
-<Settings
-  schema={data.schemas.settings}
-  type="destination"
-  configHref="/docs/destinations#configuration"
-/>
-
-<Mapping schema={data.schemas.mapping} />
 
 ## Default table schema
 

@@ -14,19 +14,17 @@ import Settings from '@site/src/components/snippets/_settings.mdx';
 
 Google Cloud Storage store with zero runtime dependencies. Uses raw `fetch` against the GCS JSON API with built-in auth: Application Default Credentials (ADC) on Cloud Run / GKE, or explicit service account JWT for non-GCP environments.
 
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-Install the package:
+## Installation
 
 <CodeSnippet
   code={`npm install @walkeros/server-store-gcs`}
   language="bash"
 />
 
-Configure in your code:
+## Configuration
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';

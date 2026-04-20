@@ -29,6 +29,12 @@ export interface LiveCodeProps {
   language?: string;
   format?: boolean;
   rowHeight?: 'auto' | 'equal' | 'synced' | number;
+  /** Language for the Result panel. Defaults to json (the typical output
+   * shape). Set to `javascript` when emptyText includes `//` comments. */
+  outputLanguage?: string;
+  /** Language for the Config panel. Defaults to `json`. Override when the
+   * Config panel content is not JSON. */
+  configLanguage?: string;
 }
 
 function formatValue(value: unknown, options: { quotes?: boolean } = {}) {
@@ -55,6 +61,8 @@ export function LiveCode({
   language = 'json',
   format = true,
   rowHeight,
+  outputLanguage = 'json',
+  configLanguage = 'json',
 }: LiveCodeProps) {
   const [input, setInput] = useState(formatValue(initInput));
   const [config, setConfig] = useState(formatValue(initConfig));
@@ -122,8 +130,8 @@ export function LiveCode({
           code={config}
           onChange={disableConfig ? undefined : setConfig}
           disabled={disableConfig}
-          language={language}
-          showFormat={!disableConfig && language === 'json'}
+          language={configLanguage}
+          showFormat={!disableConfig && configLanguage === 'json'}
         />
       )}
 
@@ -131,7 +139,7 @@ export function LiveCode({
         label={labelOutput}
         code={output[0] || emptyText}
         disabled
-        language={language}
+        language={outputLanguage}
       />
     </Grid>
   );
