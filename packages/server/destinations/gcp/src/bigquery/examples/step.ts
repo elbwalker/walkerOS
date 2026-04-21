@@ -70,7 +70,7 @@ const purchaseEvent = getEvent('order complete', {
 export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
-    'An order event with nested items is inserted into BigQuery as a single row with arrays stringified into the data field.',
+    'An order event is inserted into BigQuery as a single row. The entire nested data object (including arrays like items) is JSON-stringified into the data field via expectedRow().',
   in: purchaseEvent,
   mapping: undefined,
   out: [

@@ -38,14 +38,18 @@ This {props.type} uses the standard {props.type} config wrapper (consent, data, 
   <p>This package does not define custom rule-level settings. For the standard rule fields (consent, condition, data, batch, name, policy) see <a href="/docs/mapping">mapping</a>.</p>
 )}
 
-{props.data?.examples?.step && (
+export const visibleStepExamples = props.data?.examples?.step
+  ? Object.entries(props.data.examples.step).filter(
+      ([, example]) => example?.public !== false,
+    )
+  : [];
+
+{visibleStepExamples.length > 0 && (
   <>
     <h2>Examples</h2>
-    {Object.entries(props.data.examples.step)
-      .filter(([, example]) => example?.public !== false)
-      .flatMap(([key, example]) => [
-        <h3 key={`${key}-h`}>{stepTitle(key, example)}</h3>,
-        <StepExample key={`${key}-e`} example={example} />,
-      ])}
+    {visibleStepExamples.flatMap(([key, example]) => [
+      <h3 key={`${key}-h`}>{stepTitle(key, example)}</h3>,
+      <StepExample key={`${key}-e`} example={example} />,
+    ])}
   </>
 )}

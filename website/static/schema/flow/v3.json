@@ -1158,7 +1158,6 @@
       ]
     },
     "MappingValue": {
-      "id": "MappingValue",
       "title": "Mapping.Value",
       "description": "Polymorphic transform primitive used in every mapping field. A string path, constant, operator object (map/loop/set/condition/consent), or array of values.",
       "anyOf": [
@@ -1265,7 +1264,6 @@
       "additionalProperties": {
         "type": "boolean"
       },
-      "id": "WalkerOSConsent",
       "title": "WalkerOS.Consent",
       "description": "Consent state mapping. Keys are consent groups (e.g. marketing, functional), values are booleans for granted/denied."
     }

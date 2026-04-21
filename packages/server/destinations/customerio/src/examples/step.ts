@@ -130,7 +130,7 @@ export const anonymousTrack: CustomerIoStepExample = {
 export const destinationIdentify: CustomerIoStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify fires a Customer.io identify call before each track, attaching user attributes.',
+    'Destination-level identify fires a Customer.io identify call once on the first push, before the track, attaching user attributes.',
   in: getEvent('page view', {
     timestamp: 1700000104,
     user: { id: 'us3r', session: 's3ss10n', email: 'user@example.com' },

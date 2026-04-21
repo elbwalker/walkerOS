@@ -222,13 +222,14 @@ export const userLoginPeopleSet: MixpanelStepExample = {
 };
 
 /**
- * Full people operation vocabulary — exercises set, set_once, increment,
- * append, union, remove, unset, delete_user.
+ * Common people operation vocabulary — exercises set, set_once, increment,
+ * append, union, remove, unset. (delete_user is intentionally not covered
+ * by this example.)
  */
 export const allPeopleOperations: MixpanelStepExample = {
-  title: 'All people operations',
+  title: 'Common people operations',
   description:
-    'A profile update exercises the full Mixpanel people vocabulary including set, increment, append, union, remove, and unset.',
+    'A profile update exercises the common Mixpanel people vocabulary: set, set_once, increment, append, union, remove, and unset. delete_user is not covered by this example.',
   in: getEvent('profile update', {
     timestamp: 1700000105,
     data: {

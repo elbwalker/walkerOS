@@ -105,7 +105,7 @@ export const ruleIncludeReplaces: AmplitudeStepExample = {
 export const destinationLevelIdentify: AmplitudeStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify sets userId, deviceId, and sessionId on the Amplitude client before each track.',
+    'Destination-level identify sets userId, deviceId, and sessionId on the Amplitude client before sending events; setters only re-fire when the resolved values change (cached values are not re-applied on subsequent pushes).',
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {

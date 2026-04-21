@@ -94,6 +94,18 @@ export {
   createDeployment,
   deleteDeployment,
 } from './commands/deployments/index.js';
+export {
+  listPreviews,
+  getPreview,
+  createPreview,
+  deletePreview,
+} from './commands/previews/index.js';
+export type {
+  ListPreviewsOptions,
+  GetPreviewOptions,
+  CreatePreviewOptions,
+  DeletePreviewOptions,
+} from './commands/previews/index.js';
 export type { FeedbackOptions } from './commands/feedback/index.js';
 export { readConfig, writeConfig } from './lib/config-file.js';
 export type { WalkerOSConfig } from './lib/config-file.js';

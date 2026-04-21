@@ -1757,10 +1757,25 @@ export function generateWrapEntry(
     var __match = /(?:^|; )elbPreview=([^;]+)/.exec(document.cookie);
     var __token = __match && __match[1];
     if (__token && /^[a-zA-Z0-9_-]{8,32}$/.test(__token)) {
-      var __s = document.createElement('script');
-      __s.src = 'https://' + __previewOrigin + '/preview/' + __previewScope + '/walker.' + __token + '.js';
-      document.head.appendChild(__s);
-      return;
+      var __previewSrc = 'https://' + __previewOrigin + '/preview/' + __previewScope + '/walker.' + __token + '.js';
+      var __clearPreviewCookie = function () {
+        document.cookie = 'elbPreview=; path=/; max-age=0; SameSite=Lax' + __secure;
+      };
+      try {
+        var __probe = await fetch(__previewSrc, { method: 'HEAD' });
+        if (__probe && __probe.ok) {
+          var __s = document.createElement('script');
+          __s.src = __previewSrc;
+          document.head.appendChild(__s);
+          return;
+        }
+        // Preview bundle missing (404/5xx) — self-heal by clearing cookie and
+        // falling through to the production walker in this same bundle.
+        __clearPreviewCookie();
+      } catch (__err) {
+        // Network error — fall through to production too.
+        __clearPreviewCookie();
+      }
     }
   }
   // --- End preview mode preflight ---

@@ -52,7 +52,7 @@ export const defaultTrack: SegmentStepExample = {
 export const mappedEventName: SegmentStepExample = {
   title: 'Renamed event',
   description:
-    'A mapping renames the event so the Segment track call uses Segments canonical Order Completed name.',
+    "A mapping renames the event so the Segment track call uses Segment's canonical 'Order Completed' name.",
   in: getEvent('order complete', {
     timestamp: 1700000101,
     user: { id: 'us3r', session: 's3ss10n' },
@@ -81,7 +81,7 @@ export const mappedEventName: SegmentStepExample = {
 export const destinationIdentify: SegmentStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify fires Segment analytics.identify with traits before each track call.',
+    'Destination-level identify fires Segment analytics.identify with traits on the first push only, then the track call follows.',
   in: getEvent('page view', {
     timestamp: 1700000102,
     user: { id: 'us3r', session: 's3ss10n', email: 'user@example.com' },

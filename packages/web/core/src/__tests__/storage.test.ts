@@ -92,3 +92,100 @@ describe('Storage env injection', () => {
     storageDelete('fallback', 'session');
   });
 });
+
+describe('Storage error handling', () => {
+  const throwing = (name: string) => () => {
+    throw new DOMException('Storage disabled', name);
+  };
+
+  const throwingStorage = (kind: 'read' | 'write' | 'delete' | 'all') => ({
+    getItem: jest.fn(
+      kind === 'read' || kind === 'all'
+        ? throwing('SecurityError')
+        : () => null,
+    ),
+    setItem: jest.fn(
+      kind === 'write' || kind === 'all'
+        ? throwing('QuotaExceededError')
+        : () => {},
+    ),
+    removeItem: jest.fn(
+      kind === 'delete' || kind === 'all'
+        ? throwing('SecurityError')
+        : () => {},
+    ),
+  });
+
+  test('storageRead returns empty string when localStorage.getItem throws', () => {
+    const env = {
+      window: {
+        localStorage: throwingStorage('read'),
+        sessionStorage: throwingStorage('read'),
+      } as unknown as Window & typeof globalThis,
+    };
+    expect(storageRead('key', 'local', env)).toBe('');
+  });
+
+  test('storageRead returns empty string when sessionStorage.getItem throws', () => {
+    const env = {
+      window: {
+        localStorage: throwingStorage('read'),
+        sessionStorage: throwingStorage('read'),
+      } as unknown as Window & typeof globalThis,
+    };
+    expect(storageRead('key', 'session', env)).toBe('');
+  });
+
+  test('storageWrite does not throw on QuotaExceededError', () => {
+    const env = {
+      window: {
+        localStorage: throwingStorage('write'),
+        sessionStorage: throwingStorage('write'),
+      } as unknown as Window & typeof globalThis,
+    };
+    expect(() =>
+      storageWrite('k', 'v', 30, 'local', undefined, env),
+    ).not.toThrow();
+    expect(() =>
+      storageWrite('k', 'v', 30, 'session', undefined, env),
+    ).not.toThrow();
+  });
+
+  test('storageWrite returns empty string when write fails', () => {
+    const env = {
+      window: {
+        localStorage: throwingStorage('all'),
+        sessionStorage: throwingStorage('all'),
+      } as unknown as Window & typeof globalThis,
+    };
+    expect(storageWrite('k', 'v', 30, 'local', undefined, env)).toBe('');
+    expect(storageWrite('k', 'v', 30, 'session', undefined, env)).toBe('');
+  });
+
+  test('storageDelete does not throw on SecurityError', () => {
+    const env = {
+      window: {
+        localStorage: throwingStorage('delete'),
+        sessionStorage: throwingStorage('delete'),
+      } as unknown as Window & typeof globalThis,
+    };
+    expect(() => storageDelete('k', 'local', env)).not.toThrow();
+    expect(() => storageDelete('k', 'session', env)).not.toThrow();
+  });
+
+  test('cookie storageWrite does not throw when document.cookie setter throws', () => {
+    const env = {
+      document: {
+        get cookie() {
+          return '';
+        },
+        set cookie(_val: string) {
+          throw new DOMException('Cookies disabled', 'SecurityError');
+        },
+      } as unknown as Document,
+    };
+    expect(() =>
+      storageWrite('k', 'v', 30, 'cookie', undefined, env),
+    ).not.toThrow();
+  });
+});

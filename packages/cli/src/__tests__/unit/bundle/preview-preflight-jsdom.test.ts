@@ -109,6 +109,9 @@ describe('Preview preflight jsdom integration', () => {
         d: unknown,
       ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
+      // Mock HEAD probe as 200 so the self-heal preflight proceeds to inject
+      (win as unknown as Record<string, unknown>).fetch = () =>
+        Promise.resolve({ ok: true, status: 200 });
 
       const script = win.document.createElement('script');
       script.textContent = extractEvaluableScript(entry);
@@ -156,6 +159,9 @@ describe('Preview preflight jsdom integration', () => {
         d: unknown,
       ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
+      // Mock HEAD probe as 200 so self-heal proceeds with injection
+      (win as unknown as Record<string, unknown>).fetch = () =>
+        Promise.resolve({ ok: true, status: 200 });
 
       const script = win.document.createElement('script');
       script.textContent = extractEvaluableScript(entry);
@@ -232,6 +238,9 @@ describe('Preview preflight jsdom integration', () => {
         d: unknown,
       ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
+      // Mock HEAD probe as 200 so self-heal proceeds with injection
+      (win as unknown as Record<string, unknown>).fetch = () =>
+        Promise.resolve({ ok: true, status: 200 });
 
       const script = win.document.createElement('script');
       script.textContent = extractEvaluableScript(entry);
@@ -251,6 +260,165 @@ describe('Preview preflight jsdom integration', () => {
 
       // The token should also be stored in a cookie
       expect(win.document.cookie).toContain(`elbPreview=${token}`);
+
+      win.close();
+    });
+  });
+
+  describe('404 self-heal (missing preview bundle)', () => {
+    it('clears cookie and falls through to startFlow when HEAD returns 404', async () => {
+      const token = 'k9x2m4p7abcd';
+      const entry = generateWrapEntry('./skeleton.mjs', {
+        previewOrigin: 'cdn.walkeros.io',
+        previewScope: 'proj_abc',
+      });
+
+      // Pre-set the cookie so the cookie-valid branch is taken (no query param)
+      const dom = createDom('https://example.com/page');
+      const win = dom.window;
+      win.document.cookie = `elbPreview=${token}; path=/`;
+
+      let startFlowCalled = false;
+      (win as unknown as Record<string, unknown>).__mockStartFlow = () => {
+        startFlowCalled = true;
+        return Promise.resolve({ collector: {}, elb: () => {} });
+      };
+      (win as unknown as Record<string, unknown>).__mockWireConfig = (
+        d: unknown,
+      ) => d;
+      (win as unknown as Record<string, unknown>).__mockConfigData = {};
+
+      const fetchCalls: Array<{ url: string; method?: string }> = [];
+      (win as unknown as Record<string, unknown>).fetch = (
+        url: string,
+        init?: { method?: string },
+      ) => {
+        fetchCalls.push({ url, method: init?.method });
+        return Promise.resolve({ ok: false, status: 404 });
+      };
+
+      const script = win.document.createElement('script');
+      script.textContent = extractEvaluableScript(entry);
+      win.document.body.appendChild(script);
+
+      // Wait for async fetch + IIFE chain to settle
+      await new Promise((r) => setTimeout(r, 50));
+
+      // HEAD was issued to the preview URL
+      expect(fetchCalls.length).toBe(1);
+      expect(fetchCalls[0].method).toBe('HEAD');
+      expect(fetchCalls[0].url).toBe(
+        `https://cdn.walkeros.io/preview/proj_abc/walker.${token}.js`,
+      );
+
+      // No preview <script> injected
+      const injected = win.document.querySelectorAll('head > script[src]');
+      expect(injected.length).toBe(0);
+
+      // Cookie cleared (max-age=0 effectively removes it)
+      expect(win.document.cookie).not.toContain(`elbPreview=${token}`);
+
+      // Production path runs (fall-through to startFlow)
+      expect(startFlowCalled).toBe(true);
+
+      win.close();
+    });
+
+    it('clears cookie and falls through to startFlow when fetch rejects (network error)', async () => {
+      const token = 'Ab3Df5Gh7j9L';
+      const entry = generateWrapEntry('./skeleton.mjs', {
+        previewOrigin: 'cdn.walkeros.io',
+        previewScope: 'proj_abc',
+      });
+
+      const dom = createDom('https://example.com/page');
+      const win = dom.window;
+      win.document.cookie = `elbPreview=${token}; path=/`;
+
+      let startFlowCalled = false;
+      (win as unknown as Record<string, unknown>).__mockStartFlow = () => {
+        startFlowCalled = true;
+        return Promise.resolve({ collector: {}, elb: () => {} });
+      };
+      (win as unknown as Record<string, unknown>).__mockWireConfig = (
+        d: unknown,
+      ) => d;
+      (win as unknown as Record<string, unknown>).__mockConfigData = {};
+
+      (win as unknown as Record<string, unknown>).fetch = () =>
+        Promise.reject(new Error('network failure'));
+
+      const script = win.document.createElement('script');
+      script.textContent = extractEvaluableScript(entry);
+      win.document.body.appendChild(script);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // No preview <script> injected
+      const injected = win.document.querySelectorAll('head > script[src]');
+      expect(injected.length).toBe(0);
+
+      // Cookie cleared
+      expect(win.document.cookie).not.toContain(`elbPreview=${token}`);
+
+      // Production path runs (fall-through to startFlow)
+      expect(startFlowCalled).toBe(true);
+
+      win.close();
+    });
+
+    it('injects preview script and skips startFlow when HEAD returns 200', async () => {
+      const token = 'k9x2m4p7abcd';
+      const entry = generateWrapEntry('./skeleton.mjs', {
+        previewOrigin: 'cdn.walkeros.io',
+        previewScope: 'proj_abc',
+      });
+
+      const dom = createDom('https://example.com/page');
+      const win = dom.window;
+      win.document.cookie = `elbPreview=${token}; path=/`;
+
+      let startFlowCalled = false;
+      (win as unknown as Record<string, unknown>).__mockStartFlow = () => {
+        startFlowCalled = true;
+        return Promise.resolve({ collector: {}, elb: () => {} });
+      };
+      (win as unknown as Record<string, unknown>).__mockWireConfig = (
+        d: unknown,
+      ) => d;
+      (win as unknown as Record<string, unknown>).__mockConfigData = {};
+
+      const fetchCalls: Array<{ url: string; method?: string }> = [];
+      (win as unknown as Record<string, unknown>).fetch = (
+        url: string,
+        init?: { method?: string },
+      ) => {
+        fetchCalls.push({ url, method: init?.method });
+        return Promise.resolve({ ok: true, status: 200 });
+      };
+
+      const script = win.document.createElement('script');
+      script.textContent = extractEvaluableScript(entry);
+      win.document.body.appendChild(script);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // HEAD probe fired
+      expect(fetchCalls.length).toBe(1);
+      expect(fetchCalls[0].method).toBe('HEAD');
+
+      // Preview script injected
+      const injected = win.document.querySelectorAll('head > script[src]');
+      expect(injected.length).toBe(1);
+      expect((injected[0] as HTMLScriptElement).src).toBe(
+        `https://cdn.walkeros.io/preview/proj_abc/walker.${token}.js`,
+      );
+
+      // Cookie preserved
+      expect(win.document.cookie).toContain(`elbPreview=${token}`);
+
+      // startFlow NOT called (preview took over)
+      expect(startFlowCalled).toBe(false);
 
       win.close();
     });
