@@ -1,5 +1,5 @@
 import { themes as prismThemes } from 'prism-react-renderer';
-import type { Config } from '@docusaurus/types';
+import type { Config, Plugin } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const vars = {
@@ -269,11 +269,11 @@ async function tailwindPlugin() {
 // eval's it in the browser, so it must be self-contained with no
 // closed-over references. Logic mirrors `isMonacoCancellation` in
 // @walkeros/explorer — keep the two in sync.
-async function devOverlayFilterPlugin() {
+async function devOverlayFilterPlugin(): Promise<Plugin<unknown>> {
   return {
     name: 'walkeros-dev-overlay-filter',
-    configureWebpack() {
-      return {
+    configureWebpack: () =>
+      ({
         devServer: {
           client: {
             overlay: {
@@ -291,8 +291,7 @@ async function devOverlayFilterPlugin() {
             },
           },
         },
-      };
-    },
+      }) as never,
   };
 }
 
