@@ -14,7 +14,6 @@ import {
   Counter,
   TaggingVersion,
 } from './primitives';
-import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
 
 /**
  * Collector Schemas
@@ -108,10 +107,16 @@ export const ConfigSchema = z
     sessionStatic: z
       .record(z.string(), z.unknown())
       .describe('Static session data that persists across collector runs'),
-    verbose: z.boolean().describe('Enable verbose logging for debugging'),
-    // Function handlers
-    onError: ErrorHandlerSchema.optional(),
-    onLog: LogHandlerSchema.optional(),
+    logger: z
+      .object({
+        level: z
+          .union([z.number(), z.enum(['ERROR', 'WARN', 'INFO', 'DEBUG'])])
+          .optional()
+          .describe('Minimum log level (default: ERROR)'),
+        handler: z.any().optional().describe('Custom log handler function'),
+      })
+      .optional()
+      .describe('Logger configuration (level, handler)'),
   })
   .describe('Core collector configuration');
 
@@ -161,12 +166,15 @@ export const InitConfigSchema = ConfigSchema.partial()
     consent: ConsentSchema.optional().describe('Initial consent state'),
     user: UserSchema.optional().describe('Initial user data'),
     globals: PropertiesSchema.optional().describe('Initial global properties'),
-    // Sources and destinations are complex runtime objects
+    // Sources, destinations, transformers, stores are complex runtime objects
     sources: z.unknown().optional().describe('Source configurations'),
     destinations: z.unknown().optional().describe('Destination configurations'),
+    transformers: z.unknown().optional().describe('Transformer configurations'),
+    stores: z.unknown().optional().describe('Store configurations'),
     custom: PropertiesSchema.optional().describe(
       'Initial custom implementation-specific properties',
     ),
+    hooks: z.unknown().optional().describe('Pipeline observation hooks'),
   })
   .describe('Collector initialization configuration with initial state');
 

@@ -3,6 +3,13 @@ import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+/**
+ * API web destination invokes `env.sendWeb(url, body, options)` exactly once
+ * per push. Captures calls and asserts the `['sendWeb', ...args]` tuple list
+ * equals the example's `out`.
+ */
 describe('Step Examples', () => {
   const mockSendWeb = jest.fn();
 
@@ -34,9 +41,10 @@ describe('Step Examples', () => {
     );
     await elb(event);
 
-    expect(mockSendWeb).toHaveBeenCalled();
-    // The body (second arg) should match example.out
-    const body = mockSendWeb.mock.calls[0][1];
-    expect(body).toBe(example.out);
+    const captured: Captured[] = mockSendWeb.mock.calls.map(
+      (args) => ['sendWeb', ...args] as Captured,
+    );
+
+    expect(captured).toEqual(example.out);
   });
 });

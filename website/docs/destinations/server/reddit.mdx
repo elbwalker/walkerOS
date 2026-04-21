@@ -1,0 +1,173 @@
+---
+title: Reddit Conversions API
+description: "Server-side event delivery to Reddit Conversions API for enhanced conversion tracking"
+path: /docs/destinations/server/reddit
+sidebar_position: 19
+package: '@walkeros/server-destination-reddit'
+---
+import data from '@walkeros/server-destination-reddit/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Reddit Conversions API
+
+<PackageLink env="server" github="packages/server/destinations/reddit" npm="@walkeros/server-destination-reddit" status="beta" />
+
+Server-side event delivery to Reddit's Conversions API v2.0 for enhanced conversion tracking, bypassing browser limitations and improving match quality for ad optimization.
+
+<WhereThisFits
+  pre={<>Reddit Conversions API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Reddit CAPI', highlight: true } },
+  }}
+  post={<>Sends events server-side to Reddit's Conversions API using raw HTTP (no SDK). Identity fields (`email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`) are SHA-256 hashed before sending. Events include a stable `event_metadata.conversion_id` for deduplication with the Reddit Pixel.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-reddit`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationReddit } from '@walkeros/server-destination-reddit';
+
+await startFlow({
+  destinations: {
+    reddit: {
+      code: destinationReddit,
+      config: {
+        settings: {
+          accessToken: 'YOUR_ACCESS_TOKEN',
+          pixelId: 'YOUR_PIXEL_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "reddit": {
+    "package": "@walkeros/server-destination-reddit",
+    "code": "destinationReddit",
+    "config": {
+      "settings": {
+        "accessToken": "YOUR_ACCESS_TOKEN",
+        "pixelId": "YOUR_PIXEL_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## Event mapping
+
+Reddit uses a **rigid taxonomy**. Map walkerOS events to a standard `tracking_type` via each rule's `name` field:
+
+| walkerOS Event     | Reddit `tracking_type` |
+| ------------------ | ---------------------- |
+| `page view`        | `PageVisit`            |
+| `product view`     | `ViewContent`          |
+| `site search`      | `Search`               |
+| `product add`      | `AddToCart`            |
+| `product wishlist` | `AddToWishlist`        |
+| `order complete`   | `Purchase`             |
+| `form submit`      | `Lead`                 |
+| `user signup`      | `SignUp`               |
+
+Any non-standard name becomes `{ tracking_type: 'Custom', custom_event_name: '<name>' }` automatically. Reddit's AI optimization is trained on the standard events, so prefer them when possible.
+
+<CodeSnippet
+  code={`"mapping": {
+  "order": {
+    "complete": {
+      "name": "Purchase",
+      "data": {
+        "map": {
+          "event_metadata": {
+            "map": {
+              "value_decimal": "data.total",
+              "currency": "data.currency",
+              "item_count": { "value": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### event_metadata structure
+
+Unlike Meta's CAPI (which uses `custom_data`) and Pinterest (which also uses `custom_data`), Reddit places conversion details under `event_metadata`. Always map into `event_metadata.map`. Products belong in `event_metadata.products[]` with `{ id, name?, category }`.
+
+### Payload envelope
+
+Reddit wraps events inside `{ data: { events: [...] } }` (nested), unlike Meta/Pinterest's flat `{ data: [...] }`. The destination handles this automatically.
+
+## Hashing
+
+The destination automatically SHA-256 hashes the 6 standard identity fields before sending: `email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`. Pass raw values and hashing is handled for you.
+
+:::note Different from Meta/Pinterest
+Reddit hashes `ip_address` and `user_agent`, which Meta CAPI and Pinterest CAPI pass through as plaintext. Be sure to pass the raw values, not pre-hashed ones, unless you use `doNotHash`.
+:::
+
+Non-hashable fields pass through as-is: `uuid`, `opt_out`, `screen_dimensions`, `data_processing_options`.
+
+If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`:
+
+<CodeSnippet
+  code={`"settings": {
+  "accessToken": "YOUR_ACCESS_TOKEN",
+  "pixelId": "YOUR_PIXEL_ID",
+  "doNotHash": ["email"]
+}`}
+  language="json"
+/>
+
+## Deduplication
+
+Each event is sent with `event_metadata.conversion_id` set to the walkerOS event `id`. If you also run the Reddit Pixel in the browser, Reddit deduplicates server and browser events that share the same `conversion_id`, so conversions are not double-counted.
+
+## Test mode
+
+Set `test_mode: true` in settings to send `"test_mode": true` as a **top-level boolean in the request body** (not a query parameter, unlike Pinterest). Useful during development.
+
+<CodeSnippet
+  code={`"settings": {
+  "accessToken": "YOUR_ACCESS_TOKEN",
+  "pixelId": "YOUR_PIXEL_ID",
+  "test_mode": true
+}`}
+  language="json"
+/>
+
+## Links
+
+- [Reddit Conversions API documentation](https://ads-api.reddit.com/docs/v2/#tag/Conversions-API)
+- [Reddit Ads Manager](https://ads.reddit.com/)

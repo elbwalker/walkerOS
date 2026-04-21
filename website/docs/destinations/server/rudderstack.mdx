@@ -1,0 +1,88 @@
+---
+title: RudderStack
+description: "Server-side event delivery to RudderStack CDP (open-source Segment alternative) with full Segment Spec support"
+path: /docs/destinations/server/rudderstack
+sidebar_position: 6
+package: '@walkeros/server-destination-rudderstack'
+---
+import data from '@walkeros/server-destination-rudderstack/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# RudderStack
+
+<PackageLink env="server" github="packages/server/destinations/rudderstack" npm="@walkeros/server-destination-rudderstack" status="beta" />
+
+Server-side event delivery to [RudderStack](https://rudderstack.com/) via the official [`@rudderstack/rudder-sdk-node`](https://www.npmjs.com/package/@rudderstack/rudder-sdk-node) SDK. Implements the full Segment Spec surface (`track`, `identify`, `group`, `page`, `screen`, and `alias`) with automatic identity deduplication and graceful shutdown via `flush()`.
+
+<WhereThisFits
+  pre={<>RudderStack is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'RudderStack', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector, resolves identity, and forwards them to RudderStack's data plane for routing to downstream destinations.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-rudderstack`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationRudderStack } from '@walkeros/server-destination-rudderstack';
+
+await startFlow({
+  destinations: {
+    rudderstack: {
+      code: destinationRudderStack,
+      config: {
+        settings: {
+          writeKey: 'YOUR_RUDDERSTACK_WRITE_KEY',
+          dataPlaneUrl: 'https://your-data-plane.rudderstack.com',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "rudderstack": {
+    "package": "@walkeros/server-destination-rudderstack",
+    "config": {
+      "settings": {
+        "writeKey": "YOUR_RUDDERSTACK_WRITE_KEY",
+        "dataPlaneUrl": "https://your-data-plane.rudderstack.com"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+Identity is resolved automatically from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. At least one must be present for a call to be sent. Override these paths in settings to match your event structure.
+
+## Alias support
+
+Unlike Segment, RudderStack also supports per-event `alias()` calls, useful for linking an anonymous identity to an identified user after signup or login. Configure via `mapping.settings.alias` with a `previousId` field.

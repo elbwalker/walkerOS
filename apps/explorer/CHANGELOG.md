@@ -1,5 +1,40 @@
 # @walkeros/explorer
 
+## 3.4.0
+
+### Minor Changes
+
+- 496d4c0: `<CodeBox>` and `<LiveCode>` now run with Monaco configured to
+  `target: ES2022`, `module: ESNext`, `moduleDetection: 'force'`, and a
+  registered ambient declarations file exposing walkerOS runtime globals (`elb`,
+  `getMappingEvent`, `getMappingValue`). Mapping snippets can be plain object
+  literals or top-level `await` calls — no `import` / `export` boilerplate
+  required — while keeping full IntelliSense via the existing `@walkeros/core`
+  type registration.
+
+  `<LiveCode>` now renders its result panel as JSON (it's always vendor output,
+  regardless of the input language) and its config panel as JSON (it's always
+  data). Only the input panel respects the `language` prop.
+
+- fdf8d40: Add `CodeView` (Shiki-backed read-only code display) with matching
+  `Box` frame, plus a `CodeStatic` atom as the underlying highlighter. Also
+  suppress the Monaco loader's `{type: 'cancelation'}` unhandled rejections
+  globally via a single window-level listener, fixing the dev-console noise that
+  fired on every unmount of a `<CodeBox>` consumer.
+
+### Patch Changes
+
+- 15feda1: Harden the Monaco / CodeBox integration. Fix `moduleDetection`
+  (Force), add `<LiveCode>` `configLanguage` prop, guard `ScriptTarget.ES2022`
+  fallback, warn on `loader.init()` failures in dev, drop dead code. No API
+  change for existing callers.
+- Updated dependencies [74940cc]
+- Updated dependencies [724f97e]
+- Updated dependencies [525f5d9]
+  - @walkeros/core@3.4.0
+  - @walkeros/web-source-browser@3.4.0
+  - @walkeros/collector@3.4.0
+
 ## 3.3.1
 
 ### Patch Changes

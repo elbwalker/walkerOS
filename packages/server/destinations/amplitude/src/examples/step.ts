@@ -19,7 +19,7 @@ export type AmplitudeStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: AmplitudeStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: ['amplitude.track', 'product view', {}],
+  out: [['amplitude.track', 'product view', {}]],
 };
 
 /**
@@ -40,15 +40,17 @@ export const destinationLevelInclude: AmplitudeStepExample = {
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
-    'amplitude.track',
-    'product view',
-    {
-      data_id: 'ers',
-      data_name: 'Everyday Ruck Snack',
-      data_color: 'black',
-      data_size: 'l',
-      data_price: 420,
-    },
+    [
+      'amplitude.track',
+      'product view',
+      {
+        data_id: 'ers',
+        data_name: 'Everyday Ruck Snack',
+        data_color: 'black',
+        data_size: 'l',
+        data_price: 420,
+      },
+    ],
   ],
 };
 
@@ -73,14 +75,16 @@ export const destinationLevelIdentify: AmplitudeStepExample = {
     },
   },
   out: [
-    'amplitude.track',
-    'page view',
-    {},
-    {
-      user_id: 'us3r',
-      device_id: 'c00k13',
-      session_id: 394324160,
-    },
+    [
+      'amplitude.track',
+      'page view',
+      {},
+      {
+        user_id: 'us3r',
+        device_id: 'c00k13',
+        session_id: 394324160,
+      },
+    ],
   ],
 };
 
@@ -130,23 +134,25 @@ export const userLoginIdentify: AmplitudeStepExample = {
     },
   },
   out: [
-    'amplitude.identify',
-    {
-      set: {
-        plan: 'premium',
-        company: 'Acme',
-        email: 'user@acme.com',
+    [
+      'amplitude.identify',
+      {
+        set: {
+          plan: 'premium',
+          company: 'Acme',
+          email: 'user@acme.com',
+        },
+        setOnce: {
+          first_login: 1700000105,
+        },
+        add: {
+          login_count: 1,
+        },
       },
-      setOnce: {
-        first_login: 1700000105,
+      {
+        user_id: 'new-user-123',
       },
-      add: {
-        login_count: 1,
-      },
-    },
-    {
-      user_id: 'new-user-123',
-    },
+    ],
   ],
 };
 
@@ -180,13 +186,15 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
     },
   },
   out: [
-    'amplitude.revenue',
-    {
-      productId: 'plan-pro',
-      price: 9.99,
-      revenueType: 'renewal',
-      currency: 'EUR',
-    },
+    [
+      'amplitude.revenue',
+      {
+        productId: 'plan-pro',
+        price: 9.99,
+        revenueType: 'renewal',
+        currency: 'EUR',
+      },
+    ],
   ],
 };
 
@@ -340,13 +348,15 @@ export const eventOptionsTimeInsertId: AmplitudeStepExample = {
     },
   },
   out: [
-    'amplitude.track',
-    'page view',
-    {},
-    {
-      time: 1700000110,
-      insert_id: '1700000110-gr0up-1',
-    },
+    [
+      'amplitude.track',
+      'page view',
+      {},
+      {
+        time: 1700000110,
+        insert_id: '1700000110-gr0up-1',
+      },
+    ],
   ],
 };
 
@@ -363,7 +373,7 @@ export const consentRevokeOptOut: AmplitudeStepExample = {
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['amplitude.setOptOut', true],
+  out: [['amplitude.setOptOut', true]],
 };
 
 /**
@@ -373,5 +383,5 @@ export const consentGrantOptIn: AmplitudeStepExample = {
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['amplitude.setOptOut', false],
+  out: [['amplitude.setOptOut', false]],
 };

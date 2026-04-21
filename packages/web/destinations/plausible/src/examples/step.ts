@@ -1,6 +1,29 @@
 import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
+/**
+ * Destination bootstrap.
+ * Given the canonical settings, init loads the Plausible script tag
+ * with the configured domain and installs the global `plausible` queue.
+ */
+export const init: Flow.StepExample = {
+  in: {
+    loadScript: true,
+    settings: {
+      domain: 'example.com',
+    },
+  },
+  out: [
+    [
+      'script.appendChild',
+      {
+        src: 'https://plausible.io/js/script.manual.js',
+        domain: 'example.com',
+      },
+    ],
+  ],
+};
+
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000200 }),
   mapping: {
@@ -17,13 +40,16 @@ export const purchase: Flow.StepExample = {
     },
   },
   out: [
-    'purchase',
-    {
-      revenue: {
-        currency: 'EUR',
-        amount: 555,
+    [
+      'plausible',
+      'purchase',
+      {
+        revenue: {
+          currency: 'EUR',
+          amount: 555,
+        },
       },
-    },
+    ],
   ],
 };
 
@@ -39,15 +65,18 @@ export const customEvent: Flow.StepExample = {
     },
   },
   out: [
-    'Custom Event',
-    {
-      props: {
-        string: 'foo',
-        number: 1,
-        boolean: true,
-        array: [0, 'text', false],
+    [
+      'plausible',
+      'Custom Event',
+      {
+        props: {
+          string: 'foo',
+          number: 1,
+          boolean: true,
+          array: [0, 'text', false],
+        },
+        revenue: 1,
       },
-      revenue: 1,
-    },
+    ],
   ],
 };

@@ -22,30 +22,29 @@ describe('Step Examples', () => {
     const event = example.in as WalkerOS.DeepPartialEvent;
     const mockLog = jest.fn();
 
+    const settings =
+      name === 'addProcessedFlag' ? { addProcessedFlag: true } : {};
+    const instance = await transformerDemo(
+      createInitContext({ settings }, { log: mockLog }),
+    );
+    const result = await instance.push(event, createPushContext());
+
+    const actual =
+      result === undefined
+        ? []
+        : [
+            [
+              'return',
+              result === false
+                ? false
+                : (result as { event: WalkerOS.DeepPartialEvent }).event,
+            ],
+          ];
+
+    expect(actual).toEqual(example.out);
+
     if (name === 'passthrough') {
-      // Default config: logs and passes through (returns undefined)
-      const instance = await transformerDemo(
-        createInitContext({}, { log: mockLog }),
-      );
-      const result = await instance.push(event, createPushContext());
-
-      expect(result).toBeUndefined();
       expect(mockLog).toHaveBeenCalledTimes(1);
-    } else if (name === 'addProcessedFlag') {
-      // With addProcessedFlag: modifies the event
-      const instance = await transformerDemo(
-        createInitContext(
-          { settings: { addProcessedFlag: true } },
-          { log: mockLog },
-        ),
-      );
-      const result = await instance.push(event, createPushContext());
-
-      expect(result).toBeDefined();
-      const outEvent = (result as { event: WalkerOS.DeepPartialEvent }).event;
-      const expectedOut = example.out as { event: WalkerOS.DeepPartialEvent };
-      expect(outEvent.data).toMatchObject(expectedOut.event.data!);
-      expect(outEvent.name).toBe(expectedOut.event.name);
     }
   });
 });

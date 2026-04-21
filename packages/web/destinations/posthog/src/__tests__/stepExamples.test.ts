@@ -14,13 +14,6 @@ import { examples } from '../dev';
 import type { Env, PostHogSDK, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
 
 function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
   const calls: CallRecord[] = [];
@@ -81,7 +74,7 @@ describe('posthog destination — step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
       configInclude?: string[];
@@ -131,7 +124,7 @@ describe('posthog destination — step examples', () => {
     }
 
     // Drop init — every example triggers init once; it's not part of `out`.
-    const expected = flatten(example.out as ExpectedOut);
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
     const actual = collected().filter(([path]) => path !== 'posthog.init');
 
     expect(actual).toEqual(expected);

@@ -10,12 +10,15 @@ export const postEvent: Flow.StepExample = {
       data: { title: 'Docs', url: 'https://example.com/docs' },
     },
   },
-  out: {
-    name: 'page view',
-    data: { title: 'Docs', url: 'https://example.com/docs' },
-    entity: 'page',
-    action: 'view',
-  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: { title: 'Docs', url: 'https://example.com/docs' },
+      },
+    ],
+  ],
 };
 
 export const batchRequest: Flow.StepExample = {
@@ -30,12 +33,10 @@ export const batchRequest: Flow.StepExample = {
       ],
     },
   },
-  out: {
-    name: 'page view',
-    data: { title: 'Home' },
-    entity: 'page',
-    action: 'view',
-  },
+  out: [
+    ['elb', { name: 'page view', data: { title: 'Home' } }],
+    ['elb', { name: 'button click', data: { id: 'cta' } }],
+  ],
 };
 
 export const pixelGet: Flow.StepExample = {
@@ -44,10 +45,13 @@ export const pixelGet: Flow.StepExample = {
     method: 'GET',
     url: 'http://localhost/collect?e=page+view&d=%7B%22title%22%3A%22Home%22%7D',
   },
-  out: {
-    name: 'page view',
-    data: { title: 'Home' },
-    entity: 'page',
-    action: 'view',
-  },
+  out: [
+    [
+      'elb',
+      {
+        e: 'page view',
+        d: '{"title":"Home"}',
+      },
+    ],
+  ],
 };

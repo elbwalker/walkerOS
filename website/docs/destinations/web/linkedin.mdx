@@ -6,10 +6,10 @@ sidebar_position: 10
 package: '@walkeros/web-destination-linkedin'
 ---
 
-import destinationLinkedIn from '@walkeros/web-destination-linkedin';
 import data from '@walkeros/web-destination-linkedin/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-export const destination = { ...destinationLinkedIn, examples: data.examples };
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # LinkedIn Insight Tag
 
@@ -27,19 +27,12 @@ there is no npm SDK for the browser tag. Mapped events become
 `window.lintrk('track', { conversion_id, conversion_value?, currency?, event_id? })`
 calls.
 
-:::info Where This Fits
-LinkedIn Insight Tag is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'LinkedIn', highlight: true } }}
+<WhereThisFits
+  pre={<>LinkedIn Insight Tag is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'LinkedIn', highlight: true } },
+  }}
 />
-
-Loads the LinkedIn Insight Tag, lets the tag fire its own page view +
-audience-building cookie, and forwards explicit conversions you map by
-Campaign Manager `conversion_id`.
-:::
 
 ## Installation
 
@@ -47,8 +40,6 @@ Campaign Manager `conversion_id`.
   code={`npm install @walkeros/web-destination-linkedin`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -112,100 +103,29 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Configuration type="destination" data={data} />
 
 ## Opt-in conversion model
 
 LinkedIn is an **opt-in conversion platform**. Every tracked event must
 reference a pre-created Conversion Rule in Campaign Manager via its numeric
 `conversion_id`. Events without an explicit `mapping.settings.conversion`
-produce zero `lintrk` calls.
-
-This is the opposite of analytics destinations (Amplitude, Clarity, PostHog)
-which forward every event by default. Map only the events that matter for
-attribution.
-
-## Mapping data.examples
-
-:::tip
-
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
-
-### Simple conversion ID
-
-The minimum conversion: just the Campaign Manager `conversion_id`. Form
-submissions, signups, downloads, or anything that's a one-shot Conversion Rule.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '123456' }}
-  event={data.examples.step.simpleConversionId.in}
-  mapping={data.examples.step.simpleConversionId.mapping}
-  generic={true}
-/>
-
-### Full e-commerce conversion
-
-The hero example: `value` from `data.total`, `currency` with an `EUR`
-fallback, and `eventId` from the walkerOS `event.id` for cross-channel
-deduplication. Short walkerOS keys (`id`, `value`, `currency`, `eventId`)
-translate to LinkedIn's vendor parameter names at call time.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '123456' }}
-  event={data.examples.step.orderCompleteFullConversion.in}
-  mapping={data.examples.step.orderCompleteFullConversion.mapping}
-  generic={true}
-/>
-
-### Page view as a key conversion
-
-LinkedIn's Insight Tag automatically fires a page view on load for
-retargeting. This pattern fires an **additional** explicit conversion when a
-page view matches a Campaign Manager KEY_PAGE_VIEW rule (e.g., a high-intent
-landing page). Both calls live in the LinkedIn pipeline; they do not collide.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '123456' }}
-  event={data.examples.step.pageViewConversion.in}
-  mapping={data.examples.step.pageViewConversion.mapping}
-  generic={true}
-/>
-
-### Skipping a fully configured rule
-
-`mapping.skip: true` suppresses the call while keeping the rule on disk for
-quick reactivation, which is useful for A/B testing which conversions fire or pausing
-a rule mid-campaign without redeploying. Equivalent to omitting
-`settings.conversion` entirely under the opt-in model.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '123456' }}
-  event={data.examples.step.conversionSkipped.in}
-  mapping={data.examples.step.conversionSkipped.mapping}
-  generic={true}
-/>
+produce zero `lintrk` calls. This is the opposite of analytics destinations
+(Amplitude, Clarity, PostHog) which forward every event by default. Map only
+the events that matter for attribution.
 
 ## Falsy guards
 
 The destination protects against misconfigured mappings:
 
-- If `id` resolves to falsy or `0` → the entire `lintrk` call is skipped (no
+- If `id` resolves to falsy or `0` the entire `lintrk` call is skipped (no
   silent error or partial conversion).
-- If `value` / `currency` / `eventId` resolve to falsy → those individual
+- If `value` / `currency` / `eventId` resolve to falsy, those individual
   fields are dropped from the call. `id` is always required.
 
 ## Consent
@@ -252,9 +172,9 @@ server-side. There is no `lintrk('identify', ...)` API. The destination does
 
 A future `@walkeros/server-destination-linkedin` (Conversions API) will
 consume `li_fat_id` from the session source for advanced matching, sharing
-the `event_id` field for browser↔server deduplication.
+the `event_id` field for browser/server deduplication.
 
 ## Related
 
 - [LinkedIn Insight Tag documentation](https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads-reporting/conversions/)
-- [Bundled mode →](/docs/getting-started/modes/bundled)
+- [Bundled mode](/docs/getting-started/modes/bundled)

@@ -1,0 +1,93 @@
+---
+title: Matomo
+description: Self-hosted or cloud privacy-first web analytics (GA alternative)
+path: /docs/destinations/web/matomo
+sidebar_position: 4
+package: '@walkeros/web-destination-matomo'
+---
+
+import data from '@walkeros/web-destination-matomo/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Matomo
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/matomo"
+  npm="@walkeros/web-destination-matomo"
+  status="beta"
+/>
+
+[Matomo](https://matomo.org/) is an open-source, privacy-focused web analytics
+platform that works self-hosted or in Matomo Cloud. This destination forwards
+walkerOS events to Matomo via the `_paq` command queue with support for page
+views, custom events, ecommerce, goals, site search, content tracking, and
+custom dimensions.
+
+<WhereThisFits
+  pre={<>Matomo is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Matomo', highlight: true } },
+  }}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-matomo`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationMatomo } from '@walkeros/web-destination-matomo';
+
+await startFlow({
+  destinations: {
+    matomo: {
+      code: destinationMatomo,
+      config: {
+        loadScript: true,
+        settings: {
+          siteId: '1',
+          url: 'https://analytics.example.com/',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "matomo": {
+    "package": "@walkeros/web-destination-matomo",
+    "config": {
+      "loadScript": true,
+      "settings": {
+        "siteId": "1",
+        "url": "https://analytics.example.com/"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />

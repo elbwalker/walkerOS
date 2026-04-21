@@ -1,6 +1,35 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+/**
+ * Pinterest Conversions API step examples.
+ *
+ * At push time, the destination calls
+ * `env.sendServer(endpoint, JSON.stringify(body), { headers })` where
+ * `endpoint = ${settings.url}ad_accounts/${settings.adAccountId}/events`
+ * and `body = { data: [hashedServerEvent] }`.
+ *
+ * Test fixture pins `accessToken = 's3cr3t'` and `adAccountId = '123456789'`,
+ * so every endpoint resolves to:
+ *   https://api.pinterest.com/v5/ad_accounts/123456789/events
+ *
+ * Body is emitted with keys in insertion order from push.ts:
+ *   1. event_name
+ *   2. event_id
+ *   3. event_time (unix seconds; `Math.round(event.timestamp / 1000)`)
+ *   4. action_source (default 'web')
+ *   5. ...restEventData (from mapping.data, excluding user_data/custom_data)
+ *   6. user_data (hashed per Pinterest's PII requirements)
+ *   7. custom_data (only when mapping sets custom_data)
+ *   8. event_source_url (appended when action_source === 'web')
+ *
+ * The `options` argument carries the Authorization header.
+ */
+const ENDPOINT = 'https://api.pinterest.com/v5/ad_accounts/123456789/events';
+const OPTIONS = {
+  headers: { Authorization: 'Bearer s3cr3t' },
+};
+
 export const checkout: Flow.StepExample = {
   in: getEvent('order complete', {
     timestamp: 1700000900,
@@ -54,34 +83,39 @@ export const checkout: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: [
-      {
-        event_name: 'checkout',
-        event_time: 1700000900,
-        event_id: '1700000900-gr0up-1',
-        event_source_url: 'https://shop.example.com',
-        action_source: 'web',
-        user_data: {
-          external_id: ['user-123'],
-        },
-        custom_data: {
-          value: 249.99,
-          currency: 'EUR',
-          order_id: 'ORD-300',
-          num_items: 1,
-          contents: [
-            {
-              id: 'SKU-A1',
-              item_name: 'Everyday Ruck Snack',
-              item_price: '129.99',
-              quantity: 2,
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: [
+          {
+            event_name: 'checkout',
+            event_id: '1700000900-gr0up-1',
+            event_time: 1700001,
+            action_source: 'web',
+            user_data: {},
+            custom_data: {
+              value: 249.99,
+              currency: 'EUR',
+              order_id: 'ORD-300',
+              num_items: 1,
+              contents: [
+                {
+                  id: 'SKU-A1',
+                  item_name: 'Everyday Ruck Snack',
+                  item_price: '129.99',
+                  quantity: 2,
+                },
+              ],
             },
-          ],
-        },
-      },
+            event_source_url: 'https://shop.example.com',
+          },
+        ],
+      }),
+      OPTIONS,
     ],
-  },
+  ],
 };
 
 export const addToCart: Flow.StepExample = {
@@ -120,32 +154,37 @@ export const addToCart: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: [
-      {
-        event_name: 'add_to_cart',
-        event_time: 1700000901,
-        event_id: '1700000901-gr0up-1',
-        event_source_url: 'https://shop.example.com/products',
-        action_source: 'web',
-        user_data: {
-          external_id: ['user-456'],
-        },
-        custom_data: {
-          value: '42.00',
-          currency: 'EUR',
-          contents: [
-            {
-              id: 'SKU-B2',
-              item_name: 'Cool Cap',
-              item_price: '42.00',
-              quantity: 1,
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: [
+          {
+            event_name: 'add_to_cart',
+            event_id: '1700000901-gr0up-1',
+            event_time: 1700001,
+            action_source: 'web',
+            user_data: {},
+            custom_data: {
+              value: '42.00',
+              currency: 'EUR',
+              contents: [
+                {
+                  id: 'SKU-B2',
+                  item_name: 'Cool Cap',
+                  item_price: '42.00',
+                  quantity: 1,
+                },
+              ],
             },
-          ],
-        },
-      },
+            event_source_url: 'https://shop.example.com/products',
+          },
+        ],
+      }),
+      OPTIONS,
     ],
-  },
+  ],
 };
 
 export const pageVisit: Flow.StepExample = {
@@ -161,20 +200,25 @@ export const pageVisit: Flow.StepExample = {
   mapping: {
     name: 'page_visit',
   },
-  out: {
-    data: [
-      {
-        event_name: 'page_visit',
-        event_time: 1700000902,
-        event_id: '1700000902-gr0up-1',
-        event_source_url: 'https://www.example.com/docs/',
-        action_source: 'web',
-        user_data: {
-          external_id: ['user-789'],
-        },
-      },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: [
+          {
+            event_name: 'page_visit',
+            event_id: '1700000902-gr0up-1',
+            event_time: 1700001,
+            action_source: 'web',
+            user_data: {},
+            event_source_url: 'https://www.example.com/docs/',
+          },
+        ],
+      }),
+      OPTIONS,
     ],
-  },
+  ],
 };
 
 export const search: Flow.StepExample = {
@@ -201,23 +245,28 @@ export const search: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: [
-      {
-        event_name: 'search',
-        event_time: 1700000903,
-        event_id: '1700000903-gr0up-1',
-        event_source_url: 'https://www.example.com/search',
-        action_source: 'web',
-        user_data: {
-          external_id: ['user-101'],
-        },
-        custom_data: {
-          search_string: 'walkerOS destinations',
-        },
-      },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: [
+          {
+            event_name: 'search',
+            event_id: '1700000903-gr0up-1',
+            event_time: 1700001,
+            action_source: 'web',
+            user_data: {},
+            custom_data: {
+              search_string: 'walkerOS destinations',
+            },
+            event_source_url: 'https://www.example.com/search',
+          },
+        ],
+      }),
+      OPTIONS,
     ],
-  },
+  ],
 };
 
 export const signup: Flow.StepExample = {
@@ -245,19 +294,32 @@ export const signup: Flow.StepExample = {
       },
     },
   },
-  out: {
-    data: [
-      {
-        event_name: 'signup',
-        event_time: 1700000904,
-        event_id: '1700000904-gr0up-1',
-        event_source_url: 'https://www.example.com/register',
-        action_source: 'web',
-        user_data: {
-          em: ['new@example.com'],
-          external_id: ['new-user-1'],
-        },
-      },
+  out: [
+    [
+      'sendServer',
+      ENDPOINT,
+      JSON.stringify({
+        data: [
+          {
+            event_name: 'signup',
+            event_id: '1700000904-gr0up-1',
+            event_time: 1700001,
+            action_source: 'web',
+            user_data: {
+              // sha256('new@example.com')
+              em: [
+                'f0030501023327437b06e5c6f87df7871b8e704ae608d1d0b7b24fdd2a06c716',
+              ],
+              // sha256('new-user-1')
+              external_id: [
+                'b45cf5f6ebc2c6974ea3bd9fab19f8cc3a7cf63054727a9fcd22f1fda97d6dde',
+              ],
+            },
+            event_source_url: 'https://www.example.com/register',
+          },
+        ],
+      }),
+      OPTIONS,
     ],
-  },
+  ],
 };

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-store-fs",
   "description": "Filesystem store for walkerOS server - reads and writes files via the Store interface",
-  "version": "3.3.1",
+  "version": "3.4.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -32,10 +32,10 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "3.3.1"
+    "@walkeros/core": "3.4.0"
   },
   "devDependencies": {
-    "@walkeros/core": "3.3.1"
+    "@walkeros/core": "3.4.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

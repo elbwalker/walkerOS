@@ -12,11 +12,11 @@ import { startFlow } from '../flow';
 describe('StepExample.command', () => {
   it('accepts each documented command value without type errors', () => {
     const cases: Flow.StepExample[] = [
-      { command: 'config', in: {}, out: {} },
-      { command: 'consent', in: { marketing: true }, out: {} },
-      { command: 'user', in: { id: 'u1' }, out: {} },
-      { command: 'run', in: {}, out: {} },
-      { in: { name: 'page view' }, out: {} }, // no command: default event path
+      { command: 'config', in: {}, out: [] },
+      { command: 'consent', in: { marketing: true }, out: [] },
+      { command: 'user', in: { id: 'u1' }, out: [] },
+      { command: 'run', in: {}, out: [] },
+      { in: { name: 'page view' }, out: [] }, // no command: default event path
     ];
     expect(cases).toHaveLength(5);
   });

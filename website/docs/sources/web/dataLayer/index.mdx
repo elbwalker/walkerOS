@@ -6,24 +6,23 @@ sidebar_position: 2
 package: '@walkeros/web-source-datalayer'
 ---
 import data from '@walkeros/web-source-datalayer/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink github="packages/web/sources/datalayer" npm="@walkeros/web-source-datalayer" />
 
-# DataLayer Source
+# DataLayer source
 
 Integrates with existing Google Analytics 4 and GTM dataLayer implementations by intercepting `dataLayer.push()` calls.
 
-:::info Where This Fits
-The DataLayer Source is a **web source** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { label: 'Source', text: 'dataLayer', highlight: true } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { highlight: false } }}
+<WhereThisFits
+  pre={<>The DataLayer source is a <strong>web source</strong> in the walkerOS flow:</>}
+  flowMap={{
+    sources: { default: { label: 'Source', text: 'dataLayer', highlight: true } },
+  }}
+  post={<>It bridges existing GA4/GTM implementations to walkerOS destinations.</>}
 />
-
-It bridges existing GA4/GTM implementations to walkerOS destinations.
-:::
 
 ## Installation
 
@@ -31,8 +30,6 @@ It bridges existing GA4/GTM implementations to walkerOS destinations.
   code={`npm install @walkeros/web-source-datalayer`}
   language="bash"
 />
-
-## Basic Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -80,12 +77,14 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## How It Works
+<Configuration type="source" data={data} />
+
+## How it works
 
 The dataLayer source intercepts `dataLayer.push()` calls and transforms them into walkerOS events:
 
@@ -104,11 +103,7 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
   language="javascript"
 />
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
-
-## Custom Filtering
+## Custom filtering
 
 Filter which dataLayer events get processed:
 
@@ -135,7 +130,7 @@ Filter which dataLayer events get processed:
   language="typescript"
 />
 
-## Migration Strategy
+## Migration strategy
 
 Use the dataLayer source for gradual migration from GA4/GTM:
 
@@ -174,7 +169,7 @@ elb('order complete', { total: 99.99 });`}
   language="typescript"
 />
 
-## Next Steps
+## Next steps
 
 * Review [event mapping](/docs/mapping) for transforming dataLayer events
 * Check [GA4 destination](/docs/destinations/web/gtag) for Google Analytics integration

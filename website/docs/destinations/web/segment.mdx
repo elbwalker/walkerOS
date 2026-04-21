@@ -6,10 +6,10 @@ sidebar_position: 8
 package: '@walkeros/web-destination-segment'
 ---
 
-import destinationSegment from '@walkeros/web-destination-segment';
 import data from '@walkeros/web-destination-segment/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-export const destination = { ...destinationSegment, examples: data.examples };
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Segment
 
@@ -25,20 +25,15 @@ warehouses, ...). This destination forwards walkerOS events to Segment via
 the official
 [`@segment/analytics-next`](https://www.npmjs.com/package/@segment/analytics-next)
 (Analytics.js 2.0) SDK, implementing the full Segment Spec surface: `track`,
-`identify`, `group`, `page`, and `reset`.
+`identify`, `group`, `page`, and `reset`. Automatically stamps consent context
+on every call.
 
-:::info Where This Fits
-Segment is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Segment', highlight: true } }}
+<WhereThisFits
+  pre={<>Segment is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Segment', highlight: true } },
+  }}
 />
-
-Loads Analytics.js, forwards events as Segment Spec calls, and automatically
-stamps consent context on every call.
-:::
 
 ## Installation
 
@@ -46,8 +41,6 @@ stamps consent context on every call.
   code={`npm install @walkeros/web-destination-segment`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -90,99 +83,16 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
-
-The `Settings` type extends Segment's `InitOptions`, so every passthrough
-option (cookie, storage, integrations, plan, retryQueue, ...) works alongside
-the walkerOS-specific fields above.
-
-## Mapping data.examples
-
-:::tip
-
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
-
-### Default event forwarding
-
-Every walkerOS event becomes `analytics.track(name, properties)`.
-Without `include` config, `properties` is empty. Add `include: ['data']`
-to the destination config to forward event data as properties.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={{ include: ['data'] }}
-  generic={true}
-/>
-
-### User login identify
-
-Per-event identity with reserved Segment Spec traits (`email`, `name`,
-`plan`, `company`). `skip: true` suppresses the default `track()` call so
-only the identity side effect runs.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.userLoginIdentify.in}
-  mapping={data.examples.step.userLoginIdentify.mapping}
-  generic={true}
-/>
-
-### Group assignment
-
-Attach a user to a company and set the company's traits in a single
-`group()` call.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.companyUpdateGroup.in}
-  mapping={data.examples.step.companyUpdateGroup.mapping}
-  generic={true}
-/>
-
-### Page views
-
-Segment's `page()` is first-class. Configure it explicitly via
-`mapping.settings.page`.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.pageViewAsPage.in}
-  mapping={data.examples.step.pageViewAsPage.mapping}
-  generic={true}
-/>
-
-### Order Completed (Segment Ecommerce Spec)
-
-A single `track('Order Completed', { products: [...] })` call using
-`mapping.name` for the PascalCase event name and `mapping.data` with a
-nested `loop` to build the products array inline.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'test-project' }}
-  event={data.examples.step.orderCompletedEcommerce.in}
-  mapping={data.examples.step.orderCompletedEcommerce.mapping}
-  generic={true}
-/>
+<Configuration type="destination" data={data} />
 
 ## Consent
 
-The destination supports two complementary consent mechanisms:
+The destination supports two complementary consent mechanisms.
 
 **Automatic context forwarding.** When `settings.consent` is configured,
 every `track`, `identify`, `group`, and `page` call is stamped with
@@ -219,7 +129,7 @@ is to avoid loading the SDK in the first place.
   language="typescript"
 />
 
-## Scope Notes
+## Scope notes
 
 - **`alias()` and `screen()`** are intentionally deferred. `alias()` is a
   legacy identity-linking method; `screen()` is mobile-only.

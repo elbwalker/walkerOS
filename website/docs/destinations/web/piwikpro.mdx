@@ -6,10 +6,10 @@ sidebar_position: 3
 package: '@walkeros/web-destination-piwikpro'
 ---
 
-import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
 import data from '@walkeros/web-destination-piwikpro/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-export const destination = { ...destinationPiwikPro, examples: data.examples };
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Piwik PRO
 
@@ -19,24 +19,17 @@ export const destination = { ...destinationPiwikPro, examples: data.examples };
   npm="@walkeros/web-destination-piwikpro"
 />
 
-[Piwik PRO](https://piwik.pro/) is a European, privacy-focused web analytics and
-marketing platform that helps businesses track website traffic and user
-behavior. The destination automatically sends events to Piwik Pro via `push`
-function. All you need to do is install the destination, and optionally map
-events to Piwik Pro's format. walkerOS takes care of loading the script and the
-function calls.
+[Piwik PRO](https://piwik.pro/) is a European, privacy-focused web analytics
+and marketing platform. The destination sends events to Piwik PRO via the
+`_paq` command queue, loading the tracking container script and forwarding
+page views, custom events, and ecommerce calls.
 
-:::info Where This Fits
-Piwik PRO is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Piwik PRO', highlight: true } }}
+<WhereThisFits
+  pre={<>Piwik PRO is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Piwik PRO', highlight: true } },
+  }}
 />
-
-Loads Piwik PRO script, initializes the tracking container, and sends page views and custom events with GDPR-compliant analytics.
-:::
 
 ## Installation
 
@@ -44,8 +37,6 @@ Loads Piwik PRO script, initializes the tracking container, and sends page views
   code={`npm install @walkeros/web-destination-piwikpro`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -60,8 +51,8 @@ await startFlow({
       code: destinationPiwikPro,
       config: {
         settings: {
-          appId: 'XXX-XXX-XXX-XXX-XXX', // Required
-          url: 'https://your_account_name.piwik.pro/', // Required
+          appId: 'XXX-XXX-XXX-XXX-XXX',
+          url: 'https://your_account_name.piwik.pro/',
         },
       },
     },
@@ -90,110 +81,9 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
-
-<DestinationInitDemo
-  destination={destination}
-  settings={{
-    appId: 'XXX-XXX-XXX-XXX-XXX',
-    url: 'https://your_account_name.piwik.pro/',
-  }}
-/>
-
-### Event Mapping
-
-For custom event mapping (`mapping.entity.action.settings`):
-
-<PropertyTable schema={data.schemas.mapping} />
-
-## Mapping data.examples
-
-:::tip
-
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
-
-### ProductDetailView
-
-Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#data.examples">ecommerceProductDetailView</Link>
-event.
-
-<DestinationDemo
-  destination={destination}
-  settings={{
-    appId: 'XXX-XXX-XXX-XXX-XXX',
-    url: 'https://your_account_name.piwik.pro/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.productDetailView.in}
-  mapping={data.examples.step.productDetailView.mapping}
-  generic={true}
-/>
-
-### AddToCart
-
-Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#data.examples">ecommerceAddToCart</Link>
-event.
-
-<DestinationDemo
-  destination={destination}
-  settings={{
-    appId: 'XXX-XXX-XXX-XXX-XXX',
-    url: 'https://your_account_name.piwik.pro/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.ecommerceAddToCart.in}
-  mapping={data.examples.step.ecommerceAddToCart.mapping}
-  generic={true}
-/>
-
-### CartUpdate
-
-Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#data.examples">ecommerceCartUpdate</Link>
-event.
-
-<DestinationDemo
-  destination={destination}
-  settings={{
-    appId: 'XXX-XXX-XXX-XXX-XXX',
-    url: 'https://your_account_name.piwik.pro/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.cartUpdate.in}
-  mapping={data.examples.step.cartUpdate.mapping}
-  generic={true}
-/>
-
-### Order
-
-Map your walkerOS event to get
-an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#data.examples">ecommerceOrder</Link>
-event.
-
-<DestinationDemo
-  destination={destination}
-  settings={{
-    appId: 'XXX-XXX-XXX-XXX-XXX',
-    url: 'https://your_account_name.piwik.pro/',
-  }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.ecommerceOrder.in}
-  mapping={data.examples.step.ecommerceOrder.mapping}
-  generic={true}
-/>
+<Configuration type="destination" data={data} />

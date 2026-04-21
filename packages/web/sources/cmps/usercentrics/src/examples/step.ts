@@ -12,11 +12,17 @@ export const fullConsent: Flow.StepExample = {
       marketing: true,
     },
   },
-  out: {
-    essential: true,
-    functional: true,
-    marketing: true,
-  },
+  out: [
+    [
+      'elb',
+      'walker consent',
+      {
+        essential: true,
+        functional: true,
+        marketing: true,
+      },
+    ],
+  ],
 };
 
 export const minimalConsent: Flow.StepExample = {
@@ -31,11 +37,17 @@ export const minimalConsent: Flow.StepExample = {
       marketing: false,
     },
   },
-  out: {
-    essential: true,
-    functional: false,
-    marketing: false,
-  },
+  out: [
+    [
+      'elb',
+      'walker consent',
+      {
+        essential: true,
+        functional: false,
+        marketing: false,
+      },
+    ],
+  ],
 };
 
 export const categoryMapOverride: Flow.StepExample = {
@@ -54,11 +66,17 @@ export const categoryMapOverride: Flow.StepExample = {
   mapping: {
     categoryMap: { essential: 'functional', functional: 'analytics' },
   },
-  out: {
-    functional: true,
-    analytics: true,
-    marketing: false,
-  },
+  out: [
+    [
+      'elb',
+      'walker consent',
+      {
+        functional: true,
+        analytics: true,
+        marketing: false,
+      },
+    ],
+  ],
 };
 
 export const customEventName: Flow.StepExample = {
@@ -74,9 +92,15 @@ export const customEventName: Flow.StepExample = {
     },
   },
   mapping: { eventName: 'UC_SDK_EVENT' },
-  out: {
-    essential: true,
-    functional: true,
-    marketing: true,
-  },
+  out: [
+    [
+      'elb',
+      'walker consent',
+      {
+        essential: true,
+        functional: true,
+        marketing: true,
+      },
+    ],
+  ],
 };

@@ -64,6 +64,13 @@ export { createApiClient } from './core/api-client.js';
 export { ApiError, throwApiError } from './core/api-error.js';
 export type { ApiErrorDetail } from './core/api-error.js';
 export {
+  setClientContext,
+  getClientContext,
+  resetClientContext,
+  clientContextHeaders,
+} from './core/client-context.js';
+export type { ClientType, ClientContext } from './core/client-context.js';
+export {
   listProjects,
   getProject,
   createProject,

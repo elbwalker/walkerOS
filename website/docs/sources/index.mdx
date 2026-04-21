@@ -4,6 +4,14 @@ description: Event data sources for walkerOS collector
 sidebar_position: 4
 ---
 
+import { schemas } from '@walkeros/core/dev';
+import { omitSchemaProperties } from '@site/src/utils/schema';
+
+export const sourceConfig = omitSchemaProperties(
+
+  schemas.SourceSchemas.configJsonSchema,
+  ['settings', 'onError'],
+);
 
 # Sources
 
@@ -177,6 +185,13 @@ if (event === 'consent') {
 ## Creating custom sources
 
 See [Create Your Own Source](./create-your-own) for a complete guide to building custom sources.
+
+## Configuration
+
+These fields are available on every source, regardless of package. They wrap the
+package-specific `settings` field, which is documented on each source's page.
+
+<PropertyTable schema={sourceConfig} />
 
 ## Next steps
 

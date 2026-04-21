@@ -142,7 +142,6 @@ The codebase strictly follows **Atomic Design** principles:
 
 4. **Demos** (`src/components/demos/`): Ready-to-use complete demos
    - `MappingDemo.tsx` - Three-panel transformation editor
-   - `DestinationDemo.tsx` - Destination testing with event processing
    - `PromotionPlayground.tsx` - Promotion event playground
    - `MappingCode.tsx` - Code-based mapping demo
 
@@ -409,4 +408,29 @@ testing components for the walkerOS ecosystem.
 - `createFbqDestination()` - Facebook Pixel
 - `createPlausibleDestination()` - Plausible Analytics
 
-Use with `DestinationDemo` to create interactive destination testing interfaces.
+### Monaco ambient globals (CodeBox IntelliSense)
+
+Mapping and flow snippets embedded in docs run inside Monaco and can use the
+walkerOS runtime globals (`elb`, `getMappingEvent`, `getMappingValue`) without
+any `import` statement. The globals are declared in an ambient `.d.ts`
+registered via Monaco's official `addExtraLib` API.
+
+- Declarations live in `src/utils/monaco-types.ts` →
+  `registerWalkerOSAmbients(monaco)`.
+- Base compiler options (`target: ES2022`, `module: ESNext`,
+  `moduleDetection: 'force'`) are applied by `configureMonacoTypeScript`.
+- Both functions run unconditionally on every Monaco mount from `atoms/code.tsx`
+  (`handleBeforeMount`). They are idempotent.
+
+**Adding a new runtime global:**
+
+1. Add the declaration inside the `declare global { ... }` block in
+   `registerWalkerOSAmbients`.
+2. Type it via imports from `@walkeros/core` (the ambient file imports types,
+   then re-declares values/functions as globals).
+3. Keep the `export {}` footer — it's what turns the file into a module so
+   `declare global` augments global scope correctly.
+
+**Rule:** only declare things that are genuinely available at snippet runtime.
+The ambient block is for runtime globals, not a workaround for missing imports
+in user-authored code.

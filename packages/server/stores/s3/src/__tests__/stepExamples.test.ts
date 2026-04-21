@@ -82,7 +82,7 @@ describe('Step Examples', () => {
       key: string;
       settings: { bucket: string; prefix: string };
     };
-    const output = example.out as { s3Path: string };
+    const [, s3Path] = example.out![0] as readonly [string, string, unknown];
 
     const content = Buffer.from('data');
     mockGetObjectArrayBuffer.mockResolvedValue(content.buffer);
@@ -93,6 +93,6 @@ describe('Step Examples', () => {
     });
     await store.get(input.key);
 
-    expect(mockGetObjectArrayBuffer).toHaveBeenCalledWith(output.s3Path);
+    expect(mockGetObjectArrayBuffer).toHaveBeenCalledWith(s3Path);
   });
 });

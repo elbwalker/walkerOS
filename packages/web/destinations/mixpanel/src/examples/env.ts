@@ -3,7 +3,7 @@ import type { Env, MixpanelGroup } from '../types';
 const noop = () => {};
 
 /**
- * A recording group handle that accumulates calls for display in DestinationDemo.
+ * A recording group handle that accumulates calls so tests can assert on them.
  * Each method records its arguments and returns `this` for chaining.
  */
 class RecordingGroup implements MixpanelGroup {

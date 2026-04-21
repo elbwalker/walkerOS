@@ -6,10 +6,10 @@ sidebar_position: 11
 package: '@walkeros/web-destination-pinterest'
 ---
 
-import destinationPinterest from '@walkeros/web-destination-pinterest';
 import data from '@walkeros/web-destination-pinterest/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-export const destination = { ...destinationPinterest, examples: data.examples };
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Pinterest Tag
 
@@ -27,19 +27,12 @@ SDK for the browser tag. Mapped events become
 `window.pintrk('track', eventName, { ..., event_id })` calls, with optional
 `pintrk('set', ...)` for enhanced matching.
 
-:::info Where This Fits
-Pinterest Tag is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Pinterest', highlight: true } }}
+<WhereThisFits
+  pre={<>Pinterest Tag is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Pinterest', highlight: true } },
+  }}
 />
-
-Loads `core.js` from Pinterest's CDN, fires the standard `pintrk('load', tagId)`
-+ optional `pintrk('page')` on init, then forwards conversions you map to
-Pinterest's standard event taxonomy.
-:::
 
 ## Installation
 
@@ -47,8 +40,6 @@ Pinterest's standard event taxonomy.
   code={`npm install @walkeros/web-destination-pinterest`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -67,23 +58,6 @@ await startFlow({
         loadScript: true,
         settings: {
           apiKey: '2612345678901',
-        },
-        mapping: {
-          page: {
-            view: { name: 'pagevisit' },
-          },
-          order: {
-            complete: {
-              name: 'checkout',
-              data: {
-                map: {
-                  value: 'data.total',
-                  order_id: 'data.id',
-                  currency: { key: 'data.currency', value: 'EUR' },
-                },
-              },
-            },
-          },
         },
       },
     },
@@ -113,14 +87,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Configuration type="destination" data={data} />
 
 ## Standard event taxonomy
 
@@ -138,84 +110,6 @@ auto-maps. Every conversion event needs an explicit `mapping.name`.
 | `user signup`    | `signup`        | Same identify pattern as `lead`.                                                   |
 | (custom)         | `custom`        | Send Pinterest's `custom` event for non-standard conversions.                      |
 
-## Mapping data.examples
-
-:::tip
-
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
-
-### Page view rename
-
-The simplest conversion. The walkerOS event name is renamed to Pinterest's
-`pagevisit` standard.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.pageViewRename.in}
-  mapping={data.examples.step.pageViewRename.mapping}
-  generic={true}
-/>
-
-### Single-product viewcontent
-
-`value`, `currency` (with `EUR` fallback), `product_id`, and `product_name`
-flow into a single `pintrk('track', 'viewcontent', { ... })` call. The walkerOS
-event `id` is auto-attached as `event_id` for cross-channel deduplication.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.productViewContent.in}
-  mapping={data.examples.step.productViewContent.mapping}
-  generic={true}
-/>
-
-### Multi-product checkout with `line_items`
-
-Pinterest sends a SINGLE `pintrk('track', 'checkout', { line_items: [...] })`
-call. The walkerOS `loop` mapping resolves a nested array INTO the data, NOT
-into N separate SDK calls.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.orderCompleteCheckout.in}
-  mapping={data.examples.step.orderCompleteCheckout.mapping}
-  generic={true}
-/>
-
-### Lead with enhanced matching
-
-`settings.identify` resolves to `{ em, external_id }` and fires `pintrk('set',
-data)` BEFORE the track call. The Pinterest JS tag auto-hashes `em`, so pass raw
-emails through and do NOT pre-hash.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.userLoginLead.in}
-  mapping={data.examples.step.userLoginLead.mapping}
-  generic={true}
-/>
-
-### Identify-only via `mapping.skip`
-
-`mapping.skip: true` processes side effects (`pintrk('set', ...)`) but
-suppresses the default `pintrk('track', ...)` call. Useful when you want to
-refresh enhanced matching without firing a conversion.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '2612345678901' }}
-  event={data.examples.step.identifyOnlySkip.in}
-  mapping={data.examples.step.identifyOnlySkip.mapping}
-  generic={true}
-/>
-
 ## Enhanced matching
 
 Pinterest's web tag accepts two enhanced matching fields, both auto-hashed by
@@ -223,7 +117,7 @@ the JS tag with SHA-256:
 
 | Field         | Source                              | Notes                                                    |
 | ------------- | ----------------------------------- | -------------------------------------------------------- |
-| `em`          | `data.email` / `user.email` / etc.  | Pinterest auto-hashes. Pass raw email, do NOT pre-hash. |
+| `em`          | `data.email` / `user.email` / etc.  | Pinterest auto-hashes. Pass raw email, do NOT pre-hash.  |
 | `external_id` | `data.id` / `user.id`               | Stable user identifier. Auto-hashed by Pinterest.        |
 
 The destination strictly limits to these two fields. CAPI-only fields (`ph`,
@@ -282,4 +176,4 @@ matching the Meta / TikTok / LinkedIn web+server split. It will share the
 
 - [Pinterest Tag documentation](https://help.pinterest.com/en/business/article/install-the-pinterest-tag)
 - [Enhanced match documentation](https://help.pinterest.com/en/business/article/enhanced-match)
-- [Bundled mode →](/docs/getting-started/modes/bundled)
+- [Bundled mode](/docs/getting-started/modes/bundled)

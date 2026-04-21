@@ -11,20 +11,14 @@ import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { Env, SlackClientMock, Settings } from '../types';
 
-type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
+type Captured = [callable: string, ...args: unknown[]];
 
 /**
  * Recording env -- both Web API mocks and sendServer log to a shared list.
+ * sendServer captures the body as-is (already a JSON string).
  */
-function spyEnv(): { env: Env; collected: () => CallRecord[] } {
-  const calls: CallRecord[] = [];
+function spyEnv(): { env: Env; collected: () => Captured[] } {
+  const calls: Captured[] = [];
 
   const slackClient: SlackClientMock = {
     chat: {
@@ -52,8 +46,8 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
     },
   };
 
-  const sendServer = ((url: string, body: string) => {
-    calls.push(['sendServer', url, JSON.parse(body)]);
+  const sendServer = ((...args: unknown[]) => {
+    calls.push(['sendServer', ...args] as Captured);
     return Promise.resolve({ ok: true });
   }) as Env['sendServer'];
 
@@ -91,7 +85,7 @@ describe('slack server destination -- step examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env },
       {
@@ -102,9 +96,6 @@ describe('slack server destination -- step examples', () => {
 
     await elb(event);
 
-    const expected = flatten(example.out as ExpectedOut);
-    const actual = collected();
-
-    expect(actual).toEqual(expected);
+    expect(collected()).toEqual(example.out);
   });
 });

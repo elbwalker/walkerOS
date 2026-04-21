@@ -8,14 +8,14 @@ import { Icon } from '@iconify/react';
 import {
   CodeBox,
   CodeSnippet,
-  DestinationDemo,
-  DestinationInitDemo,
+  CodeView,
   FlowMap,
   LiveCode,
   PropertyTable,
 } from '@walkeros/explorer';
 // Import website-specific components
 import PackageLink from '@site/src/components/docs/package-link';
+import StepExample from '@site/src/components/snippets/StepExample';
 
 export default {
   // Re-use the default mapping
@@ -30,9 +30,9 @@ export default {
   // Explorer components (no import needed in MDX files)
   CodeBox,
   CodeSnippet,
-  DestinationDemo,
-  DestinationInitDemo,
+  CodeView,
   FlowMap,
   LiveCode,
   PropertyTable,
+  StepExample,
 };

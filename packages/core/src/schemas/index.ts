@@ -43,6 +43,8 @@ import * as MappingSchemas from './mapping';
 import * as DestinationSchemas from './destination';
 import * as CollectorSchemas from './collector';
 import * as SourceSchemas from './source';
+import * as TransformerSchemas from './transformer';
+import * as StoreSchemas from './store';
 import * as FlowSchemas from './flow';
 import * as UtilitySchemas from './utilities';
 
@@ -52,6 +54,8 @@ export {
   DestinationSchemas,
   CollectorSchemas,
   SourceSchemas,
+  TransformerSchemas,
+  StoreSchemas,
   FlowSchemas,
   UtilitySchemas,
 };

@@ -1,0 +1,152 @@
+---
+title: Snapchat Conversions API
+description: "Server-side event delivery to Snapchat Conversions API for enhanced conversion tracking"
+path: /docs/destinations/server/snapchat
+sidebar_position: 18
+package: '@walkeros/server-destination-snapchat'
+---
+import data from '@walkeros/server-destination-snapchat/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Snapchat Conversions API
+
+<PackageLink env="server" github="packages/server/destinations/snapchat" npm="@walkeros/server-destination-snapchat" status="beta" />
+
+Server-side event delivery to Snapchat's Conversions API v3 for enhanced conversion tracking, bypassing browser limitations and improving match quality for ad optimization.
+
+<WhereThisFits
+  pre={<>Snapchat Conversions API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Snapchat CAPI', highlight: true } },
+  }}
+  post={<>Sends events server-side to Snapchat's Conversions API using raw HTTP (no SDK). Identity fields (`em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id`) are SHA-256 hashed before sending. Events include a stable `event_id` for deduplication with the Snap Pixel.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-snapchat`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationSnapchat } from '@walkeros/server-destination-snapchat';
+
+await startFlow({
+  destinations: {
+    snapchat: {
+      code: destinationSnapchat,
+      config: {
+        settings: {
+          accessToken: 'YOUR_ACCESS_TOKEN',
+          pixelId: 'YOUR_PIXEL_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "snapchat": {
+    "package": "@walkeros/server-destination-snapchat",
+    "code": "destinationSnapchat",
+    "config": {
+      "settings": {
+        "accessToken": "YOUR_ACCESS_TOKEN",
+        "pixelId": "YOUR_PIXEL_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## Event mapping
+
+Map walkerOS events to Snapchat standard event names via each rule's `name` field. Snapchat uses **UPPERCASE** standard event names (e.g. `PURCHASE`, not `Purchase`).
+
+<CodeSnippet
+  code={`"mapping": {
+  "order": {
+    "complete": {
+      "name": "PURCHASE",
+      "data": {
+        "map": {
+          "custom_data": {
+            "map": {
+              "value": "data.total",
+              "currency": "data.currency",
+              "transaction_id": "data.id"
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### custom_data structure
+
+Unlike Meta's CAPI (which places properties flat on the event root), Snapchat requires event properties to be nested under `custom_data`. Always map into `custom_data.map`.
+
+## Hashing
+
+The destination automatically SHA-256 hashes the 11 standard identity fields before sending: `em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id`. Pass raw values and hashing is handled for you.
+
+Non-hashable fields pass through as-is: `sc_cookie1`, `client_ip_address`, `client_user_agent`, `sc_click_id`, `idfv`, `madid`.
+
+If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`:
+
+<CodeSnippet
+  code={`"settings": {
+  "accessToken": "YOUR_ACCESS_TOKEN",
+  "pixelId": "YOUR_PIXEL_ID",
+  "doNotHash": ["em"]
+}`}
+  language="json"
+/>
+
+## Deduplication
+
+Each event is sent with `event_id` set to the walkerOS event `id`. If you also run the Snap Pixel in the browser, Snapchat deduplicates server and browser events that share the same `event_id` and `event_name` within a 48h window, so conversions are not double-counted.
+
+## Test mode
+
+Set `testMode: true` to send events to Snapchat's `/events/validate` endpoint for validation instead of the live `/events` endpoint. Useful during development. Events validated via this endpoint do **not** count toward ads delivery or optimization.
+
+<CodeSnippet
+  code={`"settings": {
+  "accessToken": "YOUR_ACCESS_TOKEN",
+  "pixelId": "YOUR_PIXEL_ID",
+  "testMode": true
+}`}
+  language="json"
+/>
+
+## Links
+
+- [Snapchat Conversions API documentation](https://businesshelp.snapchat.com/s/article/conversions-api)
+- [CAPI parameters reference](https://businesshelp.snapchat.com/s/article/capi-parameters)

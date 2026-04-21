@@ -1,149 +1,220 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Destination, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 import { resetConsentState } from '../index';
 
-describe('Step Examples', () => {
+const INIT_DATE_MS = 1700000000000;
+import { resetLoadedScripts } from '../shared/gtag';
+
+type CallRecord = [string, ...unknown[]];
+
+const ga4Init = examples.step.ga4Init;
+const adsInit = examples.step.adsInit;
+const gtmInit = examples.step.gtmInit;
+
+const ga4InitIn = ga4Init.in as Destination.Config;
+const adsInitIn = adsInit.in as Destination.Config;
+const gtmInitIn = gtmInit.in as Destination.Config;
+
+const ga4InitOut = (ga4Init.out ?? []) as ReadonlyArray<CallRecord>;
+const adsInitOut = (adsInit.out ?? []) as ReadonlyArray<CallRecord>;
+const gtmInitOut = (gtmInit.out ?? []) as ReadonlyArray<CallRecord>;
+
+const noopLogger = {
+  log: () => {},
+  warn: () => {},
+  error: () => {},
+  debug: () => {},
+  throw: (msg: string) => {
+    throw new Error(msg);
+  },
+} as unknown as Destination.Context['logger'];
+
+type TestEnv = ReturnType<typeof clone> & {
+  window: { gtag: jest.Mock; dataLayer: unknown[] };
+};
+
+function makeTestEnv(): {
+  env: TestEnv;
+  mockGtag: jest.Mock;
+  calls: CallRecord[];
+} {
+  const calls: CallRecord[] = [];
+  const env = clone(examples.env.push) as TestEnv;
+  const mockGtag = jest.fn((...args: unknown[]) => {
+    calls.push(['gtag', ...args] as CallRecord);
+  });
+  env.window.gtag = mockGtag;
+
+  const dataLayerProxy = new Proxy([] as unknown[], {
+    set(target, prop, value) {
+      target[prop as unknown as number] = value;
+      if (prop !== 'length' && typeof prop === 'string') {
+        const idx = Number(prop);
+        if (!Number.isNaN(idx)) {
+          calls.push(['dataLayer.push', value] as CallRecord);
+        }
+      }
+      return true;
+    },
+  });
+  env.window.dataLayer = dataLayerProxy;
+
+  return { env, mockGtag, calls };
+}
+
+describe('gtag web destination -- step examples', () => {
   beforeEach(() => {
     resetConsentState();
+    resetLoadedScripts();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(INIT_DATE_MS));
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const initNames = new Set(['ga4Init', 'adsInit', 'gtmInit']);
+
+  it('ga4Init', async () => {
+    const { env, calls } = makeTestEnv();
+    const dest = jest.requireActual('../').default;
+
+    await dest.init({
+      id: 'gtag',
+      config: ga4InitIn,
+      env,
+      logger: noopLogger,
+      collector: {} as Destination.Context['collector'],
+    });
+
+    expect(calls).toEqual(ga4InitOut);
+  });
+
+  it('adsInit', async () => {
+    const { env, calls } = makeTestEnv();
+    const dest = jest.requireActual('../').default;
+
+    await dest.init({
+      id: 'gtag',
+      config: adsInitIn,
+      env,
+      logger: noopLogger,
+      collector: {} as Destination.Context['collector'],
+    });
+
+    expect(calls).toEqual(adsInitOut);
+  });
+
+  it('gtmInit', async () => {
+    const { env, calls } = makeTestEnv();
+    const dest = jest.requireActual('../').default;
+
+    await dest.init({
+      id: 'gtag',
+      config: gtmInitIn,
+      env,
+      logger: noopLogger,
+      collector: {} as Destination.Context['collector'],
+    });
+
+    expect(calls).toEqual(gtmInitOut);
+  });
+
+  const stepEntries = Object.entries(examples.step).filter(
+    ([name]) => !initNames.has(name),
+  );
+
+  it.each(stepEntries)('%s', async (_name, example) => {
     const mapping = example.mapping as Record<string, unknown> | undefined;
     const mappingSettings = (mapping?.settings || {}) as Record<
       string,
       unknown
     >;
 
-    const mockGtag = jest.fn();
-    const env = clone(examples.env.push);
-    env.window.gtag = mockGtag;
-
+    const { env, calls } = makeTestEnv();
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow({ tagging: 2 });
 
-    // Command examples: route `in` through elb('walker <command>', in) instead
-    // of pushing it as an event. Wire a minimal destination first so the
-    // command handler has at least one tool registered.
+    // Command examples: route `in` through elb('walker <command>', in).
     if (example.command) {
-      elb(
-        'walker destination',
-        { ...dest, env },
-        { settings: { ga4: { measurementId: 'G-XXXXXX-1' } } },
-      );
+      // Bootstrap with ga4 init so the tool is registered.
+      await elb('walker destination', { ...dest, env }, ga4InitIn);
 
       const cmd = `walker ${example.command}` as 'walker consent';
       await elb(cmd, example.in as WalkerOS.Consent);
 
-      const outArgs = example.out as unknown[];
-      const matchingCall = mockGtag.mock.calls.find(
-        (call) => call[0] === outArgs[0] && call[1] === outArgs[1],
-      );
-      expect(matchingCall).toBeDefined();
-      expect(matchingCall![2]).toEqual(outArgs[2]);
+      const actual = calls.slice(ga4InitOut.length);
+      expect(actual).toEqual(example.out);
       return;
     }
 
-    // Derive destination-level settings from mapping settings
-    const destSettings: Record<string, unknown> = {};
+    // Pick the init config that matches which tool(s) this mapping targets.
+    // Default to ga4 when no mapping.settings is specified.
+    let bootstrapConfig: Destination.Config;
+    let bootstrapOut: ReadonlyArray<CallRecord>;
     if (
       !mapping?.settings ||
       mappingSettings.ga4 !== undefined ||
       (!mappingSettings.ads && !mappingSettings.gtm)
     ) {
-      destSettings.ga4 = { measurementId: 'G-XXXXXX-1' };
-    }
-    if (mappingSettings.ads) {
-      destSettings.ads = { conversionId: 'AW-123456789', currency: 'EUR' };
-    }
-    if (mappingSettings.gtm) {
-      destSettings.gtm = { containerId: 'GTM-XXXXXXX' };
+      // GA4 is active. Build a composite bootstrap if ads/gtm also needed.
+      if (mappingSettings.ads || mappingSettings.gtm) {
+        const composite: Destination.Config = {
+          settings: {
+            ...((ga4InitIn.settings || {}) as Record<string, unknown>),
+            ...(mappingSettings.ads
+              ? { ads: { conversionId: 'AW-123456789', currency: 'EUR' } }
+              : {}),
+            ...(mappingSettings.gtm
+              ? { gtm: { containerId: 'GTM-XXXXXXX' } }
+              : {}),
+          },
+        };
+        bootstrapConfig = composite;
+        bootstrapOut = [
+          ...ga4InitOut,
+          ...(mappingSettings.ads ? adsInitOut : []),
+          ...(mappingSettings.gtm ? gtmInitOut : []),
+        ];
+      } else {
+        bootstrapConfig = ga4InitIn;
+        bootstrapOut = ga4InitOut;
+      }
+    } else if (mappingSettings.ads && !mappingSettings.gtm) {
+      bootstrapConfig = adsInitIn;
+      bootstrapOut = adsInitOut;
+    } else if (mappingSettings.gtm && !mappingSettings.ads) {
+      bootstrapConfig = gtmInitIn;
+      bootstrapOut = gtmInitOut;
+    } else {
+      // ads + gtm together
+      bootstrapConfig = {
+        settings: {
+          ads: { conversionId: 'AW-123456789', currency: 'EUR' },
+          gtm: { containerId: 'GTM-XXXXXXX' },
+        },
+      };
+      bootstrapOut = [...adsInitOut, ...gtmInitOut];
     }
 
+    const event = example.in as WalkerOS.Event;
     const mappingConfig = mapping
-      ? (() => {
-          const event = example.in as WalkerOS.Event;
-          return { [event.entity]: { [event.action]: mapping } };
-        })()
+      ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env },
-      {
-        settings: destSettings,
-        mapping: mappingConfig,
-      },
+      { ...bootstrapConfig, mapping: mappingConfig },
     );
 
-    if (
-      example.out &&
-      typeof example.out === 'object' &&
-      !Array.isArray(example.out) &&
-      ('ga4' in (example.out as object) ||
-        'ads' in (example.out as object) ||
-        'gtm' in (example.out as object))
-    ) {
-      // Multi-tool examples: out is { ga4: [...], ads: [...], gtm: {...} }
-      const event = example.in as WalkerOS.Event;
-      await elb(event);
+    await elb(event);
 
-      const multiOut = example.out as Record<string, unknown>;
-
-      if (multiOut.ga4) {
-        const ga4Args = multiOut.ga4 as unknown[];
-        const ga4Call = mockGtag.mock.calls.find(
-          (call) => call[0] === 'event' && call[1] === ga4Args[1],
-        );
-        expect(ga4Call).toBeDefined();
-        expect(ga4Call![2]).toEqual(
-          expect.objectContaining(ga4Args[2] as object),
-        );
-      }
-
-      if (multiOut.ads) {
-        const adsArgs = multiOut.ads as unknown[];
-        const adsCall = mockGtag.mock.calls.find(
-          (call) => call[0] === 'event' && call[1] === 'conversion',
-        );
-        expect(adsCall).toBeDefined();
-        expect(adsCall![2]).toEqual(
-          expect.objectContaining(adsArgs[2] as object),
-        );
-      }
-
-      if (multiOut.gtm) {
-        const gtmExpected = multiOut.gtm as object;
-        expect(env.window.dataLayer).toEqual(
-          expect.arrayContaining([expect.objectContaining(gtmExpected)]),
-        );
-      }
-    } else if (
-      example.out &&
-      typeof example.out === 'object' &&
-      !Array.isArray(example.out)
-    ) {
-      // Plain object out: dataLayer push (GTM)
-      const event = example.in as WalkerOS.Event;
-      await elb(event);
-
-      const gtmExpected = example.out as object;
-      expect(env.window.dataLayer).toEqual(
-        expect.arrayContaining([expect.objectContaining(gtmExpected)]),
-      );
-    } else {
-      // Standard gtag call (existing behavior)
-      const event = example.in as WalkerOS.Event;
-      await elb(event);
-
-      const outArgs = example.out as unknown[];
-      const lastCall = mockGtag.mock.calls[mockGtag.mock.calls.length - 1];
-      expect(lastCall[0]).toBe(outArgs[0]); // 'event' or 'consent'
-      expect(lastCall[1]).toBe(outArgs[1]); // event name
-      expect(lastCall[2]).toEqual(
-        expect.objectContaining(outArgs[2] as object),
-      );
-    }
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+    const actual = calls.slice(bootstrapOut.length);
+    expect(actual).toEqual(expected);
   });
 });

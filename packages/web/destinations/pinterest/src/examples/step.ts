@@ -3,12 +3,9 @@ import { getEvent } from '@walkeros/core';
 
 /**
  * Output convention:
- *   - Single SDK call: out = ['window.pintrk', 'track', 'checkout', { ... }]
- *     (flat array: first element is the dot-path, remaining elements are args)
- *   - Multiple SDK calls: out = [ [path, ...args], [path, ...args] ]
+ *   - Single SDK call: out = [['pintrk', 'track', 'checkout', { ... }]]
+ *   - Multiple SDK calls: out = [['pintrk', ...], ['pintrk', ...]]
  *   - Zero SDK calls: out = []
- *
- * The step-examples test runner normalizes both shapes via flatten().
  */
 
 /**
@@ -19,7 +16,7 @@ import { getEvent } from '@walkeros/core';
 export const defaultForward: Flow.StepExample = {
   in: getEvent('page view', { timestamp: 1700000100, id: 'ev-1700000100' }),
   mapping: undefined,
-  out: ['window.pintrk', 'track', 'page view', { event_id: 'ev-1700000100' }],
+  out: [['pintrk', 'track', 'page view', { event_id: 'ev-1700000100' }]],
 };
 
 /**
@@ -40,7 +37,7 @@ export const wildcardIgnored: Flow.StepExample = {
 export const pageViewRename: Flow.StepExample = {
   in: getEvent('page view', { timestamp: 1700000102, id: 'ev-1700000102' }),
   mapping: { name: 'pagevisit' },
-  out: ['window.pintrk', 'track', 'pagevisit', { event_id: 'ev-1700000102' }],
+  out: [['pintrk', 'track', 'pagevisit', { event_id: 'ev-1700000102' }]],
 };
 
 /**
@@ -62,20 +59,20 @@ export const siteSearch: Flow.StepExample = {
     },
   },
   out: [
-    'window.pintrk',
-    'track',
-    'search',
-    {
-      search_query: 'leather jacket',
-      event_id: 'ev-1700000103',
-    },
+    [
+      'pintrk',
+      'track',
+      'search',
+      {
+        search_query: 'leather jacket',
+        event_id: 'ev-1700000103',
+      },
+    ],
   ],
 };
 
 /**
- * Single-product viewcontent. Illustrates:
- *   - currency fallback via { key, value: 'EUR' }
- *   - flat product_* parameter names
+ * Single-product viewcontent.
  */
 export const productViewContent: Flow.StepExample = {
   in: getEvent('product view', {
@@ -94,24 +91,23 @@ export const productViewContent: Flow.StepExample = {
     },
   },
   out: [
-    'window.pintrk',
-    'track',
-    'viewcontent',
-    {
-      value: 420,
-      currency: 'EUR',
-      product_id: 'ers',
-      product_name: 'black',
-      event_id: 'ev-1700000104',
-    },
+    [
+      'pintrk',
+      'track',
+      'viewcontent',
+      {
+        value: 420,
+        currency: 'EUR',
+        product_id: 'ers',
+        product_name: 'black',
+        event_id: 'ev-1700000104',
+      },
+    ],
   ],
 };
 
 /**
  * Add-to-cart with an inline line_items array.
- *
- * Pinterest sends a single track() call with line_items as an ARRAY
- * INSIDE the event data — NOT a loop of N separate calls.
  */
 export const productAddToCart: Flow.StepExample = {
   in: getEvent('product add', {
@@ -141,33 +137,30 @@ export const productAddToCart: Flow.StepExample = {
     },
   },
   out: [
-    'window.pintrk',
-    'track',
-    'addtocart',
-    {
-      value: 420,
-      order_quantity: 1,
-      currency: 'EUR',
-      line_items: [
-        {
-          product_id: 'ers',
-          product_name: 'black',
-          product_price: 420,
-          product_quantity: 1,
-        },
-      ],
-      event_id: 'ev-1700000105',
-    },
+    [
+      'pintrk',
+      'track',
+      'addtocart',
+      {
+        value: 420,
+        order_quantity: 1,
+        currency: 'EUR',
+        line_items: [
+          {
+            product_id: 'ers',
+            product_name: 'black',
+            product_price: 420,
+            product_quantity: 1,
+          },
+        ],
+        event_id: 'ev-1700000105',
+      },
+    ],
   ],
 };
 
 /**
  * Multi-product checkout — the canonical Pinterest ecommerce pattern.
- * `line_items.loop: ["nested", { condition, map }]` iterates event.nested
- * and produces ONE array inside a SINGLE track() call.
- *
- * Default fixture has 3 nested entries: ers (420 black), cc (42, no color),
- * gift (no price → filtered out by condition).
  */
 export const orderCompleteCheckout: Flow.StepExample = {
   in: getEvent('order complete', {
@@ -202,38 +195,35 @@ export const orderCompleteCheckout: Flow.StepExample = {
     },
   },
   out: [
-    'window.pintrk',
-    'track',
-    'checkout',
-    {
-      value: 555,
-      order_id: '0rd3r1d',
-      currency: 'EUR',
-      line_items: [
-        {
-          product_id: 'ers',
-          product_name: 'black',
-          product_price: 420,
-          product_quantity: 1,
-        },
-        {
-          // Second product (Cool Cap) has no color in the fixture — product_name is omitted
-          product_id: 'cc',
-          product_price: 42,
-          product_quantity: 1,
-        },
-      ],
-      event_id: 'ev-1700000106',
-    },
+    [
+      'pintrk',
+      'track',
+      'checkout',
+      {
+        value: 555,
+        order_id: '0rd3r1d',
+        currency: 'EUR',
+        line_items: [
+          {
+            product_id: 'ers',
+            product_name: 'black',
+            product_price: 420,
+            product_quantity: 1,
+          },
+          {
+            product_id: 'cc',
+            product_price: 42,
+            product_quantity: 1,
+          },
+        ],
+        event_id: 'ev-1700000106',
+      },
+    ],
   ],
 };
 
 /**
  * Lead conversion with per-event enhanced matching update.
- *
- * The rule-level settings.identify resolves to { em, external_id } and
- * triggers pintrk('set', data) BEFORE the track() call — enhanced
- * matching data is associated with the same event via event_id.
  */
 export const userLoginLead: Flow.StepExample = {
   in: getEvent('user login', {
@@ -261,13 +251,9 @@ export const userLoginLead: Flow.StepExample = {
     },
   },
   out: [
+    ['pintrk', 'set', { em: 'jane@example.com', external_id: 'usr_123' }],
     [
-      'window.pintrk',
-      'set',
-      { em: 'jane@example.com', external_id: 'usr_123' },
-    ],
-    [
-      'window.pintrk',
+      'pintrk',
       'track',
       'lead',
       {
@@ -280,9 +266,7 @@ export const userLoginLead: Flow.StepExample = {
 
 /**
  * mapping.skip — processes side effects (identify set) but suppresses
- * the default pintrk('track', ...) call. Useful when an upstream
- * destination already fired the conversion and you only want to update
- * enhanced matching.
+ * the default pintrk('track', ...) call.
  */
 export const identifyOnlySkip: Flow.StepExample = {
   in: getEvent('user update', {
@@ -304,21 +288,13 @@ export const identifyOnlySkip: Flow.StepExample = {
       },
     },
   },
-  out: [
-    'window.pintrk',
-    'set',
-    { em: 'new@example.com', external_id: 'usr_456' },
-  ],
+  out: [['pintrk', 'set', { em: 'new@example.com', external_id: 'usr_456' }]],
 };
 
 /**
  * Consent revocation — walkerOS walker consent { marketing: false }.
  * The destination's on('consent') handler flips the runtime state flag
- * and stops calling pintrk('track', ...) for subsequent events. There
- * is NO opt_out SDK call — Pinterest has no such API.
- *
- * Expected out: [] — no pintrk calls fire as a direct result of the
- * consent dispatch.
+ * and stops calling pintrk('track', ...) for subsequent events.
  */
 export const consentRevoke: Flow.StepExample = {
   command: 'consent',
@@ -327,8 +303,7 @@ export const consentRevoke: Flow.StepExample = {
 };
 
 /**
- * Consent grant — explicit opt-in. Same behavior: the destination's
- * on('consent') flips the flag. No SDK call fires.
+ * Consent grant — explicit opt-in.
  */
 export const consentGrant: Flow.StepExample = {
   command: 'consent',

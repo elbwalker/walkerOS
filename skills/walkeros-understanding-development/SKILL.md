@@ -94,6 +94,26 @@ import {
 - TSConfig: `@walkeros/config/tsconfig`
 - Tsup config: `@walkeros/config/tsup`
 
+## Editing core Config types
+
+Core component configs live in two places:
+
+- TS interface:
+  `packages/core/src/types/{destination,source,transformer,store,collector}.ts`
+- Zod schema:
+  `packages/core/src/schemas/{destination,source,transformer,store,collector}.ts`
+
+Both are hand-written and mirror each other. TS stays authoritative because
+Zod's inferencer collapses recursive types (`Routes`, `MatchExpression`,
+`Value`) to `unknown`. Zod drives runtime validation, JSON Schema emission, and
+website Configuration reference tables.
+
+When adding, renaming, or removing a Config field, update BOTH files. A
+compile-time drift guard at
+`packages/core/src/schemas/__tests__/config-drift.test-d.ts` fails `tsc` if the
+key sets diverge. The guard checks keys only; value types may differ (recursion,
+generic slots). Run `npm run typecheck` in `packages/core/` to verify.
+
 ## Testing
 
 **REQUIRED SKILL:** Use `testing-strategy` for detailed testing patterns.

@@ -3,6 +3,27 @@ import { getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
+ * Mixpanel server SDK step examples.
+ *
+ * At push time, the destination calls the `mixpanel` Node SDK via the
+ * client returned from `Mixpanel.init(...)`. Public method paths users
+ * see on the client are:
+ *
+ *   - `mp.track(eventName, properties)`
+ *   - `mp.import(eventName, time, properties)` (when `useImport: true`)
+ *   - `mp.alias(distinctId, alias)` (fires before track)
+ *   - `mp.people.{set,set_once,increment,append,union,remove,unset,delete_user}(...)`
+ *   - `mp.groups.{set,set_once,union,remove,unset,delete_group}(...)`
+ *
+ * Each `out` is `[[callable, ...args], ...]`. The test filters out the
+ * one-time `Mixpanel.init` call (fired during destination init) so only
+ * per-event SDK calls are compared.
+ *
+ * For events marked `skip: true` or `ignore: true`, `track()` does not
+ * fire — only the side-effect calls (people/groups/alias) appear.
+ */
+
+/**
  * Step examples may carry destination-level settings and configInclude.
  * The test runner reads these to configure the destination.
  */
@@ -25,7 +46,7 @@ export const defaultEventForwarding: MixpanelStepExample = {
       },
     },
   },
-  out: ['mp.track', 'product view', { distinct_id: 'us3r' }],
+  out: [['mp.track', 'product view', { distinct_id: 'us3r' }]],
 };
 
 /**
@@ -43,16 +64,18 @@ export const trackWithInclude: MixpanelStepExample = {
   },
   configInclude: ['data'],
   out: [
-    'mp.track',
-    'product view',
-    {
-      distinct_id: 'us3r',
-      data_id: 'ers',
-      data_name: 'Everyday Ruck Snack',
-      data_color: 'black',
-      data_size: 'l',
-      data_price: 420,
-    },
+    [
+      'mp.track',
+      'product view',
+      {
+        distinct_id: 'us3r',
+        data_id: 'ers',
+        data_name: 'Everyday Ruck Snack',
+        data_color: 'black',
+        data_size: 'l',
+        data_price: 420,
+      },
+    ],
   ],
 };
 
@@ -78,11 +101,13 @@ export const perEventIdentify: MixpanelStepExample = {
     },
   },
   out: [
-    'mp.track',
-    'user login',
-    {
-      distinct_id: 'resolved-id',
-    },
+    [
+      'mp.track',
+      'user login',
+      {
+        distinct_id: 'resolved-id',
+      },
+    ],
   ],
 };
 
@@ -114,12 +139,14 @@ export const trackWithGroup: MixpanelStepExample = {
     },
   },
   out: [
-    'mp.track',
-    'page view',
-    {
-      distinct_id: 'us3r',
-      company_id: 'acme',
-    },
+    [
+      'mp.track',
+      'page view',
+      {
+        distinct_id: 'us3r',
+        company_id: 'acme',
+      },
+    ],
   ],
 };
 
@@ -317,7 +344,7 @@ export const historicalImport: MixpanelStepExample = {
       },
     },
   },
-  out: ['mp.import', 'order complete', 1700000107, { distinct_id: 'us3r' }],
+  out: [['mp.import', 'order complete', 1700000107, { distinct_id: 'us3r' }]],
 };
 
 /**

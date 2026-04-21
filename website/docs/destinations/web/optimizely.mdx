@@ -1,0 +1,131 @@
+---
+title: Optimizely
+description: Feature experimentation, A/B testing, and conversion tracking
+path: /docs/destinations/web/optimizely
+sidebar_position: 15
+package: '@walkeros/web-destination-optimizely'
+---
+
+import data from '@walkeros/web-destination-optimizely/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Optimizely
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/optimizely"
+  npm="@walkeros/web-destination-optimizely"
+  status="beta"
+/>
+
+[Optimizely Feature Experimentation](https://www.optimizely.com/products/experiment/feature-experimentation/)
+runs A/B tests and feature rollouts. This destination forwards walkerOS events
+to Optimizely as conversion events via the official
+[`@optimizely/optimizely-sdk`](https://www.npmjs.com/package/@optimizely/optimizely-sdk)
+v6 modular API, calling `userContext.trackEvent(eventKey, eventTags)` with
+optional revenue/value tags and user attributes.
+
+<WhereThisFits
+  pre={<>Optimizely is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Optimizely', highlight: true } },
+  }}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-optimizely`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationOptimizely } from '@walkeros/web-destination-optimizely';
+
+await startFlow({
+  destinations: {
+    optimizely: {
+      code: destinationOptimizely,
+      config: {
+        settings: {
+          sdkKey: 'YOUR_SDK_KEY',
+          userId: 'user.id',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "optimizely": {
+    "package": "@walkeros/web-destination-optimizely",
+    "config": {
+      "settings": {
+        "sdkKey": "YOUR_SDK_KEY",
+        "userId": "user.id"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## Revenue
+
+Optimizely expects revenue as an **integer in cents** (e.g. `7281` =
+`$72.81`). The destination passes the resolved value through without
+conversion. The caller must provide cents.
+
+## Consent
+
+Two layers protect event delivery:
+
+1. **`config.consent`**: walkerOS gates delivery. Events are queued
+   until required consent keys resolve to `true`.
+2. **`on('consent')`**: the destination closes the Optimizely client
+   (flushing queued events and stopping datafile polling) when any
+   required key flips to `false`. On re-grant, the next push re-initializes
+   the client.
+
+<CodeSnippet
+  code={`destinations: {
+  optimizely: {
+    code: destinationOptimizely,
+    config: {
+      consent: { analytics: true },
+      settings: {
+        sdkKey: 'YOUR_SDK_KEY',
+        userId: 'user.id',
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+## Feature flags / decide()
+
+This destination intentionally does **not** expose `decide()`. Experiment
+decisions belong in application code where UI branching happens. This
+package covers the outbound conversion-tracking use case.

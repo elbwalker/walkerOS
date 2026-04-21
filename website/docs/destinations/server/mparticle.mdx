@@ -1,0 +1,95 @@
+---
+title: mParticle
+description: "Server-side event delivery to mParticle CDP via input feed batches"
+path: /docs/destinations/server/mparticle
+sidebar_position: 16
+package: '@walkeros/server-destination-mparticle'
+---
+import data from '@walkeros/server-destination-mparticle/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# mParticle
+
+<PackageLink env="server" github="packages/server/destinations/mparticle" npm="@walkeros/server-destination-mparticle" status="beta" />
+
+Server-side event delivery to [mParticle](https://www.mparticle.com/) via the HTTP Events API. Events are packaged into batches and POSTed to the regional mParticle pod using HTTP Basic auth (`apiKey` / `apiSecret`). Supports user identities, user attributes, consent state, and environment targeting.
+
+<WhereThisFits
+  pre={<>mParticle is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'mParticle', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector and forwards them to mParticle's input feed for fan-out to downstream destinations.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-mparticle`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationMParticle } from '@walkeros/server-destination-mparticle';
+
+await startFlow({
+  destinations: {
+    mparticle: {
+      code: destinationMParticle,
+      config: {
+        settings: {
+          apiKey: 'YOUR_MPARTICLE_API_KEY',
+          apiSecret: 'YOUR_MPARTICLE_API_SECRET',
+          pod: 'us1',
+          environment: 'production',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "mparticle": {
+    "package": "@walkeros/server-destination-mparticle",
+    "config": {
+      "settings": {
+        "apiKey": "YOUR_MPARTICLE_API_KEY",
+        "apiSecret": "YOUR_MPARTICLE_API_SECRET",
+        "pod": "us1",
+        "environment": "production"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+The `apiKey` and `apiSecret` come from an mParticle **input feed** (Setup, Inputs, Feeds, Custom Feed). Each batch posts to `https://s2s.{pod}.mparticle.com/v2/events` using HTTP Basic auth.
+
+## Identities and attributes
+
+- `userIdentities`: map walkerOS event fields to mParticle identity types (`customer_id`, `email`, `other`, etc.).
+- `userAttributes`: resolved from each event and placed on the batch's `user_attributes` object.
+- `consent`: forwarded verbatim as `consent_state` on the batch.
+- `sourceRequestId`: defaults to `event.id` if unset; used by mParticle for deduplication.

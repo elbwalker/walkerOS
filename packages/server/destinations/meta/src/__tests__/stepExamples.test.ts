@@ -3,6 +3,13 @@ import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+/**
+ * Meta Conversions API destination invokes `env.sendServer(url, body)` exactly
+ * once per push. There are no init-time calls to filter — the destination is
+ * stateless; each event becomes one HTTP request.
+ */
 describe('Step Examples', () => {
   const mockSendServer = jest.fn();
 
@@ -28,7 +35,7 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
+    await elb(
       'walker destination',
       { ...dest, env: testEnv },
       {
@@ -39,27 +46,10 @@ describe('Step Examples', () => {
 
     await elb(event);
 
-    expect(mockSendServer).toHaveBeenCalled();
-    const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data).toHaveLength(1);
+    const captured: Captured[] = mockSendServer.mock.calls.map(
+      (args) => ['sendServer', ...args] as Captured,
+    );
 
-    const actual = requestBody.data[0];
-    const expected = (example.out as { data: Record<string, unknown>[] })
-      .data[0];
-
-    // Verify event ID and source URL (framework fields that should match)
-    expect(actual.event_id).toBe(expected.event_id);
-    expect(actual.event_source_url).toBe(expected.event_source_url);
-    expect(actual.action_source).toBe(expected.action_source);
-
-    // Verify mapped event name (from mapping or default)
-    if ((mapping as Record<string, unknown>)?.name) {
-      expect(actual.event_name).toBe(expected.event_name);
-    }
-
-    // Verify mapped data fields (the business-logic output)
-    if (expected.currency) expect(actual.currency).toBe(expected.currency);
-    if (expected.value) expect(actual.value).toBe(expected.value);
-    if (expected.contents) expect(actual.contents).toEqual(expected.contents);
+    expect(captured).toEqual(example.out);
   });
 });

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-mixpanel",
   "description": "Mixpanel web destination for walkerOS (events, people, groups, consent)",
-  "version": "3.3.1",
+  "version": "3.4.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -38,11 +38,11 @@
   },
   "dependencies": {
     "mixpanel-browser": "^2.78.0",
-    "@walkeros/web-core": "3.3.1"
+    "@walkeros/web-core": "3.4.0"
   },
   "devDependencies": {
     "@types/mixpanel-browser": "^2.50.0",
-    "@walkeros/collector": "3.3.1"
+    "@walkeros/collector": "3.4.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

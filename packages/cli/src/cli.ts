@@ -1,5 +1,7 @@
 import { Command } from 'commander';
 import { VERSION } from './version.js';
+import { setClientContext } from './core/client-context.js';
+import { handleCliError } from './core/api-error.js';
 import { printBanner } from './core/banner.js';
 import { bundleCommand } from './commands/bundle/index.js';
 import { pushCommand } from './commands/push/index.js';
@@ -35,6 +37,13 @@ import {
   getDeploymentBySlugCommand,
 } from './commands/deployments/index.js';
 import { feedbackCommand } from './commands/feedback/index.js';
+
+setClientContext({ type: 'cli', version: VERSION });
+
+// Top-level safety net for ApiError(CLIENT_OUTDATED) and other uncaught errors.
+// Command handlers may catch errors locally; anything that escapes lands here.
+process.on('uncaughtException', handleCliError);
+process.on('unhandledRejection', handleCliError);
 
 const program = new Command();
 

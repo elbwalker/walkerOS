@@ -6,6 +6,9 @@ sidebar_position: 6
 package: '@walkeros/server-destination-amplitude'
 ---
 import data from '@walkeros/server-destination-amplitude/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Amplitude
 
@@ -13,17 +16,13 @@ import data from '@walkeros/server-destination-amplitude/walkerOS.json';
 
 Server-side event delivery to [Amplitude](https://amplitude.com/) for product analytics, using the official [`@amplitude/analytics-node`](https://www.npmjs.com/package/@amplitude/analytics-node) SDK. Supports `track`, `identify`, `revenue`, `setGroup`, `groupIdentify`, and `flush` calls with per-event identity via EventOptions.
 
-:::info Where This Fits
-Amplitude is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Amplitude', highlight: true } }}
+<WhereThisFits
+  pre={<>Amplitude is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Amplitude', highlight: true } },
+  }}
+  post={<>Sends events server-side to Amplitude's HTTP API, providing reliable delivery with identity resolution, revenue tracking, and group analytics without browser-side SDK overhead.</>}
 />
-
-Sends events server-side to Amplitude's HTTP API, providing reliable delivery with identity resolution, revenue tracking, and group analytics without browser-side SDK overhead.
-:::
 
 ## Installation
 
@@ -31,8 +30,6 @@ Sends events server-side to Amplitude's HTTP API, providing reliable delivery wi
   code={`npm install @walkeros/server-destination-amplitude`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -76,75 +73,9 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
-
-## Docker deployment
-
-### Step 1: Create flow configuration
-
-Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "amplitude": {
-      "package": "@walkeros/server-destination-amplitude",
-      "config": {
-        "settings": {
-          "apiKey": "$env.AMPLITUDE_API_KEY",
-          "serverZone": "$env.AMPLITUDE_SERVER_ZONE:",
-          "useBatch": true
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-  title="flow.json"
-/>
-
-### Step 2: Bundle the flow
-
-Bundle your flow configuration before running in Docker:
-
-<CodeSnippet
-  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
-  language="bash"
-/>
-
-### Step 3: Run with Docker
-
-<CodeSnippet
-  code={`docker run -d \\
-  -e AMPLITUDE_API_KEY=your-api-key \\
-  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
-  -p 8080:8080 \\
-  walkeros/flow`}
-  language="bash"
-/>
-
-### Docker Compose example
-
-<CodeSnippet
-  code={`services:
-  walkeros:
-    image: walkeros/flow:latest
-    environment:
-      - AMPLITUDE_API_KEY=\${AMPLITUDE_API_KEY}
-    volumes:
-      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
-    ports:
-      - "8080:8080"`}
-  language="yaml"
-/>
-
-:::tip Security best practice
-Never commit API keys to version control. Use environment variables or a secrets manager to inject credentials at runtime.
-:::
+<Configuration type="destination" data={data} />

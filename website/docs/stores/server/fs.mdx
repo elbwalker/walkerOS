@@ -6,6 +6,7 @@ package: '@walkeros/server-store-fs'
 ---
 
 import data from '@walkeros/server-store-fs/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Filesystem
 
@@ -13,19 +14,15 @@ import data from '@walkeros/server-store-fs/walkerOS.json';
 
 Local filesystem store for walkerOS server flows. Reads and writes files relative to a base directory with path traversal protection.
 
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-Install the package:
+## Installation
 
 <CodeSnippet
   code={`npm install @walkeros/server-store-fs`}
   language="bash"
 />
 
-Configure in your code:
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -68,9 +65,7 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
+<Configuration type="store" data={data} />
 
 ## API
 

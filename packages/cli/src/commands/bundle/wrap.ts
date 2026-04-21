@@ -113,6 +113,7 @@ export async function wrapSkeleton(
           ...(options.previewScope
             ? { previewScope: options.previewScope }
             : {}),
+          platform,
         })
       : generateWrapEntryServer(absoluteSkeletonPath);
 

@@ -8,11 +8,17 @@ export const fullConsent: Flow.StepExample = {
     performance: true,
     advertising: true,
   },
-  out: {
-    functional: true,
-    analytics: true,
-    marketing: true,
-  },
+  out: [
+    [
+      'elb',
+      'walker consent',
+      {
+        functional: true,
+        analytics: true,
+        marketing: true,
+      },
+    ],
+  ],
 };
 
 export const partialConsent: Flow.StepExample = {
@@ -23,11 +29,17 @@ export const partialConsent: Flow.StepExample = {
     performance: false,
     advertising: false,
   },
-  out: {
-    functional: true,
-    analytics: false,
-    marketing: false,
-  },
+  out: [
+    [
+      'elb',
+      'walker consent',
+      {
+        functional: true,
+        analytics: false,
+        marketing: false,
+      },
+    ],
+  ],
 };
 
 export const categoryMapOverride: Flow.StepExample = {
@@ -47,11 +59,17 @@ export const categoryMapOverride: Flow.StepExample = {
       },
     },
   },
-  out: {
-    functional: true,
-    statistics: true,
-    marketing: false,
-  },
+  out: [
+    [
+      'elb',
+      'walker consent',
+      {
+        functional: true,
+        statistics: true,
+        marketing: false,
+      },
+    ],
+  ],
 };
 
 export const cfInitDetection: Flow.StepExample = {
@@ -63,9 +81,15 @@ export const cfInitDetection: Flow.StepExample = {
     performance: false,
     advertising: true,
   },
-  out: {
-    functional: true,
-    analytics: false,
-    marketing: true,
-  },
+  out: [
+    [
+      'elb',
+      'walker consent',
+      {
+        functional: true,
+        analytics: false,
+        marketing: true,
+      },
+    ],
+  ],
 };

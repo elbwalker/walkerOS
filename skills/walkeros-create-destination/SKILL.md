@@ -270,6 +270,54 @@ export const consentGranted: Flow.StepExample = {
 };
 ```
 
+#### Init step example
+
+Every destination ships an `examples.step.init` entry — the init is a
+first-class step example, not a hidden side effect.
+
+- `in` mirrors the real `Destination.Config` shape users copy-paste — typically
+  `{ loadScript: true, settings: { /* vendor-specific */ } }`. Whatever a user
+  would configure in their flow goes here verbatim.
+- `out` is the ordered list of vendor calls the `init()` lifecycle produces
+  (script tags, SDK initializers, queue setup). Each effect tuple follows the
+  standard `[callable, ...args]` shape.
+
+**Test pattern.** Call
+`destination.init({ id, config, env, logger, collector })` directly in the test
+— no capture helpers, no `capture.ts`, no allowlists. Assert the captured vendor
+calls equal `examples.step.init.out`:
+
+```typescript
+const calls: unknown[][] = [];
+const env = wrapEnv(examples.env.init, (call) => calls.push(call));
+await destination.init({
+  id: 'test',
+  config: examples.step.init.in as Destination.Config,
+  env,
+  logger,
+  collector,
+});
+expect(calls).toEqual(examples.step.init.out);
+```
+
+**Event step tests** bootstrap once with `examples.step.init.in`, then slice the
+shared capture buffer to isolate push effects from init effects:
+
+```typescript
+const pushCalls = calls.slice(examples.step.init.out.length);
+expect(pushCalls).toEqual(example.out);
+```
+
+There are no hand-maintained allowlists or `isInitEffect` filters — the init
+example's `out.length` is the single source of truth for how many effects belong
+to init.
+
+**Multi-tool packages** (like `gtag`, which drives GA4, Google Ads, and GTM)
+ship **per-tool init examples** — `examples.step.ga4Init`, `adsInit`, `gtmInit`
+— instead of a single `init`. The docs render each on its own page via
+`<StepExample example={data.examples.step.ga4Init} />`, and tests pick the right
+init per sub-tool.
+
 For destinations, the Three Type Zones collapse to:
 
 - `in` = walkerOS event (`WalkerOS.Event`)

@@ -6,10 +6,10 @@ sidebar_position: 2
 package: '@walkeros/web-destination-meta'
 ---
 
-import destinationMetaPixel from '@walkeros/web-destination-meta';
 import data from '@walkeros/web-destination-meta/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-export const destination = { ...destinationMetaPixel, examples: data.examples };
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Meta Pixel
 
@@ -26,17 +26,13 @@ function. All you need to do is install the destination, and optionally map
 events to Meta's format. walkerOS takes care of loading the script and the
 function calls.
 
-:::info Where This Fits
-Meta Pixel is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Meta Pixel', highlight: true } }}
+<WhereThisFits
+  pre={<>Meta Pixel is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Meta Pixel', highlight: true } },
+  }}
+  post={<>Loads Meta Pixel script dynamically, initializes the fbq function with your pixel ID, and tracks page views and custom conversions for Facebook and Instagram ads.</>}
 />
-
-Loads Meta Pixel script dynamically, initializes the fbq function with your pixel ID, and tracks page views and custom conversions for Facebook and Instagram ads.
-:::
 
 ## Installation
 
@@ -44,8 +40,6 @@ Loads Meta Pixel script dynamically, initializes the fbq function with your pixe
   code={`npm install @walkeros/web-destination-meta`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -90,80 +84,9 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
-
-#### Example
-
-<DestinationInitDemo
-  destination={destination}
-  settings={{
-    pixelId: '1234567890',
-  }}
-/>
-
-## Mapping data.examples
-
-:::tip
-
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
-
-Learn more aboot
-[Meta Pixel's Standard-Events.](https://developers.facebook.com/docs/meta-pixel/reference#standard-events)
-
-### ViewContent
-
-<DestinationDemo
-  destination={destination}
-  settings={{ pixelId: '1234567890' }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.viewContent.in}
-  mapping={data.examples.step.viewContent.mapping}
-  generic={true}
-/>
-
-### AddToCart
-
-<DestinationDemo
-  destination={destination}
-  settings={{ pixelId: '1234567890' }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.addToCart.in}
-  mapping={data.examples.step.addToCart.mapping}
-  generic={true}
-/>
-
-### InitiateCheckout
-
-<DestinationDemo
-  destination={destination}
-  settings={{ pixelId: '1234567890' }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.initiateCheckout.in}
-  mapping={data.examples.step.initiateCheckout.mapping}
-  generic={true}
-/>
-
-### Purchase
-
-<DestinationDemo
-  destination={destination}
-  settings={{ pixelId: '1234567890' }}
-  smallText={true}
-  height={'512px'}
-  event={data.examples.step.purchase.in}
-  mapping={data.examples.step.purchase.mapping}
-  generic={true}
-/>
+<Configuration type="destination" data={data} />

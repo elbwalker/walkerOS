@@ -7,13 +7,16 @@ export const validEvent: Flow.StepExample = {
     data: { id: 'SKU-100', name: 'Trail Runner Pro', price: 129.99 },
     source: { type: 'web', id: 'https://example.com', previous_id: '' },
   }),
-  out: {
-    event: getEvent('product view', {
-      timestamp: 1700000700,
-      data: { id: 'SKU-100', name: 'Trail Runner Pro', price: 129.99 },
-      source: { type: 'web', id: 'https://example.com', previous_id: '' },
-    }),
-  },
+  out: [
+    [
+      'return',
+      getEvent('product view', {
+        timestamp: 1700000700,
+        data: { id: 'SKU-100', name: 'Trail Runner Pro', price: 129.99 },
+        source: { type: 'web', id: 'https://example.com', previous_id: '' },
+      }),
+    ],
+  ],
 };
 
 export const invalidFormat: Flow.StepExample = {
@@ -21,7 +24,7 @@ export const invalidFormat: Flow.StepExample = {
     name: 'invalid',
     data: {},
   },
-  out: false,
+  out: [['return', false]],
 };
 
 export const contractValidationPass: Flow.StepExample = {
@@ -32,11 +35,18 @@ export const contractValidationPass: Flow.StepExample = {
     data: { id: '0rd3r1d', total: 555, currency: 'EUR' },
     source: { type: 'web', id: 'https://shop.example.com', previous_id: '' },
   }),
-  out: {
-    event: getEvent('order complete', {
-      timestamp: 1700000800,
-      data: { id: '0rd3r1d', total: 555, currency: 'EUR' },
-      source: { type: 'web', id: 'https://shop.example.com', previous_id: '' },
-    }),
-  },
+  out: [
+    [
+      'return',
+      getEvent('order complete', {
+        timestamp: 1700000800,
+        data: { id: '0rd3r1d', total: 555, currency: 'EUR' },
+        source: {
+          type: 'web',
+          id: 'https://shop.example.com',
+          previous_id: '',
+        },
+      }),
+    ],
+  ],
 };

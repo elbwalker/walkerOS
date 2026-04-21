@@ -276,7 +276,7 @@ function checkCompatibility(
   warnings: ValidationWarning[],
 ): void {
   const fromOuts = Object.entries(conn.from.examples)
-    .filter(([, ex]) => ex.out !== undefined && ex.out !== false)
+    .filter(([, ex]) => ex.out !== undefined && ex.out.length > 0)
     .map(([name, ex]) => ({ name, value: ex.out }));
 
   const toIns = Object.entries(conn.to.examples)

@@ -1,0 +1,74 @@
+---
+title: Upgrading
+description: How walkerOS clients negotiate versions with the app, and what to do when you see a 426 Upgrade Required response.
+---
+
+# Upgrading walkerOS clients
+
+The walkerOS app (`app.walkeros.io`) enforces minimum client versions per
+endpoint. When an endpoint is updated in a way that is not backwards-compatible
+with older clients, the app starts returning **`426 Upgrade Required`** to any
+client below the new minimum version. This page explains how to recognise it
+and how to recover.
+
+## How clients identify themselves
+
+Every request from an official walkerOS client carries three headers:
+
+| Header | Example |
+|---|---|
+| `User-Agent` | `walkeros-cli/1.4.0 (node/18.19.0; linux)` |
+| `X-WalkerOS-Client` | `cli`, `mcp`, or `runner` |
+| `X-WalkerOS-Client-Version` | `1.4.0` |
+
+The server uses these to:
+
+- Route tailored upgrade instructions per client type.
+- Decide whether the caller meets the minimum version for the endpoint.
+- Distinguish interactive CLI sessions from long-lived flow runners.
+
+Set the env var `WALKEROS_CLIENT_TYPE=runner` to override the default client
+type to `runner`. The official runner Docker image does this automatically.
+
+## The 426 response
+
+When the client is below the required version, the app returns `426 Upgrade
+Required` with a JSON body:
+
+```json
+{
+  "error": "upgrade_required",
+  "client": "cli",
+  "current": "1.4.0",
+  "minimum": "1.5.0",
+  "upgrade": "npm install -g @walkeros/cli@latest",
+  "docs": "https://walkeros.io/docs/upgrading"
+}
+```
+
+The CLI prints this as a one-line error and exits with code `2`. The MCP
+server surfaces the same info in its tool error responses so AI assistants
+can relay the instruction.
+
+## Upgrade checklist
+
+- **CLI** (`@walkeros/cli`):
+  `npm install -g @walkeros/cli@latest` (or bump the version in your
+  project's `package.json` if you installed locally).
+- **MCP server** (`@walkeros/mcp`): update the pinned version in your MCP
+  client config, or bump `@walkeros/mcp` in your project and restart the
+  client.
+- **Runner image**: pull the latest `walkeros/flow` (or your self-hosted
+  tag) and redeploy. The image ships with a current `@walkeros/cli` and
+  sets `WALKEROS_CLIENT_TYPE=runner`.
+
+After upgrading, re-run the failing command. If the `426` persists, your
+client is still below the minimum version. Double-check the installed
+version against the `minimum` field the server reported.
+
+## Why this exists
+
+The wire contract between clients and the app evolves. Rather than silently
+breaking older clients with a `400`, the app sends `426` with a precise
+required version and the exact upgrade command, so the fix is always one
+copy-paste away.

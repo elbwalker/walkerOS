@@ -19,7 +19,7 @@ export type ClarityStepExample = Flow.StepExample & {
  */
 export const defaultEventForwarding: ClarityStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: ['clarity.event', 'product view'],
+  out: [['clarity.event', 'product view']],
 };
 
 /**

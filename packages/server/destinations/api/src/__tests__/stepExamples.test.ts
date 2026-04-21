@@ -3,6 +3,16 @@ import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 
+type Captured = [callable: string, ...args: unknown[]];
+
+/**
+ * API server destination invokes `env.sendServer(url, body, options)` exactly
+ * once per push. Captures calls and asserts the `['sendServer', ...args]`
+ * tuple list equals the example's `out`.
+ *
+ * The first `out` tuple's options.headers (if present) are injected into
+ * settings so the destination forwards them to sendServer.
+ */
 describe('Step Examples', () => {
   const mockSendServer = jest.fn();
 
@@ -21,20 +31,19 @@ describe('Step Examples', () => {
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow({ tagging: 2 });
 
-    const expectedOut = example.out as {
-      url: string;
-      body: string;
-      headers?: Record<string, string>;
-    };
+    const expectedCalls = example.out as ReadonlyArray<
+      [string, string, string, { headers?: Record<string, string> }]
+    >;
+    const firstCall = expectedCalls[0];
+    const url = firstCall[1];
+    const headers = firstCall[3]?.headers;
 
     const mappingConfig = mapping
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    const settings: Record<string, unknown> = { url: expectedOut.url };
-    if (expectedOut.headers) {
-      settings.headers = expectedOut.headers;
-    }
+    const settings: Record<string, unknown> = { url };
+    if (headers) settings.headers = headers;
 
     elb(
       'walker destination',
@@ -44,14 +53,10 @@ describe('Step Examples', () => {
 
     await elb(event);
 
-    expect(mockSendServer).toHaveBeenCalled();
+    const captured: Captured[] = mockSendServer.mock.calls.map(
+      (args) => ['sendServer', ...args] as Captured,
+    );
 
-    const [calledUrl, calledBody, calledOptions] = mockSendServer.mock.calls[0];
-    expect(calledUrl).toBe(expectedOut.url);
-    expect(calledBody).toBe(expectedOut.body);
-
-    if (expectedOut.headers) {
-      expect(calledOptions.headers).toEqual(expectedOut.headers);
-    }
+    expect(captured).toEqual(example.out);
   });
 });

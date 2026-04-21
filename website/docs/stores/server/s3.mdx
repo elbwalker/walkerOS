@@ -6,6 +6,7 @@ package: '@walkeros/server-store-s3'
 ---
 
 import data from '@walkeros/server-store-s3/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # S3
 
@@ -13,19 +14,15 @@ import data from '@walkeros/server-store-s3/walkerOS.json';
 
 S3-compatible object storage store using [s3mini](https://github.com/good-lly/s3mini) (~20 KB, zero dependencies). Works with AWS S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2, MinIO, and any S3-compatible provider.
 
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-Install the package:
+## Installation
 
 <CodeSnippet
   code={`npm install @walkeros/server-store-s3`}
   language="bash"
 />
 
-Configure in your code:
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -78,9 +75,7 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
+<Configuration type="store" data={data} />
 
 ## Provider examples
 

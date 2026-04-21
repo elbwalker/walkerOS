@@ -14,13 +14,6 @@ import { examples } from '../dev';
 import type { Env, MixpanelGroup, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
 
 /**
  * Replaces every method on the mock env.mixpanel with a spy that appends
@@ -125,7 +118,7 @@ describe('mixpanel destination — step examples', () => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
-      out?: unknown;
+      out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
       configInclude?: string[];
@@ -175,7 +168,7 @@ describe('mixpanel destination — step examples', () => {
     // Drop init + bookkeeping — every example triggers init once; the
     // synthetic 'mixpanel.get_group' marker is also dropped unless an
     // example explicitly expects it.
-    const expected = flatten(example.out as ExpectedOut);
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
     const expectsGetGroupMarker = expected.some(
       ([path]) => path === 'mixpanel.get_group',
     );

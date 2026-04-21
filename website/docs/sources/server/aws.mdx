@@ -5,30 +5,24 @@ sidebar_position: 3
 package: '@walkeros/server-source-aws'
 ---
 
+import data from '@walkeros/server-source-aws/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
 <PackageLink env="server" github="packages/server/sources/aws" npm="@walkeros/server-source-aws" />
 
 # AWS Lambda
 
-AWS Lambda source for walkerOS - works with API Gateway v1/v2 and Lambda Function URLs.
+AWS Lambda source for walkerOS. Works across API Gateway REST (v1), API Gateway HTTP (v2), Lambda Function URLs, and direct invocation. Auto-detects the API Gateway version, supports optional pixel tracking with a 1x1 GIF response, and exposes a built-in health check endpoint.
 
-:::info Where This Fits
-The AWS Lambda Source is a **server source** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { label: 'Source', text: 'AWS Lambda', highlight: true } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { highlight: false } }}
+<WhereThisFits
+  pre={<>The AWS Lambda source is a <strong>server source</strong> in the walkerOS flow:</>}
+  flowMap={{
+    sources: { default: { label: 'Source', text: 'AWS Lambda', highlight: true } },
+  }}
+  post={<>It receives events via HTTP and forwards them to your destinations.</>}
 />
-
-It receives events via HTTP and forwards them to your destinations.
-:::
-
-## Features
-
-* **Multi-platform**: API Gateway REST (v1), HTTP API (v2), Function URLs
-* **Auto-detection**: Automatically detects API Gateway version
-* **Pixel tracking**: Optional GET requests with 1x1 GIF response
-* **Health checks**: Built-in health check endpoint
 
 ## Installation
 
@@ -36,8 +30,6 @@ It receives events via HTTP and forwards them to your destinations.
   code={`npm install @walkeros/server-source-aws`}
   language="bash"
 />
-
-## Quick start
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -98,72 +90,16 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+Server sources require platform-specific handlers. For containerized deployments, see [Docker](/docs/apps/docker).
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Deployment
+<Configuration type="source" data={data} />
 
-### Lambda Function URL (simplest)
-
-<CodeSnippet
-  code={`import * as lambda from 'aws-cdk-lib/aws-lambda';
-
-const fn = new lambda.Function(this, 'Walker', {
-  runtime: lambda.Runtime.NODEJS_20_X,
-  handler: 'index.handler',
-  code: lambda.Code.fromAsset('./dist'),
-});
-
-fn.addFunctionUrl({
-  authType: lambda.FunctionUrlAuthType.NONE,
-  cors: {
-    allowedOrigins: ['*'],
-    allowedMethods: [lambda.HttpMethod.GET, lambda.HttpMethod.POST],
-  },
-});`}
-  language="typescript"
-/>
-
-### Serverless Framework
-
-<CodeSnippet
-  code={`# serverless.yml
-service: walkeros-flow
-
-provider:
-  name: aws
-  runtime: nodejs20.x
-
-functions:
-  collector:
-    handler: dist/index.handler
-    events:
-      - httpApi:
-          path: /collect
-          method: post
-      - httpApi:
-          path: /collect
-          method: get
-      - httpApi:
-          path: /health
-          method: get`}
-  language="yaml"
-/>
-
-## Configuration
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `cors` | `boolean \| object` | `true` | CORS configuration |
-| `timeout` | `number` | `30000` | Request timeout (ms) |
-| `enablePixelTracking` | `boolean` | `true` | Enable GET tracking |
-| `healthPath` | `string` | `/health` | Health check path |
-
-## Ingest Metadata
+## Ingest metadata
 
 Extract request metadata from Lambda events and forward it through the pipeline.
 
@@ -188,7 +124,7 @@ Extract request metadata from Lambda events and forward it through the pipeline.
   language="typescript"
 />
 
-### Available Ingest Paths
+### Available ingest paths
 
 **API Gateway v1 (REST API):**
 
@@ -212,7 +148,7 @@ Extract request metadata from Lambda events and forward it through the pipeline.
 
 | Platform | Status |
 |----------|--------|
-| API Gateway REST API (v1) | ✅ |
-| API Gateway HTTP API (v2) | ✅ |
-| Lambda Function URLs | ✅ |
-| Direct Lambda invocation | ✅ |
+| API Gateway REST API (v1) | Supported |
+| API Gateway HTTP API (v2) | Supported |
+| Lambda Function URLs | Supported |
+| Direct Lambda invocation | Supported |

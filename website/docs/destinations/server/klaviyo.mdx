@@ -1,0 +1,96 @@
+---
+title: Klaviyo
+description: "Server-side event delivery to Klaviyo for email and SMS marketing automation"
+path: /docs/destinations/server/klaviyo
+sidebar_position: 14
+package: '@walkeros/server-destination-klaviyo'
+---
+import data from '@walkeros/server-destination-klaviyo/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Klaviyo
+
+<PackageLink env="server" github="packages/server/destinations/klaviyo" npm="@walkeros/server-destination-klaviyo" status="beta" />
+
+Server-side event delivery to [Klaviyo](https://www.klaviyo.com/) via the official [`klaviyo-api`](https://www.npmjs.com/package/klaviyo-api) SDK. Tracks events with `EventsApi.createEvent()` and manages profiles with `ProfilesApi.createOrUpdateProfile()`, including revenue tracking, ecommerce metric name mapping, and identify state diffing.
+
+<WhereThisFits
+  pre={<>Klaviyo is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Klaviyo', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector, resolves a profile identifier (email, externalId, or phoneNumber), optionally upserts the profile, then forwards the event to Klaviyo for flows, segmentation, and campaigns.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-klaviyo`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationKlaviyo } from '@walkeros/server-destination-klaviyo';
+
+await startFlow({
+  destinations: {
+    klaviyo: {
+      code: destinationKlaviyo,
+      config: {
+        settings: {
+          apiKey: 'YOUR_KLAVIYO_PRIVATE_API_KEY',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "klaviyo": {
+    "package": "@walkeros/server-destination-klaviyo",
+    "config": {
+      "settings": {
+        "apiKey": "YOUR_KLAVIYO_PRIVATE_API_KEY"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+Identity is resolved automatically from each event: `email` defaults to `user.email` and `externalId` defaults to `user.id`. Klaviyo requires at least one identifier (`email`, `phoneNumber`, or `externalId`) per event. Events without any identifier are skipped with a warning.
+
+## Revenue tracking
+
+Map a mapping rule's `settings.value` to a numeric event property. When `settings.currency` is also set, the destination adds `valueCurrency` on the Klaviyo event for revenue reporting.
+
+## Ecommerce metric naming
+
+Klaviyo's built-in flows and reports key off specific metric names. Use `mapping.name` to rename walkerOS events to Klaviyo's expected values:
+
+| walkerOS Event   | Klaviyo Metric   | Unlocks                      |
+| ---------------- | ---------------- | ---------------------------- |
+| `product view`   | `Viewed Product` | Product analytics            |
+| `product add`    | `Added to Cart`  | Cart abandonment flows       |
+| `order complete` | `Placed Order`   | Revenue reporting, CLV       |

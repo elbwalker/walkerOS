@@ -37,3 +37,4 @@ export * from './respond';
 export * from './matcher';
 export * from './route';
 export * from './cache';
+export * from './examples/formatOut';

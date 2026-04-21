@@ -1,5 +1,5 @@
 import type { WalkerOS, Source, Elb } from '@walkeros/core';
-import type { SettingsSchema } from '../schemas';
+import type { SettingsSchema, Mapping } from '../schemas';
 import type { z } from '@walkeros/core/dev';
 
 declare global {
@@ -24,7 +24,7 @@ export interface Settings extends Omit<BaseSettings, 'filter'> {
 // InitSettings: user input (all optional)
 export type InitSettings = Partial<Settings>;
 
-export interface Mapping {}
+export type { Mapping };
 
 export type Push = Elb.Fn;
 

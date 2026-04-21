@@ -9,6 +9,14 @@ type PackageLinkProps = {
   es5?: string;
   github?: string;
   npm?: string;
+  status?: 'beta';
+};
+
+type PackageButtonProps = {
+  icon: string;
+  to?: string;
+  text: string;
+  style?: string;
 };
 
 export function PackageButton({
@@ -16,19 +24,27 @@ export function PackageButton({
   to,
   text,
   style = '',
-}): React.JSX.Element {
+}: PackageButtonProps): React.JSX.Element {
   const classes = clsx(
     'inline-flex items-center justify-center h-9 mr-3 px-3 mb-6 gap-x-2',
     'text-xs font-medium text-black',
     'border border-gray-600 rounded-lg',
-    'hover:bg-gray-500',
+    to && 'hover:bg-gray-500',
     style,
   );
 
-  return (
-    <Link to={to} className={classes}>
+  const inner = (
+    <>
       <Icon icon={icon} className="h-6 w-6 fill-gray-400" /> {text}
+    </>
+  );
+
+  return to ? (
+    <Link to={to} className={classes}>
+      {inner}
     </Link>
+  ) : (
+    <span className={classes}>{inner}</span>
   );
 }
 
@@ -38,6 +54,7 @@ export default function PackageLink({
   es5,
   github,
   npm,
+  status,
 }: PackageLinkProps): React.JSX.Element {
   const envText = {
     web: 'Web',
@@ -78,6 +95,7 @@ export default function PackageLink({
           text="ES5"
         />
       )}
+      {status === 'beta' && <PackageButton icon="mdi:beta" text="Beta" />}
     </>
   );
 }

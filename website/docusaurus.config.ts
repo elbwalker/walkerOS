@@ -1,5 +1,5 @@
 import { themes as prismThemes } from 'prism-react-renderer';
-import type { Config } from '@docusaurus/types';
+import type { Config, Plugin } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const vars = {
@@ -205,6 +205,7 @@ const config: Config = {
 
   plugins: [
     tailwindPlugin,
+    devOverlayFilterPlugin,
     [
       '@docusaurus/plugin-client-redirects',
       {
@@ -257,6 +258,40 @@ async function tailwindPlugin() {
         },
       };
     },
+  };
+}
+
+// Filter Monaco's cancelation rejection out of the webpack-dev-server
+// overlay. The browser-side listener in @walkeros/explorer silences the
+// raw rejection, but the overlay hooks rejections independently.
+//
+// webpack-dev-server stringifies this function with `.toString()` and
+// eval's it in the browser, so it must be self-contained with no
+// closed-over references. Logic mirrors `isMonacoCancellation` in
+// @walkeros/explorer — keep the two in sync.
+async function devOverlayFilterPlugin(): Promise<Plugin<unknown>> {
+  return {
+    name: 'walkeros-dev-overlay-filter',
+    configureWebpack: () =>
+      ({
+        devServer: {
+          client: {
+            overlay: {
+              runtimeErrors: (error: unknown) => {
+                const seen = new Set<unknown>();
+                const check = (v: unknown): boolean => {
+                  if (!v || typeof v !== 'object' || seen.has(v)) return false;
+                  seen.add(v);
+                  const o = v as { type?: string; cause?: unknown };
+                  if (o.type === 'cancelation') return true;
+                  return check(o.cause);
+                };
+                return !check(error);
+              },
+            },
+          },
+        },
+      }) as never,
   };
 }
 

@@ -5,6 +5,7 @@ sidebar_position: 1
 package: '@walkeros/web-source-session'
 ---
 import data from '@walkeros/web-source-session/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 <PackageLink github="packages/web/sources/session" npm="@walkeros/web-source-session" />
 
@@ -215,9 +216,7 @@ A returning visitor starting their second session has `isStart: true` but `isNew
 
 **Click ID parameters** are stored twice: `clickId` identifies which platform originated the click (e.g. `'gclid'`), and a separate field stores the actual value (e.g. `gclid: 'AW-123...'`). This makes it easy to filter by platform without inspecting the value.
 
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
+<Configuration type="source" data={data} />
 
 ## Consent integration
 

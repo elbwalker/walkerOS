@@ -1,7 +1,6 @@
 import { createApiClient } from '../../core/api-client.js';
-import { throwApiError } from '../../core/api-error.js';
+import { handleCliError, throwApiError } from '../../core/api-error.js';
 import { requireProjectId } from '../../core/auth.js';
-import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import { isStdinPiped, readStdin } from '../../core/stdin.js';
 import type { GlobalOptions } from '../../types/global.js';
@@ -141,13 +140,11 @@ async function handleResult(
   fn: () => Promise<unknown>,
   options: FlowsCommandOptions,
 ): Promise<void> {
-  const logger = createCLILogger(options);
   try {
     const result = await fn();
     await writeResult(JSON.stringify(result, null, 2), options);
   } catch (error) {
-    logger.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    handleCliError(error);
   }
 }
 

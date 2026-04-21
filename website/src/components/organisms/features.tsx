@@ -1,7 +1,15 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
-import { CodeBox } from '@walkeros/explorer';
+import { CodeBox, type CodeBoxProps } from '@walkeros/explorer';
 import { tagger } from '@site/src/components/walkerjs';
+import flowSchema from '@site/static/schema/flow/v3.json';
+
+// Monaco's root module type deprecates languages.typescript. The real
+// typescriptDefaults surface is available at runtime but not on the root type,
+// so we narrow to the structural shape we actually call.
+type TypescriptDefaults = {
+  addExtraLib(content: string, filePath: string): void;
+};
 
 const composableTaggingHtmlCode = `<div
   data-elb="product"
@@ -14,9 +22,13 @@ const composableTaggingHtmlCode = `<div
   </button>
 </div>`;
 
-const composableTaggingCode = `import { tagger } from '../walker';
+const composableTaggingCode = `import { createTagger } from '@walkeros/web-source-browser';
 
-function ProductDetail({ product }) {
+const tagger = createTagger();
+
+type Product = { id: string; name: string };
+
+export function ProductDetail({ product }: { product: Product }) {
   return (
     <div
       {...tagger()
@@ -35,58 +47,44 @@ function ProductDetail({ product }) {
   );
 }`;
 
-const webCode = `// Capture GA4 dataLayer events
-{
-  sources: {
-    dataLayer: {
-      config: {
-        mapping: {
-          add_to_cart: {
-            name: 'product add',
-            data: {
-              map: {
-                id: 'items.0.item_id',
-                name: 'items.0.item_name',
-                price: 'value'
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}`;
+const webCode = `// Map GA4 dataLayer event to walkerOS
+const add_to_cart = {
+  name: 'product add',
+  data: {
+    map: {
+      id: 'items.0.item_id',
+      name: 'items.0.item_name',
+      price: 'value',
+    },
+  },
+};`;
 
-const serverCode = `// GET /collect?event=addToCart&data[itemId]=123&data[itemName]=Sneakers&data[amount]=49.99
-{
-  sources: {
-    express: {
-      config: {
-        mapping: {
-          addToCart: {
-            name: 'product add',
-            data: {
-              map: {
-                id: 'data.itemId',
-                name: 'data.itemName',
-                price: 'data.amount'
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}`;
+const serverCode = `// Map Express /collect request to walkerOS
+// GET /collect?event=addToCart&data[itemId]=123&data[amount]=49.99
+const addToCart = {
+  name: 'product add',
+  data: {
+    map: {
+      id: 'data.itemId',
+      name: 'data.itemName',
+      price: 'data.amount',
+    },
+  },
+};`;
 
 const flowJsonCode = `{
-  destinations: {
-    ga4: {
-      config: {
-        consent: { marketing: true },
-        loadScript: false,
-        settings: {
-          measurementId: 'G-XXXXXXXXXX'
+  "$schema": "https://walkeros.io/schema/flow/v3.json",
+  "flows": {
+    "main": {
+      "web": {},
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "consent": { "marketing": true },
+            "loadScript": false,
+            "settings": { "measurementId": "G-XXXXXXXXXX" }
+          }
         }
       }
     }
@@ -104,6 +102,29 @@ const gtagCode = `// Handled automatically:
 
 // Full Consent Mode v2 support
 // Zero additional code needed`;
+
+// Minimal ambient declaration for @walkeros/web-source-browser so Monaco can
+// type-check the tagger snippet without a CDN fetch. Only declares the surface
+// actually used in the snippet.
+const registerTaggerTypes: CodeBoxProps['beforeMount'] = (monaco) => {
+  const tsDefaults = (
+    monaco.languages.typescript as unknown as {
+      typescriptDefaults: TypescriptDefaults;
+    }
+  ).typescriptDefaults;
+  tsDefaults.addExtraLib(
+    `declare module '@walkeros/web-source-browser' {
+       export interface TaggerInstance {
+         entity(name: string): TaggerInstance;
+         action(trigger: string, action?: string): TaggerInstance;
+         data(key: string, value: string | number | boolean): TaggerInstance;
+         get(): Record<string, string>;
+       }
+       export function createTagger(): (entity?: string) => TaggerInstance;
+     }`,
+    'file:///walkeros-web-source-browser.d.ts',
+  );
+};
 
 export default function Features() {
   return (
@@ -169,6 +190,8 @@ export default function Features() {
                       language: 'typescript',
                     },
                   ]}
+                  packages={['@walkeros/core']}
+                  beforeMount={registerTaggerTypes}
                   disabled
                   className="w-full mx-6 shadow-xl"
                 />
@@ -224,6 +247,7 @@ export default function Features() {
                       language: 'typescript',
                     },
                   ]}
+                  packages={['@walkeros/core']}
                   disabled
                   className="w-full mx-6 shadow-xl"
                 />
@@ -285,6 +309,7 @@ export default function Features() {
                       language: 'javascript',
                     },
                   ]}
+                  jsonSchema={flowSchema}
                   disabled
                   className="w-full mx-6 shadow-xl"
                 />

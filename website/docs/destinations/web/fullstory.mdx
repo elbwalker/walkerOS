@@ -1,0 +1,119 @@
+---
+title: FullStory
+description: Session replay, custom events, and user/page properties
+path: /docs/destinations/web/fullstory
+sidebar_position: 14
+package: '@walkeros/web-destination-fullstory'
+---
+
+import data from '@walkeros/web-destination-fullstory/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# FullStory
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/fullstory"
+  npm="@walkeros/web-destination-fullstory"
+  status="beta"
+/>
+
+[FullStory](https://www.fullstory.com/) delivers enterprise session replay and
+digital-experience analytics. This destination forwards walkerOS events to
+FullStory via the official
+[`@fullstory/browser`](https://www.npmjs.com/package/@fullstory/browser) SDK
+v2, calling `FullStory('trackEvent', ...)` for events and supporting
+identity, user/page properties, and consent gating via `start`/`shutdown`.
+
+<WhereThisFits
+  pre={<>FullStory is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'FullStory', highlight: true } },
+  }}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-fullstory`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationFullStory } from '@walkeros/web-destination-fullstory';
+
+await startFlow({
+  destinations: {
+    fullstory: {
+      code: destinationFullStory,
+      config: {
+        settings: {
+          orgId: 'o-XXXXXX-na1',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "fullstory": {
+    "package": "@walkeros/web-destination-fullstory",
+    "config": {
+      "settings": {
+        "orgId": "o-XXXXXX-na1"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## Consent
+
+FullStory supports runtime consent via `start`/`shutdown` (recording on/off) or
+the `consent` flag on `setIdentity`. Map walkerOS consent keys to FullStory
+actions via `settings.consent`, and combine with `startCaptureManually: true`
+to delay recording until consent is granted:
+
+<CodeSnippet
+  code={`destinations: {
+  fullstory: {
+    code: destinationFullStory,
+    config: {
+      consent: { analytics: true },
+      settings: {
+        orgId: 'o-XXXXXX-na1',
+        startCaptureManually: true,
+        consent: {
+          analytics: 'capture',
+        },
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+- `"capture"` toggles `start`/`shutdown` (recording on/off)
+- `"consent"` sets the `consent` flag on `setIdentity`

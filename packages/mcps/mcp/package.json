@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/mcp",
-  "version": "3.3.1",
+  "version": "3.4.0",
   "description": "MCP server for walkerOS flow development - discover packages, scaffold configs, validate, bundle, simulate, and test event pipelines",
   "license": "MIT",
   "type": "module",
@@ -31,15 +31,15 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@walkeros/cli": "3.3.1",
-    "@walkeros/core": "3.3.1"
+    "@walkeros/cli": "3.4.0",
+    "@walkeros/core": "3.4.0"
   },
   "peerDependencies": {
     "zod": "^4.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@walkeros/config": "3.3.1"
+    "@walkeros/config": "3.4.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

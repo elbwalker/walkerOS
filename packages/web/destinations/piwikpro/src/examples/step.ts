@@ -1,6 +1,30 @@
 import type { Flow } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+/**
+ * Destination bootstrap.
+ * Given the canonical settings, init loads the PiwikPro script and configures
+ * the tracker URL, app id, and link tracking. Reproduce by passing the same
+ * settings to `startFlow` as the destination config.
+ */
+export const init: Flow.StepExample = {
+  in: {
+    loadScript: true,
+    settings: {
+      appId: 'XXX-XXX-XXX-XXX-XXX',
+      url: 'https://your_account_name.piwik.pro/',
+    },
+  },
+  out: [
+    [
+      '_paq.push',
+      ['setTrackerUrl', 'https://your_account_name.piwik.pro/ppms.php'],
+    ],
+    ['_paq.push', ['setSiteId', 'XXX-XXX-XXX-XXX-XXX']],
+    ['_paq.push', ['enableLinkTracking']],
+  ],
+};
+
 export const ecommerceOrder: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000300 }),
   mapping: {

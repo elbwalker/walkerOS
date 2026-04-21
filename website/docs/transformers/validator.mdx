@@ -1,31 +1,32 @@
 ---
 title: Validator
-description: "Event validation transformer using JSON Schema"
+description: 'Event validation transformer using JSON Schema'
 sidebar_position: 1
 package: '@walkeros/transformer-validator'
 ---
 
 import data from '@walkeros/transformer-validator/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Validator
 
-<PackageLink env="server" github="packages/transformers/validator" npm="@walkeros/transformer-validator" />
+<PackageLink
+  env="server"
+  github="packages/transformers/validator"
+  npm="@walkeros/transformer-validator"
+/>
 
-Validates events using JSON Schema with two modes: **format** (structure) and **contract** (business rules).
+Validates events using JSON Schema with two modes: **format** (structure of the full `WalkerOS.Event`) and **contract** (entity/action business rules). Invalid events are dropped from the pipeline and logged; valid events pass through unchanged.
 
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-Install the package:
+## Installation
 
 <CodeSnippet
   code={`npm install @walkeros/transformer-validator`}
   language="bash"
 />
 
-Configure in your code:
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -89,16 +90,18 @@ Add to your `flow.json`:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
+
+<Configuration type="transformer" data={data} />
 
 ## Validation modes
 
 | Mode | Purpose |
 |------|---------|
-| `format` | Validates full WalkerOS.Event structure |
+| `format` | Validates full `WalkerOS.Event` structure |
 | `contract` | Validates entity/action-specific business rules |
 
 ## Logger levels
@@ -107,15 +110,6 @@ Add to your `flow.json`:
 |-------|--------|
 | `ERROR` | Validation failures only |
 | `DEBUG` | All validation results (pass and fail) |
-
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `format` | `boolean` | `true` | Validate full WalkerOS.Event structure |
-| `contract` | `Contract` | - | Entity/action keyed validation rules |
 
 ## Behavior
 
@@ -154,7 +148,7 @@ Event → Format check → Contract check → Next transformer/Destination
 <details>
 <summary>Conditional rules</summary>
 
-Apply different data.schemas based on event data:
+Apply different schemas based on event data:
 
 <CodeSnippet
   code={`contract: {
@@ -207,4 +201,4 @@ Match multiple events with wildcards:
 
 ## Next steps
 
-* **[Create your own](./create-your-own)** - Build custom transformers
+- **[Create your own](./create-your-own)** - Build custom transformers

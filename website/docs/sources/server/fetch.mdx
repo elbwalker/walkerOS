@@ -6,32 +6,23 @@ package: '@walkeros/server-source-fetch'
 ---
 
 import data from '@walkeros/server-source-fetch/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/sources/fetch" npm="@walkeros/server-source-fetch" />
 
 # Fetch
 
-Web Standard Fetch API source for walkerOS - deploy to any modern edge or serverless platform.
+Web Standard Fetch API source for walkerOS. Platform-agnostic `(Request) => Response` signature that runs on Cloudflare Workers, Vercel Edge, Deno, Bun, and Node.js 18+. Supports batch processing, configurable CORS, and pixel tracking via a 1x1 transparent GIF for GET requests.
 
-:::info Where This Fits
-The Fetch Source is a **server source** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { label: 'Source', text: 'Fetch', highlight: true } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { highlight: false } }}
+<WhereThisFits
+  pre={<>The Fetch source is a <strong>server source</strong> in the walkerOS flow:</>}
+  flowMap={{
+    sources: { default: { label: 'Source', text: 'Fetch', highlight: true } },
+  }}
+  post={<>It receives events via the Fetch API and forwards them to your destinations. Works on any platform supporting Web Standards.</>}
 />
-
-It receives events via the Fetch API and forwards them to your destinations. Works on any platform supporting Web Standards.
-:::
-
-## Features
-
-* **Platform agnostic**: Cloudflare Workers, Vercel Edge, Deno, Bun, Node.js 18+
-* **Web Standard**: Native `(Request) => Response` signature
-* **Batch processing**: Handle multiple events in single request
-* **CORS support**: Configurable cross-origin resource sharing
-* **Pixel tracking**: 1x1 transparent GIF for GET requests
 
 ## Installation
 
@@ -51,8 +42,6 @@ settings: { path: '/events' }
 settings: { paths: ['/events'] }
 ```
 :::
-
-## Quick start
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -98,73 +87,16 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+Server sources require platform-specific handlers. For containerized deployments, see [Docker](/docs/apps/docker).
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## More platform examples
+<Configuration type="source" data={data} />
 
-The following examples show Integrated mode patterns for various platforms:
-
-### Vercel Edge
-
-<CodeSnippet
-  code={`// api/collect.ts
-export const config = { runtime: 'edge' };
-
-import { sourceFetch } from '@walkeros/server-source-fetch';
-import { startFlow } from '@walkeros/collector';
-
-const { sources } = await startFlow({
-  sources: {
-    fetch: { code: sourceFetch, config: {} },
-  },
-});
-
-export default sources.fetch.push;`}
-  language="typescript"
-/>
-
-### Deno Deploy
-
-<CodeSnippet
-  code={`import { sourceFetch } from '@walkeros/server-source-fetch';
-import { startFlow } from '@walkeros/collector';
-
-const { sources } = await startFlow({
-  sources: {
-    fetch: { code: sourceFetch, config: {} },
-  },
-});
-
-Deno.serve(sources.fetch.push);`}
-  language="typescript"
-/>
-
-### Bun
-
-<CodeSnippet
-  code={`import { sourceFetch } from '@walkeros/server-source-fetch';
-import { startFlow } from '@walkeros/collector';
-
-const { sources } = await startFlow({
-  sources: {
-    fetch: { code: sourceFetch, config: {} },
-  },
-});
-
-Bun.serve({ fetch: sources.fetch.push, port: 3000 });`}
-  language="typescript"
-/>
-
-## Configuration
-
-<PropertyTable schema={data.schemas.settings} />
-
-## Ingest Metadata
+## Ingest metadata
 
 Extract request metadata and forward it through the pipeline.
 
@@ -187,7 +119,7 @@ Extract request metadata and forward it through the pipeline.
   language="typescript"
 />
 
-### Available Ingest Paths
+### Available ingest paths
 
 | Path | Description |
 |------|-------------|
@@ -200,7 +132,7 @@ The Fetch API uses `Request` objects where headers are accessed via `.get()` met
 
 ## Usage
 
-### Single Event
+### Single event
 
 <CodeSnippet
   code={`fetch('https://your-endpoint.com/collect', {
@@ -214,7 +146,7 @@ The Fetch API uses `Request` objects where headers are accessed via `.get()` met
   language="javascript"
 />
 
-### Batch Events
+### Batch events
 
 <CodeSnippet
   code={`fetch('https://your-endpoint.com/collect', {

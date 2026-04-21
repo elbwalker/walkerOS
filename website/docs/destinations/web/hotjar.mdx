@@ -1,0 +1,111 @@
+---
+title: Hotjar
+description: Session recordings, heatmaps, and on-page feedback
+path: /docs/destinations/web/hotjar
+sidebar_position: 12
+package: '@walkeros/web-destination-hotjar'
+---
+
+import data from '@walkeros/web-destination-hotjar/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Hotjar
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/hotjar"
+  npm="@walkeros/web-destination-hotjar"
+  status="beta"
+/>
+
+[Hotjar](https://www.hotjar.com/) provides session recordings, heatmaps, and
+on-page feedback for web products. This destination forwards walkerOS events to
+Hotjar via the official
+[`@hotjar/browser`](https://www.npmjs.com/package/@hotjar/browser) SDK,
+translating events into `Hotjar.event(...)` calls and handling identity and
+SPA state changes.
+
+<WhereThisFits
+  pre={<>Hotjar is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Hotjar', highlight: true } },
+  }}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-hotjar`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationHotjar } from '@walkeros/web-destination-hotjar';
+
+await startFlow({
+  destinations: {
+    hotjar: {
+      code: destinationHotjar,
+      config: {
+        settings: {
+          siteId: 1234567,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "hotjar": {
+    "package": "@walkeros/web-destination-hotjar",
+    "config": {
+      "settings": {
+        "siteId": 1234567
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## Consent
+
+Hotjar has no runtime consent API. Consent is gated at the walkerOS level via
+`config.consent`:
+
+<CodeSnippet
+  code={`destinations: {
+  hotjar: {
+    code: destinationHotjar,
+    config: {
+      consent: { marketing: true },
+      settings: { siteId: 1234567 },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+Unconsented events are blocked by the collector before reaching the
+destination.

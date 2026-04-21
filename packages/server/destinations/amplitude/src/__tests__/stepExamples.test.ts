@@ -15,13 +15,6 @@ import type {
 } from '../types';
 
 type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
 
 /** Records Identify operations as a plain object for assertion matching. */
 class RecordingIdentify implements IdentifyInstance {
@@ -224,9 +217,8 @@ describe('amplitude server destination -- step examples', () => {
       await elb(event);
     }
 
-    const expected = flatten(example.out as ExpectedOut);
     const actual = collected().filter(([path]) => path !== 'amplitude.init');
 
-    expect(actual).toEqual(expected);
+    expect(actual).toEqual(example.out);
   });
 });

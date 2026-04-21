@@ -1,0 +1,38 @@
+// CodeStatic component - Shiki-rendered, read-only code
+// Visual parity with .elb-code (Monaco wrapper) so CodeView matches CodeBox.
+.elb-code-static {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+
+  font-size: var(--monaco-font-size, 13px);
+  line-height: 1.5;
+  font-family: var(--font-mono, 'SF Mono', 'Monaco', 'Menlo', 'Consolas',
+    monospace);
+
+  pre.shiki,
+  pre {
+    flex: 1;
+    margin: 0 !important;
+    padding: var(--spacing-sm, 8px) var(--spacing-md, 12px) !important;
+    background: transparent !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    overflow: auto;
+    box-sizing: border-box;
+  }
+
+  pre.shiki code,
+  pre code {
+    font-family: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    background: transparent !important;
+    display: block;
+  }
+}

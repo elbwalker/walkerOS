@@ -1,6 +1,18 @@
 import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
+/**
+ * API server destination step examples.
+ *
+ * At push time, the destination calls `env.sendServer(url, body, options)`
+ * where `url` is the configured endpoint, `body` is the JSON-stringified
+ * event data (or mapped data), and `options` carries headers/method/timeout.
+ *
+ * Each `out` tuple is `['sendServer', url, body, options]` mirroring the real
+ * call signature. The test fixture injects the configured settings per example.
+ */
+const URL = 'https://api.example.com/events';
+
 export const fullEvent: Flow.StepExample = {
   in: getEvent('page view', {
     timestamp: 1700000800,
@@ -10,13 +22,17 @@ export const fullEvent: Flow.StepExample = {
   mapping: {
     data: 'data',
   },
-  out: {
-    url: 'https://api.example.com/events',
-    body: JSON.stringify({
-      title: 'Docs',
-      url: 'https://example.com/docs',
-    }),
-  },
+  out: [
+    [
+      'sendServer',
+      URL,
+      JSON.stringify({
+        title: 'Docs',
+        url: 'https://example.com/docs',
+      }),
+      { headers: undefined, method: undefined, timeout: undefined },
+    ],
+  ],
 };
 
 export const customHeaders: Flow.StepExample = {
@@ -28,14 +44,21 @@ export const customHeaders: Flow.StepExample = {
   mapping: {
     data: 'data',
   },
-  out: {
-    url: 'https://api.example.com/events',
-    body: JSON.stringify({
-      type: 'contact',
-      email: 'user@example.com',
-    }),
-    headers: { 'X-API-Key': 'YOUR_API_KEY' },
-  },
+  out: [
+    [
+      'sendServer',
+      URL,
+      JSON.stringify({
+        type: 'contact',
+        email: 'user@example.com',
+      }),
+      {
+        headers: { 'X-API-Key': 'YOUR_API_KEY' },
+        method: undefined,
+        timeout: undefined,
+      },
+    ],
+  ],
 };
 
 export const customTransform: Flow.StepExample = {
@@ -56,14 +79,18 @@ export const customTransform: Flow.StepExample = {
       },
     },
   },
-  out: {
-    url: 'https://api.example.com/events',
-    body: JSON.stringify({
-      order_id: 'ORD-500',
-      amount: 199.99,
-      currency: 'USD',
-      customer_id: 'buyer-42',
-      event_type: 'order complete',
-    }),
-  },
+  out: [
+    [
+      'sendServer',
+      URL,
+      JSON.stringify({
+        order_id: 'ORD-500',
+        amount: 199.99,
+        currency: 'USD',
+        customer_id: 'buyer-42',
+        event_type: 'order complete',
+      }),
+      { headers: undefined, method: undefined, timeout: undefined },
+    ],
+  ],
 };

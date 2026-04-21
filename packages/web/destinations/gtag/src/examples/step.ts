@@ -1,6 +1,67 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+/**
+ * Fixed system time used by the step-examples test so init calls
+ * that reference `new Date()` produce deterministic output.
+ * Inlined (not exported) so it isn't surfaced as a step example.
+ */
+const INIT_DATE_MS = 1700000000000;
+const INIT_DATE = new Date(INIT_DATE_MS);
+
+/**
+ * GA4 destination bootstrap.
+ * Initializes gtag infrastructure and configures the GA4 measurementId.
+ */
+export const ga4Init: Flow.StepExample = {
+  in: {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXX-1' },
+    },
+  },
+  out: [
+    ['gtag', 'js', INIT_DATE],
+    ['gtag', 'config', 'G-XXXXXX-1', {}],
+  ],
+};
+
+/**
+ * Google Ads destination bootstrap.
+ * Initializes gtag infrastructure and configures the Ads conversionId.
+ */
+export const adsInit: Flow.StepExample = {
+  in: {
+    settings: {
+      ads: { conversionId: 'AW-123456789', currency: 'EUR' },
+    },
+  },
+  out: [
+    ['gtag', 'js', INIT_DATE],
+    ['gtag', 'config', 'AW-123456789'],
+  ],
+};
+
+/**
+ * GTM destination bootstrap.
+ * Initializes the dataLayer and pushes the gtm.js start event.
+ */
+export const gtmInit: Flow.StepExample = {
+  in: {
+    settings: {
+      gtm: { containerId: 'GTM-XXXXXXX' },
+    },
+  },
+  out: [
+    [
+      'dataLayer.push',
+      {
+        'gtm.start': INIT_DATE_MS,
+        event: 'gtm.js',
+      },
+    ],
+  ],
+};
+
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000100 }),
   mapping: {
@@ -31,20 +92,30 @@ export const purchase: Flow.StepExample = {
     },
   },
   out: [
-    'event',
-    'purchase',
-    {
-      transaction_id: '0rd3r1d',
-      value: 555,
-      tax: 73.76,
-      shipping: 5.22,
-      currency: 'EUR',
-      items: [
-        { item_id: 'ers', item_name: 'Everyday Ruck Snack', quantity: 1 },
-        { item_id: 'cc', item_name: 'Cool Cap', quantity: 1 },
-      ],
-      send_to: 'G-XXXXXX-1',
-    },
+    [
+      'gtag',
+      'event',
+      'purchase',
+      {
+        transaction_id: '0rd3r1d',
+        value: 555,
+        tax: 73.76,
+        shipping: 5.22,
+        currency: 'EUR',
+        items: [
+          { item_id: 'ers', item_name: 'Everyday Ruck Snack', quantity: 1 },
+          { item_id: 'cc', item_name: 'Cool Cap', quantity: 1 },
+        ],
+        // include: ['data', 'context'] flattens both sections as prefixed params.
+        data_id: '0rd3r1d',
+        data_currency: 'EUR',
+        data_shipping: 5.22,
+        data_taxes: 73.76,
+        data_total: 555,
+        context_shopping: 'complete',
+        send_to: 'G-XXXXXX-1',
+      },
+    ],
   ],
 };
 
@@ -73,21 +144,30 @@ export const addToCart: Flow.StepExample = {
     },
   },
   out: [
-    'event',
-    'add_to_cart',
-    {
-      currency: 'EUR',
-      value: 420,
-      items: [{ item_id: 'ers', item_variant: 'black', quantity: 1 }],
-      send_to: 'G-XXXXXX-1',
-    },
+    [
+      'gtag',
+      'event',
+      'add_to_cart',
+      {
+        currency: 'EUR',
+        value: 420,
+        items: [{ item_id: 'ers', item_variant: 'black', quantity: 1 }],
+        // include: ['data'] flattens data as prefixed params.
+        data_id: 'ers',
+        data_name: 'Everyday Ruck Snack',
+        data_color: 'black',
+        data_size: 'l',
+        data_price: 420,
+        send_to: 'G-XXXXXX-1',
+      },
+    ],
   ],
 };
 
 export const pageView: Flow.StepExample = {
   in: getEvent('page view', { timestamp: 1700000102 }),
   mapping: undefined,
-  out: ['event', 'page_view', { send_to: 'G-XXXXXX-1' }],
+  out: [['gtag', 'event', 'page_view', { send_to: 'G-XXXXXX-1' }]],
 };
 
 /**
@@ -109,13 +189,16 @@ export const googleAdsConversion: Flow.StepExample = {
     },
   },
   out: [
-    'event',
-    'conversion',
-    {
-      send_to: 'AW-123456789/PURCHASE_CONV',
-      currency: 'EUR',
-      value: 555,
-    },
+    [
+      'gtag',
+      'event',
+      'conversion',
+      {
+        send_to: 'AW-123456789/PURCHASE_CONV',
+        currency: 'EUR',
+        value: 555,
+      },
+    ],
   ],
 };
 
@@ -139,11 +222,16 @@ export const gtmDataLayerPush: Flow.StepExample = {
       },
     },
   },
-  out: {
-    event: 'page_view',
-    page_title: 'walkerOS documentation',
-    page_location: 'www.example.com',
-  },
+  out: [
+    [
+      'dataLayer.push',
+      {
+        event: 'page_view',
+        page_title: 'walkerOS documentation',
+        page_location: 'www.example.com',
+      },
+    ],
+  ],
 };
 
 /**
@@ -159,14 +247,29 @@ export const consentModeV2: Flow.StepExample = {
   command: 'consent',
   in: { marketing: true, functional: true },
   out: [
-    'consent',
-    'update',
-    {
-      ad_storage: 'granted',
-      ad_user_data: 'granted',
-      ad_personalization: 'granted',
-      analytics_storage: 'granted',
-    },
+    // First consent call sets default to denied for all mapped parameters.
+    [
+      'gtag',
+      'consent',
+      'default',
+      {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied',
+      },
+    ],
+    [
+      'gtag',
+      'consent',
+      'update',
+      {
+        ad_storage: 'granted',
+        ad_user_data: 'granted',
+        ad_personalization: 'granted',
+        analytics_storage: 'granted',
+      },
+    ],
   ],
 };
 
@@ -181,44 +284,54 @@ export const ga4WithIncludeAll: Flow.StepExample = {
     include: ['all'],
   },
   out: [
-    'event',
-    'page_view',
-    {
-      // data_* params from event.data
-      data_domain: 'www.example.com',
-      data_title: 'walkerOS documentation',
-      data_referrer: 'https://www.walkeros.io/',
-      data_search: '?foo=bar',
-      data_hash: '#hash',
-      data_id: '/docs/',
-      // context_* params from event.context
-      context_dev: 'test',
-      // globals_* params from event.globals
-      globals_pagegroup: 'docs',
-      // user_* params from event.user
-      user_id: 'us3r',
-      user_device: 'c00k13',
-      user_session: 's3ss10n',
-      // source_* params from event.source
-      source_type: 'web',
-      source_id: 'https://localhost:80',
-      source_previous_id: 'http://remotehost:9001',
-      // event_* params from event properties
-      event_entity: 'page',
-      event_action: 'view',
-      event_trigger: 'load',
-      event_group: 'gr0up',
-      event_count: 1,
-      // send_to is always set for GA4
-      send_to: 'G-XXXXXX-1',
-    },
+    [
+      'gtag',
+      'event',
+      'page_view',
+      {
+        // data_* params from event.data
+        data_domain: 'www.example.com',
+        data_title: 'walkerOS documentation',
+        data_referrer: 'https://www.walkeros.io/',
+        data_search: '?foo=bar',
+        data_hash: '#hash',
+        data_id: '/docs/',
+        // context_* params from event.context
+        context_dev: 'test',
+        // globals_* params from event.globals
+        globals_pagegroup: 'docs',
+        // user_* params from event.user
+        user_id: 'us3r',
+        user_device: 'c00k13',
+        user_session: 's3ss10n',
+        // source_* params from event.source
+        source_type: 'web',
+        source_id: 'https://localhost:80',
+        source_previous_id: 'http://remotehost:9001',
+        // event_* params from event properties
+        event_entity: 'page',
+        event_action: 'view',
+        event_trigger: 'load',
+        event_group: 'gr0up',
+        event_count: 1,
+        event_id: '1700000106-gr0up-1',
+        event_name: 'page view',
+        event_timestamp: 1700000106,
+        event_timing: 3.14,
+        // version_* params from event.version
+        version_source: '3.3.1',
+        version_tagging: 1,
+        // send_to is always set for GA4
+        send_to: 'G-XXXXXX-1',
+      },
+    ],
   ],
 };
 
 /**
  * One event pushed to GA4 + Ads + GTM simultaneously.
  * Shows settings for all three tools in a single mapping rule.
- * The out is an object keyed by tool name with each tool's expected output.
+ * The out is a flat array of all observable calls in execution order:
  *
  * - GA4: gtag('event', eventName, { ...params, send_to })
  * - Ads: gtag('event', 'conversion', { send_to, currency, ...data })
@@ -241,29 +354,50 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
       },
     },
   },
-  out: {
-    ga4: [
+  out: [
+    [
+      'gtag',
       'event',
       'purchase',
       {
         value: 555,
         currency: 'EUR',
+        // include: ['data'] flattens data as prefixed params.
+        data_id: '0rd3r1d',
+        data_currency: 'EUR',
+        data_shipping: 5.22,
+        data_taxes: 73.76,
+        data_total: 555,
         send_to: 'G-XXXXXX-1',
       },
     ],
-    ads: [
+    [
+      'gtag',
       'event',
       'conversion',
       {
         send_to: 'AW-123456789/PURCHASE_CONV',
         currency: 'EUR',
         value: 555,
+        data_id: '0rd3r1d',
+        data_currency: 'EUR',
+        data_shipping: 5.22,
+        data_taxes: 73.76,
+        data_total: 555,
       },
     ],
-    gtm: {
-      event: 'purchase',
-      value: 555,
-      currency: 'EUR',
-    },
-  },
+    [
+      'dataLayer.push',
+      {
+        event: 'purchase',
+        value: 555,
+        currency: 'EUR',
+        data_id: '0rd3r1d',
+        data_currency: 'EUR',
+        data_shipping: 5.22,
+        data_taxes: 73.76,
+        data_total: 555,
+      },
+    ],
+  ],
 };

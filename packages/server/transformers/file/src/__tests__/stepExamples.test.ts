@@ -1,6 +1,10 @@
 import type { Transformer, WalkerOS } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
-import { createIngest, createMockContext, createMockLogger } from '@walkeros/core';
+import {
+  createIngest,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
 import { createMockStore } from '@walkeros/store-memory';
 import { transformerFile } from '../transformer';
 import type { Types } from '../types';
@@ -29,7 +33,11 @@ describe('Step Examples', () => {
       env: respond ? { respond } : {},
       logger: mockLogger,
       id: 'test-file',
-      ingest: { ...createIngest('test'), ...ingestData, _meta: createIngest('test')._meta },
+      ingest: {
+        ...createIngest('test'),
+        ...ingestData,
+        _meta: createIngest('test')._meta,
+      },
     });
 
   beforeEach(() => {
@@ -66,11 +74,14 @@ describe('Step Examples', () => {
     );
 
     // File transformer returns false when it serves a file (stops the chain)
-    expect(result).toBe(example.out);
+    expect(result).toBe(false);
     expect(capturedOptions).toBeDefined();
-    expect(capturedOptions!.status).toBe(200);
-    expect(capturedOptions!.headers).toMatchObject({
-      'Content-Type': 'application/javascript',
-    });
+    const [callable, expected] = example.out![0] as readonly [
+      string,
+      { status: number; headers: Record<string, string> },
+    ];
+    expect(callable).toBe('respond');
+    expect(capturedOptions!.status).toBe(expected.status);
+    expect(capturedOptions!.headers).toMatchObject(expected.headers);
   });
 });

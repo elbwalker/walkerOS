@@ -1,0 +1,138 @@
+---
+title: X (Twitter) Conversions API
+description: "Server-side conversion event delivery to X (Twitter) for enhanced ad attribution"
+path: /docs/destinations/server/twitter
+sidebar_position: 22
+package: '@walkeros/server-destination-twitter'
+---
+import data from '@walkeros/server-destination-twitter/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# X (Twitter) Conversions API
+
+<PackageLink env="server" github="packages/server/destinations/twitter" npm="@walkeros/server-destination-twitter" status="beta" />
+
+Server-side event delivery to X's (Twitter's) Conversions API for enhanced ad attribution and privacy-compliant conversion tracking.
+
+<WhereThisFits
+  pre={<>X Conversions API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'X CAPI', highlight: true } },
+  }}
+  post={<>Sends conversion events server-side to X's Conversions API, bypassing browser limitations for improved data quality. Deduplicates with the browser-side X Pixel via `conversion_id`.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-twitter`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationTwitter } from '@walkeros/server-destination-twitter';
+
+await startFlow({
+  destinations: {
+    twitter: {
+      code: destinationTwitter,
+      config: {
+        settings: {
+          pixelId: 'YOUR_PIXEL_ID',
+          eventId: 'tw-xxxxx-xxxxx',
+          consumerKey: 'YOUR_CONSUMER_KEY',
+          consumerSecret: 'YOUR_CONSUMER_SECRET',
+          accessToken: 'YOUR_ACCESS_TOKEN',
+          accessTokenSecret: 'YOUR_ACCESS_TOKEN_SECRET',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "twitter": {
+    "package": "@walkeros/server-destination-twitter",
+    "code": "destinationTwitter",
+    "config": {
+      "settings": {
+        "pixelId": "YOUR_PIXEL_ID",
+        "eventId": "tw-xxxxx-xxxxx",
+        "consumerKey": "YOUR_CONSUMER_KEY",
+        "consumerSecret": "YOUR_CONSUMER_SECRET",
+        "accessToken": "YOUR_ACCESS_TOKEN",
+        "accessTokenSecret": "YOUR_ACCESS_TOKEN_SECRET"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## User identification
+
+The destination builds an `identifiers` array. Each identifier is a separate single-key object in the payload. At least one **primary** identifier is required. Events without one are silently skipped.
+
+**Primary identifiers:**
+
+- **`hashed_email`**: resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending. Set `doNotHash: ['email']` if you are pre-hashing upstream.
+- **`hashed_phone_number`**: resolved from `event.user.phone` or a `user_data.phone` mapping. SHA-256 hashed. Use `doNotHash: ['phone']` to skip.
+- **`twclid`**: X click ID (pass-through, **not** hashed). Typically forwarded from the browser session:
+
+<CodeSnippet
+  code={`"settings": {
+  "pixelId": "$env.TWITTER_PIXEL_ID",
+  "eventId": "$env.TWITTER_EVENT_ID",
+  "user_data": {
+    "twclid": "context.twclid"
+  }
+}`}
+  language="json"
+/>
+
+**Secondary identifiers** (optional): `ip_address`, `user_agent`, pass-through.
+
+## Per-event overrides
+
+The default `eventId` from settings applies to all events. Override it per event via mapping to route different events to different pre-registered conversion events:
+
+<CodeSnippet
+  code={`"mapping": {
+  "order": {
+    "complete": {
+      "settings": {
+        "eventId": { "value": "tw-o8z6j-purchase01" },
+        "value": "data.total",
+        "currency": { "key": "data.currency", "value": "EUR" },
+        "number_items": "data.count"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Browser deduplication
+
+When running both the browser-side X Pixel and this server destination, the walkerOS event `id` is sent as `conversion_id` on both sides. X deduplicates conversions that share the same `conversion_id` and conversion event, so only one conversion is counted.

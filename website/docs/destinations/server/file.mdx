@@ -1,0 +1,137 @@
+---
+title: File
+description: 'Local file sink for walkerOS server flows. Appends events as JSONL, TSV, or CSV for debug logging, audit trails, and cold archive.'
+path: /docs/destinations/server/file
+sidebar_position: 20
+package: '@walkeros/server-destination-file'
+---
+
+import data from '@walkeros/server-destination-file/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# File
+
+<PackageLink env="server" github="packages/server/destinations/file" npm="@walkeros/server-destination-file" status="beta" />
+
+Local filesystem sink for walkerOS server flows. Appends events to a file as JSON Lines (JSONL), tab-separated values (TSV), or comma-separated values (CSV). Useful for debug logging, audit trails, replay sources, and lightweight local persistence without standing up a database or external service.
+
+<WhereThisFits
+  pre={<>File is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Local file', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector, serialises each event, and appends a line to a local file. No network calls, no SDKs, just `fs.createWriteStream` with `flag: 'a'`.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-file`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationFile } from '@walkeros/server-destination-file';
+
+await startFlow({
+  destinations: {
+    log: {
+      code: destinationFile,
+      config: {
+        settings: {
+          filename: 'events.jsonl',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "log": {
+    "package": "@walkeros/server-destination-file",
+    "config": {
+      "settings": {
+        "filename": "events.jsonl"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+The destination opens one long-lived `WriteStream` per resolved filename during `init()` (for static filenames) or on first matching event (for dynamic filenames). On flow hot-swap or server shutdown, `destroy()` closes all cached streams.
+
+## Filename templating
+
+`filename` accepts either a static string or a standard walkerOS `Mapping.Value`. Common patterns:
+
+### Tenant sharding
+
+<CodeSnippet
+  code={`{
+  "filename": { "key": "data.tenant" }
+}`}
+  language="json"
+/>
+
+Each event lands in a file named after the tenant value (e.g. `acme`, `venti`). Pair with a static suffix via `fn:` if you need a `.jsonl` extension.
+
+### Daily rotation
+
+<CodeSnippet
+  code={`{
+  "filename": {
+    "fn": "$code:\`events-\${new Date(value.timestamp).toISOString().slice(0,10)}.jsonl\`"
+  }
+}`}
+  language="json"
+/>
+
+Inside the `$code:` function, `value` is the event being processed. One file per UTC day, created automatically. No `logrotate`, no cron.
+
+## Formats
+
+### JSONL (default)
+
+One JSON object per line. The entire event is serialised with `JSON.stringify`. Easy to ingest with `jq`, DuckDB (`read_json_auto`), ClickHouse `JSONEachRow`, BigQuery external tables, and Athena.
+
+### TSV / CSV
+
+Specify `fields: string[]` listing the event paths to extract as columns. Object values are JSON-stringified into a single cell. CSV output follows RFC 4180 quoting.
+
+<CodeSnippet
+  code={`{
+  "filename": "events.csv",
+  "format": "csv",
+  "fields": ["timestamp", "name", "data"]
+}`}
+  language="json"
+/>
+
+## Limits
+
+- One file handle is opened per resolved filename and kept open until `destroy()`. Sharding by high-cardinality keys (e.g. `user.session`) can exhaust the OS file descriptor table. Be deliberate about cardinality.
+- External rotation (e.g. `logrotate`) leaves the cached handle pointing at the rotated inode. Use the date-token pattern above instead.
+- No batching. Each event is written individually; Node's stream layer buffers under the hood.
+- Write errors log a warning and drop the event. They never fail the flow.

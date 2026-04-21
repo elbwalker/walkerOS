@@ -1,4 +1,4 @@
-import type { Destination, WalkerOS } from '@walkeros/core';
+import type { Collector, Elb, Logger } from '@walkeros/core';
 import { sourceCloudFunction } from '../index';
 import { examples } from '../../dev';
 import type { Content } from '../examples/trigger';
@@ -11,24 +11,41 @@ describe('Step Examples', () => {
     shutdown = undefined;
   });
 
+  const noopFn = () => {};
+  const noopLogger: Logger.Instance = {
+    error: noopFn,
+    warn: noopFn,
+    info: noopFn,
+    debug: noopFn,
+    throw: (message: string | Error) => {
+      throw typeof message === 'string' ? new Error(message) : message;
+    },
+    json: noopFn,
+    scope: () => noopLogger,
+  };
+
+  const stripUndefined = (value: unknown): unknown => {
+    if (value === null || typeof value !== 'object') return value;
+    if (Array.isArray(value)) return value.map(stripUndefined);
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v !== undefined) result[k] = stripUndefined(v);
+    }
+    return result;
+  };
+
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
     const content = example.in as Content;
-    const expected = example.out as {
-      name: string;
-      data?: Record<string, unknown>;
-      entity?: string;
-      action?: string;
-    };
 
-    // Spy destination captures events after full collector processing
-    const events: WalkerOS.Event[] = [];
-    const spyDestination: Destination.Instance = {
-      type: 'spy',
-      config: { init: true },
-      push: jest.fn((event: WalkerOS.Event) => {
-        events.push(JSON.parse(JSON.stringify(event)));
-      }),
-    };
+    const mockPush: jest.Mock = jest.fn(
+      async () => ({ ok: true }) as Awaited<ReturnType<Collector.PushFn>>,
+    );
+    const mockCommand: jest.Mock = jest.fn(
+      async () => ({ ok: true }) as Awaited<ReturnType<Elb.Fn>>,
+    );
+    const mockElb: jest.Mock = jest.fn(
+      async () => ({ ok: true }) as Awaited<ReturnType<Elb.Fn>>,
+    );
 
     const instance = await examples.createTrigger({
       consent: { functional: true },
@@ -36,35 +53,28 @@ describe('Step Examples', () => {
         cloudfunction: {
           code: sourceCloudFunction,
           config: { settings: {} },
+          env: {
+            push: mockPush as unknown as Collector.PushFn,
+            command: mockCommand as unknown as Collector.CommandFn,
+            elb: mockElb as unknown as Elb.Fn,
+            logger: noopLogger,
+          },
         },
-      },
-      destinations: {
-        spy: { code: spyDestination },
       },
     });
 
-    // Register shutdown for cleanup
     shutdown = async () => {
       if (instance.flow) await instance.flow.collector.command('shutdown');
     };
 
     const result = await instance.trigger()(content);
 
-    // HTTP response should be 200
     expect(result.status).toBe(200);
 
-    // Events should be captured by spy destination
-    const found = events.find((e) => e.name === expected.name);
-    expect(found).toBeDefined();
+    const captured = mockPush.mock.calls.map(
+      (args) => ['elb', ...args.map(stripUndefined)] as unknown[],
+    );
 
-    if (expected.data) {
-      expect(found!.data).toEqual(expect.objectContaining(expected.data));
-    }
-    if (expected.entity) {
-      expect(found!.entity).toBe(expected.entity);
-    }
-    if (expected.action) {
-      expect(found!.action).toBe(expected.action);
-    }
+    expect(captured).toEqual(example.out);
   });
 });

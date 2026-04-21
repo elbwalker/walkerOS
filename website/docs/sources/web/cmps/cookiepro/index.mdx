@@ -3,13 +3,18 @@ title: CookiePro / OneTrust
 description: Integrate CookiePro/OneTrust consent management with walkerOS
 ---
 
+import data from '@walkeros/web-source-cmp-cookiepro/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+# CookiePro / OneTrust
+
+Integrates [CookiePro / OneTrust](https://www.onetrust.com/) consent management with walkerOS by mapping CookiePro category IDs (`C0001`, `C0002`, ...) to walkerOS consent groups.
+
 ## Installation
 
 ```bash
 npm install @walkeros/web-source-cmp-cookiepro
 ```
-
-## Usage
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
@@ -24,13 +29,24 @@ await startFlow({
 });
 ```
 
-## Settings
+<Configuration type="source" data={data} />
 
-| Setting        | Type                     | Default      | Description                                        |
-| -------------- | ------------------------ | ------------ | -------------------------------------------------- |
-| `categoryMap`  | `Record<string, string>` | See below    | Maps CookiePro category IDs to walkerOS groups     |
-| `explicitOnly` | `boolean`                | `true`       | Only process explicit consent (user made a choice) |
-| `globalName`   | `string`                 | `'OneTrust'` | Custom name for `window.OneTrust` object           |
+## How it works
+
+1. **Already loaded**: Checks if `window.OneTrust` and
+   `window.OptanonActiveGroups` already exist. If so, processes consent
+   immediately.
+
+2. **OptanonWrapper**: If the SDK isn't loaded yet, wraps the global
+   `OptanonWrapper` callback (preserving any existing wrapper). The wrapper
+   self-unwraps after the first call.
+
+3. **OneTrustGroupsUpdated event**: Listens for the `OneTrustGroupsUpdated`
+   window event, which fires on every consent change.
+
+4. **Parsing**: Splits the `OptanonActiveGroups` comma-separated string, maps
+   category IDs through `categoryMap`, and calls `elb('walker consent', state)`.
+   Sets explicit `false` for all mapped groups not in the active list.
 
 ### CookiePro categories
 
@@ -79,23 +95,6 @@ await startFlow({
 });
 ```
 
-## How it works
-
-1. **Already loaded**: Checks if `window.OneTrust` and
-   `window.OptanonActiveGroups` already exist. If so, processes consent
-   immediately.
-
-2. **OptanonWrapper**: If the SDK isn't loaded yet, wraps the global
-   `OptanonWrapper` callback (preserving any existing wrapper). The wrapper
-   self-unwraps after the first call.
-
-3. **OneTrustGroupsUpdated event**: Listens for the `OneTrustGroupsUpdated`
-   window event, which fires on every consent change.
-
-4. **Parsing**: Splits the `OptanonActiveGroups` comma-separated string, maps
-   category IDs through `categoryMap`, and calls `elb('walker consent', state)`.
-   Sets explicit `false` for all mapped groups not in the active list.
-
 ### Timing considerations
 
 The source handles all timing scenarios:
@@ -109,5 +108,5 @@ The source handles all timing scenarios:
 
 ## Reference
 
-- [OneTrust SDK Documentation](https://my.onetrust.com/s/article/UUID-66bcaaf1-c7ca-5f32-6760-c75a1337c226)
+- [OneTrust SDK documentation](https://my.onetrust.com/s/article/UUID-66bcaaf1-c7ca-5f32-6760-c75a1337c226)
 - [Source code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/cmps/cookiepro)

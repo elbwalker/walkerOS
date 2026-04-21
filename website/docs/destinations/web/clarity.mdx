@@ -6,10 +6,10 @@ sidebar_position: 5
 package: '@walkeros/web-destination-clarity'
 ---
 
-import destinationClarity from '@walkeros/web-destination-clarity';
 import data from '@walkeros/web-destination-clarity/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-export const destination = { ...destinationClarity, examples: data.examples };
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Microsoft Clarity
 
@@ -26,18 +26,12 @@ caps. This destination forwards walkerOS events to Clarity via the official
 translating events into `Clarity.event(...)` calls, resolving custom tags,
 identities, session priority, and consent state.
 
-:::info Where This Fits
-Clarity is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Clarity', highlight: true } }}
+<WhereThisFits
+  pre={<>Clarity is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Clarity', highlight: true } },
+  }}
 />
-
-Loads the Clarity SDK, forwards every walkerOS event, and lets you layer on
-custom tags, identities, and consent translation.
-:::
 
 ## Installation
 
@@ -45,8 +39,6 @@ custom tags, identities, and consent translation.
   code={`npm install @walkeros/web-destination-clarity`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -97,83 +89,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
-
-## Mapping data.examples
-
-:::tip
-
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
-
-### Default event forwarding
-
-Every walkerOS event becomes `Clarity.event(name)` without any mapping.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.defaultEventForwarding.in}
-  mapping={data.examples.step.defaultEventForwarding.mapping}
-  generic={true}
-/>
-
-### Custom tags via `set`
-
-Resolve explicit key/value pairs into `Clarity.setTag(key, value)` calls.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.productViewWithTags.in}
-  mapping={data.examples.step.productViewWithTags.mapping}
-  generic={true}
-/>
-
-### Flatten sections with `include`
-
-Forward entire walkerOS event sections as prefixed Clarity tags.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.orderCompleteInclude.in}
-  mapping={data.examples.step.orderCompleteInclude.mapping}
-  generic={true}
-/>
-
-### Identify
-
-Resolve a mapping value into positional `Clarity.identify(...)` arguments.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.userLoginIdentify.in}
-  mapping={data.examples.step.userLoginIdentify.mapping}
-  generic={true}
-/>
-
-### Session priority upgrade
-
-Flag important sessions so Clarity retains them beyond sampling.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: '3t0wlogvdz' }}
-  event={data.examples.step.orderCompleteUpgrade.in}
-  mapping={data.examples.step.orderCompleteUpgrade.mapping}
-  generic={true}
-/>
+<Configuration type="destination" data={data} />
 
 ## Consent translation
 

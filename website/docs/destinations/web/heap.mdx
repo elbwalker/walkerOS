@@ -1,0 +1,110 @@
+---
+title: Heap
+description: Product analytics with auto-capture and retroactive events
+path: /docs/destinations/web/heap
+sidebar_position: 13
+package: '@walkeros/web-destination-heap'
+---
+
+import data from '@walkeros/web-destination-heap/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Heap
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/heap"
+  npm="@walkeros/web-destination-heap"
+  status="beta"
+/>
+
+[Heap](https://www.heap.io/) (now part of Contentsquare) is a product
+analytics platform with auto-capture and retroactive event definitions.
+This destination loads the Heap snippet from Heap's CDN and forwards
+walkerOS events through `heap.track(name, properties)`, plus identity,
+user properties, persistent event properties, and runtime consent.
+
+<WhereThisFits
+  pre={<>Heap is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Heap', highlight: true } },
+  }}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-heap`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationHeap } from '@walkeros/web-destination-heap';
+
+await startFlow({
+  destinations: {
+    heap: {
+      code: destinationHeap,
+      config: {
+        loadScript: true,
+        settings: {
+          appId: 'YOUR_HEAP_APP_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "heap": {
+    "package": "@walkeros/web-destination-heap",
+    "config": {
+      "loadScript": true,
+      "settings": {
+        "appId": "YOUR_HEAP_APP_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## Consent
+
+The destination wires walkerOS `config.consent` to Heap's runtime consent
+API. `heap.startTracking()` fires when all required consent keys are
+granted; `heap.stopTracking()` fires otherwise.
+
+<CodeSnippet
+  code={`destinations: {
+  heap: {
+    code: destinationHeap,
+    config: {
+      consent: { analytics: true },
+      settings: { appId: 'YOUR_HEAP_APP_ID' },
+    },
+  },
+}`}
+  language="typescript"
+/>

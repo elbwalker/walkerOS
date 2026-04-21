@@ -79,7 +79,7 @@ describe('Step Examples', () => {
       key: string;
       settings: { bucket: string; prefix: string };
     };
-    const output = example.out as { gcsPath: string };
+    const [, gcsPath] = example.out![0] as readonly [string, string, unknown];
 
     const content = new TextEncoder().encode('data');
     mockFetch.mockResolvedValueOnce({
@@ -100,7 +100,7 @@ describe('Step Examples', () => {
     await store.get(input.key);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining(`/o/${encodeURIComponent(output.gcsPath)}`),
+      expect.stringContaining(`/o/${encodeURIComponent(gcsPath)}`),
       expect.anything(),
     );
   });

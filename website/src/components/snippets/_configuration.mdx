@@ -1,0 +1,48 @@
+export const configHrefs = {
+  destination: '/docs/destinations#configuration',
+  source: '/docs/sources#configuration',
+  transformer: '/docs/transformers#configuration',
+  store: '/docs/stores#configuration',
+};
+
+export const camelToSpaced = (key) =>
+  key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+export const stepTitle = (key, _example) => camelToSpaced(key);
+
+## Configuration
+
+This {props.type} uses the standard {props.type} config wrapper (consent, data, env, id, ...). For the shared fields see <a href={configHrefs[props.type]}>{props.type} configuration</a>. Package-specific fields live under `config.settings` and are listed below.
+
+## Settings
+
+{props.data?.schemas?.settings ? (
+  <PropertyTable schema={props.data.schemas.settings} />
+) : (
+  <p>This package has no package-specific settings.</p>
+)}
+
+## Mapping
+
+{props.data?.schemas?.mapping ? (
+  <>
+    <p>Per-event rules under <code>config.mapping</code>. For the standard rule fields (consent, condition, data, batch, name, policy) see <a href="/docs/mapping">mapping</a>.</p>
+    <PropertyTable schema={props.data.schemas.mapping} />
+  </>
+) : (
+  <p>This package does not define custom rule-level settings. For the standard rule fields (consent, condition, data, batch, name, policy) see <a href="/docs/mapping">mapping</a>.</p>
+)}
+
+{props.data?.examples?.step && (
+  <>
+    <h2>Examples</h2>
+    {Object.entries(props.data.examples.step).flatMap(([key, example]) => [
+      <h3 key={`${key}-h`}>{stepTitle(key, example)}</h3>,
+      <StepExample key={`${key}-e`} example={example} />,
+    ])}
+  </>
+)}

@@ -1,0 +1,168 @@
+---
+title: Criteo Events API
+description: "Server-side event delivery to Criteo's Events API for retargeting"
+path: /docs/destinations/server/criteo
+sidebar_position: 19
+package: '@walkeros/server-destination-criteo'
+---
+import data from '@walkeros/server-destination-criteo/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Criteo Events API
+
+<PackageLink env="server" github="packages/server/destinations/criteo" npm="@walkeros/server-destination-criteo" status="beta" />
+
+Server-side event delivery to Criteo's Events API (S2S v0) for reliable retargeting, bypassing browser limitations and providing consistent user matching for ad optimization.
+
+<WhereThisFits
+  pre={<>Criteo Events API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Criteo Events API', highlight: true } },
+  }}
+  post={<>Sends events server-side to Criteo using raw HTTP (no SDK). Authentication is in-payload (`account` = Partner ID, `id.mapping_key` = Caller ID). Emails are hashed into MD5, SHA-256, and SHA-256(MD5) before sending.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-criteo`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationCriteo } from '@walkeros/server-destination-criteo';
+
+await startFlow({
+  destinations: {
+    criteo: {
+      code: destinationCriteo,
+      config: {
+        settings: {
+          partnerId: 'YOUR_PARTNER_ID',
+          callerId: 'YOUR_CALLER_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "criteo": {
+    "package": "@walkeros/server-destination-criteo",
+    "code": "destinationCriteo",
+    "config": {
+      "settings": {
+        "partnerId": "YOUR_PARTNER_ID",
+        "callerId": "YOUR_CALLER_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## Event mapping
+
+Criteo uses its own standard event names. Set the Criteo event name via each rule's `name` field.
+
+| walkerOS Event     | Criteo Event Name       |
+| ------------------ | ----------------------- |
+| `page view`        | `viewHome` / `viewPage` |
+| `product view`     | `viewItem`              |
+| `product list`     | `viewList`              |
+| `product add`      | `addToCart`             |
+| `cart view`        | `viewBasket`            |
+| `checkout start`   | `beginCheckout`         |
+| `checkout payment` | `addPaymentInfo`        |
+| `order complete`   | `trackTransaction`      |
+| `user login`       | `login`                 |
+
+<CodeSnippet
+  code={`"mapping": {
+  "order": {
+    "complete": {
+      "name": "trackTransaction",
+      "data": {
+        "map": {
+          "id": "data.id",
+          "item": {
+            "loop": [
+              "nested",
+              {
+                "map": {
+                  "id": "data.id",
+                  "price": "data.price",
+                  "quantity": "data.quantity"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## User identity
+
+Criteo matches users via three signals. Wire them through `user_data` in settings:
+
+| Field                 | Description                                           |
+| --------------------- | ----------------------------------------------------- |
+| `mapped_user_id`      | Criteo GUM ID                                         |
+| `email`               | Raw email. Hashed into MD5, SHA-256 and SHA-256(MD5)  |
+| `retailer_visitor_id` | Stable retailer visitor identifier                    |
+
+<CodeSnippet
+  code={`"settings": {
+  "partnerId": "YOUR_PARTNER_ID",
+  "callerId": "YOUR_CALLER_ID",
+  "user_data": {
+    "mapped_user_id": "user.id",
+    "email": "user.email",
+    "retailer_visitor_id": "user.device"
+  }
+}`}
+  language="json"
+/>
+
+## Email hashing
+
+Raw emails are lowercased and trimmed, then hashed into all three formats Criteo expects:
+
+- `md5`: MD5 hex digest
+- `sha256`: SHA-256 hex digest
+- `sha256_md5`: SHA-256 hex of the MD5 hex string
+
+Pre-hashed values (detected by hex length: 32 chars for MD5, 64 for SHA-256) are passed through without re-hashing.
+
+## Deduplication
+
+Criteo Events API supports deduplication with Criteo OneTag by sharing a `deduplication_page_view_id` across channels. Wire it via `data.map.deduplication_page_view_id` in the event mapping.
+
+## Links
+
+- [Criteo Events API Guide](https://guides.criteotilt.com/events-api/)

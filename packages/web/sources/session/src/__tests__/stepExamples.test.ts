@@ -1,8 +1,25 @@
-import type { Destination, WalkerOS } from '@walkeros/core';
+import type { Collector, Elb } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { sourceSession } from '../index';
 import { examples } from '../dev';
 
+// Mock getId to produce deterministic IDs. Keep other core exports real.
+jest.mock('@walkeros/core', () => {
+  const actual = jest.requireActual('@walkeros/core');
+  return {
+    ...actual,
+    getId: jest.fn(),
+  };
+});
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const coreMocked = require('@walkeros/core') as {
+  getId: jest.Mock<string, [number?]>;
+};
+
 describe('Step Examples', () => {
+  let dateNowSpy: jest.SpyInstance;
+
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -19,6 +36,8 @@ describe('Step Examples', () => {
   afterEach(() => {
     localStorage.clear();
     sessionStorage.clear();
+    if (dateNowSpy) dateNowSpy.mockRestore();
+    coreMocked.getId.mockReset();
   });
 
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
@@ -26,67 +45,101 @@ describe('Step Examples', () => {
       | { type?: string; options?: unknown }
       | undefined;
     const settings = example.in as Record<string, unknown>;
-    const expected = example.out as {
-      name: string;
-      data?: Record<string, unknown>;
-      entity?: string;
-      action?: string;
+    const opts = (triggerInfo?.options || {}) as {
+      url?: string;
+      referrer?: string;
     };
 
-    const events: WalkerOS.Event[] = [];
-    const spyDestination: Destination.Instance = {
-      type: 'spy',
-      config: { init: true },
-      push: jest.fn((event: WalkerOS.Event) => {
-        events.push(JSON.parse(JSON.stringify(event)));
-      }),
-    };
+    // Reset URL to clean state first (avoids leaking UTM params across cases)
+    window.history.replaceState({}, '', '/');
 
-    const instance = await examples.createTrigger({
-      consent: { functional: true },
-      sources: {
-        session: {
-          code: sourceSession,
-          config: { settings },
-        },
-      },
-      destinations: { spy: { code: spyDestination } },
+    // Set up URL + referrer per trigger options
+    if (opts.url) {
+      const urlObj = new URL(opts.url);
+      window.history.replaceState({}, '', urlObj.pathname + urlObj.search);
+    }
+    if (opts.referrer) {
+      Object.defineProperty(document, 'referrer', {
+        value: opts.referrer,
+        configurable: true,
+      });
+    } else {
+      Object.defineProperty(document, 'referrer', {
+        value: '',
+        configurable: true,
+      });
+    }
+
+    // Determine deterministic now + ids based on the scenario
+    const isReturning = name === 'returningVisitor';
+    const fakeNow = isReturning ? 1700001000000 : 1700000000000;
+    dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(fakeNow);
+    coreMocked.getId.mockImplementation((len?: number) => {
+      if (len === 8) return 'd3v1c3-id';
+      if (len === 12) {
+        return isReturning ? 'n3w-s3ss10n' : 's3ss10n-id';
+      }
+      return 'id';
     });
 
-    await instance.trigger(
-      triggerInfo?.type,
-      triggerInfo?.options,
-    )({} as never);
-
-    // Session source re-fires events after consent re-apply.
-    // The push is awaited through the elb chain, so events should
-    // be available after the trigger call resolves.
-    const found = events.find((e) => e.name === expected.name);
-    expect(found).toBeDefined();
-
-    if (expected.entity) expect(found!.entity).toBe(expected.entity);
-    if (expected.action) expect(found!.action).toBe(expected.action);
-
-    // Session data contains generated fields (id, timestamps) — use partial matching
-    if (expected.data) {
-      if (expected.data.isStart !== undefined)
-        expect(found!.data.isStart).toBe(expected.data.isStart);
-      if (expected.data.storage !== undefined)
-        expect(found!.data.storage).toBe(expected.data.storage);
-      if (expected.data.marketing !== undefined)
-        expect(found!.data.marketing).toBe(expected.data.marketing);
-      if (expected.data.source !== undefined)
-        expect(found!.data.source).toBe(expected.data.source);
-      if (expected.data.medium !== undefined)
-        expect(found!.data.medium).toBe(expected.data.medium);
-      if (expected.data.campaign !== undefined)
-        expect(found!.data.campaign).toBe(expected.data.campaign);
-      if (expected.data.referrer !== undefined)
-        expect(found!.data.referrer).toBe(expected.data.referrer);
-
-      // Generated fields: check type
-      expect(typeof found!.data.id).toBe('string');
-      expect(typeof found!.data.start).toBe('number');
+    // Seed pre-existing session for returning visitor — old enough to expire.
+    // storageRead wraps values as { e: expiry, v: JSON-string }.
+    if (isReturning) {
+      const sessionData = JSON.stringify({
+        id: 'old-session',
+        count: 2,
+        runs: 5,
+        start: 1600000000000,
+        updated: 0, // ancient — guaranteed expired
+        isNew: false,
+      });
+      localStorage.setItem(
+        'elbSessionId',
+        JSON.stringify({ e: fakeNow + 3600000, v: sessionData }),
+      );
+      // Also seed device ID so we get the expected 'd3v1c3-id' without regen
+      localStorage.setItem(
+        'elbDeviceId',
+        JSON.stringify({ e: fakeNow + 3600000, v: 'd3v1c3-id' }),
+      );
     }
+
+    const mockElb = jest.fn(async () => ({
+      ok: true,
+      successful: [],
+      failed: [],
+      queued: [],
+    })) as unknown as jest.MockedFunction<Elb.Fn>;
+
+    const collectorStub: Collector.Instance = {
+      allowed: true,
+    } as unknown as Collector.Instance;
+
+    await sourceSession({
+      collector: collectorStub,
+      config: { settings },
+      env: {
+        push: mockElb as unknown as Collector.PushFn,
+        command: mockElb as unknown as Collector.CommandFn,
+        elb: mockElb,
+        window,
+        document,
+        logger: createMockLogger(),
+      },
+      id: 'test-session',
+      logger: createMockLogger(),
+      setIngest: async () => {},
+      setRespond: jest.fn(),
+    });
+
+    // Yield to pick up any deferred pushes
+    for (let i = 0; i < 10 && mockElb.mock.calls.length === 0; i++) {
+      await Promise.resolve();
+    }
+
+    const captured = mockElb.mock.calls.map(
+      (args) => ['elb', ...args] as unknown[],
+    );
+    expect(captured).toEqual(example.out);
   });
 });

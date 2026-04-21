@@ -124,9 +124,24 @@ export interface BuildOptions extends CLIBuildOptions {
   /**
    * Skip platform wrapper (Step 2) and output raw ESM.
    * Used by CLI push for direct import of the bundled module.
+   *
+   * @deprecated Use `target` option instead. `skipWrapper` conflates skeleton
+   * emission with /dev schema inclusion. See `BundleTarget` presets
+   * (`cdn` | `cdn-skeleton` | `runner` | `simulate` | `push`).
+   * Will be removed in the next major release.
+   *
    * @default false
    */
   skipWrapper?: boolean;
+
+  /**
+   * Include `@walkeros/*\/dev` imports for schema validation / simulate / push.
+   * Derived from the resolved `BundleTarget` preset by `bundle()`.
+   * If undefined, falls back to `skipWrapper === true` for backward compatibility
+   * with direct `bundleCore` callers (push, simulate) and legacy callers.
+   * @internal
+   */
+  withDev?: boolean;
 
   /**
    * Folders to include in the output directory.

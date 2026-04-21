@@ -6,6 +6,9 @@ sidebar_position: 12
 package: '@walkeros/server-destination-slack'
 ---
 import data from '@walkeros/server-destination-slack/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Slack
 
@@ -13,17 +16,13 @@ import data from '@walkeros/server-destination-slack/walkerOS.json';
 
 Send walkerOS events to Slack as formatted messages. Supports both Incoming Webhooks (simple, single-channel) and the Web API (multi-channel routing, threading, DMs, ephemeral messages, Block Kit).
 
-:::info Where This Fits
-Slack is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Slack', highlight: true } }}
+<WhereThisFits
+  pre={<>Slack is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Slack', highlight: true } },
+  }}
+  post={<>Turns events into Slack messages for real-time alerts, sales notifications, moderation queues, or incident routing, without coupling your product code to Slack.</>}
 />
-
-Turns events into Slack messages for real-time alerts, sales notifications, moderation queues, or incident routing — without coupling your product code to Slack.
-:::
 
 ## Installation
 
@@ -31,8 +30,6 @@ Turns events into Slack messages for real-time alerts, sales notifications, mode
   code={`npm install @walkeros/server-destination-slack`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -78,10 +75,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
+
+<Configuration type="destination" data={data} />
 
 ## Webhook vs Web API modes
 
@@ -98,10 +97,6 @@ Pick exactly one auth method per destination. Each mode trades capability for si
 | Block Kit | Yes | Yes |
 
 Use **webhooks** for a single firehose channel and minimal setup. Use the **Web API** whenever you need routing, threading, DMs, or ephemeral messages.
-
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
 
 ## Channel routing
 
@@ -122,7 +117,7 @@ With Web API mode, route events to different channels using nested `entity > act
           "complete": {
             "settings": {
               "channel": "#sales",
-              "text": "New order \${data.id} — \${data.total} \${data.currency}"
+              "text": "New order \${data.id}: \${data.total} \${data.currency}"
             }
           }
         },
@@ -154,72 +149,7 @@ Events that don't match any rule fall back to the default `channel` in `settings
 
 Messages support two formatting styles, set at destination level or per rule:
 
-- **Text templates** — `${data.field}` placeholders interpolate against the walkerOS event. Good for terse alerts.
-- **Block Kit** — structured layouts via Slack's [Block Kit](https://api.slack.com/block-kit) (headers, sections, buttons, context). Use the `blocks` setting when you need rich formatting.
+- **Text templates**: `${data.field}` placeholders interpolate against the walkerOS event. Good for terse alerts.
+- **Block Kit**: structured layouts via Slack's [Block Kit](https://api.slack.com/block-kit) (headers, sections, buttons, context). Use the `blocks` setting when you need rich formatting.
 
 When neither `text` nor `blocks` is provided, the destination generates a default message with an event-name header (toggle via `includeHeader`).
-
-## Docker Deployment
-
-### Step 1: Create Flow Configuration
-
-Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "slack": {
-      "package": "@walkeros/server-destination-slack",
-      "config": {
-        "settings": {
-          "token": "$env.SLACK_BOT_TOKEN",
-          "channel": "$env.SLACK_CHANNEL"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-  title="flow.json"
-/>
-
-### Step 2: Bundle the Flow
-
-Bundle your flow configuration before running in Docker:
-
-<CodeSnippet
-  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
-  language="bash"
-/>
-
-### Step 3: Run with Docker
-
-<CodeSnippet
-  code={`docker run -d \\
-  -e SLACK_BOT_TOKEN=xoxb-your-bot-token \\
-  -e SLACK_CHANNEL=#notifications \\
-  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
-  -p 8080:8080 \\
-  walkeros/flow`}
-  language="bash"
-/>
-
-### Docker Compose Example
-
-<CodeSnippet
-  code={`services:
-  walkeros:
-    image: walkeros/flow:latest
-    environment:
-      - SLACK_BOT_TOKEN=\${SLACK_BOT_TOKEN}
-      - SLACK_CHANNEL=\${SLACK_CHANNEL}
-    volumes:
-      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
-    ports:
-      - "8080:8080"`}
-  language="yaml"
-/>
-
-:::tip Security Best Practice
-Never commit bot tokens or webhook URLs to version control. Use environment variables or a secrets manager to inject credentials at runtime.
-:::

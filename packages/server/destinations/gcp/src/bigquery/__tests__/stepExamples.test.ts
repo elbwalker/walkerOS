@@ -5,32 +5,49 @@ import * as examples from '../examples';
 
 const { env } = examples;
 
-describe('Step Examples', () => {
-  let mockInsert: jest.Mock;
+type CallRecord = [string, ...unknown[]];
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockInsert = jest.fn().mockResolvedValue(undefined);
+describe('Step Examples', () => {
+  beforeAll(() => {
+    // Lock Date so push.ts createdAt = new Date() is deterministic and
+    // matches examples/step.ts FIXED_NOW.
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-01-01T00:00:00.000Z'));
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
+  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
+    const calls: CallRecord[] = [];
+
     const destination: Destination = jest.requireActual('../').default;
     destination.config = {};
 
     const testEnv = clone(env.push);
     testEnv.BigQuery = class MockBigQuery {
       options: unknown;
+      private datasetId?: string;
+      private tableId?: string;
       constructor(options?: unknown) {
         this.options = options;
       }
-      dataset() {
+      dataset(datasetId: string) {
+        this.datasetId = datasetId;
         return this;
       }
-      table() {
+      table(tableId: string) {
+        this.tableId = tableId;
         return this;
       }
       async insert(rows: unknown[]) {
-        mockInsert(rows);
+        calls.push([
+          'dataset.table.insert',
+          this.datasetId as unknown,
+          this.tableId as unknown,
+          rows,
+        ]);
       }
     } as unknown as typeof testEnv.BigQuery;
 
@@ -57,24 +74,6 @@ describe('Step Examples', () => {
       }),
     );
 
-    expect(mockInsert).toHaveBeenCalledTimes(1);
-    const rows = mockInsert.mock.calls[0][0];
-    expect(rows).toHaveLength(1);
-
-    // BigQuery without mapping sends full event flattened (objects→JSON strings)
-    // Step example out shows event.data fields; verify they're in the row
-    const row = rows[0];
-    const expectedOut = example.out as Record<string, unknown>;
-
-    // The row's data field is JSON.stringified; parse and check fields match
-    const rowData =
-      typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-    for (const [key, value] of Object.entries(expectedOut)) {
-      if (typeof value === 'string' && key !== 'items') {
-        expect(rowData[key]).toBe(value);
-      }
-    }
-    // Verify event name is in the row
-    expect(row.name).toBe((example.in as { name: string }).name);
+    expect(calls).toEqual(example.out);
   });
 });

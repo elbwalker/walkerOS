@@ -24,7 +24,7 @@ Components follow atomic design principles:
 - **Atoms**: Basic UI elements (Box, Button, Header, ButtonGroup, Toggle, etc.)
 - **Molecules**: Component combinations (AutoSelect, MappingEditor, TreeSidebar)
 - **Organisms**: Complex components (MappingBox, CodeBox, MappingEditorTabs)
-- **Demos**: Ready-to-use complete demos (MappingDemo, DestinationDemo)
+- **Demos**: Ready-to-use complete demos (MappingDemo, PromotionPlayground)
 
 ### Design Principles
 
@@ -68,89 +68,6 @@ Interactive three-panel editor: input → config → output transformation.
   }}
 />
 ```
-
-#### DestinationDemo
-
-Interactive destination testing with event processing and mapping. Automatically
-captures destination.push() calls and displays the output.
-
-**Simple Usage** (Recommended):
-
-```tsx
-import { DestinationDemo } from '@walkeros/explorer';
-import { getEvent } from '@walkeros/core';
-import destinationPlausible from '@walkeros/web-destination-plausible';
-import { examples } from '@walkeros/web-destination-plausible';
-
-// Attach examples to destination for auto-capture
-const destination = { ...destinationPlausible, examples };
-
-<DestinationDemo
-  destination={destination}
-  event={getEvent('order complete')}
-  mapping={examples.mapping.purchase}
-  settings={{ domain: 'elbwalker.com' }}
-  generic={true}
-/>;
-```
-
-The component auto-detects `destination.examples.env.push` and uses it to
-capture function calls.
-
-**Props:**
-
-- `destination`: Destination instance with `examples.env.push` export
-- `event`: walkerOS event to process
-- `mapping`: Optional mapping rules (object or JSON string)
-- `settings`: Destination-specific settings
-- `generic`: If true, wraps mapping in `{ '*': { '*': mapping } }`
-- `labelEvent`: Label for event panel (default: 'Event')
-- `labelMapping`: Label for mapping panel (default: 'Mapping')
-- `labelOutput`: Label for output panel (default: 'Result')
-
-#### DestinationInitDemo
-
-Interactive destination initialization testing. Automatically captures
-destination.init() calls and displays the output (script loading, configuration
-calls).
-
-**Simple Usage** (Recommended):
-
-```tsx
-import { DestinationInitDemo } from '@walkeros/explorer';
-import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples } from '@walkeros/web-destination-gtag';
-
-// Attach examples to destination for auto-capture
-const destination = { ...destinationGtag, examples };
-
-<DestinationInitDemo
-  destination={destination}
-  settings={{
-    ga4: {
-      measurementId: 'G-XXXXXXXXXX',
-      debug: false,
-      pageview: false,
-    },
-  }}
-/>;
-```
-
-The component auto-detects `destination.examples.env.init` and uses it to
-capture function calls during initialization.
-
-**Props:**
-
-- `destination`: Destination instance with `examples.env.init` export
-- `settings`: Destination-specific settings (object or JSON string)
-- `labelSettings`: Label for settings panel (default: 'Settings')
-- `labelOutput`: Label for output panel (default: 'Result')
-
-**Use Cases:**
-
-- Testing destination initialization (script loading, gtag config calls)
-- Documenting initialization behavior
-- Debugging destination setup
 
 #### PromotionPlayground
 

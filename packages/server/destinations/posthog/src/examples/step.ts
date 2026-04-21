@@ -5,6 +5,11 @@ import type { Settings } from '../types';
 /**
  * PostHog server step examples carry destination-level settings and
  * optional configInclude for the test runner to wire up.
+ *
+ * At push time the destination invokes methods on a `client` constructed
+ * via `env.PostHog`. Each `out` tuple is `['client.<method>', ...args]`
+ * matching the underlying SDK signature. Multiple calls (identify +
+ * capture, groupIdentify + capture) are expressed as a tuple list.
  */
 export type PostHogStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
@@ -19,12 +24,14 @@ export type PostHogStepExample = Flow.StepExample & {
 export const defaultCapture: PostHogStepExample = {
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [
-    'client.capture',
-    {
-      distinctId: 'us3r',
-      event: 'product view',
-      properties: {},
-    },
+    [
+      'client.capture',
+      {
+        distinctId: 'us3r',
+        event: 'product view',
+        properties: {},
+      },
+    ],
   ],
 };
 
@@ -36,19 +43,21 @@ export const captureWithInclude: PostHogStepExample = {
   in: getEvent('order complete', { timestamp: 1700000101 }),
   configInclude: ['data', 'globals'],
   out: [
-    'client.capture',
-    {
-      distinctId: 'us3r',
-      event: 'order complete',
-      properties: {
-        data_id: '0rd3r1d',
-        data_currency: 'EUR',
-        data_shipping: 5.22,
-        data_taxes: 73.76,
-        data_total: 555,
-        globals_pagegroup: 'shop',
+    [
+      'client.capture',
+      {
+        distinctId: 'us3r',
+        event: 'order complete',
+        properties: {
+          data_id: '0rd3r1d',
+          data_currency: 'EUR',
+          data_shipping: 5.22,
+          data_taxes: 73.76,
+          data_total: 555,
+          globals_pagegroup: 'shop',
+        },
       },
-    },
+    ],
   ],
 };
 
@@ -87,19 +96,21 @@ export const identifyWithSetAndSetOnce: PostHogStepExample = {
     },
   },
   out: [
-    'client.identify',
-    {
-      distinctId: 'new-user-123',
-      properties: {
-        $set: {
-          email: 'user@acme.com',
-          plan: 'premium',
-        },
-        $set_once: {
-          first_login: 1700000102,
+    [
+      'client.identify',
+      {
+        distinctId: 'new-user-123',
+        properties: {
+          $set: {
+            email: 'user@acme.com',
+            plan: 'premium',
+          },
+          $set_once: {
+            first_login: 1700000102,
+          },
         },
       },
-    },
+    ],
   ],
 };
 
@@ -134,15 +145,17 @@ export const groupIdentifyWithProperties: PostHogStepExample = {
     },
   },
   out: [
-    'client.groupIdentify',
-    {
-      groupType: 'company',
-      groupKey: 'company_123',
-      properties: {
-        name: 'Acme',
-        plan: 'enterprise',
+    [
+      'client.groupIdentify',
+      {
+        groupType: 'company',
+        groupKey: 'company_123',
+        properties: {
+          name: 'Acme',
+          plan: 'enterprise',
+        },
       },
-    },
+    ],
   ],
 };
 
@@ -164,13 +177,15 @@ export const captureWithGroupContext: PostHogStepExample = {
     },
   },
   out: [
-    'client.capture',
-    {
-      distinctId: 'us3r',
-      event: 'page view',
-      properties: {},
-      groups: { company: 'company_123' },
-    },
+    [
+      'client.capture',
+      {
+        distinctId: 'us3r',
+        event: 'page view',
+        properties: {},
+        groups: { company: 'company_123' },
+      },
+    ],
   ],
 };
 
@@ -181,7 +196,7 @@ export const consentRevoke: PostHogStepExample = {
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['client.disable'],
+  out: [['client.disable']],
 };
 
 /**
@@ -191,5 +206,5 @@ export const consentGrant: PostHogStepExample = {
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: ['client.enable'],
+  out: [['client.enable']],
 };

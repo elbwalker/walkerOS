@@ -5,31 +5,23 @@ sidebar_position: 1
 package: '@walkeros/web-source-browser'
 ---
 import data from '@walkeros/web-source-browser/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink github="packages/web/sources/browser" npm="@walkeros/web-source-browser" />
 
 # Browser source
 
-Captures user interactions directly from the DOM using data attributes.
+Captures user interactions directly from the DOM using `data-elb-*` attributes. Extracts tracking data from markup, tracks pageviews automatically or manually, exposes an enhanced `elb` function with `walker init` support, and provides a trigger system covering click, submit, load, hover, scroll, and visible.
 
-## Features
-
-* **Data attribute reading**: Extracts tracking data from `data-elb-*` attributes
-* **Pageview tracking**: Automatic or manual page view events
-* **DOM commands**: Enhanced `elb` function with `walker init` support
-* **Trigger system**: Click, submit, load, hover, scroll, visible triggers
-
-:::info Where This Fits
-The Browser Source is a **source** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { label: 'Source', text: 'Browser', highlight: true } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { highlight: false } }}
+<WhereThisFits
+  pre={<>The browser source is a <strong>source</strong> in the walkerOS flow:</>}
+  flowMap={{
+    sources: { default: { label: 'Source', text: 'Browser', highlight: true } },
+  }}
+  post={<>It reads `data-elb-*` attributes from your HTML and generates events. The Collector routes these to your configured destinations.</>}
 />
-
-It reads `data-elb-*` attributes from your HTML and generates events. The Collector routes these to your configured destinations.
-:::
 
 ## Installation
 
@@ -81,16 +73,14 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration
+<Configuration type="source" data={data} />
 
-<PropertyTable schema={data.schemas.settings} />
-
-## Enhanced elb function
+## Enhanced elb
 
 The browser source returns an enhanced `elb` function with additional features:
 
@@ -104,18 +94,18 @@ elb('product view', { id: 'P123' }); // Also tracks events`}
   language="typescript"
 />
 
-**Browser Source elb adds:**
+**Browser source elb adds:**
 
-* **DOM Commands**: `walker init` for asynchronous DOM element loading
-* **Flexible Arguments**: Support for multiple argument patterns
-* **elbLayer Integration**: Automatic processing of queued commands
-* **Element Parameters**: Support for element parameters in commands
+* **DOM commands**: `walker init` for asynchronous DOM element loading
+* **Flexible arguments**: support for multiple argument patterns
+* **elbLayer integration**: automatic processing of queued commands
+* **Element parameters**: support for element parameters in commands
 
 See [Commands](/docs/sources/web/browser/commands) for complete API documentation.
 
 ## Next steps
 
-* [Session Source](/docs/sources/web/session) - Session and device tracking
-* [Tagging Guide](/docs/sources/web/browser/tagging/html-attributes) - Learn about data attributes
-* [Commands Reference](/docs/sources/web/browser/commands) - Full API documentation
-* [Tagger Tool](/docs/sources/web/browser/tagger) - Visual tagging tool
+* [Session source](/docs/sources/web/session) - session and device tracking
+* [Tagging guide](/docs/sources/web/browser/tagging/html-attributes) - learn about data attributes
+* [Commands reference](/docs/sources/web/browser/commands) - full API documentation
+* [Tagger tool](/docs/sources/web/browser/tagger) - visual tagging tool

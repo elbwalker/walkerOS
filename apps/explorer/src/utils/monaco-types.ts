@@ -33,18 +33,30 @@ interface TypeLibrary {
  */
 const typeLibraries = new Map<string, TypeLibrary>();
 
+// One-shot guards. Monaco's `setCompilerOptions` and `addExtraLib` invalidate
+// all existing TypeScript workers and cancel their in-flight operations —
+// those cancellations surface as unhandled rejections in the dev overlay.
+// Every CodeBox mount would re-trigger this, so we guard per-monaco-instance.
+const configuredMonacos = new WeakSet<Monaco>();
+const ambientsRegistered = new WeakSet<Monaco>();
+
 /**
  * Configuration for TypeScript compiler options
  */
 export function configureMonacoTypeScript(monaco: Monaco) {
+  if (configuredMonacos.has(monaco)) return;
+  configuredMonacos.add(monaco);
   monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-    target: monaco.languages.typescript.ScriptTarget.ES2020,
-    lib: ['es2020'],
+    target: monaco.languages.typescript.ScriptTarget.ES2022 ?? 9, // 9 = ES2022
+    lib: ['es2022', 'dom'],
     allowNonTsExtensions: true,
     moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-    module: monaco.languages.typescript.ModuleKind.CommonJS,
+    module: monaco.languages.typescript.ModuleKind.ESNext,
+    moduleDetection: 3, // ModuleDetectionKind.Force — Monaco does not expose the enum. Auto=1, Legacy=2, Force=3.
     noEmit: true,
     esModuleInterop: true,
+    allowSyntheticDefaultImports: true,
+    skipLibCheck: true,
     jsx: monaco.languages.typescript.JsxEmit.React,
     allowJs: true,
     checkJs: false,
@@ -60,15 +72,20 @@ export function configureMonacoTypeScript(monaco: Monaco) {
   });
 
   monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-    target: monaco.languages.typescript.ScriptTarget.ES2020,
-    lib: ['es2020'],
+    target: monaco.languages.typescript.ScriptTarget.ES2022 ?? 9, // 9 = ES2022
+    lib: ['es2022', 'dom'],
     allowNonTsExtensions: true,
     moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-    module: monaco.languages.typescript.ModuleKind.CommonJS,
+    module: monaco.languages.typescript.ModuleKind.ESNext,
+    moduleDetection: 3, // ModuleDetectionKind.Force — Monaco does not expose the enum. Auto=1, Legacy=2, Force=3.
     noEmit: true,
     esModuleInterop: true,
+    allowSyntheticDefaultImports: true,
+    skipLibCheck: true,
     jsx: monaco.languages.typescript.JsxEmit.React,
+    allowJs: true,
     strict: false,
+    noImplicitAny: false,
   });
 }
 
@@ -178,20 +195,6 @@ export async function loadTypeLibraryFromURL(
 }
 
 /**
- * Options for loading package types dynamically
- */
-export interface LoadPackageTypesOptions {
-  /** Package name (e.g., '@walkeros/destination-gtag') */
-  package: string;
-  /** Version to load (e.g., '0.1.0', 'latest') */
-  version?: string;
-  /** CDN to use ('unpkg' or 'jsdelivr') */
-  cdn?: 'unpkg' | 'jsdelivr';
-  /** Path to .d.ts file within package (defaults to '/dist/index.d.ts') */
-  typesPath?: string;
-}
-
-/**
  * Strip problematic imports from type definition content
  *
  * Removes import statements that Monaco can't resolve, while preserving:
@@ -238,8 +241,13 @@ function stripExternalImports(content: string): string {
   return cleaned;
 }
 
+/**
+ * Options for loading package types dynamically
+ */
 export interface LoadPackageTypesOptions {
+  /** Package name (e.g., '@walkeros/destination-gtag') */
   package: string;
+  /** Version to load (e.g., '0.1.0', 'latest') */
   version?: string;
 }
 
@@ -297,61 +305,6 @@ ${cleanedTypes}
 }`;
 
   return addTypeLibrary(monaco, uri, moduleContent);
-}
-
-/**
- * Minimal fallback types if we can't load from node_modules
- */
-function getMinimalWalkerOSTypes(): string {
-  return `
-declare namespace WalkerOS {
-  export interface Event {
-    entity: string;
-    action: string;
-    data?: Record<string, unknown>;
-    context?: Record<string, unknown>;
-    user?: {
-      id?: string;
-      device?: string;
-      session?: string;
-      [key: string]: unknown;
-    };
-    nested?: unknown[];
-    consent?: Record<string, boolean>;
-    id?: string;
-    trigger?: string;
-    timestamp?: number;
-    timing?: number;
-    count?: number;
-    version?: {
-      client?: string;
-      tagging?: number;
-    };
-  }
-
-  export interface Properties {
-    [key: string]: unknown;
-  }
-
-  export interface Mapping {
-    [key: string]: unknown;
-  }
-
-  export interface Collector {
-    push: (event: Partial<Event>) => Promise<unknown>;
-    [key: string]: unknown;
-  }
-
-  export namespace Destination {
-    export interface Config<T = unknown> {
-      id?: string;
-      mapping?: Mapping;
-      custom?: T;
-      [key: string]: unknown;
-    }
-  }
-}
-`;
 }
 
 /**
@@ -455,6 +408,44 @@ export function removeDestinationType(destinationId: string) {
 export function registerWalkerOSTypes(monaco: Monaco): void {
   configureMonacoTypeScript(monaco);
   loadWalkerOSCoreTypes(monaco);
+  registerWalkerOSAmbients(monaco);
+}
+
+/**
+ * Register walkerOS runtime globals so snippets can reference them without
+ * imports. Uses Monaco's official `addExtraLib` API — the documented way to
+ * inject ambient TypeScript declarations into the editor.
+ *
+ * Globals declared here:
+ *  - getMappingEvent, getMappingValue: pure mapping helpers from @walkeros/core
+ *  - elb: the walker push function bound by startFlow
+ */
+export function registerWalkerOSAmbients(monaco: Monaco): void {
+  if (ambientsRegistered.has(monaco)) return;
+  ambientsRegistered.add(monaco);
+
+  // Re-alias real exports from @walkeros/core as globals — no duplication,
+  // signatures stay in sync with the package.
+  const ambients = `
+    import type {
+      getMappingEvent as _getMappingEvent,
+      getMappingValue as _getMappingValue,
+      WalkerOS,
+    } from '@walkeros/core';
+
+    declare global {
+      const getMappingEvent: typeof _getMappingEvent;
+      const getMappingValue: typeof _getMappingValue;
+      const elb: WalkerOS.Elb;
+    }
+
+    export {};
+  `;
+
+  const uri = 'file:///node_modules/@walkeros/_ambient/index.d.ts';
+
+  monaco.languages.typescript.typescriptDefaults.addExtraLib(ambients, uri);
+  monaco.languages.typescript.javascriptDefaults.addExtraLib(ambients, uri);
 }
 
 /**
@@ -494,7 +485,7 @@ export function getLoadedTypeLibraries(): string[] {
  * Clear all type libraries (for testing)
  */
 export function clearAllTypeLibraries() {
-  for (const [uri, lib] of typeLibraries.entries()) {
+  for (const lib of typeLibraries.values()) {
     lib.disposable?.dispose();
   }
   typeLibraries.clear();

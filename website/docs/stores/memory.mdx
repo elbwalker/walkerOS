@@ -6,6 +6,7 @@ package: '@walkeros/store-memory'
 ---
 
 import data from '@walkeros/store-memory/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Memory
 
@@ -13,29 +14,15 @@ import data from '@walkeros/store-memory/walkerOS.json';
 
 In-process key-value store with LRU eviction, TTL expiration, and namespace support. Platform-agnostic: works in both browser and server flows.
 
-## When to use
-
-| Scenario | Recommended store |
-|----------|-------------------|
-| Caching API responses within a request cycle | **Memory**: fastest, no I/O |
-| Deduplicating events (seen-key tracking) | **Memory**: in-process, zero overhead |
-| Ephemeral session or user state | **Memory**: TTL support, auto-expiry |
-| Sharing state across browser tabs | Not memory: use a server store |
-| Persisting data across server restarts | [Filesystem](./server/fs) or [S3](./server/s3) |
-
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-Install the package:
+## Installation
 
 <CodeSnippet
   code={`npm install @walkeros/store-memory`}
   language="bash"
 />
 
-Configure in your code:
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -80,11 +67,19 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-## Configuration
+<Configuration type="store" data={data} />
 
-<PropertyTable schema={data.schemas.settings} />
+## When to use
 
-Both limits can be used together. When either is exceeded, the least-recently-used entry is evicted first.
+| Scenario | Recommended store |
+|----------|-------------------|
+| Caching API responses within a request cycle | **Memory**: fastest, no I/O |
+| Deduplicating events (seen-key tracking) | **Memory**: in-process, zero overhead |
+| Ephemeral session or user state | **Memory**: TTL support, auto-expiry |
+| Sharing state across browser tabs | Not memory: use a server store |
+| Persisting data across server restarts | [Filesystem](./server/fs) or [S3](./server/s3) |
+
+Both `maxSize` and `maxEntries` can be used together. When either is exceeded, the least-recently-used entry is evicted first.
 
 ## API
 

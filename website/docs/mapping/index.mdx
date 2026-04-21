@@ -1,0 +1,162 @@
+---
+title: Mapping
+description: Transform events with a code-free, declarative mapping syntax
+sidebar_position: 4
+---
+
+import { getMappingEvent, getMappingValue } from '@walkeros/core';
+
+export const parseInput = (code, scope = {}) => {
+  const codeStr = String(code);
+  return new Function(
+    ...Object.keys(scope),
+    `"use strict"; return (async () => { return ${codeStr} })()`,
+  )(...Object.values(scope));
+};
+
+export const logEvent = async (input, config, log) => {
+  log(await parseInput(input, { getMappingEvent }));
+};
+export const logValue = async (input, config, log) => {
+  log(await parseInput(input, { getMappingValue }));
+};
+
+# Mapping
+
+Mapping is walkerOS's code-free way to reshape events as they move through the
+flow. You describe the transformation as data (JSON or object literal), and the
+collector applies it at two stations: **source push** (clean and normalize
+incoming data) and **destination transform** (adapt to each tool's expected
+format).
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+  markers={[
+    { position: 'source-collector', id: '1', text: 'Source mapping: clean, filter, normalize incoming data' },
+    { position: 'collector-destination', id: '2', text: 'Destination mapping: transform to tool-specific formats' },
+  ]}
+/>
+
+## Two concepts
+
+Everything in walkerOS mapping is built from two building blocks:
+
+- **[Mapping.Value](./value.mdx)**: the polymorphic primitive. Whenever a
+  config field accepts a value (`data`, `map.*`, `policy.*`, `set[]`, …), you
+  write a `Mapping.Value`. There are eight forms (path, constant, map, loop,
+  set, fn, condition, consent).
+- **[Mapping.Rule](./rule.mdx)**: the object on a destination's
+  `mapping[entity][action]`. It composes values into a complete rule
+  (`name`, `data`, `condition`, `consent`, `policy`, `batch`, `ignore`, `skip`,
+  `settings`).
+
+When a destination doc shows `data: any`, the value you put there is a
+`Mapping.Value`. The whole rule around it is a `Mapping.Rule`.
+
+## Minimal example
+
+```typescript
+// Destination rule: transform "product view" for GA4
+{
+  product: {
+    view: {
+      name: 'view_item',
+      data: {
+        map: {
+          item_id: 'data.id',
+          value: 'data.price',
+          currency: { value: 'USD' },
+        },
+      },
+    },
+  },
+}
+```
+
+`product.view` is the entity-action key. `name` renames the event. `data` is a
+`Mapping.Value` (specifically the `map` form) that builds the destination
+payload.
+
+## Try it
+
+Map events by their entity-action structure, live:
+
+<LiveCode
+  language="typescript"
+  labelInput="Configuration"
+  rowHeight="synced"
+  input={`
+await getMappingEvent(
+  { name: 'product view' },
+  {
+    product: {
+      view: { name: 'product_viewed' },
+    },
+  }
+);`}
+  output={`{
+  eventMapping: {
+    name: "product_viewed"
+  },
+  mappingKey: "product view"
+}`}
+  fn={logEvent}
+/>
+
+## Where mapping runs
+
+**Source mapping** cleans, filters, or renames incoming events before they reach
+the collector:
+
+<CodeSnippet
+  code={`await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        mapping: {
+          product: { click: { name: 'product view' } },
+          test: { '*': { ignore: true } },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+**Destination mapping** adapts events to each tool's API shape:
+
+<CodeSnippet
+  code={`await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        mapping: {
+          product: {
+            view: {
+              name: 'view_item',
+              data: { map: { item_id: 'data.id' } },
+            },
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+Both mappings are independent. The same event can be transformed differently at
+each stage.
+
+## See also
+
+- [Mapping.Value](./value.mdx): the eight value forms
+- [Mapping.Rule](./rule.mdx): rule-level fields and API reference
+- [Transformers](/docs/transformers): middleware alternative for validation,
+  enrichment, redaction
+- [Consent](/docs/guides/consent): consent-gated mapping

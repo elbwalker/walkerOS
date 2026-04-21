@@ -4,6 +4,15 @@ description: "Send events to analytics tools, marketing platforms, and custom en
 sidebar_position: 5
 ---
 
+import { schemas } from '@walkeros/core/dev';
+import { omitSchemaProperties } from '@site/src/utils/schema';
+
+export const destinationConfig = omitSchemaProperties(
+
+  schemas.DestinationSchemas.configJsonSchema,
+  ['settings', 'init', 'mock', 'onError', 'onLog'],
+);
+
 # Destinations
 
 Destinations are the endpoints where walkerOS sends your processed events. They
@@ -36,7 +45,7 @@ analytics platforms, marketing tools, data warehouses, and custom APIs.
 Each destination operates independently, so one failed destination won't affect
 others.
 
-## Analytics Tools
+## Analytics tools
 
 | Destination | Web | Server |
 |-------------|-----|--------|
@@ -51,7 +60,7 @@ others.
 | **<Link to="/docs/destinations/web/segment">Segment</Link>** | Yes | <Link to="/docs/destinations/server/segment">Yes</Link> |
 | **<Link to="/docs/destinations/web/snowplow">Snowplow</Link>** | Yes | - |
 
-## Marketing Tools
+## Marketing tools
 
 | | Web | Server |
 |--|-----|--------|
@@ -61,7 +70,7 @@ others.
 | Pinterest | <Link to="/docs/destinations/web/pinterest">Pinterest Tag</Link> | <Link to="/docs/destinations/server/pinterest">Pinterest Conversions API</Link> |
 | TikTok | <Link to="/docs/destinations/web/tiktok">TikTok Pixel</Link> | <Link to="/docs/destinations/server/tiktok">TikTok Events API</Link> |
 
-## Data Warehouses
+## Data warehouses
 
 | Destination | Web | Server |
 |-------------|-----|--------|
@@ -74,3 +83,12 @@ others.
 Build a custom destination for any endpoint. See
 [Create your own destination](/docs/destinations/create-your-own) for a
 step-by-step guide.
+
+## Configuration
+
+These fields are available on every destination, regardless of package. They
+wrap the package-specific `settings` field, which is documented on each
+destination's page.
+
+<PropertyTable schema={destinationConfig} />
+

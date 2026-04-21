@@ -5,7 +5,6 @@ import {
   ValuesSchema,
 } from './mapping';
 import { Identifier } from './primitives';
-import { ErrorHandlerSchema } from './utilities';
 
 /**
  * Source Schemas
@@ -93,7 +92,6 @@ export const ConfigSchema = MappingConfigSchema.extend({
   id: Identifier.describe(
     'Source identifier (defaults to source key)',
   ).optional(),
-  onError: ErrorHandlerSchema.optional(),
   primary: z
     .boolean()
     .describe('Mark as primary (only one can be primary)')
@@ -122,6 +120,10 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .describe(
       'Ingest metadata extraction mapping. Extracts values from raw request objects (Express req, Lambda event) using mapping syntax.',
     ),
+  disabled: z
+    .boolean()
+    .describe('Completely skip this source (no init, no event capture)')
+    .optional(),
 }).describe('Source configuration with mapping and environment');
 
 /**

@@ -8,7 +8,8 @@ import {
   PolicySchema,
 } from './mapping';
 import { Identifier } from './primitives';
-import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
+import { RoutableNextSchema } from './matcher';
+import { CacheSchema } from './cache';
 
 /**
  * Destination Schemas
@@ -61,6 +62,10 @@ export const ConfigSchema = z
       .describe(
         'Global data transformation applied to all events for this destination',
       ),
+    include: z
+      .array(z.string())
+      .optional()
+      .describe('Event sections to flatten into context.data'),
     env: z
       .any()
       .describe('Environment dependencies (platform-specific)')
@@ -101,9 +106,25 @@ export const ConfigSchema = z
       .describe(
         'Logger configuration (level, handler) to override the collector defaults',
       ),
-    // Handler functions
-    onError: ErrorHandlerSchema.optional(),
-    onLog: LogHandlerSchema.optional(),
+    before: RoutableNextSchema.optional().describe(
+      'Post-collector transformer chain applied before this destination receives the event',
+    ),
+    next: RoutableNextSchema.optional().describe(
+      'Post-push transformer chain. Runs after destination push completes; push response is available at ingest._response',
+    ),
+    cache: CacheSchema.optional().describe(
+      'Cache configuration for deduplication; skip push on cache HIT',
+    ),
+    disabled: z
+      .boolean()
+      .describe('Completely skip this destination (no init, no push, no queue)')
+      .optional(),
+    mock: z
+      .unknown()
+      .optional()
+      .describe(
+        'Return this value instead of calling push(). Dev/testing only.',
+      ),
   })
   .describe('Destination configuration');
 

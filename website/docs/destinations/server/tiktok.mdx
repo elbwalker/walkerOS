@@ -6,6 +6,9 @@ sidebar_position: 9
 package: '@walkeros/server-destination-tiktok'
 ---
 import data from '@walkeros/server-destination-tiktok/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # TikTok Events API
 
@@ -13,17 +16,13 @@ import data from '@walkeros/server-destination-tiktok/walkerOS.json';
 
 Server-side event delivery to TikTok's Events API for enhanced conversion tracking, bypassing browser limitations and improving match quality for ad optimization.
 
-:::info Where This Fits
-TikTok Events API is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'TikTok Events API', highlight: true } }}
+<WhereThisFits
+  pre={<>TikTok Events API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'TikTok Events API', highlight: true } },
+  }}
+  post={<>Sends events server-side to TikTok's Events API using raw HTTP (no SDK). Identity fields (email, phone_number, external_id) are SHA-256 hashed before sending. Events include a stable `event_id` for deduplication with the browser pixel.</>}
 />
-
-Sends events server-side to TikTok's Events API using raw HTTP (no SDK). Identity fields (email, phone_number, external_id) are SHA-256 hashed before sending. Events include a stable `event_id` for deduplication with the browser pixel.
-:::
 
 ## Installation
 
@@ -31,8 +30,6 @@ Sends events server-side to TikTok's Events API using raw HTTP (no SDK). Identit
   code={`npm install @walkeros/server-destination-tiktok`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -78,14 +75,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Configuration type="destination" data={data} />
 
 ## Hashing
 
@@ -103,69 +98,3 @@ The destination automatically SHA-256 hashes `email`, `phone_number`, and `exter
 ## Deduplication
 
 Each event is sent with `event_id` set to the walkerOS event `id`. If you also run the [TikTok browser pixel](/docs/destinations/web/tiktok), TikTok deduplicates server and browser events that share the same `event_id`, so conversions are not double-counted.
-
-## Docker deployment
-
-### Step 1: Create flow configuration
-
-Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "tiktok": {
-      "package": "@walkeros/server-destination-tiktok",
-      "config": {
-        "settings": {
-          "accessToken": "$env.TIKTOK_ACCESS_TOKEN",
-          "pixelCode": "$env.TIKTOK_PIXEL_CODE",
-          "test_event_code": "$env.TIKTOK_TEST_CODE:"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-  title="flow.json"
-/>
-
-### Step 2: Bundle the flow
-
-Bundle your flow configuration before running in Docker:
-
-<CodeSnippet
-  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
-  language="bash"
-/>
-
-### Step 3: Run with Docker
-
-<CodeSnippet
-  code={`docker run -d \\
-  -e TIKTOK_ACCESS_TOKEN=your-access-token \\
-  -e TIKTOK_PIXEL_CODE=YOUR_PIXEL_CODE \\
-  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
-  -p 8080:8080 \\
-  walkeros/flow`}
-  language="bash"
-/>
-
-### Docker Compose example
-
-<CodeSnippet
-  code={`services:
-  walkeros:
-    image: walkeros/flow:latest
-    environment:
-      - TIKTOK_ACCESS_TOKEN=\${TIKTOK_ACCESS_TOKEN}
-      - TIKTOK_PIXEL_CODE=\${TIKTOK_PIXEL_CODE}
-    volumes:
-      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
-    ports:
-      - "8080:8080"`}
-  language="yaml"
-/>
-
-:::tip Security best practice
-Never commit access tokens to version control. Use environment variables or a secrets manager to inject credentials at runtime.
-:::

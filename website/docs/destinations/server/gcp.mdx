@@ -6,6 +6,9 @@ sidebar_position: 2
 package: '@walkeros/server-destination-gcp'
 ---
 import data from '@walkeros/server-destination-gcp/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # GCP BigQuery
 
@@ -15,17 +18,13 @@ The GCP destination package provides server-side integration for streaming
 events from walkerOS to Google BigQuery for data warehousing, analytics, and
 machine learning workloads.
 
-:::info Where This Fits
-GCP BigQuery is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'BigQuery', highlight: true } }}
+<WhereThisFits
+  pre={<>GCP BigQuery is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'BigQuery', highlight: true } },
+  }}
+  post={<>Streams events to Google BigQuery for data warehousing, analytics dashboards, and machine learning workloads.</>}
 />
-
-Streams events to Google BigQuery for data warehousing, analytics dashboards, and machine learning workloads.
-:::
 
 ## Installation
 
@@ -34,12 +33,65 @@ Streams events to Google BigQuery for data warehousing, analytics dashboards, an
   language="bash"
 />
 
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationBigQuery } from '@walkeros/server-destination-gcp';
+
+await startFlow({
+  destinations: {
+    bigquery: {
+      code: destinationBigQuery,
+      config: {
+        settings: {
+          projectId: 'YOUR_PROJECT_ID',
+          datasetId: 'YOUR_DATASET_ID',
+          tableId: 'YOUR_TABLE_ID',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "bigquery": {
+    "package": "@walkeros/server-destination-gcp",
+    "code": "destinationBigQuery",
+    "config": {
+      "settings": {
+        "projectId": "YOUR_PROJECT_ID",
+        "datasetId": "YOUR_DATASET_ID",
+        "tableId": "YOUR_TABLE_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
 ## Prerequisites
 
 - [Google Cloud account](https://cloud.google.com/) with billing enabled
 - [gcloud CLI](https://cloud.google.com/sdk/docs/install) installed and authenticated (includes `bq` command)
 
-## GCP Setup
+## GCP setup
 
 ### Enable BigQuery API
 
@@ -48,7 +100,7 @@ Streams events to Google BigQuery for data warehousing, analytics dashboards, an
   language="bash"
 />
 
-### Create BigQuery Dataset
+### Create BigQuery dataset
 
 <CodeSnippet
   code={`gcloud config set project YOUR_PROJECT_ID
@@ -61,7 +113,7 @@ bq mk --location=EU --storage_billing_model=PHYSICAL walkerOS`}
 Physical storage billing charges based on compressed size. This is set at dataset creation and applies to all tables.
 :::
 
-### Create Service Account
+### Create service account
 
 <CodeSnippet
   code={`# Create service account
@@ -122,7 +174,7 @@ See [Workload Identity documentation](https://cloud.google.com/iam/docs/workload
   </TabItem>
 </Tabs>
 
-## Environment Variables
+## Environment variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -131,63 +183,6 @@ See [Workload Identity documentation](https://cloud.google.com/iam/docs/workload
 | `BQ_TABLE` | BigQuery table name | `events` |
 | `BQ_LOCATION` | BigQuery dataset location | `EU` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key | Required (unless using Workload Identity) |
-
-## Setup
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationBigQuery } from '@walkeros/server-destination-gcp';
-
-await startFlow({
-  destinations: {
-    bigquery: {
-      code: destinationBigQuery,
-      config: {
-        settings: {
-          projectId: 'YOUR_PROJECT_ID',
-          datasetId: 'YOUR_DATASET_ID',
-          tableId: 'YOUR_TABLE_ID',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "bigquery": {
-    "package": "@walkeros/server-destination-gcp",
-    "code": "destinationBigQuery",
-    "config": {
-      "settings": {
-        "projectId": "YOUR_PROJECT_ID",
-        "datasetId": "YOUR_DATASET_ID",
-        "tableId": "YOUR_TABLE_ID"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[CLI reference →](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
-
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
 
 ## Default table schema
 
@@ -255,7 +250,7 @@ Partitioning by day reduces query costs since BigQuery only scans relevant parti
 You can send a custom schema by using the `data` configuration to map specific
 fields. This is useful when you only need a subset of the event data.
 
-### Example: Simple Schema
+### Example: simple schema
 
 This example sends only `name`, `id`, `data`, and `timestamp`:
 
@@ -344,71 +339,3 @@ To remove BigQuery resources:
 - Remove service account IAM bindings from the dataset
 - Delete the service account
 - Remove any downloaded key files
-
-## Docker Deployment
-
-For Docker deployments outside of GCP infrastructure, use mounted credentials.
-
-### Step 1: Create Flow Configuration
-
-Use the `$env.NAME` syntax for environment variables:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "bigquery": {
-      "package": "@walkeros/server-destination-gcp",
-      "config": {
-        "settings": {
-          "projectId": "$env.GCP_PROJECT_ID",
-          "datasetId": "$env.BQ_DATASET:walkeros",
-          "tableId": "$env.BQ_TABLE:events"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-  title="flow.json"
-/>
-
-### Step 2: Bundle the Flow
-
-<CodeSnippet
-  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
-  language="bash"
-/>
-
-### Step 3: Run with Docker
-
-<CodeSnippet
-  code={`docker run -d \\
-  -e GCP_PROJECT_ID=your-project-id \\
-  -e GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/key.json \\
-  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
-  -v ./service-account.json:/app/credentials/key.json:ro \\
-  -p 8080:8080 \\
-  walkeros/flow`}
-  language="bash"
-/>
-
-### Docker Compose Example
-
-<CodeSnippet
-  code={`services:
-  walkeros:
-    image: walkeros/flow:latest
-    environment:
-      - GCP_PROJECT_ID=\${GCP_PROJECT_ID}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/key.json
-    volumes:
-      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
-      - \${GCP_KEY_FILE}:/app/credentials/key.json:ro
-    ports:
-      - "8080:8080"`}
-  language="yaml"
-/>
-
-:::warning Security
-Never pass GCP private keys as environment variables. Always mount the credential file at runtime and never bake credentials into Docker images.
-:::

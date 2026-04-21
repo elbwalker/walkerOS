@@ -174,7 +174,7 @@ export default function Hero({
                       className="inline-flex items-center space-x-2 text-sm/6 font-medium"
                       style={{ color: 'var(--color-base-content)' }}
                     >
-                      <span>Just shipped v3.3</span>
+                      <span>Just shipped v3.4</span>
                       <ChevronRightIcon
                         aria-hidden="true"
                         className="size-5"

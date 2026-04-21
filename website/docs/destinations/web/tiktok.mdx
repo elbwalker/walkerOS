@@ -6,10 +6,10 @@ sidebar_position: 9
 package: '@walkeros/web-destination-tiktok'
 ---
 
-import destinationTikTok from '@walkeros/web-destination-tiktok';
 import data from '@walkeros/web-destination-tiktok/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
-export const destination = { ...destinationTikTok, examples: data.examples };
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # TikTok Pixel
 
@@ -27,19 +27,12 @@ no npm SDK for the browser pixel. Events become `ttq.track(name, params, { event
 calls; identity becomes `ttq.identify({ email, phone_number, external_id })`;
 consent toggles `ttq.enableCookie` / `ttq.disableCookie`.
 
-:::info Where This Fits
-TikTok Pixel is a **web destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'TikTok', highlight: true } }}
+<WhereThisFits
+  pre={<>TikTok Pixel is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'TikTok', highlight: true } },
+  }}
 />
-
-Loads the TikTok Pixel SDK, forwards every walkerOS event with a stable
-`event_id` for deduplication, and lets you layer on Advanced Matching and
-consent cookie toggling.
-:::
 
 ## Installation
 
@@ -47,8 +40,6 @@ consent cookie toggling.
   code={`npm install @walkeros/web-destination-tiktok`}
   language="bash"
 />
-
-## Setup
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -94,14 +85,12 @@ Add to your `flow.json` destinations:
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
+<Configuration type="destination" data={data} />
 
 ## Standard events
 
@@ -126,97 +115,16 @@ work but receive no optimization signal.
 | `CompleteRegistration` | User signup                                    |
 | `Subscribe`            | Subscription start                             |
 
-## Mapping data.examples
-
-:::tip
-
-The code data.examples are interactive. You can edit the code to generate your
-individual event mapping.
-
-:::
-
-### `ViewContent` via `mapping.name`
-
-The canonical TikTok pattern: walkerOS `product view` becomes TikTok's
-`ViewContent` standard event with the native parameter shape.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={data.examples.step.productViewContent.in}
-  mapping={data.examples.step.productViewContent.mapping}
-  generic={true}
-/>
-
-### `CompleteRegistration` with per-event Advanced Matching
-
-User signup is the moment to fire Advanced Matching for the session.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={data.examples.step.userRegisterCompleteRegistration.in}
-  mapping={data.examples.step.userRegisterCompleteRegistration.mapping}
-  generic={true}
-/>
-
-### `CompletePayment` with multi-product `contents`
-
-The hero example: `mapping.data` builds the TikTok-native shape; `loop`
-walks `event.nested` to produce one `contents` entry per product;
-`{ key, value: 'EUR' }` provides a fallback currency.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={data.examples.step.orderCompleteCompletePayment.in}
-  mapping={data.examples.step.orderCompleteCompletePayment.mapping}
-  generic={true}
-/>
-
-### `Search`
-
-Minimal example: a single `mapping.data` field maps the query string.
-
-<DestinationDemo
-  destination={destination}
-  settings={{ apiKey: 'C4XXXXXXXXXXXXXXXXXXX' }}
-  event={data.examples.step.searchSubmitSearch.in}
-  mapping={data.examples.step.searchSubmitSearch.mapping}
-  generic={true}
-/>
-
-### Destination-level Advanced Matching
-
-Set identity once on the destination and the runtime state diffing skips
-redundant `ttq.identify()` calls when nothing changed.
-
-<DestinationDemo
-  destination={destination}
-  settings={{
-    apiKey: 'C4XXXXXXXXXXXXXXXXXXX',
-    identify: {
-      map: {
-        email: 'data.email',
-        phone_number: 'data.phone',
-        external_id: 'user.id',
-      },
-    },
-  }}
-  event={data.examples.step.destinationLevelIdentify.in}
-  generic={true}
-/>
-
-## Advanced Matching
+## Advanced matching
 
 TikTok matches conversions back to TikTok users via three optional parameters:
 `email`, `phone_number`, `external_id`. The SDK hashes them with SHA256 before
 sending, so it's safe to pass raw values.
 
 `settings.identify` (destination-level) fires on first push and re-fires only
-when the resolved value changes (runtime state diffing). `mapping.settings.identify`
-(per-event) overrides for one push, which is useful for signup and checkout flows
-where the identity becomes available mid-session.
+when the resolved value changes (runtime state diffing).
+`mapping.settings.identify` (per-event) overrides for one push, which is useful
+for signup and checkout flows where the identity becomes available mid-session.
 
 `ttq.identify()` always fires **before** `ttq.track()` so Advanced Matching
 is set for the conversion event.
@@ -251,4 +159,4 @@ behavior.
 ## Related
 
 - [TikTok Events API documentation](https://business-api.tiktok.com/portal/docs)
-- [Bundled mode →](/docs/getting-started/modes/bundled)
+- [Bundled mode](/docs/getting-started/modes/bundled)

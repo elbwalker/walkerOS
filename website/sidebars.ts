@@ -87,6 +87,20 @@ const sidebars: SidebarsConfig = {
               ],
             },
             'sources/web/dataLayer/index',
+            'sources/web/session/index',
+            {
+              type: 'category',
+              label: 'CMPs',
+              link: {
+                type: 'doc',
+                id: 'sources/web/cmps/index',
+              },
+              items: [
+                'sources/web/cmps/cookiefirst/index',
+                'sources/web/cmps/cookiepro/index',
+                'sources/web/cmps/usercentrics/index',
+              ],
+            },
             'sources/server/express',
             'sources/server/fetch',
             'sources/server/aws',
@@ -111,9 +125,50 @@ const sidebars: SidebarsConfig = {
             id: 'transformers/index',
           },
           items: [
-            'mapping',
+            {
+              type: 'category',
+              label: 'Mapping',
+              link: {
+                type: 'doc',
+                id: 'mapping/index',
+              },
+              items: ['mapping/value', 'mapping/rule'],
+            },
+            'transformers/cache',
+            'transformers/file',
+            'transformers/fingerprint',
             'transformers/validator',
             'transformers/create-your-own',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Stores',
+          link: {
+            type: 'doc',
+            id: 'stores/index',
+          },
+          items: [
+            {
+              type: 'doc',
+              id: 'stores/memory',
+              className: 'sidebar-badge-web',
+            },
+            {
+              type: 'doc',
+              id: 'stores/server/fs',
+              className: 'sidebar-badge-server',
+            },
+            {
+              type: 'doc',
+              id: 'stores/server/gcs',
+              className: 'sidebar-badge-server',
+            },
+            {
+              type: 'doc',
+              id: 'stores/server/s3',
+              className: 'sidebar-badge-server',
+            },
           ],
         },
         {
@@ -152,12 +207,32 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/web/fullstory',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/web/gtag/ga4',
                   className: 'sidebar-badge-web',
                 },
                 {
                   type: 'doc',
                   id: 'destinations/web/gtag/gtm',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/heap',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/hotjar',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/matomo',
                   className: 'sidebar-badge-web',
                 },
                 {
@@ -175,6 +250,16 @@ const sidebars: SidebarsConfig = {
                       className: 'sidebar-badge-server',
                     },
                   ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/mparticle',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/web/optimizely',
+                  className: 'sidebar-badge-web',
                 },
                 {
                   type: 'doc',
@@ -201,6 +286,11 @@ const sidebars: SidebarsConfig = {
                       className: 'sidebar-badge-server',
                     },
                   ],
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/rudderstack',
+                  className: 'sidebar-badge-server',
                 },
                 {
                   type: 'category',
@@ -237,7 +327,32 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/bing',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/criteo',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/customerio',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/datamanager',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/hubspot',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/klaviyo',
                   className: 'sidebar-badge-server',
                 },
                 {
@@ -272,12 +387,32 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/reddit',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/slack',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/snapchat',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/web/tiktok',
                   className: 'sidebar-badge-web',
                 },
                 {
                   type: 'doc',
                   id: 'destinations/server/tiktok',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/twitter',
                   className: 'sidebar-badge-server',
                 },
               ],
@@ -314,7 +449,27 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/file',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/gcp',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/kafka',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/redis',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/sqlite',
                   className: 'sidebar-badge-server',
                 },
               ],

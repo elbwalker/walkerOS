@@ -41,10 +41,18 @@ describe('Step Examples', () => {
       context,
     );
 
-    if (example.out === false) {
-      expect(result).toBe(false);
-    } else {
-      expect(result).toEqual(example.out);
-    }
+    const actual =
+      result === undefined
+        ? []
+        : [
+            [
+              'return',
+              result === false
+                ? false
+                : (result as { event: WalkerOS.DeepPartialEvent }).event,
+            ],
+          ];
+
+    expect(actual).toEqual(example.out);
   });
 });

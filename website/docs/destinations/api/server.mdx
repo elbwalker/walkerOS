@@ -7,6 +7,9 @@ sidebar_position: 2
 ---
 
 import data from '@walkeros/server-destination-api/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Server API Destination
 
@@ -17,19 +20,15 @@ import data from '@walkeros/server-destination-api/walkerOS.json';
 />
 
 The server API destination sends events from Node.js to any HTTP(S) endpoint
-using native HTTP/HTTPS modules.
+using native HTTP/HTTPS modules. It auto-selects HTTP or HTTPS from the URL, supports configurable timeouts (default 5000ms), custom transforms, and dependency injection for testing.
 
-:::info Where This Fits
-Server API is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'API', highlight: true } }}
+<WhereThisFits
+  pre={<>Server API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'API', highlight: true } },
+  }}
+  post={<>Sends events server-side to any HTTP endpoint using Node.js native modules with configurable request formatting and batching.</>}
 />
-
-Sends events server-side to any HTTP endpoint using Node.js native modules with configurable request formatting and batching.
-:::
 
 ## Installation
 
@@ -38,7 +37,11 @@ Sends events server-side to any HTTP endpoint using Node.js native modules with 
   language="bash"
 />
 
-## Setup
+<Configuration type="destination" data={data} />
+
+## Usage
+
+### Basic usage
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -59,13 +62,7 @@ await startFlow({
   language="typescript"
 />
 
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />
-
-## Usage
-
-### Basic Usage
+### With headers and timeout
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -92,7 +89,7 @@ await startFlow({
   language="typescript"
 />
 
-### With Custom Transform
+### With custom transform
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -120,9 +117,9 @@ await startFlow({
   language="typescript"
 />
 
-## Examples
+## Use cases
 
-### Webhook Integration
+### Webhook integration
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -146,7 +143,7 @@ await startFlow({
   language="typescript"
 />
 
-### Custom Analytics Backend
+### Custom analytics backend
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -172,7 +169,7 @@ await startFlow({
   language="typescript"
 />
 
-### With Event Mapping
+### With event mapping
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -204,14 +201,6 @@ await startFlow({
 });`}
   language="typescript"
 />
-
-## Features
-
-- **Native HTTP/HTTPS** - Uses Node.js native modules for optimal performance
-- **Automatic Protocol Selection** - Chooses HTTP or HTTPS based on URL
-- **Configurable Timeout** - Default 5000ms, configurable per destination
-- **Custom Transform** - Transform event data before sending
-- **Dependency Injection** - Mock sendServer for testing
 
 ## Related
 

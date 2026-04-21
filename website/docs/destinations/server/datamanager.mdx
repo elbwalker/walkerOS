@@ -6,6 +6,9 @@ sidebar_position: 4
 package: '@walkeros/server-destination-datamanager'
 ---
 import data from '@walkeros/server-destination-datamanager/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Google Data Manager
 
@@ -15,17 +18,13 @@ The Google Data Manager destination package provides server-side integration for
 sending conversion events and audience data to Google's advertising ecosystem
 through a single unified API endpoint.
 
-:::info Where This Fits
-Google Data Manager is a **server destination** in the walkerOS flow:
-
-<FlowMap
-  sources={{ default: { highlight: false } }}
-  collector={{ highlight: false }}
-  destinations={{ default: { label: 'Destination', text: 'Data Manager', highlight: true } }}
+<WhereThisFits
+  pre={<>Google Data Manager is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Data Manager', highlight: true } },
+  }}
+  post={<>Sends conversion events server-side to Google Ads, Display & Video 360, and GA4 through a single unified API.</>}
 />
-
-Sends conversion events server-side to Google Ads, Display & Video 360, and GA4 through a single unified API.
-:::
 
 ## Installation
 
@@ -33,8 +32,6 @@ Sends conversion events server-side to Google Ads, Display & Video 360, and GA4 
   code={`npm install @walkeros/server-destination-datamanager`}
   language="bash"
 />
-
-## Setup
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -68,7 +65,9 @@ await startFlow({
   language="typescript"
 />
 
-## Guided Mapping Helpers
+<Configuration type="destination" data={data} />
+
+## Guided mapping helpers
 
 Define common fields once in Settings instead of repeating them in every event
 mapping:
@@ -104,7 +103,3 @@ mapping:
 />
 
 **Consent mapping**: Map your consent field names (string) or use static values (boolean). Event mappings always override Settings helpers.
-
-## Configuration reference
-
-<PropertyTable schema={data.schemas.settings} />

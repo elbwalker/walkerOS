@@ -3,6 +3,7 @@ import {
   resolveToken,
   resolveDeployToken,
 } from '../lib/config-file.js';
+import { clientContextHeaders } from './client-context.js';
 
 /**
  * Normalize headers from any RequestInit format to a plain object.
@@ -28,6 +29,21 @@ export function mergeAuthHeaders(
 }
 
 /**
+ * Build the final outbound header set by merging client-context headers
+ * (User-Agent, X-WalkerOS-Client, X-WalkerOS-Client-Version) with auth.
+ * Caller-provided headers win over client-context defaults.
+ */
+function buildHeaders(
+  token: string | null | undefined,
+  headers?: HeadersInit,
+): Record<string, string> {
+  return {
+    ...clientContextHeaders(),
+    ...mergeAuthHeaders(token, headers),
+  };
+}
+
+/**
  * Authenticated fetch — resolves base URL + adds auth token.
  * Use for all API calls that require WALKEROS_TOKEN.
  */
@@ -39,7 +55,7 @@ export async function apiFetch(
   const token = resolveToken()?.token;
   return fetch(`${baseUrl}${path}`, {
     ...init,
-    headers: mergeAuthHeaders(token, init?.headers),
+    headers: buildHeaders(token, init?.headers),
   });
 }
 
@@ -52,7 +68,13 @@ export async function publicFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const baseUrl = resolveAppUrl();
-  return fetch(`${baseUrl}${path}`, init);
+  return fetch(`${baseUrl}${path}`, {
+    ...init,
+    headers: {
+      ...clientContextHeaders(),
+      ...normalizeHeaders(init?.headers),
+    },
+  });
 }
 
 /**
@@ -71,6 +93,6 @@ export async function deployFetch(
     );
   return fetch(`${baseUrl}${path}`, {
     ...init,
-    headers: mergeAuthHeaders(token, init?.headers),
+    headers: buildHeaders(token, init?.headers),
   });
 }

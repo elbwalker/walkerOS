@@ -1,0 +1,88 @@
+---
+title: HubSpot
+description: "Server-side event delivery to HubSpot CRM (custom events + contact upsert)"
+path: /docs/destinations/server/hubspot
+sidebar_position: 13
+package: '@walkeros/server-destination-hubspot'
+---
+import data from '@walkeros/server-destination-hubspot/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# HubSpot
+
+<PackageLink env="server" github="packages/server/destinations/hubspot" npm="@walkeros/server-destination-hubspot" status="beta" />
+
+Server-side event delivery to [HubSpot](https://www.hubspot.com/) via the official [`@hubspot/api-client`](https://www.npmjs.com/package/@hubspot/api-client) SDK. Sends custom behavioral events, upserts contacts via the CRM API, and supports optional batch mode with graceful shutdown.
+
+<WhereThisFits
+  pre={<>HubSpot is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'HubSpot', highlight: true } },
+  }}
+  post={<>Receives events server-side from the collector, resolves contact identity (email or objectId), optionally upserts contact properties, then sends the custom event to HubSpot.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-hubspot`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationHubspot } from '@walkeros/server-destination-hubspot';
+
+await startFlow({
+  destinations: {
+    hubspot: {
+      code: destinationHubspot,
+      config: {
+        settings: {
+          accessToken: 'YOUR_HUBSPOT_ACCESS_TOKEN',
+          eventNamePrefix: 'pe12345678_',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "hubspot": {
+    "package": "@walkeros/server-destination-hubspot",
+    "config": {
+      "settings": {
+        "accessToken": "YOUR_HUBSPOT_ACCESS_TOKEN",
+        "eventNamePrefix": "pe12345678_"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+Every event must be associated with a contact via `email` or `objectId`. The `email` path defaults to `user.email`. Events where neither value can be resolved are skipped with a warning.
+
+## Contact upsert
+
+Use the `identify` setting (destination-level or per-rule) to upsert HubSpot contact properties alongside event tracking. The resolved mapping must produce `{ email, properties }`. State-based dedup prevents redundant API calls when identity has not changed.

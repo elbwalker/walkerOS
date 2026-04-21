@@ -10,14 +10,7 @@ import type {
   Settings,
 } from '../types';
 
-type CallRecord = [string, ...unknown[]];
-type ExpectedOut = CallRecord | CallRecord[];
-
-function flatten(out: unknown): CallRecord[] {
-  if (!Array.isArray(out) || out.length === 0) return [];
-  if (typeof out[0] === 'string') return [out as CallRecord];
-  return out as CallRecord[];
-}
+type CallRecord = [callable: string, ...args: unknown[]];
 
 /**
  * Replaces every method on the mock env.Mixpanel with a spy that appends
@@ -184,7 +177,7 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('mixpanel server destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, rawExample) => {
+  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;
@@ -230,13 +223,10 @@ describe('mixpanel server destination — step examples', () => {
     );
     await elb(event);
 
-    // Drop Mixpanel.init — every example triggers init once.
-    const expected = flatten(example.out as ExpectedOut);
-    const actual = collected().filter(([path]) => {
-      if (path === 'Mixpanel.init') return false;
-      return true;
-    });
+    // Filter out init-time call — every example triggers Mixpanel.init once
+    // when the destination sets up its client.
+    const actual = collected().filter(([path]) => path !== 'Mixpanel.init');
 
-    expect(actual).toEqual(expected);
+    expect(actual).toEqual(example.out);
   });
 });

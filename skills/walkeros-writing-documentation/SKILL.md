@@ -100,14 +100,102 @@ Before publishing ANY code example:
 
 ## DRY Patterns
 
-### PropertyTable for Configuration
+### Configuration snippet (package pages)
 
-**When to use:** Any page documenting package configuration with Zod schemas.
+**When to use:** Every package page for destinations, sources, transformers, and
+stores. The `<Configuration>` snippet owns the `## Configuration`,
+`## Settings`, `## Mapping`, and `## Examples` H2 sections. One callsite per
+page, after `## Installation`.
 
 ```mdx
 import data from '@walkeros/web-destination-gtag/walkerOS.json';
-<PropertyTable schema={data.schemas.settings} />;
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-gtag`}
+  language="bash"
+/>
+
+<Configuration type="destination" data={data} />
 ```
+
+`type` must be one of `destination`, `source`, `transformer`, `store`. `data` is
+the full `walkerOS.json` import. The snippet:
+
+- emits `## Configuration` with a short pointer to the shared group-level
+  configuration reference,
+- emits `## Settings` using `<PropertyTable schema={data.schemas.settings} />`
+  when the schema is present, otherwise a "no package-specific settings" note,
+- emits `## Mapping` using `<PropertyTable schema={data.schemas.mapping} />`
+  when present, otherwise a pointer to the standard rule fields,
+- emits `## Examples` only if `data.examples.env.init` or `data.examples.step.*`
+  is present; iterates `examples.step` and renders each through `<StepExample>`.
+
+**Never** hand-roll `## Configuration`, `## Settings`, `## Mapping`, or
+`## Examples` on a package page. Place package-specific content (vendor quirks,
+advanced usage, platform-specific setup) BELOW the `<Configuration>` block with
+its own sentence-case H2 heading. Fold `## Features` bullet lists into the intro
+paragraph as prose — no `## Features` heading on package pages.
+
+### Shared configuration reference (group index pages)
+
+On group index pages (`docs/destinations/index.mdx`, `sources/index.mdx`,
+`transformers/index.mdx`, `stores/index.mdx`), add a `## Configuration` section
+that documents the wrapper fields around `settings` — fields shared across all
+packages of that type (consent, mapping, env, id, …).
+
+Drive the table from the core Zod schemas, filtering dev-only fields at the
+representation layer:
+
+```mdx
+import { schemas } from '@walkeros/core/dev';
+import { omitSchemaProperties } from '@site/src/utils/schema';
+
+export const destinationConfig = omitSchemaProperties(
+  schemas.DestinationSchemas.configJsonSchema,
+  ['settings', 'init', 'mock', 'onError', 'onLog'],
+);
+
+## Configuration
+
+<PropertyTable schema={destinationConfig} />
+```
+
+Available schemas:
+
+- `schemas.DestinationSchemas.configJsonSchema`
+- `schemas.SourceSchemas.configJsonSchema`
+- `schemas.TransformerSchemas.configJsonSchema`
+- `schemas.StoreSchemas.configJsonSchema`
+
+Use `omitSchemaProperties` to hide `settings` (documented per-package) and any
+dev-only fields (`init`, `mock`, `chainMocks`, `onError`, `onLog`) from the
+user-facing table.
+
+### Code display: CodeView vs CodeBox
+
+`@walkeros/explorer` exports two components for code display:
+
+- **`<CodeBox>`** renders Monaco, the full editor. Use when the user can edit
+  the code (playgrounds, interactive demos). Ships the IDE.
+- **`<CodeView>`** renders Shiki, read-only. Use for static code in docs,
+  marketing pages, and anywhere editing is not a requirement. Same `<Box>` frame
+  as `<CodeBox>` (traffic lights, header, copy button, tabs) so visuals match.
+  Zero Monaco runtime cost.
+
+Tokens match because Shiki uses the same TextMate grammars as VS Code / Monaco,
+with the matching `dark-plus` / `light-plus` themes.
+
+**Rule:** default to `<CodeView>`. Only reach for `<CodeBox>` when the code must
+be editable.
+
+### PropertyTable component
+
+`<PropertyTable schema={...} />` from `@walkeros/explorer` is the primitive. It
+renders a pure table — no heading, no captions. Never wrap it in a custom
+heading on package pages; use the `<Settings />` snippet instead.
 
 **When NOT to use:**
 
@@ -335,6 +423,8 @@ the package's role in the walkerOS ecosystem.
 
 ### Website Doc Template (MDX)
 
+Website docs fold features into the intro paragraph (no `## Features` heading). READMEs keep `## Features` — this template is website-only.
+
 ```mdx
 ---
 title: [Title]
@@ -342,37 +432,28 @@ description: [SEO description]
 sidebar_position: [N]
 ---
 
+import data from '@walkeros/[package]/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
 # [Title]
 
 <PackageLink package="@walkeros/[package]" />
 
-[1-sentence description]
+[1-sentence description that folds in key features as prose — no separate `## Features` heading on website docs.]
 
-## Quick Start
+## Quick start
 
 ```json
 // Flow config example (<15 lines)
 ````
 
-## Features
-
-- **Feature 1**: Description
-
 ## Installation
 
-<Tabs>
-  <TabItem value="npm" label="npm">
-    ```bash
-    npm install @walkeros/[package]
-    ```
-  </TabItem>
-</Tabs>
+<CodeSnippet code={`npm install @walkeros/[package]`} language="bash" />
 
-## Configuration
+<Configuration type="destination" data={data} />
 
-<PropertyTable schema={schemas.settings} />
-
-## Next Steps
+## Next steps
 
 - [Related guide 1](/docs/...)
 

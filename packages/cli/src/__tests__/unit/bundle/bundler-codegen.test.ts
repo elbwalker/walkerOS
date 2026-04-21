@@ -1,3 +1,14 @@
+// Task 2: mock bundleCore so bundle() target-resolution tests can assert on
+// what buildOptions are passed through. The `...actual` spread keeps every
+// other export (used by the codegen tests) real.
+jest.mock('../../../commands/bundle/bundler.js', () => {
+  const actual = jest.requireActual('../../../commands/bundle/bundler.js');
+  return {
+    ...actual,
+    bundleCore: jest.fn(),
+  };
+});
+
 import {
   buildSplitConfigObject,
   createEntryPoint,
@@ -5,6 +16,7 @@ import {
   detectExplicitCodeImports,
   serializeWithCode,
   generateSplitWireConfigModule,
+  generateWebEntry,
   generateWrapEntry,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
@@ -781,14 +793,15 @@ describe('generateWrapEntry preview preflight', () => {
       previewScope: 'proj_abc123',
     });
     const previewIdx = output.indexOf('elbPreview');
-    const startFlowIdx = output.indexOf('startFlow(wireConfig');
+    const startFlowIdx = output.indexOf('startFlow(config)');
     expect(previewIdx).toBeLessThan(startFlowIdx);
   });
 
   it('omits preflight entirely when previewOrigin is absent', () => {
     const output = generateWrapEntry('./skeleton.mjs', {});
     expect(output).not.toContain('elbPreview');
-    expect(output).toContain('startFlow(wireConfig(__configData))');
+    expect(output).toContain('wireConfig(__configData)');
+    expect(output).toContain('startFlow(config)');
   });
 
   it('omits preflight when previewScope is empty string', () => {
@@ -809,6 +822,70 @@ describe('generateWrapEntry preview preflight', () => {
     expect(output).toContain("window['collector']");
     expect(output).toContain("window['elb']");
     expect(output).toContain('elbPreview');
+  });
+});
+
+describe('generateWebEntry platform gating', () => {
+  const DATA_PAYLOAD = '{"version":3,"flows":{"default":{"web":{}}}}';
+
+  it('emits env.window/env.document injection when platform is browser', () => {
+    const output = generateWebEntry('./skeleton.mjs', DATA_PAYLOAD, {
+      platform: 'browser',
+    });
+    expect(output).toContain("typeof window !== 'undefined'");
+    expect(output).toContain("typeof document !== 'undefined'");
+    expect(output).toContain('Object.keys(config.sources)');
+  });
+
+  it('omits env injection when platform is node', () => {
+    const output = generateWebEntry('./skeleton.mjs', DATA_PAYLOAD, {
+      platform: 'node',
+    });
+    expect(output).not.toContain("typeof window !== 'undefined'");
+    expect(output).not.toContain("typeof document !== 'undefined'");
+    expect(output).not.toContain('Object.keys(config.sources)');
+  });
+
+  it('defaults to browser platform when platform option is not provided', () => {
+    const output = generateWebEntry('./skeleton.mjs', DATA_PAYLOAD);
+    expect(output).toContain("typeof window !== 'undefined'");
+    expect(output).toContain("typeof document !== 'undefined'");
+    expect(output).toContain('Object.keys(config.sources)');
+  });
+});
+
+describe('generateWrapEntry platform gating', () => {
+  it('emits env.window/env.document injection when platform is browser', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      platform: 'browser',
+    });
+    expect(output).toContain("typeof window !== 'undefined'");
+    expect(output).toContain("typeof document !== 'undefined'");
+    expect(output).toContain('Object.keys(config.sources)');
+  });
+
+  it('omits env injection when platform is node', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      platform: 'node',
+    });
+    expect(output).not.toContain("typeof window !== 'undefined'");
+    expect(output).not.toContain("typeof document !== 'undefined'");
+    expect(output).not.toContain('Object.keys(config.sources)');
+  });
+
+  it('env injection appears AFTER preview preflight block', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      platform: 'browser',
+      previewOrigin: 'cdn.walkeros.io',
+      previewScope: 'proj_abc123',
+    });
+    // Preflight block returns early when a valid token cookie exists; env
+    // injection must sit AFTER that return to avoid running in preview mode.
+    const previewReturnIdx = output.indexOf('head.appendChild(__s);');
+    const envBlockIdx = output.indexOf('Object.keys(config.sources)');
+    expect(previewReturnIdx).toBeGreaterThan(-1);
+    expect(envBlockIdx).toBeGreaterThan(-1);
+    expect(envBlockIdx).toBeGreaterThan(previewReturnIdx);
   });
 });
 
@@ -835,5 +912,142 @@ describe('previewScope / previewOrigin validation', () => {
         previewOrigin: 'evil.com/x?',
       }),
     ).rejects.toThrow(/Invalid previewOrigin/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 2: bundle() target resolution
+// ---------------------------------------------------------------------------
+//
+// These tests mock bundleCore (mock is declared at the top of the file) so we
+// can assert on the resolved buildOptions passed through by the public
+// bundle() entry point. Full end-to-end output assertions (dev import
+// presence, zod absence) belong to Task 6 (size-budget integration test)
+// where a real bundle is actually produced.
+describe('bundle() target resolution', () => {
+  // Minimal config shape — extracted properly by Task 6a.
+  const MINIMAL_FLOW = {
+    version: 3,
+    flows: {
+      default: {
+        web: {},
+        bundle: {
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
+        },
+      },
+    },
+  };
+
+  let bundleCoreMock: jest.Mock;
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(async () => {
+    jest.resetModules();
+    const bundlerMod = await import('../../../commands/bundle/bundler.js');
+    bundleCoreMock = bundlerMod.bundleCore as unknown as jest.Mock;
+    bundleCoreMock.mockReset();
+    bundleCoreMock.mockResolvedValue(undefined);
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    delete process.env.WALKEROS_SUPPRESS_DEPRECATIONS;
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+    delete process.env.WALKEROS_SUPPRESS_DEPRECATIONS;
+  });
+
+  it('deprecation warn fires when buildOverrides.skipWrapper passed without target', async () => {
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, {
+      silent: true,
+      buildOverrides: { skipWrapper: true },
+    });
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const msg = String(warnSpy.mock.calls[0][0]);
+    expect(msg).toMatch(/deprecated/);
+    expect(msg).toMatch(/target/);
+  });
+
+  it('WALKEROS_SUPPRESS_DEPRECATIONS=1 silences the warn', async () => {
+    process.env.WALKEROS_SUPPRESS_DEPRECATIONS = '1';
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, {
+      silent: true,
+      buildOverrides: { skipWrapper: true },
+    });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('target="cdn" resolves to skipWrapper=false, withDev=false (no warn)', async () => {
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, { silent: true, target: 'cdn' });
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(bundleCoreMock).toHaveBeenCalledTimes(1);
+    const buildOptions = bundleCoreMock.mock.calls[0][1];
+    expect(buildOptions.skipWrapper).toBe(false);
+    expect(buildOptions.withDev).toBe(false);
+  });
+
+  it('target="cdn-skeleton" resolves to skipWrapper=true, withDev=false', async () => {
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, { silent: true, target: 'cdn-skeleton' });
+    expect(warnSpy).not.toHaveBeenCalled();
+    const buildOptions = bundleCoreMock.mock.calls[0][1];
+    expect(buildOptions.skipWrapper).toBe(true);
+    expect(buildOptions.withDev).toBe(false);
+  });
+
+  it('target="simulate" resolves to skipWrapper=true, withDev=true', async () => {
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, { silent: true, target: 'simulate' });
+    expect(warnSpy).not.toHaveBeenCalled();
+    const buildOptions = bundleCoreMock.mock.calls[0][1];
+    expect(buildOptions.skipWrapper).toBe(true);
+    expect(buildOptions.withDev).toBe(true);
+  });
+
+  it('target="push" resolves to skipWrapper=true, withDev=true', async () => {
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, { silent: true, target: 'push' });
+    const buildOptions = bundleCoreMock.mock.calls[0][1];
+    expect(buildOptions.skipWrapper).toBe(true);
+    expect(buildOptions.withDev).toBe(true);
+  });
+
+  it('explicit target wins over buildOverrides.skipWrapper (no warn)', async () => {
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, {
+      silent: true,
+      target: 'cdn',
+      buildOverrides: { skipWrapper: true },
+    });
+    // Warn only fires when skipWrapper set WITHOUT target; here both are set.
+    expect(warnSpy).not.toHaveBeenCalled();
+    const buildOptions = bundleCoreMock.mock.calls[0][1];
+    expect(buildOptions.skipWrapper).toBe(false);
+    expect(buildOptions.withDev).toBe(false);
+  });
+
+  it('legacy buildOverrides.skipWrapper=true maps to simulate preset (withDev=true)', async () => {
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, {
+      silent: true,
+      buildOverrides: { skipWrapper: true },
+    });
+    expect(warnSpy).toHaveBeenCalled();
+    const buildOptions = bundleCoreMock.mock.calls[0][1];
+    expect(buildOptions.skipWrapper).toBe(true);
+    expect(buildOptions.withDev).toBe(true);
+  });
+
+  it('default (no target, no skipWrapper) resolves to cdn preset', async () => {
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, { silent: true });
+    expect(warnSpy).not.toHaveBeenCalled();
+    const buildOptions = bundleCoreMock.mock.calls[0][1];
+    expect(buildOptions.skipWrapper).toBe(false);
+    expect(buildOptions.withDev).toBe(false);
   });
 });
