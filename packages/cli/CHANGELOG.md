@@ -1,5 +1,24 @@
 # @walkeros/cli
 
+## 3.4.1
+
+### Patch Changes
+
+- caea905: Add `walkeros previews {list|get|create|delete}` commands for
+  managing preview bundles. `create` supports `--flow <name>` or
+  `--settings-id <id>` to target a flow settings entry, and `--url <siteUrl>` to
+  produce a ready-to-open activation URL. Use `--open` to launch it in your
+  default browser.
+- caea905: Preview preflight now self-heals when a preview bundle is deleted.
+  Instead of injecting the preview script directly and letting it 404, the
+  preflight does a `fetch(HEAD)` first. If the bundle is missing, it clears the
+  `elbPreview` cookie and loads the production walker, so visitors never see
+  silent analytics breakage.
+- Updated dependencies [12adf24]
+- Updated dependencies [75aa26b]
+  - @walkeros/core@3.4.1
+  - @walkeros/server-core@3.4.1
+
 ## 3.4.0
 
 ### Minor Changes

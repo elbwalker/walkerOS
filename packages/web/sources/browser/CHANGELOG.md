@@ -1,5 +1,14 @@
 # @walkeros/web-source-browser
 
+## 3.4.1
+
+### Patch Changes
+
+- Updated dependencies [75aa26b]
+- Updated dependencies [caea905]
+  - @walkeros/collector@3.4.1
+  - @walkeros/web-core@3.4.1
+
 ## 3.4.0
 
 ### Minor Changes

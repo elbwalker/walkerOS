@@ -1,5 +1,23 @@
 # @walkeros/mcp
 
+## 3.4.1
+
+### Patch Changes
+
+- caea905: Add `preview.list`, `preview.get`, `preview.create`, and
+  `preview.delete` actions to the `api` tool. When `siteUrl` is provided to
+  `preview.create`, the response includes a ready-to-open `activationUrl` and
+  `deactivationUrl`.
+- 12adf24: Step examples can now carry a `title`, `description`, and `public`
+  flag. Non-public examples stay hidden from the docs and AI tools so first-time
+  visitors see only the canonical ones.
+- Updated dependencies [caea905]
+- Updated dependencies [caea905]
+- Updated dependencies [12adf24]
+- Updated dependencies [75aa26b]
+  - @walkeros/cli@3.4.1
+  - @walkeros/core@3.4.1
+
 ## 3.4.0
 
 ### Minor Changes

@@ -1,5 +1,14 @@
 # @walkeros/web-source-cmp-cookiefirst
 
+## 3.4.1
+
+### Patch Changes
+
+- Updated dependencies [12adf24]
+- Updated dependencies [75aa26b]
+  - @walkeros/core@3.4.1
+  - @walkeros/collector@3.4.1
+
 ## 3.4.0
 
 ### Minor Changes

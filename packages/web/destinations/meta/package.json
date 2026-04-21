@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-meta",
   "description": "Meta pixel web destination for walkerOS",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -37,11 +37,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/web-core": "3.4.0"
+    "@walkeros/web-core": "3.4.1"
   },
   "devDependencies": {
     "@types/facebook-pixel": "^0.0.31",
-    "@walkeros/collector": "3.4.0"
+    "@walkeros/collector": "3.4.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

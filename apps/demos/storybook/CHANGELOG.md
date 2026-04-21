@@ -1,5 +1,11 @@
 # @walkeros/storybook-demo
 
+## 3.4.1
+
+### Patch Changes
+
+- @walkeros/web-source-browser@3.4.1
+
 ## 3.4.0
 
 ### Patch Changes

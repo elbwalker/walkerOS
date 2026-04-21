@@ -1,5 +1,18 @@
 # @walkeros/web-core
 
+## 3.4.1
+
+### Patch Changes
+
+- caea905: Wrap `localStorage`/`sessionStorage`/cookie operations in try/catch.
+  Storage access in private browsing (Safari), sandboxed iframes, or when quota
+  is exceeded throws `SecurityError`/`QuotaExceededError` — previously these
+  crashed the event pipeline at the call site. Reads now return empty, writes
+  return empty and do not persist, deletes are silently ignored.
+- Updated dependencies [12adf24]
+- Updated dependencies [75aa26b]
+  - @walkeros/core@3.4.1
+
 ## 3.4.0
 
 ### Patch Changes

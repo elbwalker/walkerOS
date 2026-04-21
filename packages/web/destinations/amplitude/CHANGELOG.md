@@ -1,5 +1,12 @@
 # @walkeros/web-destination-amplitude
 
+## 3.4.1
+
+### Patch Changes
+
+- Updated dependencies [caea905]
+  - @walkeros/web-core@3.4.1
+
 ## 3.4.0
 
 ### Minor Changes
