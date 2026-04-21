@@ -32,6 +32,9 @@ export type SlackStepExample = Flow.StepExample & {
  * text template interpolated against event.data.
  */
 export const purchaseAlert: SlackStepExample = {
+  title: 'Purchase alert',
+  description:
+    'A completed order posts a templated message to a sales channel via the Slack Web API.',
   in: getEvent('order complete', {
     timestamp: 1700000100,
     data: {
@@ -66,6 +69,9 @@ export const purchaseAlert: SlackStepExample = {
  * Error alert -- routes to a different channel via mapping override.
  */
 export const errorAlert: SlackStepExample = {
+  title: 'Error alert',
+  description:
+    'An error event posts a critical alert to an engineering channel using a mapping-level channel override.',
   in: getEvent('error occur', {
     timestamp: 1700000200,
     data: {
@@ -98,6 +104,9 @@ export const errorAlert: SlackStepExample = {
  * Welcome DM -- conversations.open(users) -> chat.postMessage(channel: D-id).
  */
 export const welcomeDM: SlackStepExample = {
+  title: 'Welcome DM',
+  description:
+    'A user signup opens a Slack DM channel and posts a welcome message with the selected plan.',
   in: getEvent('user signup', {
     timestamp: 1700000300,
     data: { plan: 'enterprise' },
@@ -129,6 +138,9 @@ export const welcomeDM: SlackStepExample = {
  * Threaded checkout step -- thread_ts override puts the reply into a thread.
  */
 export const threadedCheckoutStep: SlackStepExample = {
+  title: 'Threaded reply',
+  description:
+    'A checkout step posts as a threaded reply in Slack via thread_ts with broadcast to the channel.',
   in: getEvent('checkout step', {
     timestamp: 1700000400,
     data: { step: 'payment', sessionTs: '1700000000.000050' },
@@ -161,6 +173,9 @@ export const threadedCheckoutStep: SlackStepExample = {
  * Ephemeral message -- visible to one user in the target channel.
  */
 export const ephemeralMessage: SlackStepExample = {
+  title: 'Ephemeral message',
+  description:
+    'A quota warning posts an ephemeral Slack message visible only to a target admin user.',
   in: getEvent('quota warning', {
     timestamp: 1700000500,
     data: { remaining: 5 },
@@ -193,6 +208,9 @@ export const ephemeralMessage: SlackStepExample = {
  * Block Kit message from the event data.
  */
 export const defaultBlocks: SlackStepExample = {
+  title: 'Default blocks',
+  description:
+    'With no custom text the destination auto-generates a Block Kit message from event data and source.',
   in: getEvent('lead submit', {
     timestamp: 1700000600,
     data: { name: 'Acme', email: 'sales@acme.test' },
@@ -240,6 +258,9 @@ export const defaultBlocks: SlackStepExample = {
  * URL by Slack.
  */
 export const deployNotification: SlackStepExample = {
+  title: 'Webhook deploy',
+  description:
+    'Without a token the destination posts to an incoming Slack webhook URL with the rendered message body.',
   in: getEvent('deploy complete', {
     timestamp: 1700000700,
     data: { version: '1.4.2', environment: 'prod' },

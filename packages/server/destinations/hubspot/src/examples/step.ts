@@ -30,6 +30,9 @@ export type HubSpotStepExample = Flow.StepExample & {
  * event name. Email resolved from default settings.email = 'user.email'.
  */
 export const defaultEvent: HubSpotStepExample = {
+  title: 'Default event',
+  description:
+    'A walker event is sent to HubSpot as a custom behavioral event keyed by the user email.',
   in: getEvent('product view', {
     timestamp: 1700000100,
     user: { email: 'user@example.com' },
@@ -52,6 +55,9 @@ export const defaultEvent: HubSpotStepExample = {
  * name. The prefix is still prepended.
  */
 export const mappedEventName: HubSpotStepExample = {
+  title: 'Custom event name',
+  description:
+    'A mapping supplies a custom HubSpot event name and maps order data into properties for the behavioral event.',
   in: getEvent('order complete', {
     timestamp: 1700000101,
     user: { email: 'user@example.com' },
@@ -92,6 +98,9 @@ export const mappedEventName: HubSpotStepExample = {
  * into every event. Per-event properties override defaults.
  */
 export const defaultProperties: HubSpotStepExample = {
+  title: 'Default properties',
+  description:
+    'Destination-level default properties are merged into every HubSpot event payload, such as traffic source metadata.',
   in: getEvent('page view', {
     timestamp: 1700000102,
     user: { email: 'user@example.com' },
@@ -123,6 +132,9 @@ export const defaultProperties: HubSpotStepExample = {
  * first push when settings.identify mapping resolves. Then fires the event.
  */
 export const destinationIdentify: HubSpotStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify upserts the HubSpot contact with mapped properties before sending the behavioral event.',
   in: getEvent('page view', {
     timestamp: 1700000103,
     user: { email: 'user@example.com', firstName: 'Jane', lastName: 'Doe' },
@@ -164,6 +176,9 @@ export const destinationIdentify: HubSpotStepExample = {
  * no custom event sent.
  */
 export const userLoginIdentify: HubSpotStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login only upserts the HubSpot contact with profile and lifecycle properties, skipping the event send.',
   in: getEvent('user login', {
     timestamp: 1700000104,
     user: { email: 'user@example.com' },
@@ -212,6 +227,9 @@ export const userLoginIdentify: HubSpotStepExample = {
  * association on the event.
  */
 export const objectIdAssociation: HubSpotStepExample = {
+  title: 'Object id association',
+  description:
+    'The HubSpot event is associated via objectId instead of email, resolved from the walker user id.',
   in: getEvent('product view', {
     timestamp: 1700000105,
     user: { id: 'hs-contact-789' },
@@ -238,6 +256,7 @@ export const objectIdAssociation: HubSpotStepExample = {
  * nor objectId can be resolved from the event.
  */
 export const noIdentity: HubSpotStepExample = {
+  public: false,
   in: getEvent('product view', {
     timestamp: 1700000106,
     user: {},
@@ -250,6 +269,7 @@ export const noIdentity: HubSpotStepExample = {
  * The destination fires zero SDK calls.
  */
 export const wildcardIgnored: HubSpotStepExample = {
+  public: false,
   in: getEvent('debug noise', {
     timestamp: 1700000107,
     user: { email: 'user@example.com' },

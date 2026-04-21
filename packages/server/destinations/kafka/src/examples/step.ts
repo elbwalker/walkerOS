@@ -14,6 +14,9 @@ export type KafkaStepExample = Flow.StepExample & {
  * topic. Message key defaults to entity_action when no key path is set.
  */
 export const defaultEvent: KafkaStepExample = {
+  title: 'Default event',
+  description:
+    'An event is produced to the configured Kafka topic with the full JSON body and entity_action as the message key.',
   in: getEvent('page view', {
     timestamp: 1700000100,
   }),
@@ -42,6 +45,9 @@ export const defaultEvent: KafkaStepExample = {
  * default message key when no key mapping is configured.
  */
 export const mappedEventName: KafkaStepExample = {
+  title: 'Renamed event',
+  description:
+    'A mapping renames the event which also changes the default Kafka message key used for partitioning.',
   in: getEvent('order complete', {
     timestamp: 1700000101,
   }),
@@ -73,6 +79,9 @@ export const mappedEventName: KafkaStepExample = {
  * object serialized as JSON.
  */
 export const mappedData: KafkaStepExample = {
+  title: 'Mapped payload',
+  description:
+    'A data mapping transforms the event payload before producing it as the Kafka message value.',
   in: getEvent('order complete', {
     timestamp: 1700000102,
     data: { id: 'ORD-400', total: 99.99, currency: 'EUR' },
@@ -112,6 +121,9 @@ export const mappedData: KafkaStepExample = {
  * the event (here user.id).
  */
 export const keyFromUser: KafkaStepExample = {
+  title: 'Key from user id',
+  description:
+    'A settings.kafka.key path resolves the message key from the event, here using user.id for per-user partitioning.',
   in: getEvent('user signup', {
     timestamp: 1700000103,
     user: { id: 'usr-789' },
@@ -149,6 +161,9 @@ export const keyFromUser: KafkaStepExample = {
  * topic than the destination default.
  */
 export const topicOverride: KafkaStepExample = {
+  title: 'Topic override',
+  description:
+    'A mapping rule overrides the destination topic so specific events are routed to a dedicated stream.',
   in: getEvent('order complete', {
     timestamp: 1700000104,
     data: { id: 'ORD-500', total: 42 },
@@ -182,6 +197,7 @@ export const topicOverride: KafkaStepExample = {
  * Ignored event -- mapping.ignore: true produces no producer.send call.
  */
 export const ignoredEvent: KafkaStepExample = {
+  public: false,
   in: getEvent('debug noise', {
     timestamp: 1700000105,
   }),

@@ -34,6 +34,9 @@ const OPTIONS = {
 };
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order is sent to the Bing UET CAPI with transaction id, value, items, and hashed user data.',
   in: getEvent('order complete', {
     timestamp: 1700000900000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
@@ -125,6 +128,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view is sent to the Bing UET CAPI with eventType pageLoad and the source URL.',
   in: getEvent('page view', {
     timestamp: 1700000901000,
     source: {
@@ -159,6 +165,9 @@ export const pageView: Flow.StepExample = {
 };
 
 export const lead: Flow.StepExample = {
+  title: 'Lead',
+  description:
+    'A newsletter form submission is sent to Bing UET as a lead event with the SHA-256 hashed email.',
   in: getEvent('form submit', {
     timestamp: 1700000902000,
     data: { type: 'newsletter' },
@@ -208,6 +217,9 @@ export const lead: Flow.StepExample = {
 };
 
 export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add is sent to Bing UET as an add_to_cart event with value, currency, and item details.',
   in: getEvent('product add', {
     timestamp: 1700000903000,
     data: {

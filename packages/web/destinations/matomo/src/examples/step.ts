@@ -8,6 +8,9 @@ import { getEvent, isObject } from '@walkeros/core';
  * settings to `startFlow` as the destination config.
  */
 export const init: Flow.StepExample = {
+  title: 'Initialization',
+  description:
+    'Destination bootstrap loads the Matomo tracker script and configures the tracker URL and site id.',
   in: {
     loadScript: true,
     settings: {
@@ -30,6 +33,9 @@ export const init: Flow.StepExample = {
  * Destination auto-calls trackPageView with the page title.
  */
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view is tracked in Matomo via trackPageView with the page title from event data.',
   in: getEvent('page view', { timestamp: 1700000400 }),
   mapping: {
     data: 'data.title',
@@ -42,6 +48,9 @@ export const pageView: Flow.StepExample = {
  * Uses trackEvent with mapped name, followed by trackGoal.
  */
 export const customEvent: Flow.StepExample = {
+  title: 'Custom event with goal',
+  description:
+    'A promotion visible event fires Matomo trackEvent and then trackGoal to record a goal conversion.',
   in: getEvent('promotion visible', { timestamp: 1700000401 }),
   mapping: {
     name: 'trackEvent',
@@ -62,6 +71,9 @@ export const customEvent: Flow.StepExample = {
  * Ecommerce order -- one call with cart items array and order totals.
  */
 export const ecommerceOrder: Flow.StepExample = {
+  title: 'Ecommerce order',
+  description:
+    'A completed order calls Matomo trackEcommerceOrder with line items and order totals.',
   in: getEvent('order complete', { timestamp: 1700000402 }),
   mapping: {
     name: 'trackEcommerceOrder',
@@ -131,6 +143,9 @@ export const ecommerceOrder: Flow.StepExample = {
  * then trackEcommerceCartUpdate with cart total.
  */
 export const ecommerceCartUpdate: Flow.StepExample = {
+  title: 'Cart update',
+  description:
+    'A cart view calls Matomo trackEcommerceCartUpdate with the nested product items and cart total.',
   in: getEvent('cart view', { timestamp: 1700000403 }),
   mapping: {
     name: 'trackEcommerceCartUpdate',
@@ -180,6 +195,9 @@ export const ecommerceCartUpdate: Flow.StepExample = {
  * Product detail view -- setEcommerceView equivalent with a single product array.
  */
 export const productDetailView: Flow.StepExample = {
+  title: 'Product detail view',
+  description:
+    'A product view fires Matomo ecommerceProductDetailView with a single-product array.',
   in: getEvent('product view', { timestamp: 1700000404 }),
   mapping: {
     name: 'ecommerceProductDetailView',
@@ -222,6 +240,9 @@ export const productDetailView: Flow.StepExample = {
  * Site search -- trackSiteSearch with keyword, category, result count.
  */
 export const siteSearch: Flow.StepExample = {
+  title: 'Site search',
+  description:
+    'A search submit fires Matomo trackSiteSearch with the keyword, category, and number of results.',
   in: getEvent('search submit', {
     timestamp: 1700000405,
     data: { query: 'shoes', category: 'products', resultsCount: 42 },
@@ -243,6 +264,9 @@ export const siteSearch: Flow.StepExample = {
  * Uses a known fixture event (promotion visible) so data paths resolve.
  */
 export const goalTracking: Flow.StepExample = {
+  title: 'Goal with value',
+  description:
+    'A promotion event fires Matomo trackEvent and then trackGoal with a monetary goal value from event data.',
   in: getEvent('promotion visible', {
     timestamp: 1700000406,
     data: { name: 'Setting up tracking easily', position: 'hero', value: 50 },

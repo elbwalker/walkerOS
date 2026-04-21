@@ -14,6 +14,9 @@ export type HotjarStepExample = Flow.StepExample & {
  * No mapping rule; the destination's default push behavior fires.
  */
 export const defaultEventForwarding: HotjarStepExample = {
+  title: 'Default event',
+  description:
+    'A walker event becomes a Hotjar.event call with the event name as the custom Hotjar event.',
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [['hotjar.event', 'product view']],
 };
@@ -23,6 +26,7 @@ export const defaultEventForwarding: HotjarStepExample = {
  * The destination must produce zero calls.
  */
 export const wildcardIgnored: HotjarStepExample = {
+  public: false,
   in: getEvent('debug noise', { timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
@@ -32,6 +36,9 @@ export const wildcardIgnored: HotjarStepExample = {
  * Renamed event via mapping.name -- order complete becomes completed_purchase.
  */
 export const renamedEvent: HotjarStepExample = {
+  title: 'Renamed event',
+  description:
+    'A mapping renames the event so the Hotjar custom event uses a canonical name like completed_purchase.',
   in: getEvent('order complete', { timestamp: 1700000102 }),
   mapping: {
     name: 'completed_purchase',
@@ -45,6 +52,9 @@ export const renamedEvent: HotjarStepExample = {
  * Identify fires before event per Hotjar's guidance.
  */
 export const userLoginIdentify: HotjarStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login fires Hotjar.identify with userId and attributes before firing the event.',
   in: getEvent('user login', {
     timestamp: 1700000103,
     data: { id: 'u-123', email: 'jane@example.com', plan: 'premium' },
@@ -75,6 +85,9 @@ export const userLoginIdentify: HotjarStepExample = {
  * Hotjar recommends calling identify() on every page load.
  */
 export const destinationLevelIdentify: HotjarStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify calls Hotjar.identify with the user id on every push as Hotjar recommends.',
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -94,6 +107,9 @@ export const destinationLevelIdentify: HotjarStepExample = {
  * skip=true suppresses the default Hotjar.event() call.
  */
 export const pageViewStateChange: HotjarStepExample = {
+  title: 'State change',
+  description:
+    'An SPA navigation fires Hotjar.stateChange with the new path instead of a Hotjar custom event.',
   in: getEvent('page view', { timestamp: 1700000105 }),
   mapping: {
     skip: true,
@@ -109,6 +125,9 @@ export const pageViewStateChange: HotjarStepExample = {
  * Execution order: identify -> event.
  */
 export const combinedFeatures: HotjarStepExample = {
+  title: 'Combined features',
+  description:
+    'A purchase fires Hotjar.identify then the renamed custom event in the canonical execution order.',
   in: getEvent('order complete', { timestamp: 1700000106 }),
   mapping: {
     name: 'completed_purchase',
@@ -127,6 +146,7 @@ export const combinedFeatures: HotjarStepExample = {
  * settings active, so the destination produces zero calls.
  */
 export const pageViewSkip: HotjarStepExample = {
+  public: false,
   in: getEvent('page view', { timestamp: 1700000107 }),
   mapping: {
     skip: true,

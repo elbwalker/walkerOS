@@ -34,6 +34,9 @@ const OPTIONS = {
 };
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order is sent to the LinkedIn Conversions API with conversion value, currency, and hashed email.',
   in: getEvent('order complete', {
     timestamp: 1700000900000,
     data: { total: 249.99, currency: 'EUR' },
@@ -83,6 +86,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const lead: Flow.StepExample = {
+  title: 'Lead',
+  description:
+    'A form submission is posted to LinkedIn as a conversion with the SHA-256 hashed email as the user identifier.',
   in: getEvent('form submit', {
     timestamp: 1700000901000,
     user: { email: 'user@example.com' },
@@ -118,6 +124,9 @@ export const lead: Flow.StepExample = {
 };
 
 export const purchaseWithLiFatId: Flow.StepExample = {
+  title: 'Purchase with li_fat_id',
+  description:
+    'A purchase is sent to LinkedIn with both the hashed email and the first-party li_fat_id tracking identifier.',
   in: getEvent('order complete', {
     timestamp: 1700000902000,
     data: { total: 89.99, currency: 'USD' },

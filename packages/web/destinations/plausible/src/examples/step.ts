@@ -7,6 +7,9 @@ import { getEvent } from '@walkeros/core';
  * with the configured domain and installs the global `plausible` queue.
  */
 export const init: Flow.StepExample = {
+  title: 'Initialization',
+  description:
+    'Destination bootstrap loads the Plausible script for the configured domain and installs the queue.',
   in: {
     loadScript: true,
     settings: {
@@ -25,6 +28,9 @@ export const init: Flow.StepExample = {
 };
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order fires a Plausible purchase event with revenue currency and amount.',
   in: getEvent('order complete', { timestamp: 1700000200 }),
   mapping: {
     name: 'purchase',
@@ -54,6 +60,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const customEvent: Flow.StepExample = {
+  title: 'Custom event',
+  description:
+    'A generic entity action fires a Plausible custom event with mapped props and a revenue field.',
   in: getEvent('entity action', { timestamp: 1700000201 }),
   mapping: {
     name: 'Custom Event',

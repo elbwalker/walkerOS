@@ -131,9 +131,10 @@ export const step = {
 ```
 
 For transformers, both `in` and `out` are walkerOS events, except `out: false`
-which indicates the transformer filters (rejects) the event. See
-[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
-Type Zones.
+which indicates the transformer filters (rejects) the event. Set `title` +
+`description` for public examples; mark test-only fixtures with `public: false`.
+See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the
+Three Type Zones.
 
 ### 2.5 Export via dev.ts
 

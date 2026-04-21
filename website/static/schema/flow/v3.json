@@ -181,9 +181,17 @@
                   "additionalProperties": {
                     "type": "object",
                     "properties": {
+                      "title": {
+                        "description": "Human-readable title (overrides default heading)",
+                        "type": "string"
+                      },
                       "description": {
                         "description": "Human-readable description",
                         "type": "string"
+                      },
+                      "public": {
+                        "description": "Whether this example is shown in docs/UI/MCP default output (default: true). Set false for test-only fixtures.",
+                        "type": "boolean"
                       },
                       "in": {
                         "description": "Input to the step"
@@ -268,7 +276,7 @@
                               "type": "string"
                             },
                             "additionalProperties": {
-                              "$ref": "#/definitions/__schema2"
+                              "$ref": "#/definitions/MappingValue"
                             }
                           }
                         },
@@ -389,9 +397,17 @@
                   "additionalProperties": {
                     "type": "object",
                     "properties": {
+                      "title": {
+                        "description": "Human-readable title (overrides default heading)",
+                        "type": "string"
+                      },
                       "description": {
                         "description": "Human-readable description",
                         "type": "string"
+                      },
+                      "public": {
+                        "description": "Whether this example is shown in docs/UI/MCP default output (default: true). Set false for test-only fixtures.",
+                        "type": "boolean"
                       },
                       "in": {
                         "description": "Input to the step"
@@ -476,7 +492,7 @@
                               "type": "string"
                             },
                             "additionalProperties": {
-                              "$ref": "#/definitions/__schema2"
+                              "$ref": "#/definitions/MappingValue"
                             }
                           }
                         },
@@ -597,9 +613,17 @@
                   "additionalProperties": {
                     "type": "object",
                     "properties": {
+                      "title": {
+                        "description": "Human-readable title (overrides default heading)",
+                        "type": "string"
+                      },
                       "description": {
                         "description": "Human-readable description",
                         "type": "string"
+                      },
+                      "public": {
+                        "description": "Whether this example is shown in docs/UI/MCP default output (default: true). Set false for test-only fixtures.",
+                        "type": "boolean"
                       },
                       "in": {
                         "description": "Input to the step"
@@ -684,7 +708,7 @@
                               "type": "string"
                             },
                             "additionalProperties": {
-                              "$ref": "#/definitions/__schema2"
+                              "$ref": "#/definitions/MappingValue"
                             }
                           }
                         },
@@ -789,9 +813,17 @@
                   "additionalProperties": {
                     "type": "object",
                     "properties": {
+                      "title": {
+                        "description": "Human-readable title (overrides default heading)",
+                        "type": "string"
+                      },
                       "description": {
                         "description": "Human-readable description",
                         "type": "string"
+                      },
+                      "public": {
+                        "description": "Whether this example is shown in docs/UI/MCP default output (default: true). Set false for test-only fixtures.",
+                        "type": "boolean"
                       },
                       "in": {
                         "description": "Input to the step"
@@ -1125,7 +1157,10 @@
         }
       ]
     },
-    "__schema2": {
+    "MappingValue": {
+      "id": "MappingValue",
+      "title": "Mapping.Value",
+      "description": "Polymorphic transform primitive used in every mapping field. A string path, constant, operator object (map/loop/set/condition/consent), or array of values.",
       "anyOf": [
         {
           "type": "string",
@@ -1171,7 +1206,7 @@
                 "type": "string"
               },
               "additionalProperties": {
-                "$ref": "#/definitions/__schema2"
+                "$ref": "#/definitions/MappingValue"
               }
             },
             "loop": {
@@ -1179,10 +1214,10 @@
               "type": "array",
               "items": [
                 {
-                  "$ref": "#/definitions/__schema2"
+                  "$ref": "#/definitions/MappingValue"
                 },
                 {
-                  "$ref": "#/definitions/__schema2"
+                  "$ref": "#/definitions/MappingValue"
                 }
               ]
             },
@@ -1190,18 +1225,16 @@
               "description": "Set of values: combine or select from multiple values",
               "type": "array",
               "items": {
-                "$ref": "#/definitions/__schema2"
+                "$ref": "#/definitions/MappingValue"
               }
             },
             "consent": {
               "description": "Required consent states to include this value",
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {
-                "type": "boolean"
-              }
+              "allOf": [
+                {
+                  "$ref": "#/definitions/WalkerOSConsent"
+                }
+              ]
             },
             "condition": {
               "description": "Condition function as string: return true to include value",
@@ -1218,11 +1251,23 @@
         {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/__schema2"
+            "$ref": "#/definitions/MappingValue"
           },
           "description": "Array of values"
         }
       ]
+    },
+    "WalkerOSConsent": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "id": "WalkerOSConsent",
+      "title": "WalkerOS.Consent",
+      "description": "Consent state mapping. Keys are consent groups (e.g. marketing, functional), values are booleans for granted/denied."
     }
   }
 }

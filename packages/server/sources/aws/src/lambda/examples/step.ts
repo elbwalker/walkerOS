@@ -1,6 +1,9 @@
 import type { Flow } from '@walkeros/core';
 
 export const lambdaPost: Flow.StepExample = {
+  title: 'Lambda POST',
+  description:
+    'An API Gateway v2 HTTP POST with a JSON body is converted into a walker elb event.',
   trigger: { type: 'POST' },
   in: {
     version: '2.0',
@@ -26,6 +29,9 @@ export const lambdaPost: Flow.StepExample = {
 };
 
 export const apiGatewayV1Post: Flow.StepExample = {
+  title: 'API Gateway v1 POST',
+  description:
+    'A REST API Gateway v1 POST request with a JSON body is converted into a walker elb event.',
   trigger: { type: 'POST' },
   in: {
     httpMethod: 'POST',
@@ -53,6 +59,9 @@ export const apiGatewayV1Post: Flow.StepExample = {
 };
 
 export const lambdaGet: Flow.StepExample = {
+  title: 'Lambda GET',
+  description:
+    'An API Gateway v2 HTTP GET with query parameters is parsed into an elb event payload.',
   trigger: { type: 'GET' },
   in: {
     version: '2.0',

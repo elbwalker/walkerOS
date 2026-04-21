@@ -29,6 +29,9 @@ const HEADERS = {
 };
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order is sent to the X (Twitter) Conversions API with conversion value and the hashed email.',
   in: getEvent('order complete', {
     timestamp: 1700000900000,
     data: { total: 249.99, currency: 'EUR' },
@@ -67,6 +70,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const lead: Flow.StepExample = {
+  title: 'Lead',
+  description:
+    'A form submission is sent to X as a conversion with the SHA-256 hashed email as the identifier.',
   in: getEvent('form submit', {
     timestamp: 1700000901000,
     user: { email: 'user@example.com' },
@@ -98,6 +104,9 @@ export const lead: Flow.StepExample = {
 };
 
 export const purchaseWithTwclid: Flow.StepExample = {
+  title: 'Purchase with twclid',
+  description:
+    'A purchase is sent to X with both the hashed email and the twclid click id for ads attribution.',
   in: getEvent('order complete', {
     timestamp: 1700000902000,
     data: { total: 89.99, currency: 'USD' },

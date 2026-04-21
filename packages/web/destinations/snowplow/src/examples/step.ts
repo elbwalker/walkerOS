@@ -9,6 +9,9 @@ import { ACTIONS, SCHEMAS } from '../types';
  * settings to `startFlow` as the destination config.
  */
 export const init: Flow.StepExample = {
+  title: 'Initialization',
+  description:
+    'Destination bootstrap creates a Snowplow tracker pointed at the configured collector URL.',
   in: {
     loadScript: true,
     settings: {
@@ -36,6 +39,9 @@ export const init: Flow.StepExample = {
 };
 
 export const productView: Flow.StepExample = {
+  title: 'Product view',
+  description:
+    'A product view fires a Snowplow ecommerce action with a product context schema and pricing fields.',
   in: getEvent('product view', { timestamp: 1700000400 }),
   mapping: {
     name: ACTIONS.PRODUCT_VIEW,
@@ -85,6 +91,9 @@ export const productView: Flow.StepExample = {
 };
 
 export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add fires a Snowplow ecommerce add_to_cart action with product, cart, page, and user contexts.',
   in: getEvent('product add', { timestamp: 1700000401 }),
   mapping: {
     name: ACTIONS.ADD_TO_CART,
@@ -181,6 +190,9 @@ export const addToCart: Flow.StepExample = {
 };
 
 export const transaction: Flow.StepExample = {
+  title: 'Transaction',
+  description:
+    'A completed order fires a Snowplow ecommerce transaction action with transaction id, revenue, tax, and shipping.',
   in: getEvent('order complete', { timestamp: 1700000402 }),
   mapping: {
     name: ACTIONS.TRANSACTION,
@@ -231,6 +243,9 @@ export const transaction: Flow.StepExample = {
 };
 
 export const promoView: Flow.StepExample = {
+  title: 'Promo view',
+  description:
+    'A promotion visible event fires a Snowplow promo_view action with a promotion context.',
   in: getEvent('promotion visible', { timestamp: 1700000403 }),
   mapping: {
     name: ACTIONS.PROMO_VIEW,
@@ -277,12 +292,18 @@ export const promoView: Flow.StepExample = {
 };
 
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view calls Snowplow trackPageView directly instead of a self-describing event.',
   in: getEvent('page view', { timestamp: 1700000404 }),
   mapping: undefined,
   out: [['snowplow.trackPageView']],
 };
 
 export const checkoutStep: Flow.StepExample = {
+  title: 'Checkout step',
+  description:
+    'A checkout view fires a Snowplow checkout_step action with the current step and option.',
   in: getEvent('checkout view', { timestamp: 1700000405 }),
   mapping: {
     name: ACTIONS.CHECKOUT_STEP,
@@ -324,6 +345,9 @@ export const checkoutStep: Flow.StepExample = {
 };
 
 export const structuredEvent: Flow.StepExample = {
+  title: 'Struct event',
+  description:
+    'A custom event is tracked via Snowplow trackStructEvent with category, action, label, property, and value.',
   in: getEvent('product visible', { timestamp: 1700000406 }),
   mapping: {
     settings: {
@@ -351,6 +375,9 @@ export const structuredEvent: Flow.StepExample = {
 };
 
 export const contextLoop: Flow.StepExample = {
+  title: 'Transaction with products',
+  description:
+    'A transaction event adds one Snowplow product context per nested product via a loop mapping.',
   in: getEvent('order complete', { timestamp: 1700000407 }),
   mapping: {
     name: ACTIONS.TRANSACTION,

@@ -24,6 +24,9 @@ export type TikTokStepExample = Flow.StepExample & {
  * optimization. The next example shows the recommended override.
  */
 export const defaultEventForwarding: TikTokStepExample = {
+  title: 'Default track',
+  description:
+    'Without a mapping the walker event name is forwarded to ttq.track with an event_id for TikTok dedup.',
   in: getEvent('product view'),
   out: [
     [
@@ -40,6 +43,7 @@ export const defaultEventForwarding: TikTokStepExample = {
  * matches but does nothing. The destination fires zero SDK calls.
  */
 export const wildcardIgnored: TikTokStepExample = {
+  public: false,
   in: getEvent('product view'),
   mapping: { ignore: true },
   out: [],
@@ -53,6 +57,9 @@ export const wildcardIgnored: TikTokStepExample = {
  * properties don't leak onto the call and confuse TikTok's matcher.
  */
 export const productViewContent: TikTokStepExample = {
+  title: 'View content',
+  description:
+    'A product view is renamed to the TikTok ViewContent standard event with content_type, id, value, and currency.',
   in: getEvent('product view'),
   mapping: {
     name: 'ViewContent',
@@ -93,6 +100,9 @@ export const productViewContent: TikTokStepExample = {
  * do optimization anyway, and no mapping.data is needed.
  */
 export const destinationLevelInclude: TikTokStepExample = {
+  title: 'Include data',
+  description:
+    'Destination-level include flattens the event data section into prefixed TikTok event parameters.',
   in: getEvent('product view'),
   configInclude: ['data'],
   out: [
@@ -117,6 +127,9 @@ export const destinationLevelInclude: TikTokStepExample = {
  * merges with, destination-level include).
  */
 export const ruleIncludeReplaces: TikTokStepExample = {
+  title: 'Rule include overrides',
+  description:
+    'A per-rule include replaces the destination-level include so this event forwards only globals.',
   in: getEvent('order complete'),
   configInclude: ['data'],
   mapping: {
@@ -146,6 +159,9 @@ export const ruleIncludeReplaces: TikTokStepExample = {
  * so the example injects data and maps from there.
  */
 export const destinationLevelIdentify: TikTokStepExample = {
+  title: 'Advanced matching',
+  description:
+    'Destination-level identify calls ttq.identify with email, phone, and external id for TikTok advanced matching.',
   in: getEvent('page view', {
     data: {
       email: 'user@acme.com',
@@ -181,6 +197,9 @@ export const destinationLevelIdentify: TikTokStepExample = {
  * identify overrides any destination-level identify for this one push.
  */
 export const userRegisterCompleteRegistration: TikTokStepExample = {
+  title: 'Complete registration',
+  description:
+    'A user register fires ttq.identify for advanced matching and then tracks CompleteRegistration.',
   in: getEvent('user register', {
     data: {
       email: 'new@acme.com',
@@ -240,6 +259,9 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
  * products (ers, cc) and one gift (Surprise — no id, no price).
  */
 export const orderCompleteCompletePayment: TikTokStepExample = {
+  title: 'Complete payment',
+  description:
+    'A completed order is mapped to TikTok CompletePayment with value, currency, and nested product contents.',
   in: getEvent('order complete'),
   mapping: {
     name: 'CompletePayment',
@@ -307,6 +329,9 @@ export const orderCompleteCompletePayment: TikTokStepExample = {
  * mapping.data field (the query string).
  */
 export const searchSubmitSearch: TikTokStepExample = {
+  title: 'Search',
+  description:
+    'A search submit fires TikTok Search with the query field mapped from event data.',
   in: getEvent('search submit', {
     data: {
       term: 'hiking backpack',
@@ -343,6 +368,9 @@ export const searchSubmitSearch: TikTokStepExample = {
  * an event.
  */
 export const consentGrantEnableCookie: TikTokStepExample = {
+  title: 'Consent granted',
+  description:
+    'A walker consent grant for marketing calls ttq.enableCookie so TikTok can set and read its attribution cookie.',
   command: 'consent',
   in: { marketing: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>, // consent key is derived from config.consent
@@ -354,6 +382,9 @@ export const consentGrantEnableCookie: TikTokStepExample = {
  * reading its first-party cookie (_ttp) for attribution.
  */
 export const consentRevokeDisableCookie: TikTokStepExample = {
+  title: 'Consent revoked',
+  description:
+    'A walker consent revoke for marketing calls ttq.disableCookie so TikTok stops using its first-party cookie.',
   command: 'consent',
   in: { marketing: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,

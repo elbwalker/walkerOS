@@ -32,6 +32,9 @@ const OPTIONS = {
 };
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order is sent to the Reddit Conversions API as a Purchase event with value, currency, and items.',
   in: getEvent('order complete', {
     timestamp: 1700000900,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
@@ -118,6 +121,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add is sent to Reddit as an AddToCart conversion with value and product details.',
   in: getEvent('product add', {
     timestamp: 1700000901,
     data: {
@@ -190,6 +196,9 @@ export const addToCart: Flow.StepExample = {
 };
 
 export const pageVisit: Flow.StepExample = {
+  title: 'Page visit',
+  description:
+    'A page view is sent to Reddit as a PageVisit conversion used for retargeting audiences.',
   in: getEvent('page view', {
     timestamp: 1700000902,
     user: { id: 'user-789' },
@@ -225,6 +234,9 @@ export const pageVisit: Flow.StepExample = {
 };
 
 export const lead: Flow.StepExample = {
+  title: 'Lead',
+  description:
+    'A form submission is sent to Reddit as a Lead conversion with the SHA-256 hashed email and external id.',
   in: getEvent('form submit', {
     timestamp: 1700000903,
     data: { form: 'contact' },
@@ -278,6 +290,9 @@ export const lead: Flow.StepExample = {
 };
 
 export const signUp: Flow.StepExample = {
+  title: 'Sign up',
+  description:
+    'A user signup is sent to Reddit as a SignUp conversion with hashed user identifiers.',
   in: getEvent('user signup', {
     timestamp: 1700000904,
     data: { method: 'email' },
@@ -331,6 +346,9 @@ export const signUp: Flow.StepExample = {
 };
 
 export const search: Flow.StepExample = {
+  title: 'Search',
+  description:
+    'A site search is sent to Reddit as a Search conversion with an item count in event_metadata.',
   in: getEvent('site search', {
     timestamp: 1700000905,
     data: { query: 'walkerOS destinations' },

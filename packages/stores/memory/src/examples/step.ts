@@ -2,6 +2,7 @@ import type { Flow } from '@walkeros/core';
 
 /** Successful key retrieval from a populated store. */
 export const getHit: Flow.StepExample = {
+  title: 'Get existing key',
   description: 'Read an existing key from the memory store',
   in: { operation: 'get', key: 'session:abc123' },
   out: [['get', 'session:abc123', { userId: 'usr_42', role: 'admin' }]],
@@ -9,6 +10,7 @@ export const getHit: Flow.StepExample = {
 
 /** Write a value then read it back — full lifecycle. */
 export const setAndGet: Flow.StepExample = {
+  title: 'Set and get',
   description: 'Write a key-value pair then read it back',
   in: {
     operation: 'set',
@@ -23,6 +25,7 @@ export const setAndGet: Flow.StepExample = {
 
 /** TTL entry expires and returns undefined on next access. */
 export const ttlExpiration: Flow.StepExample = {
+  title: 'TTL expiration',
   description: 'Entry with TTL returns undefined after expiration',
   in: { operation: 'set', key: 'token:refresh', value: 'abc', ttl: 1000 },
   out: [

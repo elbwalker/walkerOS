@@ -18,6 +18,9 @@ export type SegmentStepExample = Flow.StepExample & {
  * Reproduce by passing the same settings as the destination config.
  */
 export const init: Flow.StepExample = {
+  title: 'Initialization',
+  description:
+    'Destination bootstrap calls analytics.load with the Segment writeKey and walker default options.',
   in: {
     settings: {
       apiKey: 'test-project',
@@ -38,6 +41,9 @@ export const init: Flow.StepExample = {
  * destination-level include, properties is `{}`.
  */
 export const defaultEventForwarding: SegmentStepExample = {
+  title: 'Default track',
+  description:
+    'A walker event becomes a Segment analytics.track call with the event name and empty properties.',
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [['analytics.track', 'product view', {}]],
 };
@@ -47,6 +53,7 @@ export const defaultEventForwarding: SegmentStepExample = {
  * matches but does nothing. The destination fires zero SDK calls.
  */
 export const wildcardIgnored: SegmentStepExample = {
+  public: false,
   in: getEvent('debug noise', { timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
@@ -57,6 +64,9 @@ export const wildcardIgnored: SegmentStepExample = {
  * into prefixed properties on every push.
  */
 export const destinationLevelInclude: SegmentStepExample = {
+  title: 'Include data',
+  description:
+    'Destination-level include flattens the event data section into prefixed Segment track properties.',
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
@@ -80,6 +90,9 @@ export const destinationLevelInclude: SegmentStepExample = {
  * overrides it with `globals` only.
  */
 export const ruleIncludeReplaces: SegmentStepExample = {
+  title: 'Rule include overrides',
+  description:
+    'A per-rule include replaces the destination-level include so this event forwards only globals.',
   in: getEvent('order complete', { timestamp: 1700000103 }),
   configInclude: ['data'],
   mapping: {
@@ -103,6 +116,9 @@ export const ruleIncludeReplaces: SegmentStepExample = {
  * same userId do NOT re-fire identify().
  */
 export const destinationLevelIdentify: SegmentStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify calls analytics.identify with the resolved userId before firing the default track.',
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -124,6 +140,9 @@ export const destinationLevelIdentify: SegmentStepExample = {
  * (email, name, plan, company) so downstream destinations recognize them.
  */
 export const userLoginIdentify: SegmentStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login fires Segment analytics.identify with userId and reserved traits such as email, name, and plan.',
   in: getEvent('user login', {
     timestamp: 1700000105,
     data: {
@@ -177,6 +196,9 @@ export const userLoginIdentify: SegmentStepExample = {
  * userId and merges the traits into the existing trait set.
  */
 export const profileUpdateTraitsOnly: SegmentStepExample = {
+  title: 'Profile update',
+  description:
+    'A profile update calls Segment analytics.identify with traits and no userId to merge traits into the current profile.',
   in: getEvent('profile update', {
     timestamp: 1700000106,
     data: {
@@ -220,6 +242,9 @@ export const profileUpdateTraitsOnly: SegmentStepExample = {
  * skip: true because we're only running the reset side effect.
  */
 export const userLogoutReset: SegmentStepExample = {
+  title: 'User logout reset',
+  description:
+    'A user logout calls analytics.reset to clear userId, anonymousId, and traits then generate a new anonymous id.',
   in: getEvent('user logout', { timestamp: 1700000107 }),
   mapping: {
     skip: true,
@@ -235,6 +260,9 @@ export const userLogoutReset: SegmentStepExample = {
  * to a company and sets the company's traits in one call.
  */
 export const companyUpdateGroup: SegmentStepExample = {
+  title: 'Group company',
+  description:
+    'A company update fires Segment analytics.group with a groupId and traits for account-level tracking.',
   in: getEvent('company update', {
     timestamp: 1700000108,
     data: {
@@ -283,6 +311,9 @@ export const companyUpdateGroup: SegmentStepExample = {
  * analytics.page(category, name, properties) instead.
  */
 export const pageViewAsPage: SegmentStepExample = {
+  title: 'Page view',
+  description:
+    'A page view fires Segment analytics.page with category, name, and properties instead of a generic track.',
   in: getEvent('page view', {
     timestamp: 1700000109,
     data: {
@@ -324,6 +355,9 @@ export const pageViewAsPage: SegmentStepExample = {
  * analytics.page() relying entirely on SDK auto-collection.
  */
 export const pageViewMinimal: SegmentStepExample = {
+  title: 'Page view minimal',
+  description:
+    'A mapping with page: true fires an empty analytics.page call relying on Segments auto-collection.',
   in: getEvent('page view', { timestamp: 1700000110 }),
   mapping: {
     skip: true,
@@ -341,6 +375,9 @@ export const pageViewMinimal: SegmentStepExample = {
  * products loop. The loop filters via condition to products with prices.
  */
 export const orderCompletedEcommerce: SegmentStepExample = {
+  title: 'Order completed',
+  description:
+    'A completed order is mapped to the Segment Spec Order Completed event with a nested products array.',
   in: getEvent('order complete', { timestamp: 1700000111 }),
   mapping: {
     name: 'Order Completed',
@@ -410,6 +447,9 @@ export const orderCompletedEcommerce: SegmentStepExample = {
  * remaps walkerOS keys to Segment category names.
  */
 export const consentContextForwarded: SegmentStepExample = {
+  title: 'Consent context',
+  description:
+    'Walker consent is stamped on every Segment call via context.consent.categoryPreferences for downstream filtering.',
   in: getEvent('product view', {
     timestamp: 1700000112,
     consent: { analytics: true, marketing: true },
@@ -448,6 +488,9 @@ export const consentContextForwarded: SegmentStepExample = {
  * call shape includes both the settings arg and the initOptions arg.
  */
 export const consentGrantDeferredLoad: SegmentStepExample = {
+  title: 'Consent deferred load',
+  description:
+    'A walker consent grant triggers the deferred Segment analytics.load with the configured writeKey.',
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   out: [
@@ -465,6 +508,7 @@ export const consentGrantDeferredLoad: SegmentStepExample = {
  * is a no-op on revocation (Segment has no opt-out method).
  */
 export const consentRevokeNoOp: SegmentStepExample = {
+  public: false,
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   out: [],

@@ -12,7 +12,8 @@ export const camelToSpaced = (key) =>
     .trim()
     .toLowerCase();
 
-export const stepTitle = (key, _example) => camelToSpaced(key);
+export const stepTitle = (key, example) =>
+  (example && example.title) || camelToSpaced(key);
 
 ## Configuration
 
@@ -40,9 +41,11 @@ This {props.type} uses the standard {props.type} config wrapper (consent, data, 
 {props.data?.examples?.step && (
   <>
     <h2>Examples</h2>
-    {Object.entries(props.data.examples.step).flatMap(([key, example]) => [
-      <h3 key={`${key}-h`}>{stepTitle(key, example)}</h3>,
-      <StepExample key={`${key}-e`} example={example} />,
-    ])}
+    {Object.entries(props.data.examples.step)
+      .filter(([, example]) => example?.public !== false)
+      .flatMap(([key, example]) => [
+        <h3 key={`${key}-h`}>{stepTitle(key, example)}</h3>,
+        <StepExample key={`${key}-e`} example={example} />,
+      ])}
   </>
 )}

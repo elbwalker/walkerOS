@@ -45,6 +45,9 @@ const INIT_OPTIONS = (body: string) => ({
 });
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order is posted to Google Data Manager as a purchase conversion with hashed user identifiers.',
   in: getEvent('order complete', {
     timestamp: 1700000900000,
     data: { id: 'ORD-600', total: 149.99, currency: 'EUR' },
@@ -98,6 +101,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const lead: Flow.StepExample = {
+  title: 'Lead',
+  description:
+    'A demo request form submission is sent to Data Manager as a generate_lead conversion with a hashed email.',
   in: getEvent('form submit', {
     timestamp: 1700000901000,
     data: { type: 'demo-request' },
@@ -149,6 +155,9 @@ export const lead: Flow.StepExample = {
 };
 
 export const ga4PageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view is sent to Data Manager as a page_view event tied to the walker user id.',
   in: getEvent('page view', {
     timestamp: 1700000902000,
     data: { title: 'Pricing', url: 'https://example.com/pricing' },

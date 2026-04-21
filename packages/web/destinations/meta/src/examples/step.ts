@@ -8,6 +8,9 @@ import { getEvent, isObject } from '@walkeros/core';
  * `startFlow` as the destination config.
  */
 export const init: Flow.StepExample = {
+  title: 'Pixel init',
+  description:
+    'The destination loads the Meta Pixel script and initializes it with the configured pixelId.',
   in: {
     loadScript: true,
     settings: {
@@ -18,6 +21,9 @@ export const init: Flow.StepExample = {
 };
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'An order complete event is mapped to the Meta Pixel Purchase standard event with value, currency, and product contents.',
   in: getEvent('order complete', { timestamp: 1700000000 }),
   mapping: {
     name: 'Purchase',
@@ -69,6 +75,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add event is mapped to the Meta Pixel AddToCart standard event with product contents and value.',
   in: getEvent('product add', { timestamp: 1700000001 }),
   mapping: {
     name: 'AddToCart',
@@ -107,6 +116,9 @@ export const addToCart: Flow.StepExample = {
 };
 
 export const viewContent: Flow.StepExample = {
+  title: 'View content',
+  description:
+    'A product view event is mapped to the Meta Pixel ViewContent standard event with single-product contents.',
   in: getEvent('product view', { timestamp: 1700000002 }),
   mapping: {
     name: 'ViewContent',
@@ -145,6 +157,9 @@ export const viewContent: Flow.StepExample = {
 };
 
 export const initiateCheckout: Flow.StepExample = {
+  title: 'Initiate checkout',
+  description:
+    'A cart view event is mapped to the Meta Pixel InitiateCheckout standard event with value and product contents.',
   in: getEvent('cart view', { timestamp: 1700000003 }),
   mapping: {
     name: 'InitiateCheckout',
@@ -191,12 +206,18 @@ export const initiateCheckout: Flow.StepExample = {
 };
 
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view event is forwarded to Meta Pixel as the PageView standard event with no extra parameters.',
   in: getEvent('page view', { timestamp: 1700000004 }),
   mapping: undefined,
   out: [['fbq', 'track', 'PageView', {}, { eventID: '1700000004-gr0up-1' }]],
 };
 
 export const customEventWithTrackCustom: Flow.StepExample = {
+  title: 'Custom event',
+  description:
+    'A video complete event is sent as a Meta Pixel trackCustom call with a custom event name and parameters.',
   in: getEvent('video complete', {
     timestamp: 1700000005,
     data: { video_id: 'v1d30', duration: 120 },

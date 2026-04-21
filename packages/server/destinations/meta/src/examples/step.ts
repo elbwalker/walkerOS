@@ -30,6 +30,9 @@ const ENDPOINT =
   'https://graph.facebook.com/v22.0/p1x3l1d/events?access_token=s3cr3t';
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order is sent to the Meta Conversions API as a Purchase event with value, currency, and contents.',
   in: getEvent('order complete', {
     timestamp: 1700000900,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
@@ -95,6 +98,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const lead: Flow.StepExample = {
+  title: 'Form submit',
+  description:
+    'A form submission is forwarded to Meta CAPI as a custom event with the event source URL.',
   in: getEvent('form submit', {
     timestamp: 1700000901,
     data: { type: 'newsletter' },
@@ -123,6 +129,9 @@ export const lead: Flow.StepExample = {
 };
 
 export const purchaseWithClickAttribution: Flow.StepExample = {
+  title: 'Purchase with fbclid',
+  description:
+    'A purchase is sent to Meta CAPI with an external_id and a formatted fbc click id for ads attribution.',
   in: getEvent('order complete', {
     timestamp: 1700000902,
     data: { id: 'ORD-700', total: 89.99, currency: 'USD' },

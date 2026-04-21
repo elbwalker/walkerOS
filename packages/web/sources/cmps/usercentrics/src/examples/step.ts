@@ -1,6 +1,9 @@
 import type { Flow } from '@walkeros/core';
 
 export const fullConsent: Flow.StepExample = {
+  title: 'Full consent',
+  description:
+    'A Usercentrics onAcceptAllServices event emits a walker consent command with essential, functional, and marketing granted.',
   trigger: { type: 'consent' },
   in: {
     event: 'consent_status',
@@ -26,6 +29,9 @@ export const fullConsent: Flow.StepExample = {
 };
 
 export const minimalConsent: Flow.StepExample = {
+  title: 'Minimal consent',
+  description:
+    'A Usercentrics onDenyAllServices event emits a walker consent command with only essential granted.',
   trigger: { type: 'consent' },
   in: {
     event: 'consent_status',
@@ -51,6 +57,7 @@ export const minimalConsent: Flow.StepExample = {
 };
 
 export const categoryMapOverride: Flow.StepExample = {
+  title: 'Category map override',
   description:
     'Custom categoryMap remaps essential to functional and functional to analytics',
   trigger: { type: 'consent' },
@@ -80,6 +87,7 @@ export const categoryMapOverride: Flow.StepExample = {
 };
 
 export const customEventName: Flow.StepExample = {
+  title: 'Custom event name',
   description: 'Using UC_SDK_EVENT instead of ucEvent for Usercentrics SDK v2',
   trigger: { type: 'consent', options: { eventName: 'UC_SDK_EVENT' } },
   in: {

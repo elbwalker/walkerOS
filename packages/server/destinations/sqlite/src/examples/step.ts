@@ -14,6 +14,9 @@ export type SqliteStepExample = Flow.StepExample & {
  * column args the prepared INSERT is bound with.
  */
 export const defaultInsert: SqliteStepExample = {
+  title: 'Default insert',
+  description:
+    'A walker event is inserted into the default events table with canonical columns and JSON-encoded sections.',
   in: getEvent('page view', {
     timestamp: 1700000100,
     id: 'evt-1',
@@ -53,6 +56,9 @@ export const defaultInsert: SqliteStepExample = {
  * Custom table name. Verifies table overrides while using the canonical column set.
  */
 export const customTable: SqliteStepExample = {
+  title: 'Custom table',
+  description:
+    'A destination-level table setting inserts events into a custom SQLite table with the same column layout.',
   in: getEvent('form submit', {
     timestamp: 1700000101,
     id: 'evt-2',
@@ -98,6 +104,9 @@ export const customTable: SqliteStepExample = {
  * Order event with numeric data. Confirms JSON serialization of nested values.
  */
 export const orderComplete: SqliteStepExample = {
+  title: 'Order insert',
+  description:
+    'An order complete is inserted with numeric data serialized as JSON in the data column.',
   in: getEvent('order complete', {
     timestamp: 1700000102,
     id: 'evt-3',
@@ -133,6 +142,9 @@ export const orderComplete: SqliteStepExample = {
  * Table override per rule -- routes this event to a dedicated table.
  */
 export const tableOverride: SqliteStepExample = {
+  title: 'Table override',
+  description:
+    'A mapping rule overrides the target table so specific events are inserted into a dedicated SQLite table.',
   in: getEvent('order complete', {
     timestamp: 1700000103,
     id: 'evt-4',
@@ -173,6 +185,7 @@ export const tableOverride: SqliteStepExample = {
  * Ignored event -- mapping.ignore: true produces no insert call.
  */
 export const ignoredEvent: SqliteStepExample = {
+  public: false,
   in: getEvent('debug noise', {
     timestamp: 1700000104,
     id: 'evt-5',

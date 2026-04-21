@@ -14,6 +14,9 @@ import { getEvent } from '@walkeros/core';
 const URL = 'https://api.example.com/events';
 
 export const fullEvent: Flow.StepExample = {
+  title: 'Forward event data',
+  description:
+    'A page view is POSTed to the configured endpoint with the event data serialized as the JSON body.',
   in: getEvent('page view', {
     timestamp: 1700000800,
     data: { title: 'Docs', url: 'https://example.com/docs' },
@@ -36,6 +39,9 @@ export const fullEvent: Flow.StepExample = {
 };
 
 export const customHeaders: Flow.StepExample = {
+  title: 'Custom headers',
+  description:
+    'A form submission is sent to the API with custom request headers such as an API key for authentication.',
   in: getEvent('form submit', {
     timestamp: 1700000801,
     data: { type: 'contact', email: 'user@example.com' },
@@ -62,6 +68,9 @@ export const customHeaders: Flow.StepExample = {
 };
 
 export const customTransform: Flow.StepExample = {
+  title: 'Custom payload',
+  description:
+    'An order event is reshaped via a data mapping into a custom JSON payload with renamed fields for the API.',
   in: getEvent('order complete', {
     timestamp: 1700000802,
     data: { id: 'ORD-500', total: 199.99, currency: 'USD' },

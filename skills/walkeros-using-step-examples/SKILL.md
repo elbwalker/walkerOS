@@ -234,6 +234,9 @@ Supported commands: `config`, `consent`, `user`, `run`.
    logic; omit empty/default-value fields (`context: {}`, `nested: []`,
    `user: {}`, etc.)
 5. **Export from `examples/step.ts`** -- follow the existing `dev.ts` structure
+6. **Title and describe public examples** -- add `title` (2-5 words) and
+   `description` (one short sentence, 10-25 words) for every example that should
+   appear in docs. Mark test-only fixtures with `public: false`.
 
 ### File Structure
 
@@ -255,6 +258,55 @@ export * as step from './step';
 
 The file exports **only** `Flow.StepExample` objects. No intermediate variables,
 no `all`, no `config`. Consumers iterate via `Object.entries(examples.step)`.
+
+## Metadata: title, description, public
+
+Every `Flow.StepExample` accepts three optional metadata fields that control how
+it surfaces in docs and MCP output:
+
+- **`title?: string`** — overrides the default camelCase-to-spaced heading in
+  website docs. Keep it short (2-5 words), human-readable.
+- **`description?: string`** — one short sentence (10-25 words) rendered above
+  each example in docs and surfaced in MCP `flow_examples` output. Explains what
+  the example demonstrates, not how.
+- **`public?: boolean`** — defaults to `true`. When `false`, the example is
+  excluded from the website docs render and from default MCP `flow_examples`
+  output. It still runs in tests and remains callable via CLI/MCP
+  `flow_simulate`.
+
+```typescript
+export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order mapped to the Meta Pixel Purchase standard event.',
+  in: getEvent('order complete', { timestamp: 1700000000 }),
+  mapping: { name: 'Purchase', data: { map: { value: 'data.total' } } },
+  out: [['fbq', 'track', 'Purchase', { value: 555, currency: 'EUR' }]],
+};
+
+// Internal fixture — runs in tests, hidden from docs and default MCP output.
+export const debugFiltered: Flow.StepExample = {
+  public: false,
+  in: { name: 'debug test', data: { message: 'noise' } },
+  out: [['return', false]],
+};
+```
+
+### When to mark `public: false`
+
+**Mark `public: false` when:**
+
+- The example is a transformer rejection (`out: [['return', false]]`) that only
+  proves filtering works.
+- It's an error-path or malformed-input case.
+- It's a redundant variant kept only for regression coverage.
+- It's an internal fixture used by cross-package tests.
+
+**Keep public (omit the field) when:**
+
+- It's the happy path.
+- It teaches a distinct mapping or usage pattern.
+- It's the only example for some entity/action the package handles.
 
 ## Source Trigger Metadata
 
@@ -486,6 +538,8 @@ When adding step examples to a package or flow:
 - [ ] Add `it.each` test using step examples
 - [ ] Verify examples compile: `npm run build`
 - [ ] Run tests: `npm run test`
+- [ ] Add `title` and `description` to every public example.
+- [ ] Mark internal/test-only examples with `public: false`.
 
 ## Related Skills
 

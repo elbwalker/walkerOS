@@ -25,6 +25,9 @@ export type RudderStackStepExample = Flow.StepExample & {
  * properties. userId resolved from default settings.userId = 'user.id'.
  */
 export const defaultTrack: RudderStackStepExample = {
+  title: 'Default track',
+  description:
+    'A walker event becomes a RudderStack analytics.track call with userId and anonymousId resolved from the event.',
   in: getEvent('product view', {
     timestamp: 1700000100,
     user: { id: 'us3r', session: 's3ss10n' },
@@ -47,6 +50,9 @@ export const defaultTrack: RudderStackStepExample = {
  * Mapped event name -- mapping.name renames the event for RudderStack.
  */
 export const mappedEventName: RudderStackStepExample = {
+  title: 'Renamed event',
+  description:
+    'A mapping renames the event so the RudderStack track call uses a canonical name such as Order Completed.',
   in: getEvent('order complete', {
     timestamp: 1700000101,
     user: { id: 'us3r', session: 's3ss10n' },
@@ -73,6 +79,9 @@ export const mappedEventName: RudderStackStepExample = {
  * when settings.identify mapping resolves. Then fires analytics.track().
  */
 export const destinationIdentify: RudderStackStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify fires analytics.identify with traits before each track call.',
   in: getEvent('page view', {
     timestamp: 1700000102,
     user: { id: 'us3r', session: 's3ss10n', email: 'user@example.com' },
@@ -115,6 +124,9 @@ export const destinationIdentify: RudderStackStepExample = {
  * Per-event identify with skip -- user login fires identify() only.
  */
 export const userLoginIdentify: RudderStackStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login fires only an analytics.identify call with the resolved userId and traits, skipping the track.',
   in: getEvent('user login', {
     timestamp: 1700000103,
     user: { id: 'us3r', session: 's3ss10n' },
@@ -159,6 +171,9 @@ export const userLoginIdentify: RudderStackStepExample = {
  * Per-event group with skip -- company update fires group() only.
  */
 export const companyGroup: RudderStackStepExample = {
+  title: 'Group company',
+  description:
+    'A company update fires analytics.group with the groupId and group traits for B2B account tracking.',
   in: getEvent('company update', {
     timestamp: 1700000104,
     user: { id: 'us3r', session: 's3ss10n' },
@@ -205,6 +220,9 @@ export const companyGroup: RudderStackStepExample = {
  * from mapping. skip: true suppresses track().
  */
 export const pageView: RudderStackStepExample = {
+  title: 'Page view',
+  description:
+    'A page view fires analytics.page with a resolved page name and properties instead of a generic track.',
   in: getEvent('page view', {
     timestamp: 1700000105,
     user: { id: 'us3r', session: 's3ss10n' },
@@ -247,6 +265,9 @@ export const pageView: RudderStackStepExample = {
  * RudderStack requires name -- resolved from mapping.
  */
 export const screenView: RudderStackStepExample = {
+  title: 'Screen view',
+  description:
+    'A screen view from a mobile app backend fires analytics.screen with a screen name and properties.',
   in: getEvent('screen view', {
     timestamp: 1700000106,
     user: { id: 'us3r', session: 's3ss10n' },
@@ -290,6 +311,9 @@ export const screenView: RudderStackStepExample = {
  * skip: true suppresses track(). Requires previousId from mapping.
  */
 export const aliasUser: RudderStackStepExample = {
+  title: 'Alias user',
+  description:
+    'An identity merge fires analytics.alias to link a previous anonymous id to the newly registered user id.',
   in: getEvent('identity merge', {
     timestamp: 1700000107,
     user: { id: 'registered-456', session: 's3ss10n' },
@@ -323,6 +347,9 @@ export const aliasUser: RudderStackStepExample = {
  * AnonymousId only -- no userId resolved. RudderStack accepts anonymousId alone.
  */
 export const anonymousOnly: RudderStackStepExample = {
+  title: 'Anonymous only',
+  description:
+    'When no userId is resolved RudderStack accepts the track call keyed solely by anonymousId.',
   in: getEvent('product view', {
     timestamp: 1700000108,
     user: { session: 's3ss10n' },
@@ -348,6 +375,7 @@ export const anonymousOnly: RudderStackStepExample = {
  * The destination fires zero SDK calls.
  */
 export const wildcardIgnored: RudderStackStepExample = {
+  public: false,
   in: getEvent('debug noise', {
     timestamp: 1700000109,
     user: { id: 'us3r', session: 's3ss10n' },

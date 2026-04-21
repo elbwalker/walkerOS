@@ -29,6 +29,9 @@ export type KlaviyoStepExample = Flow.StepExample & {
  * inline profile. Email resolved from default settings.email = 'user.email'.
  */
 export const defaultEvent: KlaviyoStepExample = {
+  title: 'Default event',
+  description:
+    'An event is sent to Klaviyo as a metric with an inline profile resolved from the user email and id.',
   in: getEvent('product view', {
     timestamp: 1700000100,
     user: { id: 'us3r', email: 'user@example.com' },
@@ -69,6 +72,9 @@ export const defaultEvent: KlaviyoStepExample = {
  * metric name for ecommerce reporting.
  */
 export const mappedEventName: KlaviyoStepExample = {
+  title: 'Viewed product',
+  description:
+    'A product view is mapped to the Klaviyo Viewed Product metric with properties such as product name and price.',
   in: getEvent('product view', {
     timestamp: 1700000101,
     user: { id: 'us3r', email: 'user@example.com' },
@@ -128,6 +134,9 @@ export const mappedEventName: KlaviyoStepExample = {
  * valueCurrency on the Klaviyo event for revenue tracking.
  */
 export const revenueEvent: KlaviyoStepExample = {
+  title: 'Placed order',
+  description:
+    'An order complete is sent to Klaviyo as Placed Order with value and currency for revenue attribution.',
   in: getEvent('order complete', {
     timestamp: 1700000102,
     user: { id: 'us3r', email: 'user@example.com' },
@@ -194,6 +203,9 @@ export const revenueEvent: KlaviyoStepExample = {
  * profilesApi.createOrUpdateProfile() only, no event tracked.
  */
 export const userLoginIdentify: KlaviyoStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login upserts the Klaviyo profile with name, organization, and custom properties without firing an event.',
   in: getEvent('user login', {
     timestamp: 1700000103,
     user: { id: 'us3r', email: 'user@acme.com' },
@@ -248,6 +260,9 @@ export const userLoginIdentify: KlaviyoStepExample = {
  * on first push when settings.identify resolves, then fires createEvent().
  */
 export const destinationIdentify: KlaviyoStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify upserts the Klaviyo profile with a first name before each event is sent.',
   in: getEvent('page view', {
     timestamp: 1700000104,
     user: { id: 'us3r', email: 'user@example.com', firstName: 'Jane' },
@@ -307,6 +322,9 @@ export const destinationIdentify: KlaviyoStepExample = {
  * Email only -- no externalId. Klaviyo accepts email as sole identifier.
  */
 export const emailOnly: KlaviyoStepExample = {
+  title: 'Email only',
+  description:
+    'A newsletter signup uses only the email address as the Klaviyo profile identifier, with no external id.',
   in: getEvent('newsletter signup', {
     timestamp: 1700000105,
     user: { email: 'subscriber@example.com' },
@@ -349,6 +367,7 @@ export const emailOnly: KlaviyoStepExample = {
  * The destination fires zero API calls.
  */
 export const wildcardIgnored: KlaviyoStepExample = {
+  public: false,
   in: getEvent('debug noise', {
     timestamp: 1700000106,
     user: { id: 'us3r', email: 'user@example.com' },

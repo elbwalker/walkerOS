@@ -232,6 +232,10 @@ import { getEvent } from '@walkeros/core';
 //       typed against the vendor SDK's published types where available.
 // `mapping` is the mapping rule under test (optional — omit for default push).
 
+// Set `title` + `description` for public examples; mark test-only fixtures
+// with `public: false`. See
+// [walkeros-using-step-examples](../walkeros-using-step-examples/SKILL.md).
+
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000100 }),
   mapping: {

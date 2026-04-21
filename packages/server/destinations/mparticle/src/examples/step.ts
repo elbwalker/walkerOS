@@ -39,6 +39,9 @@ const OPTIONS = {
  * `settings.userIdentities`.
  */
 export const customEvent: Flow.StepExample = {
+  title: 'Custom event',
+  description:
+    'A walker event is sent to mParticle as a custom_event with user identities resolved from destination settings.',
   in: getEvent('product view', {
     timestamp: 1700000100000,
     data: { id: 'SKU-A1', name: 'Shoe', price: 129.99 },
@@ -78,6 +81,9 @@ export const customEvent: Flow.StepExample = {
  * event shape. Uses event name as the `screen_name`.
  */
 export const screenView: Flow.StepExample = {
+  title: 'Screen view',
+  description:
+    'A page view is mapped to an mParticle screen_view event with the event name as the screen name.',
   in: getEvent('page view', {
     timestamp: 1700000200000,
     data: { title: 'Checkout', path: '/checkout' },
@@ -119,6 +125,9 @@ export const screenView: Flow.StepExample = {
  * and transaction metadata are all driven by the commerce mapping value.
  */
 export const commercePurchase: Flow.StepExample = {
+  title: 'Commerce purchase',
+  description:
+    'A completed order becomes an mParticle commerce_event with a purchase product_action block.',
   in: getEvent('order complete', {
     timestamp: 1700000300000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
@@ -178,6 +187,9 @@ export const commercePurchase: Flow.StepExample = {
  * come from the batch-level settings mappings, not the event payload.
  */
 export const identityAndAttributes: Flow.StepExample = {
+  title: 'User identities',
+  description:
+    'A form submission sends a custom_event whose batch carries user_identities resolved from destination settings.',
   in: getEvent('form submit', {
     timestamp: 1700000400000,
     data: { type: 'newsletter' },

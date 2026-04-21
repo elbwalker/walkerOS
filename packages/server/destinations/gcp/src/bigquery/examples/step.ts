@@ -38,6 +38,9 @@ const pageViewEvent = getEvent('page view', {
 });
 
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view is inserted as one row into the configured BigQuery table with timestamp converted to Date.',
   in: pageViewEvent,
   mapping: undefined,
   out: [
@@ -65,6 +68,9 @@ const purchaseEvent = getEvent('order complete', {
 });
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'An order event with nested items is inserted into BigQuery as a single row with arrays stringified into the data field.',
   in: purchaseEvent,
   mapping: undefined,
   out: [

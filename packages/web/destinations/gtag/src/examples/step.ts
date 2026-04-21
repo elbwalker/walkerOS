@@ -14,6 +14,9 @@ const INIT_DATE = new Date(INIT_DATE_MS);
  * Initializes gtag infrastructure and configures the GA4 measurementId.
  */
 export const ga4Init: Flow.StepExample = {
+  title: 'GA4 init',
+  description:
+    'The destination bootstraps gtag and configures a GA4 property via its measurementId.',
   in: {
     settings: {
       ga4: { measurementId: 'G-XXXXXX-1' },
@@ -30,6 +33,9 @@ export const ga4Init: Flow.StepExample = {
  * Initializes gtag infrastructure and configures the Ads conversionId.
  */
 export const adsInit: Flow.StepExample = {
+  title: 'Google Ads init',
+  description:
+    'The destination bootstraps gtag and configures a Google Ads account via its conversionId.',
   in: {
     settings: {
       ads: { conversionId: 'AW-123456789', currency: 'EUR' },
@@ -46,6 +52,9 @@ export const adsInit: Flow.StepExample = {
  * Initializes the dataLayer and pushes the gtm.js start event.
  */
 export const gtmInit: Flow.StepExample = {
+  title: 'GTM init',
+  description:
+    'The destination initializes the dataLayer and pushes the gtm.js start event for a GTM container.',
   in: {
     settings: {
       gtm: { containerId: 'GTM-XXXXXXX' },
@@ -63,6 +72,9 @@ export const gtmInit: Flow.StepExample = {
 };
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'An order complete event is mapped to the GA4 purchase event with transaction details and nested product items.',
   in: getEvent('order complete', { timestamp: 1700000100 }),
   mapping: {
     name: 'purchase',
@@ -120,6 +132,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add event is mapped to the GA4 add_to_cart event with item details and value.',
   in: getEvent('product add', { timestamp: 1700000101 }),
   mapping: {
     name: 'add_to_cart',
@@ -165,6 +180,9 @@ export const addToCart: Flow.StepExample = {
 };
 
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view event is forwarded as a GA4 page_view event with no additional mapping.',
   in: getEvent('page view', { timestamp: 1700000102 }),
   mapping: undefined,
   out: [['gtag', 'event', 'page_view', { send_to: 'G-XXXXXX-1' }]],
@@ -176,6 +194,9 @@ export const pageView: Flow.StepExample = {
  * The Ads push produces gtag('event', 'conversion', { send_to, currency, ...data }).
  */
 export const googleAdsConversion: Flow.StepExample = {
+  title: 'Ads conversion',
+  description:
+    'An order complete event is sent as a Google Ads conversion with a configured label and transaction value.',
   in: getEvent('order complete', { timestamp: 1700000103 }),
   mapping: {
     name: 'PURCHASE_CONV',
@@ -209,6 +230,9 @@ export const googleAdsConversion: Flow.StepExample = {
  * Note: GTM pushes to dataLayer (not gtag), so the out format is a plain object.
  */
 export const gtmDataLayerPush: Flow.StepExample = {
+  title: 'GTM dataLayer push',
+  description:
+    'A page view event is pushed to window.dataLayer for GTM with the mapped event name and parameters.',
   in: getEvent('page view', { timestamp: 1700000104 }),
   mapping: {
     name: 'page_view',
@@ -244,6 +268,9 @@ export const gtmDataLayerPush: Flow.StepExample = {
  *   functional → analytics_storage
  */
 export const consentModeV2: Flow.StepExample = {
+  title: 'Consent Mode v2',
+  description:
+    'A walker consent command with marketing and functional granted updates gtag Consent Mode v2 parameters.',
   command: 'consent',
   in: { marketing: true, functional: true },
   out: [
@@ -282,6 +309,9 @@ export const consentModeV2: Flow.StepExample = {
  * would couple the fixture to the release version.
  */
 export const ga4WithIncludeAll: Flow.StepExample = {
+  title: 'GA4 include all',
+  description:
+    'Include flattens every event section into prefixed GA4 params, exposing data, context, user, source, and event fields.',
   in: getEvent('page view', { timestamp: 1700000106 }),
   mapping: {
     include: ['data', 'context', 'globals', 'user', 'source', 'event'],
@@ -338,6 +368,9 @@ export const ga4WithIncludeAll: Flow.StepExample = {
  * - GTM: window.dataLayer.push({ event: eventName, ...data })
  */
 export const multipleToolsSimultaneous: Flow.StepExample = {
+  title: 'Multi-tool push',
+  description:
+    'A single order event fans out to GA4, Google Ads, and GTM from one mapping rule with per-tool settings.',
   in: getEvent('order complete', { timestamp: 1700000107 }),
   mapping: {
     name: 'purchase',

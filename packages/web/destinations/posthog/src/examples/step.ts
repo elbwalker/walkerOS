@@ -18,6 +18,9 @@ export type PostHogStepExample = Flow.StepExample & {
  * destination-level include, properties is `{}`.
  */
 export const defaultEventForwarding: PostHogStepExample = {
+  title: 'Default capture',
+  description:
+    'A walker event becomes a PostHog capture call with the event name and empty properties.',
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [['posthog.capture', 'product view', {}]],
 };
@@ -27,6 +30,7 @@ export const defaultEventForwarding: PostHogStepExample = {
  * matches but does nothing. The destination fires zero SDK calls.
  */
 export const wildcardIgnored: PostHogStepExample = {
+  public: false,
   in: getEvent('debug noise', { timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
@@ -37,6 +41,9 @@ export const wildcardIgnored: PostHogStepExample = {
  * into prefixed capture() properties on every push.
  */
 export const destinationLevelInclude: PostHogStepExample = {
+  title: 'Include data',
+  description:
+    'Destination-level include flattens the event data section into prefixed PostHog capture properties.',
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
@@ -60,6 +67,9 @@ export const destinationLevelInclude: PostHogStepExample = {
  * overrides it with `globals` only.
  */
 export const ruleIncludeReplaces: PostHogStepExample = {
+  title: 'Rule include overrides',
+  description:
+    'A per-rule include replaces the destination-level include so this event forwards only globals.',
   in: getEvent('order complete', { timestamp: 1700000103 }),
   configInclude: ['data'],
   mapping: {
@@ -86,6 +96,9 @@ export const ruleIncludeReplaces: PostHogStepExample = {
  * is called with just the distinctId.
  */
 export const destinationLevelIdentify: PostHogStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify calls posthog.identify with the user id before firing the default capture.',
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -110,6 +123,9 @@ export const destinationLevelIdentify: PostHogStepExample = {
  *   posthog.identify(distinctId, $set, $set_once)
  */
 export const userLoginIdentify: PostHogStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login fires PostHog identify with $set and $set_once person properties, skipping the capture.',
   in: getEvent('user login', {
     timestamp: 1700000105,
     data: {
@@ -170,6 +186,9 @@ export const userLoginIdentify: PostHogStepExample = {
  * "profile update" event so it shows up in PostHog's event stream.
  */
 export const profileUpdateSetPersonProperties: PostHogStepExample = {
+  title: 'Set person properties',
+  description:
+    'A profile update calls setPersonProperties to enrich the PostHog profile without changing identity.',
   in: getEvent('profile update', {
     timestamp: 1700000106,
     data: {
@@ -210,6 +229,9 @@ export const profileUpdateSetPersonProperties: PostHogStepExample = {
  * we're only running the reset side effect, no default capture().
  */
 export const userLogoutReset: PostHogStepExample = {
+  title: 'User logout reset',
+  description:
+    'A user logout calls posthog.reset to clear the distinct id and generate a new anonymous one.',
   in: getEvent('user logout', { timestamp: 1700000107 }),
   mapping: {
     skip: true,
@@ -228,6 +250,9 @@ export const userLogoutReset: PostHogStepExample = {
  * pure side-effect rule — no "company update" capture().
  */
 export const groupAssignmentWithProperties: PostHogStepExample = {
+  title: 'Group assignment',
+  description:
+    'A company update assigns the user to a PostHog group and sets group properties via posthog.group.',
   in: getEvent('company update', {
     timestamp: 1700000108,
     data: {
@@ -277,6 +302,9 @@ export const groupAssignmentWithProperties: PostHogStepExample = {
  * data_* properties on the PostHog event.
  */
 export const orderCompleteWithInclude: PostHogStepExample = {
+  title: 'Order complete',
+  description:
+    'An order complete captures order data and globals as prefixed properties for revenue analysis in PostHog.',
   in: getEvent('order complete', { timestamp: 1700000109 }),
   mapping: {
     include: ['data', 'globals'],
@@ -308,6 +336,9 @@ export const orderCompleteWithInclude: PostHogStepExample = {
  * an event.
  */
 export const consentRevokeOptOut: PostHogStepExample = {
+  title: 'Consent revoked',
+  description:
+    'A walker consent command with analytics denied calls posthog.opt_out_capturing to stop capture and replay.',
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
@@ -319,6 +350,9 @@ export const consentRevokeOptOut: PostHogStepExample = {
  * by default (the SDK fires its own $opt_in event).
  */
 export const consentGrantOptIn: PostHogStepExample = {
+  title: 'Consent granted',
+  description:
+    'A walker consent command with analytics granted calls posthog.opt_in_capturing to resume capture.',
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,

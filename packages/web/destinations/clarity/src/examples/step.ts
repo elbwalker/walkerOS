@@ -18,6 +18,9 @@ export type ClarityStepExample = Flow.StepExample & {
  * No mapping rule; the destination's default push behavior fires.
  */
 export const defaultEventForwarding: ClarityStepExample = {
+  title: 'Default event',
+  description:
+    'A walker event becomes a Clarity.event call with the event name as the Clarity custom event.',
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [['clarity.event', 'product view']],
 };
@@ -29,6 +32,7 @@ export const defaultEventForwarding: ClarityStepExample = {
  * must produce zero calls.
  */
 export const wildcardIgnored: ClarityStepExample = {
+  public: false,
   in: getEvent('debug noise', { timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
@@ -41,6 +45,9 @@ export const wildcardIgnored: ClarityStepExample = {
  * Then fires the default Clarity.event(...) forwarding.
  */
 export const userLoginIdentify: ClarityStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login fires Clarity.identify with custom id, session id, page id, and friendly name then tracks the event.',
   in: getEvent('user login', {
     timestamp: 1700000102,
     data: { id: 'u-123', name: 'Jane Doe' },
@@ -70,6 +77,9 @@ export const userLoginIdentify: ClarityStepExample = {
  * `settings.identify`, which fires on every push.
  */
 export const destinationLevelIdentify: ClarityStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify calls Clarity.identify with the user id on every push as Clarity recommends.',
   in: getEvent('page view', { timestamp: 1700000103 }),
   settings: {
     identify: {
@@ -90,6 +100,9 @@ export const destinationLevelIdentify: ClarityStepExample = {
  * but before the default event.
  */
 export const productViewWithTags: ClarityStepExample = {
+  title: 'Custom tags',
+  description:
+    'A product view sets Clarity session tags such as product color and id before firing the event.',
   in: getEvent('product view', { timestamp: 1700000104 }),
   mapping: {
     settings: {
@@ -115,6 +128,9 @@ export const productViewWithTags: ClarityStepExample = {
  * no splitting into multiple calls).
  */
 export const arrayTagValue: ClarityStepExample = {
+  title: 'Array tag values',
+  description:
+    'Array values such as product tags are passed through to Clarity.setTag preserving the array shape.',
   in: getEvent('product view', {
     timestamp: 1700000105,
     data: {
@@ -146,6 +162,9 @@ export const arrayTagValue: ClarityStepExample = {
  * it beyond the sampling cap. upgrade fires before the default event.
  */
 export const orderCompleteUpgrade: ClarityStepExample = {
+  title: 'Upgrade session',
+  description:
+    'A completed order upgrades the Clarity session priority so it is retained beyond the sampling cap.',
   in: getEvent('order complete', { timestamp: 1700000106 }),
   mapping: {
     name: 'Purchase',
@@ -165,6 +184,9 @@ export const orderCompleteUpgrade: ClarityStepExample = {
  * The example includes `data` only; keys become `data_<field>`.
  */
 export const orderCompleteInclude: ClarityStepExample = {
+  title: 'Include data as tags',
+  description:
+    'A mapping include flattens the event data section into Clarity.setTag calls before the event fires.',
   in: getEvent('order complete', { timestamp: 1700000107 }),
   mapping: {
     include: ['data'],
@@ -186,6 +208,9 @@ export const orderCompleteInclude: ClarityStepExample = {
  * (identify → tags → upgrade → event).
  */
 export const combinedFeatures: ClarityStepExample = {
+  title: 'Combined features',
+  description:
+    'A purchase identifies the user, sets an order tag, upgrades the session, and fires the Clarity event in order.',
   in: getEvent('order complete', { timestamp: 1700000108 }),
   mapping: {
     name: 'Purchase',
@@ -209,6 +234,9 @@ export const combinedFeatures: ClarityStepExample = {
  * Clarity has its own page tracking and you only want to set tags.
  */
 export const pageViewSkip: ClarityStepExample = {
+  title: 'Tags without event',
+  description:
+    'A page view sets Clarity tags while skip suppresses the event, letting Clarity handle page tracking itself.',
   in: getEvent('page view', { timestamp: 1700000109 }),
   mapping: {
     skip: true,
@@ -233,6 +261,9 @@ export const pageViewSkip: ClarityStepExample = {
  * dispatches via elb('walker consent', in) instead of pushing an event.
  */
 export const consentGrantBoth: ClarityStepExample = {
+  title: 'Consent granted',
+  description:
+    'A walker consent command translates analytics and marketing grants into a Clarity.consentV2 call.',
   command: 'consent',
   in: { analytics: true, marketing: true } as WalkerOS.Consent,
   settings: {
@@ -255,6 +286,9 @@ export const consentGrantBoth: ClarityStepExample = {
  * API at all — consentV2 is the single source of truth for consent state.
  */
 export const consentRevoke: ClarityStepExample = {
+  title: 'Consent revoked',
+  description:
+    'A walker consent command with analytics and marketing denied calls Clarity.consentV2 with denied flags.',
   command: 'consent',
   in: { analytics: false, marketing: false } as WalkerOS.Consent,
   settings: {
