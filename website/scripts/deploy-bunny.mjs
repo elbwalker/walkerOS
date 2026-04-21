@@ -27,15 +27,45 @@ async function uploadFile(localPath, remotePath) {
 
 async function purgeCache() {
   const purgePath = DEPLOY_PATH ? `${PULLZONE_URL}/${DEPLOY_PATH}/*` : `${PULLZONE_URL}/*`;
-  const res = await fetch(`https://api.bunny.net/purge?url=${encodeURIComponent(purgePath)}`, {
-    method: 'POST',
-    headers: { AccessKey: API_KEY },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Purge failed: ${res.status} - ${text}`);
+  const url = `https://api.bunny.net/purge?url=${encodeURIComponent(purgePath)}`;
+  const maxAttempts = 5;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { AccessKey: API_KEY },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        console.log('✓ Cache purged');
+        return;
+      }
+
+      // Retry on 5xx and 429; fail fast on other 4xx (auth, bad URL, etc.)
+      if (res.status < 500 && res.status !== 429) {
+        const text = await res.text();
+        throw new Error(`Purge failed: ${res.status} - ${text.slice(0, 200)}`);
+      }
+      console.warn(`Purge attempt ${attempt}/${maxAttempts} failed: ${res.status}`);
+    } catch (err) {
+      if (err.message?.startsWith('Purge failed:')) throw err;
+      console.warn(`Purge attempt ${attempt}/${maxAttempts} error: ${err.message}`);
+    }
+
+    if (attempt < maxAttempts) {
+      const delay = Math.min(2000 * 2 ** (attempt - 1), 30_000);
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
-  console.log('✓ Cache purged');
+
+  // Upload already succeeded; a failed purge only delays cache eviction.
+  // Don't fail the deploy — warn loudly so the job stays green.
+  console.warn('::warning::Cache purge failed after retries — new content will propagate as edge TTLs expire.');
 }
 
 async function deploy() {
