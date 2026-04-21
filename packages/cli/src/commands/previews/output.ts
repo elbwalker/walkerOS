@@ -1,5 +1,3 @@
-import { spawn } from 'node:child_process';
-
 export interface FormatOptions {
   url?: string;
 }
@@ -55,21 +53,11 @@ export function formatPreviewCreated(
   return { stdoutLast, stderr: lines.join('\n') };
 }
 
-export async function printPreviewCreated(
+export function printPreviewCreated(
   preview: PreviewPrintable,
-  options: FormatOptions & { open?: boolean },
-): Promise<void> {
+  options: FormatOptions,
+): void {
   const { stdoutLast, stderr } = formatPreviewCreated(preview, options);
   process.stderr.write(stderr + '\n');
   process.stdout.write(stdoutLast + '\n');
-
-  if (options.open && options.url) {
-    const opener =
-      process.platform === 'darwin'
-        ? 'open'
-        : process.platform === 'win32'
-          ? 'start'
-          : 'xdg-open';
-    spawn(opener, [stdoutLast], { stdio: 'ignore', detached: true }).unref();
-  }
 }

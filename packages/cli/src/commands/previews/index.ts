@@ -100,5 +100,7 @@ export async function deletePreview(options: DeletePreviewOptions) {
     const body = await response.json().catch(() => ({}));
     throwApiError(body, 'Failed to delete preview');
   }
-  return response.json();
+  // App returns 204 No Content on success; older surfaces may return JSON.
+  if (response.status === 204) return null;
+  return response.json().catch(() => null);
 }

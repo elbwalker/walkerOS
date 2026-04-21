@@ -1762,7 +1762,16 @@ export function generateWrapEntry(
         document.cookie = 'elbPreview=; path=/; max-age=0; SameSite=Lax' + __secure;
       };
       try {
-        var __probe = await fetch(__previewSrc, { method: 'HEAD' });
+        // Bound the HEAD probe so a hung CDN can never block the production
+        // walker. On abort/timeout we fall through to the catch branch and
+        // self-heal by clearing the cookie.
+        var __ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var __timeoutId = __ctrl ? setTimeout(function () { __ctrl.abort(); }, 2000) : null;
+        var __probe = await fetch(__previewSrc, {
+          method: 'HEAD',
+          signal: __ctrl ? __ctrl.signal : undefined,
+        });
+        if (__timeoutId) clearTimeout(__timeoutId);
         if (__probe && __probe.ok) {
           var __s = document.createElement('script');
           __s.src = __previewSrc;
@@ -1773,7 +1782,7 @@ export function generateWrapEntry(
         // falling through to the production walker in this same bundle.
         __clearPreviewCookie();
       } catch (__err) {
-        // Network error — fall through to production too.
+        // Network error, timeout, or abort — fall through to production too.
         __clearPreviewCookie();
       }
     }

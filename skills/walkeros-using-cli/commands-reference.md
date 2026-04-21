@@ -263,13 +263,12 @@ walkeros previews get <flowId> <previewId> [--project <projectId>]
 walkeros previews create <flowId> [options]
 ```
 
-| Option                   | Description                                                   |
-| ------------------------ | ------------------------------------------------------------- |
-| `-f, --flow <name>`      | Flow settings name (resolved to an ID)                        |
-| `-s, --settings-id <id>` | Flow settings ID (alternative to `--flow`)                    |
-| `-u, --url <siteUrl>`    | Your site URL; prints a full activation URL on stdout         |
-| `--open`                 | Launch the activation URL in your default browser (+ `--url`) |
-| `--project <id>`         | Project ID (overrides default)                                |
+| Option                   | Description                                           |
+| ------------------------ | ----------------------------------------------------- |
+| `-f, --flow <name>`      | Flow settings name (resolved to an ID)                |
+| `-s, --settings-id <id>` | Flow settings ID (alternative to `--flow`)            |
+| `-u, --url <siteUrl>`    | Your site URL; prints a full activation URL on stdout |
+| `--project <id>`         | Project ID (overrides default)                        |
 
 Without `--url`, stdout contains the activation fragment (`?elbPreview=...`) to
 append to any URL on your site. With `--url`, stdout contains the complete
@@ -289,11 +288,10 @@ walkeros previews delete <flowId> <previewId> [options]
 ### Example
 
 ```bash
-# Create a preview for the `demo` flow settings and open in browser
+# Create a preview for the `demo` flow settings with a full activation URL
 walkeros previews create flow_abc123 \
   --flow demo \
-  --url https://example.com \
-  --open
+  --url https://example.com
 
 # List previews
 walkeros previews list flow_abc123

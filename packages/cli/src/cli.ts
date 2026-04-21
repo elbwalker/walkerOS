@@ -492,10 +492,19 @@ previewsCmd
   .option('-f, --flow <name>', 'Flow settings name (resolved to ID)')
   .option('-s, --settings-id <id>', 'Flow settings ID (alternative to --flow)')
   .option('-u, --url <url>', 'Site URL to construct activation URL')
-  .option('--open', 'Open activation URL in the default browser')
   .option('--project <projectId>', 'Project ID (overrides default)')
   .action(async (flowId, options) => {
     try {
+      // Validate --url BEFORE creating the preview — otherwise an invalid URL
+      // would produce a server-side preview that can't be used, wasting a
+      // quota slot and forcing manual cleanup.
+      if (options.url) {
+        try {
+          new URL(options.url);
+        } catch {
+          throw new Error(`Invalid --url value: ${options.url}`);
+        }
+      }
       const { createPreview } = await import('./commands/previews/index.js');
       const { printPreviewCreated } =
         await import('./commands/previews/output.js');
@@ -505,10 +514,7 @@ previewsCmd
         flowName: options.flow,
         flowSettingsId: options.settingsId,
       })) as Parameters<typeof printPreviewCreated>[0];
-      await printPreviewCreated(preview, {
-        url: options.url,
-        open: options.open,
-      });
+      printPreviewCreated(preview, { url: options.url });
     } catch (err) {
       handleCliError(err);
     }

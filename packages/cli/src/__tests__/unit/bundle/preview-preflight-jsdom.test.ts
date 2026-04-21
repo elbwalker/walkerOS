@@ -422,6 +422,63 @@ describe('Preview preflight jsdom integration', () => {
 
       win.close();
     });
+
+    it('self-heals when fetch never resolves (hung CDN) via AbortController timeout', async () => {
+      const token = 'k9x2m4p7abcd';
+      const entry = generateWrapEntry('./skeleton.mjs', {
+        previewOrigin: 'cdn.walkeros.io',
+        previewScope: 'proj_abc',
+      });
+
+      const dom = createDom(`https://example.com/page?elbPreview=${token}`);
+      const win = dom.window;
+
+      let startFlowCalled = false;
+      (win as unknown as Record<string, unknown>).__mockStartFlow = () => {
+        startFlowCalled = true;
+        return Promise.resolve({ collector: {}, elb: () => {} });
+      };
+      (win as unknown as Record<string, unknown>).__mockWireConfig = (
+        d: unknown,
+      ) => d;
+      (win as unknown as Record<string, unknown>).__mockConfigData = {};
+
+      // Mock fetch that never resolves on its own — only rejects when aborted.
+      // This simulates a hung CDN. The preflight's AbortController must fire
+      // and the catch branch must self-heal.
+      (win as unknown as Record<string, unknown>).fetch = (
+        _url: string,
+        init?: { signal?: AbortSignal },
+      ) => {
+        return new Promise((_resolve, reject) => {
+          const signal = init?.signal;
+          if (signal) {
+            signal.addEventListener('abort', () => {
+              reject(new win.DOMException('Aborted', 'AbortError'));
+            });
+          }
+        });
+      };
+
+      const script = win.document.createElement('script');
+      script.textContent = extractEvaluableScript(entry);
+      win.document.body.appendChild(script);
+
+      // Wait longer than the preflight's 2s timeout so AbortController fires.
+      await new Promise((r) => setTimeout(r, 2200));
+
+      // Cookie cleared by self-heal
+      expect(win.document.cookie).not.toContain(`elbPreview=${token}`);
+
+      // No preview script injected
+      const scripts = win.document.querySelectorAll('head > script[src]');
+      expect(scripts.length).toBe(0);
+
+      // Production walker ran
+      expect(startFlowCalled).toBe(true);
+
+      win.close();
+    }, 5000);
   });
 
   describe('regression: no preflight without preview options', () => {

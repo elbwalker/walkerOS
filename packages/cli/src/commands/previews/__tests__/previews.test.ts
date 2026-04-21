@@ -194,11 +194,9 @@ describe('previews', () => {
   });
 
   describe('deletePreview', () => {
-    it('DELETEs /previews/{previewId}', async () => {
-      mockApiFetch.mockResolvedValue(
-        new Response(JSON.stringify({ deleted: true }), { status: 200 }),
-      );
-      await deletePreview({
+    it('DELETEs /previews/{previewId} and returns null on 204 No Content', async () => {
+      mockApiFetch.mockResolvedValue(new Response(null, { status: 204 }));
+      const result = await deletePreview({
         projectId: 'proj_x',
         flowId: 'fl_y',
         previewId: 'prv_x',
@@ -207,6 +205,19 @@ describe('previews', () => {
         '/api/projects/proj_x/flows/fl_y/previews/prv_x',
         expect.objectContaining({ method: 'DELETE' }),
       );
+      expect(result).toBeNull();
+    });
+
+    it('returns parsed body when server replies with JSON 200', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify({ deleted: true }), { status: 200 }),
+      );
+      const result = await deletePreview({
+        projectId: 'proj_x',
+        flowId: 'fl_y',
+        previewId: 'prv_x',
+      });
+      expect(result).toEqual({ deleted: true });
     });
 
     it('throws on error', async () => {

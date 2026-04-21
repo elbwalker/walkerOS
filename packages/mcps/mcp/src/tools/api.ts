@@ -403,6 +403,16 @@ export function registerApiTool(server: McpServer) {
                 'flowName or flowSettingsId required for preview.create',
               );
             }
+            // Validate siteUrl BEFORE creating the preview — a bad URL would
+            // otherwise leave an orphan preview on the server that counts
+            // against the project quota.
+            if (siteUrl) {
+              try {
+                new URL(siteUrl);
+              } catch {
+                throw new Error(`Invalid siteUrl: ${siteUrl}`);
+              }
+            }
             const preview = await createPreviewApi({
               projectId,
               flowId,
