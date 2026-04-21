@@ -1,5 +1,30 @@
 # @walkeros/cli
 
+## 3.4.0
+
+### Minor Changes
+
+- 1a0f8f2: Add `target` option to `bundle()`:
+  `cdn | cdn-skeleton | runner | simulate | push`. Replaces
+  `buildOverrides.skipWrapper` (deprecated) to stop dev schemas leaking into
+  production CDN bundles. Stage 2 entry generators gain `platform` option and
+  inject `env.window`/`env.document` for browser targets, fixing
+  `window.elbLayer` in deployed walker.js.
+- 9f97bdd: Clients now send `User-Agent`, `X-WalkerOS-Client`, and
+  `X-WalkerOS-Client-Version` on every request to the walkerOS app. When the app
+  returns `426 Upgrade Required`, the CLI prints the required version + upgrade
+  instruction and exits with code 2; the MCP surfaces the same info in tool
+  errors. Set `WALKEROS_CLIENT_TYPE=runner` to have the CLI binary identify as a
+  long-lived runner instead of an interactive CLI (used by the runtime image so
+  runners are distinguishable from interactive sessions).
+
+### Patch Changes
+
+- Updated dependencies [74940cc]
+- Updated dependencies [525f5d9]
+  - @walkeros/core@3.4.0
+  - @walkeros/server-core@3.4.0
+
 ## 3.3.1
 
 ### Patch Changes

@@ -1,5 +1,52 @@
 # @walkeros/core
 
+## 3.4.0
+
+### Minor Changes
+
+- 525f5d9: Introduce the standardized `StepExample.out` shape:
+  `[callable, ...args][]` where each tuple is a function call (first element is
+  the callable name) or a `['return', value]` tuple for transformer-style
+  returns. Every effect is self-describing; docs and tools can render it
+  uniformly without a per-package registry.
+
+  Ship the shared `formatOut` renderer from `@walkeros/core` for docs + app.
+  Also exports `StepEffect` and `StepOut` types. Migrate
+  `@walkeros/web-destination-gtag` to the new shape as the canary — its
+  multi-tool outputs (GA4 + Ads + GTM) now flatten into a single array of
+  `gtag(...)` and `dataLayer.push(...)` tuples in observed execution order.
+  Remaining destination packages ship the old shape until the bulk migration
+  (separate plan).
+
+### Patch Changes
+
+- 74940cc: Add `TransformerSchemas` and `StoreSchemas` namespaces with
+  `ConfigSchema` / `configJsonSchema` exports. Mirrors the existing
+  `DestinationSchemas` / `SourceSchemas` pattern so every component type has a
+  documented Config schema available via `@walkeros/core/dev`.
+
+  Reconcile pre-existing drift between TS Config interfaces and their Zod
+  schemas:
+  - `DestinationSchemas.ConfigSchema` now includes `before`, `next`, `cache`,
+    `disabled`, `mock`, `include` (matching `Destination.Config`) and drops
+    phantom `onError` / `onLog` fields that were never wired in the TS type or
+    consumed at runtime.
+  - `SourceSchemas.ConfigSchema` now includes `disabled` and drops a phantom
+    `onError` field.
+  - `MappingSchemas.ConfigSchema` now includes `include`, matching
+    `Mapping.Config` (the base `Source.Config` extends).
+  - `CollectorSchemas.ConfigSchema` now includes `logger` and drops phantom
+    `verbose` / `onError` / `onLog` fields not present in `Collector.Config`.
+  - `CollectorSchemas.InitConfigSchema` now includes `transformers`, `stores`,
+    `hooks`, matching `Collector.InitConfig`.
+
+  Add a compile-time drift guard at
+  `packages/core/src/schemas/__tests__/config-drift.test-d.ts`. Any future
+  divergence between a Config TS interface and its Zod schema fails
+  `tsc --noEmit` (already wired into the project's `typecheck` script and CI).
+  Keys-only check; value types may still differ for recursive or generic-slot
+  fields where Zod cannot express TS-side precision.
+
 ## 3.3.1
 
 ## 3.3.0
