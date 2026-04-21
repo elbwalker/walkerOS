@@ -67,15 +67,23 @@ describe('fetchConfig', () => {
     );
   });
 
-  it('throws on 401', async () => {
+  it('throws RunnerAuthError on 401', async () => {
+    const { RunnerAuthError } =
+      await import('../../../runtime/runner-auth-error.js');
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
       statusText: 'Unauthorized',
+      headers: new Headers(),
+      clone() {
+        return {
+          status: 401,
+          statusText: 'Unauthorized',
+          json: async () => ({}),
+        };
+      },
     });
-    await expect(fetchConfig(opts)).rejects.toThrow(
-      'Config fetch failed (401)',
-    );
+    await expect(fetchConfig(opts)).rejects.toBeInstanceOf(RunnerAuthError);
   });
 
   it('does not send If-None-Match when no lastEtag', async () => {
