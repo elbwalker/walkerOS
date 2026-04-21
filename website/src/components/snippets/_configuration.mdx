@@ -12,10 +12,7 @@ export const camelToSpaced = (key) =>
     .trim()
     .toLowerCase();
 
-export const stepTitle = (key, example) =>
-  example && example.mapping && example.mapping.name
-    ? example.mapping.name
-    : camelToSpaced(key);
+export const stepTitle = (key, _example) => camelToSpaced(key);
 
 ## Configuration
 

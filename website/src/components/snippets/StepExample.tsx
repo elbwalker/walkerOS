@@ -33,7 +33,7 @@ export default function StepExample({ example }: Props): React.ReactElement {
   const columns = hasMapping ? 3 : 2;
 
   return (
-    <Grid columns={columns} rowHeight="synced">
+    <Grid columns={columns} maxRowHeight={360}>
       <CodeView
         label="Event"
         code={JSON.stringify(example.in, null, 2)}

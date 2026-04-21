@@ -17,7 +17,7 @@
 '@walkeros/web-destination-snowplow': minor
 '@walkeros/web-destination-tiktok': minor
 '@walkeros/web-destination-api': minor
-'@walkeros/web-destination-demo': minor
+'@walkeros/destination-demo': minor
 '@walkeros/server-destination-amplitude': minor
 '@walkeros/server-destination-api': minor
 '@walkeros/server-destination-aws': minor
@@ -46,8 +46,8 @@
 '@walkeros/server-destination-tiktok': minor
 '@walkeros/server-destination-twitter': minor
 '@walkeros/web-source-browser': minor
-'@walkeros/web-source-dataLayer': minor
-'@walkeros/web-source-demo': minor
+'@walkeros/web-source-datalayer': minor
+'@walkeros/source-demo': minor
 '@walkeros/web-source-session': minor
 '@walkeros/web-source-cmp-cookiefirst': minor
 '@walkeros/web-source-cmp-cookiepro': minor
