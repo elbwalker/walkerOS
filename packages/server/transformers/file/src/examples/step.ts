@@ -1,6 +1,7 @@
 import type { Flow } from '@walkeros/core';
 
 export const serveStaticFile: Flow.StepExample = {
+  title: 'Serve static file',
   description:
     'Serve a static JavaScript file from store. ' +
     'Config: prefix: "/static", headers: { "Cache-Control": "public, max-age=3600" }',

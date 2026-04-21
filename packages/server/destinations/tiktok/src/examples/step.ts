@@ -28,6 +28,9 @@ const HEADERS = {
 };
 
 export const purchase: Flow.StepExample = {
+  title: 'Complete payment',
+  description:
+    'A completed order is sent to the TikTok Events API as a CompletePayment with value, currency, and contents.',
   in: getEvent('order complete', {
     timestamp: 1700000900000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
@@ -119,6 +122,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add is sent to TikTok as an AddToCart event with value, currency, and product contents.',
   in: getEvent('product add', {
     timestamp: 1700000901000,
     data: {
@@ -208,6 +214,9 @@ export const addToCart: Flow.StepExample = {
 };
 
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view is forwarded to TikTok as a page view event with the source URL in the page context.',
   in: getEvent('page view', {
     timestamp: 1700000902000,
     source: {
@@ -244,6 +253,9 @@ export const pageView: Flow.StepExample = {
 };
 
 export const lead: Flow.StepExample = {
+  title: 'Submit form',
+  description:
+    'A newsletter form submission is sent to TikTok as a SubmitForm event with the hashed email in user context.',
   in: getEvent('form submit', {
     timestamp: 1700000903000,
     data: { type: 'newsletter' },

@@ -12,7 +12,8 @@ export const camelToSpaced = (key) =>
     .trim()
     .toLowerCase();
 
-export const stepTitle = (key, _example) => camelToSpaced(key);
+export const stepTitle = (key, example) =>
+  (example && example.title) || camelToSpaced(key);
 
 ## Configuration
 
@@ -37,12 +38,20 @@ This {props.type} uses the standard {props.type} config wrapper (consent, data, 
   <p>This package does not define custom rule-level settings. For the standard rule fields (consent, condition, data, batch, name, policy) see <a href="/docs/mapping">mapping</a>.</p>
 )}
 
-{props.data?.examples?.step && (
-  <>
-    <h2>Examples</h2>
-    {Object.entries(props.data.examples.step).flatMap(([key, example]) => [
-      <h3 key={`${key}-h`}>{stepTitle(key, example)}</h3>,
-      <StepExample key={`${key}-e`} example={example} />,
-    ])}
-  </>
-)}
+{(() => {
+  const visible = props.data?.examples?.step
+    ? Object.entries(props.data.examples.step).filter(
+        ([, example]) => example?.public !== false,
+      )
+    : [];
+  if (visible.length === 0) return null;
+  return (
+    <>
+      <h2>Examples</h2>
+      {visible.flatMap(([key, example]) => [
+        <h3 key={`${key}-h`}>{stepTitle(key, example)}</h3>,
+        <StepExample key={`${key}-e`} example={example} />,
+      ])}
+    </>
+  );
+})()}

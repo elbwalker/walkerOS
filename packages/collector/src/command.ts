@@ -32,5 +32,6 @@ export function createCommand<T extends Collector.Instance>(
     },
     'Command',
     collector.hooks,
+    collector.logger,
   ) as Collector.CommandFn;
 }

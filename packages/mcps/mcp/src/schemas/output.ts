@@ -100,6 +100,17 @@ export const ExamplesListOutputShape = {
           .describe('Step type'),
         stepName: z.string().describe('Step name'),
         exampleName: z.string().describe('Example name'),
+        title: z.string().optional().describe('Human-readable title if set'),
+        description: z
+          .string()
+          .optional()
+          .describe('Short human-readable description'),
+        public: z
+          .boolean()
+          .optional()
+          .describe(
+            'Whether the example is public (defaults to true if omitted)',
+          ),
         hasIn: z.boolean().describe('Whether the example has an input value'),
         hasOut: z.boolean().describe('Whether the example has an output value'),
         hasMapping: z

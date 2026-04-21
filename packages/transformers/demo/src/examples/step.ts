@@ -2,6 +2,7 @@ import type { Flow } from '@walkeros/core';
 
 /** Default passthrough — logs the event and returns void (no modification). */
 export const passthrough: Flow.StepExample = {
+  public: false,
   description: 'Default config: logs event, passes through unchanged',
   in: {
     name: 'page view',
@@ -21,6 +22,7 @@ export const passthrough: Flow.StepExample = {
 
 /** addProcessedFlag enriches the event with _processed metadata. */
 export const addProcessedFlag: Flow.StepExample = {
+  title: 'Add processed flag',
   description:
     'With addProcessedFlag: true, adds _processed and _processedBy to event.data',
   in: {

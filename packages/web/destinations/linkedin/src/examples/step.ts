@@ -21,6 +21,7 @@ export type LinkedInStepExample = Flow.StepExample & {
  * Conversion Rule from Campaign Manager.
  */
 export const unmappedEventIgnored: LinkedInStepExample = {
+  public: false,
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [],
 };
@@ -33,6 +34,9 @@ export const unmappedEventIgnored: LinkedInStepExample = {
  * `{ id }` → `lintrk('track', { conversion_id })`.
  */
 export const simpleConversionId: LinkedInStepExample = {
+  title: 'Simple conversion',
+  description:
+    'A form submit fires a LinkedIn lintrk track with only a conversion_id from Campaign Manager.',
   in: getEvent('form submit', { timestamp: 1700000101 }),
   mapping: {
     settings: {
@@ -62,6 +66,9 @@ export const simpleConversionId: LinkedInStepExample = {
  * ready for deduplication with a future server (Conversions API) destination.
  */
 export const orderCompleteFullConversion: LinkedInStepExample = {
+  title: 'Ecommerce conversion',
+  description:
+    'A completed order fires a LinkedIn lintrk track with conversion_id, value, currency, and event_id for deduplication.',
   in: getEvent('order complete', { timestamp: 1700000102 }),
   mapping: {
     settings: {
@@ -100,6 +107,9 @@ export const orderCompleteFullConversion: LinkedInStepExample = {
  * to the auto page view.
  */
 export const pageViewConversion: LinkedInStepExample = {
+  title: 'Key page view',
+  description:
+    'A page view fires an explicit lintrk track mapped to a LinkedIn KEY_PAGE_VIEW conversion rule.',
   in: getEvent('page view', { timestamp: 1700000103 }),
   mapping: {
     settings: {
@@ -132,6 +142,9 @@ export const pageViewConversion: LinkedInStepExample = {
  * "id + eventId only" shape.
  */
 export const demoRequestLead: LinkedInStepExample = {
+  title: 'Lead conversion',
+  description:
+    'A demo request fires a LinkedIn lintrk track for a lead conversion with id and event_id only.',
   in: getEvent('demo request', { timestamp: 1700000104 }),
   mapping: {
     settings: {
@@ -164,6 +177,7 @@ export const demoRequestLead: LinkedInStepExample = {
  * reactivation without deleting it.
  */
 export const conversionSkipped: LinkedInStepExample = {
+  public: false,
   in: getEvent('form submit', { timestamp: 1700000105 }),
   mapping: {
     skip: true,
@@ -189,6 +203,7 @@ export const conversionSkipped: LinkedInStepExample = {
  * so zero calls are produced.
  */
 export const missingConversionIdIgnored: LinkedInStepExample = {
+  public: false,
   in: getEvent('form submit', { timestamp: 1700000106 }),
   mapping: {
     settings: {
@@ -210,6 +225,7 @@ export const missingConversionIdIgnored: LinkedInStepExample = {
  * `event_id` appear in the final call — no `conversion_value`, no `currency`.
  */
 export const partialFieldsOmitted: LinkedInStepExample = {
+  public: false,
   in: getEvent('order complete', { timestamp: 1700000107 }),
   mapping: {
     settings: {

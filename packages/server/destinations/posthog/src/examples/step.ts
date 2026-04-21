@@ -22,6 +22,9 @@ export type PostHogStepExample = Flow.StepExample & {
  * and no include, properties is {}. distinctId falls back to event.user.id.
  */
 export const defaultCapture: PostHogStepExample = {
+  title: 'Default capture',
+  description:
+    'A walker event becomes a PostHog capture call with the user id as distinctId and no extra properties.',
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [
     [
@@ -40,6 +43,9 @@ export const defaultCapture: PostHogStepExample = {
  * globals sections into prefixed properties.
  */
 export const captureWithInclude: PostHogStepExample = {
+  title: 'Capture with include',
+  description:
+    'Destination-level include flattens data and globals sections into prefixed PostHog event properties.',
   in: getEvent('order complete', { timestamp: 1700000101 }),
   configInclude: ['data', 'globals'],
   out: [
@@ -66,6 +72,9 @@ export const captureWithInclude: PostHogStepExample = {
  * client.identify() with person properties. skip: true suppresses capture.
  */
 export const identifyWithSetAndSetOnce: PostHogStepExample = {
+  title: 'Identify with $set',
+  description:
+    'A user login fires PostHog identify with $set and $set_once person properties and skips the capture.',
   in: getEvent('user login', {
     timestamp: 1700000102,
     data: {
@@ -119,6 +128,9 @@ export const identifyWithSetAndSetOnce: PostHogStepExample = {
  * client.groupIdentify() with group properties. skip: true suppresses capture.
  */
 export const groupIdentifyWithProperties: PostHogStepExample = {
+  title: 'Group identify',
+  description:
+    'A company update fires PostHog groupIdentify with group type, key, and associated group properties.',
   in: getEvent('company update', {
     timestamp: 1700000103,
     data: {
@@ -164,6 +176,9 @@ export const groupIdentifyWithProperties: PostHogStepExample = {
  * type + key (no properties). The capture call includes groups.
  */
 export const captureWithGroupContext: PostHogStepExample = {
+  title: 'Capture with group',
+  description:
+    'A destination-level group mapping attaches the resolved group context to every PostHog capture call.',
   in: getEvent('page view', {
     timestamp: 1700000104,
     globals: { pagegroup: 'docs', company_id: 'company_123' },
@@ -193,6 +208,9 @@ export const captureWithGroupContext: PostHogStepExample = {
  * Consent revoked — client.disable() is called.
  */
 export const consentRevoke: PostHogStepExample = {
+  title: 'Consent revoked',
+  description:
+    'A walker consent command with analytics denied calls client.disable on the PostHog client.',
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
@@ -203,6 +221,9 @@ export const consentRevoke: PostHogStepExample = {
  * Consent granted — client.enable() is called.
  */
 export const consentGrant: PostHogStepExample = {
+  title: 'Consent granted',
+  description:
+    'A walker consent command with analytics granted calls client.enable on the PostHog client.',
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,

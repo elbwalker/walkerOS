@@ -20,6 +20,9 @@ export type AmplitudeStepExample = Flow.StepExample & {
  * no destination-level include, event_properties is `{}`.
  */
 export const defaultEventForwarding: AmplitudeStepExample = {
+  title: 'Default track',
+  description:
+    'A walker event is forwarded to Amplitude as an amplitude.track call with the event name and empty properties.',
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [['amplitude.track', 'product view', {}]],
 };
@@ -29,6 +32,7 @@ export const defaultEventForwarding: AmplitudeStepExample = {
  * matches but does nothing. The destination fires zero SDK calls.
  */
 export const wildcardIgnored: AmplitudeStepExample = {
+  public: false,
   in: getEvent('debug noise', { timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
@@ -39,6 +43,9 @@ export const wildcardIgnored: AmplitudeStepExample = {
  * into prefixed event_properties on every push.
  */
 export const destinationLevelInclude: AmplitudeStepExample = {
+  title: 'Include data',
+  description:
+    'Destination-level include flattens the event data section into prefixed event_properties on every track call.',
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
@@ -62,6 +69,9 @@ export const destinationLevelInclude: AmplitudeStepExample = {
  * overrides it with `globals` only.
  */
 export const ruleIncludeReplaces: AmplitudeStepExample = {
+  title: 'Rule include overrides',
+  description:
+    'A per-rule include replaces the destination-level include for the matched event, here using only globals.',
   in: getEvent('order complete', { timestamp: 1700000103 }),
   configInclude: ['data'],
   mapping: {
@@ -93,6 +103,9 @@ export const ruleIncludeReplaces: AmplitudeStepExample = {
  * session number (cross-page-load consistency). djb2('s3ss10n') = 394324160.
  */
 export const destinationLevelIdentify: AmplitudeStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify sets userId, deviceId, and sessionId on the Amplitude client before sending events; setters only re-fire when the resolved values change (cached values are not re-applied on subsequent pushes).',
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -118,6 +131,9 @@ export const destinationLevelIdentify: AmplitudeStepExample = {
  * identity side effects only.
  */
 export const userLoginIdentify: AmplitudeStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login sets the Amplitude userId and runs identify with set, setOnce, and add operations.',
   in: getEvent('user login', {
     timestamp: 1700000105,
     data: {
@@ -181,6 +197,9 @@ export const userLoginIdentify: AmplitudeStepExample = {
  * reset side effect, no default track().
  */
 export const userLogoutReset: AmplitudeStepExample = {
+  title: 'User logout reset',
+  description:
+    'A user logout calls amplitude.reset to clear the userId and regenerate the deviceId.',
   in: getEvent('user logout', { timestamp: 1700000106 }),
   mapping: {
     skip: true,
@@ -199,6 +218,9 @@ export const userLogoutReset: AmplitudeStepExample = {
  * The walkerOS default event has no data.currency, so the fallback fires.
  */
 export const subscriptionRenewRevenue: AmplitudeStepExample = {
+  title: 'Subscription revenue',
+  description:
+    'A subscription renewal fires a single amplitude.revenue call with productId, price, and currency fallback.',
   in: getEvent('subscription renew', {
     timestamp: 1700000107,
     data: {
@@ -245,6 +267,9 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
  * filters to products only (price must be present).
  */
 export const orderCompleteMultiProduct: AmplitudeStepExample = {
+  title: 'Multi-product order',
+  description:
+    'An order fires one amplitude.revenue call per nested product plus a single track for the order totals.',
   in: getEvent('order complete', { timestamp: 1700000108 }),
   mapping: {
     include: ['data', 'globals'],
@@ -311,6 +336,9 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
  * where a user belongs to a company. Both SDK calls fire on the same rule.
  */
 export const groupAssignmentWithProperties: AmplitudeStepExample = {
+  title: 'Group assignment',
+  description:
+    'A company update assigns the user to a group and sets group properties via setGroup and groupIdentify.',
   in: getEvent('company update', {
     timestamp: 1700000109,
     data: {
@@ -377,6 +405,9 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
  * an event.
  */
 export const consentRevokeOptOut: AmplitudeStepExample = {
+  title: 'Consent revoked',
+  description:
+    'A walker consent command with analytics denied opts out of Amplitude tracking via setOptOut(true).',
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
@@ -387,6 +418,9 @@ export const consentRevokeOptOut: AmplitudeStepExample = {
  * Consent granted → amplitude.setOptOut(false).
  */
 export const consentGrantOptIn: AmplitudeStepExample = {
+  title: 'Consent granted',
+  description:
+    'A walker consent command with analytics granted opts back into Amplitude tracking via setOptOut(false).',
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,

@@ -8,6 +8,9 @@ import type { Flow } from '@walkeros/core';
  */
 
 export const newMarketingSession: Flow.StepExample = {
+  title: 'New marketing session',
+  description:
+    'A visit with UTM parameters starts a new session and emits walker user, session, and session start calls.',
   trigger: {
     type: 'load',
     options: {
@@ -63,6 +66,9 @@ export const newMarketingSession: Flow.StepExample = {
 };
 
 export const returningVisitor: Flow.StepExample = {
+  title: 'Returning visitor',
+  description:
+    'A returning visit with a google referrer reuses the stored device id and increments the session count.',
   trigger: {
     type: 'load',
     options: {

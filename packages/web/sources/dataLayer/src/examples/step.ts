@@ -1,6 +1,9 @@
 import type { Flow } from '@walkeros/core';
 
 export const gtagPurchase: Flow.StepExample = {
+  title: 'gtag purchase',
+  description:
+    'A gtag purchase call pushed to the dataLayer is captured as a walker dataLayer purchase event with item details.',
   trigger: { type: 'gtag' },
   in: [
     'event',
@@ -29,6 +32,9 @@ export const gtagPurchase: Flow.StepExample = {
 };
 
 export const consentUpdate: Flow.StepExample = {
+  title: 'Consent update',
+  description:
+    'A gtag consent update is captured from the dataLayer as a walker dataLayer consent update event.',
   trigger: { type: 'gtag' },
   in: [
     'consent',
@@ -53,6 +59,9 @@ export const consentUpdate: Flow.StepExample = {
 };
 
 export const gtagAddToCart: Flow.StepExample = {
+  title: 'gtag add_to_cart',
+  description:
+    'A gtag add_to_cart call pushed to the dataLayer is captured as a walker dataLayer add_to_cart event.',
   trigger: { type: 'gtag' },
   in: [
     'event',
@@ -95,6 +104,9 @@ export const gtagAddToCart: Flow.StepExample = {
 };
 
 export const gtagViewItem: Flow.StepExample = {
+  title: 'gtag view_item',
+  description:
+    'A gtag view_item call pushed to the dataLayer is captured as a walker dataLayer view_item event with item data.',
   trigger: { type: 'gtag' },
   in: [
     'event',
@@ -135,6 +147,9 @@ export const gtagViewItem: Flow.StepExample = {
 };
 
 export const directEvent: Flow.StepExample = {
+  title: 'Direct dataLayer event',
+  description:
+    'A plain object pushed directly onto the dataLayer is captured as a walker dataLayer custom event.',
   trigger: { type: 'direct' },
   in: {
     event: 'custom_event',

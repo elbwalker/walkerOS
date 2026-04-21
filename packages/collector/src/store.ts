@@ -32,9 +32,24 @@ export async function initStores(
     const originalSet = instance.set;
     const originalDelete = instance.delete;
 
-    instance.get = useHooks(originalGet, 'StoreGet', collector.hooks);
-    instance.set = useHooks(originalSet, 'StoreSet', collector.hooks);
-    instance.delete = useHooks(originalDelete, 'StoreDelete', collector.hooks);
+    instance.get = useHooks(
+      originalGet,
+      'StoreGet',
+      collector.hooks,
+      collector.logger,
+    );
+    instance.set = useHooks(
+      originalSet,
+      'StoreSet',
+      collector.hooks,
+      collector.logger,
+    );
+    instance.delete = useHooks(
+      originalDelete,
+      'StoreDelete',
+      collector.hooks,
+      collector.logger,
+    );
 
     result[storeId] = instance;
   }

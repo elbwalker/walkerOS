@@ -14,6 +14,9 @@ import { getEvent } from '@walkeros/core';
 const URL = 'https://api.example.com/events';
 
 export const entityAction: Flow.StepExample = {
+  title: 'Entity action',
+  description:
+    'A generic entity action event is forwarded to the configured API endpoint with the mapped data JSON body.',
   in: getEvent('entity action', { timestamp: 1700000500 }),
   mapping: {
     data: 'data',
@@ -34,6 +37,9 @@ export const entityAction: Flow.StepExample = {
 };
 
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view is POSTed to the configured API endpoint with the event data section as the JSON body.',
   in: getEvent('page view', { timestamp: 1700000501 }),
   mapping: {
     data: 'data',
@@ -56,6 +62,9 @@ export const pageView: Flow.StepExample = {
 };
 
 export const customTransform: Flow.StepExample = {
+  title: 'Custom payload',
+  description:
+    'An order event is reshaped via a data mapping into a custom JSON body for the API endpoint.',
   in: getEvent('order complete', { timestamp: 1700000502 }),
   mapping: {
     data: {

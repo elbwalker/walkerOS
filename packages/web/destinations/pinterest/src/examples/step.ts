@@ -14,6 +14,9 @@ import { getEvent } from '@walkeros/core';
  * standard conversion event. event_id is auto-attached for deduplication.
  */
 export const defaultForward: Flow.StepExample = {
+  title: 'Default forward',
+  description:
+    'Without a mapping the walker event name is forwarded as-is to pintrk track with an event_id for dedup.',
   in: getEvent('page view', { timestamp: 1700000100, id: 'ev-1700000100' }),
   mapping: undefined,
   out: [['pintrk', 'track', 'page view', { event_id: 'ev-1700000100' }]],
@@ -24,6 +27,7 @@ export const defaultForward: Flow.StepExample = {
  * events. `mapping.ignore: true` at rule level produces zero SDK calls.
  */
 export const wildcardIgnored: Flow.StepExample = {
+  public: false,
   in: getEvent('debug noise', { timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
@@ -35,6 +39,9 @@ export const wildcardIgnored: Flow.StepExample = {
  * a conversion event — the destination never auto-maps.
  */
 export const pageViewRename: Flow.StepExample = {
+  title: 'Page visit',
+  description:
+    'A mapping renames the walker event to the Pinterest standard pagevisit event for conversion tracking.',
   in: getEvent('page view', { timestamp: 1700000102, id: 'ev-1700000102' }),
   mapping: { name: 'pagevisit' },
   out: [['pintrk', 'track', 'pagevisit', { event_id: 'ev-1700000102' }]],
@@ -45,6 +52,9 @@ export const pageViewRename: Flow.StepExample = {
  * Illustrates single-field mapping.data resolution.
  */
 export const siteSearch: Flow.StepExample = {
+  title: 'Search',
+  description:
+    'A site search fires Pinterest search with the search_query field resolved from event data.',
   in: getEvent('site search', {
     timestamp: 1700000103,
     id: 'ev-1700000103',
@@ -75,6 +85,9 @@ export const siteSearch: Flow.StepExample = {
  * Single-product viewcontent.
  */
 export const productViewContent: Flow.StepExample = {
+  title: 'View content',
+  description:
+    'A product view fires Pinterest viewcontent with value, currency, product_id, and product_name.',
   in: getEvent('product view', {
     timestamp: 1700000104,
     id: 'ev-1700000104',
@@ -110,6 +123,9 @@ export const productViewContent: Flow.StepExample = {
  * Add-to-cart with an inline line_items array.
  */
 export const productAddToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add fires Pinterest addtocart with value, currency, and a single-item line_items array.',
   in: getEvent('product add', {
     timestamp: 1700000105,
     id: 'ev-1700000105',
@@ -163,6 +179,9 @@ export const productAddToCart: Flow.StepExample = {
  * Multi-product checkout — the canonical Pinterest ecommerce pattern.
  */
 export const orderCompleteCheckout: Flow.StepExample = {
+  title: 'Checkout',
+  description:
+    'A completed order fires Pinterest checkout with value, order_id, currency, and a nested line_items array.',
   in: getEvent('order complete', {
     timestamp: 1700000106,
     id: 'ev-1700000106',
@@ -226,6 +245,9 @@ export const orderCompleteCheckout: Flow.StepExample = {
  * Lead conversion with per-event enhanced matching update.
  */
 export const userLoginLead: Flow.StepExample = {
+  title: 'Lead with matching',
+  description:
+    'A user login fires pintrk set for enhanced matching and then a lead conversion track call.',
   in: getEvent('user login', {
     timestamp: 1700000107,
     id: 'ev-1700000107',
@@ -269,6 +291,9 @@ export const userLoginLead: Flow.StepExample = {
  * the default pintrk('track', ...) call.
  */
 export const identifyOnlySkip: Flow.StepExample = {
+  title: 'Identify only',
+  description:
+    'A user update fires pintrk set for enhanced matching without a track call via mapping skip.',
   in: getEvent('user update', {
     timestamp: 1700000108,
     id: 'ev-1700000108',
@@ -297,6 +322,7 @@ export const identifyOnlySkip: Flow.StepExample = {
  * and stops calling pintrk('track', ...) for subsequent events.
  */
 export const consentRevoke: Flow.StepExample = {
+  public: false,
   command: 'consent',
   in: { marketing: false } as WalkerOS.Consent,
   out: [],
@@ -306,6 +332,7 @@ export const consentRevoke: Flow.StepExample = {
  * Consent grant — explicit opt-in.
  */
 export const consentGrant: Flow.StepExample = {
+  public: false,
   command: 'consent',
   in: { marketing: true } as WalkerOS.Consent,
   out: [],

@@ -183,7 +183,17 @@ export const InlineCodeSchema = z
  */
 export const StepExampleSchema = z
   .object({
+    title: z
+      .string()
+      .optional()
+      .describe('Human-readable title (overrides default heading)'),
     description: z.string().optional().describe('Human-readable description'),
+    public: z
+      .boolean()
+      .optional()
+      .describe(
+        'Whether this example is shown in docs/UI/MCP default output (default: true). Set false for test-only fixtures.',
+      ),
     in: z.unknown().optional().describe('Input to the step'),
     trigger: z
       .object({

@@ -35,6 +35,12 @@ export function registerFlowExamplesTool(server: McpServer) {
           .describe(
             'Return full in/out/mapping data for each example (default: false, returns metadata only)',
           ),
+        includeHidden: z
+          .boolean()
+          .optional()
+          .describe(
+            'Include examples marked public: false (default: false). Set true for test/debug discovery.',
+          ),
       },
       outputSchema: ExamplesListOutputShape,
       annotations: {
@@ -44,7 +50,7 @@ export function registerFlowExamplesTool(server: McpServer) {
         openWorldHint: false,
       },
     },
-    async ({ configPath, flow, step, full }) => {
+    async ({ configPath, flow, step, full, includeHidden }) => {
       try {
         const rawConfig = await loadJsonConfig<Flow.Config>(configPath);
 
@@ -70,6 +76,9 @@ export function registerFlowExamplesTool(server: McpServer) {
           stepType: string;
           stepName: string;
           exampleName: string;
+          title?: string;
+          description?: string;
+          public?: boolean;
           hasIn: boolean;
           hasOut: boolean;
           hasMapping: boolean;
@@ -97,11 +106,15 @@ export function registerFlowExamplesTool(server: McpServer) {
             for (const [exName, ex] of Object.entries(
               ref.examples as Flow.StepExamples,
             )) {
+              if (!includeHidden && ex.public === false) continue;
               examples.push({
                 step: `${type}.${name}`,
                 stepType: type,
                 stepName: name,
                 exampleName: exName,
+                title: ex.title,
+                description: ex.description,
+                public: ex.public,
                 hasIn: ex.in !== undefined,
                 hasOut: ex.out !== undefined,
                 hasMapping: ex.mapping !== undefined,

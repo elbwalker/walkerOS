@@ -1,5 +1,13 @@
 # walkeros
 
+## 3.4.1
+
+### Patch Changes
+
+- Updated dependencies [caea905]
+- Updated dependencies [caea905]
+  - @walkeros/cli@3.4.1
+
 ## 3.4.0
 
 ### Patch Changes

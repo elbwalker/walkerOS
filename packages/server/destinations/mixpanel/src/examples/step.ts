@@ -38,6 +38,9 @@ export type MixpanelStepExample = Flow.StepExample & {
  * With default settings.identify resolving user.id.
  */
 export const defaultEventForwarding: MixpanelStepExample = {
+  title: 'Default track',
+  description:
+    'A walkerOS event is forwarded to Mixpanel as a track call with the user id as the distinct_id.',
   in: getEvent('product view', { timestamp: 1700000100 }),
   settings: {
     identify: {
@@ -54,6 +57,9 @@ export const defaultEventForwarding: MixpanelStepExample = {
  * prefixed track() properties.
  */
 export const trackWithInclude: MixpanelStepExample = {
+  title: 'Track with include',
+  description:
+    'A destination-level include flattens the event data section into prefixed Mixpanel track properties.',
   in: getEvent('product view', { timestamp: 1700000101 }),
   settings: {
     identify: {
@@ -84,6 +90,9 @@ export const trackWithInclude: MixpanelStepExample = {
  * destination-level default.
  */
 export const perEventIdentify: MixpanelStepExample = {
+  title: 'Per-event identify',
+  description:
+    'A mapping-level identify overrides the destination default to resolve the distinct_id from event data.',
   in: getEvent('user login', {
     timestamp: 1700000102,
     data: {
@@ -115,6 +124,9 @@ export const perEventIdentify: MixpanelStepExample = {
  * Track with group — group key/id attached as track property.
  */
 export const trackWithGroup: MixpanelStepExample = {
+  title: 'Track with group',
+  description:
+    'A group key and id are attached as a Mixpanel track property so the event is associated with a company or account.',
   in: getEvent('page view', {
     timestamp: 1700000103,
     data: {
@@ -155,6 +167,9 @@ export const trackWithGroup: MixpanelStepExample = {
  * only identity + people side effects fire.
  */
 export const userLoginPeopleSet: MixpanelStepExample = {
+  title: 'User login people',
+  description:
+    'A user login fires Mixpanel people.set, set_once, and increment operations without sending a track event.',
   in: getEvent('user login', {
     timestamp: 1700000104,
     data: {
@@ -207,10 +222,14 @@ export const userLoginPeopleSet: MixpanelStepExample = {
 };
 
 /**
- * Full people operation vocabulary — exercises set, set_once, increment,
- * append, union, remove, unset, delete_user.
+ * Common people operation vocabulary — exercises set, set_once, increment,
+ * append, union, remove, unset. (delete_user is intentionally not covered
+ * by this example.)
  */
 export const allPeopleOperations: MixpanelStepExample = {
+  title: 'Common people operations',
+  description:
+    'A profile update exercises the common Mixpanel people vocabulary: set, set_once, increment, append, union, remove, and unset. delete_user is not covered by this example.',
   in: getEvent('profile update', {
     timestamp: 1700000105,
     data: {
@@ -282,6 +301,9 @@ export const allPeopleOperations: MixpanelStepExample = {
  * Group profile operations — settings.groupProfile with set and set_once.
  */
 export const companyGroupProfile: MixpanelStepExample = {
+  title: 'Group profile',
+  description:
+    'A company update sets Mixpanel group profile properties via groups.set and groups.set_once.',
   in: getEvent('company update', {
     timestamp: 1700000106,
     data: {
@@ -330,6 +352,9 @@ export const companyGroupProfile: MixpanelStepExample = {
  * Historical import — useImport: true uses mp.import() instead of mp.track().
  */
 export const historicalImport: MixpanelStepExample = {
+  title: 'Historical import',
+  description:
+    'Setting useImport routes the event through mp.import for backfilling historical Mixpanel data.',
   in: getEvent('order complete', {
     timestamp: 1700000107,
     data: {
@@ -351,6 +376,9 @@ export const historicalImport: MixpanelStepExample = {
  * Alias — legacy identity merge. Fires mp.alias before track.
  */
 export const aliasBeforeTrack: MixpanelStepExample = {
+  title: 'Alias before track',
+  description:
+    'A user login merges a prior anonymous id into the new user id via mp.alias before sending the track event.',
   in: getEvent('user login', {
     timestamp: 1700000108,
     data: {
@@ -378,6 +406,7 @@ export const aliasBeforeTrack: MixpanelStepExample = {
  * Wildcard ignore — the rule matches but does nothing.
  */
 export const wildcardIgnored: MixpanelStepExample = {
+  public: false,
   in: getEvent('debug noise', { timestamp: 1700000109 }),
   mapping: { ignore: true },
   out: [],

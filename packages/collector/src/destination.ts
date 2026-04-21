@@ -509,6 +509,7 @@ export async function destinationInit<Destination extends Destination.Instance>(
       destination.init,
       'DestinationInit',
       collector.hooks,
+      collector.logger,
     )(context);
 
     // Actively check for errors (when false)
@@ -634,6 +635,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
             destination.pushBatch!,
             'DestinationPushBatch',
             collector.hooks,
+            collector.logger,
           )(currentBatched, batchContext);
 
           destLogger.debug('push batch done');
@@ -660,6 +662,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
       destination.push,
       'DestinationPush',
       collector.hooks,
+      collector.logger,
     )(processed.event, context);
 
     destLogger.debug('push done');

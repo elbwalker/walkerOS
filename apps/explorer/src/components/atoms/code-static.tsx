@@ -4,6 +4,10 @@ import {
   type Highlighter,
   type BundledLanguage,
 } from 'shiki';
+import { palenightTheme } from '../../themes/palenight';
+import { lighthouseTheme } from '../../themes/lighthouse';
+import { monacoThemeToShiki } from '../../themes/shiki-adapter';
+import { ELB_THEME_DARK, ELB_THEME_LIGHT } from '../../themes/names';
 
 export interface CodeStaticProps {
   code: string;
@@ -26,12 +30,29 @@ const LANGS: readonly BundledLanguage[] = [
   'markdown',
 ];
 
+// Derive Shiki themes from the same Monaco theme objects CodeBox uses,
+// so CodeView (Shiki) and CodeBox (Monaco) render identical colors.
+// Names match Monaco's `monaco.editor.setTheme(...)` keys.
+const ELB_SHIKI_LIGHT = monacoThemeToShiki(lighthouseTheme, {
+  name: ELB_THEME_LIGHT,
+  type: 'light',
+  defaultBackground: '#ffffff',
+  defaultForeground: '#24292E',
+});
+
+const ELB_SHIKI_DARK = monacoThemeToShiki(palenightTheme, {
+  name: ELB_THEME_DARK,
+  type: 'dark',
+  defaultBackground: '#292d3e',
+  defaultForeground: '#bfc7d5',
+});
+
 let highlighterPromise: Promise<Highlighter> | null = null;
 
 function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
     highlighterPromise = createHighlighter({
-      themes: ['dark-plus', 'light-plus'],
+      themes: [ELB_SHIKI_LIGHT, ELB_SHIKI_DARK],
       langs: [...LANGS],
     });
   }
@@ -85,7 +106,7 @@ export function CodeStatic({
       if (cancelled) return;
       const rendered = highlighter.codeToHtml(code, {
         lang: resolveLang(language),
-        theme: activeTheme === 'dark' ? 'dark-plus' : 'light-plus',
+        theme: activeTheme === 'dark' ? ELB_THEME_DARK : ELB_THEME_LIGHT,
       });
       setHtml(rendered);
     });
@@ -94,7 +115,9 @@ export function CodeStatic({
     };
   }, [code, language, activeTheme]);
 
+  const wrapperClass = `elb-code-static${className ? ` ${className}` : ''}`;
+
   return (
-    <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
+    <div className={wrapperClass} dangerouslySetInnerHTML={{ __html: html }} />
   );
 }

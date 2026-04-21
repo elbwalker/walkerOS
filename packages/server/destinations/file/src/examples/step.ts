@@ -37,6 +37,9 @@ export type FileStepExample = Flow.StepExample & {
 
 /** Default JSONL append. Static filename, all defaults. */
 export const jsonlDefault: FileStepExample = {
+  title: 'JSONL append',
+  description:
+    'An event is appended as a single JSON line to a static filename using default JSONL formatting.',
   in: getEvent('page view', { timestamp: 1700000000000 }),
   settings: { filename: 'events.jsonl' },
   out: [
@@ -53,6 +56,9 @@ export const jsonlDefault: FileStepExample = {
 
 /** Baersch-style TSV log: PHP parity case. */
 export const tsvBaerschLog: FileStepExample = {
+  title: 'TSV log',
+  description:
+    'An event is written as a tab-separated line selecting specific fields for a compact access-log style file.',
   in: getEvent('page view', {
     timestamp: 1700000000000,
     data: { title: 'Docs' },
@@ -86,6 +92,9 @@ export const tsvBaerschLog: FileStepExample = {
 
 /** Tenant sharding via plain key extraction. */
 export const jsonlTenantShardKey: FileStepExample = {
+  title: 'Tenant sharding',
+  description:
+    'The filename is resolved from an event field so events are partitioned into per-tenant JSONL files.',
   in: getEvent('custom event', {
     timestamp: 1700000000000,
     data: { tenant: 'acme' },
@@ -104,6 +113,9 @@ export const jsonlTenantShardKey: FileStepExample = {
  * example exercises the same code path without needing the bundler.
  */
 export const jsonlDailyRotation: FileStepExample = {
+  title: 'Daily rotation',
+  description:
+    'A mapping function derives a date-stamped filename from the event timestamp to rotate JSONL files daily.',
   in: getEvent('order complete', {
     timestamp: Date.UTC(2026, 3, 15, 12, 34, 56),
     data: { id: 'ORD-1' },
@@ -123,6 +135,9 @@ export const jsonlDailyRotation: FileStepExample = {
 
 /** CSV with an object cell. data is JSON-stringified, properly quoted. */
 export const csvObjectCell: FileStepExample = {
+  title: 'CSV with object cell',
+  description:
+    'An event is written as a CSV row with the data object JSON-stringified and properly quoted for embedded commas and quotes.',
   in: getEvent('page view', {
     timestamp: 1700000000000,
     data: { title: 'Hello, "World"', count: 3 },

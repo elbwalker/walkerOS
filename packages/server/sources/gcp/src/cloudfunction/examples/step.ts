@@ -1,6 +1,9 @@
 import type { Flow } from '@walkeros/core';
 
 export const postEvent: Flow.StepExample = {
+  title: 'POST event',
+  description:
+    'A GCP Cloud Function HTTP POST with a JSON body becomes a single walker elb event.',
   trigger: { type: 'POST' },
   in: {
     method: 'POST',
@@ -22,6 +25,9 @@ export const postEvent: Flow.StepExample = {
 };
 
 export const orderEvent: Flow.StepExample = {
+  title: 'Order POST',
+  description:
+    'A Cloud Function HTTP POST carrying an order payload becomes a walker order complete event.',
   trigger: { type: 'POST' },
   in: {
     method: 'POST',

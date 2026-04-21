@@ -31,6 +31,9 @@ const OPTIONS = {
 };
 
 export const checkout: Flow.StepExample = {
+  title: 'Checkout',
+  description:
+    'A completed order is sent to the Pinterest Conversions API as a checkout event with value, currency, and contents.',
   in: getEvent('order complete', {
     timestamp: 1700000900,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
@@ -119,6 +122,9 @@ export const checkout: Flow.StepExample = {
 };
 
 export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add is sent to Pinterest as an add_to_cart conversion with the added item details.',
   in: getEvent('product add', {
     timestamp: 1700000901,
     data: { id: 'SKU-B2', name: 'Cool Cap', price: '42.00', quantity: 1 },
@@ -188,6 +194,9 @@ export const addToCart: Flow.StepExample = {
 };
 
 export const pageVisit: Flow.StepExample = {
+  title: 'Page visit',
+  description:
+    'A page view is sent to Pinterest as a page_visit conversion with the source URL.',
   in: getEvent('page view', {
     timestamp: 1700000902,
     user: { id: 'user-789' },
@@ -222,6 +231,9 @@ export const pageVisit: Flow.StepExample = {
 };
 
 export const search: Flow.StepExample = {
+  title: 'Search',
+  description:
+    'A site search event is forwarded to Pinterest as a search conversion with the query in custom data.',
   in: getEvent('entity action', {
     timestamp: 1700000903,
     name: 'site search',
@@ -270,6 +282,9 @@ export const search: Flow.StepExample = {
 };
 
 export const signup: Flow.StepExample = {
+  title: 'Signup',
+  description:
+    'A user signup is sent to Pinterest as a signup conversion with the hashed email and external id.',
   in: getEvent('entity action', {
     timestamp: 1700000904,
     name: 'user signup',

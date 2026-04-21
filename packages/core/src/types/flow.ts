@@ -507,7 +507,16 @@ export type StepOut = readonly StepEffect[];
  * `elb(event)`.
  */
 export interface StepExample {
+  /** Human-readable title (overrides camelCase-to-spaced default heading in docs). */
+  title?: string;
   description?: string;
+  /**
+   * Whether this example is meant for public consumption (docs, UI, MCP default output).
+   * Defaults to `true`. Set to `false` for test-only fixtures that should stay out of
+   * user-facing surfaces but still run in test suites and remain available to
+   * `flow_simulate` / CLI `--simulate`.
+   */
+  public?: boolean;
   in?: unknown;
   /** Trigger metadata for sources — type and options for the trigger call. */
   trigger?: {

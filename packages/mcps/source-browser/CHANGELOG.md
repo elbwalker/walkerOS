@@ -1,5 +1,14 @@
 # @walkeros/mcp-source-browser
 
+## 3.4.1
+
+### Patch Changes
+
+- Updated dependencies [12adf24]
+- Updated dependencies [75aa26b]
+  - @walkeros/core@3.4.1
+  - @walkeros/web-source-browser@3.4.1
+
 ## 3.4.0
 
 ### Patch Changes

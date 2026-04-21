@@ -8,6 +8,9 @@ import { getEvent, isObject } from '@walkeros/core';
  * settings to `startFlow` as the destination config.
  */
 export const init: Flow.StepExample = {
+  title: 'Initialization',
+  description:
+    'Destination bootstrap loads the Piwik PRO tracker and configures the tracker URL and app id.',
   in: {
     loadScript: true,
     settings: {
@@ -26,6 +29,9 @@ export const init: Flow.StepExample = {
 };
 
 export const ecommerceOrder: Flow.StepExample = {
+  title: 'Ecommerce order',
+  description:
+    'A completed order calls Piwik PRO ecommerceOrder with line items, order totals, and currency code.',
   in: getEvent('order complete', { timestamp: 1700000300 }),
   mapping: {
     name: 'ecommerceOrder',
@@ -101,6 +107,9 @@ export const ecommerceOrder: Flow.StepExample = {
 };
 
 export const ecommerceAddToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add fires Piwik PRO ecommerceAddToCart with the added item and currency code.',
   in: getEvent('product add', { timestamp: 1700000301 }),
   mapping: {
     name: 'ecommerceAddToCart',
@@ -151,6 +160,9 @@ export const ecommerceAddToCart: Flow.StepExample = {
 };
 
 export const productDetailView: Flow.StepExample = {
+  title: 'Product detail view',
+  description:
+    'A product view fires Piwik PRO ecommerceProductDetailView with a single-item array and currency code.',
   in: getEvent('product view', { timestamp: 1700000302 }),
   mapping: {
     name: 'ecommerceProductDetailView',
@@ -201,6 +213,9 @@ export const productDetailView: Flow.StepExample = {
 };
 
 export const cartUpdate: Flow.StepExample = {
+  title: 'Cart update',
+  description:
+    'A cart view fires Piwik PRO ecommerceCartUpdate with nested products, total value, and currency code.',
   in: getEvent('cart view', { timestamp: 1700000303 }),
   mapping: {
     name: 'ecommerceCartUpdate',
@@ -256,6 +271,9 @@ export const cartUpdate: Flow.StepExample = {
 };
 
 export const customEvent: Flow.StepExample = {
+  title: 'Custom event with goal',
+  description:
+    'A promotion visible event fires Piwik PRO trackEvent and then trackGoal to record a goal conversion.',
   in: getEvent('promotion visible', { timestamp: 1700000304 }),
   mapping: {
     name: 'trackEvent',
@@ -273,6 +291,9 @@ export const customEvent: Flow.StepExample = {
 };
 
 export const pageViewWithTitle: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view fires Piwik PRO trackPageView with the page title resolved from event data.',
   in: getEvent('page view', { timestamp: 1700000305 }),
   mapping: {
     data: 'data.title',

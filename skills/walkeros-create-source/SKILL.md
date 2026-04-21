@@ -279,6 +279,10 @@ import type { Flow } from '@walkeros/core';
 //      typed against the platform SDK's published types where available.
 // `out` is the walkerOS event the source is expected to emit.
 
+// Set `title` + `description` for public examples; mark test-only fixtures
+// with `public: false`. See
+// [walkeros-using-step-examples](../walkeros-using-step-examples/SKILL.md).
+
 export const pageView: Flow.StepExample = {
   trigger: {
     type: 'load',

@@ -14,6 +14,9 @@ export type FullStoryStepExample = Flow.StepExample & {
  * FullStory('trackEvent', { name, properties }). No mapping rule needed.
  */
 export const defaultEventForwarding: FullStoryStepExample = {
+  title: 'Default event',
+  description:
+    'A walker event becomes a FullStory trackEvent call with the event name and empty properties.',
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [['fullstory.trackEvent', { name: 'product view', properties: {} }]],
 };
@@ -23,6 +26,7 @@ export const defaultEventForwarding: FullStoryStepExample = {
  * The destination fires zero SDK calls.
  */
 export const wildcardIgnored: FullStoryStepExample = {
+  public: false,
   in: getEvent('debug noise', { timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
@@ -32,6 +36,9 @@ export const wildcardIgnored: FullStoryStepExample = {
  * Event name mapping -- mapping.name renames the walkerOS event for FullStory.
  */
 export const mappedEventName: FullStoryStepExample = {
+  title: 'Renamed event',
+  description:
+    'A mapping renames the event so the FullStory trackEvent uses Purchase instead of the walker name.',
   in: getEvent('order complete', { timestamp: 1700000102 }),
   mapping: {
     name: 'Purchase',
@@ -45,6 +52,9 @@ export const mappedEventName: FullStoryStepExample = {
  * Then fires the default trackEvent.
  */
 export const userLoginIdentify: FullStoryStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login fires FullStory setIdentity with uid and profile properties before tracking the event.',
   in: getEvent('user login', {
     timestamp: 1700000103,
     data: { id: 'u-123', name: 'Jane Doe', email: 'jane@example.com' },
@@ -81,6 +91,9 @@ export const userLoginIdentify: FullStoryStepExample = {
  * Uses user.id from the standard getEvent fixture.
  */
 export const destinationLevelIdentify: FullStoryStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify fires FullStory setIdentity with the user id before every track call.',
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -100,6 +113,9 @@ export const destinationLevelIdentify: FullStoryStepExample = {
  * Calls FullStory('setProperties', { type: 'user', properties }).
  */
 export const setUserProperties: FullStoryStepExample = {
+  title: 'Set user properties',
+  description:
+    'A purchase sets user-level FullStory properties such as revenue and currency alongside the tracked event.',
   in: getEvent('order complete', { timestamp: 1700000105 }),
   mapping: {
     name: 'Purchase',
@@ -127,6 +143,9 @@ export const setUserProperties: FullStoryStepExample = {
  * FullStory already auto-captures navigation.
  */
 export const setPageProperties: FullStoryStepExample = {
+  title: 'Set page properties',
+  description:
+    'A page view sets FullStory page-type properties without firing a track, since FullStory auto-captures navigation.',
   in: getEvent('page view', {
     timestamp: 1700000106,
     data: { id: '/docs/', title: 'Getting Started' },
@@ -155,6 +174,9 @@ export const setPageProperties: FullStoryStepExample = {
  * the event. Tests push execution order: identify -> setProperties -> trackEvent.
  */
 export const combinedFeatures: FullStoryStepExample = {
+  title: 'Combined features',
+  description:
+    'A purchase fires FullStory setIdentity, setProperties, and trackEvent in the canonical execution order.',
   in: getEvent('order complete', { timestamp: 1700000107 }),
   mapping: {
     name: 'Purchase',
@@ -178,6 +200,7 @@ export const combinedFeatures: FullStoryStepExample = {
  * still executes identify and set from the mapping rule.
  */
 export const skipWithIdentify: FullStoryStepExample = {
+  public: false,
   in: getEvent('user login', {
     timestamp: 1700000108,
     data: { id: 'u-123', name: 'Jane Doe' },
@@ -213,6 +236,9 @@ export const skipWithIdentify: FullStoryStepExample = {
  * elb('walker consent', in) instead of pushing an event.
  */
 export const consentGrantCapture: FullStoryStepExample = {
+  title: 'Start capture',
+  description:
+    'A walker consent grant for analytics calls FullStory start to resume session recording.',
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {
@@ -227,6 +253,9 @@ export const consentGrantCapture: FullStoryStepExample = {
  * Consent revoke -- revoking consent calls FullStory('shutdown').
  */
 export const consentRevokeCapture: FullStoryStepExample = {
+  title: 'Shutdown capture',
+  description:
+    'A walker consent revoke for analytics calls FullStory shutdown to stop session recording.',
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   settings: {
@@ -242,6 +271,9 @@ export const consentRevokeCapture: FullStoryStepExample = {
  * "consent" action. Granting calls setIdentity({ consent: true }).
  */
 export const consentGrantFlag: FullStoryStepExample = {
+  title: 'Consent flag granted',
+  description:
+    'A walker consent grant with action consent sets the FullStory identity consent flag to true.',
   command: 'consent',
   in: { marketing: true } as WalkerOS.Consent,
   settings: {
@@ -256,6 +288,9 @@ export const consentGrantFlag: FullStoryStepExample = {
  * Consent flag revoke -- calls setIdentity({ consent: false }).
  */
 export const consentRevokeFlag: FullStoryStepExample = {
+  title: 'Consent flag revoked',
+  description:
+    'A walker consent revoke with action consent sets the FullStory identity consent flag to false.',
   command: 'consent',
   in: { marketing: false } as WalkerOS.Consent,
   settings: {

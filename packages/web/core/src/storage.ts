@@ -17,16 +17,21 @@ export function storageDelete(
   storage: StorageType = Const.Utils.Storage.Session,
   env?: StorageEnv,
 ) {
-  switch (storage) {
-    case Const.Utils.Storage.Cookie:
-      storageWrite(key, '', 0, storage, undefined, env);
-      break;
-    case Const.Utils.Storage.Local:
-      (env?.window ?? window).localStorage.removeItem(key);
-      break;
-    case Const.Utils.Storage.Session:
-      (env?.window ?? window).sessionStorage.removeItem(key);
-      break;
+  try {
+    switch (storage) {
+      case Const.Utils.Storage.Cookie:
+        storageWrite(key, '', 0, storage, undefined, env);
+        break;
+      case Const.Utils.Storage.Local:
+        (env?.window ?? window).localStorage.removeItem(key);
+        break;
+      case Const.Utils.Storage.Session:
+        (env?.window ?? window).sessionStorage.removeItem(key);
+        break;
+    }
+  } catch (err) {
+    // Storage may be disabled (SecurityError in private browsing, sandboxed
+    // iframes, or restrictive browser settings). Silently ignore.
   }
 }
 
@@ -54,21 +59,26 @@ export function storageRead(
   }
   let value, item;
 
-  switch (storage) {
-    case Const.Utils.Storage.Cookie:
-      value = decodeURIComponent(
-        (env?.document ?? document).cookie
-          .split('; ')
-          .find((row) => row.startsWith(key + '='))
-          ?.split('=')[1] || '',
-      );
-      break;
-    case Const.Utils.Storage.Local:
-      item = parseItem((env?.window ?? window).localStorage.getItem(key));
-      break;
-    case Const.Utils.Storage.Session:
-      item = parseItem((env?.window ?? window).sessionStorage.getItem(key));
-      break;
+  try {
+    switch (storage) {
+      case Const.Utils.Storage.Cookie:
+        value = decodeURIComponent(
+          (env?.document ?? document).cookie
+            .split('; ')
+            .find((row) => row.startsWith(key + '='))
+            ?.split('=')[1] || '',
+        );
+        break;
+      case Const.Utils.Storage.Local:
+        item = parseItem((env?.window ?? window).localStorage.getItem(key));
+        break;
+      case Const.Utils.Storage.Session:
+        item = parseItem((env?.window ?? window).sessionStorage.getItem(key));
+        break;
+    }
+  } catch (err) {
+    // Storage may be disabled or inaccessible. Return empty string.
+    return castValue('');
   }
 
   // Check if item is expired
@@ -96,24 +106,30 @@ export function storageWrite(
   const item: StorageValue = { e, v: String(value) };
   const stringifiedItem = JSON.stringify(item);
 
-  switch (storage) {
-    case Const.Utils.Storage.Cookie: {
-      value = typeof value === 'object' ? JSON.stringify(value) : value;
-      let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
-        maxAgeInMinutes * 60
-      }; path=/; SameSite=Lax; secure`;
+  try {
+    switch (storage) {
+      case Const.Utils.Storage.Cookie: {
+        value = typeof value === 'object' ? JSON.stringify(value) : value;
+        let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
+          maxAgeInMinutes * 60
+        }; path=/; SameSite=Lax; secure`;
 
-      if (domain) cookie += '; domain=' + domain;
+        if (domain) cookie += '; domain=' + domain;
 
-      (env?.document ?? document).cookie = cookie;
-      break;
+        (env?.document ?? document).cookie = cookie;
+        break;
+      }
+      case Const.Utils.Storage.Local:
+        (env?.window ?? window).localStorage.setItem(key, stringifiedItem);
+        break;
+      case Const.Utils.Storage.Session:
+        (env?.window ?? window).sessionStorage.setItem(key, stringifiedItem);
+        break;
     }
-    case Const.Utils.Storage.Local:
-      (env?.window ?? window).localStorage.setItem(key, stringifiedItem);
-      break;
-    case Const.Utils.Storage.Session:
-      (env?.window ?? window).sessionStorage.setItem(key, stringifiedItem);
-      break;
+  } catch (err) {
+    // Storage may be disabled (SecurityError) or full (QuotaExceededError).
+    // Return empty string to signal the write did not persist.
+    return castValue('');
   }
 
   return storageRead(key, storage, env);

@@ -27,6 +27,9 @@ const ENDPOINT =
   'https://tr.snapchat.com/v3/p1x3l1d/events?access_token=s3cr3t';
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order is sent to the Snapchat Conversions API as a PURCHASE with value, currency, and contents.',
   in: getEvent('order complete', {
     timestamp: 1700000900000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
@@ -106,6 +109,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add is sent to Snapchat as an ADD_CART conversion with value and product details.',
   in: getEvent('product add', {
     timestamp: 1700000901000,
     data: {
@@ -184,6 +190,9 @@ export const addToCart: Flow.StepExample = {
 };
 
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view is forwarded to Snapchat with the event source URL and no extra custom data.',
   in: getEvent('page view', {
     timestamp: 1700000902000,
     source: {
@@ -215,6 +224,9 @@ export const pageView: Flow.StepExample = {
 };
 
 export const lead: Flow.StepExample = {
+  title: 'Sign up',
+  description:
+    'A newsletter form submission is sent to Snapchat as a SIGN_UP conversion with a hashed email.',
   in: getEvent('form submit', {
     timestamp: 1700000903000,
     data: { type: 'newsletter' },

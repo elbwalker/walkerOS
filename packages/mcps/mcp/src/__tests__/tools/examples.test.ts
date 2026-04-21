@@ -239,6 +239,104 @@ describe('flow_examples tool', () => {
     expect(browser.trigger).toEqual({ type: 'load' });
   });
 
+  it('excludes examples with public: false by default', async () => {
+    const configWithHidden = {
+      version: 3,
+      flows: {
+        default: {
+          web: {},
+          destinations: {
+            gtag: {
+              package: '@walkeros/web-destination-gtag',
+              examples: {
+                visible: { in: { name: 'page view' } },
+                hidden: { in: { name: 'debug event' }, public: false },
+              },
+            },
+          },
+        },
+      },
+    };
+    mockLoadJsonConfig.mockResolvedValue(configWithHidden as any);
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(result.structuredContent.count).toBe(1);
+    expect(result.structuredContent.examples[0].exampleName).toBe('visible');
+  });
+
+  it('includes public: false examples when includeHidden: true', async () => {
+    const configWithHidden = {
+      version: 3,
+      flows: {
+        default: {
+          web: {},
+          destinations: {
+            gtag: {
+              package: '@walkeros/web-destination-gtag',
+              examples: {
+                visible: { in: { name: 'page view' } },
+                hidden: { in: { name: 'debug event' }, public: false },
+              },
+            },
+          },
+        },
+      },
+    };
+    mockLoadJsonConfig.mockResolvedValue(configWithHidden as any);
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      includeHidden: true,
+    });
+
+    expect(result.structuredContent.count).toBe(2);
+    const names = result.structuredContent.examples.map(
+      (e: any) => e.exampleName,
+    );
+    expect(names).toContain('visible');
+    expect(names).toContain('hidden');
+    const hidden = result.structuredContent.examples.find(
+      (e: any) => e.exampleName === 'hidden',
+    );
+    expect(hidden.public).toBe(false);
+  });
+
+  it('surfaces title and description on output items when set', async () => {
+    const configWithMetadata = {
+      version: 3,
+      flows: {
+        default: {
+          web: {},
+          destinations: {
+            gtag: {
+              package: '@walkeros/web-destination-gtag',
+              examples: {
+                purchase: {
+                  title: 'Purchase Event',
+                  description: 'Fires when an order is completed',
+                  in: { name: 'order complete' },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    mockLoadJsonConfig.mockResolvedValue(configWithMetadata as any);
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    const purchase = result.structuredContent.examples.find(
+      (e: any) => e.exampleName === 'purchase',
+    );
+    expect(purchase.title).toBe('Purchase Event');
+    expect(purchase.description).toBe('Fires when an order is completed');
+  });
+
   it('returns empty examples array when no examples exist', async () => {
     const configNoExamples = {
       version: 3,

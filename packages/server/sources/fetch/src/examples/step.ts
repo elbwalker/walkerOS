@@ -1,6 +1,9 @@
 import type { Flow } from '@walkeros/core';
 
 export const postEvent: Flow.StepExample = {
+  title: 'POST event',
+  description:
+    'A fetch POST request with a JSON body becomes a single walker elb event in a fetch-based server.',
   trigger: { type: 'POST' },
   in: {
     method: 'POST',
@@ -22,6 +25,9 @@ export const postEvent: Flow.StepExample = {
 };
 
 export const batchRequest: Flow.StepExample = {
+  title: 'Batch POST',
+  description:
+    'A fetch POST with a batch array produces one walker elb event per batched item preserving order.',
   trigger: { type: 'POST' },
   in: {
     method: 'POST',
@@ -40,6 +46,9 @@ export const batchRequest: Flow.StepExample = {
 };
 
 export const pixelGet: Flow.StepExample = {
+  title: 'Pixel GET',
+  description:
+    'A fetch GET with query parameters in the URL is parsed into an elb event payload for pixel-style tracking.',
   trigger: { type: 'GET' },
   in: {
     method: 'GET',

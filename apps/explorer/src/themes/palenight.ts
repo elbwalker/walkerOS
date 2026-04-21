@@ -23,157 +23,371 @@
  */
 
 import type { editor } from 'monaco-editor';
+import { ELB_THEME_DARK } from './names';
+import { tokenGroupsToMonacoRules, type TokenGroup } from './token-groups';
+
+// Semantic color palette — change a hex here, it flows to every scope that uses it.
+const C = {
+  comment: '697098',
+  string: 'c3e88d',
+  regexp: '89ddff',
+  number: 'f78c6c',
+  keyword: 'c084fc',
+  operator: '89ddff',
+  function: '82aaff',
+  type: 'ffcb6b',
+  variable: 'bfc7d5',
+  bool: 'ff5874',
+  punctuation: 'c792ea',
+  tag: 'ff5572',
+  namespace: 'b2ccd6',
+  url: 'dddddd',
+  invalid: 'ff5572',
+  invalidDep: 'f78c6c',
+  cssSelector: 'ff5572',
+  cssId: '82aaff',
+  cssProperty: 'c084fc',
+} as const;
+
+// Token groups pool Monarch token names (Monaco) + TextMate scopes (Shiki).
+// Both engines consume the SAME list — change a group, both pick up.
+//
+// ORDER MATTERS: more-specific scopes should come AFTER broader ones so they
+// win when both match. Monaco walks `rules[]` top-to-bottom and (like
+// TextMate) later rules override earlier ones for the same scope.
+const TOKEN_GROUPS: TokenGroup[] = [
+  // Comments
+  {
+    foreground: C.comment,
+    fontStyle: 'italic',
+    scopes: [
+      'comment',
+      'comment.block',
+      'comment.line',
+      'comment.html',
+      'comment.line.double-slash',
+      'comment.line.number-sign',
+      'comment.block.documentation',
+      'punctuation.definition.comment',
+    ],
+  },
+
+  // Strings (generic)
+  {
+    foreground: C.string,
+    scopes: [
+      'string',
+      'string.quoted',
+      'string.template',
+      'string.value.json',
+      'string.json',
+      'string.html',
+      'string.css',
+      'string.js',
+      'string.ts',
+      'string.quoted.single',
+      'string.quoted.double',
+      'string.quoted.triple',
+      'punctuation.definition.string',
+      'punctuation.definition.string.begin',
+      'punctuation.definition.string.end',
+      'meta.string',
+      // HTML/JSX attribute values stay in string color (matches prior rule)
+      'attribute.value.html',
+    ],
+  },
+
+  // Regex (cyan — distinct from plain strings)
+  {
+    foreground: C.regexp,
+    scopes: ['string.regexp'],
+  },
+
+  // Numbers
+  {
+    foreground: C.number,
+    scopes: [
+      'number',
+      'number.hex',
+      'number.binary',
+      'number.octal',
+      'number.float',
+      'constant.numeric',
+      'constant.numeric.decimal',
+      'constant.numeric.integer',
+      'constant.numeric.float',
+      'constant.numeric.hex',
+      'constant.numeric.binary',
+      'constant.numeric.octal',
+      'keyword.other.unit',
+    ],
+  },
+
+  // Keywords — italic
+  {
+    foreground: C.keyword,
+    fontStyle: 'italic',
+    scopes: [
+      'keyword',
+      'keyword.control',
+      'keyword.control.flow',
+      'keyword.control.import',
+      'keyword.control.conditional',
+      'keyword.control.loop',
+      'storage.type',
+      'storage.modifier',
+      'keyword.declaration',
+    ],
+  },
+
+  // Keyword "other" — same color, upright
+  {
+    foreground: C.keyword,
+    scopes: ['keyword.other'],
+  },
+
+  // Operators — cyan
+  {
+    foreground: C.operator,
+    scopes: [
+      'operator',
+      'operators',
+      'keyword.operator',
+      'keyword.operator.assignment',
+      'keyword.operator.arithmetic',
+      'keyword.operator.logical',
+      'keyword.operator.comparison',
+      'keyword.operator.type',
+      'keyword.operator.type.ts',
+    ],
+  },
+
+  // Functions
+  {
+    foreground: C.function,
+    scopes: [
+      'function',
+      'identifier.function',
+      'support.function',
+      'entity.name.function',
+      'meta.function-call',
+      'meta.function-call.entity.name.function',
+      'variable.function',
+    ],
+  },
+
+  // Types & classes
+  {
+    foreground: C.type,
+    scopes: [
+      'type',
+      'type.identifier',
+      'entity.name.type',
+      'entity.name.class',
+      'support.type',
+      'support.class',
+      'support.type.primitive.ts',
+      'support.type.primitive.js',
+      'entity.name.type.ts',
+      'entity.name.type.js',
+      'meta.type.annotation',
+      'meta.type.annotation.ts',
+      'entity.other.inherited-class',
+      'storage.type.class',
+      'storage.type.function',
+      'storage.type.interface',
+      'support.type.primitive',
+    ],
+  },
+
+  // Variables / identifiers / property names — unified light gray
+  {
+    foreground: C.variable,
+    scopes: [
+      'variable',
+      'variable.name',
+      'variable.parameter',
+      'variable.parameter.ts',
+      'variable.parameter.js',
+      'variable.other',
+      'variable.other.readwrite',
+      'variable.other.constant',
+      'variable.language',
+      'meta.definition.variable',
+      'identifier',
+      'identifier.ts',
+      'identifier.js',
+      // Object keys — JSON, TS, JS
+      'support.type.property-name',
+      'support.type.property-name.json',
+      'string.key.json',
+      'string.name.tag.json',
+      'meta.object-literal.key',
+      'variable.other.property',
+      'variable.other.object.property',
+      'variable.other.constant.property',
+    ],
+  },
+
+  // Constants & built-ins (blue — matches function color per Prism palenight)
+  {
+    foreground: C.function,
+    scopes: ['constant', 'constant.character', 'support.constant'],
+  },
+
+  // Booleans / null / language constants
+  {
+    foreground: C.bool,
+    scopes: [
+      'constant.language',
+      'constant.language.boolean',
+      'constant.language.null',
+      'constant.language.undefined',
+      'constant.language.boolean.true',
+      'constant.language.boolean.false',
+      'keyword.constant.boolean',
+    ],
+  },
+
+  // Delimiters & punctuation
+  {
+    foreground: C.punctuation,
+    scopes: [
+      'delimiter',
+      'delimiter.bracket',
+      'delimiter.parenthesis',
+      'delimiter.square',
+      'delimiter.html',
+      'punctuation',
+      'punctuation.separator',
+      'punctuation.definition',
+      'punctuation.terminator',
+      'punctuation.section',
+      'meta.brace',
+      'meta.brace.round',
+      'meta.brace.square',
+      'meta.brace.curly',
+      'meta.tag.html',
+      'punctuation.definition.tag.html',
+    ],
+  },
+
+  // Tags (HTML/XML/JSX) — red/pink accent
+  {
+    foreground: C.tag,
+    scopes: [
+      'tag',
+      'meta.tag',
+      'entity.name.tag',
+      'entity.name.tag.tsx',
+      'entity.name.tag.jsx',
+      'punctuation.definition.tag',
+      'punctuation.definition.tag.begin',
+      'punctuation.definition.tag.end',
+    ],
+  },
+
+  // Attribute names — string color (matches prior theme intent)
+  {
+    foreground: C.string,
+    scopes: ['attribute.name', 'entity.other.attribute-name', 'meta.attribute'],
+  },
+
+  // Namespaces
+  {
+    foreground: C.namespace,
+    scopes: ['namespace', 'entity.name.namespace', 'storage.type.namespace'],
+  },
+
+  // URLs / links
+  {
+    foreground: C.url,
+    scopes: ['markup.underline.link', 'string.other.link'],
+  },
+
+  // Doctype
+  {
+    foreground: C.keyword,
+    fontStyle: 'italic',
+    scopes: ['meta.tag.sgml.doctype'],
+  },
+
+  // Markdown
+  {
+    fontStyle: 'bold',
+    scopes: ['markup.bold'],
+  },
+  {
+    fontStyle: 'italic',
+    scopes: ['markup.italic'],
+  },
+  {
+    foreground: C.keyword,
+    fontStyle: 'bold',
+    scopes: ['markup.heading'],
+  },
+  {
+    foreground: C.string,
+    scopes: ['markup.raw'],
+  },
+  {
+    foreground: C.comment,
+    fontStyle: 'italic',
+    scopes: ['markup.quote'],
+  },
+  {
+    foreground: C.variable,
+    scopes: ['markup.list'],
+  },
+
+  // Language-Specific: HTML — tag names/attributes rendered as identifiers
+  {
+    foreground: C.variable,
+    scopes: [
+      'entity.name.tag.html',
+      'tag.html',
+      'entity.other.attribute-name.html',
+      'attribute.name.html',
+    ],
+  },
+
+  // Language-Specific: CSS
+  {
+    foreground: C.cssSelector,
+    scopes: ['entity.name.tag.css'],
+  },
+  {
+    foreground: C.type,
+    scopes: ['entity.other.attribute-name.class.css'],
+  },
+  {
+    foreground: C.cssId,
+    scopes: ['entity.other.attribute-name.id.css'],
+  },
+  {
+    foreground: C.cssProperty,
+    scopes: ['support.type.property-name.css'],
+  },
+  {
+    foreground: C.number,
+    scopes: ['support.constant.property-value.css', 'keyword.other.unit.css'],
+  },
+
+  // Errors / invalid
+  {
+    foreground: C.invalid,
+    scopes: ['invalid', 'invalid.illegal'],
+  },
+  {
+    foreground: C.invalidDep,
+    scopes: ['invalid.deprecated'],
+  },
+];
 
 export const palenightTheme: editor.IStandaloneThemeData = {
   base: 'vs-dark',
   inherit: true,
-  rules: [
-    // Comments
-    { token: 'comment', foreground: '697098', fontStyle: 'italic' },
-    { token: 'comment.block', foreground: '697098', fontStyle: 'italic' },
-    { token: 'comment.line', foreground: '697098', fontStyle: 'italic' },
-
-    // Strings - green matching Prism palenight
-    { token: 'string', foreground: 'c3e88d' },
-    { token: 'string.quoted', foreground: 'c3e88d' },
-    { token: 'string.template', foreground: 'c3e88d' },
-    { token: 'string.regexp', foreground: '89ddff' },
-
-    // Language-specific strings (Monaco uses these exact token names)
-    { token: 'string.value.json', foreground: 'c3e88d' },
-    { token: 'string.json', foreground: 'c3e88d' },
-    { token: 'string.html', foreground: 'c3e88d' },
-    { token: 'string.css', foreground: 'c3e88d' },
-    { token: 'string.js', foreground: 'c3e88d' },
-    { token: 'string.ts', foreground: 'c3e88d' },
-
-    // Numbers
-    { token: 'number', foreground: 'f78c6c' },
-    { token: 'number.hex', foreground: 'f78c6c' },
-    { token: 'number.binary', foreground: 'f78c6c' },
-    { token: 'number.octal', foreground: 'f78c6c' },
-    { token: 'number.float', foreground: 'f78c6c' },
-
-    // Keywords - brighter purple/magenta
-    { token: 'keyword', foreground: 'c084fc', fontStyle: 'italic' },
-    { token: 'keyword.control', foreground: 'c084fc', fontStyle: 'italic' },
-    { token: 'keyword.operator', foreground: '89ddff' },
-    { token: 'keyword.other', foreground: 'c084fc' },
-
-    // Operators - cyan matching Prism palenight
-    { token: 'operator', foreground: '89ddff' },
-    { token: 'operators', foreground: '89ddff' },
-
-    // Functions
-    { token: 'function', foreground: '82aaff' },
-    { token: 'identifier.function', foreground: '82aaff' },
-    { token: 'support.function', foreground: '82aaff' },
-    { token: 'entity.name.function', foreground: '82aaff' },
-
-    // Types & Classes
-    { token: 'type', foreground: 'ffcb6b' },
-    { token: 'type.identifier', foreground: 'ffcb6b' },
-    { token: 'entity.name.type', foreground: 'ffcb6b' },
-    { token: 'entity.name.class', foreground: 'ffcb6b' },
-    { token: 'support.type', foreground: 'ffcb6b' },
-    { token: 'support.class', foreground: 'ffcb6b' },
-
-    // Variables
-    { token: 'variable', foreground: 'bfc7d5' },
-    { token: 'variable.name', foreground: 'bfc7d5' },
-    { token: 'variable.parameter', foreground: 'bfc7d5' },
-
-    // Constants & Built-ins
-    { token: 'constant', foreground: '82aaff' },
-    { token: 'constant.language', foreground: 'ff5874' },
-    { token: 'constant.numeric', foreground: 'f78c6c' },
-    { token: 'constant.character', foreground: '82aaff' },
-    { token: 'support.constant', foreground: '82aaff' },
-
-    // Booleans
-    { token: 'constant.language.boolean', foreground: 'ff5874' },
-    { token: 'keyword.constant.boolean', foreground: 'ff5874' },
-
-    // Delimiters & Punctuation - purple matching Prism palenight
-    { token: 'delimiter', foreground: 'c792ea' },
-    { token: 'delimiter.bracket', foreground: 'c792ea' },
-    { token: 'delimiter.parenthesis', foreground: 'c792ea' },
-    { token: 'delimiter.square', foreground: 'c792ea' },
-    { token: 'punctuation', foreground: 'c792ea' },
-
-    // Tags (HTML/XML/JSX)
-    { token: 'tag', foreground: 'ff5572' },
-    { token: 'meta.tag', foreground: 'ff5572' },
-    { token: 'entity.name.tag', foreground: 'ff5572' },
-
-    // Tag Attributes (using string color for consistency with how Prism treats attributes)
-    { token: 'attribute.name', foreground: 'c3e88d' },
-    { token: 'entity.other.attribute-name', foreground: 'c3e88d' },
-
-    // Namespaces
-    { token: 'namespace', foreground: 'b2ccd6' },
-    { token: 'entity.name.namespace', foreground: 'b2ccd6' },
-
-    // URLs
-    { token: 'markup.underline.link', foreground: 'dddddd' },
-
-    // Doctype
-    {
-      token: 'meta.tag.sgml.doctype',
-      foreground: 'c084fc',
-      fontStyle: 'italic',
-    },
-
-    // Object Keys - Unified light gray for all property names
-    // Covers JSON, TypeScript, JavaScript object literals
-    { token: 'support.type.property-name', foreground: 'bfc7d5' },
-    { token: 'support.type.property-name.json', foreground: 'bfc7d5' },
-    { token: 'string.key.json', foreground: 'bfc7d5' },
-    { token: 'meta.object-literal.key', foreground: 'bfc7d5' },
-    { token: 'variable.other.property', foreground: 'bfc7d5' },
-    { token: 'identifier', foreground: 'bfc7d5' },
-    { token: 'identifier.ts', foreground: 'bfc7d5' },
-    { token: 'identifier.js', foreground: 'bfc7d5' },
-
-    // Markdown
-    { token: 'markup.bold', fontStyle: 'bold' },
-    { token: 'markup.italic', fontStyle: 'italic' },
-    { token: 'markup.heading', foreground: 'c084fc', fontStyle: 'bold' },
-
-    // Language-Specific: JavaScript/TypeScript
-    { token: 'variable.parameter.ts', foreground: 'bfc7d5' },
-    { token: 'variable.parameter.js', foreground: 'bfc7d5' },
-    { token: 'support.type.primitive.ts', foreground: 'ffcb6b' },
-    { token: 'support.type.primitive.js', foreground: 'ffcb6b' },
-    { token: 'entity.name.type.ts', foreground: 'ffcb6b' },
-    { token: 'entity.name.type.js', foreground: 'ffcb6b' },
-    { token: 'meta.type.annotation.ts', foreground: 'ffcb6b' },
-    { token: 'keyword.operator.type.ts', foreground: '89ddff' },
-
-    // Language-Specific: HTML
-    { token: 'entity.name.tag.html', foreground: 'bfc7d5' },
-    { token: 'tag.html', foreground: 'bfc7d5' },
-    { token: 'entity.other.attribute-name.html', foreground: 'bfc7d5' },
-    { token: 'attribute.name.html', foreground: 'bfc7d5' },
-    { token: 'attribute.value.html', foreground: 'c3e88d' },
-    { token: 'delimiter.html', foreground: 'c792ea' },
-    { token: 'comment.html', foreground: '697098', fontStyle: 'italic' },
-    { token: 'meta.tag.html', foreground: 'c792ea' },
-    { token: 'punctuation.definition.tag.html', foreground: 'c792ea' },
-
-    // Language-Specific: CSS
-    { token: 'entity.name.tag.css', foreground: 'ff5572' },
-    { token: 'entity.other.attribute-name.class.css', foreground: 'ffcb6b' },
-    { token: 'entity.other.attribute-name.id.css', foreground: '82aaff' },
-    { token: 'support.type.property-name.css', foreground: 'c084fc' },
-    { token: 'support.constant.property-value.css', foreground: 'f78c6c' },
-    { token: 'keyword.other.unit.css', foreground: 'f78c6c' },
-
-    // Errors & Warnings
-    { token: 'invalid', foreground: 'ff5572' },
-    { token: 'invalid.illegal', foreground: 'ff5572' },
-    { token: 'invalid.deprecated', foreground: 'f78c6c' },
-  ],
+  rules: tokenGroupsToMonacoRules(TOKEN_GROUPS),
   colors: {
     // Editor Background - transparent, let box handle background
     // Falls back to CSS var(--bg-input) in _code.scss
@@ -274,5 +488,5 @@ export const palenightTheme: editor.IStandaloneThemeData = {
  * Call this function before creating any editor instances
  */
 export function registerPalenightTheme(monaco: typeof import('monaco-editor')) {
-  monaco.editor.defineTheme('elbTheme-dark', palenightTheme);
+  monaco.editor.defineTheme(ELB_THEME_DARK, palenightTheme);
 }

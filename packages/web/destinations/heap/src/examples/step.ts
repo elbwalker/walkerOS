@@ -16,6 +16,9 @@ export type HeapStepExample = Flow.StepExample & {
  * heap.track(event.name, properties). With no mapping, properties is `{}`.
  */
 export const defaultEventForwarding: HeapStepExample = {
+  title: 'Default track',
+  description:
+    'A walker event becomes a Heap track call with the event name and empty properties.',
   in: getEvent('product view', { timestamp: 1700000100 }),
   out: [['heap.track', 'product view', {}]],
 };
@@ -25,6 +28,9 @@ export const defaultEventForwarding: HeapStepExample = {
  * data resolves to { order_id, total, currency } → heap.track('purchase', props).
  */
 export const destinationLevelInclude: HeapStepExample = {
+  title: 'Renamed purchase',
+  description:
+    'An order complete is renamed to purchase and mapped to Heap track properties such as order_id, total, and currency.',
   in: getEvent('order complete', { timestamp: 1700000101 }),
   mapping: {
     name: 'purchase',
@@ -50,6 +56,9 @@ export const destinationLevelInclude: HeapStepExample = {
  * then the default heap.track() call fires.
  */
 export const destinationLevelIdentify: HeapStepExample = {
+  title: 'Destination identify',
+  description:
+    'Destination-level identify calls heap.identify with the user id before firing the default track.',
   in: getEvent('page view', { timestamp: 1700000102 }),
   settings: {
     identify: 'user.id',
@@ -65,6 +74,9 @@ export const destinationLevelIdentify: HeapStepExample = {
  * properties from the same rule. skip: true suppresses the track() call.
  */
 export const userLoginIdentify: HeapStepExample = {
+  title: 'User login identify',
+  description:
+    'A user login identifies the Heap user by email and adds user properties while skipping the track.',
   in: getEvent('user login', {
     timestamp: 1700000103,
     data: {
@@ -95,6 +107,9 @@ export const userLoginIdentify: HeapStepExample = {
  * User logout — heap.resetIdentity(). skip: true suppresses the track() call.
  */
 export const userLogoutReset: HeapStepExample = {
+  title: 'User logout reset',
+  description:
+    'A user logout calls heap.resetIdentity to clear the identified user from the Heap client.',
   in: getEvent('user logout', { timestamp: 1700000104 }),
   mapping: {
     skip: true,
@@ -110,6 +125,9 @@ export const userLogoutReset: HeapStepExample = {
  * then the default heap.track() call.
  */
 export const eventWithUserProperties: HeapStepExample = {
+  title: 'User properties on event',
+  description:
+    'An order fires Heap addUserProperties with last-order fields and then tracks the event.',
   in: getEvent('order complete', {
     timestamp: 1700000105,
     data: {
@@ -142,6 +160,9 @@ export const eventWithUserProperties: HeapStepExample = {
  * properties on all subsequent events. skip: true on this rule.
  */
 export const globalEventProperties: HeapStepExample = {
+  title: 'Global event properties',
+  description:
+    'A page view sets persistent Heap event properties so all subsequent events include the page category.',
   in: getEvent('page view', {
     timestamp: 1700000106,
     data: { category: 'docs' },
@@ -164,6 +185,9 @@ export const globalEventProperties: HeapStepExample = {
  * when a required consent key is false.
  */
 export const consentRevokeStopTracking: HeapStepExample = {
+  title: 'Consent revoked',
+  description:
+    'A walker consent revoke for analytics calls heap.stopTracking to pause event capture.',
   command: 'consent',
   in: { analytics: false },
   out: [['heap.stopTracking']],
@@ -174,6 +198,9 @@ export const consentRevokeStopTracking: HeapStepExample = {
  * when all required consent keys are true.
  */
 export const consentGrantStartTracking: HeapStepExample = {
+  title: 'Consent granted',
+  description:
+    'A walker consent grant for analytics calls heap.startTracking to resume event capture.',
   command: 'consent',
   in: { analytics: true },
   out: [['heap.startTracking']],

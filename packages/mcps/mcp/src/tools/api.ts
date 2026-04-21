@@ -20,6 +20,10 @@ import {
   getDeploymentBySlug,
   createDeployment as createDep,
   deleteDeployment as deleteDep,
+  listPreviews as listPreviewsApi,
+  getPreview as getPreviewApi,
+  createPreview as createPreviewApi,
+  deletePreview as deletePreviewApi,
 } from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { ApiOutputShape } from '../schemas/api-output.js';
@@ -42,6 +46,10 @@ const ACTIONS = [
   'deployment.list',
   'deployment.create',
   'deployment.delete',
+  'preview.list',
+  'preview.get',
+  'preview.create',
+  'preview.delete',
 ] as const;
 
 export function registerApiTool(server: McpServer) {
@@ -56,8 +64,15 @@ export function registerApiTool(server: McpServer) {
         '- project.list/get/create/update/delete — manage projects\n' +
         '- flow.list/get/create/update/delete/duplicate — manage flow configs\n' +
         '- deploy — deploy a flow (auto-detects web/server)\n' +
-        '- deployment.get/list/create/delete — manage deployments\n\n' +
-        'Parameters vary by action. content = Flow.Config JSON for flow.create/update.',
+        '- deployment.get/list/create/delete — manage deployments\n' +
+        '- preview.list/get/create/delete — manage preview bundles for testing flow changes on live sites\n\n' +
+        'Parameters vary by action. content = Flow.Config JSON for flow.create/update.\n' +
+        '\nFor preview.create:\n' +
+        '- Ask the user for their site URL BEFORE creating (pass as siteUrl).\n' +
+        '- After creation, tell the user to open the returned activationUrl to activate preview mode.\n' +
+        '- Tell them to open the returned deactivationUrl to exit preview mode.\n' +
+        '- The activation URL is first-party on THEIR site (not walkeros.io); the preview only affects their domain.\n' +
+        '- Show the URLs verbatim; do not paraphrase them.\n',
       inputSchema: {
         action: z.enum(ACTIONS).describe('API action to perform'),
         projectId: z
@@ -113,6 +128,24 @@ export function registerApiTool(server: McpServer) {
           .boolean()
           .optional()
           .describe('Include deleted items in lists'),
+        previewId: z
+          .string()
+          .optional()
+          .describe(
+            'Preview ID (e.g., prv_abc123). Required for preview.get/delete.',
+          ),
+        flowSettingsId: z
+          .string()
+          .optional()
+          .describe(
+            'Flow settings ID. Used by preview.create as an alternative to flowName.',
+          ),
+        siteUrl: z
+          .string()
+          .optional()
+          .describe(
+            'Optional site URL for preview.create. When provided, the response includes a full activationUrl the user can click to activate preview mode on their site.',
+          ),
       },
       outputSchema: ApiOutputShape,
       annotations: {
@@ -138,6 +171,9 @@ export function registerApiTool(server: McpServer) {
         order,
         status,
         includeDeleted,
+        previewId,
+        flowSettingsId,
+        siteUrl,
       } = params;
 
       try {
@@ -344,6 +380,79 @@ export function registerApiTool(server: McpServer) {
             if (!flowId)
               throw new Error('flowId (slug) required for deployment.delete');
             data = await deleteDep({ slug: flowId });
+            break;
+          }
+
+          // Previews
+          case 'preview.list': {
+            if (!flowId) throw new Error('flowId required for preview.list');
+            data = await listPreviewsApi({ projectId, flowId });
+            break;
+          }
+          case 'preview.get': {
+            if (!flowId || !previewId) {
+              throw new Error('flowId and previewId required for preview.get');
+            }
+            data = await getPreviewApi({ projectId, flowId, previewId });
+            break;
+          }
+          case 'preview.create': {
+            if (!flowId) throw new Error('flowId required for preview.create');
+            if (!flowName && !flowSettingsId) {
+              throw new Error(
+                'flowName or flowSettingsId required for preview.create',
+              );
+            }
+            // Validate siteUrl BEFORE creating the preview — a bad URL would
+            // otherwise leave an orphan preview on the server that counts
+            // against the project quota.
+            if (siteUrl) {
+              try {
+                new URL(siteUrl);
+              } catch {
+                throw new Error(`Invalid siteUrl: ${siteUrl}`);
+              }
+            }
+            const preview = await createPreviewApi({
+              projectId,
+              flowId,
+              flowName,
+              flowSettingsId,
+            });
+            const typedPreview = preview as {
+              id: string;
+              token: string;
+              activationUrl: string;
+              bundleUrl: string;
+              createdBy: string;
+              createdAt: string;
+              [key: string]: unknown;
+            };
+            const enriched: Record<string, unknown> = {
+              ...typedPreview,
+              activationParam: typedPreview.activationUrl,
+            };
+            if (siteUrl) {
+              const on = new URL(siteUrl);
+              on.searchParams.set('elbPreview', typedPreview.token);
+              enriched.activationUrl = on.toString();
+
+              const off = new URL(siteUrl);
+              off.searchParams.set('elbPreview', 'off');
+              enriched.deactivationUrl = off.toString();
+            } else {
+              delete enriched.activationUrl;
+            }
+            data = enriched;
+            break;
+          }
+          case 'preview.delete': {
+            if (!flowId || !previewId) {
+              throw new Error(
+                'flowId and previewId required for preview.delete',
+              );
+            }
+            data = await deletePreviewApi({ projectId, flowId, previewId });
             break;
           }
 

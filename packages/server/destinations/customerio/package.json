@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-customerio",
   "description": "Customer.io messaging automation server destination for walkerOS (customerio-node, Track + Transactional API)",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "license": "MIT",
   "exports": {
     ".": {
@@ -35,11 +35,11 @@
   },
   "dependencies": {
     "customerio-node": "^4.2.0",
-    "@walkeros/core": "3.4.0",
-    "@walkeros/server-core": "3.4.0"
+    "@walkeros/core": "3.4.1",
+    "@walkeros/server-core": "3.4.1"
   },
   "devDependencies": {
-    "@walkeros/collector": "3.4.0"
+    "@walkeros/collector": "3.4.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

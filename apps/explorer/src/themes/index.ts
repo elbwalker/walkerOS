@@ -13,6 +13,13 @@ import { registerLighthouseTheme } from './lighthouse';
 export { palenightTheme, registerPalenightTheme } from './palenight';
 export { lighthouseTheme, registerLighthouseTheme } from './lighthouse';
 
+// Theme name constants — use these instead of hard-coded string literals
+export { ELB_THEME_DARK, ELB_THEME_LIGHT } from './names';
+export type { ElbThemeName } from './names';
+
+// Unified scope → color grouping (drives Monaco + Shiki from one source)
+export type { TokenGroup } from './token-groups';
+
 // Theme types (for documentation and TypeScript support)
 export type { ExplorerTheme } from './types';
 

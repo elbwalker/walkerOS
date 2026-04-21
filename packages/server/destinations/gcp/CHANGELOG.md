@@ -1,5 +1,11 @@
 # @walkeros/server-destination-gcp
 
+## 3.4.1
+
+### Patch Changes
+
+- @walkeros/server-core@3.4.1
+
 ## 3.4.0
 
 ### Minor Changes

@@ -2,6 +2,9 @@ import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
 export const validEvent: Flow.StepExample = {
+  title: 'Valid event',
+  description:
+    'A well-formed product view passes validation and is returned unchanged for downstream destinations.',
   in: getEvent('product view', {
     timestamp: 1700000700,
     data: { id: 'SKU-100', name: 'Trail Runner Pro', price: 129.99 },
@@ -20,6 +23,7 @@ export const validEvent: Flow.StepExample = {
 };
 
 export const invalidFormat: Flow.StepExample = {
+  public: false,
   in: {
     name: 'invalid',
     data: {},
@@ -28,6 +32,7 @@ export const invalidFormat: Flow.StepExample = {
 };
 
 export const contractValidationPass: Flow.StepExample = {
+  title: 'Contract validation',
   description:
     'Contract validation passes when event data matches the entity.action JSON Schema',
   in: getEvent('order complete', {

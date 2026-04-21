@@ -47,7 +47,6 @@ import {
 } from '@walkeros/core';
 import { getCacheStore } from './cache';
 
-
 /**
  * Extracts transformer next configuration for chain walking.
  * Maps transformer instances to their config.next values.
@@ -264,6 +263,7 @@ export async function transformerInit(
       transformer.init,
       'TransformerInit',
       collector.hooks,
+      collector.logger,
     )(context);
 
     // Check for initialization failure
@@ -325,6 +325,7 @@ export async function transformerPush(
     transformer.push,
     'TransformerPush',
     collector.hooks,
+    collector.logger,
   )(event, context);
 
   transformerLogger.debug('push done');
@@ -392,16 +393,23 @@ export async function runTransformerChain(
     }
 
     // Path-specific mock check (takes precedence)
-    if (chainContext && transformer.config?.chainMocks?.[chainContext] !== undefined) {
+    if (
+      chainContext &&
+      transformer.config?.chainMocks?.[chainContext] !== undefined
+    ) {
       const chainMock = transformer.config.chainMocks[chainContext];
-      collector.logger.scope(`transformer:${transformer.type || 'unknown'}`).debug('chainMock', { chain: chainContext });
+      collector.logger
+        .scope(`transformer:${transformer.type || 'unknown'}`)
+        .debug('chainMock', { chain: chainContext });
       processedEvent = chainMock as WalkerOS.DeepPartialEvent;
       continue;
     }
 
     // Global mock check
     if (transformer.config?.mock !== undefined) {
-      collector.logger.scope(`transformer:${transformer.type || 'unknown'}`).debug('mock');
+      collector.logger
+        .scope(`transformer:${transformer.type || 'unknown'}`)
+        .debug('mock');
       processedEvent = transformer.config.mock as WalkerOS.DeepPartialEvent;
       continue;
     }
@@ -433,7 +441,8 @@ export async function runTransformerChain(
 
       if (cacheResult?.status === 'HIT' && cacheResult.value) {
         processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
-        if (compiledTCache.full) return { event: processedEvent, respond: currentRespond }; // full=true → stop chain
+        if (compiledTCache.full)
+          return { event: processedEvent, respond: currentRespond }; // full=true → stop chain
         continue; // full=false → next transformer
       }
 
@@ -470,7 +479,11 @@ export async function runTransformerChain(
           currentRespond,
           chainContext,
         );
-        if (beforeResult.event === null) return { event: null, respond: beforeResult.respond ?? currentRespond }; // Before chain stopped
+        if (beforeResult.event === null)
+          return {
+            event: null,
+            respond: beforeResult.respond ?? currentRespond,
+          }; // Before chain stopped
         if (beforeResult.respond) currentRespond = beforeResult.respond;
         // Before chains use first result if fan-out occurred
         processedEvent = Array.isArray(beforeResult.event)
@@ -577,8 +590,10 @@ export async function runTransformerChain(
           flatEvents.push(fr as WalkerOS.DeepPartialEvent);
         }
       }
-      if (flatEvents.length === 0) return { event: null, respond: lastForkRespond };
-      if (flatEvents.length === 1) return { event: flatEvents[0], respond: lastForkRespond };
+      if (flatEvents.length === 0)
+        return { event: null, respond: lastForkRespond };
+      if (flatEvents.length === 1)
+        return { event: flatEvents[0], respond: lastForkRespond };
       return { event: flatEvents, respond: lastForkRespond };
     }
 

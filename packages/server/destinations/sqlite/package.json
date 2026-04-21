@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-sqlite",
   "description": "SQLite server destination for walkerOS (local via better-sqlite3, remote via libSQL/Turso)",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -37,8 +37,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "3.4.0",
-    "@walkeros/server-core": "3.4.0"
+    "@walkeros/core": "3.4.1",
+    "@walkeros/server-core": "3.4.1"
   },
   "peerDependencies": {
     "better-sqlite3": "^11.0.0",
@@ -53,7 +53,7 @@
     }
   },
   "devDependencies": {
-    "@walkeros/collector": "3.4.0",
+    "@walkeros/collector": "3.4.1",
     "better-sqlite3": "^11.0.0",
     "@libsql/client": "^0.14.0",
     "@types/better-sqlite3": "^7.6.11"

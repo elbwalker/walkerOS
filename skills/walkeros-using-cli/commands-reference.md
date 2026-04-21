@@ -228,6 +228,87 @@ walkeros deploy list --type server
 
 ---
 
+## previews
+
+Manage preview bundles — short-lived flow bundles used to test configuration
+changes on a real production site before deploying. Each preview has a token;
+visiting any page of your site with `?elbPreview={token}` activates preview mode
+for that browser (7-day cookie, 30-day CDN bundle). The production walker
+self-heals on a deleted preview by clearing the cookie and loading production.
+
+### Subcommands
+
+| Subcommand | Purpose                                     |
+| ---------- | ------------------------------------------- |
+| `list`     | List previews for a flow                    |
+| `get`      | Get a single preview's details              |
+| `create`   | Create a preview bundle for a flow settings |
+| `delete`   | Delete a preview (DB row + CDN bundle)      |
+
+### previews list
+
+```bash
+walkeros previews list <flowId> [--project <projectId>]
+```
+
+### previews get
+
+```bash
+walkeros previews get <flowId> <previewId> [--project <projectId>]
+```
+
+### previews create
+
+```bash
+walkeros previews create <flowId> [options]
+```
+
+| Option                   | Description                                           |
+| ------------------------ | ----------------------------------------------------- |
+| `-f, --flow <name>`      | Flow settings name (resolved to an ID)                |
+| `-s, --settings-id <id>` | Flow settings ID (alternative to `--flow`)            |
+| `-u, --url <siteUrl>`    | Your site URL; prints a full activation URL on stdout |
+| `--project <id>`         | Project ID (overrides default)                        |
+
+Without `--url`, stdout contains the activation fragment (`?elbPreview=...`) to
+append to any URL on your site. With `--url`, stdout contains the complete
+`{url}?elbPreview={token}` URL plus a deactivation URL on stderr.
+
+### previews delete
+
+```bash
+walkeros previews delete <flowId> <previewId> [options]
+```
+
+| Option           | Description                                           |
+| ---------------- | ----------------------------------------------------- |
+| `-y, --yes`      | Skip confirmation (required to run non-interactively) |
+| `--project <id>` | Project ID (overrides default)                        |
+
+### Example
+
+```bash
+# Create a preview for the `demo` flow settings with a full activation URL
+walkeros previews create flow_abc123 \
+  --flow demo \
+  --url https://example.com
+
+# List previews
+walkeros previews list flow_abc123
+
+# Delete when done
+walkeros previews delete flow_abc123 prv_xyz456 --yes
+```
+
+### Prerequisites
+
+- **Authentication:** `WALKEROS_TOKEN` env var or `walkeros auth`
+- **Project:** `WALKEROS_PROJECT_ID` or `--project`
+- **Target site** must be running a walkerOS-built `walker.js` with the preview
+  preflight baked in (all bundles from `@walkeros/cli >= 3.0` include it)
+
+---
+
 ## validate
 
 Validate flow configurations, events, mappings, or contracts.

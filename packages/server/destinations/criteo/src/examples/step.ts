@@ -24,6 +24,9 @@ import { getEvent, isObject } from '@walkeros/core';
 const ENDPOINT = 'https://widget.criteo.com/m/event?version=s2s_v0';
 
 export const purchase: Flow.StepExample = {
+  title: 'Purchase',
+  description:
+    'A completed order is posted to the Criteo Events API as a trackTransaction event with items.',
   in: getEvent('order complete', {
     timestamp: 1700000900000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
@@ -95,6 +98,9 @@ export const purchase: Flow.StepExample = {
 };
 
 export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add becomes a Criteo addToCart event with the item id, price, and quantity.',
   in: getEvent('product add', {
     timestamp: 1700000901000,
     data: {
@@ -171,6 +177,9 @@ export const addToCart: Flow.StepExample = {
 };
 
 export const viewItem: Flow.StepExample = {
+  title: 'View item',
+  description:
+    'A product view becomes a Criteo viewItem event with the viewed product id.',
   in: getEvent('product view', {
     timestamp: 1700000902000,
     data: { id: 'SKU-C3', name: 'Coffee Maker' },
@@ -234,6 +243,9 @@ export const viewItem: Flow.StepExample = {
 };
 
 export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view becomes a Criteo viewHome event used for home page impression tracking.',
   in: getEvent('page view', {
     timestamp: 1700000903000,
     source: {

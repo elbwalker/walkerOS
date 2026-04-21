@@ -1,6 +1,7 @@
 import type { Flow } from '@walkeros/core';
 
 export const serverFingerprint: Flow.StepExample = {
+  title: 'Server fingerprint',
   description:
     'Standard server fingerprint using ingest.ip and ingest.userAgent. Requires source config.ingest.',
   in: {
@@ -48,6 +49,7 @@ export const serverFingerprint: Flow.StepExample = {
 };
 
 export const missingFields: Flow.StepExample = {
+  public: false,
   description:
     'Graceful handling when ingest is missing — fields resolve to empty strings, hash is still generated.',
   in: {
@@ -87,6 +89,7 @@ export const missingFields: Flow.StepExample = {
 };
 
 export const ipAnonymization: Flow.StepExample = {
+  title: 'IP anonymization',
   description:
     'Privacy-preserving fingerprint using key+fn pattern: ' +
     'fn truncates IP to /24 subnet before hashing, so 10.0.42.* users share a hash. ' +

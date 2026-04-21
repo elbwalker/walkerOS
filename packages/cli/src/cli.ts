@@ -37,6 +37,7 @@ import {
   getDeploymentBySlugCommand,
 } from './commands/deployments/index.js';
 import { feedbackCommand } from './commands/feedback/index.js';
+import { writeResult } from './core/output.js';
 
 setClientContext({ type: 'cli', version: VERSION });
 
@@ -443,6 +444,102 @@ deployCmd
   .option('-s, --silent', 'suppress output')
   .action(async (idOrSlug, options) => {
     await deleteDeploymentCommand(idOrSlug, options);
+  });
+
+// ── Previews ─────────────────────────────────────────────────────────────
+const previewsCmd = program
+  .command('previews')
+  .description('Manage preview bundles for testing flow changes on live sites');
+
+previewsCmd
+  .command('list <flowId>')
+  .description('List previews for a flow')
+  .option('--project <projectId>', 'Project ID (overrides default)')
+  .action(async (flowId, options) => {
+    try {
+      const { listPreviews } = await import('./commands/previews/index.js');
+      const result = (await listPreviews({
+        projectId: options.project,
+        flowId,
+      })) as { previews: unknown };
+      await writeResult(JSON.stringify(result.previews, null, 2), {});
+    } catch (err) {
+      handleCliError(err);
+    }
+  });
+
+previewsCmd
+  .command('get <flowId> <previewId>')
+  .description('Get preview details')
+  .option('--project <projectId>', 'Project ID (overrides default)')
+  .action(async (flowId, previewId, options) => {
+    try {
+      const { getPreview } = await import('./commands/previews/index.js');
+      const result = await getPreview({
+        projectId: options.project,
+        flowId,
+        previewId,
+      });
+      await writeResult(JSON.stringify(result, null, 2), {});
+    } catch (err) {
+      handleCliError(err);
+    }
+  });
+
+previewsCmd
+  .command('create <flowId>')
+  .description('Create a preview bundle for a flow settings entry')
+  .option('-f, --flow <name>', 'Flow settings name (resolved to ID)')
+  .option('-s, --settings-id <id>', 'Flow settings ID (alternative to --flow)')
+  .option('-u, --url <url>', 'Site URL to construct activation URL')
+  .option('--project <projectId>', 'Project ID (overrides default)')
+  .action(async (flowId, options) => {
+    try {
+      // Validate --url BEFORE creating the preview — otherwise an invalid URL
+      // would produce a server-side preview that can't be used, wasting a
+      // quota slot and forcing manual cleanup.
+      if (options.url) {
+        try {
+          new URL(options.url);
+        } catch {
+          throw new Error(`Invalid --url value: ${options.url}`);
+        }
+      }
+      const { createPreview } = await import('./commands/previews/index.js');
+      const { printPreviewCreated } =
+        await import('./commands/previews/output.js');
+      const preview = (await createPreview({
+        projectId: options.project,
+        flowId,
+        flowName: options.flow,
+        flowSettingsId: options.settingsId,
+      })) as Parameters<typeof printPreviewCreated>[0];
+      printPreviewCreated(preview, { url: options.url });
+    } catch (err) {
+      handleCliError(err);
+    }
+  });
+
+previewsCmd
+  .command('delete <flowId> <previewId>')
+  .description('Delete a preview')
+  .option('-y, --yes', 'Skip confirmation prompt')
+  .option('--project <projectId>', 'Project ID (overrides default)')
+  .action(async (flowId, previewId, options) => {
+    try {
+      if (!options.yes) {
+        throw new Error('Confirmation required. Use --yes to skip.');
+      }
+      const { deletePreview } = await import('./commands/previews/index.js');
+      await deletePreview({
+        projectId: options.project,
+        flowId,
+        previewId,
+      });
+      process.stderr.write(`Deleted ${previewId}\n`);
+    } catch (err) {
+      handleCliError(err);
+    }
   });
 
 // Run command
