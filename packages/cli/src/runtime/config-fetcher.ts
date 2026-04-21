@@ -1,4 +1,5 @@
 import { mergeAuthHeaders } from '../core/http.js';
+import { throwIfRunnerAuthFailure } from './runner-auth-error.js';
 
 export interface FetchConfigResult {
   content: Record<string, unknown>;
@@ -40,12 +41,10 @@ export async function fetchConfig(
     return { changed: false };
   }
 
+  // Classify 401/403 (RunnerAuthError with typed reason).
+  await throwIfRunnerAuthFailure(response);
+
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new Error(
-        `Config fetch failed (${response.status}): token may have expired — redeploy to rotate`,
-      );
-    }
     throw new Error(
       `Config fetch failed: ${response.status} ${response.statusText}`,
     );
