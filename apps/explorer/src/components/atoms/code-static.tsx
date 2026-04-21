@@ -95,10 +95,6 @@ export function CodeStatic({
   }, [code, language, activeTheme]);
 
   return (
-    <div
-      className={className}
-      // eslint-disable-next-line react/no-danger -- Shiki output is safe.
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
   );
 }
