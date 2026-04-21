@@ -7,7 +7,11 @@ import React, {
 } from 'react';
 import { Editor, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
-import { registerAllThemes } from '../../themes';
+import {
+  registerAllThemes,
+  ELB_THEME_DARK,
+  ELB_THEME_LIGHT,
+} from '../../themes';
 import {
   configureMonacoTypeScript,
   registerWalkerOSAmbients,
@@ -261,7 +265,7 @@ export function Code({
         dataTheme === 'dark' ||
         (dataTheme === null &&
           window.matchMedia('(prefers-color-scheme: dark)').matches);
-      const newTheme = isDark ? 'elbTheme-dark' : 'elbTheme-light';
+      const newTheme = isDark ? ELB_THEME_DARK : ELB_THEME_LIGHT;
 
       setMonacoTheme(newTheme);
     };
@@ -389,7 +393,7 @@ export function Code({
       dataTheme === 'dark' ||
       (dataTheme === null &&
         window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const themeName = isDark ? 'elbTheme-dark' : 'elbTheme-light';
+    const themeName = isDark ? ELB_THEME_DARK : ELB_THEME_LIGHT;
     monaco.editor.setTheme(themeName);
 
     // Register walkerOS IntelliSense providers for JSON
