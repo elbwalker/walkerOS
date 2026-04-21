@@ -1,5 +1,5 @@
 ---
-'@walkeros/cli': minor
+'@walkeros/cli': patch
 ---
 
 Preview preflight now self-heals when a preview bundle is deleted. Instead of

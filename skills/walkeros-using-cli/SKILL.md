@@ -42,6 +42,7 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 | `push`     | Execute with real API calls (or `--simulate` for mocked) | ⚠️    |
 | `run`      | Local HTTP event collection                              | ✅    |
 | `deploy`   | Deploy flows to cloud                                    | ⚠️    |
+| `previews` | Manage preview bundles for testing on live sites         | ⚠️    |
 | `validate` | Validate configs/events                                  | ✅    |
 | `cache`    | Manage caching                                           | ✅    |
 

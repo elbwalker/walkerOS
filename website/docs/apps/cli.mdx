@@ -48,6 +48,7 @@ npx walkeros --version`}
 | `projects` | Manage walkerOS projects | Create, list, update, delete projects |
 | `flows` | Manage walkerOS flows | Create, list, update, delete, duplicate flows |
 | `deploy` | Create and manage deployments | Deploy flows to walkerOS cloud or self-hosted |
+| `previews` | Manage preview bundles | Test flow changes on live sites before deploying |
 
 The `push` command accepts either a config JSON or a pre-built bundle as input.
 
@@ -1269,6 +1270,100 @@ All `deploy` subcommands support:
 | `--json` | Output as JSON |
 | `-v, --verbose` | Verbose output |
 | `-s, --silent` | Suppress output |
+
+## Previews command
+
+The `previews` command group manages preview bundles — short-lived flow bundles
+used to test configuration changes on a real production site before deploying.
+Each preview gets a short token; visiting any page of your site with
+`?elbPreview={token}` activates preview mode for that browser (7-day cookie).
+
+All commands require authentication and a project (set via `WALKEROS_PROJECT_ID`
+or `--project`).
+
+### previews list
+
+List all previews for a flow.
+
+<CodeSnippet
+  code={`walkeros previews list <flowId> [--project <projectId>]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID (overrides default) |
+
+### previews get
+
+Get details for a single preview.
+
+<CodeSnippet
+  code={`walkeros previews get <flowId> <previewId> [--project <projectId>]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID (overrides default) |
+
+### previews create
+
+Create a preview bundle for a specific flow settings entry.
+
+<CodeSnippet
+  code={`walkeros previews create <flowId> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `-f, --flow <name>` | Flow settings name (resolved to an ID) |
+| `-s, --settings-id <id>` | Flow settings ID (alternative to `--flow`) |
+| `-u, --url <siteUrl>` | Your site URL; prints a ready-to-open activation URL on stdout |
+| `--open` | Launch the activation URL in your default browser (requires `--url`) |
+| `--project <id>` | Project ID (overrides default) |
+
+Without `--url`, the CLI prints the activation fragment (`?elbPreview=...`) to
+stdout — append it to any URL on your site to activate preview mode. With
+`--url`, it prints the full `{siteUrl}?elbPreview={token}` URL, plus a
+deactivation URL on stderr. Use `--open` to launch that URL immediately.
+
+You must provide either `--flow` or `--settings-id` to pick which flow settings
+the preview should bundle.
+
+### previews delete
+
+Delete a preview. Removes both the DB row and the S3 bundle immediately; the
+production walker on visitors' browsers self-heals on the next page load by
+clearing the `elbPreview` cookie and loading the production flow.
+
+<CodeSnippet
+  code={`walkeros previews delete <flowId> <previewId> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `-y, --yes` | Skip confirmation (required to run non-interactively) |
+| `--project <id>` | Project ID (overrides default) |
+
+### Example
+
+<CodeSnippet
+  code={`# Create a preview for the \`demo\` flow settings and open it in your browser
+walkeros previews create flow_abc123 \\
+  --flow demo \\
+  --url https://example.com \\
+  --open
+
+# List previews for a flow
+walkeros previews list flow_abc123
+
+# Delete when you're done
+walkeros previews delete flow_abc123 prv_xyz456 --yes`}
+  language="bash"
+/>
 
 ## Run command
 

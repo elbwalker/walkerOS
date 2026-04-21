@@ -1,5 +1,5 @@
 ---
-'@walkeros/cli': minor
+'@walkeros/cli': patch
 ---
 
 Add `walkeros previews {list|get|create|delete}` commands for managing preview

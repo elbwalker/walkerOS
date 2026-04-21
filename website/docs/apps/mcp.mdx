@@ -192,15 +192,35 @@ Unified walkerOS cloud API. Only available when `WALKEROS_TOKEN` is set.
 |-----------|------|----------|-------------|
 | `action` | enum | Yes | API action (see below) |
 | `projectId` | string | No | Project ID (`proj_...`). Required for: project.get/update/delete, flow.create, flow.list. Falls back to `WALKEROS_PROJECT_ID` env. |
-| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: flow.get/update/delete/duplicate, deploy. For deployment.get/delete: can be a deployment slug. |
+| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: flow.get/update/delete/duplicate, deploy, preview.*. For deployment.get/delete: can be a deployment slug. |
 | `name` | string | No | Name for create/update operations |
 | `content` | object | No | Flow.Config JSON for flow operations |
 | `wait` | boolean | No | Wait for deploy to complete (default: `true`) |
+| `previewId` | string | No | Preview ID (e.g., `prv_abc123`). Required for `preview.get` / `preview.delete`. |
+| `flowSettingsId` | string | No | Flow settings ID for `preview.create` (alternative to `flowName`). |
+| `flowName` | string | No | Flow settings name for `preview.create` (resolved to a settings ID). |
+| `siteUrl` | string | No | Optional site URL for `preview.create`. When provided, the response includes full `activationUrl` / `deactivationUrl` values the user can click. |
 
 **Actions:** `whoami`, `project.list`, `project.get`, `project.create`,
 `project.update`, `project.delete`, `flow.list`, `flow.get`, `flow.create`,
 `flow.update`, `flow.delete`, `flow.duplicate`, `deploy`, `deployment.get`,
-`deployment.list`, `deployment.create`, `deployment.delete`
+`deployment.list`, `deployment.create`, `deployment.delete`, `preview.list`,
+`preview.get`, `preview.create`, `preview.delete`
+
+#### Preview actions
+
+`preview.*` manages short-lived flow bundles used to test configuration changes
+on a live production site before deploying. Each preview has a token; visiting
+any page of your site with `?elbPreview={token}` activates preview mode in that
+browser (7-day cookie). The production walker self-heals on a deleted preview
+by clearing the cookie and loading the production flow.
+
+| Action | Required parameters | Notes |
+|--------|---------------------|-------|
+| `preview.list` | `flowId` | Lists all previews for a flow. |
+| `preview.get` | `flowId`, `previewId` | Returns a single preview (`bundleUrl`, `activationUrl`, `createdBy`, `createdAt`). |
+| `preview.create` | `flowId`, and one of `flowSettingsId` / `flowName` | Creates a preview and publishes the bundle to the CDN. Pass `siteUrl` to get a ready-to-open `activationUrl` and `deactivationUrl`. |
+| `preview.delete` | `flowId`, `previewId` | Removes the DB row and the CDN bundle. Browsers with an active cookie self-heal on next page load. |
 
 ### Resources
 
@@ -313,6 +333,17 @@ which destinations received the event.
 
 The assistant calls `api({ action: "deploy", id: "cfg_abc123" })` and streams
 progress updates through bundling, publishing, and activation.
+
+### Preview a flow on a live site
+
+> "Create a preview of my demo settings on flow_abc123 and give me the link to
+> open on https://example.com."
+
+The assistant calls `api({ action: "preview.create", flowId: "flow_abc123",
+flowName: "demo", siteUrl: "https://example.com" })` and returns the
+`activationUrl` the user clicks to activate preview mode on their site. Running
+`api({ action: "preview.delete", … })` later removes the bundle; the production
+walker self-heals on visitors' next page load.
 
 ### Set up event mapping
 

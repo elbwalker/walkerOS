@@ -49,8 +49,15 @@ export function createPush<T extends Collector.Instance>(
       return await tryCatchAsync(
         async (): Promise<Elb.PushResult> => {
           const pushStart = Date.now();
-          const { id, ingest, respond: initialRespond, mapping, preChain, include, exclude } =
-            options;
+          const {
+            id,
+            ingest,
+            respond: initialRespond,
+            mapping,
+            preChain,
+            include,
+            exclude,
+          } = options;
           let respond = initialRespond;
           let partialEvent = event;
 
@@ -198,5 +205,6 @@ export function createPush<T extends Collector.Instance>(
     },
     'Push',
     collector.hooks,
+    collector.logger,
   ) as Collector.PushFn;
 }

@@ -1,5 +1,5 @@
 ---
-'@walkeros/mcp': minor
+'@walkeros/mcp': patch
 ---
 
 Add `preview.list`, `preview.get`, `preview.create`, and `preview.delete`
