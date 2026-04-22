@@ -1,5 +1,13 @@
 # walkeros
 
+## 3.4.2
+
+### Patch Changes
+
+- Updated dependencies [2d25eda]
+- Updated dependencies [cb4c069]
+  - @walkeros/cli@3.4.2
+
 ## 3.4.1
 
 ### Patch Changes

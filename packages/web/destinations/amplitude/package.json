@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-amplitude",
   "description": "Amplitude web destination for walkerOS (analytics, session replay, experiments, guides & surveys)",
-  "version": "3.4.1",
+  "version": "3.4.2",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -38,10 +38,10 @@
   },
   "dependencies": {
     "@amplitude/unified": "^1.0.16",
-    "@walkeros/web-core": "3.4.1"
+    "@walkeros/web-core": "3.4.2"
   },
   "devDependencies": {
-    "@walkeros/collector": "3.4.1"
+    "@walkeros/collector": "3.4.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

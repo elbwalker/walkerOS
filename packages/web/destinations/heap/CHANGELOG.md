@@ -1,5 +1,11 @@
 # @walkeros/web-destination-heap
 
+## 3.4.2
+
+### Patch Changes
+
+- @walkeros/web-core@3.4.2
+
 ## 3.4.1
 
 ### Patch Changes
