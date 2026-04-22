@@ -626,37 +626,55 @@ describe('Flow Schemas', () => {
   // ========================================
 
   describe('JSON Schema Generation', () => {
+    /**
+     * Since adding `.meta({id,title})` to schemas, Zod 4 emits top-level
+     * schemas as `{ $schema, allOf: [{ $ref: '#/definitions/X' }], definitions: {X: {...}} }`
+     * instead of inline `{ type: 'object', properties: {...} }`. Helper walks the
+     * definitions container to validate the inner shape.
+     */
+    const getRootDefinition = (schema: unknown): Record<string, unknown> => {
+      const s = schema as Record<string, unknown>;
+      const allOf = s.allOf as Array<Record<string, unknown>> | undefined;
+      const ref = allOf?.[0]?.$ref as string | undefined;
+      const definitions = s.definitions as
+        | Record<string, Record<string, unknown>>
+        | undefined;
+      if (!ref || !definitions) {
+        throw new Error('Schema missing allOf/definitions structure');
+      }
+      const match = ref.match(/^#\/definitions\/(.+)$/);
+      if (!match) throw new Error(`Unexpected $ref: ${ref}`);
+      return definitions[match[1]];
+    };
+
     test('configJsonSchema is valid JSON Schema', () => {
       expect(configJsonSchema).toHaveProperty('$schema');
-      expect(configJsonSchema).toHaveProperty('type', 'object');
-      expect((configJsonSchema as any).properties).toHaveProperty('version');
-      expect((configJsonSchema as any).properties).toHaveProperty('flows');
+      const root = getRootDefinition(configJsonSchema);
+      expect(root).toHaveProperty('type', 'object');
+      expect(root.properties).toHaveProperty('version');
+      expect(root.properties).toHaveProperty('flows');
     });
 
     test('settingsJsonSchema is valid JSON Schema', () => {
       expect(settingsJsonSchema).toHaveProperty('$schema');
-      expect(settingsJsonSchema).toHaveProperty('type', 'object');
-      expect(settingsJsonSchema).toHaveProperty('properties');
-      expect((settingsJsonSchema as any).properties).toHaveProperty('web');
-      expect((settingsJsonSchema as any).properties).toHaveProperty('server');
+      const root = getRootDefinition(settingsJsonSchema);
+      expect(root).toHaveProperty('properties');
+      expect(root.properties).toHaveProperty('web');
+      expect(root.properties).toHaveProperty('server');
     });
 
     test('sourceReferenceJsonSchema is valid JSON Schema', () => {
       expect(sourceReferenceJsonSchema).toHaveProperty('$schema');
-      expect(sourceReferenceJsonSchema).toHaveProperty('type', 'object');
-      expect(sourceReferenceJsonSchema).toHaveProperty('properties');
-      expect((sourceReferenceJsonSchema as any).properties).toHaveProperty(
-        'package',
-      );
+      const root = getRootDefinition(sourceReferenceJsonSchema);
+      expect(root).toHaveProperty('properties');
+      expect(root.properties).toHaveProperty('package');
     });
 
     test('destinationReferenceJsonSchema is valid JSON Schema', () => {
       expect(destinationReferenceJsonSchema).toHaveProperty('$schema');
-      expect(destinationReferenceJsonSchema).toHaveProperty('type', 'object');
-      expect(destinationReferenceJsonSchema).toHaveProperty('properties');
-      expect((destinationReferenceJsonSchema as any).properties).toHaveProperty(
-        'package',
-      );
+      const root = getRootDefinition(destinationReferenceJsonSchema);
+      expect(root).toHaveProperty('properties');
+      expect(root.properties).toHaveProperty('package');
     });
   });
 

@@ -534,6 +534,45 @@ references
 
 ---
 
+## Schema naming (`.meta({id, title})`)
+
+Every exported schema in `packages/core/src/schemas/*.ts` (and in the `*Schema`
+exports of destination / source / transformer / store packages) **must** carry
+`.meta({ id, title, description })` so the generated JSON Schema links back to
+the canonical TypeScript name. Without meta, the website's PropertyTable falls
+back to `__schema0`, `object`, or `any`.
+
+Convention:
+
+- **id** — PascalCase, namespace-prefixed so it is globally unique across every
+  schema in `packages/core/src/schemas`. Examples: `WalkerOSConsent`,
+  `DestinationConfig`, `CollectorPushContext`, `LoggerConfig`.
+- **title** — dotted form matching the VS Code TS hover: `WalkerOS.Consent`,
+  `Destination.Config`, `Collector.PushContext`, `Logger.Config`.
+- **description** — one short sentence. May repeat an existing `.describe()`
+  where both are present.
+
+Reference implementation (copy this shape for new schemas):
+
+```ts
+export const ConsentSchema = z.record(z.string(), z.boolean()).meta({
+  id: 'WalkerOSConsent',
+  title: 'WalkerOS.Consent',
+  description: 'Consent state mapping (group name to granted state).',
+});
+```
+
+Coverage is enforced by
+`packages/core/src/schemas/__tests__/meta-coverage.test.ts`. When adding a new
+schema, run that test — it will fail with the exact schema name if meta is
+missing.
+
+Destination / source / transformer / store packages that ship their own
+`SettingsSchema` should also call `.meta({ id, title })` on it, e.g.
+`DestinationGtag.Settings` / `GtagDestinationSettings`.
+
+---
+
 ## Related Skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - Data

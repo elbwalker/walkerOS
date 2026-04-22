@@ -10,6 +10,7 @@ import {
 import { Identifier } from './primitives';
 import { RoutableNextSchema } from './matcher';
 import { CacheSchema } from './cache';
+import { LoggerConfigSchema } from './logger';
 
 /**
  * Destination Schemas
@@ -54,6 +55,12 @@ export const ConfigSchema = z
     ),
     settings: z
       .any()
+      .meta({
+        id: 'DestinationSettings',
+        title: 'Destination.Settings',
+        description:
+          'Implementation-specific configuration (destination-defined shape).',
+      })
       .describe('Implementation-specific configuration')
       .optional(),
     data: z
@@ -68,6 +75,12 @@ export const ConfigSchema = z
       .describe('Event sections to flatten into context.data'),
     env: z
       .any()
+      .meta({
+        id: 'DestinationEnv',
+        title: 'Destination.Env',
+        description:
+          'Environment dependencies (destination-defined shape) — platform, SDK, or mock hook.',
+      })
       .describe('Environment dependencies (platform-specific)')
       .optional(),
     id: Identifier.describe(
@@ -94,18 +107,9 @@ export const ConfigSchema = z
       .describe(
         'Defer destination initialization until these collector events fire (e.g., ["consent"])',
       ),
-    logger: z
-      .object({
-        level: z
-          .union([z.number(), z.enum(['ERROR', 'WARN', 'INFO', 'DEBUG'])])
-          .optional()
-          .describe('Minimum log level (default: ERROR)'),
-        handler: z.any().optional().describe('Custom log handler function'),
-      })
-      .optional()
-      .describe(
-        'Logger configuration (level, handler) to override the collector defaults',
-      ),
+    logger: LoggerConfigSchema.optional().describe(
+      'Logger configuration (level, handler) to override the collector defaults',
+    ),
     before: RoutableNextSchema.optional().describe(
       'Post-collector transformer chain applied before this destination receives the event',
     ),
@@ -121,10 +125,22 @@ export const ConfigSchema = z
       .optional(),
     mock: z
       .unknown()
+      .meta({
+        id: 'DestinationMock',
+        title: 'Destination.Mock',
+        description:
+          'Return this value instead of calling push(). Dev/testing only.',
+      })
       .optional()
       .describe(
         'Return this value instead of calling push(). Dev/testing only.',
       ),
+  })
+  .meta({
+    id: 'DestinationConfig',
+    title: 'Destination.Config',
+    description:
+      'Destination configuration: consent, settings, data, env, mapping rules, policy, queue, logger, before/next chains, cache.',
   })
   .describe('Destination configuration');
 
@@ -135,9 +151,13 @@ export const ConfigSchema = z
  * Note: All fields in ConfigSchema are already optional (.optional() on each field).
  * Using .partial() ensures the schema itself makes all fields optional at the type level.
  */
-export const PartialConfigSchema = ConfigSchema.partial().describe(
-  'Partial destination configuration with all fields optional',
-);
+export const PartialConfigSchema = ConfigSchema.partial()
+  .meta({
+    id: 'DestinationPartialConfig',
+    title: 'Destination.PartialConfig',
+    description: 'Partial destination configuration with all fields optional.',
+  })
+  .describe('Partial destination configuration with all fields optional');
 
 /**
  * Policy - Processing policy rules
@@ -147,6 +167,8 @@ export const PartialConfigSchema = ConfigSchema.partial().describe(
 export const DestinationPolicySchema = PolicySchema.describe(
   'Destination policy rules for event pre-processing',
 );
+// Note: DestinationPolicySchema is an alias of MappingPolicySchema;
+// it intentionally shares the Mapping.Policy id/title via the underlying schema.
 
 // ========================================
 // Context Schemas
@@ -161,7 +183,15 @@ export const DestinationPolicySchema = PolicySchema.describe(
  */
 export const ContextSchema = z
   .object({
-    collector: z.unknown().describe('Collector instance (runtime object)'),
+    collector: z
+      .unknown()
+      .meta({
+        id: 'DestinationContextCollector',
+        title: 'Collector.Instance',
+        description:
+          'Collector instance handed to the destination (runtime object).',
+      })
+      .describe('Collector instance (runtime object)'),
     config: ConfigSchema.describe('Destination configuration'),
     data: z
       .union([
@@ -170,7 +200,19 @@ export const ContextSchema = z
       ])
       .optional()
       .describe('Transformed event data'),
-    env: z.unknown().describe('Environment dependencies'),
+    env: z
+      .unknown()
+      .meta({
+        id: 'DestinationContextEnv',
+        title: 'Destination.Env',
+        description: 'Environment dependencies (destination-defined shape).',
+      })
+      .describe('Environment dependencies'),
+  })
+  .meta({
+    id: 'DestinationContext',
+    title: 'Destination.Context',
+    description: 'Destination context passed to init and push functions.',
   })
   .describe('Destination context for init and push functions');
 
@@ -182,7 +224,14 @@ export const PushContextSchema = ContextSchema.extend({
   mapping: RuleSchema.optional().describe(
     'Resolved mapping rule for this specific event',
   ),
-}).describe('Push context with event-specific mapping');
+})
+  .meta({
+    id: 'DestinationPushContext',
+    title: 'Destination.PushContext',
+    description:
+      'Destination context for push() with the resolved event mapping rule.',
+  })
+  .describe('Push context with event-specific mapping');
 
 /**
  * PushBatchContext - Context for pushBatch function
@@ -191,6 +240,8 @@ export const PushContextSchema = ContextSchema.extend({
 export const PushBatchContextSchema = PushContextSchema.describe(
   'Batch push context with event-specific mapping',
 );
+// Note: PushBatchContextSchema is the same shape as PushContextSchema; it
+// shares the Destination.PushContext id via the underlying schema.
 
 // ========================================
 // Batch Processing Schemas
@@ -204,6 +255,12 @@ export const PushEventSchema = z
     event: EventSchema.describe('The event to process'),
     mapping: RuleSchema.optional().describe('Mapping rule for this event'),
   })
+  .meta({
+    id: 'DestinationPushEvent',
+    title: 'Destination.PushEvent',
+    description:
+      'Single event paired with its resolved mapping rule (batch element).',
+  })
   .describe('Event with optional mapping for batch processing');
 
 /**
@@ -211,6 +268,11 @@ export const PushEventSchema = z
  */
 export const PushEventsSchema = z
   .array(PushEventSchema)
+  .meta({
+    id: 'DestinationPushEvents',
+    title: 'Destination.PushEvents',
+    description: 'Array of events with mappings (batch input).',
+  })
   .describe('Array of events with mappings');
 
 /**
@@ -235,6 +297,11 @@ export const BatchSchema = z
       .describe('Transformed data for each event'),
     mapping: RuleSchema.optional().describe('Shared mapping rule for batch'),
   })
+  .meta({
+    id: 'DestinationBatch',
+    title: 'Destination.Batch',
+    description: 'Batch of events grouped by mapping key for batch delivery.',
+  })
   .describe('Batch of events grouped by mapping key');
 
 /**
@@ -246,6 +313,12 @@ export const DataSchema = z
     z.unknown(), // WalkerOS.Property
     z.array(z.unknown()),
   ])
+  .meta({
+    id: 'DestinationData',
+    title: 'Destination.Data',
+    description:
+      'Transformed event data delivered to the destination (Property, undefined, or array).',
+  })
   .optional()
   .describe('Transformed event data (Property, undefined, or array)');
 
@@ -279,6 +352,12 @@ export const InstanceSchema = z
     pushBatch: z.unknown().optional().describe('Batch push function'),
     on: z.unknown().optional().describe('Event lifecycle hook function'),
   })
+  .meta({
+    id: 'DestinationInstance',
+    title: 'Destination.Instance',
+    description:
+      'Destination instance (runtime object with init/push/pushBatch/on).',
+  })
   .describe('Destination instance (runtime object with functions)');
 
 /**
@@ -293,6 +372,12 @@ export const InitSchema = z
     ),
     env: z.unknown().optional().describe('Partial environment overrides'),
   })
+  .meta({
+    id: 'DestinationInit',
+    title: 'Destination.Init',
+    description:
+      'Destination initialization bundle (instance code + config + env).',
+  })
   .describe('Destination initialization configuration');
 
 /**
@@ -300,6 +385,11 @@ export const InitSchema = z
  */
 export const InitDestinationsSchema = z
   .record(z.string(), InitSchema)
+  .meta({
+    id: 'DestinationInitDestinations',
+    title: 'Destination.InitDestinations',
+    description: 'Map of destination IDs to initialization configurations.',
+  })
   .describe('Map of destination IDs to initialization configurations');
 
 /**
@@ -307,6 +397,11 @@ export const InitDestinationsSchema = z
  */
 export const DestinationsSchema = z
   .record(z.string(), InstanceSchema)
+  .meta({
+    id: 'DestinationDestinations',
+    title: 'Destination.Destinations',
+    description: 'Map of destination IDs to runtime destination instances.',
+  })
   .describe('Map of destination IDs to runtime instances');
 
 // ========================================
@@ -323,6 +418,12 @@ export const RefSchema = z
     data: z.unknown().optional().describe('Response from push()'),
     error: z.unknown().optional().describe('Error if failed'),
   })
+  .meta({
+    id: 'DestinationRef',
+    title: 'Destination.Ref',
+    description:
+      'Reference to a destination outcome (type + response data or error).',
+  })
   .describe('Destination reference with type and response data');
 
 /**
@@ -335,6 +436,12 @@ export const PushResultSchema = z
       .optional()
       .describe('Events queued (awaiting consent)'),
     error: z.unknown().optional().describe('Error if push failed'),
+  })
+  .meta({
+    id: 'DestinationPushResult',
+    title: 'Destination.PushResult',
+    description:
+      'Result of a single destination push (queued events, optional error).',
   })
   .describe('Push operation result');
 
@@ -360,6 +467,12 @@ export const ResultSchema = z
       .optional()
       .describe('Destinations that failed to process'),
   })
+  .meta({
+    id: 'DestinationResult',
+    title: 'Destination.Result',
+    description:
+      'Overall push result aggregated across all destinations (done/queued/failed maps).',
+  })
   .describe('Push result with destination outcomes');
 
 /**
@@ -368,6 +481,11 @@ export const ResultSchema = z
  */
 export const DLQSchema = z
   .array(z.tuple([EventSchema, z.unknown()]))
+  .meta({
+    id: 'DestinationDLQ',
+    title: 'Destination.DLQ',
+    description: 'Dead-letter queue: list of [event, error] tuples.',
+  })
   .describe('Dead letter queue: [(event, error), ...]');
 
 // ========================================

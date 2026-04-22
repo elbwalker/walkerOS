@@ -28,6 +28,11 @@ import { z, toJsonSchema } from './validation';
  */
 export const StorageTypeSchema = z
   .enum(['local', 'session', 'cookie'])
+  .meta({
+    id: 'StorageType',
+    title: 'Storage.Type',
+    description: 'Storage mechanism: local, session, or cookie.',
+  })
   .describe('Storage mechanism: local, session, or cookie');
 
 /**
@@ -39,6 +44,11 @@ export const StorageSchema = z
     Local: z.literal('local'),
     Session: z.literal('session'),
     Cookie: z.literal('cookie'),
+  })
+  .meta({
+    id: 'StorageConstants',
+    title: 'Storage',
+    description: 'Storage type constants for type-safe references.',
   })
   .describe('Storage type constants for type-safe references');
 
@@ -65,6 +75,11 @@ export const StorageSchema = z
  */
 export const ErrorHandlerSchema = z
   .any()
+  .meta({
+    id: 'ErrorHandler',
+    title: 'Error.Handler',
+    description: 'Error handler function: (error, state?) => void.',
+  })
   .describe('Error handler function: (error, state?) => void');
 
 /**
@@ -85,6 +100,11 @@ export const ErrorHandlerSchema = z
  */
 export const LogHandlerSchema = z
   .any()
+  .meta({
+    id: 'LogHandler',
+    title: 'Log.Handler',
+    description: 'Log handler function: (message, verbose?) => void.',
+  })
   .describe('Log handler function: (message, verbose?) => void');
 
 /**
@@ -95,6 +115,11 @@ export const HandlerSchema = z
   .object({
     Error: ErrorHandlerSchema.describe('Error handler function'),
     Log: LogHandlerSchema.describe('Log handler function'),
+  })
+  .meta({
+    id: 'Handler',
+    title: 'Handler',
+    description: 'Handler interface with error and log functions.',
   })
   .describe('Handler interface with error and log functions');
 

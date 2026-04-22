@@ -34,6 +34,11 @@ import { CacheSchema } from './cache';
  */
 export const PrimitiveSchema = z
   .union([z.string(), z.number(), z.boolean()])
+  .meta({
+    id: 'FlowPrimitive',
+    title: 'Flow.Primitive',
+    description: 'Primitive value: string, number, or boolean.',
+  })
   .describe('Primitive value: string, number, or boolean');
 
 // ========================================
@@ -45,13 +50,30 @@ export const PrimitiveSchema = z
  */
 export const VariablesSchema = z
   .record(z.string(), PrimitiveSchema)
+  .meta({
+    id: 'FlowVariables',
+    title: 'Flow.Variables',
+    description: 'Variables for interpolation (string/number/boolean values).',
+  })
   .describe('Variables for interpolation');
 
 /**
  * Definitions schema for reusable configurations.
  */
 export const DefinitionsSchema = z
-  .record(z.string(), z.unknown())
+  .record(
+    z.string(),
+    z.unknown().meta({
+      id: 'FlowDefinition',
+      title: 'Flow.Definition',
+      description: 'Single named definition value (arbitrary shape).',
+    }),
+  )
+  .meta({
+    id: 'FlowDefinitions',
+    title: 'Flow.Definitions',
+    description: 'Reusable configuration definitions referenced via $def.name.',
+  })
   .describe('Reusable configuration definitions');
 
 /**
@@ -60,15 +82,33 @@ export const DefinitionsSchema = z
 const npmPackageNamePattern =
   /^(@[a-z0-9\-~][a-z0-9\-._~]*\/)?[a-z0-9\-~][a-z0-9\-._~]*$/;
 
+/**
+ * Single package spec — version / imports / local path triple.
+ * Extracted from PackagesSchema so it renders with its canonical name in
+ * the generated JSON Schema.
+ */
+export const FlowPackageSpecSchema = z
+  .object({
+    version: z.string().optional(),
+    imports: z.array(z.string()).optional(),
+    path: z.string().optional(), // Local path (takes precedence over version)
+  })
+  .meta({
+    id: 'FlowPackageSpec',
+    title: 'Flow.PackageSpec',
+    description: 'Per-package bundle spec (version / imports / local path).',
+  });
+
 export const PackagesSchema = z
   .record(
     z.string().regex(npmPackageNamePattern, 'Invalid npm package name'),
-    z.object({
-      version: z.string().optional(),
-      imports: z.array(z.string()).optional(),
-      path: z.string().optional(), // Local path (takes precedence over version)
-    }),
+    FlowPackageSpecSchema,
   )
+  .meta({
+    id: 'FlowPackages',
+    title: 'Flow.Packages',
+    description: 'Map of npm package names to bundle specs.',
+  })
   .describe('NPM packages to bundle');
 
 /**
@@ -83,6 +123,11 @@ export const OverridesSchema = z
     z.string().regex(npmPackageNamePattern, 'Invalid npm package name'),
     z.string().min(1, 'Override version cannot be empty'),
   )
+  .meta({
+    id: 'FlowOverrides',
+    title: 'Flow.Overrides',
+    description: 'Transitive dependency version overrides (flat record).',
+  })
   .describe('Transitive dependency version overrides');
 
 /**
@@ -96,6 +141,11 @@ export const BundleSchema = z
     ),
   })
   .strict()
+  .meta({
+    id: 'FlowBundle',
+    title: 'Flow.Bundle',
+    description: 'Bundle configuration (packages + overrides).',
+  })
   .describe('Bundle configuration (packages + overrides)');
 
 // ========================================
@@ -122,6 +172,11 @@ export const WebSchema = z
         'Window property name for the elb command queue (default: "elb")',
       ),
   })
+  .meta({
+    id: 'FlowWeb',
+    title: 'Flow.Web',
+    description: 'Web platform configuration (browser-based tracking).',
+  })
   .describe('Web platform configuration');
 
 /**
@@ -130,6 +185,12 @@ export const WebSchema = z
 export const ServerSchema = z
   .object({})
   .passthrough()
+  .meta({
+    id: 'FlowServer',
+    title: 'Flow.Server',
+    description:
+      'Server platform configuration (Node.js) — reserved for future options.',
+  })
   .describe('Server platform configuration (reserved for future options)');
 
 // ========================================
@@ -172,6 +233,12 @@ export const InlineCodeSchema = z
         'Optional initialization function. Use $code: prefix for inline JavaScript.',
       ),
   })
+  .meta({
+    id: 'FlowInlineCode',
+    title: 'Flow.InlineCode',
+    description:
+      'Inline code block for custom sources / transformers / destinations — declared directly in JSON configs.',
+  })
   .describe('Inline code for custom sources/transformers/destinations');
 
 // ========================================
@@ -181,6 +248,26 @@ export const InlineCodeSchema = z
 /**
  * Step example schema — a named { in, out } pair.
  */
+/**
+ * Trigger descriptor — source trigger metadata for step examples.
+ * Extracted from inline StepExampleSchema.trigger so it renders as
+ * `Trigger.Descriptor` in PropertyTable.
+ */
+export const TriggerDescriptorSchema = z
+  .object({
+    type: z
+      .string()
+      .optional()
+      .describe('Trigger mechanism (e.g., click, POST, load)'),
+    options: z.unknown().optional().describe('Mechanism-specific options'),
+  })
+  .meta({
+    id: 'TriggerDescriptor',
+    title: 'Trigger.Descriptor',
+    description:
+      'Source trigger metadata (mechanism + options) used by step examples.',
+  });
+
 export const StepExampleSchema = z
   .object({
     title: z
@@ -195,16 +282,9 @@ export const StepExampleSchema = z
         'Whether this example is shown in docs/UI/MCP default output (default: true). Set false for test-only fixtures.',
       ),
     in: z.unknown().optional().describe('Input to the step'),
-    trigger: z
-      .object({
-        type: z
-          .string()
-          .optional()
-          .describe('Trigger mechanism (e.g., click, POST, load)'),
-        options: z.unknown().optional().describe('Mechanism-specific options'),
-      })
-      .optional()
-      .describe('Source trigger metadata'),
+    trigger: TriggerDescriptorSchema.optional().describe(
+      'Source trigger metadata',
+    ),
     mapping: z.unknown().optional().describe('Mapping configuration'),
     out: z.unknown().optional().describe('Expected output from the step'),
     command: z
@@ -214,6 +294,11 @@ export const StepExampleSchema = z
         "Invoke elb('walker <command>', in) instead of pushing in as an event",
       ),
   })
+  .meta({
+    id: 'FlowStepExample',
+    title: 'Flow.StepExample',
+    description: 'Named example with input/output pair used for step testing.',
+  })
   .describe('Named example with input/output pair');
 
 /**
@@ -221,6 +306,11 @@ export const StepExampleSchema = z
  */
 export const StepExamplesSchema = z
   .record(z.string(), StepExampleSchema)
+  .meta({
+    id: 'FlowStepExamples',
+    title: 'Flow.StepExamples',
+    description: 'Named step examples keyed by scenario name.',
+  })
   .describe('Named step examples for testing and documentation');
 
 // ========================================
@@ -252,9 +342,23 @@ export const SourceReferenceSchema = z
       ),
     config: z
       .unknown()
+      .meta({
+        id: 'FlowSourceReferenceConfig',
+        title: 'Source.Config',
+        description: 'Source-specific configuration object (Source.Config).',
+      })
       .optional()
       .describe('Source-specific configuration object'),
-    env: z.unknown().optional().describe('Source environment configuration'),
+    env: z
+      .unknown()
+      .meta({
+        id: 'FlowSourceReferenceEnv',
+        title: 'Source.BaseEnv',
+        description:
+          'Source environment configuration (Source.BaseEnv overrides).',
+      })
+      .optional()
+      .describe('Source environment configuration'),
     primary: z
       .boolean()
       .optional()
@@ -279,6 +383,12 @@ export const SourceReferenceSchema = z
     cache: CacheSchema.optional().describe(
       'Cache configuration for this source (match → key → ttl rules)',
     ),
+  })
+  .meta({
+    id: 'FlowSourceReference',
+    title: 'Flow.SourceReference',
+    description:
+      'Source package reference with configuration, env, chains, and examples.',
   })
   .describe('Source package reference with configuration');
 
@@ -310,10 +420,20 @@ export const TransformerReferenceSchema = z
       ),
     config: z
       .unknown()
+      .meta({
+        id: 'FlowTransformerReferenceConfig',
+        title: 'Transformer.Config',
+        description: 'Transformer-specific configuration object.',
+      })
       .optional()
       .describe('Transformer-specific configuration object'),
     env: z
       .unknown()
+      .meta({
+        id: 'FlowTransformerReferenceEnv',
+        title: 'Transformer.Env',
+        description: 'Transformer environment configuration.',
+      })
       .optional()
       .describe('Transformer environment configuration'),
     before: RoutableNextSchema.optional().describe(
@@ -334,6 +454,12 @@ export const TransformerReferenceSchema = z
     cache: CacheSchema.optional().describe(
       'Cache configuration for this transformer (match → key → ttl rules)',
     ),
+  })
+  .meta({
+    id: 'FlowTransformerReference',
+    title: 'Flow.TransformerReference',
+    description:
+      'Transformer package reference with configuration, env, chains, and cache.',
   })
   .describe('Transformer package reference with configuration');
 
@@ -365,10 +491,20 @@ export const DestinationReferenceSchema = z
       ),
     config: z
       .unknown()
+      .meta({
+        id: 'FlowDestinationReferenceConfig',
+        title: 'Destination.Config',
+        description: 'Destination-specific configuration object.',
+      })
       .optional()
       .describe('Destination-specific configuration object'),
     env: z
       .unknown()
+      .meta({
+        id: 'FlowDestinationReferenceEnv',
+        title: 'Destination.Env',
+        description: 'Destination environment configuration.',
+      })
       .optional()
       .describe('Destination environment configuration'),
     variables: VariablesSchema.optional().describe(
@@ -389,6 +525,12 @@ export const DestinationReferenceSchema = z
     cache: CacheSchema.optional().describe(
       'Cache configuration for this destination (match → key → ttl rules)',
     ),
+  })
+  .meta({
+    id: 'FlowDestinationReference',
+    title: 'Flow.DestinationReference',
+    description:
+      'Destination package reference with configuration, env, chains, and cache.',
   })
   .describe('Destination package reference with configuration');
 
@@ -412,9 +554,22 @@ export const StoreReferenceSchema = z
       .describe('Named export string or inline code definition'),
     config: z
       .unknown()
+      .meta({
+        id: 'FlowStoreReferenceConfig',
+        title: 'Store.Config',
+        description: 'Store-specific configuration object.',
+      })
       .optional()
       .describe('Store-specific configuration object'),
-    env: z.unknown().optional().describe('Store environment configuration'),
+    env: z
+      .unknown()
+      .meta({
+        id: 'FlowStoreReferenceEnv',
+        title: 'Store.Env',
+        description: 'Store environment configuration.',
+      })
+      .optional()
+      .describe('Store environment configuration'),
     variables: VariablesSchema.optional().describe(
       'Store-level variables (highest priority in cascade)',
     ),
@@ -424,6 +579,12 @@ export const StoreReferenceSchema = z
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
+  })
+  .meta({
+    id: 'FlowStoreReference',
+    title: 'Flow.StoreReference',
+    description:
+      'Store package reference with configuration, env, and examples.',
   })
   .describe('Store package reference with configuration');
 
@@ -437,6 +598,12 @@ export const StoreReferenceSchema = z
  */
 export const ContractSchemaEntry = z
   .record(z.string(), z.unknown())
+  .meta({
+    id: 'FlowContractSchemaEntry',
+    title: 'Flow.ContractSchemaEntry',
+    description:
+      'JSON Schema object for event validation with description/examples annotations.',
+  })
   .describe(
     'JSON Schema object for event validation with description/examples annotations',
   );
@@ -446,6 +613,11 @@ export const ContractSchemaEntry = z
  */
 export const ContractActionsSchema = z
   .record(z.string(), ContractSchemaEntry)
+  .meta({
+    id: 'FlowContractActions',
+    title: 'Flow.ContractActions',
+    description: 'Action-level contract entries keyed by action name.',
+  })
   .describe('Action-level contract entries');
 
 /**
@@ -453,6 +625,11 @@ export const ContractActionsSchema = z
  */
 export const ContractEventsSchema = z
   .record(z.string(), ContractActionsSchema)
+  .meta({
+    id: 'FlowContractEvents',
+    title: 'Flow.ContractEvents',
+    description: 'Entity-action event schemas (entity → action → schema).',
+  })
   .describe('Entity-action event schemas');
 
 /**
@@ -488,6 +665,12 @@ export const ContractEntrySchema = z
       'Entity-action event schemas',
     ),
   })
+  .meta({
+    id: 'FlowContractEntry',
+    title: 'Flow.ContractEntry',
+    description:
+      'Named contract entry with optional sections (globals/context/custom/user/consent) and event schemas.',
+  })
   .describe('Named contract entry with optional sections and events');
 
 /**
@@ -495,6 +678,11 @@ export const ContractEntrySchema = z
  */
 export const ContractSchema = z
   .record(z.string(), ContractEntrySchema)
+  .meta({
+    id: 'FlowContract',
+    title: 'Flow.Contract',
+    description: 'Named contracts map with optional extends inheritance.',
+  })
   .describe('Named contracts with optional extends inheritance');
 
 // ========================================
@@ -543,6 +731,12 @@ export const SettingsSchema = z
       ),
     collector: z
       .unknown()
+      .meta({
+        id: 'FlowSettingsCollector',
+        title: 'Collector.InitConfig',
+        description:
+          'Collector configuration for event processing (Collector.InitConfig).',
+      })
       .optional()
       .describe(
         'Collector configuration for event processing (uses Collector.InitConfig)',
@@ -577,6 +771,12 @@ export const SettingsSchema = z
       message: 'Exactly one of "web" or "server" must be present',
     },
   )
+  .meta({
+    id: 'FlowSettings',
+    title: 'Flow.Settings',
+    description:
+      'Single flow settings for one deployment target (web/server, sources, destinations, transformers, stores, collector, bundle).',
+  })
   .describe('Single flow settings for one deployment target');
 
 // ========================================
@@ -623,7 +823,14 @@ export const ConfigSchema = ConfigBaseSchema.extend({
   contract: ContractSchema.optional().describe(
     'Named contracts with extends inheritance and dot-path references',
   ),
-}).describe('walkerOS flow configuration (walkeros.config.json)');
+})
+  .meta({
+    id: 'FlowConfig',
+    title: 'Flow.Config',
+    description:
+      'walkerOS flow configuration root (walkeros.config.json) with version, variables, definitions, contract and named flows.',
+  })
+  .describe('walkerOS flow configuration (walkeros.config.json)');
 
 // ========================================
 // Helper Functions

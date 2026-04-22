@@ -32,22 +32,34 @@ import {
  * PropertyType - Base property value types
  * Can be primitive (boolean, string, number) or nested object with Property values
  */
-export const PropertyTypeSchema: z.ZodTypeAny = z.lazy(() =>
-  z.union([
-    z.boolean(),
-    z.string(),
-    z.number(),
-    z.record(z.string(), PropertySchema),
-  ]),
-);
+export const PropertyTypeSchema: z.ZodTypeAny = z
+  .lazy(() =>
+    z.union([
+      z.boolean(),
+      z.string(),
+      z.number(),
+      z.record(z.string(), PropertySchema),
+    ]),
+  )
+  .meta({
+    id: 'WalkerOSPropertyType',
+    title: 'WalkerOS.PropertyType',
+    description:
+      'Base property value types (boolean, string, number, or nested Property record).',
+  });
 
 /**
  * Property - PropertyType or array of PropertyType
  * Recursive structure allows nested objects and arrays
  */
-export const PropertySchema: z.ZodTypeAny = z.lazy(() =>
-  z.union([PropertyTypeSchema, z.array(PropertyTypeSchema)]),
-);
+export const PropertySchema: z.ZodTypeAny = z
+  .lazy(() => z.union([PropertyTypeSchema, z.array(PropertyTypeSchema)]))
+  .meta({
+    id: 'WalkerOSProperty',
+    title: 'WalkerOS.Property',
+    description:
+      'PropertyType or an array of PropertyType. Recursive structure for nested objects and arrays.',
+  });
 
 /**
  * Properties - Record of string keys to Property values
@@ -55,6 +67,11 @@ export const PropertySchema: z.ZodTypeAny = z.lazy(() =>
  */
 export const PropertiesSchema = z
   .record(z.string(), PropertySchema.optional())
+  .meta({
+    id: 'WalkerOSProperties',
+    title: 'WalkerOS.Properties',
+    description: 'Flexible property collection with optional values.',
+  })
   .describe('Flexible property collection with optional values');
 
 /**
@@ -63,6 +80,12 @@ export const PropertiesSchema = z
  */
 export const OrderedPropertiesSchema = z
   .record(z.string(), z.tuple([PropertySchema, z.number()]).optional())
+  .meta({
+    id: 'WalkerOSOrderedProperties',
+    title: 'WalkerOS.OrderedProperties',
+    description:
+      'Ordered properties with [value, order] tuples for priority control.',
+  })
   .describe(
     'Ordered properties with [value, order] tuples for priority control',
   );
@@ -78,6 +101,12 @@ export const OrderedPropertiesSchema = z
  */
 export const SourceTypeSchema = z
   .union([z.enum(['web', 'server', 'app', 'other']), z.string()])
+  .meta({
+    id: 'WalkerOSSourceType',
+    title: 'WalkerOS.SourceType',
+    description:
+      'Source type identifier. Standard: web, server, app, other. Extensible to custom strings.',
+  })
   .describe('Source type: web, server, app, other, or custom');
 
 // ========================================
@@ -140,7 +169,13 @@ export const UserSchema = PropertiesSchema.and(
       .optional()
       .describe('Internal user flag (employee, test user)'),
   }),
-).describe('User identification and properties');
+)
+  .meta({
+    id: 'WalkerOSUser',
+    title: 'WalkerOS.User',
+    description: 'User identification and attributes.',
+  })
+  .describe('User identification and properties');
 
 /**
  * Version - Walker version information
@@ -153,7 +188,13 @@ export const VersionSchema = PropertiesSchema.and(
     ),
     tagging: TaggingVersion,
   }),
-).describe('Walker version information');
+)
+  .meta({
+    id: 'WalkerOSVersion',
+    title: 'WalkerOS.Version',
+    description: 'Walker version information (source + tagging).',
+  })
+  .describe('Walker version information');
 
 /**
  * Source - Event source information
@@ -167,7 +208,13 @@ export const SourceSchema = PropertiesSchema.and(
       'Previous source identifier (typically referrer on web)',
     ),
   }),
-).describe('Event source information');
+)
+  .meta({
+    id: 'WalkerOSSource',
+    title: 'WalkerOS.Source',
+    description: 'Event source information (origin of the event).',
+  })
+  .describe('Event source information');
 
 /**
  * Entity - Nested entity structure
@@ -183,6 +230,11 @@ export const EntitySchema: z.ZodTypeAny = z
       context: OrderedPropertiesSchema.describe('Entity context data'),
     }),
   )
+  .meta({
+    id: 'WalkerOSEntity',
+    title: 'WalkerOS.Entity',
+    description: 'Nested entity structure with recursive nesting support.',
+  })
   .describe('Nested entity structure with recursive nesting support');
 
 /**
@@ -190,6 +242,11 @@ export const EntitySchema: z.ZodTypeAny = z
  */
 export const EntitiesSchema = z
   .array(EntitySchema)
+  .meta({
+    id: 'WalkerOSEntities',
+    title: 'WalkerOS.Entities',
+    description: 'Array of nested entities.',
+  })
   .describe('Array of nested entities');
 
 // ========================================
@@ -261,15 +318,24 @@ export const EventSchema = z
     version: VersionSchema.describe('Walker version information'),
     source: SourceSchema.describe('Event source information'),
   })
+  .meta({
+    id: 'WalkerOSEvent',
+    title: 'WalkerOS.Event',
+    description: 'Complete walkerOS event structure.',
+  })
   .describe('Complete walkerOS event structure');
 
 /**
  * PartialEvent - Event with all fields optional
  * Used for event creation where not all fields are provided
  */
-export const PartialEventSchema = EventSchema.partial().describe(
-  'Partial event structure with all fields optional',
-);
+export const PartialEventSchema = EventSchema.partial()
+  .meta({
+    id: 'WalkerOSPartialEvent',
+    title: 'WalkerOS.PartialEvent',
+    description: 'Partial event structure with all fields optional.',
+  })
+  .describe('Partial event structure with all fields optional');
 
 /**
  * DeepPartialEvent - Event with all fields optional
@@ -281,10 +347,13 @@ export const PartialEventSchema = EventSchema.partial().describe(
  * provided (users typically omit entire objects rather than providing partial nested data).
  * Zod 4 deliberately removed .deepPartial() due to internal type complexity issues.
  */
-export const DeepPartialEventSchema: z.ZodTypeAny =
-  EventSchema.partial().describe(
-    'Partial event structure with all top-level fields optional',
-  );
+export const DeepPartialEventSchema: z.ZodTypeAny = EventSchema.partial()
+  .meta({
+    id: 'WalkerOSDeepPartialEvent',
+    title: 'WalkerOS.DeepPartialEvent',
+    description: 'Partial event structure with all top-level fields optional.',
+  })
+  .describe('Partial event structure with all top-level fields optional');
 
 // ========================================
 // JSON Schema Exports (for Explorer/RJSF/MCP)

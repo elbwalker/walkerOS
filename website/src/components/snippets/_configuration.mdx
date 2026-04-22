@@ -29,7 +29,8 @@ This {props.type} uses the standard {props.type} config wrapper (consent, data, 
 
 ## Mapping
 
-{props.data?.schemas?.mapping ? (
+{props.data?.schemas?.mapping &&
+Object.keys(props.data.schemas.mapping.properties ?? {}).length > 0 ? (
   <>
     <p>Per-event rules under <code>config.mapping</code>. For the standard rule fields (consent, condition, data, batch, name, policy) see <a href="/docs/mapping">mapping</a>.</p>
     <PropertyTable schema={props.data.schemas.mapping} />

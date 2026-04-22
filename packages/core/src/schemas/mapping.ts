@@ -62,6 +62,11 @@ export const ValueSchema: z.ZodTypeAny = z
  */
 export const ValuesSchema = z
   .array(ValueSchema)
+  .meta({
+    id: 'MappingValues',
+    title: 'Mapping.Values',
+    description: 'Array of transformation values.',
+  })
   .describe('Array of transformation values');
 
 /**
@@ -74,13 +79,20 @@ export const ValuesSchema = z
  * Example: ['nested', { map: { id: 'data.id' } }]
  * Means: Iterate over event.nested array, transform each item
  */
-const LoopSchema: z.ZodTypeAny = z.lazy(() =>
-  z
-    .tuple([ValueSchema, ValueSchema])
-    .describe(
-      'Loop transformation: [source, transform] tuple for array processing',
-    ),
-);
+const LoopSchema: z.ZodTypeAny = z
+  .lazy(() =>
+    z
+      .tuple([ValueSchema, ValueSchema])
+      .describe(
+        'Loop transformation: [source, transform] tuple for array processing',
+      ),
+  )
+  .meta({
+    id: 'MappingLoop',
+    title: 'Mapping.Loop',
+    description:
+      'Loop tuple [source, transform] for iterating and transforming arrays.',
+  });
 
 /**
  * Set - Array of values for selection/combination
@@ -92,11 +104,17 @@ const LoopSchema: z.ZodTypeAny = z.lazy(() =>
  * Example: ['data.firstName', ' ', 'data.lastName']
  * Means: Combine multiple values
  */
-const SetSchema: z.ZodTypeAny = z.lazy(() =>
-  z
-    .array(ValueSchema)
-    .describe('Set: Array of values for selection or combination'),
-);
+const SetSchema: z.ZodTypeAny = z
+  .lazy(() =>
+    z
+      .array(ValueSchema)
+      .describe('Set: Array of values for selection or combination'),
+  )
+  .meta({
+    id: 'MappingSet',
+    title: 'Mapping.Set',
+    description: 'Set: array of values for selection or combination.',
+  });
 
 /**
  * Map - Object mapping for data transformation
@@ -105,11 +123,17 @@ const SetSchema: z.ZodTypeAny = z.lazy(() =>
  * Example: { item_id: 'data.id', item_name: 'data.name' }
  * Means: Transform event data to destination format
  */
-const MapSchema: z.ZodTypeAny = z.lazy(() =>
-  z
-    .record(z.string(), ValueSchema)
-    .describe('Map: Object mapping keys to transformation values'),
-);
+const MapSchema: z.ZodTypeAny = z
+  .lazy(() =>
+    z
+      .record(z.string(), ValueSchema)
+      .describe('Map: Object mapping keys to transformation values'),
+  )
+  .meta({
+    id: 'MappingMap',
+    title: 'Mapping.Map',
+    description: 'Map: object mapping keys to transformation values.',
+  });
 
 /**
  * ValueConfig - Configuration object for value transformations
@@ -167,6 +191,12 @@ ValueConfigSchemaLazy = z
   .refine((data) => Object.keys(data).length > 0, {
     message: 'ValueConfig must have at least one property',
   })
+  .meta({
+    id: 'MappingValueConfig',
+    title: 'Mapping.ValueConfig',
+    description:
+      'Object-form value transformation with map/loop/set/condition/consent etc.',
+  })
   .describe('Value transformation configuration with multiple strategies');
 
 // Export with original name for backward compatibility
@@ -189,6 +219,12 @@ export { LoopSchema, SetSchema, MapSchema };
  */
 export const PolicySchema = z
   .record(z.string(), ValueSchema)
+  .meta({
+    id: 'MappingPolicy',
+    title: 'Mapping.Policy',
+    description:
+      'Policy rules for event pre-processing (key → value transformation).',
+  })
   .describe('Policy rules for event pre-processing (key → value mapping)');
 
 // ========================================
@@ -291,6 +327,12 @@ export const RulesSchema = z
     z.string(),
     z.record(z.string(), z.union([RuleSchema, z.array(RuleSchema)])).optional(),
   )
+  .meta({
+    id: 'MappingRules',
+    title: 'Mapping.Rules',
+    description:
+      'Event mapping rules tree: entity → action → Rule (or Rule[]). Use "*" as wildcard for entity or action.',
+  })
   .describe(
     'Event mapping rules: entity → action → Rule. Keys match event name split by space. Use "*" as wildcard for entity or action. Priority: exact > entity wildcard > action wildcard > global wildcard (*→*).',
   );
@@ -325,6 +367,12 @@ export const ConfigSchema = z
       'Pre-processing policy rules applied before mapping',
     ),
   })
+  .meta({
+    id: 'MappingConfig',
+    title: 'Mapping.Config',
+    description:
+      'Shared mapping configuration (consent, data, include, mapping, policy).',
+  })
   .describe('Shared mapping configuration for sources and destinations');
 
 /**
@@ -340,6 +388,11 @@ export const ResultSchema = z
       .string()
       .optional()
       .describe('Mapping key used (e.g., "product.view")'),
+  })
+  .meta({
+    id: 'MappingResult',
+    title: 'Mapping.Result',
+    description: 'Mapping resolution result (matched rule + key).',
   })
   .describe('Mapping resolution result');
 
