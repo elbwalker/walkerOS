@@ -135,8 +135,8 @@ describe('reference resources', () => {
   });
 
   describe('already-automated resources', () => {
-    it('should register api resource', () => {
-      expect(mockServer.getResource('api')).toBeDefined();
+    it('should register openapi resource', () => {
+      expect(mockServer.getResource('openapi')).toBeDefined();
     });
 
     it('should register packages resource', () => {
