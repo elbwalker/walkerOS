@@ -1,6 +1,10 @@
 import { createMockLogger } from '@walkeros/core';
 import { setupV2Adapter } from '../lib/v2';
-import type { Settings, UsercentricsV2Service } from '../types';
+import type {
+  Settings,
+  UsercentricsV2Api,
+  UsercentricsV2Service,
+} from '../types';
 import {
   ConsentCall,
   createMockElb,
@@ -24,18 +28,11 @@ function buildSettings(overrides: Partial<Settings> = {}): Settings {
 }
 
 /**
- * Attach a UC_UI mock onto the MockWindow.
- * We cast to a local-typed shape rather than mutating `unknown` so the typing
- * stays explicit for each test.
+ * Attach a UC_UI mock onto the MockWindow. `Window.UC_UI` is now optional and
+ * typed as the local minimal `UsercentricsV2Api` — no external-types cast.
  */
-function withUcUi(
-  mockWindow: MockWindow,
-  ucUi: {
-    isInitialized?: () => boolean;
-    getServicesBaseInfo?: () => UsercentricsV2Service[];
-  },
-): void {
-  (mockWindow as unknown as { UC_UI: typeof ucUi }).UC_UI = ucUi;
+function withUcUi(mockWindow: MockWindow, ucUi: UsercentricsV2Api): void {
+  (mockWindow as unknown as { UC_UI: UsercentricsV2Api }).UC_UI = ucUi;
 }
 
 describe('V2 adapter (setupV2Adapter)', () => {
@@ -47,10 +44,65 @@ describe('V2 adapter (setupV2Adapter)', () => {
     mockElb = createMockElb(consentCalls);
   });
 
-  describe('post-init static read', () => {
-    test('aggregates services by categorySlug with OR logic', () => {
+  describe('post-init static read (implicit type, default explicitOnly)', () => {
+    test('default explicitOnly=true suppresses the static read', () => {
       const mockWindow = createMockWindow();
       const services: UsercentricsV2Service[] = [
+        { categorySlug: 'essential', consent: { status: true } },
+        { categorySlug: 'marketing', consent: { status: false } },
+      ];
+      withUcUi(mockWindow, {
+        isInitialized: () => true,
+        getServicesBaseInfo: () => services,
+      });
+
+      const cleanup = setupV2Adapter({
+        window: mockWindow as unknown as Window & typeof globalThis,
+        elb: mockElb,
+        settings: buildSettings(), // explicitOnly: true by default
+        logger: createMockLogger(),
+      });
+
+      // Static read emits 'implicit'; explicitOnly=true drops it.
+      expect(mockElb).not.toHaveBeenCalled();
+
+      cleanup();
+    });
+
+    test('explicitOnly=false surfaces the static read as implicit snapshot', () => {
+      const mockWindow = createMockWindow();
+      const services: UsercentricsV2Service[] = [
+        { categorySlug: 'essential', consent: { status: true } },
+        { categorySlug: 'marketing', consent: { status: false } },
+      ];
+      withUcUi(mockWindow, {
+        isInitialized: () => true,
+        getServicesBaseInfo: () => services,
+      });
+
+      const cleanup = setupV2Adapter({
+        window: mockWindow as unknown as Window & typeof globalThis,
+        elb: mockElb,
+        settings: buildSettings({ explicitOnly: false }),
+        logger: createMockLogger(),
+      });
+
+      expect(mockElb).toHaveBeenCalledWith('walker consent', {
+        essential: true,
+        marketing: false,
+      });
+      expect(mockElb).toHaveBeenCalledTimes(1);
+
+      cleanup();
+    });
+
+    test('aggregates services by categorySlug with strict AND logic', () => {
+      const mockWindow = createMockWindow();
+      // Two services in 'marketing': one true, one false → category is false.
+      // Two services in 'essential': both true → category is true.
+      // One service in 'functional': false → category is false.
+      const services: UsercentricsV2Service[] = [
+        { categorySlug: 'essential', consent: { status: true } },
         { categorySlug: 'essential', consent: { status: true } },
         { categorySlug: 'marketing', consent: { status: true } },
         { categorySlug: 'marketing', consent: { status: false } },
@@ -64,13 +116,14 @@ describe('V2 adapter (setupV2Adapter)', () => {
       const cleanup = setupV2Adapter({
         window: mockWindow as unknown as Window & typeof globalThis,
         elb: mockElb,
-        settings: buildSettings(),
+        // explicitOnly=false so the static read is actually emitted here.
+        settings: buildSettings({ explicitOnly: false }),
         logger: createMockLogger(),
       });
 
       expect(mockElb).toHaveBeenCalledWith('walker consent', {
         essential: true,
-        marketing: true,
+        marketing: false,
         functional: false,
       });
       expect(mockElb).toHaveBeenCalledTimes(1);
@@ -90,7 +143,7 @@ describe('V2 adapter (setupV2Adapter)', () => {
       const cleanup = setupV2Adapter({
         window: mockWindow as unknown as Window & typeof globalThis,
         elb: mockElb,
-        settings: buildSettings(),
+        settings: buildSettings({ explicitOnly: false }),
         logger: createMockLogger(),
       });
 
@@ -106,7 +159,7 @@ describe('V2 adapter (setupV2Adapter)', () => {
       const cleanup = setupV2Adapter({
         window: mockWindow as unknown as Window & typeof globalThis,
         elb: mockElb,
-        settings: buildSettings(),
+        settings: buildSettings({ explicitOnly: false }),
         logger: createMockLogger(),
       });
 

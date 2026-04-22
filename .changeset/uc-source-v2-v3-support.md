@@ -1,5 +1,5 @@
 ---
-'@walkeros/web-source-cmp-usercentrics': minor
+'@walkeros/web-source-cmp-usercentrics': patch
 ---
 
 Support both Usercentrics V2 (`window.UC_UI`) and V3 (`window.__ucCmp`) APIs.

@@ -140,6 +140,10 @@ export async function requestDeviceCode(
  * On success: writes config and returns authenticated result.
  * On timeout: returns pending (NOT an error — caller can retry).
  * On real error (denied, expired): returns error result.
+ *
+ * In-flight fetch requests are bounded by the remaining time to the deadline
+ * via AbortController, so a hanging fetch cannot exceed the configured timeout.
+ * Malformed JSON responses return an error result instead of throwing.
  */
 export async function pollForToken(
   deviceCode: string,
@@ -158,23 +162,67 @@ export async function pollForToken(
     // Check if we've exceeded the deadline after sleeping
     if (Date.now() >= deadline) break;
 
-    const tokenResponse = await f(`${appUrl}/api/auth/device/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceCode, hostname: hostname() }),
-    });
+    const remaining = Math.max(1, deadline - Date.now());
+    const controller = new AbortController();
+    const timeoutHandle = setTimeout(() => controller.abort(), remaining);
 
-    const data = await tokenResponse.json();
+    let tokenResponse: Response;
+    try {
+      tokenResponse = await f(`${appUrl}/api/auth/device/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceCode, hostname: hostname() }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timeoutHandle);
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Aborted by our deadline — fall through to the pending return below
+        break;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutHandle);
+    }
 
-    if (tokenResponse.ok && data.token) {
-      writeConfig({ token: data.token, email: data.email, appUrl });
-      const configPath = getConfigPath();
+    const data = await safeJsonParse(tokenResponse);
+    if (data === MALFORMED) {
       return {
-        success: true,
-        status: 'authenticated',
-        email: data.email,
-        configPath,
+        success: false,
+        status: 'error',
+        error: 'Server returned malformed response',
       };
+    }
+
+    if (tokenResponse.ok) {
+      const token = data.token;
+      const email = data.email;
+      if (typeof token === 'string' && token.length > 0) {
+        if (typeof email !== 'string' || email.length === 0) {
+          return {
+            success: false,
+            status: 'error',
+            error: 'Server returned malformed response (missing email)',
+          };
+        }
+        writeConfig({ token, email, appUrl });
+        const configPath = getConfigPath();
+        return {
+          success: true,
+          status: 'authenticated',
+          email,
+          configPath,
+        };
+      }
+      if (token !== undefined) {
+        return {
+          success: false,
+          status: 'error',
+          error: 'Server returned malformed response (invalid token type)',
+        };
+      }
+      // ok=true but no token and no error field — treat as pending and continue
+      continue;
     }
 
     if (data.error === 'authorization_pending') continue;
@@ -184,14 +232,40 @@ export async function pollForToken(
     }
 
     // Any other error: expired, denied, etc.
-    const errorMsg =
-      typeof data.error === 'string'
-        ? data.error
-        : data.error?.message || 'Authorization failed';
+    const errField: unknown = data.error;
+    let errorMsg: string;
+    if (typeof errField === 'string') {
+      errorMsg = errField;
+    } else if (
+      errField &&
+      typeof errField === 'object' &&
+      'message' in errField &&
+      typeof (errField as { message: unknown }).message === 'string'
+    ) {
+      errorMsg = (errField as { message: string }).message;
+    } else {
+      errorMsg = 'Authorization failed';
+    }
     return { success: false, status: 'error', error: errorMsg };
   }
 
   return { success: false, status: 'pending' };
+}
+
+const MALFORMED = Symbol('malformed-json');
+
+async function safeJsonParse(
+  response: Response,
+): Promise<Record<string, unknown> | typeof MALFORMED> {
+  try {
+    const parsed: unknown = await response.json();
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return MALFORMED;
+  } catch {
+    return MALFORMED;
+  }
 }
 
 export async function login(options: LoginOptions = {}): Promise<LoginResult> {
@@ -250,18 +324,57 @@ export async function login(options: LoginOptions = {}): Promise<LoginResult> {
       attempts++;
       await new Promise((r) => setTimeout(r, pollInterval));
 
-      const tokenResponse = await f(`${appUrl}/api/auth/device/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceCode, hostname: hostname() }),
-      });
+      const remaining = Math.max(1, deadline - Date.now());
+      const controller = new AbortController();
+      const timeoutHandle = setTimeout(() => controller.abort(), remaining);
 
-      const data = await tokenResponse.json();
+      let tokenResponse: Response;
+      try {
+        tokenResponse = await f(`${appUrl}/api/auth/device/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceCode, hostname: hostname() }),
+          signal: controller.signal,
+        });
+      } catch (err) {
+        clearTimeout(timeoutHandle);
+        if (err instanceof Error && err.name === 'AbortError') {
+          break;
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeoutHandle);
+      }
 
-      if (tokenResponse.ok && data.token) {
-        writeConfig({ token: data.token, email: data.email, appUrl });
-        const configPath = getConfigPath();
-        return { success: true, email: data.email, configPath };
+      const data = await safeJsonParse(tokenResponse);
+      if (data === MALFORMED) {
+        return {
+          success: false,
+          error: 'Server returned malformed response',
+        };
+      }
+
+      if (tokenResponse.ok) {
+        const token = data.token;
+        const email = data.email;
+        if (typeof token === 'string' && token.length > 0) {
+          if (typeof email !== 'string' || email.length === 0) {
+            return {
+              success: false,
+              error: 'Server returned malformed response (missing email)',
+            };
+          }
+          writeConfig({ token, email, appUrl });
+          const configPath = getConfigPath();
+          return { success: true, email, configPath };
+        }
+        if (token !== undefined) {
+          return {
+            success: false,
+            error: 'Server returned malformed response (invalid token type)',
+          };
+        }
+        continue;
       }
 
       if (data.error === 'authorization_pending') continue;
@@ -270,7 +383,10 @@ export async function login(options: LoginOptions = {}): Promise<LoginResult> {
         continue;
       }
 
-      return { success: false, error: data.error || 'Authorization failed' };
+      const errField: unknown = data.error;
+      const errorMsg =
+        typeof errField === 'string' ? errField : 'Authorization failed';
+      return { success: false, error: errorMsg };
     }
 
     return {

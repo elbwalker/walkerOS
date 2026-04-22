@@ -1,10 +1,12 @@
 import type { Elb, Logger } from '@walkeros/core';
 import type {
-  CategoryData,
-  ConsentDetails,
-  Usercentrics,
-} from 'usercentrics-browser-ui';
-import type { Settings, UsercentricsEventDetail } from '../types';
+  Settings,
+  UsercentricsEventDetail,
+  UsercentricsV3Api,
+  UsercentricsV3CategoryState,
+  UsercentricsV3CmpEventDetail,
+  UsercentricsV3ConsentDetails,
+} from '../types';
 import { parseConsent } from './parseConsent';
 
 export interface V3AdapterContext {
@@ -17,18 +19,34 @@ export interface V3AdapterContext {
 const V3_DEFAULT_EVENT_NAME = 'UC_UI_CMP_EVENT';
 
 /**
- * Map a V3 CategoryData.state value to a walkerOS boolean.
- * ALL_DENIED → false; SOME_ACCEPTED or ALL_ACCEPTED → true.
+ * V3 CMP event types that represent a user consent decision. Presentation
+ * events like `CMP_SHOWN` or `UI_INITIALIZED` must NOT trigger a consent
+ * publish — they carry no user decision.
  */
-function categoryStateToBoolean(state: CategoryData['state']): boolean {
-  return state !== 'ALL_DENIED';
+const V3_DECISION_TYPES: ReadonlySet<string> = new Set([
+  'ACCEPT_ALL',
+  'DENY_ALL',
+  'SAVE',
+]);
+
+/**
+ * Map a V3 CategoryData.state value to a walkerOS boolean using strict
+ * semantics: only fully-accepted categories are `true`. Any partial or
+ * denied state (including future/unknown states) resolves to `false`.
+ *
+ * This matches the consent rule of thumb: any deny signal denies.
+ */
+function categoryStateToBoolean(state: UsercentricsV3CategoryState): boolean {
+  return state === 'ALL_ACCEPTED';
 }
 
 /**
  * Build a synthetic UsercentricsEventDetail from V3 ConsentDetails.
  * Translates V3's structured consent state into the shape parseConsent expects.
  */
-function buildDetailFromV3(details: ConsentDetails): UsercentricsEventDetail {
+function buildDetailFromV3(
+  details: UsercentricsV3ConsentDetails,
+): UsercentricsEventDetail {
   const ucCategory: Record<string, boolean> = {};
   Object.entries(details.categories).forEach(([slug, category]) => {
     ucCategory[slug] = categoryStateToBoolean(category.state);
@@ -56,7 +74,7 @@ export async function setupV3Adapter(
   const { window: win, elb, settings, logger } = ctx;
   const eventName = settings.v3EventName ?? V3_DEFAULT_EVENT_NAME;
 
-  const publishConsent = async (cmp: Usercentrics): Promise<void> => {
+  const publishConsent = async (cmp: UsercentricsV3Api): Promise<void> => {
     const details = await cmp.getConsentDetails();
     const detail = buildDetailFromV3(details);
     logger.debug('event received', detail);
@@ -69,9 +87,16 @@ export async function setupV3Adapter(
     }
   };
 
-  const listener = (): void => {
+  const listener = (event: Event): void => {
     const cmp = win.__ucCmp;
     if (!cmp) return;
+    const custom = event as CustomEvent<UsercentricsV3CmpEventDetail>;
+    const detail = custom.detail;
+    // Filter to decision events only: the CMP emits a broad set of events
+    // (CMP_SHOWN, UI_INITIALIZED, VIEW_CHANGED, …) on this bus. Without
+    // filtering, every view toggle would re-publish consent.
+    if (!detail || detail.source !== 'CMP') return;
+    if (!detail.type || !V3_DECISION_TYPES.has(detail.type)) return;
     publishConsent(cmp).catch(() => {
       // Swallow — a failed V3 fetch should not break the page.
     });
@@ -79,11 +104,18 @@ export async function setupV3Adapter(
   win.addEventListener(eventName, listener);
 
   // Static check: if __ucCmp is already initialized, fetch now.
+  // Wrapped in try/catch so transient API failures during setup don't
+  // reject setupV3Adapter() and tear down the whole flow — the listener
+  // stays registered and will pick up the next real event.
   const cmp = win.__ucCmp;
   if (cmp) {
-    const initialized = await cmp.isInitialized();
-    if (initialized) {
-      await publishConsent(cmp);
+    try {
+      const initialized = await cmp.isInitialized();
+      if (initialized) {
+        await publishConsent(cmp);
+      }
+    } catch (err) {
+      logger.warn('v3 static consent read failed', err);
     }
   }
 

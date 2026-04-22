@@ -200,7 +200,18 @@ describe('auth tool', () => {
   });
 
   describe('logout', () => {
+    const origEnvToken = process.env.WALKEROS_TOKEN;
+
+    afterEach(() => {
+      if (origEnvToken !== undefined) {
+        process.env.WALKEROS_TOKEN = origEnvToken;
+      } else {
+        delete process.env.WALKEROS_TOKEN;
+      }
+    });
+
     it('calls deleteConfig and returns success', async () => {
+      delete process.env.WALKEROS_TOKEN;
       mockDeleteConfig.mockReturnValue(true);
 
       const tool = server.getTool('auth');
@@ -212,6 +223,7 @@ describe('auth tool', () => {
     });
 
     it('returns success even when no config existed', async () => {
+      delete process.env.WALKEROS_TOKEN;
       mockDeleteConfig.mockReturnValue(false);
 
       const tool = server.getTool('auth');
@@ -219,6 +231,47 @@ describe('auth tool', () => {
 
       expect(result.structuredContent.loggedOut).toBe(true);
       expect(result.structuredContent.message).toContain('already logged out');
+    });
+
+    it('clears WALKEROS_TOKEN env var and mentions it in the message', async () => {
+      process.env.WALKEROS_TOKEN = 'tok_env_abc';
+      mockDeleteConfig.mockReturnValue(true);
+
+      const tool = server.getTool('auth');
+      const result = await tool.handler({ action: 'logout' });
+
+      expect(mockDeleteConfig).toHaveBeenCalled();
+      expect(process.env.WALKEROS_TOKEN).toBeUndefined();
+      expect(result.structuredContent.loggedOut).toBe(true);
+      expect(result.structuredContent.message).toContain('Config removed');
+      expect(result.structuredContent.message).toContain('WALKEROS_TOKEN');
+    });
+
+    it('subsequent status call reports unauthenticated after logout with env token', async () => {
+      process.env.WALKEROS_TOKEN = 'tok_env_xyz';
+      mockDeleteConfig.mockReturnValue(true);
+      // Tool's own status path calls resolveToken(); simulate it returning null
+      // once logout clears things.
+      mockResolveToken.mockReturnValue(null);
+
+      const tool = server.getTool('auth');
+      await tool.handler({ action: 'logout' });
+      expect(process.env.WALKEROS_TOKEN).toBeUndefined();
+
+      const statusResult = await tool.handler({ action: 'status' });
+      expect(statusResult.structuredContent.authenticated).toBe(false);
+    });
+
+    it('clears env token even when no config existed', async () => {
+      process.env.WALKEROS_TOKEN = 'tok_env_only';
+      mockDeleteConfig.mockReturnValue(false);
+
+      const tool = server.getTool('auth');
+      const result = await tool.handler({ action: 'logout' });
+
+      expect(process.env.WALKEROS_TOKEN).toBeUndefined();
+      expect(result.structuredContent.loggedOut).toBe(true);
+      expect(result.structuredContent.message).toContain('WALKEROS_TOKEN');
     });
   });
 });

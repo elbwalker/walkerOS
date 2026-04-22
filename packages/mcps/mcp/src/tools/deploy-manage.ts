@@ -16,7 +16,9 @@ export function registerDeployTool(server: McpServer) {
     {
       title: 'Deploy Management',
       description:
-        'Deploy walkerOS flows and manage deployments. Deploy a flow, list deployments, get deployment details, or delete deployments.',
+        'Deploy walkerOS flows and manage deployments. Deploy a flow, list deployments, get deployment details, or delete deployments. ' +
+        'Note: the "get" and "delete" actions accept a deployment slug (e.g. "dep_..."), not a flow ID. ' +
+        'If you only have a flowId, resolve the latest deployment slug first via flow_manage with action "get".',
       inputSchema: {
         action: z
           .enum(['deploy', 'list', 'get', 'delete'])
@@ -29,7 +31,8 @@ export function registerDeployTool(server: McpServer) {
           .string()
           .optional()
           .describe(
-            'Deployment ID or slug. Required for get and delete actions.',
+            'Deployment slug (e.g. "dep_..."). Required for get and delete actions. ' +
+              'This is the deployment slug, not a flow ID — if you only have a flowId, use flow_manage action "get" to resolve the latest deployment slug.',
           ),
         projectId: z
           .string()
@@ -114,8 +117,23 @@ export function registerDeployTool(server: McpServer) {
                 ),
               );
             }
-            const data = await deleteDeployment({ slug: id, projectId });
-            return mcpResult({ deleted: true, ...data });
+            try {
+              const data = await deleteDeployment({ slug: id, projectId });
+              return mcpResult({ deleted: true, ...data });
+            } catch (error) {
+              if (isAuthError(error)) {
+                return mcpError(error, AUTH_HINT);
+              }
+              const message =
+                error instanceof Error ? error.message : String(error);
+              if (/not[\s_-]?found|404/i.test(message)) {
+                return mcpError(
+                  error,
+                  'Deployment not found. The "delete" action expects a deployment slug (e.g. "dep_..."), not a flow ID. If you only have a flowId, use flow_manage with action "get" to resolve the latest deployment slug first.',
+                );
+              }
+              return mcpError(error);
+            }
           }
 
           default:

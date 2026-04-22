@@ -50,7 +50,7 @@ export function registerFlowBundleTool(server: McpServer) {
             {
               next: [
                 'Use flow_simulate to test',
-                'Use deploy with action "deploy" to publish',
+                'Use deploy_manage with action "deploy" to publish',
               ],
             },
           );
@@ -81,7 +81,7 @@ export function registerFlowBundleTool(server: McpServer) {
           {
             next: [
               'Use flow_simulate to test',
-              'Use deploy with action "deploy" to publish',
+              'Use deploy_manage with action "deploy" to publish',
             ],
           },
         );

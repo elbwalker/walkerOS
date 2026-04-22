@@ -521,4 +521,151 @@ describe('login (device code flow)', () => {
       expect(result.error).toBe('expired_token');
     }
   });
+
+  // === Bounded-fetch + malformed-JSON safety ===
+
+  it('pollForToken passes an AbortSignal to fetch', async () => {
+    const receivedInits: RequestInit[] = [];
+    const mockFetch: typeof globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const urlStr = typeof url === 'string' ? url : url.toString();
+      if (urlStr.includes('/api/auth/device/token')) {
+        receivedInits.push(init ?? {});
+        return fakeResponse({
+          token: 'sk-walkeros-' + 'a'.repeat(64),
+          email: 'signal@example.com',
+          userId: 'user_signal',
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    }) as typeof globalThis.fetch;
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(true);
+    expect(receivedInits.length).toBeGreaterThan(0);
+    const lastInit = receivedInits[receivedInits.length - 1];
+    expect(lastInit.signal).toBeDefined();
+    expect(typeof (lastInit.signal as AbortSignal).aborted).toBe('boolean');
+  });
+
+  it('pollForToken aborts in-flight fetch when deadline passes', async () => {
+    // The fetch hangs forever unless aborted. If the bounded timeout works,
+    // the pollForToken call resolves with pending (timeout) rather than hanging.
+    let aborted = false;
+    const mockFetch: typeof globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const urlStr = typeof url === 'string' ? url : url.toString();
+      if (urlStr.includes('/api/auth/device/token')) {
+        const signal = init?.signal;
+        return await new Promise<Response>((_resolve, reject) => {
+          if (signal) {
+            signal.addEventListener('abort', () => {
+              aborted = true;
+              const abortError = new Error('The operation was aborted');
+              abortError.name = 'AbortError';
+              reject(abortError);
+            });
+          }
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    }) as typeof globalThis.fetch;
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 150,
+      intervalMs: 10,
+    });
+
+    expect(aborted).toBe(true);
+    expect(result.success).toBe(false);
+    // AbortError at the deadline is a timeout, not a real error
+    expect(['pending', 'error']).toContain(result.status);
+  }, 5000);
+
+  it('pollForToken returns error shape on non-JSON token response', async () => {
+    const htmlResponse = {
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON at position 0');
+      },
+      text: async () => '<html>server error</html>',
+    } as unknown as Response;
+
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return htmlResponse;
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('error');
+    if (!result.success && result.status === 'error') {
+      expect(result.error).toMatch(/malformed/i);
+    }
+  });
+
+  it('pollForToken returns error shape when ok response is missing token field', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        // ok: true but no token/email at all
+        return fakeResponse({ something: 'else' });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 200,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    // Without a token/email and without an error field, this is just pending until timeout
+    // but should NOT have thrown or written config.
+    expect(['pending', 'error']).toContain(result.status);
+  });
+
+  it('pollForToken returns error shape when token field is wrong type', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return fakeResponse({
+          token: 12345, // not a string
+          email: 'x@example.com',
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('error');
+  });
 });

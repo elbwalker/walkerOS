@@ -2,14 +2,15 @@ import { sourceUsercentrics } from '../index';
 import { createMockLogger } from '@walkeros/core';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
-import { examples } from '../dev';
 import type {
-  CategoryData,
-  ConsentData,
-  ConsentDetails,
-  Usercentrics,
-} from 'usercentrics-browser-ui';
-import type { UsercentricsV2Service } from '../types';
+  UsercentricsV2Api,
+  UsercentricsV2Service,
+  UsercentricsV3Api,
+  UsercentricsV3CategoryData,
+  UsercentricsV3CategoryState,
+  UsercentricsV3ConsentData,
+  UsercentricsV3ConsentDetails,
+} from '../types';
 import {
   createMockElb,
   createMockWindow,
@@ -201,7 +202,7 @@ describe('Usercentrics Source', () => {
       });
     });
 
-    test('uses OR logic when multiple categories map to same group', async () => {
+    test('uses strict AND logic when multiple categories map to same group', async () => {
       const mockWindow = createMockWindow();
       await createUsercentricsSource(mockWindow, mockElb, {
         settings: {
@@ -212,14 +213,41 @@ describe('Usercentrics Source', () => {
         },
       });
 
-      // essential=true, functional=false both map to 'functional'
-      // OR logic: true OR false = true
+      // essential=true, functional=false both map to 'functional'.
+      // Strict AND: any deny signal denies → functional = false.
       mockWindow.__dispatchEvent('ucEvent', {
         event: 'consent_status',
         type: 'explicit',
         ucCategory: {
           essential: true,
           functional: false,
+          marketing: false,
+        },
+      });
+
+      expect(consentCalls[0].consent).toEqual({
+        functional: false,
+        marketing: false,
+      });
+    });
+
+    test('strict AND: all contributing sources true → target true', async () => {
+      const mockWindow = createMockWindow();
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: {
+          categoryMap: {
+            essential: 'functional',
+            functional: 'functional',
+          },
+        },
+      });
+
+      mockWindow.__dispatchEvent('ucEvent', {
+        event: 'consent_status',
+        type: 'explicit',
+        ucCategory: {
+          essential: true,
+          functional: true,
           marketing: false,
         },
       });
@@ -352,7 +380,7 @@ describe('Usercentrics Source', () => {
       await source.destroy?.({
         id: 'test',
         config: source.config,
-        env: {} as any,
+        env: {} as never,
         logger: createMockLogger(),
       });
 
@@ -371,7 +399,7 @@ describe('Usercentrics Source', () => {
       await source.destroy?.({
         id: 'test',
         config: source.config,
-        env: {} as any,
+        env: {} as never,
         logger: createMockLogger(),
       });
 
@@ -387,20 +415,10 @@ describe('Usercentrics Source', () => {
      * Minimal ConsentData stub for V3 fixtures.
      */
     function buildConsentData(
-      overrides: Partial<ConsentData> = {},
-    ): ConsentData {
+      overrides: Partial<UsercentricsV3ConsentData> = {},
+    ): UsercentricsV3ConsentData {
       return {
-        status: 'ALL_ACCEPTED',
-        required: false,
-        version: 1,
-        controllerId: 'test-controller',
-        language: 'en',
-        createdAt: 0,
-        updatedAt: 0,
-        updatedBy: 'onInitialPageLoad',
-        setting: { id: 'test-setting', type: 'GDPR', version: '1.0.0' },
         type: 'EXPLICIT',
-        hash: 'test-hash',
         ...overrides,
       };
     }
@@ -409,33 +427,26 @@ describe('Usercentrics Source', () => {
      * Minimal CategoryData stub for V3 fixtures.
      */
     function buildCategory(
-      state: CategoryData['state'],
+      state: UsercentricsV3CategoryState,
       name: string,
-    ): CategoryData {
-      return { state, dps: null, name };
+    ): UsercentricsV3CategoryData {
+      return { state, name };
     }
 
     /**
      * V3 API mock surface used by the adapter.
      */
-    interface MockUcCmp {
+    interface MockUcCmp extends UsercentricsV3Api {
       isInitialized: jest.Mock<Promise<boolean>, []>;
-      getConsentDetails: jest.Mock<Promise<ConsentDetails>, []>;
+      getConsentDetails: jest.Mock<Promise<UsercentricsV3ConsentDetails>, []>;
     }
 
     function withUcCmp(mockWindow: MockWindow, ucCmp: MockUcCmp): void {
-      (mockWindow as unknown as { __ucCmp: Usercentrics }).__ucCmp =
-        ucCmp as unknown as Usercentrics;
+      (mockWindow as unknown as { __ucCmp: UsercentricsV3Api }).__ucCmp = ucCmp;
     }
 
-    function withUcUi(
-      mockWindow: MockWindow,
-      ucUi: {
-        isInitialized?: () => boolean;
-        getServicesBaseInfo?: () => UsercentricsV2Service[];
-      },
-    ): void {
-      (mockWindow as unknown as { UC_UI: typeof ucUi }).UC_UI = ucUi;
+    function withUcUi(mockWindow: MockWindow, ucUi: UsercentricsV2Api): void {
+      (mockWindow as unknown as { UC_UI: UsercentricsV2Api }).UC_UI = ucUi;
     }
 
     /**
@@ -469,12 +480,8 @@ describe('Usercentrics Source', () => {
     test('auto + both V2 and V3 present: V3 fires, V2 does not', async () => {
       const mockWindow = createMockWindow();
 
-      const v3Details: ConsentDetails = {
-        consent: buildConsentData({
-          status: 'SOME_ACCEPTED',
-          type: 'EXPLICIT',
-        }),
-        services: {},
+      const v3Details: UsercentricsV3ConsentDetails = {
+        consent: buildConsentData({ type: 'EXPLICIT' }),
         categories: {
           essential: buildCategory('ALL_ACCEPTED', 'Essential'),
           marketing: buildCategory('ALL_DENIED', 'Marketing'),
@@ -500,7 +507,7 @@ describe('Usercentrics Source', () => {
       });
       await flushPromises();
 
-      // V3 fired once with V3-shaped consent (marketing=false).
+      // V3 fired once with V3-shaped consent (marketing=false, strict AND).
       expect(consentCalls).toHaveLength(1);
       expect(consentCalls[0].consent).toEqual({
         essential: true,
@@ -508,7 +515,7 @@ describe('Usercentrics Source', () => {
       });
     });
 
-    test('auto + only V2 present: V2 fires', async () => {
+    test('auto + only V2 present: V2 fires via event (static read suppressed by explicitOnly)', async () => {
       const mockWindow = createMockWindow();
       const v2Services: UsercentricsV2Service[] = [
         { categorySlug: 'essential', consent: { status: true } },
@@ -520,7 +527,9 @@ describe('Usercentrics Source', () => {
       });
 
       await createUsercentricsSource(mockWindow, mockElb, {
-        settings: { apiVersion: 'auto' },
+        // Default explicitOnly=true would drop the implicit static read.
+        // Use false here to prove the V2 static read still flows end-to-end.
+        settings: { apiVersion: 'auto', explicitOnly: false },
       });
       await flushPromises();
 
@@ -551,9 +560,8 @@ describe('Usercentrics Source', () => {
       expect(consentCalls).toHaveLength(1);
 
       // Now V3 API becomes available and dispatches its event.
-      const v3Details: ConsentDetails = {
-        consent: buildConsentData({ status: 'ALL_ACCEPTED', type: 'EXPLICIT' }),
-        services: {},
+      const v3Details: UsercentricsV3ConsentDetails = {
+        consent: buildConsentData({ type: 'EXPLICIT' }),
         categories: {
           essential: buildCategory('ALL_ACCEPTED', 'Essential'),
         },
@@ -622,9 +630,8 @@ describe('Usercentrics Source', () => {
       expect(consentCalls).toHaveLength(0);
 
       // Attach V3 API, then dispatch the V3 event — V3 listener is active.
-      const v3Details: ConsentDetails = {
-        consent: buildConsentData({ status: 'ALL_ACCEPTED', type: 'EXPLICIT' }),
-        services: {},
+      const v3Details: UsercentricsV3ConsentDetails = {
+        consent: buildConsentData({ type: 'EXPLICIT' }),
         categories: {
           essential: buildCategory('ALL_ACCEPTED', 'Essential'),
         },

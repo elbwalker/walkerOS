@@ -35,7 +35,7 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 | `auth`           | Device-code login/logout/status for walkerOS cloud                              |
 | `project_manage` | Manage walkerOS projects (list/get/create/update/delete/set_default)            |
 | `flow_manage`    | Manage flows and previews (list/get/create/update/delete/duplicate/preview\_\*) |
-| `deploy_manage`  | Manage deployments (list/get/create/delete)                                     |
+| `deploy_manage`  | Manage deployments (deploy/list/get/delete)                                     |
 
 ## Resources
 

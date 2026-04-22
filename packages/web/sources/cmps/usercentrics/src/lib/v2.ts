@@ -14,8 +14,10 @@ export interface V2AdapterContext {
 }
 
 /**
- * Aggregate V2 service array into a group-level ucCategory object using OR logic.
- * If ANY service in a category has consent, the category is true.
+ * Aggregate V2 service array into a group-level ucCategory object using strict
+ * AND logic. A category is `true` only if EVERY service in that category is
+ * accepted. Any single denied service denies the whole category — this
+ * matches the consent rule of thumb: any deny signal denies.
  */
 function aggregateByCategory(
   services: UsercentricsV2Service[],
@@ -24,22 +26,27 @@ function aggregateByCategory(
   services.forEach((service) => {
     const category = service.categorySlug;
     const status = service.consent?.status ?? false;
-    categories[category] = categories[category] || status;
+    categories[category] =
+      categories[category] === undefined
+        ? status
+        : categories[category] && status;
   });
   return categories;
 }
 
 /**
  * Build a synthetic UsercentricsEventDetail from the V2 static API.
- * Marked as 'explicit' because UC_UI.isInitialized() === true implies the
- * user already interacted with the banner (or the CMP confirmed default consent).
+ * Marked as 'implicit' because UC_UI.isInitialized() === true does NOT prove
+ * the read was user-initiated — it only proves the SDK has finished loading.
+ * With settings.explicitOnly = true (the default), consumers correctly drop
+ * this detail. Set explicitOnly = false to surface the static snapshot.
  */
 function buildDetailFromStatic(
   services: UsercentricsV2Service[],
 ): UsercentricsEventDetail {
   return {
     event: 'consent_status',
-    type: 'explicit',
+    type: 'implicit',
     ucCategory: aggregateByCategory(services),
   };
 }

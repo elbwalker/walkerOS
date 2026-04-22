@@ -203,15 +203,24 @@ Manage walkerOS projects in the cloud.
 
 #### `flow_manage`
 
-Manage walkerOS flow configurations in the cloud.
+Manage walkerOS flow configurations and previews in the cloud.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"duplicate"` | Yes | Flow action |
-| `projectId` | string | No | Project ID (`proj_...`). Required for: list, create. Falls back to `WALKEROS_PROJECT_ID` env. |
-| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: get, update, delete, duplicate. |
-| `name` | string | No | Name for create/update operations |
-| `content` | object | No | Flow.Config JSON for flow operations |
+| `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"duplicate"` \| `"preview_list"` \| `"preview_get"` \| `"preview_create"` \| `"preview_delete"` | Yes | Flow action |
+| `projectId` | string | No | Project ID (`proj_...`). Optional filter for list. Required for create if no default project set. Falls back to `WALKEROS_PROJECT_ID` env. |
+| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: get, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete. |
+| `name` | string | No | Flow name. Required for create. Optional for update (to rename) and duplicate. |
+| `content` | object | No | Flow.Config JSON content. Used for create and update. |
+| `patch` | boolean | No | Merge-patch for update (default: `true`). When true, only provided fields are updated. |
+| `fields` | string[] | No | Dot-path selectors for get to return only specific fields. |
+| `sort` | `"name"` \| `"updated_at"` \| `"created_at"` | No | Sort field for list. |
+| `order` | `"asc"` \| `"desc"` | No | Sort order for list. |
+| `includeDeleted` | boolean | No | Include soft-deleted flows in list results. |
+| `previewId` | string | No | Preview ID (`prv_...`). Required for: preview_get, preview_delete. |
+| `flowName` | string | No | Flow settings name. Used by preview_create as an alternative to `flowSettingsId`. |
+| `flowSettingsId` | string | No | Flow settings ID. Used by preview_create as an alternative to `flowName`. |
+| `siteUrl` | string | No | Optional site URL for preview_create. When provided, the response includes full `activationUrl` and `deactivationUrl` the user can click. |
 
 #### `deploy_manage`
 
@@ -220,8 +229,13 @@ Deploy walkerOS flows and manage deployments.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `action` | `"deploy"` \| `"list"` \| `"get"` \| `"delete"` | Yes | Deployment action |
-| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: deploy. For get/delete: can be a deployment slug. |
-| `wait` | boolean | No | Wait for deploy to complete (default: `true`) |
+| `flowId` | string | No | Flow ID. Required for: `deploy`. |
+| `id` | string | No | Deployment slug (e.g. `dep_...`). Required for: `get`, `delete`. Must be a deployment slug, not a flow ID — resolve via `flow_manage` with action `get` if you only have a flow ID. |
+| `projectId` | string | No | Project ID. Optional filter for `list`. |
+| `type` | `"web"` \| `"server"` | No | Deployment type filter for `list`. |
+| `status` | string | No | Status filter for `list`. |
+| `wait` | boolean | No | Wait for deploy to complete (default: `true`). Only used with `deploy`. |
+| `flowName` | string | No | Flow name for multi-settings flows. Only used with `deploy`. |
 
 ### Resources
 

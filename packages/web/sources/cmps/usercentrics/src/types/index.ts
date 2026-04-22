@@ -1,5 +1,4 @@
 import type { Source, Elb } from '@walkeros/core';
-import type { Usercentrics } from 'usercentrics-browser-ui';
 
 /**
  * Usercentrics consent event detail structure.
@@ -23,6 +22,7 @@ export interface UsercentricsEventDetail {
 declare global {
   interface WindowEventMap {
     ucEvent: CustomEvent<UsercentricsEventDetail>;
+    UC_UI_CMP_EVENT: CustomEvent<UsercentricsV3CmpEventDetail>;
   }
 }
 
@@ -51,16 +51,78 @@ export interface UsercentricsV2Api {
   areAllConsentsAccepted?: () => boolean;
 }
 
+/**
+ * Usercentrics V3 category state. The SDK may add future states; we handle
+ * unknowns conservatively as non-accepting.
+ */
+export type UsercentricsV3CategoryState =
+  | 'ALL_ACCEPTED'
+  | 'ALL_DENIED'
+  | 'SOME_ACCEPTED'
+  | 'NO_STATE'
+  | string;
+
+/**
+ * Minimal V3 CategoryData — only fields the adapter reads.
+ */
+export interface UsercentricsV3CategoryData {
+  state: UsercentricsV3CategoryState;
+  name: string;
+}
+
+/**
+ * Minimal V3 ConsentData — only the `type` field is used to distinguish
+ * explicit vs implicit consent. Other fields (status, version, etc.) exist on
+ * the real SDK but are not read by this adapter.
+ */
+export interface UsercentricsV3ConsentData {
+  type: 'EXPLICIT' | 'IMPLICIT' | string;
+}
+
+/**
+ * Minimal V3 ConsentDetails — only the fields the adapter reads.
+ * The real SDK also exposes `services`, but the adapter currently operates
+ * at category level only.
+ */
+export interface UsercentricsV3ConsentDetails {
+  consent: UsercentricsV3ConsentData;
+  categories: Record<string, UsercentricsV3CategoryData>;
+}
+
+/**
+ * Usercentrics V3 window API (`window.__ucCmp`).
+ *
+ * Only the methods this adapter calls are typed — the real SDK surface is
+ * much wider but we intentionally keep this narrow.
+ */
+export interface UsercentricsV3Api {
+  isInitialized: () => Promise<boolean>;
+  getConsentDetails: () => Promise<UsercentricsV3ConsentDetails>;
+}
+
+/**
+ * V3 CMP event detail. Fired on `UC_UI_CMP_EVENT` (or custom name).
+ * `source: 'CMP'` + a decision `type` tells us a user action has been taken.
+ */
+export interface UsercentricsV3CmpEventDetail {
+  source?: string;
+  type?: string;
+}
+
 declare global {
   interface Window {
+    /**
+     * Usercentrics V2 CMP API. Attached once the V2 Browser SDK is
+     * initialized. Optional because the SDK loads asynchronously — guard
+     * with a truthiness check before access.
+     */
     UC_UI?: UsercentricsV2Api;
     /**
      * Usercentrics V3 CMP API. Attached once the V3 Browser SDK is
-     * initialized. The `@types/usercentrics-browser-ui` package declares this
-     * as always-present; our adapter still guards with a truthiness check for
-     * early-page / SSR safety.
+     * initialized. Optional because the SDK loads asynchronously — guard
+     * with a truthiness check before access.
      */
-    __ucCmp: Usercentrics;
+    __ucCmp?: UsercentricsV3Api;
   }
 }
 
@@ -83,8 +145,9 @@ export interface Settings {
    * Values: walkerOS consent group names
    *
    * Applied in both group-level and service-level consent modes.
-   * When multiple source categories map to the same group, OR logic applies:
-   * if ANY source category is true, the target group is true.
+   * When multiple source categories map to the same group, strict AND logic
+   * applies: ALL contributing source categories must be true for the target
+   * group to be true. Any single false denies consent.
    *
    * Default: {} (pass through category names as-is)
    */

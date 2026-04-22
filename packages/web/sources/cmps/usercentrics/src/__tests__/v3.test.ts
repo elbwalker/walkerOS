@@ -1,12 +1,14 @@
 import { createMockLogger } from '@walkeros/core';
-import type {
-  CategoryData,
-  ConsentData,
-  ConsentDetails,
-  Usercentrics,
-} from 'usercentrics-browser-ui';
 import { setupV3Adapter } from '../lib/v3';
-import type { Settings } from '../types';
+import type {
+  Settings,
+  UsercentricsV3Api,
+  UsercentricsV3CategoryData,
+  UsercentricsV3CategoryState,
+  UsercentricsV3CmpEventDetail,
+  UsercentricsV3ConsentData,
+  UsercentricsV3ConsentDetails,
+} from '../types';
 import {
   ConsentCall,
   createMockElb,
@@ -30,22 +32,13 @@ function buildSettings(overrides: Partial<Settings> = {}): Settings {
 }
 
 /**
- * Minimal ConsentData stub. Fields not used by the adapter are set to
- * plausible minimums but must match the real type exactly.
+ * Minimal ConsentData stub. Only `type` is read by the adapter.
  */
-function buildConsentData(overrides: Partial<ConsentData> = {}): ConsentData {
+function buildConsentData(
+  overrides: Partial<UsercentricsV3ConsentData> = {},
+): UsercentricsV3ConsentData {
   return {
-    status: 'ALL_ACCEPTED',
-    required: false,
-    version: 1,
-    controllerId: 'test-controller',
-    language: 'en',
-    createdAt: 0,
-    updatedAt: 0,
-    updatedBy: 'onInitialPageLoad',
-    setting: { id: 'test-setting', type: 'GDPR', version: '1.0.0' },
     type: 'EXPLICIT',
-    hash: 'test-hash',
     ...overrides,
   };
 }
@@ -54,12 +47,11 @@ function buildConsentData(overrides: Partial<ConsentData> = {}): ConsentData {
  * Minimal CategoryData stub.
  */
 function buildCategory(
-  state: CategoryData['state'],
+  state: UsercentricsV3CategoryState,
   name: string,
-): CategoryData {
+): UsercentricsV3CategoryData {
   return {
     state,
-    dps: null,
     name,
   };
 }
@@ -68,19 +60,18 @@ function buildCategory(
  * Shape of the V3 window API subset the adapter needs. We use jest mocks so
  * each test can swap return values and assert call counts.
  */
-interface MockUcCmp {
+interface MockUcCmp extends UsercentricsV3Api {
   isInitialized: jest.Mock<Promise<boolean>, []>;
-  getConsentDetails: jest.Mock<Promise<ConsentDetails>, []>;
+  getConsentDetails: jest.Mock<Promise<UsercentricsV3ConsentDetails>, []>;
 }
 
 /**
- * Attach a __ucCmp mock onto the MockWindow. The adapter only uses
- * isInitialized and getConsentDetails, so we expose those and cast the
- * shape to the full Usercentrics interface at the boundary.
+ * Attach a __ucCmp mock onto the MockWindow. Because `Window.__ucCmp` is now
+ * optional and typed to the local minimal `UsercentricsV3Api`, the mock
+ * directly implements that interface — no `as unknown as Usercentrics` cast.
  */
 function withUcCmp(mockWindow: MockWindow, ucCmp: MockUcCmp): void {
-  (mockWindow as unknown as { __ucCmp: Usercentrics }).__ucCmp =
-    ucCmp as unknown as Usercentrics;
+  (mockWindow as unknown as { __ucCmp: UsercentricsV3Api }).__ucCmp = ucCmp;
 }
 
 /**
@@ -91,13 +82,13 @@ function withUcCmp(mockWindow: MockWindow, ucCmp: MockUcCmp): void {
 function dispatchV3Event(
   mockWindow: MockWindow,
   eventName: string,
-  detail: { source: string; type: string },
+  detail: UsercentricsV3CmpEventDetail,
 ): void {
   (
     mockWindow as unknown as {
       __dispatchEvent: (
         event: string,
-        detail: { source: string; type: string },
+        detail: UsercentricsV3CmpEventDetail,
       ) => void;
     }
   ).__dispatchEvent(eventName, detail);
@@ -128,12 +119,8 @@ describe('V3 adapter (setupV3Adapter)', () => {
   describe('post-init static read', () => {
     test('fetches consent via getConsentDetails and maps categories to walkerOS state', async () => {
       const mockWindow = createMockWindow();
-      const details: ConsentDetails = {
-        consent: buildConsentData({
-          status: 'SOME_ACCEPTED',
-          type: 'EXPLICIT',
-        }),
-        services: {},
+      const details: UsercentricsV3ConsentDetails = {
+        consent: buildConsentData({ type: 'EXPLICIT' }),
         categories: {
           essential: buildCategory('ALL_ACCEPTED', 'Essential'),
           marketing: buildCategory('ALL_DENIED', 'Marketing'),
@@ -152,13 +139,69 @@ describe('V3 adapter (setupV3Adapter)', () => {
         logger: createMockLogger(),
       });
 
+      // Strict AND semantics: only ALL_ACCEPTED → true. SOME_ACCEPTED is partial
+      // and must NOT be treated as consent granted.
       expect(mockElb).toHaveBeenCalledWith('walker consent', {
         essential: true,
         marketing: false,
-        functional: true,
+        functional: false,
       });
       expect(mockElb).toHaveBeenCalledTimes(1);
 
+      cleanup();
+    });
+
+    test('SOME_ACCEPTED maps to false (strict AND semantics)', async () => {
+      const mockWindow = createMockWindow();
+      const details: UsercentricsV3ConsentDetails = {
+        consent: buildConsentData({ type: 'EXPLICIT' }),
+        categories: {
+          marketing: buildCategory('SOME_ACCEPTED', 'Marketing'),
+          functional: buildCategory('ALL_ACCEPTED', 'Functional'),
+        },
+      };
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(true),
+        getConsentDetails: jest.fn().mockResolvedValue(details),
+      });
+
+      const cleanup = await setupV3Adapter({
+        window: mockWindow as unknown as Window & typeof globalThis,
+        elb: mockElb,
+        settings: buildSettings(),
+        logger: createMockLogger(),
+      });
+
+      expect(mockElb).toHaveBeenCalledWith('walker consent', {
+        marketing: false,
+        functional: true,
+      });
+      cleanup();
+    });
+
+    test('unknown future state (e.g. NO_STATE) maps to false', async () => {
+      const mockWindow = createMockWindow();
+      const details: UsercentricsV3ConsentDetails = {
+        consent: buildConsentData({ type: 'EXPLICIT' }),
+        categories: {
+          essential: buildCategory('NO_STATE', 'Essential'),
+        },
+      };
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(true),
+        getConsentDetails: jest.fn().mockResolvedValue(details),
+      });
+
+      const cleanup = await setupV3Adapter({
+        window: mockWindow as unknown as Window & typeof globalThis,
+        elb: mockElb,
+        settings: buildSettings(),
+        logger: createMockLogger(),
+      });
+
+      expect(mockElb).toHaveBeenCalledWith('walker consent', {
+        essential: false,
+      });
       cleanup();
     });
 
@@ -200,13 +243,78 @@ describe('V3 adapter (setupV3Adapter)', () => {
     });
   });
 
-  describe('pre-init event listener', () => {
-    test('UC_UI_CMP_EVENT triggers a fresh getConsentDetails fetch and emits walker consent', async () => {
+  describe('static-read error handling (Task D)', () => {
+    test('isInitialized() throwing does not reject setupV3Adapter', async () => {
       const mockWindow = createMockWindow();
-      // Start in a pre-init state: isInitialized false so no static read fires.
-      const isInitialized = jest.fn().mockResolvedValue(false);
+      const boom = new Error('transient CMP failure');
       const getConsentDetails = jest.fn();
-      withUcCmp(mockWindow, { isInitialized, getConsentDetails });
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockRejectedValue(boom),
+        getConsentDetails,
+      });
+
+      // Must resolve, not reject. Listener stays registered.
+      const cleanup = await setupV3Adapter({
+        window: mockWindow as unknown as Window & typeof globalThis,
+        elb: mockElb,
+        settings: buildSettings(),
+        logger: createMockLogger(),
+      });
+
+      // No consent published (static read failed).
+      expect(mockElb).not.toHaveBeenCalled();
+
+      // But the listener is live — a subsequent real event still works.
+      getConsentDetails.mockResolvedValue({
+        consent: buildConsentData({ type: 'EXPLICIT' }),
+        categories: {
+          essential: buildCategory('ALL_ACCEPTED', 'Essential'),
+        },
+      } satisfies UsercentricsV3ConsentDetails);
+      dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
+        source: 'CMP',
+        type: 'ACCEPT_ALL',
+      });
+      await flushPromises();
+      expect(mockElb).toHaveBeenCalledTimes(1);
+
+      cleanup();
+    });
+
+    test('getConsentDetails() throwing during static read does not reject setupV3Adapter', async () => {
+      const mockWindow = createMockWindow();
+      const boom = new Error('consent fetch failed');
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(true),
+        getConsentDetails: jest.fn().mockRejectedValue(boom),
+      });
+
+      await expect(
+        setupV3Adapter({
+          window: mockWindow as unknown as Window & typeof globalThis,
+          elb: mockElb,
+          settings: buildSettings(),
+          logger: createMockLogger(),
+        }),
+      ).resolves.toBeDefined();
+
+      expect(mockElb).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('event-listener decision filter (Task C)', () => {
+    test('ACCEPT_ALL + source=CMP triggers publish', async () => {
+      const mockWindow = createMockWindow();
+      const getConsentDetails = jest.fn().mockResolvedValue({
+        consent: buildConsentData({ type: 'EXPLICIT' }),
+        categories: {
+          essential: buildCategory('ALL_ACCEPTED', 'Essential'),
+        },
+      } satisfies UsercentricsV3ConsentDetails);
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(false),
+        getConsentDetails,
+      });
 
       const cleanup = await setupV3Adapter({
         window: mockWindow as unknown as Window & typeof globalThis,
@@ -215,39 +323,135 @@ describe('V3 adapter (setupV3Adapter)', () => {
         logger: createMockLogger(),
       });
 
-      // Static read should not have called getConsentDetails.
-      expect(getConsentDetails).not.toHaveBeenCalled();
-      expect(mockElb).not.toHaveBeenCalled();
-
-      // Now UC finishes loading: event fires with just {source, type}. The
-      // adapter must re-fetch getConsentDetails to get the real state.
-      const details: ConsentDetails = {
-        consent: buildConsentData({
-          status: 'ALL_ACCEPTED',
-          type: 'EXPLICIT',
-        }),
-        services: {},
-        categories: {
-          essential: buildCategory('ALL_ACCEPTED', 'Essential'),
-          marketing: buildCategory('ALL_ACCEPTED', 'Marketing'),
-        },
-      };
-      getConsentDetails.mockResolvedValue(details);
-
       dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
         source: 'CMP',
         type: 'ACCEPT_ALL',
       });
+      await flushPromises();
 
-      // Wait for the adapter's async listener to await getConsentDetails.
+      expect(getConsentDetails).toHaveBeenCalledTimes(1);
+      expect(mockElb).toHaveBeenCalledTimes(1);
+
+      cleanup();
+    });
+
+    test('SAVE + source=CMP triggers publish', async () => {
+      const mockWindow = createMockWindow();
+      const getConsentDetails = jest.fn().mockResolvedValue({
+        consent: buildConsentData({ type: 'EXPLICIT' }),
+        categories: {
+          essential: buildCategory('ALL_ACCEPTED', 'Essential'),
+        },
+      } satisfies UsercentricsV3ConsentDetails);
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(false),
+        getConsentDetails,
+      });
+
+      const cleanup = await setupV3Adapter({
+        window: mockWindow as unknown as Window & typeof globalThis,
+        elb: mockElb,
+        settings: buildSettings(),
+        logger: createMockLogger(),
+      });
+
+      dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
+        source: 'CMP',
+        type: 'SAVE',
+      });
+      await flushPromises();
+
+      expect(getConsentDetails).toHaveBeenCalledTimes(1);
+      expect(mockElb).toHaveBeenCalledTimes(1);
+
+      cleanup();
+    });
+
+    test('DENY_ALL + source=CMP triggers publish', async () => {
+      const mockWindow = createMockWindow();
+      const getConsentDetails = jest.fn().mockResolvedValue({
+        consent: buildConsentData({ type: 'EXPLICIT' }),
+        categories: {
+          marketing: buildCategory('ALL_DENIED', 'Marketing'),
+        },
+      } satisfies UsercentricsV3ConsentDetails);
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(false),
+        getConsentDetails,
+      });
+
+      const cleanup = await setupV3Adapter({
+        window: mockWindow as unknown as Window & typeof globalThis,
+        elb: mockElb,
+        settings: buildSettings(),
+        logger: createMockLogger(),
+      });
+
+      dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
+        source: 'CMP',
+        type: 'DENY_ALL',
+      });
       await flushPromises();
 
       expect(getConsentDetails).toHaveBeenCalledTimes(1);
       expect(mockElb).toHaveBeenCalledTimes(1);
       expect(mockElb).toHaveBeenCalledWith('walker consent', {
-        essential: true,
-        marketing: true,
+        marketing: false,
       });
+
+      cleanup();
+    });
+
+    test('CMP_SHOWN + source=CMP does NOT trigger publish', async () => {
+      const mockWindow = createMockWindow();
+      const getConsentDetails = jest.fn();
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(false),
+        getConsentDetails,
+      });
+
+      const cleanup = await setupV3Adapter({
+        window: mockWindow as unknown as Window & typeof globalThis,
+        elb: mockElb,
+        settings: buildSettings(),
+        logger: createMockLogger(),
+      });
+
+      dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
+        source: 'CMP',
+        type: 'CMP_SHOWN',
+      });
+      await flushPromises();
+
+      expect(getConsentDetails).not.toHaveBeenCalled();
+      expect(mockElb).not.toHaveBeenCalled();
+
+      cleanup();
+    });
+
+    test('event with source !== CMP does NOT trigger publish', async () => {
+      const mockWindow = createMockWindow();
+      const getConsentDetails = jest.fn();
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(false),
+        getConsentDetails,
+      });
+
+      const cleanup = await setupV3Adapter({
+        window: mockWindow as unknown as Window & typeof globalThis,
+        elb: mockElb,
+        settings: buildSettings(),
+        logger: createMockLogger(),
+      });
+
+      dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
+        source: 'SOMETHING_ELSE',
+        type: 'ACCEPT_ALL',
+      });
+      await flushPromises();
+
+      expect(getConsentDetails).not.toHaveBeenCalled();
+      expect(mockElb).not.toHaveBeenCalled();
 
       cleanup();
     });
@@ -259,15 +463,11 @@ describe('V3 adapter (setupV3Adapter)', () => {
       withUcCmp(mockWindow, {
         isInitialized: jest.fn().mockResolvedValue(true),
         getConsentDetails: jest.fn().mockResolvedValue({
-          consent: buildConsentData({
-            status: 'SOME_ACCEPTED',
-            type: 'IMPLICIT',
-          }),
-          services: {},
+          consent: buildConsentData({ type: 'IMPLICIT' }),
           categories: {
             essential: buildCategory('ALL_ACCEPTED', 'Essential'),
           },
-        } satisfies ConsentDetails),
+        } satisfies UsercentricsV3ConsentDetails),
       });
 
       const cleanup = await setupV3Adapter({
@@ -287,15 +487,11 @@ describe('V3 adapter (setupV3Adapter)', () => {
       withUcCmp(mockWindow, {
         isInitialized: jest.fn().mockResolvedValue(true),
         getConsentDetails: jest.fn().mockResolvedValue({
-          consent: buildConsentData({
-            status: 'SOME_ACCEPTED',
-            type: 'IMPLICIT',
-          }),
-          services: {},
+          consent: buildConsentData({ type: 'IMPLICIT' }),
           categories: {
             essential: buildCategory('ALL_ACCEPTED', 'Essential'),
           },
-        } satisfies ConsentDetails),
+        } satisfies UsercentricsV3ConsentDetails),
       });
 
       const cleanup = await setupV3Adapter({
@@ -318,15 +514,11 @@ describe('V3 adapter (setupV3Adapter)', () => {
       withUcCmp(mockWindow, {
         isInitialized: jest.fn().mockResolvedValue(true),
         getConsentDetails: jest.fn().mockResolvedValue({
-          consent: buildConsentData({
-            status: 'ALL_ACCEPTED',
-            type: 'EXPLICIT',
-          }),
-          services: {},
+          consent: buildConsentData({ type: 'EXPLICIT' }),
           categories: {
             essential: buildCategory('ALL_ACCEPTED', 'Essential'),
           },
-        } satisfies ConsentDetails),
+        } satisfies UsercentricsV3ConsentDetails),
       });
 
       const cleanup = await setupV3Adapter({
@@ -349,15 +541,11 @@ describe('V3 adapter (setupV3Adapter)', () => {
     test('cleanup removes the V3 event listener', async () => {
       const mockWindow = createMockWindow();
       const getConsentDetails = jest.fn().mockResolvedValue({
-        consent: buildConsentData({
-          status: 'ALL_ACCEPTED',
-          type: 'EXPLICIT',
-        }),
-        services: {},
+        consent: buildConsentData({ type: 'EXPLICIT' }),
         categories: {
           essential: buildCategory('ALL_ACCEPTED', 'Essential'),
         },
-      } satisfies ConsentDetails);
+      } satisfies UsercentricsV3ConsentDetails);
       withUcCmp(mockWindow, {
         isInitialized: jest.fn().mockResolvedValue(false),
         getConsentDetails,
@@ -387,15 +575,11 @@ describe('V3 adapter (setupV3Adapter)', () => {
     test('registers the listener on the custom event name, not UC_UI_CMP_EVENT', async () => {
       const mockWindow = createMockWindow();
       const getConsentDetails = jest.fn().mockResolvedValue({
-        consent: buildConsentData({
-          status: 'ALL_ACCEPTED',
-          type: 'EXPLICIT',
-        }),
-        services: {},
+        consent: buildConsentData({ type: 'EXPLICIT' }),
         categories: {
           essential: buildCategory('ALL_ACCEPTED', 'Essential'),
         },
-      } satisfies ConsentDetails);
+      } satisfies UsercentricsV3ConsentDetails);
       withUcCmp(mockWindow, {
         isInitialized: jest.fn().mockResolvedValue(false),
         getConsentDetails,
@@ -430,6 +614,29 @@ describe('V3 adapter (setupV3Adapter)', () => {
       });
 
       cleanup();
+    });
+  });
+
+  describe('no-window / absent CMP resilience (Task E)', () => {
+    test('window without __ucCmp and no event: adapter sets up listener, does not throw', async () => {
+      const mockWindow = createMockWindow();
+      // Neither __ucCmp nor UC_UI attached.
+
+      await expect(
+        setupV3Adapter({
+          window: mockWindow as unknown as Window & typeof globalThis,
+          elb: mockElb,
+          settings: buildSettings(),
+          logger: createMockLogger(),
+        }),
+      ).resolves.toBeDefined();
+
+      expect(mockElb).not.toHaveBeenCalled();
+      // Listener should be registered so a late-loading CMP still fires.
+      expect(mockWindow.addEventListener).toHaveBeenCalledWith(
+        'UC_UI_CMP_EVENT',
+        expect.any(Function),
+      );
     });
   });
 });

@@ -102,11 +102,25 @@ export function registerAuthTool(server: McpServer) {
 
           case 'logout': {
             const deleted = deleteConfig();
+            const hadEnvToken =
+              typeof process.env.WALKEROS_TOKEN === 'string' &&
+              process.env.WALKEROS_TOKEN.length > 0;
+            delete process.env.WALKEROS_TOKEN;
+            let message: string;
+            if (deleted && hadEnvToken) {
+              message =
+                'Logged out. Config removed and WALKEROS_TOKEN cleared from process environment.';
+            } else if (deleted) {
+              message = 'Logged out and config removed.';
+            } else if (hadEnvToken) {
+              message =
+                'No config found. WALKEROS_TOKEN cleared from process environment.';
+            } else {
+              message = 'No config found — already logged out.';
+            }
             return mcpResult({
               loggedOut: true,
-              message: deleted
-                ? 'Logged out and config removed'
-                : 'No config found — already logged out',
+              message,
             });
           }
 
