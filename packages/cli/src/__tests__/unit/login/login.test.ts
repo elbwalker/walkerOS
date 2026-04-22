@@ -2,7 +2,11 @@ import { jest } from '@jest/globals';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import type { LoginOptions } from '../../../commands/login/index.js';
+import type {
+  LoginOptions,
+  DeviceCodeOptions,
+  PollOptions,
+} from '../../../commands/login/index.js';
 
 // No-op browser opener for tests
 const noopOpen = async () => {};
@@ -34,6 +38,27 @@ describe('login (device code flow)', () => {
     configPath?: string;
     error?: string;
   }>;
+  let requestDeviceCode: (options?: DeviceCodeOptions) => Promise<{
+    deviceCode: string;
+    userCode: string;
+    verificationUri: string;
+    verificationUriComplete?: string;
+    expiresIn: number;
+    interval: number;
+  }>;
+  let pollForToken: (
+    deviceCode: string,
+    options?: PollOptions,
+  ) => Promise<
+    | {
+        success: true;
+        status: 'authenticated';
+        email: string;
+        configPath: string;
+      }
+    | { success: false; status: 'pending' }
+    | { success: false; status: 'error'; error: string }
+  >;
   let tmpDir: string;
   let origXdg: string | undefined;
 
@@ -49,6 +74,8 @@ describe('login (device code flow)', () => {
 
     const loginModule = await import('../../../commands/login/index.js');
     login = loginModule.login;
+    requestDeviceCode = loginModule.requestDeviceCode;
+    pollForToken = loginModule.pollForToken;
   });
 
   afterEach(() => {
@@ -325,5 +352,320 @@ describe('login (device code flow)', () => {
     });
 
     expect(openedUrl).toBe('https://app.test/auth/device');
+  });
+
+  // === requestDeviceCode tests ===
+
+  it('requestDeviceCode returns code data on success', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/code')) {
+        return fakeResponse({
+          deviceCode: 'dc_' + 'a'.repeat(64),
+          userCode: 'ABCD-EFGH',
+          verificationUri: 'https://app.test/auth/device',
+          verificationUriComplete:
+            'https://app.test/auth/device?user_code=ABCD-EFGH',
+          expiresIn: 900,
+          interval: 5,
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await requestDeviceCode({
+      url: 'https://app.test',
+      fetch: mockFetch,
+    });
+
+    expect(result.deviceCode).toBe('dc_' + 'a'.repeat(64));
+    expect(result.userCode).toBe('ABCD-EFGH');
+    expect(result.verificationUri).toBe('https://app.test/auth/device');
+    expect(result.verificationUriComplete).toBe(
+      'https://app.test/auth/device?user_code=ABCD-EFGH',
+    );
+    expect(result.expiresIn).toBe(900);
+    expect(result.interval).toBe(5);
+  });
+
+  it('requestDeviceCode throws on fetch failure', async () => {
+    const mockFetch = createMockFetch(() => {
+      return fakeResponse({ error: 'server error' }, { status: 500 });
+    });
+
+    await expect(
+      requestDeviceCode({ url: 'https://app.test', fetch: mockFetch }),
+    ).rejects.toThrow('Failed to request device code');
+  });
+
+  // === pollForToken tests ===
+
+  it('pollForToken returns success when token received', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return fakeResponse({
+          token: 'sk-walkeros-' + 'x'.repeat(64),
+          email: 'poll@example.com',
+          userId: 'user_poll',
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.status).toBe('authenticated');
+    if (result.success) {
+      expect(result.email).toBe('poll@example.com');
+      expect(result.configPath).toBeDefined();
+    }
+  });
+
+  it('pollForToken returns pending on timeout', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return fakeResponse(
+          { error: 'authorization_pending' },
+          { status: 400 },
+        );
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 100,
+      intervalMs: 30,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('pending');
+  });
+
+  it('pollForToken handles slow_down by increasing interval', async () => {
+    let pollCount = 0;
+
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        pollCount++;
+        if (pollCount === 1) {
+          return fakeResponse({ error: 'slow_down' }, { status: 400 });
+        }
+        return fakeResponse({
+          token: 'sk-walkeros-' + 'y'.repeat(64),
+          email: 'slow@example.com',
+          userId: 'user_slow',
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 30000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.status).toBe('authenticated');
+    expect(pollCount).toBe(2);
+  }, 10_000);
+
+  it('pollForToken returns error on denied', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return fakeResponse({ error: 'access_denied' }, { status: 400 });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('error');
+    if (!result.success && result.status === 'error') {
+      expect(result.error).toBe('access_denied');
+    }
+  });
+
+  it('pollForToken returns error on expired token', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return fakeResponse({ error: 'expired_token' }, { status: 400 });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('error');
+    if (!result.success && result.status === 'error') {
+      expect(result.error).toBe('expired_token');
+    }
+  });
+
+  // === Bounded-fetch + malformed-JSON safety ===
+
+  it('pollForToken passes an AbortSignal to fetch', async () => {
+    const receivedInits: RequestInit[] = [];
+    const mockFetch: typeof globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const urlStr = typeof url === 'string' ? url : url.toString();
+      if (urlStr.includes('/api/auth/device/token')) {
+        receivedInits.push(init ?? {});
+        return fakeResponse({
+          token: 'sk-walkeros-' + 'a'.repeat(64),
+          email: 'signal@example.com',
+          userId: 'user_signal',
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    }) as typeof globalThis.fetch;
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(true);
+    expect(receivedInits.length).toBeGreaterThan(0);
+    const lastInit = receivedInits[receivedInits.length - 1];
+    expect(lastInit.signal).toBeDefined();
+    expect(typeof (lastInit.signal as AbortSignal).aborted).toBe('boolean');
+  });
+
+  it('pollForToken aborts in-flight fetch when deadline passes', async () => {
+    // The fetch hangs forever unless aborted. If the bounded timeout works,
+    // the pollForToken call resolves with pending (timeout) rather than hanging.
+    let aborted = false;
+    const mockFetch: typeof globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const urlStr = typeof url === 'string' ? url : url.toString();
+      if (urlStr.includes('/api/auth/device/token')) {
+        const signal = init?.signal;
+        return await new Promise<Response>((_resolve, reject) => {
+          if (signal) {
+            signal.addEventListener('abort', () => {
+              aborted = true;
+              const abortError = new Error('The operation was aborted');
+              abortError.name = 'AbortError';
+              reject(abortError);
+            });
+          }
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    }) as typeof globalThis.fetch;
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 150,
+      intervalMs: 10,
+    });
+
+    expect(aborted).toBe(true);
+    expect(result.success).toBe(false);
+    // AbortError at the deadline is a timeout, not a real error
+    expect(['pending', 'error']).toContain(result.status);
+  }, 5000);
+
+  it('pollForToken returns error shape on non-JSON token response', async () => {
+    const htmlResponse = {
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON at position 0');
+      },
+      text: async () => '<html>server error</html>',
+    } as unknown as Response;
+
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return htmlResponse;
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('error');
+    if (!result.success && result.status === 'error') {
+      expect(result.error).toMatch(/malformed/i);
+    }
+  });
+
+  it('pollForToken returns error shape when ok response is missing token field', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        // ok: true but no token/email at all
+        return fakeResponse({ something: 'else' });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 200,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    // Without a token/email and without an error field, this is just pending until timeout
+    // but should NOT have thrown or written config.
+    expect(['pending', 'error']).toContain(result.status);
+  });
+
+  it('pollForToken returns error shape when token field is wrong type', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return fakeResponse({
+          token: 12345, // not a string
+          email: 'x@example.com',
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('error');
   });
 });

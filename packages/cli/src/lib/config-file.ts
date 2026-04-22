@@ -13,6 +13,7 @@ export interface WalkerOSConfig {
   email: string;
   appUrl: string;
   anonymousFeedback?: boolean;
+  defaultProjectId?: string;
 }
 
 /**
@@ -65,6 +66,45 @@ export function deleteConfig(): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Set the anonymous feedback preference in the config.
+ * Does nothing when no config exists (avoids creating a skeleton config).
+ */
+export function setFeedbackPreference(anonymous: boolean): void {
+  const config = readConfig();
+  if (!config) return;
+  writeConfig({ ...config, anonymousFeedback: anonymous });
+}
+
+/**
+ * Get the anonymous feedback preference from the config.
+ * Returns undefined when not set or no config exists.
+ */
+export function getFeedbackPreference(): boolean | undefined {
+  const config = readConfig();
+  return config?.anonymousFeedback;
+}
+
+/**
+ * Set the default project ID in the config.
+ * Throws if no config exists (user not authenticated).
+ */
+export function setDefaultProject(projectId: string): void {
+  const config = readConfig();
+  if (!config) {
+    throw new Error('Not authenticated. Run `walkeros login` first.');
+  }
+  writeConfig({ ...config, defaultProjectId: projectId });
+}
+
+/**
+ * Get the default project ID from the config, or null if not set.
+ */
+export function getDefaultProject(): string | null {
+  const config = readConfig();
+  return config?.defaultProjectId ?? null;
 }
 
 /**

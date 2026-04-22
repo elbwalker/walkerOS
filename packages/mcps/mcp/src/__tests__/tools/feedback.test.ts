@@ -5,8 +5,8 @@ import { registerFeedbackTool } from '../../tools/feedback.js';
 
 jest.mock('@walkeros/cli', () => ({
   feedback: jest.fn(),
-  readConfig: jest.fn(),
-  writeConfig: jest.fn(),
+  getFeedbackPreference: jest.fn(),
+  setFeedbackPreference: jest.fn(),
 }));
 
 jest.mock('@walkeros/core', () => ({
@@ -36,10 +36,14 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import { feedback, readConfig, writeConfig } from '@walkeros/cli';
+import {
+  feedback,
+  getFeedbackPreference,
+  setFeedbackPreference,
+} from '@walkeros/cli';
 const mockFeedback = jest.mocked(feedback);
-const mockReadConfig = jest.mocked(readConfig);
-const mockWriteConfig = jest.mocked(writeConfig);
+const mockGetPref = jest.mocked(getFeedbackPreference);
+const mockSetPref = jest.mocked(setFeedbackPreference);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -77,12 +81,7 @@ describe('feedback tool', () => {
   });
 
   it('passes version to feedback function', async () => {
-    mockReadConfig.mockReturnValue({
-      token: 't',
-      email: 'e',
-      appUrl: 'u',
-      anonymousFeedback: true,
-    });
+    mockGetPref.mockReturnValue(true);
     mockFeedback.mockResolvedValue(undefined);
 
     const tool = server.getTool('feedback');
@@ -94,13 +93,8 @@ describe('feedback tool', () => {
     });
   });
 
-  it('calls feedback with anonymous: true when config has anonymousFeedback: true', async () => {
-    mockReadConfig.mockReturnValue({
-      token: 't',
-      email: 'e',
-      appUrl: 'u',
-      anonymousFeedback: true,
-    });
+  it('calls feedback with anonymous: true when preference is true', async () => {
+    mockGetPref.mockReturnValue(true);
     mockFeedback.mockResolvedValue(undefined);
 
     const tool = server.getTool('feedback');
@@ -114,13 +108,8 @@ describe('feedback tool', () => {
     expect(JSON.parse(result.content[0].text).ok).toBe(true);
   });
 
-  it('calls feedback with anonymous: false when config has anonymousFeedback: false', async () => {
-    mockReadConfig.mockReturnValue({
-      token: 't',
-      email: 'e',
-      appUrl: 'u',
-      anonymousFeedback: false,
-    });
+  it('calls feedback with anonymous: false when preference is false', async () => {
+    mockGetPref.mockReturnValue(false);
     mockFeedback.mockResolvedValue(undefined);
 
     const tool = server.getTool('feedback');
@@ -133,12 +122,8 @@ describe('feedback tool', () => {
     expect(result.structuredContent).toEqual({ ok: true });
   });
 
-  it('returns consent prompt when config anonymousFeedback is undefined and no anonymous param', async () => {
-    mockReadConfig.mockReturnValue({
-      token: 't',
-      email: 'e',
-      appUrl: 'u',
-    });
+  it('returns consent prompt when preference is undefined and no anonymous param', async () => {
+    mockGetPref.mockReturnValue(undefined);
 
     const tool = server.getTool('feedback');
     const result = await tool.handler({ text: 'Some feedback' });
@@ -151,12 +136,8 @@ describe('feedback tool', () => {
     ]);
   });
 
-  it('calls feedback and stores preference when config is undefined but anonymous param is provided', async () => {
-    mockReadConfig.mockReturnValue({
-      token: 't',
-      email: 'e',
-      appUrl: 'u',
-    });
+  it('calls feedback and stores preference when preference is undefined but anonymous param is provided', async () => {
+    mockGetPref.mockReturnValue(undefined);
     mockFeedback.mockResolvedValue(undefined);
 
     const tool = server.getTool('feedback');
@@ -165,12 +146,7 @@ describe('feedback tool', () => {
       anonymous: true,
     });
 
-    expect(mockWriteConfig).toHaveBeenCalledWith({
-      token: 't',
-      email: 'e',
-      appUrl: 'u',
-      anonymousFeedback: true,
-    });
+    expect(mockSetPref).toHaveBeenCalledWith(true);
     expect(mockFeedback).toHaveBeenCalledWith('Feedback with consent', {
       anonymous: true,
       version: '0.0.0-test',
@@ -179,12 +155,7 @@ describe('feedback tool', () => {
   });
 
   it('returns error on feedback failure', async () => {
-    mockReadConfig.mockReturnValue({
-      token: 't',
-      email: 'e',
-      appUrl: 'u',
-      anonymousFeedback: true,
-    });
+    mockGetPref.mockReturnValue(true);
     mockFeedback.mockRejectedValue(new Error('Network error'));
 
     const tool = server.getTool('feedback');
@@ -195,8 +166,8 @@ describe('feedback tool', () => {
     expect(parsed.error).toBe('Network error');
   });
 
-  it('creates fresh config when config is null and anonymous param provided', async () => {
-    mockReadConfig.mockReturnValue(null);
+  it('stores preference via CLI when no prior preference and anonymous param provided', async () => {
+    mockGetPref.mockReturnValue(undefined);
     mockFeedback.mockResolvedValue(undefined);
 
     const tool = server.getTool('feedback');
@@ -205,12 +176,7 @@ describe('feedback tool', () => {
       anonymous: false,
     });
 
-    expect(mockWriteConfig).toHaveBeenCalledWith({
-      token: '',
-      email: '',
-      appUrl: '',
-      anonymousFeedback: false,
-    });
+    expect(mockSetPref).toHaveBeenCalledWith(false);
     expect(mockFeedback).toHaveBeenCalledWith('No config feedback', {
       anonymous: false,
       version: '0.0.0-test',
@@ -218,27 +184,18 @@ describe('feedback tool', () => {
     expect(result.structuredContent).toEqual({ ok: true });
   });
 
-  it('returns consent prompt when config is null and no anonymous param', async () => {
-    mockReadConfig.mockReturnValue(null);
+  it('returns consent prompt when preference undefined and no anonymous param', async () => {
+    mockGetPref.mockReturnValue(undefined);
 
     const tool = server.getTool('feedback');
     const result = await tool.handler({ text: 'Some feedback' });
 
     expect(mockFeedback).not.toHaveBeenCalled();
     expect(result.structuredContent.needsConsent).toBe(true);
-    expect(result.structuredContent._hints.next).toEqual([
-      'Ask the user if they want to include their info',
-      'Call feedback again with anonymous: true or false',
-    ]);
   });
 
-  it('uses explicit anonymous override even when config has stored preference', async () => {
-    mockReadConfig.mockReturnValue({
-      token: 't',
-      email: 'e',
-      appUrl: 'u',
-      anonymousFeedback: true,
-    });
+  it('uses explicit anonymous override even when preference is stored', async () => {
+    mockGetPref.mockReturnValue(true);
     mockFeedback.mockResolvedValue(undefined);
 
     const tool = server.getTool('feedback');

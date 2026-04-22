@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-fullstory",
   "description": "FullStory web destination for walkerOS (session replay, custom events, user/page properties)",
-  "version": "3.4.1",
+  "version": "3.4.2",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -38,10 +38,10 @@
   },
   "dependencies": {
     "@fullstory/browser": "^2.0.8",
-    "@walkeros/web-core": "3.4.1"
+    "@walkeros/web-core": "3.4.2"
   },
   "devDependencies": {
-    "@walkeros/collector": "3.4.1"
+    "@walkeros/collector": "3.4.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

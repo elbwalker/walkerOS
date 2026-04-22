@@ -1,5 +1,34 @@
 # @walkeros/cli
 
+## 3.4.2
+
+### Patch Changes
+
+- 2d25eda: Replace `api` mega-tool with four focused management tools: `auth`
+  (device code login), `project_manage`, `flow_manage`, and `deploy_manage`.
+  Enforce strict CLI/MCP separation of concern — MCP no longer reads config
+  files or checks env vars directly. All tools are always registered regardless
+  of auth state.
+
+  CLI exports new functions: `requestDeviceCode`, `pollForToken`,
+  `setDefaultProject`, `getDefaultProject`, `listAllFlows`,
+  `setFeedbackPreference`, `getFeedbackPreference`, `resolveToken`,
+  `deleteConfig`.
+
+  Preview CRUD (`preview_list`, `preview_get`, `preview_create`,
+  `preview_delete`) is now part of `flow_manage` — previews are a flow-scoped
+  concern and belong alongside the flow lifecycle actions rather than in a
+  separate tool.
+
+- cb4c069: Runtime fetchers (`fetchConfig`, `fetchSecrets`) now classify 401/403
+  responses from the app as a typed `RunnerAuthError` with a structured `reason`
+  (`'unauthorised' | 'flow' | 'scope' | 'forbidden'`) and the app's error `code`
+  (`FORBIDDEN_FLOW` / `FORBIDDEN_SCOPE`). Callers can log a specific reason
+  instead of a generic "token may have expired" message, and exit cleanly rather
+  than retry on scope/flow mismatches.
+  - @walkeros/core@3.4.2
+  - @walkeros/server-core@3.4.2
+
 ## 3.4.1
 
 ### Patch Changes

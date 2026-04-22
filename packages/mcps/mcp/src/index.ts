@@ -13,7 +13,10 @@ import {
 } from './tools/package.js';
 import { registerFlowLoadTool } from './tools/flow-load.js';
 import { registerFeedbackTool } from './tools/feedback.js';
-import { registerApiTool } from './tools/api.js';
+import { registerAuthTool } from './tools/auth.js';
+import { registerProjectManageTool } from './tools/project-manage.js';
+import { registerFlowManageTool } from './tools/flow-manage.js';
+import { registerDeployTool } from './tools/deploy-manage.js';
 import { registerPackageSchemaResources } from './resources/package-schemas.js';
 import { registerReferenceResources } from './resources/references.js';
 import { registerAddStepPrompt } from './prompts/add-step.js';
@@ -44,15 +47,18 @@ const server = new McpServer(
 
 ## Workflow
 
-1. \`flow_load({ platform: "web" })\` or \`flow_load({ source: "./flow.json" })\` — create or load
-2. \`package_search({ type: "destination", platform: "web" })\` — discover packages
-3. \`package_get({ package: "..." })\` — read schemas, hints, examples
-4. Use the \`add-step\` prompt — guided step addition
-5. Use the \`setup-mapping\` prompt — event transformation config
-6. \`flow_validate({ type: "flow", input: "flow.json" })\` — verify
-7. \`flow_simulate({ configPath: "flow.json", event: "..." })\` — test
-8. \`flow_bundle({ configPath: "flow.json" })\` — build
-9. \`api({ action: "deploy", id: "cfg_..." })\` — deploy (requires WALKEROS_TOKEN)
+1. \`auth({ action: "status" })\` — check if logged in, or \`auth({ action: "login" })\` to connect
+2. \`project_manage({ action: "list" })\` — see your projects
+3. \`flow_manage({ action: "list" })\` — see all flows across projects
+4. \`flow_load({ platform: "web" })\` or \`flow_load({ source: "./flow.json" })\` — create or load
+5. \`package_search({ type: "destination", platform: "web" })\` — discover packages
+6. \`package_get({ package: "..." })\` — read schemas, hints, examples
+7. Use the \`add-step\` prompt — guided step addition
+8. Use the \`setup-mapping\` prompt — event transformation config
+9. \`flow_validate({ type: "flow", input: "flow.json" })\` — verify
+10. \`flow_simulate({ configPath: "flow.json", event: "..." })\` — test
+11. \`flow_manage({ action: "update", flowId: "...", content: {...} })\` — save to cloud
+12. \`deploy_manage({ action: "deploy", flowId: "..." })\` — deploy
 
 ## Architecture: Source → Collector → Destination(s)
 
@@ -107,16 +113,16 @@ registerPackageSearchTool(server);
 registerGetPackageSchemaTool(server);
 registerFlowLoadTool(server);
 registerFeedbackTool(server);
+registerAuthTool(server);
+registerProjectManageTool(server);
+registerFlowManageTool(server);
+registerDeployTool(server);
 registerPackageSchemaResources(server);
 registerReferenceResources(server);
 registerAddStepPrompt(server);
 registerSetupMappingPrompt(server);
 registerManageContractPrompt(server);
 registerUseDefinitionsPrompt(server);
-
-if (process.env.WALKEROS_TOKEN) {
-  registerApiTool(server);
-}
 
 async function main() {
   const transport = new StdioServerTransport();

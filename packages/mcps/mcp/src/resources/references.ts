@@ -218,10 +218,10 @@ export function registerReferenceResources(server: McpServer) {
     },
   );
 
-  // API reference (OpenAPI spec)
+  // OpenAPI 3.1 specification for the walkerOS cloud HTTP API
   server.resource(
-    'api',
-    'walkeros://reference/api',
+    'openapi',
+    'walkeros://reference/openapi',
     {
       description: 'walkerOS cloud API — OpenAPI 3.1 specification',
       mimeType: 'application/json',
@@ -240,7 +240,7 @@ export function registerReferenceResources(server: McpServer) {
       return {
         contents: [
           {
-            uri: 'walkeros://reference/api',
+            uri: 'walkeros://reference/openapi',
             text: openApiSpec,
             mimeType: 'application/json',
           },

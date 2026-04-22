@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { feedback, readConfig, writeConfig } from '@walkeros/cli';
+import {
+  feedback,
+  getFeedbackPreference,
+  setFeedbackPreference,
+} from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
 
 declare const __VERSION__: string;
@@ -31,8 +35,7 @@ export function registerFeedbackTool(server: McpServer) {
       try {
         const { text, anonymous: explicitAnonymous } = params;
 
-        const config = readConfig();
-        let anonymous = config?.anonymousFeedback;
+        let anonymous = getFeedbackPreference();
 
         // First time: need user's consent choice
         if (anonymous === undefined && explicitAnonymous === undefined) {
@@ -50,8 +53,7 @@ export function registerFeedbackTool(server: McpServer) {
         // Store preference if this is the first time
         if (anonymous === undefined && explicitAnonymous !== undefined) {
           anonymous = explicitAnonymous;
-          const base = config ?? { token: '', email: '', appUrl: '' };
-          writeConfig({ ...base, anonymousFeedback: anonymous });
+          setFeedbackPreference(anonymous);
         }
 
         // Use explicit override if provided, otherwise use stored value

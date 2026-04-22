@@ -800,6 +800,7 @@ describe('generateWrapEntry preview preflight', () => {
   it('omits preflight entirely when previewOrigin is absent', () => {
     const output = generateWrapEntry('./skeleton.mjs', {});
     expect(output).not.toContain('elbPreview');
+    // Config is built from __configData via wireConfig, then passed to startFlow
     expect(output).toContain('wireConfig(__configData)');
     expect(output).toContain('startFlow(config)');
   });
