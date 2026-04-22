@@ -3,11 +3,19 @@ import { createMockLogger } from '@walkeros/core';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
 import { examples } from '../dev';
+import type {
+  CategoryData,
+  ConsentData,
+  ConsentDetails,
+  Usercentrics,
+} from 'usercentrics-browser-ui';
+import type { UsercentricsV2Service } from '../types';
 import {
   createMockElb,
   createMockWindow,
   createUsercentricsSource,
   ConsentCall,
+  MockWindow,
 } from './test-utils';
 
 describe('Usercentrics Source', () => {
@@ -371,6 +379,268 @@ describe('Usercentrics Source', () => {
         'myConsentEvent',
         expect.any(Function),
       );
+    });
+  });
+
+  describe('apiVersion detection', () => {
+    /**
+     * Minimal ConsentData stub for V3 fixtures.
+     */
+    function buildConsentData(
+      overrides: Partial<ConsentData> = {},
+    ): ConsentData {
+      return {
+        status: 'ALL_ACCEPTED',
+        required: false,
+        version: 1,
+        controllerId: 'test-controller',
+        language: 'en',
+        createdAt: 0,
+        updatedAt: 0,
+        updatedBy: 'onInitialPageLoad',
+        setting: { id: 'test-setting', type: 'GDPR', version: '1.0.0' },
+        type: 'EXPLICIT',
+        hash: 'test-hash',
+        ...overrides,
+      };
+    }
+
+    /**
+     * Minimal CategoryData stub for V3 fixtures.
+     */
+    function buildCategory(
+      state: CategoryData['state'],
+      name: string,
+    ): CategoryData {
+      return { state, dps: null, name };
+    }
+
+    /**
+     * V3 API mock surface used by the adapter.
+     */
+    interface MockUcCmp {
+      isInitialized: jest.Mock<Promise<boolean>, []>;
+      getConsentDetails: jest.Mock<Promise<ConsentDetails>, []>;
+    }
+
+    function withUcCmp(mockWindow: MockWindow, ucCmp: MockUcCmp): void {
+      (mockWindow as unknown as { __ucCmp: Usercentrics }).__ucCmp =
+        ucCmp as unknown as Usercentrics;
+    }
+
+    function withUcUi(
+      mockWindow: MockWindow,
+      ucUi: {
+        isInitialized?: () => boolean;
+        getServicesBaseInfo?: () => UsercentricsV2Service[];
+      },
+    ): void {
+      (mockWindow as unknown as { UC_UI: typeof ucUi }).UC_UI = ucUi;
+    }
+
+    /**
+     * Dispatch a V3 event (detail shape differs from V2).
+     */
+    function dispatchV3Event(
+      mockWindow: MockWindow,
+      eventName: string,
+      detail: { source: string; type: string },
+    ): void {
+      (
+        mockWindow as unknown as {
+          __dispatchEvent: (
+            event: string,
+            detail: { source: string; type: string },
+          ) => void;
+        }
+      ).__dispatchEvent(eventName, detail);
+    }
+
+    /**
+     * Drain the microtask queue so awaited V3 calls settle. Fake timers are
+     * on globally, so a setTimeout flush would hang.
+     */
+    async function flushPromises(): Promise<void> {
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+    }
+
+    test('auto + both V2 and V3 present: V3 fires, V2 does not', async () => {
+      const mockWindow = createMockWindow();
+
+      const v3Details: ConsentDetails = {
+        consent: buildConsentData({
+          status: 'SOME_ACCEPTED',
+          type: 'EXPLICIT',
+        }),
+        services: {},
+        categories: {
+          essential: buildCategory('ALL_ACCEPTED', 'Essential'),
+          marketing: buildCategory('ALL_DENIED', 'Marketing'),
+        },
+      };
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(true),
+        getConsentDetails: jest.fn().mockResolvedValue(v3Details),
+      });
+
+      // V2 also present, but should be ignored because __ucCmp wins in auto mode.
+      const v2Services: UsercentricsV2Service[] = [
+        { categorySlug: 'essential', consent: { status: true } },
+        { categorySlug: 'marketing', consent: { status: true } }, // would differ from V3
+      ];
+      withUcUi(mockWindow, {
+        isInitialized: () => true,
+        getServicesBaseInfo: () => v2Services,
+      });
+
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'auto' },
+      });
+      await flushPromises();
+
+      // V3 fired once with V3-shaped consent (marketing=false).
+      expect(consentCalls).toHaveLength(1);
+      expect(consentCalls[0].consent).toEqual({
+        essential: true,
+        marketing: false,
+      });
+    });
+
+    test('auto + only V2 present: V2 fires', async () => {
+      const mockWindow = createMockWindow();
+      const v2Services: UsercentricsV2Service[] = [
+        { categorySlug: 'essential', consent: { status: true } },
+        { categorySlug: 'marketing', consent: { status: false } },
+      ];
+      withUcUi(mockWindow, {
+        isInitialized: () => true,
+        getServicesBaseInfo: () => v2Services,
+      });
+
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'auto' },
+      });
+      await flushPromises();
+
+      expect(consentCalls).toHaveLength(1);
+      expect(consentCalls[0].consent).toEqual({
+        essential: true,
+        marketing: false,
+      });
+    });
+
+    test('auto + neither present: both listeners registered', async () => {
+      const mockWindow = createMockWindow();
+
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'auto' },
+      });
+      await flushPromises();
+
+      // Nothing fired yet — no static state on either API.
+      expect(consentCalls).toHaveLength(0);
+
+      // V2 event fires.
+      mockWindow.__dispatchEvent('ucEvent', {
+        event: 'consent_status',
+        type: 'explicit',
+        ucCategory: { essential: true, marketing: false },
+      });
+      expect(consentCalls).toHaveLength(1);
+
+      // Now V3 API becomes available and dispatches its event.
+      const v3Details: ConsentDetails = {
+        consent: buildConsentData({ status: 'ALL_ACCEPTED', type: 'EXPLICIT' }),
+        services: {},
+        categories: {
+          essential: buildCategory('ALL_ACCEPTED', 'Essential'),
+        },
+      };
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(true),
+        getConsentDetails: jest.fn().mockResolvedValue(v3Details),
+      });
+      dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
+        source: 'CMP',
+        type: 'ACCEPT_ALL',
+      });
+      await flushPromises();
+
+      expect(consentCalls).toHaveLength(2);
+      expect(consentCalls[1].consent).toEqual({ essential: true });
+    });
+
+    test('apiVersion=v2 + only V3 present: V3 is ignored, V2 listener still works', async () => {
+      const mockWindow = createMockWindow();
+      const getConsentDetails = jest.fn();
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(true),
+        getConsentDetails,
+      });
+
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
+      });
+      await flushPromises();
+
+      // V3 must have been skipped entirely.
+      expect(getConsentDetails).not.toHaveBeenCalled();
+      expect(consentCalls).toHaveLength(0);
+
+      // V2 listener is active — dispatching ucEvent reaches it.
+      mockWindow.__dispatchEvent('ucEvent', {
+        event: 'consent_status',
+        type: 'explicit',
+        ucCategory: { essential: true, marketing: false },
+      });
+      expect(consentCalls).toHaveLength(1);
+      expect(consentCalls[0].consent).toEqual({
+        essential: true,
+        marketing: false,
+      });
+    });
+
+    test('apiVersion=v3 + only V2 present: V2 is ignored, V3 listener still works', async () => {
+      const mockWindow = createMockWindow();
+      const getServicesBaseInfo = jest.fn((): UsercentricsV2Service[] => [
+        { categorySlug: 'essential', consent: { status: true } },
+      ]);
+      withUcUi(mockWindow, {
+        isInitialized: () => true,
+        getServicesBaseInfo,
+      });
+
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v3' },
+      });
+      await flushPromises();
+
+      // V2 must have been skipped entirely.
+      expect(getServicesBaseInfo).not.toHaveBeenCalled();
+      expect(consentCalls).toHaveLength(0);
+
+      // Attach V3 API, then dispatch the V3 event — V3 listener is active.
+      const v3Details: ConsentDetails = {
+        consent: buildConsentData({ status: 'ALL_ACCEPTED', type: 'EXPLICIT' }),
+        services: {},
+        categories: {
+          essential: buildCategory('ALL_ACCEPTED', 'Essential'),
+        },
+      };
+      withUcCmp(mockWindow, {
+        isInitialized: jest.fn().mockResolvedValue(true),
+        getConsentDetails: jest.fn().mockResolvedValue(v3Details),
+      });
+      dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
+        source: 'CMP',
+        type: 'ACCEPT_ALL',
+      });
+      await flushPromises();
+
+      expect(consentCalls).toHaveLength(1);
+      expect(consentCalls[0].consent).toEqual({ essential: true });
     });
   });
 

@@ -3,9 +3,10 @@
  *
  * Takes a Stage 1 ESM skeleton produced via `bundle({ skipWrapper: true })`
  * and produces a wrapped output:
- *  - `browser`: self-executing async IIFE that calls
- *    `startFlow(wireConfig(__configData))` and optionally assigns the
- *    resulting collector/elb onto `window`.
+ *  - `browser`: self-executing async IIFE that calls `wireConfig(__configData)`,
+ *    injects `env.window` / `env.document` into every source, then calls
+ *    `startFlow(config)` and optionally assigns the resulting collector/elb
+ *    onto `window`.
  *  - `node`: ESM module whose default export is an async factory function
  *    that the runtime container (see `runtime/load-bundle.ts:53-66`) calls
  *    with a context to get back `{ collector, elb, httpHandler? }`.

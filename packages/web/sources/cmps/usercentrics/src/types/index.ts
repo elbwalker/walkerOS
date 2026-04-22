@@ -1,4 +1,5 @@
 import type { Source, Elb } from '@walkeros/core';
+import type { Usercentrics } from 'usercentrics-browser-ui';
 
 /**
  * Usercentrics consent event detail structure.
@@ -22,6 +23,44 @@ export interface UsercentricsEventDetail {
 declare global {
   interface WindowEventMap {
     ucEvent: CustomEvent<UsercentricsEventDetail>;
+  }
+}
+
+/**
+ * Usercentrics V2 service info shape returned by `UC_UI.getServicesBaseInfo()`.
+ * Only the fields we use are typed — minimal surface, not a full V2 API mirror.
+ */
+export interface UsercentricsV2Service {
+  /** Category slug: 'essential' | 'functional' | 'marketing' | custom */
+  categorySlug: string;
+  /** Consent state for this service */
+  consent: {
+    status: boolean;
+  };
+}
+
+/**
+ * Usercentrics V2 window API (`window.UC_UI`).
+ *
+ * Methods are synchronous (unlike V3). All methods are optional because
+ * Usercentrics does not guarantee every deployment exposes every method.
+ */
+export interface UsercentricsV2Api {
+  isInitialized?: () => boolean;
+  getServicesBaseInfo?: () => UsercentricsV2Service[];
+  areAllConsentsAccepted?: () => boolean;
+}
+
+declare global {
+  interface Window {
+    UC_UI?: UsercentricsV2Api;
+    /**
+     * Usercentrics V3 CMP API. Attached once the V3 Browser SDK is
+     * initialized. The `@types/usercentrics-browser-ui` package declares this
+     * as always-present; our adapter still guards with a truthiness check for
+     * early-page / SSR safety.
+     */
+    __ucCmp: Usercentrics;
   }
 }
 
@@ -59,6 +98,30 @@ export interface Settings {
    * Default: true
    */
   explicitOnly?: boolean;
+
+  /**
+   * Which Usercentrics API to target.
+   * - 'auto' (default): detect at init. If `window.__ucCmp` is present, use V3.
+   *   If only `window.UC_UI` is present, use V2. If neither is present yet,
+   *   register listeners for both so late-loading CMPs are still caught.
+   * - 'v2': force legacy `window.UC_UI` path.
+   * - 'v3': force current `window.__ucCmp` path.
+   */
+  apiVersion?: 'auto' | 'v2' | 'v3';
+
+  /**
+   * V3 window event name to listen for consent changes.
+   *
+   * Usercentrics V3 hardcodes its built-in event names (`UC_UI_CMP_EVENT`,
+   * `UC_UI_INITIALIZED`, `UC_UI_VIEW_CHANGED`, `UC_CONSENT`) — they cannot be
+   * renamed. However, the Usercentrics admin dashboard (Implementation >
+   * Data Layer & Events) lets admins configure an ADDITIONAL custom window
+   * event. Use this setting to point at that custom event name if
+   * configured; otherwise leave as default.
+   *
+   * Default: 'UC_UI_CMP_EVENT'
+   */
+  v3EventName?: string;
 }
 
 /**

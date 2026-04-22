@@ -45,10 +45,7 @@ manually:
   "mcpServers": {
     "walkeros-flow": {
       "command": "npx",
-      "args": ["@walkeros/mcp"],
-      "env": {
-        "WALKEROS_TOKEN": "sk-walkeros-..."
-      }
+      "args": ["@walkeros/mcp"]
     },
     "walkeros-source-browser": {
       "command": "npx",
@@ -65,12 +62,13 @@ Each server starts on STDIO and registers its tools automatically.
 
 | Variable | Used by | Required | Default | Purpose |
 |----------|---------|----------|---------|---------|
-| `WALKEROS_TOKEN` | mcp | No | none | Bearer token for cloud API and remote bundling |
+| `WALKEROS_TOKEN` | mcp | No | none | Bearer token fallback (alternative to `auth` tool login) |
 | `WALKEROS_PROJECT_ID` | mcp | No | none | Active project ID (`proj_...`) |
 | `WALKEROS_APP_URL` | mcp | No | `https://app.walkeros.io` | Base URL override |
 
 `@walkeros/mcp-source-browser` works without any environment variables.
-When `WALKEROS_TOKEN` is set, the `api` tool is registered for cloud operations.
+All tools are always registered. To authenticate with the walkerOS cloud, use
+the `auth` tool (device code flow) or set `WALKEROS_TOKEN` as a fallback.
 
 ---
 
@@ -87,7 +85,7 @@ and `@walkeros/mcp-api` packages.
   language="bash"
 />
 
-### Tools (9)
+### Tools (12)
 
 #### `flow_load`
 
@@ -120,7 +118,7 @@ Bundle a walkerOS flow configuration into deployable JavaScript.
 | `flow` | string | No | Flow name for multi-flow configs |
 | `stats` | boolean | No | Return bundle statistics (default: `true`) |
 | `output` | string | No | Output file path |
-| `remote` | boolean | No | Use remote cloud bundling (requires `WALKEROS_TOKEN`). Default: `false` |
+| `remote` | boolean | No | Use remote cloud bundling (requires authentication). Default: `false` |
 | `content` | object | No | Flow.Config JSON content (required when `remote: true`) |
 
 #### `flow_simulate`
@@ -184,43 +182,46 @@ example summaries. Use `section` parameter for full content.
 | `version` | string | No | Package version (default: latest) |
 | `section` | `"hints"` \| `"examples"` \| `"all"` | No | Section to expand with full content |
 
-#### `api`
+#### `auth`
 
-Unified walkerOS cloud API. Only available when `WALKEROS_TOKEN` is set.
+Authenticate with the walkerOS cloud. Uses device code flow — the user receives
+a URL to open in a browser to complete login.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | enum | Yes | API action (see below) |
-| `projectId` | string | No | Project ID (`proj_...`). Required for: project.get/update/delete, flow.create, flow.list. Falls back to `WALKEROS_PROJECT_ID` env. |
-| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: flow.get/update/delete/duplicate, deploy, preview.*. For deployment.get/delete: can be a deployment slug. |
+| `action` | `"status"` \| `"login"` \| `"logout"` | Yes | Auth action |
+
+#### `project_manage`
+
+Manage walkerOS projects in the cloud.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"set_default"` | Yes | Project action |
+| `projectId` | string | No | Project ID (`proj_...`). Required for: get, update, delete, set_default. Falls back to `WALKEROS_PROJECT_ID` env. |
+| `name` | string | No | Name for create/update operations |
+
+#### `flow_manage`
+
+Manage walkerOS flow configurations in the cloud.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"duplicate"` | Yes | Flow action |
+| `projectId` | string | No | Project ID (`proj_...`). Required for: list, create. Falls back to `WALKEROS_PROJECT_ID` env. |
+| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: get, update, delete, duplicate. |
 | `name` | string | No | Name for create/update operations |
 | `content` | object | No | Flow.Config JSON for flow operations |
+
+#### `deploy_manage`
+
+Deploy walkerOS flows and manage deployments.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"deploy"` \| `"list"` \| `"get"` \| `"delete"` | Yes | Deployment action |
+| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: deploy. For get/delete: can be a deployment slug. |
 | `wait` | boolean | No | Wait for deploy to complete (default: `true`) |
-| `previewId` | string | No | Preview ID (e.g., `prv_abc123`). Required for `preview.get` / `preview.delete`. |
-| `flowSettingsId` | string | No | Flow settings ID for `preview.create` (alternative to `flowName`). |
-| `flowName` | string | No | Flow settings name for `preview.create` (resolved to a settings ID). |
-| `siteUrl` | string | No | Optional site URL for `preview.create`. When provided, the response includes full `activationUrl` / `deactivationUrl` values the user can click. |
-
-**Actions:** `whoami`, `project.list`, `project.get`, `project.create`,
-`project.update`, `project.delete`, `flow.list`, `flow.get`, `flow.create`,
-`flow.update`, `flow.delete`, `flow.duplicate`, `deploy`, `deployment.get`,
-`deployment.list`, `deployment.create`, `deployment.delete`, `preview.list`,
-`preview.get`, `preview.create`, `preview.delete`
-
-#### Preview actions
-
-`preview.*` manages short-lived flow bundles used to test configuration changes
-on a live production site before deploying. Each preview has a token; visiting
-any page of your site with `?elbPreview={token}` activates preview mode in that
-browser (7-day cookie). The production walker self-heals on a deleted preview
-by clearing the cookie and loading the production flow.
-
-| Action | Required parameters | Notes |
-|--------|---------------------|-------|
-| `preview.list` | `flowId` | Lists all previews for a flow. |
-| `preview.get` | `flowId`, `previewId` | Returns a single preview (`bundleUrl`, `activationUrl`, `createdBy`, `createdAt`). |
-| `preview.create` | `flowId`, and one of `flowSettingsId` / `flowName` | Creates a preview and publishes the bundle to the CDN. Pass `siteUrl` to get a ready-to-open `activationUrl` and `deactivationUrl`. |
-| `preview.delete` | `flowId`, `previewId` | Removes the DB row and the CDN bundle. Browsers with an active cookie self-heal on next page load. |
 
 ### Resources
 
@@ -232,7 +233,7 @@ by clearing the cookie and loading the production flow.
 | `walkeros://reference/consent` | Consent model (destination/rule/field level) |
 | `walkeros://reference/variables` | Variable patterns ($var/$env/$def/$code/$store) |
 | `walkeros://reference/contract` | Event schemas, wildcards, inheritance |
-| `walkeros://reference/api` | OpenAPI 3.1 specification |
+| `walkeros://reference/openapi` | OpenAPI 3.1 specification |
 | `walkeros://reference/packages` | Full package catalog |
 | `walkeros://schema/{packageName}` | Per-package JSON schemas |
 
@@ -331,19 +332,19 @@ which destinations received the event.
 
 > "Deploy flow cfg_abc123 and wait for it to finish."
 
-The assistant calls `api({ action: "deploy", id: "cfg_abc123" })` and streams
-progress updates through bundling, publishing, and activation.
+The assistant calls `deploy_manage({ action: "deploy", flowId: "cfg_abc123" })` and
+streams progress updates through bundling, publishing, and activation.
 
 ### Preview a flow on a live site
 
 > "Create a preview of my demo settings on flow_abc123 and give me the link to
 > open on https://example.com."
 
-The assistant calls `api({ action: "preview.create", flowId: "flow_abc123",
-flowName: "demo", siteUrl: "https://example.com" })` and returns the
-`activationUrl` the user clicks to activate preview mode on their site. Running
-`api({ action: "preview.delete", … })` later removes the bundle; the production
-walker self-heals on visitors' next page load.
+The assistant calls `flow_manage({ action: "preview_create", flowId:
+"flow_abc123", flowName: "demo", siteUrl: "https://example.com" })` and returns
+the `activationUrl` the user clicks to activate preview mode on their site.
+Running `flow_manage({ action: "preview_delete", … })` later removes the
+bundle; the production walker self-heals on visitors' next page load.
 
 ### Set up event mapping
 
@@ -367,23 +368,6 @@ ready-to-use HTML attributes.
 
 The assistant calls `package_search` for `@walkeros/web-destination-snowplow`,
 then `package_get` to fetch schemas, hints, and examples.
-
-## Migration from separate servers
-
-The previous `@walkeros/mcp-cli` and `@walkeros/mcp-api` packages are now
-unified in `@walkeros/mcp`. Key changes:
-
-| Old | New |
-|-----|-----|
-| `@walkeros/mcp-cli` | `@walkeros/mcp` |
-| `@walkeros/mcp-api` (17 tools) | `api` tool in `@walkeros/mcp` |
-| `validate` | `flow_validate` |
-| `bundle` | `flow_bundle` |
-| `simulate` | `flow_simulate` |
-| `push` | `flow_push` |
-| `examples_list` | `flow_examples` |
-| `flow_init` | `flow_load` |
-| `flow_schema` tool | `walkeros://reference/flow-schema` resource |
 
 ## Next steps
 

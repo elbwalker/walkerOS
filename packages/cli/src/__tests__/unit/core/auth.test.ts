@@ -2,7 +2,9 @@ import {
   getToken,
   getAuthHeaders,
   resolveRunToken,
+  requireProjectId,
 } from '../../../core/auth.js';
+import { getDefaultProject } from '../../../lib/config-file.js';
 
 // Isolate from real ~/.config/walkeros/config.json
 jest.mock('../../../lib/config-file.js', () => ({
@@ -14,7 +16,12 @@ jest.mock('../../../lib/config-file.js', () => ({
   resolveDeployToken: () => process.env.WALKEROS_DEPLOY_TOKEN ?? null,
   resolveAppUrl: () =>
     process.env.WALKEROS_APP_URL || 'https://app.walkeros.io',
+  getDefaultProject: jest.fn(() => null),
 }));
+
+const mockGetDefaultProject = getDefaultProject as jest.MockedFunction<
+  typeof getDefaultProject
+>;
 
 describe('auth', () => {
   const originalEnv = process.env;
@@ -23,6 +30,8 @@ describe('auth', () => {
     process.env = { ...originalEnv };
     delete process.env.WALKEROS_TOKEN;
     delete process.env.WALKEROS_DEPLOY_TOKEN;
+    delete process.env.WALKEROS_PROJECT_ID;
+    mockGetDefaultProject.mockReturnValue(null);
   });
 
   afterEach(() => {
@@ -73,6 +82,30 @@ describe('auth', () => {
 
     it('returns null when no token available', () => {
       expect(resolveRunToken()).toBeNull();
+    });
+  });
+
+  describe('requireProjectId', () => {
+    it('returns env var when set', () => {
+      process.env.WALKEROS_PROJECT_ID = 'proj-from-env';
+      expect(requireProjectId()).toBe('proj-from-env');
+    });
+
+    it('returns config defaultProjectId when env var not set', () => {
+      mockGetDefaultProject.mockReturnValue('proj-from-config');
+      expect(requireProjectId()).toBe('proj-from-config');
+    });
+
+    it('prefers env var over config when both set', () => {
+      process.env.WALKEROS_PROJECT_ID = 'proj-from-env';
+      mockGetDefaultProject.mockReturnValue('proj-from-config');
+      expect(requireProjectId()).toBe('proj-from-env');
+    });
+
+    it('throws when neither env var nor config is set', () => {
+      expect(() => requireProjectId()).toThrow(
+        'No project selected. Set WALKEROS_PROJECT_ID or configure a default project.',
+      );
     });
   });
 });

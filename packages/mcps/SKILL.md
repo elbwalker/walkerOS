@@ -13,8 +13,6 @@ Tools       →  execute operations (flow_validate, flow_simulate, flow_bundle, 
 Packages    →  provide specifics  (hints, schemas, examples per step)
 ```
 
-See `DESIGN.md` for full vision and principles.
-
 ## Packages
 
 | Package                                            | Purpose                                                                |
@@ -24,17 +22,20 @@ See `DESIGN.md` for full vision and principles.
 
 ## Tools (in `@walkeros/mcp`)
 
-| Tool             | Description                                          |
-| ---------------- | ---------------------------------------------------- |
-| `flow_load`      | Load existing or create new flow configuration       |
-| `flow_validate`  | Validate events, flows, mappings, or contracts       |
-| `flow_bundle`    | Bundle flow into deployable JavaScript               |
-| `flow_simulate`  | Simulate events through a flow (mocked API calls)    |
-| `flow_push`      | Push real events through a flow (real API calls)     |
-| `flow_examples`  | List step examples in a flow                         |
-| `package_search` | Browse or look up walkerOS packages                  |
-| `package_get`    | Fetch package schemas, hints, and examples           |
-| `api`            | Unified walkerOS cloud API (requires WALKEROS_TOKEN) |
+| Tool             | Description                                                                     |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `flow_load`      | Load existing or create new flow configuration                                  |
+| `flow_validate`  | Validate events, flows, mappings, or contracts                                  |
+| `flow_bundle`    | Bundle flow into deployable JavaScript                                          |
+| `flow_simulate`  | Simulate events through a flow (mocked API calls)                               |
+| `flow_push`      | Push real events through a flow (real API calls)                                |
+| `flow_examples`  | List step examples in a flow                                                    |
+| `package_search` | Browse or look up walkerOS packages                                             |
+| `package_get`    | Fetch package schemas, hints, and examples                                      |
+| `auth`           | Device-code login/logout/status for walkerOS cloud                              |
+| `project_manage` | Manage walkerOS projects (list/get/create/update/delete/set_default)            |
+| `flow_manage`    | Manage flows and previews (list/get/create/update/delete/duplicate/preview\_\*) |
+| `deploy_manage`  | Manage deployments (list/get/create/delete)                                     |
 
 ## Resources
 
@@ -46,7 +47,7 @@ See `DESIGN.md` for full vision and principles.
 | `walkeros://reference/consent`     | Consent model (destination/rule/field level)                |
 | `walkeros://reference/variables`   | Variable patterns ($var/$env/$def/$code/$store)             |
 | `walkeros://reference/contract`    | Event schemas, wildcards, inheritance                       |
-| `walkeros://reference/api`         | OpenAPI 3.1 specification                                   |
+| `walkeros://reference/openapi`     | OpenAPI 3.1 specification                                   |
 | `walkeros://reference/packages`    | Full package catalog                                        |
 | `walkeros://schema/{packageName}`  | Per-package JSON schemas                                    |
 

@@ -21,7 +21,7 @@ export function registerFlowBundleTool(server: McpServer) {
           .boolean()
           .optional()
           .describe(
-            'Use remote cloud bundling (requires WALKEROS_TOKEN). Default: false (local)',
+            'Use remote cloud bundling (requires authentication). Default: false (local)',
           ),
         content: z
           .record(z.string(), z.unknown())
@@ -50,7 +50,7 @@ export function registerFlowBundleTool(server: McpServer) {
             {
               next: [
                 'Use flow_simulate to test',
-                "Use api({ action: 'deploy' }) to publish",
+                'Use deploy with action "deploy" to publish',
               ],
             },
           );
@@ -81,7 +81,7 @@ export function registerFlowBundleTool(server: McpServer) {
           {
             next: [
               'Use flow_simulate to test',
-              "Use api({ action: 'deploy' }) to publish",
+              'Use deploy with action "deploy" to publish',
             ],
           },
         );
