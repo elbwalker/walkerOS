@@ -78,6 +78,10 @@ describe('public API surface', () => {
     expect(api.TOOL_DEFINITIONS.length).toBe(13);
   });
 
+  it('exports createToolHandlers', () => {
+    expect(typeof api.createToolHandlers).toBe('function');
+  });
+
   it('does not auto-start stdio on import (smoke: import completes without side effects)', () => {
     // If stdio.ts were imported from index.ts, the test runner would hang
     // on process.stdin. Reaching this line means we're clean.
