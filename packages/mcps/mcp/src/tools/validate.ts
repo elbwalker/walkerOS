@@ -4,8 +4,23 @@ import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { ValidateOutputShape } from '../schemas/output.js';
+import { wrapUserData } from '../user-data.js';
 
 import type { ToolSpec } from '../tool-spec.js';
+
+function wrapIssueMessages(result: ValidateResult): ValidateResult {
+  return {
+    ...result,
+    errors: result.errors.map((e) => ({
+      ...e,
+      message: wrapUserData(e.message),
+    })),
+    warnings: result.warnings.map((w) => ({
+      ...w,
+      message: wrapUserData(w.message),
+    })),
+  };
+}
 
 const TITLE = 'Validate Flow';
 const DESCRIPTION =
@@ -63,7 +78,7 @@ async function flowValidateHandlerBody(input: unknown) {
             'Read walkeros://reference/flow-schema for correct structure',
           ],
         };
-    return mcpResult(result, hints);
+    return mcpResult(wrapIssueMessages(result), hints);
   } catch (error) {
     return mcpError(
       error,

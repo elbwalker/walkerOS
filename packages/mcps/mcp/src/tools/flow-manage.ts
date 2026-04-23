@@ -2,9 +2,58 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
+import { wrapUserData, redactNestedStrings } from '../user-data.js';
+import { flowCanvasResult } from '../ui-parts.js';
+
+/** Peek at a Flow.Config and decide whether it's web-flavoured or
+ *  server-flavoured. Flow.Config is keyed by platform at the top level. If
+ *  both exist the web half wins (rare — dual-platform flows are an
+ *  advanced case we don't render in chat bubbles). */
+function pickPlatform(config: unknown): 'web' | 'server' {
+  if (config && typeof config === 'object' && 'web' in (config as object)) {
+    return 'web';
+  }
+  return 'server';
+}
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+
+// Keys whose string values must remain literal so the LLM can reference them
+// (ids, dates, immutable identifiers). Everything else that's a string goes
+// through wrapUserData.
+const KEEP_LITERAL = new Set([
+  'id',
+  'flowId',
+  'projectId',
+  'previewId',
+  'version',
+  'slug',
+  'createdAt',
+  'updatedAt',
+  'deletedAt',
+]);
+const keepLiteral = (key: string) => KEEP_LITERAL.has(key);
+
+function safeSummary<T extends { name?: string }>(flow: T): T {
+  return flow.name !== undefined
+    ? { ...flow, name: wrapUserData(flow.name) }
+    : flow;
+}
+
+function safeDetail<T extends { name?: string; config?: unknown }>(flow: T): T {
+  const withName =
+    flow.name !== undefined
+      ? { ...flow, name: wrapUserData(flow.name) }
+      : { ...flow };
+  if (flow.config !== undefined) {
+    (withName as { config?: unknown }).config = redactNestedStrings(
+      flow.config,
+      { skip: keepLiteral },
+    );
+  }
+  return withName as T;
+}
 
 const TITLE = 'Flow Management';
 const DESCRIPTION =
@@ -162,15 +211,22 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
             order,
             includeDeleted,
           });
-          return mcpResult(data);
+          const flows = (data as { flows?: Array<{ name?: string }> }).flows;
+          const safe = Array.isArray(flows)
+            ? { ...data, flows: flows.map(safeSummary) }
+            : data;
+          return mcpResult(safe);
         }
         const data = await client.listAllFlows({
           sort,
           order,
           includeDeleted,
         });
+        const safe = Array.isArray(data)
+          ? (data as Array<{ name?: string }>).map(safeSummary)
+          : data;
         return mcpResult(
-          { projects: data },
+          { projects: safe },
           {
             next: [
               'Use flow_manage with action "get" and a flowId to inspect a specific flow',
@@ -189,8 +245,29 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           );
         }
         const flow = await client.getFlow({ flowId, projectId, fields });
-        return mcpResult(flow, {
-          next: ['Use flow_load to open this flow for editing and validation'],
+        const safe = safeDetail(
+          flow as {
+            id?: string;
+            name?: string;
+            config?: Record<string, unknown>;
+          },
+        );
+        return flowCanvasResult({
+          flowId: safe.id,
+          configName: safe.name ?? 'default',
+          platform: pickPlatform(safe.config),
+          flowConfig: (safe.config ?? {}) as Record<string, unknown>,
+          suggestions: [
+            {
+              label: 'Validate this flow',
+              prompt: `Validate flow ${safe.id}`,
+              autoSend: true,
+            },
+            {
+              label: 'Add a destination',
+              prompt: `Help me add a destination to flow ${safe.id}`,
+            },
+          ],
         });
       }
 
@@ -203,8 +280,29 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           content: content ?? {},
           projectId,
         });
-        return mcpResult(created, {
-          next: ['Use flow_load to open this flow for editing and validation'],
+        const safeCreated = safeDetail(
+          created as {
+            id?: string;
+            name?: string;
+            config?: Record<string, unknown>;
+          },
+        );
+        return flowCanvasResult({
+          flowId: safeCreated.id,
+          configName: safeCreated.name ?? 'default',
+          platform: pickPlatform(safeCreated.config),
+          flowConfig: (safeCreated.config ?? {}) as Record<string, unknown>,
+          suggestions: [
+            {
+              label: 'Validate this flow',
+              prompt: `Validate flow ${safeCreated.id}`,
+              autoSend: true,
+            },
+            {
+              label: 'Deploy it',
+              prompt: `Deploy flow ${safeCreated.id}`,
+            },
+          ],
         });
       }
 
@@ -223,7 +321,30 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           content,
           mergePatch: patch ?? true,
         });
-        return mcpResult(updated);
+        const safeUpdated = safeDetail(
+          updated as {
+            id?: string;
+            name?: string;
+            config?: Record<string, unknown>;
+          },
+        );
+        return flowCanvasResult({
+          flowId: safeUpdated.id,
+          configName: safeUpdated.name ?? 'default',
+          platform: pickPlatform(safeUpdated.config),
+          flowConfig: (safeUpdated.config ?? {}) as Record<string, unknown>,
+          suggestions: [
+            {
+              label: 'Validate this flow',
+              prompt: `Validate flow ${safeUpdated.id}`,
+              autoSend: true,
+            },
+            {
+              label: 'Deploy it',
+              prompt: `Deploy flow ${safeUpdated.id}`,
+            },
+          ],
+        });
       }
 
       case 'delete': {
@@ -251,7 +372,9 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           name,
           projectId,
         });
-        return mcpResult(duplicated);
+        return mcpResult(
+          safeDetail(duplicated as { name?: string; config?: unknown }),
+        );
       }
 
       case 'preview_list': {

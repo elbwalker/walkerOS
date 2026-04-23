@@ -81,7 +81,10 @@ describe('project_manage tool', () => {
       };
 
       expect(listProjects).toHaveBeenCalled();
-      expect(result.structuredContent.projects).toEqual(projects.projects);
+      expect(result.structuredContent.projects).toEqual([
+        { id: 'proj_1', name: '<user_data>My Project</user_data>' },
+        { id: 'proj_2', name: '<user_data>Another Project</user_data>' },
+      ]);
     });
 
     it('hints to create when projects list is empty', async () => {
@@ -208,7 +211,9 @@ describe('project_manage tool', () => {
         projectId: 'proj_1',
         name: 'Renamed',
       });
-      expect(result.structuredContent.name).toBe('Renamed');
+      expect(result.structuredContent.name).toBe(
+        '<user_data>Renamed</user_data>',
+      );
     });
   });
 

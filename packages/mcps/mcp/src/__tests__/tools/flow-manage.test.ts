@@ -105,7 +105,9 @@ describe('flow_manage tool', () => {
         order: undefined,
         includeDeleted: undefined,
       });
-      expect(result.structuredContent.flows).toEqual(flows.flows);
+      expect(result.structuredContent.flows).toEqual([
+        { id: 'flow_1', name: '<user_data>My Flow</user_data>' },
+      ]);
     });
   });
 
@@ -133,14 +135,17 @@ describe('flow_manage tool', () => {
         action: 'get',
         flowId: 'flow_1',
         fields: ['name', 'content.flows'],
-      })) as { structuredContent: { id: string } };
+      })) as {
+        structuredContent: { kind: string; flowId: string; configName: string };
+      };
 
       expect(getFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',
         projectId: undefined,
         fields: ['name', 'content.flows'],
       });
-      expect(result.structuredContent.id).toBe('flow_1');
+      expect(result.structuredContent.kind).toBe('flow-canvas');
+      expect(result.structuredContent.flowId).toBe('flow_1');
     });
   });
 
@@ -168,14 +173,17 @@ describe('flow_manage tool', () => {
         action: 'create',
         name: 'New Flow',
         projectId: 'proj_1',
-      })) as { structuredContent: { id: string } };
+      })) as {
+        structuredContent: { kind: string; flowId: string; configName: string };
+      };
 
       expect(createFlow).toHaveBeenCalledWith({
         name: 'New Flow',
         content: {},
         projectId: 'proj_1',
       });
-      expect(result.structuredContent.id).toBe('flow_new');
+      expect(result.structuredContent.kind).toBe('flow-canvas');
+      expect(result.structuredContent.flowId).toBe('flow_new');
     });
   });
 
@@ -212,7 +220,9 @@ describe('flow_manage tool', () => {
         content: undefined,
         mergePatch: true,
       });
-      expect(result.structuredContent.name).toBe('Updated');
+      expect(result.structuredContent.configName).toBe(
+        '<user_data>Updated</user_data>',
+      );
     });
   });
 

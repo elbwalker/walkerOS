@@ -37,6 +37,20 @@ export {
 
 export type { ToolSpec } from './tool-spec.js';
 
+export {
+  wrapUserData,
+  redactNestedStrings,
+  type RedactOptions,
+} from './user-data.js';
+
+export {
+  flowCanvasResult,
+  isFlowCanvasResult,
+  type FlowCanvasToolResult,
+  type FlowCanvasPayload,
+  type SuggestionTile,
+} from './ui-parts.js';
+
 /**
  * Handler-bearing spec for every tool `createWalkerOSMcpServer` registers.
  *

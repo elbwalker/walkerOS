@@ -2,9 +2,14 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
+import { wrapUserData } from '../user-data.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+
+function wrapProjectName<T extends { name?: string }>(p: T): T {
+  return p.name !== undefined ? { ...p, name: wrapUserData(p.name) } : p;
+}
 
 const TITLE = 'Project Management';
 const DESCRIPTION =
@@ -72,7 +77,10 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
             },
           );
         }
-        return mcpResult(projects);
+        const safe = Array.isArray(projects)
+          ? (items as Array<{ name?: string }>).map(wrapProjectName)
+          : { ...projects, projects: items.map(wrapProjectName) };
+        return mcpResult(safe);
       }
 
       case 'get': {
@@ -84,7 +92,7 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
           );
         }
         const project = await client.getProject({ projectId });
-        return mcpResult(project);
+        return mcpResult(wrapProjectName(project as { name?: string }));
       }
 
       case 'create': {
@@ -92,7 +100,7 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
           return mcpError(new Error('name is required for create action.'));
         }
         const created = await client.createProject({ name });
-        return mcpResult(created, {
+        return mcpResult(wrapProjectName(created as { name?: string }), {
           next: [
             'Use project_manage with action "set_default" to make this your active project',
           ],
@@ -111,7 +119,7 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
           return mcpError(new Error('name is required for update action.'));
         }
         const updated = await client.updateProject({ projectId, name });
-        return mcpResult(updated);
+        return mcpResult(wrapProjectName(updated as { name?: string }));
       }
 
       case 'delete': {
