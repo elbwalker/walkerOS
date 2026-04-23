@@ -74,7 +74,7 @@ export const StorageSchema = z
  * Note: Function schemas use z.unknown() as functions aren't serializable
  */
 export const ErrorHandlerSchema = z
-  .any()
+  .unknown()
   .meta({
     id: 'ErrorHandler',
     title: 'Error.Handler',
@@ -99,7 +99,7 @@ export const ErrorHandlerSchema = z
  * Note: Function schemas use z.unknown() as functions aren't serializable
  */
 export const LogHandlerSchema = z
-  .any()
+  .unknown()
   .meta({
     id: 'LogHandler',
     title: 'Log.Handler',

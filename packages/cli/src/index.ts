@@ -44,6 +44,11 @@ export {
   deleteDeploymentCommand,
 } from './commands/deployments/index.js';
 export { feedbackCommand } from './commands/feedback/index.js';
+export {
+  telemetryStatusCommand,
+  telemetryEnableCommand,
+  telemetryDisableCommand,
+} from './commands/telemetry/index.js';
 
 // === Programmatic API ===
 // High-level functions for library usage
@@ -143,6 +148,9 @@ export type { SSEEvent, SSEParseResult } from './core/sse.js';
 export { loadConfig, loadJsonConfig } from './config/utils.js';
 export { findExample } from './commands/simulate/example-loader.js';
 export { compareOutput } from './commands/simulate/compare.js';
+
+// === Telemetry ===
+export * as telemetry from './telemetry/index.js';
 
 // === Types ===
 // Export types for programmatic usage

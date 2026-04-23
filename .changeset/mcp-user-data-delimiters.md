@@ -1,5 +1,5 @@
 ---
-'@walkeros/mcp': minor
+'@walkeros/mcp': patch
 ---
 
 Tool handlers now wrap user-writable strings (flow/project names, config fields,

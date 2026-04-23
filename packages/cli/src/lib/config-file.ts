@@ -9,11 +9,15 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 export interface WalkerOSConfig {
-  token: string;
-  email: string;
-  appUrl: string;
+  token?: string;
+  email?: string;
+  appUrl?: string;
   anonymousFeedback?: boolean;
   defaultProjectId?: string;
+  /** UUID v4 generated once on first CLI run, used for telemetry grouping. */
+  installationId?: string;
+  /** Explicit opt-out toggle for telemetry. Absent means default-on. */
+  telemetryEnabled?: boolean;
 }
 
 /**
@@ -54,6 +58,18 @@ export function writeConfig(config: WalkerOSConfig): void {
 
   const configPath = getConfigPath();
   writeFileSync(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+}
+
+/**
+ * Write a telemetry-only skeleton config. Used on first CLI run to persist
+ * the installation ID without requiring login.
+ */
+export function writeTelemetryOnlyConfig(partial: {
+  installationId: string;
+  telemetryEnabled?: boolean;
+}): void {
+  const existing = readConfig() ?? {};
+  writeConfig({ ...existing, ...partial });
 }
 
 /**

@@ -486,6 +486,7 @@ const sidebars: SidebarsConfig = {
             'apps/docker',
             'core/web',
             'core/server',
+            'apps/telemetry',
           ],
         },
       ],

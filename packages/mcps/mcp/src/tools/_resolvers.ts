@@ -85,7 +85,7 @@ export async function resolveDeploymentSlug(args: {
     );
   }
 
-  if (args.slug) {
+  if (args.slug !== undefined) {
     const hit = matches.find((m) => m.slug === args.slug);
     if (!hit) {
       throw new DeploymentNotFoundError(

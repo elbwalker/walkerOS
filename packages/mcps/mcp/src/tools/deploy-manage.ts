@@ -69,7 +69,7 @@ function listForResolver(
 ): ListDeploymentsForResolver {
   return async (q) => {
     const resp = (await client.listDeployments({
-      projectId: projectId ?? q.projectId,
+      projectId: projectId || q.projectId || undefined,
       flowId: q.flowId,
     })) as { deployments?: DeploymentSummaryForResolver[] };
     return resp.deployments ?? [];

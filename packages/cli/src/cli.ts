@@ -3,6 +3,7 @@ import { VERSION } from './version.js';
 import { setClientContext } from './core/client-context.js';
 import { handleCliError } from './core/api-error.js';
 import { printBanner } from './core/banner.js';
+import { createEmitter } from './telemetry/index.js';
 import { bundleCommand } from './commands/bundle/index.js';
 import { pushCommand } from './commands/push/index.js';
 import { runCommand } from './commands/run/index.js';
@@ -37,14 +38,48 @@ import {
   getDeploymentBySlugCommand,
 } from './commands/deployments/index.js';
 import { feedbackCommand } from './commands/feedback/index.js';
+import {
+  telemetryStatusCommand,
+  telemetryEnableCommand,
+  telemetryDisableCommand,
+} from './commands/telemetry/index.js';
 import { writeResult } from './core/output.js';
 
 setClientContext({ type: 'cli', version: VERSION });
 
+// Resolve the telemetry emitter up-front. createEmitter is fast and mostly
+// synchronous (opt-out + env collection + first-run notice). Awaiting here
+// lets the exit-path code (process.on('exit')) fire `send` synchronously in
+// debug mode, which writes to stderr before any await point — microtasks
+// don't run after `exit` fires.
+const emitter = await createEmitter({
+  sourceId: 'cli',
+  sourceType: 'terminal',
+  packageVersion: VERSION,
+});
+
+let cmdStart = 0;
+let cmdPath = '';
+let telemetryEmitted = false;
+
 // Top-level safety net for ApiError(CLIENT_OUTDATED) and other uncaught errors.
 // Command handlers may catch errors locally; anything that escapes lands here.
-process.on('uncaughtException', handleCliError);
-process.on('unhandledRejection', handleCliError);
+process.on('uncaughtException', async (err) => {
+  try {
+    await emitter.send('error throw', { kind: 'uncaught' });
+  } catch {
+    /* never throw from telemetry */
+  }
+  handleCliError(err);
+});
+process.on('unhandledRejection', async (err) => {
+  try {
+    await emitter.send('error throw', { kind: 'unhandledRejection' });
+  } catch {
+    /* never throw from telemetry */
+  }
+  handleCliError(err);
+});
 
 const program = new Command();
 
@@ -577,8 +612,85 @@ program
     await feedbackCommand(text);
   });
 
+// Telemetry command group
+const telemetryCmd = program
+  .command('telemetry')
+  .description('Manage anonymous usage telemetry');
+
+telemetryCmd
+  .command('status')
+  .description('Show whether telemetry is enabled or disabled')
+  .action(() => telemetryStatusCommand());
+
+telemetryCmd
+  .command('enable')
+  .description('Enable anonymous usage telemetry')
+  .action(() => telemetryEnableCommand());
+
+telemetryCmd
+  .command('disable')
+  .description('Disable anonymous usage telemetry')
+  .action(() => telemetryDisableCommand());
+
 // Cache command
 registerCacheCommand(program);
+
+// Telemetry hooks — populate cmdPath/cmdStart for action-bound commands.
+program.hook('preAction', (_thisCmd, actionCmd) => {
+  cmdStart = Date.now();
+  // Space-joined command path: `walkeros projects list` → "projects list".
+  const parts: string[] = [];
+  let cur: Command | null = actionCmd;
+  while (cur && cur.name() !== 'walkeros') {
+    parts.unshift(cur.name());
+    cur = cur.parent;
+  }
+  cmdPath = parts.join(' ');
+});
+
+program.hook('postAction', async () => {
+  try {
+    await emitter.send(
+      'cmd invoke',
+      { command: cmdPath, outcome: 'success' },
+      Date.now() - cmdStart,
+    );
+    telemetryEmitted = true;
+  } catch {
+    /* never throw from telemetry */
+  }
+});
+
+// Fallback emit for paths that bypass action hooks — `--version`, `--help`,
+// or subcommand-less invocations that Commander handles via `this._exit`.
+// In debug mode the `send` call writes to stderr synchronously before its
+// first await, so the emission is observable on exit. In production mode the
+// collector already flushed for action-bound paths; for non-action paths we
+// accept best-effort here.
+process.on('exit', () => {
+  if (telemetryEmitted) return;
+  // Derive a reasonable command label from argv for paths that skipped hooks.
+  const argvTail = process.argv.slice(2);
+  const argvCmd =
+    cmdPath ||
+    argvTail.find((a) => !a.startsWith('-')) ||
+    (argvTail.some((a) => a === '--version' || a === '-V')
+      ? '--version'
+      : '') ||
+    (argvTail.some((a) => a === '--help' || a === '-h') ? '--help' : '');
+  // In debug mode, send() writes to stderr synchronously before its first
+  // await, so the emission is observable before process exit. In production
+  // mode the abandoned promise matches our "never break the host" contract.
+  void emitter
+    .send(
+      'cmd invoke',
+      { command: argvCmd, outcome: 'success' },
+      cmdStart ? Date.now() - cmdStart : 0,
+    )
+    .catch(() => {
+      /* never throw from telemetry */
+    });
+});
 
 // Show banner when called without any arguments (bare `walkeros`)
 if (process.argv.length <= 2) {
@@ -587,4 +699,18 @@ if (process.argv.length <= 2) {
   process.exit(0);
 }
 
-program.parse();
+try {
+  await program.parseAsync();
+} catch (err) {
+  try {
+    await emitter.send(
+      'cmd invoke',
+      { command: cmdPath || 'unknown', outcome: 'error' },
+      cmdStart ? Date.now() - cmdStart : 0,
+    );
+    telemetryEmitted = true;
+  } catch {
+    /* never throw from telemetry */
+  }
+  handleCliError(err);
+}

@@ -1,5 +1,5 @@
 ---
-'@walkeros/mcp': minor
+'@walkeros/mcp': patch
 ---
 
 Add `flowCanvasResult` helper + `FlowCanvasToolResult` / `FlowCanvasPayload` /

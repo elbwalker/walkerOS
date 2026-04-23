@@ -26,7 +26,7 @@ import { LoggerConfigSchema } from './logger';
 export const ConfigSchema = z
   .object({
     settings: z
-      .any()
+      .unknown()
       .meta({
         id: 'StoreSettings',
         title: 'Store.Settings',
@@ -36,7 +36,7 @@ export const ConfigSchema = z
       .describe('Implementation-specific configuration')
       .optional(),
     env: z
-      .any()
+      .unknown()
       .meta({
         id: 'StoreEnv',
         title: 'Store.Env',

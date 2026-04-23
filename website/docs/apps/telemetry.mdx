@@ -1,0 +1,110 @@
+---
+title: Telemetry
+description: What walkerOS CLI and MCP collect, why, and how to opt out.
+sidebar_position: 6
+---
+
+# Telemetry
+
+walkerOS `@walkeros/cli` and `@walkeros/mcp` collect anonymous usage telemetry to
+help us improve the tools. We see which commands are used, whether they
+succeed, and how long they take. Telemetry is privacy-first and opt-out.
+
+On first run, the CLI and MCP server print a one-time notice explaining this
+and how to opt out. The notice is shown once per installation.
+
+## What we collect
+
+Every event is an `entity action` (the same event model the rest of walkerOS
+uses). The emitted events are:
+
+| Event | When |
+|-------|------|
+| `mcp start` | MCP server starts up |
+| `mcp stop` | MCP server shuts down |
+| `cmd invoke` | A CLI command or MCP tool is invoked |
+| `error throw` | An unhandled error is thrown during a command or tool call |
+
+For each event we attach:
+
+- **Installation UUID** - generated once per machine, stored in
+  `~/.config/walkeros/config.json`, not linked to any account or user.
+- **Environment** - OS, OS version, Node.js version, language, timezone,
+  whether the process is running in CI.
+- **Command or tool name** - for example `bundle`, `push`, `flow_validate`.
+- **Outcome** - success or error, plus error class (never the message).
+- **Duration** - how long the command or tool call took, in milliseconds.
+- **Client version** - the installed `@walkeros/cli` or `@walkeros/mcp` version.
+
+## What we do NOT collect
+
+- File paths, file names, or file contents
+- Environment variable names or values
+- Error messages, stack traces, or code snippets
+- Project names, flow names, destination settings, or any flow config content
+- Account identifiers, email addresses, or auth tokens
+- IP addresses
+
+If you spot a field that looks like it could identify you or your project,
+[open an issue](https://github.com/elbwalker/walkerOS/issues) and we will
+remove it.
+
+## Source of truth
+
+The full contract, with JSON Schemas for every event and every property, lives
+in the CLI source tree:
+
+[`packages/cli/src/telemetry/flow.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/src/telemetry/flow.json)
+
+This file is the single source of truth. Anything the CLI or MCP emits is
+defined there. If you want to know exactly what leaves your machine, read it.
+
+## Opt out
+
+Any of the following disables telemetry completely:
+
+```bash
+# Per-shell environment variable (industry standard)
+export DO_NOT_TRACK=1
+
+# walkerOS-specific environment variable
+export WALKEROS_TELEMETRY_DISABLED=1
+
+# Persistent, stored in ~/.config/walkeros/config.json
+walkeros telemetry disable
+```
+
+Check the current state at any time:
+
+```bash
+walkeros telemetry status
+```
+
+Re-enable later with:
+
+```bash
+walkeros telemetry enable
+```
+
+Environment variables take precedence over the config file. If `DO_NOT_TRACK`
+or `WALKEROS_TELEMETRY_DISABLED` is set, telemetry is off regardless of
+`walkeros telemetry enable`.
+
+## Debug mode
+
+To inspect exactly what would be sent, set:
+
+```bash
+export WALKEROS_TELEMETRY_DEBUG=1
+```
+
+In debug mode the CLI and MCP print each telemetry payload to `stderr` as JSON
+and do not send anything to the network. Use this if you want to verify the
+claims above against your own traffic.
+
+## Where it goes
+
+Telemetry events are sent to the walkerOS managed ingest endpoint operated by
+elbwalker GmbH. We do not share the data with any third party and we do not
+use it for advertising. It exists to help us prioritize fixes and improvements
+to the open-source tools.
