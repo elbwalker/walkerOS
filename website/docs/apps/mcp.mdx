@@ -85,6 +85,38 @@ and `@walkeros/mcp-api` packages.
   language="bash"
 />
 
+### Programmatic usage
+
+`@walkeros/mcp` exports a transport-agnostic server factory so host
+applications can mount the MCP protocol over HTTP (e.g., from a Next.js Route
+Handler) instead of running the stdio binary:
+
+<CodeSnippet
+  code={`import {
+  createWalkerOSMcpServer,
+  HttpToolClient,
+  createStreamableHttpHandler,
+} from '@walkeros/mcp';
+
+const server = createWalkerOSMcpServer({
+  client: new HttpToolClient(),
+  version: '1.0.0',
+});
+
+const handler = createStreamableHttpHandler(server, {
+  sessionIdGenerator: () => crypto.randomUUID(),
+});
+
+// In a Next.js Route Handler:
+export const POST = handler;`}
+  language="typescript"
+/>
+
+To use the raw tool registry without the MCP protocol (e.g., with the Vercel
+AI SDK), import \`TOOL_DEFINITIONS\` and provide your own \`ToolClient\`
+implementation. The stdio binary stays available via \`@walkeros/mcp/stdio\`
+and the \`walkeros-mcp\` bin entry, unchanged for end users.
+
 ### Tools (12)
 
 #### `flow_load`

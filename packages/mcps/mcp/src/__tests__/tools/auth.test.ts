@@ -1,13 +1,3 @@
-import { registerAuthTool } from '../../tools/auth.js';
-
-jest.mock('@walkeros/cli', () => ({
-  resolveToken: jest.fn(),
-  whoami: jest.fn(),
-  requestDeviceCode: jest.fn(),
-  pollForToken: jest.fn(),
-  deleteConfig: jest.fn(),
-}));
-
 jest.mock('@walkeros/core', () => ({
   mcpResult: jest.fn((result, hints) => ({
     content: [
@@ -35,24 +25,15 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import {
-  resolveToken,
-  whoami,
-  requestDeviceCode,
-  pollForToken,
-  deleteConfig,
-} from '@walkeros/cli';
+import { registerAuthTool } from '../../tools/auth.js';
+import { stubClient } from '../support/stub-client.js';
 
-const mockResolveToken = jest.mocked(resolveToken);
-const mockWhoami = jest.mocked(whoami);
-const mockRequestDeviceCode = jest.mocked(requestDeviceCode);
-const mockPollForToken = jest.mocked(pollForToken);
-const mockDeleteConfig = jest.mocked(deleteConfig);
+type HandlerFn = (input: Record<string, unknown>) => Promise<unknown>;
 
 function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
+  const tools: Record<string, { config: unknown; handler: HandlerFn }> = {};
   return {
-    registerTool(name: string, config: unknown, handler: Function) {
+    registerTool(name: string, config: unknown, handler: HandlerFn) {
       tools[name] = { config, handler };
     },
     getTool(name: string) {
@@ -67,14 +48,13 @@ describe('auth tool', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     server = createMockServer();
-    registerAuthTool(server as any);
   });
 
   it('registers with name "auth" and correct annotations', () => {
+    registerAuthTool(server as never, stubClient());
     const tool = server.getTool('auth');
     expect(tool).toBeDefined();
-
-    const config = tool.config as any;
+    const config = tool!.config as { annotations: Record<string, boolean> };
     expect(config.annotations).toEqual({
       readOnlyHint: false,
       destructiveHint: true,
@@ -85,29 +65,43 @@ describe('auth tool', () => {
 
   describe('status', () => {
     it('returns user info when authenticated', async () => {
-      mockResolveToken.mockReturnValue({ token: 'tok_123', source: 'config' });
-      mockWhoami.mockResolvedValue({
+      const whoami = jest.fn().mockResolvedValue({
         email: 'user@example.com',
         userId: 'usr_1',
       });
+      const client = stubClient({
+        resolveToken: () => ({ token: 'tok_123', source: 'config' }),
+        whoami,
+      });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({ action: 'status' });
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({ action: 'status' })) as {
+        structuredContent: { authenticated: boolean; email?: string };
+      };
 
-      expect(mockResolveToken).toHaveBeenCalled();
-      expect(mockWhoami).toHaveBeenCalled();
+      expect(whoami).toHaveBeenCalled();
       expect(result.structuredContent.authenticated).toBe(true);
       expect(result.structuredContent.email).toBe('user@example.com');
     });
 
     it('returns not authenticated when no token', async () => {
-      mockResolveToken.mockReturnValue(null);
+      const whoami = jest.fn();
+      const client = stubClient({
+        resolveToken: () => null,
+        whoami,
+      });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({ action: 'status' });
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({ action: 'status' })) as {
+        structuredContent: {
+          authenticated: boolean;
+          _hints: { next: string[] };
+        };
+      };
 
-      expect(mockResolveToken).toHaveBeenCalled();
-      expect(mockWhoami).not.toHaveBeenCalled();
+      expect(whoami).not.toHaveBeenCalled();
       expect(result.structuredContent.authenticated).toBe(false);
       expect(result.structuredContent._hints.next).toEqual(
         expect.arrayContaining([expect.stringContaining('login')]),
@@ -117,7 +111,7 @@ describe('auth tool', () => {
 
   describe('login', () => {
     it('returns URL and deviceCode immediately on fresh login without polling', async () => {
-      mockRequestDeviceCode.mockResolvedValue({
+      const requestDeviceCode = jest.fn().mockResolvedValue({
         deviceCode: 'dev_abc',
         userCode: 'ABCD-1234',
         verificationUri: 'https://app.walkeros.io/device',
@@ -126,12 +120,22 @@ describe('auth tool', () => {
         expiresIn: 900,
         interval: 5,
       });
+      const pollForToken = jest.fn();
+      const client = stubClient({ requestDeviceCode, pollForToken });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({ action: 'login' });
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({ action: 'login' })) as {
+        structuredContent: {
+          authenticated: boolean;
+          status: string;
+          loginUrl: string;
+          deviceCode: string;
+        };
+      };
 
-      expect(mockRequestDeviceCode).toHaveBeenCalled();
-      expect(mockPollForToken).not.toHaveBeenCalled();
+      expect(requestDeviceCode).toHaveBeenCalled();
+      expect(pollForToken).not.toHaveBeenCalled();
       expect(result.structuredContent.authenticated).toBe(false);
       expect(result.structuredContent.status).toBe('awaiting_authorization');
       expect(result.structuredContent.loginUrl).toContain('walkeros.io');
@@ -139,40 +143,52 @@ describe('auth tool', () => {
     });
 
     it('only calls pollForToken when deviceCode is provided (retry)', async () => {
-      mockPollForToken.mockResolvedValue({
+      const requestDeviceCode = jest.fn();
+      const pollForToken = jest.fn().mockResolvedValue({
         success: true,
         status: 'authenticated',
         email: 'user@example.com',
         configPath: '/home/.config/walkeros/config.json',
       });
+      const client = stubClient({ requestDeviceCode, pollForToken });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({
         action: 'login',
         deviceCode: 'dev_existing',
-      });
+      })) as { structuredContent: { authenticated: boolean } };
 
-      expect(mockRequestDeviceCode).not.toHaveBeenCalled();
-      expect(mockPollForToken).toHaveBeenCalledWith('dev_existing', {
+      expect(requestDeviceCode).not.toHaveBeenCalled();
+      expect(pollForToken).toHaveBeenCalledWith('dev_existing', {
         timeoutMs: 60000,
       });
       expect(result.structuredContent.authenticated).toBe(true);
     });
 
     it('returns pending with deviceCode on retry timeout', async () => {
-      mockPollForToken.mockResolvedValue({
+      const requestDeviceCode = jest.fn();
+      const pollForToken = jest.fn().mockResolvedValue({
         success: false,
         status: 'pending',
       });
+      const client = stubClient({ requestDeviceCode, pollForToken });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({
         action: 'login',
         deviceCode: 'dev_timeout',
-      });
+      })) as {
+        structuredContent: {
+          authenticated: boolean;
+          status: string;
+          deviceCode: string;
+        };
+      };
 
-      expect(mockRequestDeviceCode).not.toHaveBeenCalled();
-      expect(mockPollForToken).toHaveBeenCalledWith('dev_timeout', {
+      expect(requestDeviceCode).not.toHaveBeenCalled();
+      expect(pollForToken).toHaveBeenCalledWith('dev_timeout', {
         timeoutMs: 60000,
       });
       expect(result.structuredContent.authenticated).toBe(false);
@@ -181,17 +197,19 @@ describe('auth tool', () => {
     });
 
     it('returns error when poll fails with error status', async () => {
-      mockPollForToken.mockResolvedValue({
+      const pollForToken = jest.fn().mockResolvedValue({
         success: false,
         status: 'error',
         error: 'access_denied',
       });
+      const client = stubClient({ pollForToken });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({
         action: 'login',
         deviceCode: 'dev_denied',
-      });
+      })) as { isError: boolean; content: Array<{ text: string }> };
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
@@ -212,22 +230,30 @@ describe('auth tool', () => {
 
     it('calls deleteConfig and returns success', async () => {
       delete process.env.WALKEROS_TOKEN;
-      mockDeleteConfig.mockReturnValue(true);
+      const deleteConfig = jest.fn().mockReturnValue(true);
+      const client = stubClient({ deleteConfig });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({ action: 'logout' });
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({ action: 'logout' })) as {
+        structuredContent: { loggedOut: boolean; message: string };
+      };
 
-      expect(mockDeleteConfig).toHaveBeenCalled();
+      expect(deleteConfig).toHaveBeenCalled();
       expect(result.structuredContent.loggedOut).toBe(true);
       expect(result.structuredContent.message).toContain('Logged out');
     });
 
     it('returns success even when no config existed', async () => {
       delete process.env.WALKEROS_TOKEN;
-      mockDeleteConfig.mockReturnValue(false);
+      const deleteConfig = jest.fn().mockReturnValue(false);
+      const client = stubClient({ deleteConfig });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({ action: 'logout' });
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({ action: 'logout' })) as {
+        structuredContent: { loggedOut: boolean; message: string };
+      };
 
       expect(result.structuredContent.loggedOut).toBe(true);
       expect(result.structuredContent.message).toContain('already logged out');
@@ -235,12 +261,16 @@ describe('auth tool', () => {
 
     it('clears WALKEROS_TOKEN env var and mentions it in the message', async () => {
       process.env.WALKEROS_TOKEN = 'tok_env_abc';
-      mockDeleteConfig.mockReturnValue(true);
+      const deleteConfig = jest.fn().mockReturnValue(true);
+      const client = stubClient({ deleteConfig });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({ action: 'logout' });
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({ action: 'logout' })) as {
+        structuredContent: { loggedOut: boolean; message: string };
+      };
 
-      expect(mockDeleteConfig).toHaveBeenCalled();
+      expect(deleteConfig).toHaveBeenCalled();
       expect(process.env.WALKEROS_TOKEN).toBeUndefined();
       expect(result.structuredContent.loggedOut).toBe(true);
       expect(result.structuredContent.message).toContain('Config removed');
@@ -249,25 +279,33 @@ describe('auth tool', () => {
 
     it('subsequent status call reports unauthenticated after logout with env token', async () => {
       process.env.WALKEROS_TOKEN = 'tok_env_xyz';
-      mockDeleteConfig.mockReturnValue(true);
-      // Tool's own status path calls resolveToken(); simulate it returning null
-      // once logout clears things.
-      mockResolveToken.mockReturnValue(null);
+      const deleteConfig = jest.fn().mockReturnValue(true);
+      const client = stubClient({
+        deleteConfig,
+        resolveToken: () => null,
+      });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
+      const tool = server.getTool('auth')!;
       await tool.handler({ action: 'logout' });
       expect(process.env.WALKEROS_TOKEN).toBeUndefined();
 
-      const statusResult = await tool.handler({ action: 'status' });
+      const statusResult = (await tool.handler({ action: 'status' })) as {
+        structuredContent: { authenticated: boolean };
+      };
       expect(statusResult.structuredContent.authenticated).toBe(false);
     });
 
     it('clears env token even when no config existed', async () => {
       process.env.WALKEROS_TOKEN = 'tok_env_only';
-      mockDeleteConfig.mockReturnValue(false);
+      const deleteConfig = jest.fn().mockReturnValue(false);
+      const client = stubClient({ deleteConfig });
+      registerAuthTool(server as never, client);
 
-      const tool = server.getTool('auth');
-      const result = await tool.handler({ action: 'logout' });
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({ action: 'logout' })) as {
+        structuredContent: { loggedOut: boolean; message: string };
+      };
 
       expect(process.env.WALKEROS_TOKEN).toBeUndefined();
       expect(result.structuredContent.loggedOut).toBe(true);

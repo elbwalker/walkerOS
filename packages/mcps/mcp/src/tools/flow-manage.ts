@@ -1,22 +1,11 @@
 import { z } from 'zod';
-import {
-  listAllFlows,
-  listFlows,
-  getFlow,
-  createFlow,
-  updateFlow,
-  deleteFlow,
-  duplicateFlow,
-  listPreviews,
-  getPreview,
-  createPreview,
-  deletePreview,
-} from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
 
-export function registerFlowManageTool(server: McpServer) {
+import type { ToolClient } from '../tool-client.js';
+
+export function registerFlowManageTool(server: McpServer, client: ToolClient) {
   server.registerTool(
     'flow_manage',
     {
@@ -109,7 +98,6 @@ export function registerFlowManageTool(server: McpServer) {
             'Optional site URL for preview_create. When provided, the response includes full activationUrl and deactivationUrl the user can click.',
           ),
       },
-      // No outputSchema: action-dispatched tool — each action returns a different shape
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -137,7 +125,7 @@ export function registerFlowManageTool(server: McpServer) {
         switch (action) {
           case 'list': {
             if (projectId) {
-              const data = await listFlows({
+              const data = await client.listFlows({
                 projectId,
                 sort,
                 order,
@@ -145,7 +133,11 @@ export function registerFlowManageTool(server: McpServer) {
               });
               return mcpResult(data);
             }
-            const data = await listAllFlows({ sort, order, includeDeleted });
+            const data = await client.listAllFlows({
+              sort,
+              order,
+              includeDeleted,
+            });
             return mcpResult(
               { projects: data },
               {
@@ -165,7 +157,7 @@ export function registerFlowManageTool(server: McpServer) {
                 ),
               );
             }
-            const flow = await getFlow({ flowId, projectId, fields });
+            const flow = await client.getFlow({ flowId, projectId, fields });
             return mcpResult(flow, {
               next: [
                 'Use flow_load to open this flow for editing and validation',
@@ -177,7 +169,7 @@ export function registerFlowManageTool(server: McpServer) {
             if (!name) {
               return mcpError(new Error('name is required for create action.'));
             }
-            const created = await createFlow({
+            const created = await client.createFlow({
               name,
               content: content ?? {},
               projectId,
@@ -197,7 +189,7 @@ export function registerFlowManageTool(server: McpServer) {
                 ),
               );
             }
-            const updated = await updateFlow({
+            const updated = await client.updateFlow({
               flowId,
               projectId,
               name,
@@ -215,7 +207,7 @@ export function registerFlowManageTool(server: McpServer) {
                 ),
               );
             }
-            const deleted = await deleteFlow({ flowId, projectId });
+            const deleted = await client.deleteFlow({ flowId, projectId });
             return mcpResult(deleted);
           }
 
@@ -227,7 +219,7 @@ export function registerFlowManageTool(server: McpServer) {
                 ),
               );
             }
-            const duplicated = await duplicateFlow({
+            const duplicated = await client.duplicateFlow({
               flowId,
               name,
               projectId,
@@ -243,7 +235,7 @@ export function registerFlowManageTool(server: McpServer) {
                 ),
               );
             }
-            const data = await listPreviews({ projectId, flowId });
+            const data = await client.listPreviews({ projectId, flowId });
             return mcpResult(data);
           }
 
@@ -253,7 +245,11 @@ export function registerFlowManageTool(server: McpServer) {
                 new Error('flowId and previewId are required for preview_get.'),
               );
             }
-            const data = await getPreview({ projectId, flowId, previewId });
+            const data = await client.getPreview({
+              projectId,
+              flowId,
+              previewId,
+            });
             return mcpResult(data);
           }
 
@@ -270,7 +266,7 @@ export function registerFlowManageTool(server: McpServer) {
                 ),
               );
             }
-            const preview = await createPreview({
+            const preview = await client.createPreview({
               projectId,
               flowId,
               flowName,
@@ -319,7 +315,7 @@ export function registerFlowManageTool(server: McpServer) {
                 ),
               );
             }
-            const data = await deletePreview({
+            const data = await client.deletePreview({
               projectId,
               flowId,
               previewId,

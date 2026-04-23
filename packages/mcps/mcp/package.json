@@ -10,10 +10,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./stdio": {
+      "types": "./dist/stdio.d.ts",
+      "default": "./dist/stdio.js"
     }
   },
   "bin": {
-    "walkeros-mcp": "./dist/index.js"
+    "walkeros-mcp": "./dist/stdio.js"
   },
   "files": [
     "dist/**",

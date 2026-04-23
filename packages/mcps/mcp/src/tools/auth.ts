@@ -1,22 +1,17 @@
 import { z } from 'zod';
-import {
-  resolveToken,
-  deleteConfig,
-  requestDeviceCode,
-  pollForToken,
-  whoami,
-} from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 
-export function registerAuthTool(server: McpServer) {
+import type { ToolClient } from '../tool-client.js';
+
+export function registerAuthTool(server: McpServer, client: ToolClient) {
   server.registerTool(
     'auth',
     {
       title: 'Authentication',
       description:
         'Manage walkerOS authentication. Check login status, log in via device code flow, or log out. ' +
-        'No terminal or browser required — the MCP client handles the authorization URL.',
+        'No terminal or browser required, the MCP client handles the authorization URL.',
       inputSchema: {
         action: z
           .enum(['status', 'login', 'logout'])
@@ -28,7 +23,6 @@ export function registerAuthTool(server: McpServer) {
             'Device code from a previous pending login attempt. Provide to resume polling without requesting a new code.',
           ),
       },
-      // No outputSchema: action-dispatched tool — each action returns a different shape
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -40,21 +34,23 @@ export function registerAuthTool(server: McpServer) {
       try {
         switch (action) {
           case 'status': {
-            const resolved = resolveToken();
+            const resolved = client.resolveToken();
             if (!resolved) {
               return mcpResult(
                 { authenticated: false },
                 { next: ['Use auth with action "login" to authenticate'] },
               );
             }
-            const user = await whoami();
-            return mcpResult({ authenticated: true, ...user });
+            const user = await client.whoami();
+            return mcpResult({
+              authenticated: true,
+              ...(user as Record<string, unknown>),
+            });
           }
 
           case 'login': {
-            // Retry path: caller already has a deviceCode from a previous pending attempt
             if (deviceCode) {
-              const pollResult = await pollForToken(deviceCode, {
+              const pollResult = await client.pollForToken(deviceCode, {
                 timeoutMs: 60000,
               });
 
@@ -79,15 +75,12 @@ export function registerAuthTool(server: McpServer) {
                 });
               }
 
-              // pollResult is narrowed to { status: 'error', error: string }
               return mcpError(
                 new Error(pollResult.error || 'Authorization failed'),
               );
             }
 
-            // Fresh login: return URL immediately, do NOT poll
-            // The user needs to see and open the URL first
-            const code = await requestDeviceCode();
+            const code = await client.requestDeviceCode();
             const loginUrl =
               code.verificationUriComplete || code.verificationUri;
 
@@ -101,7 +94,7 @@ export function registerAuthTool(server: McpServer) {
           }
 
           case 'logout': {
-            const deleted = deleteConfig();
+            const deleted = client.deleteConfig();
             const hadEnvToken =
               typeof process.env.WALKEROS_TOKEN === 'string' &&
               process.env.WALKEROS_TOKEN.length > 0;
@@ -116,7 +109,7 @@ export function registerAuthTool(server: McpServer) {
               message =
                 'No config found. WALKEROS_TOKEN cleared from process environment.';
             } else {
-              message = 'No config found — already logged out.';
+              message = 'No config found, already logged out.';
             }
             return mcpResult({
               loggedOut: true,

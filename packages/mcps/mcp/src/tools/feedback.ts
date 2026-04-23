@@ -1,15 +1,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import {
-  feedback,
-  getFeedbackPreference,
-  setFeedbackPreference,
-} from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
+
+import type { ToolClient } from '../tool-client.js';
 
 declare const __VERSION__: string;
 
-export function registerFeedbackTool(server: McpServer) {
+export function registerFeedbackTool(server: McpServer, client: ToolClient) {
   server.registerTool(
     'feedback',
     {
@@ -35,9 +32,8 @@ export function registerFeedbackTool(server: McpServer) {
       try {
         const { text, anonymous: explicitAnonymous } = params;
 
-        let anonymous = getFeedbackPreference();
+        let anonymous = client.getFeedbackPreference();
 
-        // First time: need user's consent choice
         if (anonymous === undefined && explicitAnonymous === undefined) {
           return mcpResult(
             { needsConsent: true },
@@ -50,16 +46,17 @@ export function registerFeedbackTool(server: McpServer) {
           );
         }
 
-        // Store preference if this is the first time
         if (anonymous === undefined && explicitAnonymous !== undefined) {
           anonymous = explicitAnonymous;
-          setFeedbackPreference(anonymous);
+          client.setFeedbackPreference(anonymous);
         }
 
-        // Use explicit override if provided, otherwise use stored value
         const isAnonymous = explicitAnonymous ?? anonymous ?? true;
 
-        await feedback(text, { anonymous: isAnonymous, version: __VERSION__ });
+        await client.submitFeedback(text, {
+          anonymous: isAnonymous,
+          version: __VERSION__,
+        });
 
         return mcpResult({ ok: true });
       } catch (error) {

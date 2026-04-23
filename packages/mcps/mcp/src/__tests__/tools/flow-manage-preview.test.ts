@@ -1,19 +1,3 @@
-import { registerFlowManageTool } from '../../tools/flow-manage.js';
-
-jest.mock('@walkeros/cli', () => ({
-  listAllFlows: jest.fn(),
-  listFlows: jest.fn(),
-  getFlow: jest.fn(),
-  createFlow: jest.fn(),
-  updateFlow: jest.fn(),
-  deleteFlow: jest.fn(),
-  duplicateFlow: jest.fn(),
-  listPreviews: jest.fn(),
-  getPreview: jest.fn(),
-  createPreview: jest.fn(),
-  deletePreview: jest.fn(),
-}));
-
 jest.mock('@walkeros/core', () => ({
   mcpResult: jest.fn((result, hints) => ({
     content: [
@@ -42,17 +26,8 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import {
-  listPreviews,
-  getPreview,
-  createPreview,
-  deletePreview,
-} from '@walkeros/cli';
-
-const mockListPreviews = jest.mocked(listPreviews);
-const mockGetPreview = jest.mocked(getPreview);
-const mockCreatePreview = jest.mocked(createPreview);
-const mockDeletePreview = jest.mocked(deletePreview);
+import { registerFlowManageTool } from '../../tools/flow-manage.js';
+import { stubClient } from '../support/stub-client.js';
 
 const mockExtra = {
   _meta: {},
@@ -60,10 +35,15 @@ const mockExtra = {
   signal: undefined,
 };
 
+type HandlerFn = (
+  input: Record<string, unknown>,
+  extra?: unknown,
+) => Promise<unknown>;
+
 function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
+  const tools: Record<string, { config: unknown; handler: HandlerFn }> = {};
   return {
-    registerTool(name: string, config: unknown, handler: Function) {
+    registerTool(name: string, config: unknown, handler: HandlerFn) {
       tools[name] = { config, handler };
     },
     getTool(name: string) {
@@ -78,30 +58,31 @@ describe('flow_manage tool — preview actions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     server = createMockServer();
-    registerFlowManageTool(server as any);
   });
 
   describe('preview_list', () => {
     it('requires flowId', async () => {
-      const tool = server.getTool('flow_manage');
-      const result = await tool.handler(
+      registerFlowManageTool(server as never, stubClient());
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
         { action: 'preview_list' },
         mockExtra,
-      );
+      )) as { isError: boolean };
 
       expect(result.isError).toBe(true);
     });
 
     it('calls listPreviews with projectId and flowId', async () => {
-      mockListPreviews.mockResolvedValue({ previews: [] } as never);
+      const listPreviews = jest.fn().mockResolvedValue({ previews: [] });
+      registerFlowManageTool(server as never, stubClient({ listPreviews }));
 
-      const tool = server.getTool('flow_manage');
-      const result = await tool.handler(
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
         { action: 'preview_list', projectId: 'proj_1', flowId: 'cfg_1' },
         mockExtra,
-      );
+      )) as { isError?: boolean; structuredContent: unknown };
 
-      expect(mockListPreviews).toHaveBeenCalledWith({
+      expect(listPreviews).toHaveBeenCalledWith({
         projectId: 'proj_1',
         flowId: 'cfg_1',
       });
@@ -112,29 +93,33 @@ describe('flow_manage tool — preview actions', () => {
 
   describe('preview_get', () => {
     it('requires flowId and previewId', async () => {
-      const tool = server.getTool('flow_manage');
+      registerFlowManageTool(server as never, stubClient());
+      const tool = server.getTool('flow_manage')!;
 
-      const r1 = await tool.handler({ action: 'preview_get' }, mockExtra);
+      const r1 = (await tool.handler({ action: 'preview_get' }, mockExtra)) as {
+        isError: boolean;
+      };
       expect(r1.isError).toBe(true);
 
-      const r2 = await tool.handler(
+      const r2 = (await tool.handler(
         { action: 'preview_get', flowId: 'cfg_1' },
         mockExtra,
-      );
+      )) as { isError: boolean };
       expect(r2.isError).toBe(true);
 
-      const r3 = await tool.handler(
+      const r3 = (await tool.handler(
         { action: 'preview_get', previewId: 'prv_1' },
         mockExtra,
-      );
+      )) as { isError: boolean };
       expect(r3.isError).toBe(true);
     });
 
     it('calls getPreview with all ids', async () => {
-      mockGetPreview.mockResolvedValue({ id: 'prv_1' } as never);
+      const getPreview = jest.fn().mockResolvedValue({ id: 'prv_1' });
+      registerFlowManageTool(server as never, stubClient({ getPreview }));
 
-      const tool = server.getTool('flow_manage');
-      const result = await tool.handler(
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
         {
           action: 'preview_get',
           projectId: 'proj_1',
@@ -142,9 +127,9 @@ describe('flow_manage tool — preview actions', () => {
           previewId: 'prv_1',
         },
         mockExtra,
-      );
+      )) as { isError?: boolean; structuredContent: unknown };
 
-      expect(mockGetPreview).toHaveBeenCalledWith({
+      expect(getPreview).toHaveBeenCalledWith({
         projectId: 'proj_1',
         flowId: 'cfg_1',
         previewId: 'prv_1',
@@ -156,66 +141,70 @@ describe('flow_manage tool — preview actions', () => {
 
   describe('preview_create', () => {
     it('requires flowId', async () => {
-      const tool = server.getTool('flow_manage');
-      const result = await tool.handler(
+      registerFlowManageTool(server as never, stubClient());
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
         { action: 'preview_create', flowName: 'demo' },
         mockExtra,
-      );
+      )) as { isError: boolean };
 
       expect(result.isError).toBe(true);
     });
 
     it('requires flowName or flowSettingsId', async () => {
-      const tool = server.getTool('flow_manage');
-      const result = await tool.handler(
+      registerFlowManageTool(server as never, stubClient());
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
         { action: 'preview_create', flowId: 'cfg_1' },
         mockExtra,
-      );
+      )) as { isError: boolean };
 
       expect(result.isError).toBe(true);
     });
 
     it('without siteUrl returns activationParam only (no activationUrl, no deactivationUrl)', async () => {
-      mockCreatePreview.mockResolvedValue({
+      const createPreview = jest.fn().mockResolvedValue({
         id: 'prv_1',
         token: 'tok_abc',
         activationUrl: '?elbPreview=tok_abc',
         bundleUrl: 'https://cdn.example.com/preview.js',
         createdBy: 'user_1',
         createdAt: '2026-04-21T00:00:00Z',
-      } as never);
+      });
+      registerFlowManageTool(server as never, stubClient({ createPreview }));
 
-      const tool = server.getTool('flow_manage');
-      const result = await tool.handler(
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
         { action: 'preview_create', flowId: 'cfg_1', flowName: 'demo' },
         mockExtra,
-      );
+      )) as { isError?: boolean; structuredContent: Record<string, unknown> };
 
-      expect(mockCreatePreview).toHaveBeenCalledWith({
+      expect(createPreview).toHaveBeenCalledWith({
         projectId: undefined,
         flowId: 'cfg_1',
         flowName: 'demo',
         flowSettingsId: undefined,
       });
       expect(result.isError).toBeUndefined();
-      const data = result.structuredContent as Record<string, unknown>;
+      const data = result.structuredContent;
       expect(data.activationParam).toBe('?elbPreview=tok_abc');
       expect(data.activationUrl).toBeUndefined();
       expect(data.deactivationUrl).toBeUndefined();
     });
 
     it('with siteUrl returns full activationUrl and deactivationUrl', async () => {
-      mockCreatePreview.mockResolvedValue({
+      const createPreview = jest.fn().mockResolvedValue({
         id: 'prv_1',
         token: 'tok_abc',
         activationUrl: '?elbPreview=tok_abc',
         bundleUrl: 'https://cdn.example.com/preview.js',
         createdBy: 'user_1',
         createdAt: '2026-04-21T00:00:00Z',
-      } as never);
+      });
+      registerFlowManageTool(server as never, stubClient({ createPreview }));
 
-      const tool = server.getTool('flow_manage');
-      const result = await tool.handler(
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
         {
           action: 'preview_create',
           flowId: 'cfg_1',
@@ -223,10 +212,10 @@ describe('flow_manage tool — preview actions', () => {
           siteUrl: 'https://example.com',
         },
         mockExtra,
-      );
+      )) as { isError?: boolean; structuredContent: Record<string, unknown> };
 
       expect(result.isError).toBeUndefined();
-      const data = result.structuredContent as Record<string, unknown>;
+      const data = result.structuredContent;
       expect(data.activationUrl).toBe(
         'https://example.com/?elbPreview=tok_abc',
       );
@@ -235,26 +224,27 @@ describe('flow_manage tool — preview actions', () => {
     });
 
     it('works with flowSettingsId instead of flowName', async () => {
-      mockCreatePreview.mockResolvedValue({
+      const createPreview = jest.fn().mockResolvedValue({
         id: 'prv_1',
         token: 'tok_abc',
         activationUrl: '?elbPreview=tok_abc',
         bundleUrl: 'https://cdn.example.com/preview.js',
         createdBy: 'user_1',
         createdAt: '2026-04-21T00:00:00Z',
-      } as never);
+      });
+      registerFlowManageTool(server as never, stubClient({ createPreview }));
 
-      const tool = server.getTool('flow_manage');
-      const result = await tool.handler(
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
         {
           action: 'preview_create',
           flowId: 'cfg_1',
           flowSettingsId: 'set_1',
         },
         mockExtra,
-      );
+      )) as { isError?: boolean };
 
-      expect(mockCreatePreview).toHaveBeenCalledWith({
+      expect(createPreview).toHaveBeenCalledWith({
         projectId: undefined,
         flowId: 'cfg_1',
         flowName: undefined,
@@ -266,29 +256,34 @@ describe('flow_manage tool — preview actions', () => {
 
   describe('preview_delete', () => {
     it('requires flowId and previewId', async () => {
-      const tool = server.getTool('flow_manage');
+      registerFlowManageTool(server as never, stubClient());
+      const tool = server.getTool('flow_manage')!;
 
-      const r1 = await tool.handler({ action: 'preview_delete' }, mockExtra);
+      const r1 = (await tool.handler(
+        { action: 'preview_delete' },
+        mockExtra,
+      )) as { isError: boolean };
       expect(r1.isError).toBe(true);
 
-      const r2 = await tool.handler(
+      const r2 = (await tool.handler(
         { action: 'preview_delete', flowId: 'cfg_1' },
         mockExtra,
-      );
+      )) as { isError: boolean };
       expect(r2.isError).toBe(true);
 
-      const r3 = await tool.handler(
+      const r3 = (await tool.handler(
         { action: 'preview_delete', previewId: 'prv_1' },
         mockExtra,
-      );
+      )) as { isError: boolean };
       expect(r3.isError).toBe(true);
     });
 
     it('calls deletePreview with all ids', async () => {
-      mockDeletePreview.mockResolvedValue({ deleted: true } as never);
+      const deletePreview = jest.fn().mockResolvedValue({ deleted: true });
+      registerFlowManageTool(server as never, stubClient({ deletePreview }));
 
-      const tool = server.getTool('flow_manage');
-      const result = await tool.handler(
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
         {
           action: 'preview_delete',
           projectId: 'proj_1',
@@ -296,9 +291,9 @@ describe('flow_manage tool — preview actions', () => {
           previewId: 'prv_1',
         },
         mockExtra,
-      );
+      )) as { isError?: boolean; structuredContent: unknown };
 
-      expect(mockDeletePreview).toHaveBeenCalledWith({
+      expect(deletePreview).toHaveBeenCalledWith({
         projectId: 'proj_1',
         flowId: 'cfg_1',
         previewId: 'prv_1',

@@ -1,17 +1,14 @@
 import { z } from 'zod';
-import {
-  listProjects,
-  getProject,
-  createProject,
-  updateProject,
-  deleteProject,
-  setDefaultProject,
-} from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
 
-export function registerProjectManageTool(server: McpServer) {
+import type { ToolClient } from '../tool-client.js';
+
+export function registerProjectManageTool(
+  server: McpServer,
+  client: ToolClient,
+) {
   server.registerTool(
     'project_manage',
     {
@@ -35,7 +32,6 @@ export function registerProjectManageTool(server: McpServer) {
             'Project name. Required for create. Optional for update (to rename).',
           ),
       },
-      // No outputSchema: action-dispatched tool — each action returns a different shape
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -47,7 +43,9 @@ export function registerProjectManageTool(server: McpServer) {
       try {
         switch (action) {
           case 'list': {
-            const projects = await listProjects();
+            const projects = (await client.listProjects()) as
+              | unknown[]
+              | { projects?: unknown[] };
             const items = Array.isArray(projects)
               ? projects
               : projects?.projects || [];
@@ -73,7 +71,7 @@ export function registerProjectManageTool(server: McpServer) {
                 ),
               );
             }
-            const project = await getProject({ projectId });
+            const project = await client.getProject({ projectId });
             return mcpResult(project);
           }
 
@@ -81,7 +79,7 @@ export function registerProjectManageTool(server: McpServer) {
             if (!name) {
               return mcpError(new Error('name is required for create action.'));
             }
-            const created = await createProject({ name });
+            const created = await client.createProject({ name });
             return mcpResult(created, {
               next: [
                 'Use project_manage with action "set_default" to make this your active project',
@@ -100,7 +98,7 @@ export function registerProjectManageTool(server: McpServer) {
             if (!name) {
               return mcpError(new Error('name is required for update action.'));
             }
-            const updated = await updateProject({ projectId, name });
+            const updated = await client.updateProject({ projectId, name });
             return mcpResult(updated);
           }
 
@@ -112,7 +110,7 @@ export function registerProjectManageTool(server: McpServer) {
                 ),
               );
             }
-            const deleted = await deleteProject({ projectId });
+            const deleted = await client.deleteProject({ projectId });
             return mcpResult(deleted);
           }
 
@@ -124,7 +122,7 @@ export function registerProjectManageTool(server: McpServer) {
                 ),
               );
             }
-            setDefaultProject(projectId);
+            client.setDefaultProject(projectId);
             return mcpResult(
               { defaultProjectId: projectId },
               {

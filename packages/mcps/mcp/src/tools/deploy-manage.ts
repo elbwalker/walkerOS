@@ -1,12 +1,8 @@
 import { z } from 'zod';
-import {
-  deploy as deployFlow,
-  listDeployments,
-  getDeploymentBySlug,
-  deleteDeployment,
-} from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
+
+import type { ToolClient } from '../tool-client.js';
 import { isAuthError, AUTH_HINT } from '../types.js';
 import {
   resolveDeploymentSlug,
@@ -14,15 +10,12 @@ import {
   type ListDeploymentsForResolver,
 } from './_resolvers.js';
 
-/**
- * Wraps the CLI's listDeployments for use as the resolver's injected list
- * function. Narrows the response to the fields the resolver needs.
- */
 function listForResolver(
+  client: ToolClient,
   projectId: string | undefined,
 ): ListDeploymentsForResolver {
   return async (q) => {
-    const resp = (await listDeployments({
+    const resp = (await client.listDeployments({
       projectId: projectId ?? q.projectId,
       flowId: q.flowId,
     })) as { deployments?: DeploymentSummaryForResolver[] };
@@ -30,7 +23,7 @@ function listForResolver(
   };
 }
 
-export function registerDeployTool(server: McpServer) {
+export function registerDeployTool(server: McpServer, client: ToolClient) {
   server.registerTool(
     'deploy_manage',
     {
@@ -77,7 +70,6 @@ export function registerDeployTool(server: McpServer) {
             'Flow name for multi-settings flows. Only used with deploy action.',
           ),
       },
-      // No outputSchema: action-dispatched tool — each action returns a different shape
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -105,7 +97,7 @@ export function registerDeployTool(server: McpServer) {
                 ),
               );
             }
-            const result = await deployFlow({
+            const result = await client.deploy({
               flowId,
               wait: wait ?? true,
               flowName,
@@ -118,7 +110,7 @@ export function registerDeployTool(server: McpServer) {
           }
 
           case 'list': {
-            const data = await listDeployments({
+            const data = await client.listDeployments({
               projectId,
               flowId,
               type,
@@ -139,9 +131,9 @@ export function registerDeployTool(server: McpServer) {
               projectId: projectId ?? '',
               flowId,
               slug,
-              list: listForResolver(projectId),
+              list: listForResolver(client, projectId),
             });
-            const data = await getDeploymentBySlug({
+            const data = await client.getDeploymentBySlug({
               slug: resolvedSlug,
               projectId,
             });
@@ -160,13 +152,16 @@ export function registerDeployTool(server: McpServer) {
               projectId: projectId ?? '',
               flowId,
               slug,
-              list: listForResolver(projectId),
+              list: listForResolver(client, projectId),
             });
-            const data = await deleteDeployment({
+            const data = await client.deleteDeployment({
               slug: resolvedSlug,
               projectId,
             });
-            return mcpResult({ deleted: true, ...data });
+            return mcpResult({
+              deleted: true,
+              ...(data as Record<string, unknown>),
+            });
           }
 
           default:
