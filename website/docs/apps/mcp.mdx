@@ -190,6 +190,7 @@ a URL to open in a browser to complete login.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `action` | `"status"` \| `"login"` \| `"logout"` | Yes | Auth action |
+| `deviceCode` | string | No | Device code from a previous pending login. Provide with `action: "login"` to resume polling without requesting a new code. |
 
 #### `project_manage`
 
@@ -229,13 +230,26 @@ Deploy walkerOS flows and manage deployments.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `action` | `"deploy"` \| `"list"` \| `"get"` \| `"delete"` | Yes | Deployment action |
-| `flowId` | string | No | Flow ID. Required for: `deploy`. |
-| `id` | string | No | Deployment slug (e.g. `dep_...`). Required for: `get`, `delete`. Must be a deployment slug, not a flow ID — resolve via `flow_manage` with action `get` if you only have a flow ID. |
-| `projectId` | string | No | Project ID. Optional filter for `list`. |
+| `flowId` | string | Conditional | Flow ID. Required for: `deploy`, `get`, `delete`. Optional filter for `list`. |
+| `slug` | string | No | Deployment slug. Optional disambiguator for `get`/`delete` when the flow has multiple active deployments. |
+| `projectId` | string | No | Project ID. Optional; falls back to the default project. |
 | `type` | `"web"` \| `"server"` | No | Deployment type filter for `list`. |
 | `status` | string | No | Status filter for `list`. |
 | `wait` | boolean | No | Wait for deploy to complete (default: `true`). Only used with `deploy`. |
 | `flowName` | string | No | Flow name for multi-settings flows. Only used with `deploy`. |
+
+When a flow has more than one active deployment and no `slug` is supplied, `get` and `delete` return a `MULTIPLE_DEPLOYMENTS` error with a `details[]` list so the caller can pick a specific deployment. Soft-deleted deployments are always excluded.
+
+```json
+{
+  "error": "Flow flow_abc has 2 active deployments; pass slug to disambiguate",
+  "code": "MULTIPLE_DEPLOYMENTS",
+  "details": [
+    { "slug": "abc123456789", "type": "web", "status": "active", "updatedAt": "2026-04-20T00:00:00.000Z" },
+    { "slug": "def987654321", "type": "web", "status": "active", "updatedAt": "2026-04-21T00:00:00.000Z" }
+  ]
+}
+```
 
 ### Resources
 

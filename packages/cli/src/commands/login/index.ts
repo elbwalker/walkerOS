@@ -1,4 +1,5 @@
 import { hostname } from 'os';
+import { z } from 'zod';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   writeConfig,
@@ -6,6 +7,32 @@ import {
   getConfigPath,
 } from '../../lib/config-file.js';
 import type { GlobalOptions } from '../../types/global.js';
+
+/**
+ * Zod schema for the device-code response from `POST /api/auth/device/code`.
+ * Validates the trust boundary between the auth server and the CLI so a
+ * malformed response cannot propagate `undefined` into the browser-opener
+ * or subsequent token polling.
+ */
+const DeviceCodeResponseSchema = z.object({
+  deviceCode: z.string().min(1),
+  userCode: z.string().min(1),
+  verificationUri: z.string().min(1),
+  verificationUriComplete: z.string().optional(),
+  // Server protocol allows 0 for both (e.g. fast retry / already expired).
+  expiresIn: z.number().int().nonnegative(),
+  interval: z.number().int().nonnegative(),
+});
+
+/**
+ * Zod schema for the token response from `POST /api/auth/device/token` on 2xx.
+ * Validates that the token and email are both present and are strings before
+ * writing them to the on-disk config.
+ */
+const TokenResponseSchema = z.object({
+  token: z.string().min(1),
+  email: z.string().min(1),
+});
 
 export interface LoginCommandOptions extends GlobalOptions {
   url?: string;
@@ -121,15 +148,25 @@ export async function requestDeviceCode(
     throw new Error('Failed to request device code');
   }
 
-  const data = await response.json();
+  let raw: unknown;
+  try {
+    raw = await response.json();
+  } catch {
+    throw new Error('Malformed device code response');
+  }
+
+  const parsed = DeviceCodeResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error('Malformed device code response');
+  }
 
   return {
-    deviceCode: data.deviceCode,
-    userCode: data.userCode,
-    verificationUri: data.verificationUri,
-    verificationUriComplete: data.verificationUriComplete,
-    expiresIn: data.expiresIn,
-    interval: data.interval,
+    deviceCode: parsed.data.deviceCode,
+    userCode: parsed.data.userCode,
+    verificationUri: parsed.data.verificationUri,
+    verificationUriComplete: parsed.data.verificationUriComplete,
+    expiresIn: parsed.data.expiresIn,
+    interval: parsed.data.interval,
   };
 }
 
@@ -195,34 +232,28 @@ export async function pollForToken(
     }
 
     if (tokenResponse.ok) {
-      const token = data.token;
-      const email = data.email;
-      if (typeof token === 'string' && token.length > 0) {
-        if (typeof email !== 'string' || email.length === 0) {
-          return {
-            success: false,
-            status: 'error',
-            error: 'Server returned malformed response (missing email)',
-          };
-        }
-        writeConfig({ token, email, appUrl });
-        const configPath = getConfigPath();
-        return {
-          success: true,
-          status: 'authenticated',
-          email,
-          configPath,
-        };
+      // ok=true but no token and no error field — treat as pending and continue.
+      // Only try to validate as a token response if a `token` key is present.
+      if (data.token === undefined) {
+        continue;
       }
-      if (token !== undefined) {
+      const tokenParsed = TokenResponseSchema.safeParse(data);
+      if (!tokenParsed.success) {
         return {
           success: false,
           status: 'error',
-          error: 'Server returned malformed response (invalid token type)',
+          error: 'Server returned malformed token response',
         };
       }
-      // ok=true but no token and no error field — treat as pending and continue
-      continue;
+      const { token, email } = tokenParsed.data;
+      writeConfig({ token, email, appUrl });
+      const configPath = getConfigPath();
+      return {
+        success: true,
+        status: 'authenticated',
+        email,
+        configPath,
+      };
     }
 
     if (data.error === 'authorization_pending') continue;
@@ -355,26 +386,20 @@ export async function login(options: LoginOptions = {}): Promise<LoginResult> {
       }
 
       if (tokenResponse.ok) {
-        const token = data.token;
-        const email = data.email;
-        if (typeof token === 'string' && token.length > 0) {
-          if (typeof email !== 'string' || email.length === 0) {
-            return {
-              success: false,
-              error: 'Server returned malformed response (missing email)',
-            };
-          }
-          writeConfig({ token, email, appUrl });
-          const configPath = getConfigPath();
-          return { success: true, email, configPath };
+        if (data.token === undefined) {
+          continue;
         }
-        if (token !== undefined) {
+        const tokenParsed = TokenResponseSchema.safeParse(data);
+        if (!tokenParsed.success) {
           return {
             success: false,
-            error: 'Server returned malformed response (invalid token type)',
+            error: 'Server returned malformed token response',
           };
         }
-        continue;
+        const { token, email } = tokenParsed.data;
+        writeConfig({ token, email, appUrl });
+        const configPath = getConfigPath();
+        return { success: true, email, configPath };
       }
 
       if (data.error === 'authorization_pending') continue;

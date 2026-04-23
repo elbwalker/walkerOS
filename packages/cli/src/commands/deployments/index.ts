@@ -13,6 +13,7 @@ export interface ListDeploymentsOptions {
   projectId?: string;
   type?: 'web' | 'server';
   status?: string;
+  flowId?: string;
 }
 
 export async function listDeployments(options: ListDeploymentsOptions = {}) {
@@ -20,6 +21,7 @@ export async function listDeployments(options: ListDeploymentsOptions = {}) {
   const params = new URLSearchParams();
   if (options.type) params.set('type', options.type);
   if (options.status) params.set('status', options.status);
+  if (options.flowId) params.set('flowId', options.flowId);
   const qs = params.toString();
 
   const response = await apiFetch(
@@ -30,6 +32,76 @@ export async function listDeployments(options: ListDeploymentsOptions = {}) {
     throwApiError(body, 'Failed to list deployments');
   }
   return response.json();
+}
+
+/**
+ * Summary of an active deployment returned by listDeployments, used when
+ * disambiguating which deployment to operate on for a given flow.
+ */
+export interface DeploymentSummaryForFlow {
+  slug: string;
+  type: string;
+  status: string;
+  updatedAt: string;
+}
+
+/**
+ * Error thrown by deleteDeploymentByFlowId and other flow-scoped helpers when
+ * the flow has multiple active (non-deleted) deployments and the caller did
+ * not disambiguate with an explicit slug.
+ *
+ * Callers (e.g. the MCP layer) can translate this into a structured error.
+ * The CLI package does not depend on MCP helpers.
+ */
+export class DeploymentAmbiguityError extends Error {
+  readonly code = 'MULTIPLE_DEPLOYMENTS';
+  readonly details: DeploymentSummaryForFlow[];
+  constructor(message: string, details: DeploymentSummaryForFlow[]) {
+    super(message);
+    this.name = 'DeploymentAmbiguityError';
+    this.details = details;
+  }
+}
+
+/**
+ * Delete a deployment identified by flowId, optionally disambiguated by slug
+ * when the flow has more than one active deployment. Throws
+ * DeploymentAmbiguityError when the flow has >= 2 active deployments and no
+ * slug is provided. Throws a plain Error (via throwApiError) when no match is
+ * found.
+ */
+export async function deleteDeploymentByFlowId(options: {
+  projectId?: string;
+  flowId: string;
+  slug?: string;
+}): Promise<unknown> {
+  const { flowId, slug } = options;
+  const projectId = options.projectId ?? requireProjectId();
+
+  if (slug) {
+    return deleteDeployment({ slug, projectId });
+  }
+
+  const listResp = (await listDeployments({ projectId, flowId })) as {
+    deployments?: DeploymentSummaryForFlow[];
+  };
+  const matches = listResp.deployments ?? [];
+
+  if (matches.length === 0) {
+    throw new Error(`No deployments found for flow ${flowId}`);
+  }
+  if (matches.length > 1) {
+    throw new DeploymentAmbiguityError(
+      `Flow ${flowId} has ${matches.length} active deployments; pass slug to disambiguate`,
+      matches.map((m) => ({
+        slug: m.slug,
+        type: m.type,
+        status: m.status,
+        updatedAt: m.updatedAt,
+      })),
+    );
+  }
+  return deleteDeployment({ slug: matches[0].slug, projectId });
 }
 
 export async function getDeploymentBySlug(options: {

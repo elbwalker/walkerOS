@@ -103,7 +103,7 @@ const serverDestinations: Destination[] = [
   },
   {
     icon: 'logos:google-cloud',
-    label: 'Google Data Manager',
+    label: 'Google Data Manager API',
     link: '/docs/destinations/server/datamanager',
   },
   {

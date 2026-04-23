@@ -2,13 +2,33 @@ import { z } from 'zod';
 import {
   deploy as deployFlow,
   listDeployments,
-  getDeployment,
   getDeploymentBySlug,
   deleteDeployment,
 } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
+import {
+  resolveDeploymentSlug,
+  type DeploymentSummaryForResolver,
+  type ListDeploymentsForResolver,
+} from './_resolvers.js';
+
+/**
+ * Wraps the CLI's listDeployments for use as the resolver's injected list
+ * function. Narrows the response to the fields the resolver needs.
+ */
+function listForResolver(
+  projectId: string | undefined,
+): ListDeploymentsForResolver {
+  return async (q) => {
+    const resp = (await listDeployments({
+      projectId: projectId ?? q.projectId,
+      flowId: q.flowId,
+    })) as { deployments?: DeploymentSummaryForResolver[] };
+    return resp.deployments ?? [];
+  };
+}
 
 export function registerDeployTool(server: McpServer) {
   server.registerTool(
@@ -16,28 +36,29 @@ export function registerDeployTool(server: McpServer) {
     {
       title: 'Deploy Management',
       description:
-        'Deploy walkerOS flows and manage deployments. Deploy a flow, list deployments, get deployment details, or delete deployments. ' +
-        'Note: the "get" and "delete" actions accept a deployment slug (e.g. "dep_..."), not a flow ID. ' +
-        'If you only have a flowId, resolve the latest deployment slug first via flow_manage with action "get".',
+        'Deploy walkerOS flows and manage deployments. ' +
+        'For get/delete actions pass flowId (required) plus optional slug to disambiguate when a flow has multiple active deployments. ' +
+        "If a flow has >=2 active deployments and no slug is supplied, the tool returns a MULTIPLE_DEPLOYMENTS error with a details[] list showing each deployment's slug, type, status, and updatedAt.",
       inputSchema: {
         action: z
           .enum(['deploy', 'list', 'get', 'delete'])
           .describe('Deployment action to perform'),
-        flowId: z
-          .string()
-          .optional()
-          .describe('Flow ID. Required for deploy action.'),
-        id: z
-          .string()
-          .optional()
-          .describe(
-            'Deployment slug (e.g. "dep_..."). Required for get and delete actions. ' +
-              'This is the deployment slug, not a flow ID — if you only have a flowId, use flow_manage action "get" to resolve the latest deployment slug.',
-          ),
         projectId: z
           .string()
           .optional()
-          .describe('Project ID. Optional filter for list.'),
+          .describe('Project ID. Optional; falls back to the default project.'),
+        flowId: z
+          .string()
+          .optional()
+          .describe(
+            'Flow ID. Required for: deploy, get, delete. Optional filter for list.',
+          ),
+        slug: z
+          .string()
+          .optional()
+          .describe(
+            'Deployment slug. Optional disambiguator for get/delete when the flow has multiple active deployments.',
+          ),
         type: z
           .enum(['web', 'server'])
           .optional()
@@ -64,7 +85,16 @@ export function registerDeployTool(server: McpServer) {
         openWorldHint: true,
       },
     },
-    async ({ action, flowId, id, projectId, type, status, wait, flowName }) => {
+    async ({
+      action,
+      projectId,
+      flowId,
+      slug,
+      type,
+      status,
+      wait,
+      flowName,
+    }) => {
       try {
         switch (action) {
           case 'deploy': {
@@ -88,52 +118,55 @@ export function registerDeployTool(server: McpServer) {
           }
 
           case 'list': {
-            const data = await listDeployments({ projectId, type, status });
+            const data = await listDeployments({
+              projectId,
+              flowId,
+              type,
+              status,
+            });
             return mcpResult(data);
           }
 
           case 'get': {
-            if (!id) {
+            if (!flowId) {
               return mcpError(
                 new Error(
-                  'id is required for get action. Use deploy_manage with action "list" to see available deployments.',
+                  'flowId is required for get action. Use flow_manage with action "list" to see available flows.',
                 ),
               );
             }
-            try {
-              const data = await getDeploymentBySlug({ slug: id, projectId });
-              return mcpResult(data);
-            } catch {
-              const data = await getDeployment({ flowId: id, projectId });
-              return mcpResult(data);
-            }
+            const resolvedSlug = await resolveDeploymentSlug({
+              projectId: projectId ?? '',
+              flowId,
+              slug,
+              list: listForResolver(projectId),
+            });
+            const data = await getDeploymentBySlug({
+              slug: resolvedSlug,
+              projectId,
+            });
+            return mcpResult(data);
           }
 
           case 'delete': {
-            if (!id) {
+            if (!flowId) {
               return mcpError(
                 new Error(
-                  'id is required for delete action. Use deploy_manage with action "list" to see available deployments.',
+                  'flowId is required for delete action. Use flow_manage with action "list" to see available flows.',
                 ),
               );
             }
-            try {
-              const data = await deleteDeployment({ slug: id, projectId });
-              return mcpResult({ deleted: true, ...data });
-            } catch (error) {
-              if (isAuthError(error)) {
-                return mcpError(error, AUTH_HINT);
-              }
-              const message =
-                error instanceof Error ? error.message : String(error);
-              if (/not[\s_-]?found|404/i.test(message)) {
-                return mcpError(
-                  error,
-                  'Deployment not found. The "delete" action expects a deployment slug (e.g. "dep_..."), not a flow ID. If you only have a flowId, use flow_manage with action "get" to resolve the latest deployment slug first.',
-                );
-              }
-              return mcpError(error);
-            }
+            const resolvedSlug = await resolveDeploymentSlug({
+              projectId: projectId ?? '',
+              flowId,
+              slug,
+              list: listForResolver(projectId),
+            });
+            const data = await deleteDeployment({
+              slug: resolvedSlug,
+              projectId,
+            });
+            return mcpResult({ deleted: true, ...data });
           }
 
           default:

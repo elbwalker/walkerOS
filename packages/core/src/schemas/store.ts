@@ -1,5 +1,6 @@
 import { z, toJsonSchema } from './validation';
 import { Identifier } from './primitives';
+import { LoggerConfigSchema } from './logger';
 
 /**
  * Store Schemas
@@ -26,36 +27,48 @@ export const ConfigSchema = z
   .object({
     settings: z
       .any()
+      .meta({
+        id: 'StoreSettings',
+        title: 'Store.Settings',
+        description:
+          'Implementation-specific configuration (store-defined shape).',
+      })
       .describe('Implementation-specific configuration')
       .optional(),
     env: z
       .any()
+      .meta({
+        id: 'StoreEnv',
+        title: 'Store.Env',
+        description: 'Environment dependencies (store-defined shape).',
+      })
       .describe('Environment dependencies (platform-specific)')
       .optional(),
     id: Identifier.describe(
       'Store instance identifier (defaults to store key)',
     ).optional(),
-    logger: z
-      .object({
-        level: z
-          .union([z.number(), z.enum(['ERROR', 'WARN', 'INFO', 'DEBUG'])])
-          .optional()
-          .describe('Minimum log level (default: ERROR)'),
-        handler: z.any().optional().describe('Custom log handler function'),
-      })
-      .optional()
-      .describe(
-        'Logger configuration (level, handler) to override the collector defaults',
-      ),
+    logger: LoggerConfigSchema.optional().describe(
+      'Logger configuration (level, handler) to override the collector defaults',
+    ),
+  })
+  .meta({
+    id: 'StoreConfig',
+    title: 'Store.Config',
+    description:
+      'Store configuration (settings, env, logger) — key-value infrastructure component.',
   })
   .describe('Store configuration');
 
 /**
  * PartialConfig - Config with all fields optional
  */
-export const PartialConfigSchema = ConfigSchema.partial().describe(
-  'Partial store configuration with all fields optional',
-);
+export const PartialConfigSchema = ConfigSchema.partial()
+  .meta({
+    id: 'StorePartialConfig',
+    title: 'Store.PartialConfig',
+    description: 'Partial store configuration with all fields optional.',
+  })
+  .describe('Partial store configuration with all fields optional');
 
 // ========================================
 // JSON Schema Exports (for Explorer/RJSF/MCP)

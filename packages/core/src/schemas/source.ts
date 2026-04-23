@@ -5,6 +5,7 @@ import {
   ValuesSchema,
 } from './mapping';
 import { Identifier } from './primitives';
+import { LoggerConfigSchema } from './logger';
 
 /**
  * Source Schemas
@@ -48,15 +49,43 @@ import { Identifier } from './primitives';
  */
 export const BaseEnvSchema = z
   .object({
-    push: z.unknown().describe('Collector push function'),
-    command: z.unknown().describe('Collector command function'),
+    push: z
+      .unknown()
+      .meta({
+        id: 'SourcePushFn',
+        title: 'Source.PushFn',
+        description:
+          'Collector push function passed to the source via dependency injection.',
+      })
+      .describe('Collector push function'),
+    command: z
+      .unknown()
+      .meta({
+        id: 'SourceCommandFn',
+        title: 'Source.CommandFn',
+        description: 'Collector command function passed to the source.',
+      })
+      .describe('Collector command function'),
     sources: z
       .unknown()
       .optional()
       .describe('Map of registered source instances'),
-    elb: z.unknown().describe('Public API function (alias for collector.push)'),
+    elb: z
+      .unknown()
+      .meta({
+        id: 'ElbFn',
+        title: 'Elb.Fn',
+        description: 'Public `elb(...)` API function alias for collector.push.',
+      })
+      .describe('Public API function (alias for collector.push)'),
   })
   .catchall(z.unknown())
+  .meta({
+    id: 'SourceBaseEnv',
+    title: 'Source.BaseEnv',
+    description:
+      'Base environment for source dependency injection; platform-specific sources extend this.',
+  })
   .describe(
     'Base environment for dependency injection - platform-specific sources extend this',
   );
@@ -84,6 +113,12 @@ export const BaseEnvSchema = z
 export const ConfigSchema = MappingConfigSchema.extend({
   settings: z
     .any()
+    .meta({
+      id: 'SourceSettings',
+      title: 'Source.Settings',
+      description:
+        'Implementation-specific configuration (source-defined shape).',
+    })
     .describe('Implementation-specific configuration')
     .optional(),
   env: BaseEnvSchema.optional().describe(
@@ -102,18 +137,9 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .describe(
       'Defer source initialization until these collector events fire (e.g., ["consent"])',
     ),
-  logger: z
-    .object({
-      level: z
-        .union([z.number(), z.enum(['ERROR', 'WARN', 'INFO', 'DEBUG'])])
-        .optional()
-        .describe('Minimum log level (default: ERROR)'),
-      handler: z.any().optional().describe('Custom log handler function'),
-    })
-    .optional()
-    .describe(
-      'Logger configuration (level, handler) to override the collector defaults',
-    ),
+  logger: LoggerConfigSchema.optional().describe(
+    'Logger configuration (level, handler) to override the collector defaults',
+  ),
   ingest: z
     .union([ValueSchema, ValuesSchema])
     .optional()
@@ -124,7 +150,14 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .boolean()
     .describe('Completely skip this source (no init, no event capture)')
     .optional(),
-}).describe('Source configuration with mapping and environment');
+})
+  .meta({
+    id: 'SourceConfig',
+    title: 'Source.Config',
+    description:
+      'Source configuration with mapping, environment, and lifecycle hooks.',
+  })
+  .describe('Source configuration with mapping and environment');
 
 /**
  * PartialConfig - Config with all fields optional
@@ -133,9 +166,13 @@ export const ConfigSchema = MappingConfigSchema.extend({
  * Note: ConfigSchema extends MappingConfigSchema with mostly optional fields.
  * Using .partial() ensures all fields are optional for config updates.
  */
-export const PartialConfigSchema = ConfigSchema.partial().describe(
-  'Partial source configuration with all fields optional',
-);
+export const PartialConfigSchema = ConfigSchema.partial()
+  .meta({
+    id: 'SourcePartialConfig',
+    title: 'Source.PartialConfig',
+    description: 'Partial source configuration with all fields optional.',
+  })
+  .describe('Partial source configuration with all fields optional');
 
 // ========================================
 // Instance Schema
@@ -171,18 +208,35 @@ export const InstanceSchema = z
     // Push function - flexible signature, not validated
     push: z
       .any()
+      .meta({
+        id: 'SourceInstancePushFn',
+        title: 'Source.PushFn',
+        description:
+          'Push function — THE HANDLER (flexible signature for platform compatibility).',
+      })
       .describe(
         'Push function - THE HANDLER (flexible signature for platform compatibility)',
       ),
     // Optional lifecycle methods
     destroy: z
       .any()
+      .meta({
+        id: 'SourceDestroyFn',
+        title: 'Source.DestroyFn',
+        description: 'Cleanup function called when the source is removed.',
+      })
       .optional()
       .describe('Cleanup function called when source is removed'),
     on: z
       .unknown()
       .optional()
       .describe('Lifecycle hook function for event types'),
+  })
+  .meta({
+    id: 'SourceInstance',
+    title: 'Source.Instance',
+    description:
+      'Source instance (runtime object with push handler and lifecycle methods).',
   })
   .describe('Source instance with push handler and lifecycle methods');
 
@@ -208,6 +262,12 @@ export const InstanceSchema = z
  */
 export const InitSchema = z
   .any()
+  .meta({
+    id: 'SourceInit',
+    title: 'Source.Init',
+    description:
+      'Source initialization function: (config, env) => Instance | Promise<Instance>.',
+  })
   .describe(
     'Source initialization function: (config, env) => Instance | Promise<Instance>',
   );
@@ -235,6 +295,12 @@ export const InitSourceSchema = z
       .optional()
       .describe('Mark as primary source (only one can be primary)'),
   })
+  .meta({
+    id: 'SourceInitSource',
+    title: 'Source.InitSource',
+    description:
+      'Source initialization bundle (init function + config + env + primary flag).',
+  })
   .describe('Source initialization configuration');
 
 /**
@@ -242,6 +308,11 @@ export const InitSourceSchema = z
  */
 export const InitSourcesSchema = z
   .record(z.string(), InitSourceSchema)
+  .meta({
+    id: 'SourceInitSources',
+    title: 'Source.InitSources',
+    description: 'Map of source IDs to initialization configurations.',
+  })
   .describe('Map of source IDs to initialization configurations');
 
 // ========================================

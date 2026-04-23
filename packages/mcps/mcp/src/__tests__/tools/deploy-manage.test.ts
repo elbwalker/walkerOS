@@ -3,7 +3,6 @@ import { registerDeployTool } from '../../tools/deploy-manage.js';
 jest.mock('@walkeros/cli', () => ({
   deploy: jest.fn(),
   listDeployments: jest.fn(),
-  getDeployment: jest.fn(),
   getDeploymentBySlug: jest.fn(),
   deleteDeployment: jest.fn(),
 }));
@@ -22,31 +21,31 @@ jest.mock('@walkeros/core', () => ({
     ],
     structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
-  mcpError: jest.fn((error, hint) => ({
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Unknown error',
-          ...(hint ? { hint } : {}),
-        }),
-      },
-    ],
-    isError: true,
-  })),
+  mcpError: jest.fn((error, hint) => {
+    const err = error as Error & { code?: string; details?: unknown[] };
+    const structured: Record<string, unknown> = {
+      error: err?.message ?? 'Unknown error',
+    };
+    if (hint) structured.hint = hint;
+    if (err?.code) structured.code = err.code;
+    if (Array.isArray(err?.details)) structured.details = err.details;
+    return {
+      content: [{ type: 'text', text: JSON.stringify(structured) }],
+      structuredContent: structured,
+      isError: true,
+    };
+  }),
 }));
 
 import {
   deploy as deployFlow,
   listDeployments,
-  getDeployment,
   getDeploymentBySlug,
   deleteDeployment,
 } from '@walkeros/cli';
 
 const mockDeployFlow = jest.mocked(deployFlow);
 const mockListDeployments = jest.mocked(listDeployments);
-const mockGetDeployment = jest.mocked(getDeployment);
 const mockGetDeploymentBySlug = jest.mocked(getDeploymentBySlug);
 const mockDeleteDeployment = jest.mocked(deleteDeployment);
 
@@ -61,6 +60,20 @@ function createMockServer() {
     },
   };
 }
+
+const DEPLOYMENT_ONE = {
+  slug: 'abc123456789',
+  type: 'web',
+  status: 'active',
+  updatedAt: '2026-04-20T00:00:00.000Z',
+};
+
+const DEPLOYMENT_TWO = {
+  slug: 'def987654321',
+  type: 'web',
+  status: 'active',
+  updatedAt: '2026-04-21T00:00:00.000Z',
+};
 
 describe('deploy_manage tool', () => {
   let server: ReturnType<typeof createMockServer>;
@@ -145,15 +158,45 @@ describe('deploy_manage tool', () => {
   });
 
   describe('list', () => {
-    it('calls listDeployments with filters', async () => {
-      const deployments = [
-        { id: 'dep_1', type: 'web', status: 'active' },
-        { id: 'dep_2', type: 'server', status: 'active' },
-      ];
-      mockListDeployments.mockResolvedValue(deployments);
+    it('passes flowId filter through to listDeployments', async () => {
+      const deployments = [DEPLOYMENT_ONE, DEPLOYMENT_TWO];
+      mockListDeployments.mockResolvedValue({ deployments });
 
       const tool = server.getTool('deploy_manage');
       const result = await tool.handler({
+        action: 'list',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+      });
+
+      expect(mockListDeployments).toHaveBeenCalledWith({
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+        type: undefined,
+        status: undefined,
+      });
+      expect(result.structuredContent.deployments).toEqual(deployments);
+    });
+
+    it('calls listDeployments without flowId', async () => {
+      mockListDeployments.mockResolvedValue({ deployments: [] });
+
+      const tool = server.getTool('deploy_manage');
+      await tool.handler({ action: 'list' });
+
+      expect(mockListDeployments).toHaveBeenCalledWith({
+        projectId: undefined,
+        flowId: undefined,
+        type: undefined,
+        status: undefined,
+      });
+    });
+
+    it('accepts type and status filters', async () => {
+      mockListDeployments.mockResolvedValue({ deployments: [] });
+
+      const tool = server.getTool('deploy_manage');
+      await tool.handler({
         action: 'list',
         projectId: 'proj_1',
         type: 'web',
@@ -162,101 +205,171 @@ describe('deploy_manage tool', () => {
 
       expect(mockListDeployments).toHaveBeenCalledWith({
         projectId: 'proj_1',
+        flowId: undefined,
         type: 'web',
         status: 'active',
-      });
-      expect(result.structuredContent).toEqual(deployments);
-    });
-
-    it('calls listDeployments without filters', async () => {
-      mockListDeployments.mockResolvedValue([]);
-
-      const tool = server.getTool('deploy_manage');
-      await tool.handler({ action: 'list' });
-
-      expect(mockListDeployments).toHaveBeenCalledWith({
-        projectId: undefined,
-        type: undefined,
-        status: undefined,
       });
     });
   });
 
   describe('get', () => {
-    it('requires id', async () => {
+    it('requires flowId', async () => {
       const tool = server.getTool('deploy_manage');
       const result = await tool.handler({ action: 'get' });
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('id is required');
+      expect(parsed.error).toContain('flowId is required');
     });
 
-    it('tries slug first, falls back to id', async () => {
-      mockGetDeploymentBySlug.mockRejectedValue(new Error('Not found'));
-      const deployment = { id: 'flow_1', status: 'active' };
-      mockGetDeployment.mockResolvedValue(deployment);
-
-      const tool = server.getTool('deploy_manage');
-      const result = await tool.handler({ action: 'get', id: 'flow_1' });
-
-      expect(mockGetDeploymentBySlug).toHaveBeenCalledWith({
-        slug: 'flow_1',
-        projectId: undefined,
+    it('resolves single active deployment and fetches it by slug', async () => {
+      mockListDeployments.mockResolvedValue({ deployments: [DEPLOYMENT_ONE] });
+      mockGetDeploymentBySlug.mockResolvedValue({
+        slug: DEPLOYMENT_ONE.slug,
+        status: 'active',
       });
-      expect(mockGetDeployment).toHaveBeenCalledWith({
-        flowId: 'flow_1',
-        projectId: undefined,
-      });
-      expect(result.structuredContent.id).toBe('flow_1');
-    });
-
-    it('returns slug result when slug lookup succeeds', async () => {
-      const deployment = { slug: 'my-deploy', status: 'active' };
-      mockGetDeploymentBySlug.mockResolvedValue(deployment);
 
       const tool = server.getTool('deploy_manage');
       const result = await tool.handler({
         action: 'get',
-        id: 'my-deploy',
         projectId: 'proj_1',
+        flowId: 'flow_abc',
+      });
+
+      expect(mockListDeployments).toHaveBeenCalledWith({
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+      });
+      expect(mockGetDeploymentBySlug).toHaveBeenCalledWith({
+        slug: DEPLOYMENT_ONE.slug,
+        projectId: 'proj_1',
+      });
+      expect(result.structuredContent.slug).toBe(DEPLOYMENT_ONE.slug);
+    });
+
+    it('returns MULTIPLE_DEPLOYMENTS when two matches and no slug', async () => {
+      mockListDeployments.mockResolvedValue({
+        deployments: [DEPLOYMENT_ONE, DEPLOYMENT_TWO],
+      });
+
+      const tool = server.getTool('deploy_manage');
+      const result = await tool.handler({
+        action: 'get',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.structuredContent.code).toBe('MULTIPLE_DEPLOYMENTS');
+      expect(result.structuredContent.details).toHaveLength(2);
+      expect(mockGetDeploymentBySlug).not.toHaveBeenCalled();
+    });
+
+    it('returns NOT_FOUND when slug matches neither of two deployments', async () => {
+      mockListDeployments.mockResolvedValue({
+        deployments: [DEPLOYMENT_ONE, DEPLOYMENT_TWO],
+      });
+
+      const tool = server.getTool('deploy_manage');
+      const result = await tool.handler({
+        action: 'get',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+        slug: 'ghi999',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.structuredContent.code).toBe('NOT_FOUND');
+      expect(mockGetDeploymentBySlug).not.toHaveBeenCalled();
+    });
+
+    it('uses provided slug when it matches one of multiple deployments', async () => {
+      mockListDeployments.mockResolvedValue({
+        deployments: [DEPLOYMENT_ONE, DEPLOYMENT_TWO],
+      });
+      mockGetDeploymentBySlug.mockResolvedValue({
+        slug: DEPLOYMENT_TWO.slug,
+      });
+
+      const tool = server.getTool('deploy_manage');
+      const result = await tool.handler({
+        action: 'get',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+        slug: DEPLOYMENT_TWO.slug,
       });
 
       expect(mockGetDeploymentBySlug).toHaveBeenCalledWith({
-        slug: 'my-deploy',
+        slug: DEPLOYMENT_TWO.slug,
         projectId: 'proj_1',
       });
-      expect(mockGetDeployment).not.toHaveBeenCalled();
-      expect(result.structuredContent.slug).toBe('my-deploy');
+      expect(result.structuredContent.slug).toBe(DEPLOYMENT_TWO.slug);
     });
   });
 
   describe('delete', () => {
-    it('requires id', async () => {
+    it('requires flowId', async () => {
       const tool = server.getTool('deploy_manage');
       const result = await tool.handler({ action: 'delete' });
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('id is required');
+      expect(parsed.error).toContain('flowId is required');
     });
 
-    it('calls deleteDeployment', async () => {
+    it('resolves single active deployment and deletes it', async () => {
+      mockListDeployments.mockResolvedValue({ deployments: [DEPLOYMENT_ONE] });
       mockDeleteDeployment.mockResolvedValue({ success: true });
 
       const tool = server.getTool('deploy_manage');
       const result = await tool.handler({
         action: 'delete',
-        id: 'my-deploy',
         projectId: 'proj_1',
+        flowId: 'flow_abc',
       });
 
       expect(mockDeleteDeployment).toHaveBeenCalledWith({
-        slug: 'my-deploy',
+        slug: DEPLOYMENT_ONE.slug,
         projectId: 'proj_1',
       });
       expect(result.structuredContent.deleted).toBe(true);
       expect(result.structuredContent.success).toBe(true);
+    });
+
+    it('returns MULTIPLE_DEPLOYMENTS with details when two active and no slug', async () => {
+      mockListDeployments.mockResolvedValue({
+        deployments: [DEPLOYMENT_ONE, DEPLOYMENT_TWO],
+      });
+
+      const tool = server.getTool('deploy_manage');
+      const result = await tool.handler({
+        action: 'delete',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.structuredContent.code).toBe('MULTIPLE_DEPLOYMENTS');
+      expect(result.structuredContent.details).toHaveLength(2);
+      expect(mockDeleteDeployment).not.toHaveBeenCalled();
+    });
+
+    it('returns NOT_FOUND when slug matches neither of two deployments', async () => {
+      mockListDeployments.mockResolvedValue({
+        deployments: [DEPLOYMENT_ONE, DEPLOYMENT_TWO],
+      });
+
+      const tool = server.getTool('deploy_manage');
+      const result = await tool.handler({
+        action: 'delete',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+        slug: 'ghi999',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.structuredContent.code).toBe('NOT_FOUND');
+      expect(mockDeleteDeployment).not.toHaveBeenCalled();
     });
   });
 

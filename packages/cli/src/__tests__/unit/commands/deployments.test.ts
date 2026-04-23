@@ -5,6 +5,8 @@ import {
   getDeploymentBySlug,
   createDeployment,
   deleteDeployment,
+  deleteDeploymentByFlowId,
+  DeploymentAmbiguityError,
 } from '../../../commands/deployments/index.js';
 
 jest.mock('../../../core/auth.js', () => ({
@@ -46,6 +48,29 @@ describe('deployments', () => {
       });
       expect(mockApiFetch).toHaveBeenCalledWith(
         '/api/projects/proj_123/deployments?type=web&status=active',
+      );
+    });
+
+    it('appends flowId when provided', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify({ deployments: [] }), { status: 200 }),
+      );
+      await listDeployments({
+        projectId: 'proj_123',
+        flowId: 'flow_abc',
+      });
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_123/deployments?flowId=flow_abc',
+      );
+    });
+
+    it('omits flowId when not provided', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify({ deployments: [] }), { status: 200 }),
+      );
+      await listDeployments({ projectId: 'proj_123' });
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_123/deployments',
       );
     });
 
@@ -172,6 +197,105 @@ describe('deployments', () => {
       await expect(deleteDeployment({ slug: 'missing' })).rejects.toThrow(
         'Not found',
       );
+    });
+  });
+
+  describe('deleteDeploymentByFlowId', () => {
+    it('skips list and deletes directly when slug is provided', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify({ success: true }), { status: 200 }),
+      );
+      await deleteDeploymentByFlowId({
+        projectId: 'proj_123',
+        flowId: 'flow_abc',
+        slug: 'my-deploy',
+      });
+      expect(mockApiFetch).toHaveBeenCalledTimes(1);
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_123/deployments/my-deploy',
+        { method: 'DELETE' },
+      );
+    });
+
+    it('lists then deletes the single match when no slug provided', async () => {
+      mockApiFetch
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              deployments: [
+                {
+                  slug: 'only-one',
+                  type: 'web',
+                  status: 'active',
+                  updatedAt: '2026-04-22T00:00:00.000Z',
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ success: true }), { status: 200 }),
+        );
+
+      await deleteDeploymentByFlowId({
+        projectId: 'proj_123',
+        flowId: 'flow_abc',
+      });
+
+      expect(mockApiFetch).toHaveBeenCalledTimes(2);
+      expect(mockApiFetch).toHaveBeenNthCalledWith(
+        1,
+        '/api/projects/proj_123/deployments?flowId=flow_abc',
+      );
+      expect(mockApiFetch).toHaveBeenNthCalledWith(
+        2,
+        '/api/projects/proj_123/deployments/only-one',
+        { method: 'DELETE' },
+      );
+    });
+
+    it('throws DeploymentAmbiguityError when multiple active matches and no slug', async () => {
+      mockApiFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            deployments: [
+              {
+                slug: 'one',
+                type: 'web',
+                status: 'active',
+                updatedAt: '2026-04-20T00:00:00.000Z',
+              },
+              {
+                slug: 'two',
+                type: 'web',
+                status: 'active',
+                updatedAt: '2026-04-21T00:00:00.000Z',
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+
+      await expect(
+        deleteDeploymentByFlowId({
+          projectId: 'proj_123',
+          flowId: 'flow_abc',
+        }),
+      ).rejects.toBeInstanceOf(DeploymentAmbiguityError);
+    });
+
+    it('throws a plain error when no matches found', async () => {
+      mockApiFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify({ deployments: [] }), { status: 200 }),
+      );
+      await expect(
+        deleteDeploymentByFlowId({
+          projectId: 'proj_123',
+          flowId: 'flow_abc',
+        }),
+      ).rejects.toThrow('No deployments found for flow flow_abc');
     });
   });
 });

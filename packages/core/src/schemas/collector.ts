@@ -14,6 +14,7 @@ import {
   Counter,
   TaggingVersion,
 } from './primitives';
+import { LoggerConfigSchema } from './logger';
 
 /**
  * Collector Schemas
@@ -74,6 +75,12 @@ export const CommandTypeSchema = z
     ]),
     z.string(), // Allow custom commands
   ])
+  .meta({
+    id: 'CollectorCommandType',
+    title: 'Collector.CommandType',
+    description:
+      'Collector command type identifier (standard or extension string).',
+  })
   .describe(
     'Collector command type: standard commands or custom string for extensions',
   );
@@ -106,17 +113,21 @@ export const ConfigSchema = z
     ),
     sessionStatic: z
       .record(z.string(), z.unknown())
-      .describe('Static session data that persists across collector runs'),
-    logger: z
-      .object({
-        level: z
-          .union([z.number(), z.enum(['ERROR', 'WARN', 'INFO', 'DEBUG'])])
-          .optional()
-          .describe('Minimum log level (default: ERROR)'),
-        handler: z.any().optional().describe('Custom log handler function'),
+      .meta({
+        id: 'CollectorSessionStatic',
+        title: 'Collector.SessionStatic',
+        description: 'Static session data that persists across collector runs.',
       })
-      .optional()
-      .describe('Logger configuration (level, handler)'),
+      .describe('Static session data that persists across collector runs'),
+    logger: LoggerConfigSchema.optional().describe(
+      'Logger configuration (level, handler)',
+    ),
+  })
+  .meta({
+    id: 'CollectorConfig',
+    title: 'Collector.Config',
+    description:
+      'Core collector configuration (tagging, globals/session statics, logger).',
   })
   .describe('Core collector configuration');
 
@@ -148,7 +159,13 @@ export const SessionDataSchema = PropertiesSchema.and(
     count: Counter.describe('Event count in session').optional(),
     runs: Counter.describe('Number of runs').optional(),
   }),
-).describe('Session state and tracking data');
+)
+  .meta({
+    id: 'CollectorSessionData',
+    title: 'Collector.SessionData',
+    description: 'Session state and tracking data.',
+  })
+  .describe('Session state and tracking data');
 
 /**
  * InitConfig - Initialization configuration
@@ -167,14 +184,60 @@ export const InitConfigSchema = ConfigSchema.partial()
     user: UserSchema.optional().describe('Initial user data'),
     globals: PropertiesSchema.optional().describe('Initial global properties'),
     // Sources, destinations, transformers, stores are complex runtime objects
-    sources: z.unknown().optional().describe('Source configurations'),
-    destinations: z.unknown().optional().describe('Destination configurations'),
-    transformers: z.unknown().optional().describe('Transformer configurations'),
-    stores: z.unknown().optional().describe('Store configurations'),
+    sources: z
+      .unknown()
+      .meta({
+        id: 'CollectorInitSources',
+        title: 'Source.InitSources',
+        description: 'Source configurations map (id → InitSource).',
+      })
+      .optional()
+      .describe('Source configurations'),
+    destinations: z
+      .unknown()
+      .meta({
+        id: 'CollectorInitDestinations',
+        title: 'Destination.InitDestinations',
+        description: 'Destination configurations map (id → Init).',
+      })
+      .optional()
+      .describe('Destination configurations'),
+    transformers: z
+      .unknown()
+      .meta({
+        id: 'CollectorInitTransformers',
+        title: 'Transformer.Configs',
+        description: 'Transformer configurations map (id → Config).',
+      })
+      .optional()
+      .describe('Transformer configurations'),
+    stores: z
+      .unknown()
+      .meta({
+        id: 'CollectorInitStores',
+        title: 'Store.Configs',
+        description: 'Store configurations map (id → Config).',
+      })
+      .optional()
+      .describe('Store configurations'),
     custom: PropertiesSchema.optional().describe(
       'Initial custom implementation-specific properties',
     ),
-    hooks: z.unknown().optional().describe('Pipeline observation hooks'),
+    hooks: z
+      .unknown()
+      .meta({
+        id: 'CollectorHooks',
+        title: 'Collector.Hooks',
+        description: 'Pipeline observation hooks.',
+      })
+      .optional()
+      .describe('Pipeline observation hooks'),
+  })
+  .meta({
+    id: 'CollectorInitConfig',
+    title: 'Collector.InitConfig',
+    description:
+      'Collector initialization configuration with initial state (consent, user, globals, components, hooks).',
   })
   .describe('Collector initialization configuration with initial state');
 
@@ -194,6 +257,11 @@ export const PushContextSchema = z
       'Source-level mapping configuration',
     ),
   })
+  .meta({
+    id: 'CollectorPushContext',
+    title: 'Collector.PushContext',
+    description: 'Push context with optional source-level mapping.',
+  })
   .describe('Push context with optional source mapping');
 
 // ========================================
@@ -205,6 +273,11 @@ export const PushContextSchema = z
  */
 export const SourcesSchema = z
   .record(z.string(), z.unknown())
+  .meta({
+    id: 'CollectorSources',
+    title: 'Collector.Sources',
+    description: 'Map of source IDs to runtime source instances.',
+  })
   .describe('Map of source IDs to source instances');
 
 /**
@@ -212,6 +285,11 @@ export const SourcesSchema = z
  */
 export const DestinationsSchema = z
   .record(z.string(), z.unknown())
+  .meta({
+    id: 'CollectorDestinations',
+    title: 'Collector.Destinations',
+    description: 'Map of destination IDs to runtime destination instances.',
+  })
   .describe('Map of destination IDs to destination instances');
 
 // ========================================
@@ -276,6 +354,12 @@ export const InstanceSchema = z
     timing: z.number().describe('Event processing timing information'),
     user: UserSchema.describe('Current user data'),
     version: z.string().describe('Walker implementation version'),
+  })
+  .meta({
+    id: 'CollectorInstance',
+    title: 'Collector.Instance',
+    description:
+      'Collector instance (runtime object with push/command + full state and component maps).',
   })
   .describe('Collector instance with state and methods');
 

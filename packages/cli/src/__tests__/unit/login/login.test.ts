@@ -667,5 +667,97 @@ describe('login (device code flow)', () => {
 
     expect(result.success).toBe(false);
     expect(result.status).toBe('error');
+    if (!result.success && result.status === 'error') {
+      expect(result.error).toMatch(/malformed/i);
+    }
+  });
+
+  // === Zod schema validation (TokenResponseSchema + DeviceCodeResponseSchema) ===
+
+  it('requestDeviceCode throws when deviceCode field is missing (Zod)', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/code')) {
+        return fakeResponse({
+          userCode: 'X',
+          verificationUri: 'https://app.test/device',
+          expiresIn: 900,
+          interval: 5,
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    await expect(
+      requestDeviceCode({ url: 'https://app.test', fetch: mockFetch }),
+    ).rejects.toThrow(/malformed|invalid/i);
+  });
+
+  it('requestDeviceCode throws when expiresIn is a string instead of number (Zod)', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/code')) {
+        return fakeResponse({
+          deviceCode: 'dc_abc',
+          userCode: 'BCDF-GHJK',
+          verificationUri: 'https://app.test/device',
+          expiresIn: '900', // wrong type
+          interval: 5,
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    await expect(
+      requestDeviceCode({ url: 'https://app.test', fetch: mockFetch }),
+    ).rejects.toThrow(/malformed|invalid/i);
+  });
+
+  it('pollForToken rejects numeric token via Zod (schema negative case)', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return fakeResponse({
+          token: 4242, // number not string
+          email: 'n@example.com',
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('error');
+    if (!result.success && result.status === 'error') {
+      expect(result.error).toMatch(/malformed/i);
+    }
+  });
+
+  it('pollForToken rejects response missing email via Zod', async () => {
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/token')) {
+        return fakeResponse({
+          token: 'sk-walkeros-' + 'z'.repeat(64),
+          // email missing
+        });
+      }
+      return fakeResponse({ error: 'not found' }, { status: 404 });
+    });
+
+    const result = await pollForToken('dc_test_code', {
+      url: 'https://app.test',
+      fetch: mockFetch,
+      timeoutMs: 10000,
+      intervalMs: 10,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('error');
+    if (!result.success && result.status === 'error') {
+      expect(result.error).toMatch(/malformed|email/i);
+    }
   });
 });

@@ -307,33 +307,25 @@ Explorer type detector reads these properties to determine the type.
 
 ## Migration Notes
 
-### Breaking Change: value-config.ts Reorganization
+All mapping value schemas (`ValueSchema`, `ValueConfigSchema`, `LoopSchema`,
+`SetSchema`, `MapSchema`) live in `mapping.ts`. Import them from
+`@walkeros/core` (re-exported at the package root) or directly from
+`@walkeros/core/schemas/mapping`. The previous `value-config.ts` file has been
+removed.
 
-**What changed**:
+### Schema type naming
 
-- Schemas previously in `value-config.ts` have been moved to `mapping.ts`
-- The `value-config.ts` file is now **deprecated** and will be removed
+Every exported schema must carry `.meta({ id, title, description })` so the
+generated JSON Schema can link back to the canonical TypeScript name:
 
-**Impact on imports**:
+- **id** — PascalCase, namespace-prefixed to avoid collisions
+  (`DestinationConfig`, `CollectorPushContext`, `LoggerConfig`).
+- **title** — dotted form matching the VS Code TS hover (`Destination.Config`,
+  `Collector.PushContext`, `Logger.Config`).
+- **description** — 1–2 sentences describing the type.
 
-```typescript
-// ✅ Still works (re-exported from index.ts)
-import { ValueConfigSchema, LoopSchema } from '@walkeros/core';
-
-// ✅ Also works (explicit import from new location)
-import { ValueConfigSchema, LoopSchema } from '@walkeros/core/schemas/mapping';
-
-// ❌ Will stop working in next major version
-import { ValueConfigSchema } from '@walkeros/core/schemas/value-config';
-```
-
-**Action required**:
-
-- If importing from `@walkeros/core` → No action needed
-- If importing directly from `value-config.ts` → Update imports to use
-  `mapping.ts`
-
-**Timeline**: `value-config.ts` will be removed in the next major version
+Reference implementation: `ConsentSchema` in `walkeros.ts`. Coverage is enforced
+by `__tests__/meta-coverage.test.ts`.
 
 ## Development Guidelines
 

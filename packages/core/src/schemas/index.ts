@@ -78,6 +78,9 @@ export {
 export { CodeSchema, HintSchema, HintsSchema } from './hint';
 export { ClickIdEntrySchema } from './marketing';
 
+// Logger schemas (shared config used by destination/source/transformer/store/collector)
+export { LoggerConfigSchema, LoggerHandlerSchema } from './logger';
+
 // ========================================
 // Direct Exports (commonly used schemas)
 // ========================================
@@ -177,26 +180,6 @@ export { validateFlowConfig } from './validate-flow-config';
  * This follows the DRY principle - write once in core, use everywhere.
  */
 export * from './schema-builder';
-
-// ========================================
-// Deprecated: value-config.ts
-// ========================================
-
-/**
- * @deprecated Import from MappingSchemas or directly from './mapping' instead
- *
- * The value-config.ts file has been migrated to mapping.ts for better organization.
- * This export is kept for backward compatibility but will be removed in a future version.
- *
- * Migration:
- * - Old: import { ValueSchema, ValueConfigSchema } from '@walkeros/core'
- * - New: import { ValueSchema, ValueConfigSchema } from '@walkeros/core'
- *        (imports now come from mapping.ts but the API is identical)
- *
- * Breaking change: The value-config.ts file will be removed in the next major version.
- * All schemas are now organized by domain (mapping, destination, collector, etc.)
- */
-// Note: Schemas are already exported above from mapping.ts
 
 /**
  * Re-export Zod and zod-to-json-schema for destinations

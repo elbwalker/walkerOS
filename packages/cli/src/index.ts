@@ -104,7 +104,10 @@ export {
   getDeploymentBySlug,
   createDeployment,
   deleteDeployment,
+  deleteDeploymentByFlowId,
+  DeploymentAmbiguityError,
 } from './commands/deployments/index.js';
+export type { DeploymentSummaryForFlow } from './commands/deployments/index.js';
 export {
   listPreviews,
   getPreview,
