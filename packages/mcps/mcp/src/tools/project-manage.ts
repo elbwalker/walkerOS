@@ -77,9 +77,10 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
             },
           );
         }
+        const typedItems = items as Array<{ name?: string }>;
         const safe = Array.isArray(projects)
-          ? (items as Array<{ name?: string }>).map(wrapProjectName)
-          : { ...projects, projects: items.map(wrapProjectName) };
+          ? typedItems.map(wrapProjectName)
+          : { ...projects, projects: typedItems.map(wrapProjectName) };
         return mcpResult(safe);
       }
 

@@ -13,6 +13,8 @@ export type { BrowserBoxProps } from './components/organisms/browser-box';
 // Molecules
 export { ArchitectureFlow } from './components/molecules/architecture-flow';
 export { CodeBox } from './components/molecules/code-box';
+export { CodeDiffBox } from './components/molecules/code-diff-box';
+export type { CodeDiffBoxProps } from './components/molecules/code-diff-box';
 export { CodeSnippet } from './components/molecules/code-snippet';
 export { FlowMap } from './components/molecules/flow-map';
 export { PropertyTable } from './components/molecules/property-table';
@@ -50,6 +52,7 @@ export type { PreviewProps } from './components/molecules/preview';
 
 // Atoms
 export { Code } from './components/atoms/code';
+export { CodeDiff } from './components/atoms/code-diff';
 export { CodeStatic } from './components/atoms/code-static';
 export { Box } from './components/atoms/box';
 export { Grid } from './components/atoms/grid';
@@ -62,6 +65,10 @@ export { Spinner } from './components/atoms/spinner';
 
 export { Icon } from './components/atoms/icons';
 export type { CodeProps } from './components/atoms/code';
+export type {
+  CodeDiffProps,
+  CodeDiffSummary,
+} from './components/atoms/code-diff';
 export type { CodeStaticProps } from './components/atoms/code-static';
 export type { BoxProps, BoxTab } from './components/atoms/box';
 export type { GridProps } from './components/atoms/grid';

@@ -211,9 +211,10 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
             order,
             includeDeleted,
           });
-          const flows = (data as { flows?: Array<{ name?: string }> }).flows;
+          const dataObj = data as { flows?: Array<{ name?: string }> };
+          const flows = dataObj.flows;
           const safe = Array.isArray(flows)
-            ? { ...data, flows: flows.map(safeSummary) }
+            ? { ...dataObj, flows: flows.map(safeSummary) }
             : data;
           return mcpResult(safe);
         }

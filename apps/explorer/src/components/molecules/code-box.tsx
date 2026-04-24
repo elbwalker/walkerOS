@@ -122,10 +122,10 @@ export function CodeBox({
   const [copied, setCopied] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [settings, setSettings] = useState({
-    lineNumbers: false,
-    minimap: false,
-    wordWrap: false,
-    sticky: true,
+    lineNumbers: codeProps.lineNumbers ?? false,
+    minimap: codeProps.minimap ?? false,
+    wordWrap: codeProps.wordWrap ?? false,
+    sticky: codeProps.sticky ?? true,
   });
   const settingsRef = useRef<HTMLDivElement>(null);
   type MarkerDetail = {
