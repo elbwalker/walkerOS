@@ -44,6 +44,7 @@ describe('emitter', () => {
 
   it('prints event shape to stderr in debug mode and skips network', async () => {
     process.env.WALKEROS_TELEMETRY_DEBUG = '1';
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
     const errSpy = jest
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true);
@@ -77,6 +78,7 @@ describe('emitter', () => {
 
   it('passes user.session to the collector when provided (MCP case)', async () => {
     process.env.WALKEROS_TELEMETRY_DEBUG = '1';
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
     const errSpy = jest
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true);
@@ -89,6 +91,42 @@ describe('emitter', () => {
     await emitter.send('mcp start', { ci: false, client: 'claude-ai' });
     const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
     expect(out).toContain('"session":"sess-xyz"');
+    errSpy.mockRestore();
+  });
+
+  it('is a no-op when opted in but no endpoint is configured', async () => {
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
+    // No TELEMETRY_ENDPOINT env var; flow.json still has the $TELEMETRY_ENDPOINT placeholder.
+    const emitter = await createEmitter({
+      sourceId: 'cli',
+      sourceType: 'terminal',
+      packageVersion: '3.4.2',
+    });
+    // send resolves, does not throw, never attempts network.
+    await expect(
+      emitter.send('cmd invoke', { command: 'x', outcome: 'success' }),
+    ).resolves.toBeUndefined();
+    // Assert we did NOT initialize the collector by checking no stderr writes
+    // (debug mode is off; production no-op is silent).
+    // We don't have a direct collector spy here; the resolution + no exception
+    // above is the observable signal. This test locks the behavior: the
+    // previous code would have invoked the collector with a 404 endpoint.
+  });
+
+  it('still prints to stderr in debug mode even with no endpoint', async () => {
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
+    process.env.WALKEROS_TELEMETRY_DEBUG = '1';
+    const errSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+    const emitter = await createEmitter({
+      sourceId: 'cli',
+      sourceType: 'terminal',
+      packageVersion: '3.4.2',
+    });
+    await emitter.send('cmd invoke', { command: 'x', outcome: 'success' }, 10);
+    const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
+    expect(out).toContain('"name":"cmd invoke"');
     errSpy.mockRestore();
   });
 });

@@ -12,6 +12,7 @@ jest.mock('@walkeros/cli', () => {
   };
 });
 
+import { writeConfig } from '../../../../cli/src/lib/config-file.js';
 import { createMcpEmitter } from '../telemetry.js';
 
 const testDir = join(tmpdir(), `mcp-telemetry-test-${Date.now()}`);
@@ -27,6 +28,8 @@ describe('MCP emitter wrapper', () => {
     delete process.env.WALKEROS_TELEMETRY_DEBUG;
     delete process.env.TELEMETRY_ENDPOINT;
     mkdirSync(join(testDir, 'walkeros'), { recursive: true });
+    // Seed opt-in config so emitter is enabled under the new opt-in default.
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
   });
 
   afterEach(() => {

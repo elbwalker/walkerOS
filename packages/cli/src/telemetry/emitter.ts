@@ -7,10 +7,9 @@ import { destinationAPI } from '@walkeros/server-destination-api';
 import { buildInitConfig } from './init-config.js';
 import { getEnvironment } from './environment.js';
 import { getInstallationId } from './install-id.js';
-import { isTelemetryEnabled, isDebugMode } from './opt-out.js';
+import { isTelemetryEnabled, isDebugMode } from './consent.js';
 import { maybePrintFirstRunNotice } from './first-run-notice.js';
 
-const DEFAULT_TELEMETRY_ENDPOINT = 'https://app.walkeros.io/api/telemetry';
 const CONTRACT_VERSION = 1;
 const SEND_TIMEOUT_MS = 1000;
 
@@ -32,12 +31,12 @@ export interface Emitter {
 /**
  * Build the walkerOS telemetry emitter.
  *
- * Opt-out, debug, and first-run-notice are resolved up-front. When telemetry
- * is disabled the returned `send` is a no-op that never initializes the
+ * Consent, debug, and first-run-notice are resolved up-front. When telemetry
+ * is not enabled the returned `send` is a no-op that never initializes the
  * collector, never writes a config file, and never touches the network.
  *
  * In debug mode we synthesize the event shape that the collector would emit
- * and write it to stderr instead of starting a real collector — keeps the
+ * and write it to stderr instead of starting a real collector. Keeps the
  * output deterministic and avoids paying for collector init when only
  * inspecting payloads.
  *
@@ -57,17 +56,37 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
     };
   }
 
+  const maybeDevice = getInstallationId();
+  if (!maybeDevice) {
+    // telemetryEnabled === true but no UUID: inconsistent config.
+    // Stay silent rather than silently create one post-consent without an
+    // explicit user action.
+    return {
+      async send() {
+        /* no-op */
+      },
+    };
+  }
+  const device: string = maybeDevice;
+
   const debug = isDebugMode();
-  const endpoint =
-    process.env.TELEMETRY_ENDPOINT ||
-    loadFlowJsonEndpoint() ||
-    DEFAULT_TELEMETRY_ENDPOINT;
+  const endpoint = process.env.TELEMETRY_ENDPOINT || loadFlowJsonEndpoint();
+  if (!endpoint && !debug) {
+    // No ingest URL configured. Consistent with the "ship consent UX
+    // without a backend" contract: opted-in users produce no traffic in
+    // v1. Debug mode still runs below because its sole purpose is
+    // inspecting payloads locally.
+    return {
+      async send() {
+        /* no-op */
+      },
+    };
+  }
 
   // First-run notice is purely informational; suppress in debug mode so the
   // debug output stream stays predictable for tooling.
   if (!debug) maybePrintFirstRunNotice();
 
-  const device = getInstallationId();
   const environment = getEnvironment();
 
   const eventBase: Pick<WalkerOS.DeepPartialEvent, 'source' | 'version'> = {
@@ -82,7 +101,7 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
     },
   };
 
-  // Lazy collector init — only pay the cost on first send.
+  // Lazy collector init: only pay the cost on first send.
   let elbFn: Elb.Fn | null = null;
   async function ensureElb(): Promise<Elb.Fn> {
     if (elbFn) return elbFn;
@@ -91,7 +110,7 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
       installationId: device,
       session: opts.session,
       environment,
-      endpoint,
+      endpoint: endpoint ?? '',
     });
 
     const collectorConfig: Collector.InitConfig = {
@@ -158,7 +177,8 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
  *
  * The contract file lives next to this module (both in `src/` and in the
  * built `dist/`). We intentionally skip the `$VAR` placeholder that ships
- * in the contract — the default endpoint handles that fallback.
+ * in the contract: an unresolved placeholder means no real endpoint, so
+ * the caller treats that as "unconfigured" and no-ops.
  */
 function loadFlowJsonEndpoint(): string | undefined {
   try {
@@ -173,7 +193,7 @@ function loadFlowJsonEndpoint(): string | undefined {
     const url = raw.flows?.default?.destinations?.api?.config?.url;
     if (url && !url.startsWith('$')) return url;
   } catch {
-    /* fall through to default */
+    /* fall through: caller treats undefined as unconfigured */
   }
   return undefined;
 }

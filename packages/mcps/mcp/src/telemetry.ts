@@ -36,9 +36,9 @@ export interface McpEmitter {
 /**
  * Build an MCP telemetry emitter.
  *
- * All opt-out, debug, and endpoint resolution is delegated to the CLI's
- * underlying `telemetry.createEmitter` — this wrapper only provides MCP-specific
- * field mapping and event shorthands.
+ * All consent, debug, and endpoint resolution is delegated to the CLI's
+ * underlying `telemetry.createEmitter`. This wrapper only provides
+ * MCP-specific field mapping and event shorthands.
  */
 export async function createMcpEmitter(
   opts: McpEmitterOptions,

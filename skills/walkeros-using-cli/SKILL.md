@@ -388,14 +388,20 @@ version-negotiation rules.
 
 ## Telemetry
 
-The CLI emits anonymous usage events (installation id, command name, outcome,
-duration, environment) to help improve the tool.
+The CLI supports anonymous usage telemetry (installation id, command name,
+outcome, duration, environment) to help improve the tool. Telemetry is **off by
+default** and requires explicit opt-in. No persistent identifier is written
+before consent.
 
-- **Opt-out:** set `DO_NOT_TRACK=1` or `WALKEROS_TELEMETRY_DISABLED=1`, or run
-  `walkeros telemetry disable`.
-- **Debug:** set `WALKEROS_TELEMETRY_DEBUG=1` to print the payload to stderr.
+- **Opt in:** `walkeros telemetry enable`.
+- **Opt out:** `walkeros telemetry disable`.
+- **Current state:** `walkeros telemetry status`.
+- **Forced off (override):** set `DO_NOT_TRACK=1` or
+  `WALKEROS_TELEMETRY_DISABLED=1`.
+- **Debug:** set `WALKEROS_TELEMETRY_DEBUG=1` to print the payload to stderr
+  (requires opt-in; no network traffic).
 - **Docs:** see [apps/telemetry](../../website/docs/apps/telemetry.mdx) for the
-  full event list and privacy details.
+  full event list, privacy details, and legal basis.
 - **Contract (source of truth):**
   [`packages/cli/src/telemetry/flow.json`](../../packages/cli/src/telemetry/flow.json).
 

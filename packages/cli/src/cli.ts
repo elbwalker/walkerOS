@@ -48,9 +48,9 @@ import { writeResult } from './core/output.js';
 setClientContext({ type: 'cli', version: VERSION });
 
 // Resolve the telemetry emitter up-front. createEmitter is fast and mostly
-// synchronous (opt-out + env collection + first-run notice). Awaiting here
-// lets the exit-path code (process.on('exit')) fire `send` synchronously in
-// debug mode, which writes to stderr before any await point — microtasks
+// synchronous (consent check + env collection + first-run notice). Awaiting
+// here lets the exit-path code (process.on('exit')) fire `send` synchronously
+// in debug mode, which writes to stderr before any await point. Microtasks
 // don't run after `exit` fires.
 const emitter = await createEmitter({
   sourceId: 'cli',

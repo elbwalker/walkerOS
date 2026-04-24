@@ -6,83 +6,107 @@ import {
   telemetryEnableCommand,
   telemetryDisableCommand,
 } from '../index.js';
-import { readConfig, getConfigPath } from '../../../lib/config-file.js';
+import {
+  readConfig,
+  writeConfig,
+  getConfigPath,
+} from '../../../lib/config-file.js';
 
 const testDir = join(tmpdir(), `telemetry-cmd-test-${Date.now()}`);
 
-describe('telemetry subcommand', () => {
+describe('telemetry commands', () => {
   const originalEnv = process.env;
+  let stdoutSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    // Redirect XDG_CONFIG_HOME so getConfigDir() points to our temp dir.
     process.env = { ...originalEnv, XDG_CONFIG_HOME: testDir };
     mkdirSync(join(testDir, 'walkeros'), { recursive: true });
-    delete process.env.DO_NOT_TRACK;
-    delete process.env.WALKEROS_TELEMETRY_DISABLED;
     const p = getConfigPath();
     if (existsSync(p)) unlinkSync(p);
+    delete process.env.DO_NOT_TRACK;
+    delete process.env.WALKEROS_TELEMETRY_DISABLED;
+    stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
   });
 
   afterEach(() => {
     process.env = originalEnv;
     rmSync(testDir, { recursive: true, force: true });
+    stdoutSpy.mockRestore();
   });
 
-  it('status reports enabled by default', () => {
-    const out = captureStdout(() => telemetryStatusCommand());
-    expect(out).toMatch(/enabled/i);
+  function stdoutText(): string {
+    return stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+  }
+
+  describe('telemetryStatusCommand', () => {
+    it('reports "not yet chosen" when no config exists', () => {
+      telemetryStatusCommand();
+      expect(stdoutText()).toMatch(/not yet/i);
+      expect(stdoutText()).toMatch(/walkeros telemetry enable/);
+    });
+
+    it('reports "not yet chosen" when config exists but field is absent', () => {
+      writeConfig({ token: 'x' });
+      telemetryStatusCommand();
+      expect(stdoutText()).toMatch(/not yet/i);
+    });
+
+    it('reports "enabled" when telemetryEnabled is true', () => {
+      writeConfig({ telemetryEnabled: true, installationId: 'u' });
+      telemetryStatusCommand();
+      expect(stdoutText()).toMatch(/enabled/i);
+      expect(stdoutText()).not.toMatch(/not yet/i);
+    });
+
+    it('reports "disabled" when telemetryEnabled is false', () => {
+      writeConfig({ telemetryEnabled: false });
+      telemetryStatusCommand();
+      expect(stdoutText()).toMatch(/disabled/i);
+    });
+
+    it('reports env override when DO_NOT_TRACK is set', () => {
+      writeConfig({ telemetryEnabled: true, installationId: 'u' });
+      process.env.DO_NOT_TRACK = '1';
+      telemetryStatusCommand();
+      expect(stdoutText()).toMatch(/DO_NOT_TRACK/);
+    });
   });
 
-  it('status reports disabled when DO_NOT_TRACK is set', () => {
-    process.env.DO_NOT_TRACK = '1';
-    const out = captureStdout(() => telemetryStatusCommand());
-    expect(out).toMatch(/disabled/i);
-    expect(out).toContain('DO_NOT_TRACK');
+  describe('telemetryEnableCommand', () => {
+    it('persists telemetryEnabled=true and a fresh installation id', () => {
+      telemetryEnableCommand();
+      const cfg = readConfig();
+      expect(cfg?.telemetryEnabled).toBe(true);
+      expect(cfg?.installationId).toMatch(/[0-9a-f-]{36}/);
+      expect(stdoutText()).toMatch(/enabled/i);
+    });
+
+    it('keeps an existing installation id when re-enabling', () => {
+      writeConfig({ installationId: 'existing' });
+      telemetryEnableCommand();
+      expect(readConfig()?.installationId).toBe('existing');
+    });
   });
 
-  it('status reports disabled when WALKEROS_TELEMETRY_DISABLED is set', () => {
-    process.env.WALKEROS_TELEMETRY_DISABLED = '1';
-    const out = captureStdout(() => telemetryStatusCommand());
-    expect(out).toMatch(/disabled/i);
-    expect(out).toContain('WALKEROS_TELEMETRY_DISABLED');
-  });
+  describe('telemetryDisableCommand', () => {
+    it('persists telemetryEnabled=false', () => {
+      telemetryDisableCommand();
+      expect(readConfig()?.telemetryEnabled).toBe(false);
+      expect(stdoutText()).toMatch(/disabled/i);
+    });
 
-  it('enable/disable writes config flag', () => {
-    telemetryDisableCommand();
-    expect(readConfig()?.telemetryEnabled).toBe(false);
-    telemetryEnableCommand();
-    expect(readConfig()?.telemetryEnabled).toBe(true);
-  });
+    it('does not create an installation id on disable', () => {
+      telemetryDisableCommand();
+      expect(readConfig()?.installationId).toBeUndefined();
+    });
 
-  it('enable seeds installationId when missing', () => {
-    telemetryEnableCommand();
-    const cfg = readConfig();
-    expect(cfg?.telemetryEnabled).toBe(true);
-    expect(cfg?.installationId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
-  });
-
-  it('disable reports the config file as the reason via status', () => {
-    telemetryDisableCommand();
-    const out = captureStdout(() => telemetryStatusCommand());
-    expect(out).toMatch(/disabled/i);
-    expect(out).toContain('config file');
+    it('preserves an existing installation id if one was already present', () => {
+      writeConfig({ installationId: 'existing', telemetryEnabled: true });
+      telemetryDisableCommand();
+      expect(readConfig()?.installationId).toBe('existing');
+      expect(readConfig()?.telemetryEnabled).toBe(false);
+    });
   });
 });
-
-function captureStdout(fn: () => void): string {
-  let out = '';
-  const spy = jest
-    .spyOn(process.stdout, 'write')
-    .mockImplementation((chunk: unknown) => {
-      out += String(chunk);
-      return true;
-    });
-  try {
-    fn();
-    return out;
-  } finally {
-    spy.mockRestore();
-  }
-}

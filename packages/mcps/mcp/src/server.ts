@@ -146,7 +146,7 @@ export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   // MCP SDK fires `oninitialized` after the `initialized` notification, which
   // follows a successful `initialize` request. At that point `getClientVersion`
   // returns the negotiated client identity. We create the emitter here and
-  // emit `mcp start`, so opt-out, debug, and endpoint resolution happen lazily
+  // emit `mcp start`, so consent, debug, and endpoint resolution happen lazily
   // at the moment a real client connects.
   const priorOnInitialized = server.server.oninitialized;
   server.server.oninitialized = () => {

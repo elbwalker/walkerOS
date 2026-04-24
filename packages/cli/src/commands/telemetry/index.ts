@@ -1,61 +1,85 @@
 import { readConfig, writeTelemetryOnlyConfig } from '../../lib/config-file.js';
-import { isTelemetryEnabled } from '../../telemetry/opt-out.js';
-import { getInstallationId } from '../../telemetry/install-id.js';
+import { createInstallationId } from '../../telemetry/install-id.js';
 
-/**
- * Report current telemetry status to stdout.
- *
- * When disabled, lists the reason(s): DO_NOT_TRACK env var,
- * WALKEROS_TELEMETRY_DISABLED env var, and/or config file.
- */
-export function telemetryStatusCommand(): void {
-  const enabled = isTelemetryEnabled();
-  if (enabled) {
-    process.stdout.write('walkerOS telemetry: enabled\n');
-    process.stdout.write(
-      'Disable with: DO_NOT_TRACK=1, WALKEROS_TELEMETRY_DISABLED=1, or `walkeros telemetry disable`\n',
-    );
-    return;
-  }
-  const reasons: string[] = [];
+function envOverrideReason(): string | undefined {
   if (process.env.DO_NOT_TRACK === '1' || process.env.DO_NOT_TRACK === 'true') {
-    reasons.push('DO_NOT_TRACK env var');
+    return 'DO_NOT_TRACK env var';
   }
   if (
     process.env.WALKEROS_TELEMETRY_DISABLED === '1' ||
     process.env.WALKEROS_TELEMETRY_DISABLED === 'true'
   ) {
-    reasons.push('WALKEROS_TELEMETRY_DISABLED env var');
+    return 'WALKEROS_TELEMETRY_DISABLED env var';
   }
-  if (readConfig()?.telemetryEnabled === false) reasons.push('config file');
+  return undefined;
+}
+
+/**
+ * Report current telemetry state to stdout. Three possible outcomes:
+ *
+ *  - Not yet chosen: config has no `telemetryEnabled` field.
+ *  - Enabled: `telemetryEnabled === true`.
+ *  - Disabled: `telemetryEnabled === false`, or forced off by an env var.
+ */
+export function telemetryStatusCommand(): void {
+  const override = envOverrideReason();
+  if (override) {
+    process.stdout.write(
+      `walkerOS telemetry: disabled (${override})\n` +
+        'Unset the env var and run `walkeros telemetry status` to see the stored choice.\n',
+    );
+    return;
+  }
+
+  const stored = readConfig()?.telemetryEnabled;
+  if (stored === true) {
+    process.stdout.write(
+      'walkerOS telemetry: enabled\n' +
+        'Opt out any time with `walkeros telemetry disable`.\n',
+    );
+    return;
+  }
+  if (stored === false) {
+    process.stdout.write(
+      'walkerOS telemetry: disabled\n' +
+        'Opt in any time with `walkeros telemetry enable`.\n',
+    );
+    return;
+  }
   process.stdout.write(
-    `walkerOS telemetry: disabled (${reasons.join(', ')})\n`,
+    'walkerOS telemetry: not yet chosen (default: off)\n' +
+      'Opt in with `walkeros telemetry enable`, or leave off, nothing is sent until you choose.\n',
   );
 }
 
 /**
- * Persist `telemetryEnabled: true` to the config. Lazily seeds the
- * installation ID via `getInstallationId()` first so the config always has a
- * stable id when opting in.
+ * Persist explicit consent: `telemetryEnabled: true` plus a stable
+ * installation UUID. `createInstallationId` is idempotent, re-enabling
+ * preserves any existing UUID.
  */
 export function telemetryEnableCommand(): void {
-  const installationId = getInstallationId();
+  const installationId = createInstallationId();
   writeTelemetryOnlyConfig({
     installationId,
     telemetryEnabled: true,
   });
-  process.stdout.write('walkerOS telemetry enabled.\n');
+  process.stdout.write(
+    'walkerOS telemetry enabled. Thank you for helping improve the tools.\n' +
+      'Installation UUID: ' +
+      installationId +
+      '\n',
+  );
 }
 
 /**
- * Persist `telemetryEnabled: false` to the config. Lazily seeds the
- * installation ID first so the stored config remains consistent.
+ * Persist explicit refusal: `telemetryEnabled: false`. Does not create an
+ * installation UUID, a disabled state has no need for a stable identifier.
+ * Preserves any existing UUID (e.g. from a prior enable) so re-enabling
+ * later keeps the same id.
  */
 export function telemetryDisableCommand(): void {
-  const installationId = getInstallationId();
-  writeTelemetryOnlyConfig({
-    installationId,
-    telemetryEnabled: false,
-  });
-  process.stdout.write('walkerOS telemetry disabled.\n');
+  writeTelemetryOnlyConfig({ telemetryEnabled: false });
+  process.stdout.write(
+    'walkerOS telemetry disabled. Nothing will be sent from this machine.\n',
+  );
 }
