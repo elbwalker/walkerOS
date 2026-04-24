@@ -38,6 +38,7 @@
     "format": "prettier --write .",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
+    "lint:refs": "./scripts/lint-ref-syntax.sh",
     "reset": "rm -rf .turbo && rm -rf node_modules && npm ci",
     "publish-docker": "npm run -w @walkeros/cli docker:publish",
     "test": "turbo run test",

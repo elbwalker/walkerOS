@@ -63,7 +63,7 @@ export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
 | Property    | Type                 | Purpose                                 |
 | ----------- | -------------------- | --------------------------------------- |
 | `config`    | `Transformer.Config` | Settings, mapping, next chain           |
-| `env`       | `Types['env']`       | Environment deps (stores via `$store:`) |
+| `env`       | `Types['env']`       | Environment deps (stores via `$store.`) |
 | `logger`    | `Logger`             | Logging functions                       |
 | `id`        | `string`             | Transformer identifier                  |
 | `collector` | `Collector.Instance` | Reference to collector                  |

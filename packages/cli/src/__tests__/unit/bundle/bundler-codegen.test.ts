@@ -201,7 +201,7 @@ describe('createEntryPoint integration', () => {
           package: '@walkeros/server-transformer-fingerprint',
           code: 'transformerFingerprint',
           config: {},
-          env: { store: '$store:cache' },
+          env: { store: '$store.cache' },
         },
       },
       stores: {
@@ -436,14 +436,14 @@ describe('detectExplicitCodeImports', () => {
   });
 });
 
-describe('$store: prefix', () => {
-  it('should resolve $store: to stores variable reference', () => {
-    const result = serializeWithCode('$store:cache', 0);
+describe('$store. prefix', () => {
+  it('should resolve $store. to stores variable reference', () => {
+    const result = serializeWithCode('$store.cache', 0);
     expect(result).toBe('stores.cache');
   });
 
-  it('should resolve $store: in nested objects', () => {
-    const result = serializeWithCode({ store: '$store:files' }, 0);
+  it('should resolve $store. in nested objects', () => {
+    const result = serializeWithCode({ store: '$store.files' }, 0);
     expect(result).toContain('stores.files');
   });
 
@@ -457,7 +457,7 @@ describe('$store: prefix', () => {
           package: '@walkeros/server-transformer-fingerprint',
           code: 'transformerFingerprint',
           config: {},
-          env: { store: '$store:cache' },
+          env: { store: '$store.cache' },
         },
       },
       stores: {
@@ -536,7 +536,7 @@ describe('buildSplitConfigObject', () => {
     expect(result.dataPayload).toContain('8080');
   });
 
-  it('keeps $store: env in code skeleton', () => {
+  it('keeps $store. env in code skeleton', () => {
     const flowSettings = {
       server: {},
       bundle: {
@@ -547,14 +547,14 @@ describe('buildSplitConfigObject', () => {
         ga4: {
           package: '@walkeros/web-destination-ga4',
           config: { settings: { measurementId: 'G-ABC' } },
-          env: { store: '$store:memory' },
+          env: { store: '$store.memory' },
         },
       },
     } as Flow.Settings;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
-    // $store: stays in code skeleton
+    // $store. stays in code skeleton
     expect(result.codeConfigObject).toContain('stores.memory');
     // Plain config goes to data
     expect(result.dataPayload).toContain('G-ABC');

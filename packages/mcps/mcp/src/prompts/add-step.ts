@@ -50,7 +50,7 @@ export function registerAddStepPrompt(server: McpServer) {
               '- Read the walkeros://reference/flow-schema resource to understand connection rules.',
               '- Sources connect to pre-collector transformers via `next`.',
               '- Destinations connect to post-collector transformers via `before`.',
-              '- Stores are passive — referenced via `$store:storeName` in env values.',
+              '- Stores are passive — referenced via `$store.storeName` in env values.',
               '- Use variables ($var) for values that change between environments.',
               '- For required settings without defaults in the package schema, ask the user which value to use. Do not guess credentials, IDs, or environment-specific values.',
               '- If $meta.exports lists named exports, set the `code` field on the step to the chosen export name. If only one export exists, use it automatically.',

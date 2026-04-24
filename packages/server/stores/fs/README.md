@@ -29,7 +29,7 @@ relative to a base directory with path traversal protection.
         "file": {
           "package": "@walkeros/server-transformer-file",
           "config": { "settings": { "prefix": "/static" } },
-          "env": { "store": "$store:assets" }
+          "env": { "store": "$store.assets" }
         }
       }
     }

@@ -322,7 +322,7 @@ export interface Settings {
    *
    * @remarks
    * Stores provide key-value storage consumed by sources, transformers,
-   * and destinations via env injection. Referenced using $store:storeId
+   * and destinations via env injection. Referenced using $store.storeId
    * prefix in env values.
    *
    * Key = unique store identifier (arbitrary)

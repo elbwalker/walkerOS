@@ -124,7 +124,7 @@ processing. After a destination push, the response is available at
 Stores are the 4th component type — passive key-value infrastructure that other
 components consume via `env`.
 
-- Referenced via `$store:storeId` in `env` values (bundled mode) or passed
+- Referenced via `$store.storeId` in `env` values (bundled mode) or passed
   directly as store instances (integrated mode)
 - **Init first, destroy last** — stores are available before any source,
   transformer, or destination starts, and outlive them on shutdown
@@ -142,7 +142,7 @@ components consume via `env`.
   "transformers": {
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint",
-      "env": { "store": "$store:data" }
+      "env": { "store": "$store.data" }
     }
   }
 }
@@ -378,21 +378,21 @@ validating configurations, and rendering UI visualizations.
 
 ### Valid connection matrix
 
-| From        | To          | Via Field                   | Valid?                  |
-| ----------- | ----------- | --------------------------- | ----------------------- |
-| Source      | Transformer | `source.before`             | Yes (consent-exempt)    |
-| Source      | Transformer | `source.next`               | Yes (pre-collector)     |
-| Source      | Collector   | (implicit, no next)         | Yes                     |
-| Source      | Source      | —                           | No                      |
-| Source      | Destination | —                           | No                      |
-| Transformer | Transformer | `transformer.before`        | Yes (pre-transform)     |
-| Transformer | Transformer | `transformer.next`          | Yes (chain continues)   |
-| Transformer | Collector   | (implicit, pre-chain ends)  | Yes                     |
-| Transformer | Destination | (implicit, post-chain ends) | Yes                     |
-| Collector   | Destination | (implicit, no before)       | Yes                     |
-| Collector   | Transformer | `destination.before`        | Yes (post-chain)        |
-| Destination | Transformer | `destination.next`          | Yes (post-push)         |
-| Collector   | Source      | —                           | No                      |
+| From        | To          | Via Field                   | Valid?                |
+| ----------- | ----------- | --------------------------- | --------------------- |
+| Source      | Transformer | `source.before`             | Yes (consent-exempt)  |
+| Source      | Transformer | `source.next`               | Yes (pre-collector)   |
+| Source      | Collector   | (implicit, no next)         | Yes                   |
+| Source      | Source      | —                           | No                    |
+| Source      | Destination | —                           | No                    |
+| Transformer | Transformer | `transformer.before`        | Yes (pre-transform)   |
+| Transformer | Transformer | `transformer.next`          | Yes (chain continues) |
+| Transformer | Collector   | (implicit, pre-chain ends)  | Yes                   |
+| Transformer | Destination | (implicit, post-chain ends) | Yes                   |
+| Collector   | Destination | (implicit, no before)       | Yes                   |
+| Collector   | Transformer | `destination.before`        | Yes (post-chain)      |
+| Destination | Transformer | `destination.next`          | Yes (post-push)       |
+| Collector   | Source      | —                           | No                    |
 
 ### Pre-transformer chains (`source.next`)
 

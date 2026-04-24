@@ -37,7 +37,7 @@ export function registerUseDefinitionsPrompt(server: McpServer) {
               '- `$def.name` and `$def.name.path.deep` — definition references',
               '- `$contract.name` — contract references',
               '- `$code:(expr)` — inline JavaScript functions',
-              '- `$store:storeId` — store injection in env values',
+              '- `$store.storeId` — store injection in env values',
               '',
               'Look for:',
               '- Same API keys or URLs across multiple destinations → $var or $env',

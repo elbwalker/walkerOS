@@ -82,10 +82,10 @@ const WALKEROS_REFS_A = `{
       "package": "@walkeros/web-destination-gtag",
       "config": {
         "settings": {
-          "ga4": { "measurementId": "$var:GA4_MEASUREMENT_ID" }
+          "ga4": { "measurementId": "$var.ga4MeasurementId" }
         },
         "env": {
-          "apiKey": "$secret:GTAG_API_KEY"
+          "apiKey": "$secret.GTAG_API_KEY"
         }
       }
     }
@@ -98,11 +98,11 @@ const WALKEROS_REFS_B = `{
       "package": "@walkeros/web-destination-gtag",
       "config": {
         "settings": {
-          "ga4": { "measurementId": "$var:GA4_MEASUREMENT_ID_V2" }
+          "ga4": { "measurementId": "$var.ga4MeasurementIdV2" }
         },
         "env": {
-          "apiKey": "$secret:GTAG_API_KEY_V2",
-          "region": "$var:REGION"
+          "apiKey": "$secret.GTAG_API_KEY_V2",
+          "region": "$var.region"
         }
       }
     }
@@ -131,7 +131,7 @@ export const TypeScript: Story = {
 
 export const JsonWithWalkerOSRefs: Story = {
   args: {
-    label: 'flow.json (with $var: / $secret:)',
+    label: 'flow.json (with $var. / $secret.)',
     language: 'json',
     original: WALKEROS_REFS_A,
     modified: WALKEROS_REFS_B,

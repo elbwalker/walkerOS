@@ -8,6 +8,7 @@
 
 import type { Flow } from './types';
 import { resolveContracts } from './contract';
+import { REF_CONTRACT, REF_DEF, REF_ENV, REF_VAR } from './references';
 import { throwError } from './throwError';
 
 /**
@@ -104,9 +105,7 @@ function resolvePatterns(
 ): unknown {
   if (typeof value === 'string') {
     // Check if entire string is a $def reference with optional deep path
-    const defMatch = value.match(
-      /^\$def\.([a-zA-Z_][a-zA-Z0-9_]*)(?:\.(.+))?$/,
-    );
+    const defMatch = value.match(REF_DEF);
     if (defMatch) {
       const defName = defMatch[1];
       const path = defMatch[2]; // e.g., "nested.deep" or undefined
@@ -133,9 +132,7 @@ function resolvePatterns(
     }
 
     // Check if entire string is a $contract reference with path
-    const contractMatch = value.match(
-      /^\$contract\.([a-zA-Z_][a-zA-Z0-9_]*)(?:\.(.+))?$/,
-    );
+    const contractMatch = value.match(REF_CONTRACT);
     if (contractMatch && resolvedContracts) {
       const contractName = contractMatch[1];
       const path = contractMatch[2];
@@ -154,39 +151,30 @@ function resolvePatterns(
     }
 
     // Replace $var.name patterns (inline substitution)
-    let result = value.replace(
-      /\$var\.([a-zA-Z_][a-zA-Z0-9_]*)/g,
-      (match, name) => {
-        if (variables[name] !== undefined) {
-          return String(variables[name]);
-        }
-        throwError(`Variable "${name}" not found`);
-      },
-    );
+    let result = value.replace(REF_VAR, (match, name) => {
+      if (variables[name] !== undefined) {
+        return String(variables[name]);
+      }
+      throwError(`Variable "${name}" not found`);
+    });
 
     // Replace $env.NAME or $env.NAME:default patterns
-    result = result.replace(
-      /\$env\.([a-zA-Z_][a-zA-Z0-9_]*)(?::([^"}\s]*))?/g,
-      (match, name, defaultValue) => {
-        if (options?.deferred) {
-          return defaultValue !== undefined
-            ? `${ENV_MARKER_PREFIX}${name}:${defaultValue}`
-            : `${ENV_MARKER_PREFIX}${name}`;
-        }
-        if (
-          typeof process !== 'undefined' &&
-          process.env?.[name] !== undefined
-        ) {
-          return process.env[name]!;
-        }
-        if (defaultValue !== undefined) {
-          return defaultValue;
-        }
-        throwError(
-          `Environment variable "${name}" not found and no default provided`,
-        );
-      },
-    );
+    result = result.replace(REF_ENV, (match, name, defaultValue) => {
+      if (options?.deferred) {
+        return defaultValue !== undefined
+          ? `${ENV_MARKER_PREFIX}${name}:${defaultValue}`
+          : `${ENV_MARKER_PREFIX}${name}`;
+      }
+      if (typeof process !== 'undefined' && process.env?.[name] !== undefined) {
+        return process.env[name]!;
+      }
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+      throwError(
+        `Environment variable "${name}" not found and no default provided`,
+      );
+    });
 
     return result;
   }

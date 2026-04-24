@@ -1097,7 +1097,7 @@ export function validateComponentNames(
 }
 
 /**
- * Validates all $store: references point to defined stores.
+ * Validates all $store. references point to defined stores.
  * Throws descriptive error on mismatch.
  */
 function validateStoreReferences(
@@ -1107,7 +1107,7 @@ function validateStoreReferences(
   const refs: Array<{ ref: string; location: string }> = [];
 
   function collectRefs(obj: unknown, path: string) {
-    if (typeof obj === 'string' && obj.startsWith('$store:')) {
+    if (typeof obj === 'string' && obj.startsWith('$store.')) {
       refs.push({ ref: obj.slice(7), location: path });
     } else if (obj && typeof obj === 'object') {
       for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
@@ -1136,7 +1136,7 @@ function validateStoreReferences(
           ? `Available stores: ${Array.from(storeIds).join(', ')}`
           : 'No stores defined';
       throw new Error(
-        `Store reference "$store:${ref}" in ${location} — store "${ref}" not found. ${available}`,
+        `Store reference "$store.${ref}" in ${location} — store "${ref}" not found. ${available}`,
       );
     }
   }
@@ -1158,7 +1158,7 @@ export async function createEntryPoint(
   const storePackages = detectStepPackages(flowSettings, 'stores');
   const explicitCodeImports = detectExplicitCodeImports(flowSettings);
 
-  // Validate $store: references before code generation
+  // Validate $store. references before code generation
   const storeIds = new Set(
     Object.keys(
       (flowSettings as unknown as { stores?: Record<string, unknown> })
@@ -1864,9 +1864,9 @@ export function serializeWithCode(value: unknown, indent: number): string {
   const spaces = '  '.repeat(indent);
   const nextSpaces = '  '.repeat(indent + 1);
 
-  // Handle $code: and $store: prefixes - output raw JavaScript
+  // Handle $code: and $store. prefixes - output raw JavaScript
   if (typeof value === 'string') {
-    if (value.startsWith('$store:')) {
+    if (value.startsWith('$store.')) {
       const storeId = value.slice(7);
       return `stores.${storeId}`;
     }

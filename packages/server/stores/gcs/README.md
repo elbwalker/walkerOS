@@ -28,7 +28,7 @@ built-in auth (ADC on Cloud Run / service account JWT elsewhere).
         "file": {
           "package": "@walkeros/server-transformer-file",
           "config": { "settings": { "prefix": "/static" } },
-          "env": { "store": "$store:assets" }
+          "env": { "store": "$store.assets" }
         }
       }
     }

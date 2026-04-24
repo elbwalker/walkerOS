@@ -2,14 +2,14 @@
  * Check if a config value contains code markers that require esbuild compilation.
  * Returns true if the value (or any nested value) contains:
  * - $code: prefix (raw JS expression)
- * - $store: prefix (JS variable reference)
+ * - $store. prefix (JS variable reference)
  * - __WALKEROS_ENV: prefix (process.env expression)
  */
 export function containsCodeMarkers(value: unknown): boolean {
   if (typeof value === 'string') {
     return (
       value.startsWith('$code:') ||
-      value.startsWith('$store:') ||
+      value.startsWith('$store.') ||
       value.includes('__WALKEROS_ENV:')
     );
   }
@@ -32,9 +32,10 @@ export function containsCodeMarkers(value: unknown): boolean {
  *
  * Not applicable to InlineCode steps — those go entirely to the code layer.
  */
-export function classifyStepProperties(
-  step: Record<string, unknown>,
-): { codeProps: Record<string, unknown>; dataProps: Record<string, unknown> } {
+export function classifyStepProperties(step: Record<string, unknown>): {
+  codeProps: Record<string, unknown>;
+  dataProps: Record<string, unknown>;
+} {
   const codeProps: Record<string, unknown> = {};
   const dataProps: Record<string, unknown> = {};
 

@@ -687,7 +687,7 @@
           },
           "next": "fingerprint",
           "env": {
-            "store": "$store:cache"
+            "store": "$store.cache"
           },
           "config": {},
           "examples": {

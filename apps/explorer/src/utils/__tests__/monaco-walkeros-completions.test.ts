@@ -2,6 +2,8 @@ import {
   getVariableCompletions,
   getDefinitionCompletions,
   getSecretCompletions,
+  getStoreCompletions,
+  getEnvCompletions,
   getPackageCompletions,
   getStepNameCompletions,
   getContractCompletions,
@@ -38,6 +40,34 @@ describe('getSecretCompletions', () => {
     expect(items).toHaveLength(2);
     expect(items[0].label).toBe('$secret.GA_MEASUREMENT_ID');
     expect(items[0].detail).toBe('(secret)');
+  });
+});
+
+describe('getStoreCompletions', () => {
+  it('returns entries for each store', () => {
+    const entries = getStoreCompletions(['cache', 'ttl']);
+    expect(entries.map((e) => e.label)).toEqual(['$store.cache', '$store.ttl']);
+    expect(entries[0].detail).toBe('(store)');
+    expect(entries[0].kind).toBe('reference');
+  });
+
+  it('returns empty when no stores', () => {
+    expect(getStoreCompletions(undefined)).toEqual([]);
+    expect(getStoreCompletions([])).toEqual([]);
+  });
+});
+
+describe('getEnvCompletions', () => {
+  it('returns entries for each env name', () => {
+    const entries = getEnvCompletions(['API_URL', 'PORT']);
+    expect(entries.map((e) => e.label)).toEqual(['$env.API_URL', '$env.PORT']);
+    expect(entries[0].detail).toBe('(env var)');
+    expect(entries[0].kind).toBe('variable');
+  });
+
+  it('returns empty when no envNames', () => {
+    expect(getEnvCompletions(undefined)).toEqual([]);
+    expect(getEnvCompletions([])).toEqual([]);
   });
 });
 

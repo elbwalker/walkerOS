@@ -539,7 +539,7 @@ export const DestinationReferenceSchema = z
  *
  * @remarks
  * Stores are passive key-value infrastructure — no chain properties (next/before).
- * Consumed by other components via `$store:storeId` env wiring.
+ * Consumed by other components via `$store.storeId` env wiring.
  */
 export const StoreReferenceSchema = z
   .object({

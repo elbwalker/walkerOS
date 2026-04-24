@@ -89,7 +89,7 @@ export async function collector(
   collector.stores = await initStores(collector, rawStores);
 
   // Resolve store references in component env values.
-  // The bundler emits `$store:gcs` as a direct reference to `stores.gcs`
+  // The bundler emits `$store.gcs` as a direct reference to `stores.gcs`
   // (the raw {code, config} definition). After initialization, replace
   // these raw references with the actual Store.Instance objects.
   resolveStoreReferences(rawStores, collector.stores, initConfig);

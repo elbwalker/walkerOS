@@ -225,3 +225,63 @@ describe('extractFlowIntelliSenseContext', () => {
     });
   });
 });
+
+describe('extractFlowIntelliSenseContext — stores', () => {
+  it('collects store IDs from active flow', () => {
+    const result = extractFlowIntelliSenseContext(
+      JSON.stringify({
+        version: 3,
+        flows: {
+          server: {
+            server: {},
+            stores: {
+              cache: { package: '@walkeros/store-memory' },
+              ttl: {},
+            },
+          },
+        },
+      }),
+    );
+    expect(result.stores).toEqual(expect.arrayContaining(['cache', 'ttl']));
+  });
+});
+
+describe('extractFlowIntelliSenseContext — cascade priority', () => {
+  it('step-level variables override flow-level override config', () => {
+    const result = extractFlowIntelliSenseContext(
+      JSON.stringify({
+        version: 3,
+        variables: { mode: 'config' },
+        flows: {
+          web: {
+            web: {},
+            variables: { mode: 'flow' },
+            sources: {
+              browser: { variables: { mode: 'step' } },
+            },
+          },
+        },
+      }),
+    );
+    expect(result.variables?.mode).toBe('step');
+  });
+
+  it('missing step variables fall back to flow then config', () => {
+    const result = extractFlowIntelliSenseContext(
+      JSON.stringify({
+        version: 3,
+        variables: { foo: 'config' },
+        flows: {
+          web: {
+            web: {},
+            variables: { bar: 'flow' },
+            sources: { browser: { variables: { baz: 'step' } } },
+          },
+        },
+      }),
+    );
+    expect(result.variables?.foo).toBe('config');
+    expect(result.variables?.bar).toBe('flow');
+    expect(result.variables?.baz).toBe('step');
+  });
+});

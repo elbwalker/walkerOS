@@ -83,7 +83,7 @@ const val = collector.stores.cache.get('key');`}
 
 ## Connecting stores to components
 
-Use the `$store:` prefix in a component's `env` to inject a store instance at runtime:
+Use the `$store.` prefix in a component's `env` to inject a store instance at runtime:
 
 <CodeSnippet
   code={`{
@@ -95,14 +95,14 @@ Use the `$store:` prefix in a component's `env` to inject a store instance at ru
   "transformers": {
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint",
-      "env": { "store": "$store:cache" }
+      "env": { "store": "$store.cache" }
     }
   }
 }`}
   language="json"
 />
 
-The bundler resolves `$store:cache` to the initialized store instance. Invalid references (pointing to undefined stores) are caught at build time.
+The bundler resolves `$store.cache` to the initialized store instance. Invalid references (pointing to undefined stores) are caught at build time.
 
 ## Lifecycle
 

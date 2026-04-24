@@ -37,4 +37,10 @@ export interface IntelliSenseContext {
 
   /** Current platform context (web or server) */
   platform?: 'web' | 'server';
+
+  /** Store IDs from the active flow's `stores` map. Enables `$store.` completion. */
+  stores?: string[];
+
+  /** Known environment variable names. If omitted, `$env.` offers only the prefix. */
+  envNames?: string[];
 }

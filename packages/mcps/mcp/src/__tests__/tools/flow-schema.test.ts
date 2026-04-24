@@ -135,7 +135,7 @@ describe('reference resources', () => {
       expect(parsed.patterns['$var.name']).toBeDefined();
       expect(parsed.patterns['$env.NAME']).toBeDefined();
       expect(parsed.patterns['$code:(expr)']).toBeDefined();
-      expect(parsed.patterns['$store:storeId']).toBeDefined();
+      expect(parsed.patterns['$store.storeId']).toBeDefined();
     });
   });
 

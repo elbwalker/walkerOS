@@ -27,6 +27,7 @@ export function extractFlowIntelliSenseContext(
   const sources: string[] = [];
   const destinations: string[] = [];
   const transformers: string[] = [];
+  const stores: string[] = [];
   const packages: PackageInfo[] = [];
   const contractEntities: Array<{ entity: string; actions: string[] }> = [];
   const contractRaw: Record<string, unknown> = {};
@@ -111,6 +112,17 @@ export function extractFlowIntelliSenseContext(
         }
       }
     }
+
+    // Stores — collect IDs and cascade their variables/definitions
+    if (isObject(settings.stores)) {
+      for (const [name, ref] of Object.entries(settings.stores)) {
+        stores.push(name);
+        if (isObject(ref)) {
+          mergeVars(variables, ref.variables);
+          mergeDefs(definitions, ref.definitions);
+        }
+      }
+    }
   }
 
   const result: Partial<IntelliSenseContext> = {
@@ -123,6 +135,7 @@ export function extractFlowIntelliSenseContext(
   if (packages.length > 0) result.packages = packages;
   if (contractEntities.length > 0) result.contract = contractEntities;
   if (Object.keys(contractRaw).length > 0) result.contractRaw = contractRaw;
+  if (stores.length > 0) result.stores = stores;
 
   return result;
 }

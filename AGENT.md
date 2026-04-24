@@ -26,7 +26,7 @@ Learn the concepts before coding:
 | [understanding-destinations](skills/understanding-destinations/SKILL.md) | Destination interface, env pattern                 |
 | [understanding-sources](skills/understanding-sources/SKILL.md)           | Source interface, capture patterns                 |
 | [understanding-transformers](skills/understanding-transformers/SKILL.md) | Transformer interface, chaining, pipeline          |
-| [understanding-stores](skills/understanding-stores/SKILL.md)             | Store interface, $store: wiring, lifecycle         |
+| [understanding-stores](skills/understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle         |
 | [using-logger](skills/using-logger/SKILL.md)                             | Logger access, DRY principles, when to log         |
 | [using-step-examples](skills/using-step-examples/SKILL.md)               | Step examples lifecycle, Three Type Zones, testing |
 
