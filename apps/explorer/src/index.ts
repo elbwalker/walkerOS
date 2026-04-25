@@ -103,6 +103,11 @@ export {
 } from './themes';
 export type { ExplorerTheme } from './themes';
 
+// Monaco Editor type (re-exported for consumers of callbacks that receive a
+// Monaco instance — e.g. `CodeBox.beforeMount(monaco)`. Raw `Editor` / `DiffEditor`
+// components stay private — use CodeBox / CodeDiffBox molecules instead).
+export type { Monaco } from '@monaco-editor/react';
+
 // Monaco Editor type registration
 export {
   registerWalkerOSTypes,
