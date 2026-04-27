@@ -114,6 +114,8 @@ export {
   initializeMonacoTypes,
   loadPackageTypes,
   loadTypeLibraryFromURL,
+  setPackageTypesBaseUrl,
+  resolveTypesUrl,
 } from './utils/monaco-types';
 export type { LoadPackageTypesOptions } from './utils/monaco-types';
 

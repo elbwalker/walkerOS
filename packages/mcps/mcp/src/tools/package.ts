@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
 import { mergeConfigSchema } from '@walkeros/core/dev';
-import { fetchCatalog, normalizePlatform } from '../catalog.js';
+import { fetchCatalog, normalizePlatform, CLIENT_HEADER } from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
 
@@ -79,7 +79,11 @@ async function packageSearchHandlerBody(input: unknown) {
 
   // Lookup mode: fetch specific package details
   try {
-    const info = await fetchPackage(packageName, { version, baseUrl });
+    const info = await fetchPackage(packageName, {
+      version,
+      baseUrl,
+      client: CLIENT_HEADER,
+    });
 
     const result = {
       package: info.packageName,
@@ -174,7 +178,11 @@ async function packageGetHandlerBody(input: unknown) {
   const baseUrl = process.env.APP_URL || undefined;
 
   try {
-    const info = await fetchPackage(packageName, { version, baseUrl });
+    const info = await fetchPackage(packageName, {
+      version,
+      baseUrl,
+      client: CLIENT_HEADER,
+    });
 
     // Build merged schemas: base config + package settings → schemas.config
     const mergedSchemas: Record<string, unknown> = {};

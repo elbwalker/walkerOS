@@ -251,4 +251,43 @@ describe('fetchCatalog', () => {
     const catalog = await fetchCatalog();
     expect(catalog).toHaveLength(1);
   });
+
+  it('sends X-Walkeros-Client header on baseUrl catalog fetch', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ catalog: [], count: 0 }),
+    });
+
+    await fetchCatalog({ baseUrl: 'http://app.test' });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const init = mockFetch.mock.calls[0][1] as RequestInit;
+    expect(init.headers).toMatchObject({
+      'X-Walkeros-Client': expect.stringMatching(/^walkeros-mcp\//) as unknown,
+    });
+  });
+
+  it('sends X-Walkeros-Client header on npm search and jsdelivr meta fetch', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        npmSearchResponse([
+          { name: '@walkeros/web-destination-gtag', version: '1.0.0' },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        walkerOSJsonResponse({ type: 'destination', platform: 'web' }),
+      );
+
+    await fetchCatalog();
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const npmInit = mockFetch.mock.calls[0][1] as RequestInit;
+    const jsdelivrInit = mockFetch.mock.calls[1][1] as RequestInit;
+    expect(npmInit.headers).toMatchObject({
+      'X-Walkeros-Client': expect.stringMatching(/^walkeros-mcp\//) as unknown,
+    });
+    expect(jsdelivrInit.headers).toMatchObject({
+      'X-Walkeros-Client': expect.stringMatching(/^walkeros-mcp\//) as unknown,
+    });
+  });
 });

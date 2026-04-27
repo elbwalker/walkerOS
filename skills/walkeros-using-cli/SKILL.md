@@ -386,6 +386,12 @@ version-negotiation rules.
 
 ---
 
+## Networking
+
+Outbound requests to a configured `APP_URL` carry an
+`X-Walkeros-Client: walkeros-cli/{version}` header so the host can attribute
+usage. No PII; the header is the only client identifier.
+
 ## Telemetry
 
 The CLI supports anonymous usage telemetry (installation id, command name,

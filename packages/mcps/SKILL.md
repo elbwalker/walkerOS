@@ -60,6 +60,12 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 | `manage-contract` | Create/update event contracts (bidirectional with mappings) |
 | `use-definitions` | Extract shared patterns into definitions and variables      |
 
+## Networking
+
+Outbound requests to a configured `APP_URL` carry an
+`X-Walkeros-Client: walkeros-mcp/{version}` header so the host can attribute
+usage. No PII; the header is the only client identifier.
+
 ## Conventions
 
 - Each package is registered in `walkerOS/package.json` workspaces
