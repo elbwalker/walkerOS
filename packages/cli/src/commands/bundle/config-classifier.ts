@@ -17,6 +17,9 @@ export function containsCodeMarkers(value: unknown): boolean {
     return value.some(containsCodeMarkers);
   }
   if (value !== null && typeof value === 'object') {
+    // Boundary: walker traverses arbitrary JSON. After typeof === 'object'
+    // narrowing, indexing as a Record<string, unknown> is the typed way to
+    // enumerate values.
     return Object.values(value as Record<string, unknown>).some(
       containsCodeMarkers,
     );

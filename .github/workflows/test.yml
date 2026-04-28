@@ -48,7 +48,8 @@ jobs:
       - name: Test, lint
         run: npx turbo run test lint
       - name: Run integration tests
-        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        if:
+          github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: npm run test:integration
       - name: Upload test results on failure
         if: failure()

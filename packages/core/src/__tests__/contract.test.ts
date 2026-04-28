@@ -24,7 +24,9 @@ describe('mergeContractSchemas', () => {
       properties: { data: { type: 'object', required: ['name'] } },
     };
     const result = mergeContractSchemas(parent, child);
-    expect((result.properties as any).data.required).toEqual(['id', 'name']);
+    expect(result).toEqual({
+      properties: { data: { type: 'object', required: ['id', 'name'] } },
+    });
   });
 
   it('should let child override scalar keywords', () => {
@@ -131,9 +133,9 @@ describe('resolveContracts', () => {
     };
     const resolved = resolveContracts(contract);
     // Wildcard merged into concrete action
-    expect(
-      (resolved.web.events?.product.add as any).properties.data.required,
-    ).toEqual(['id', 'qty']);
+    expect(resolved.web.events?.product.add).toEqual({
+      properties: { data: { required: ['id', 'qty'] } },
+    });
     // Wildcard entry preserved
     expect(resolved.web.events?.product['*']).toBeDefined();
   });
@@ -152,12 +154,12 @@ describe('resolveContracts', () => {
       },
     };
     const resolved = resolveContracts(contract);
-    expect(
-      (resolved.web.events?.product.view as any).properties.consent.required,
-    ).toEqual(['analytics']);
-    expect(
-      (resolved.web.events?.product.view as any).properties.data.required,
-    ).toEqual(['id']);
+    expect(resolved.web.events?.product.view).toEqual({
+      properties: {
+        consent: { required: ['analytics'] },
+        data: { required: ['id'] },
+      },
+    });
   });
 
   it('should resolve extends before wildcards', () => {
@@ -180,9 +182,9 @@ describe('resolveContracts', () => {
     };
     const resolved = resolveContracts(contract);
     // web inherits product.* from default, then add merges with *
-    expect(
-      (resolved.web.events?.product.add as any).properties.data.required,
-    ).toEqual(['id', 'qty']);
+    expect(resolved.web.events?.product.add).toEqual({
+      properties: { data: { required: ['id', 'qty'] } },
+    });
   });
 
   it('should merge sections additively via extends', () => {
@@ -217,11 +219,10 @@ describe('resolveContracts', () => {
     const resolved = resolveContracts(contract);
     // top-level description preserved (it's contract metadata)
     expect(resolved.web.description).toBe('Web shop');
-    // event-level annotations stripped
-    const view = resolved.web.events?.product.view as any;
-    expect(view.description).toBeUndefined();
-    expect(view.examples).toBeUndefined();
-    expect(view.properties.data.required).toEqual(['id']);
+    // event-level annotations stripped — only `properties` remains
+    expect(resolved.web.events?.product.view).toEqual({
+      properties: { data: { required: ['id'] } },
+    });
   });
 
   it('should handle contract with only sections, no events', () => {

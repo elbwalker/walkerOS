@@ -3,16 +3,20 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 
 // Stub the broad `@walkeros/cli` surface (it transitively imports chalk/pacote/etc
-// which Jest can't resolve) and forward `telemetry.*` to the real module. This
-// matches the approach used by the rest of the MCP test suite.
+// which Jest can't resolve) and forward `telemetry.*` plus `writeConfig` to
+// their real implementations. This matches the approach used by the rest of the
+// MCP test suite. Relative `requireActual` paths bypass jest's moduleNameMapper
+// so we don't re-enter the mocked module.
 jest.mock('@walkeros/cli', () => {
   const realTelemetry = jest.requireActual('../../../../cli/src/telemetry');
+  const realConfig = jest.requireActual('../../../../cli/src/lib/config-file');
   return {
     telemetry: realTelemetry,
+    writeConfig: realConfig.writeConfig,
   };
 });
 
-import { writeConfig } from '../../../../cli/src/lib/config-file.js';
+import { writeConfig } from '@walkeros/cli';
 import { createMcpEmitter } from '../telemetry.js';
 
 const testDir = join(tmpdir(), `mcp-telemetry-test-${Date.now()}`);

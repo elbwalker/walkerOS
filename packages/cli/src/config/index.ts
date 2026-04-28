@@ -7,7 +7,6 @@
 
 // Type guards and validators
 export {
-  isObject,
   detectPlatform,
   isFlowConfig,
   validateFlowConfig,

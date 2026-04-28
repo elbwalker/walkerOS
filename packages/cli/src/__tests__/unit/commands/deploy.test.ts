@@ -2,7 +2,6 @@ import { requireProjectId } from '../../../core/auth.js';
 import { apiFetch } from '../../../core/http.js';
 import { getFlow } from '../../../commands/flows/index.js';
 import { deploy, getDeployment } from '../../../commands/deploy/index.js';
-import { bundleRemote } from '../../../commands/bundle/index.js';
 import { setupMockApiClient } from '../../helpers/mock-api-client.js';
 
 jest.mock('../../../core/api-client.js');
@@ -319,34 +318,6 @@ describe('deploy', () => {
       expect(mockApiFetch).toHaveBeenCalledWith(
         '/api/projects/proj_default/flows/cfg_1/settings/cfg_web/deploy',
       );
-    });
-  });
-
-  describe('bundleRemote()', () => {
-    it('without flowName sends only flow in body', async () => {
-      const content = { version: 3, flows: { default: {} } };
-      mockPost.mockResolvedValue({
-        data: 'console.log("bundle")',
-        response: { headers: new Headers() },
-      });
-      await bundleRemote({ content });
-      expect(mockPost).toHaveBeenCalledWith('/api/bundle', {
-        body: { flow: content },
-        parseAs: 'text',
-      });
-    });
-
-    it('with flowName includes flowName in body', async () => {
-      const content = { version: 3, flows: { web: {}, server: {} } };
-      mockPost.mockResolvedValue({
-        data: 'console.log("bundle")',
-        response: { headers: new Headers() },
-      });
-      await bundleRemote({ content, flowName: 'web' });
-      expect(mockPost).toHaveBeenCalledWith('/api/bundle', {
-        body: { flow: content, flowName: 'web' },
-        parseAs: 'text',
-      });
     });
   });
 });

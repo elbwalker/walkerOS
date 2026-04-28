@@ -211,7 +211,7 @@ describe('flow_manage tool', () => {
         action: 'update',
         flowId: 'flow_1',
         name: 'Updated',
-      })) as { structuredContent: { name: string } };
+      })) as { structuredContent: { configName: string } };
 
       expect(updateFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',

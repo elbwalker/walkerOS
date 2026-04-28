@@ -2823,6 +2823,35 @@ describe('$flow references', () => {
     );
   });
 
+  test('detects 3-flow cycles (a -> b -> c -> a)', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'web', settings: { x: '$flow.b.settings.y' } },
+        },
+        b: {
+          config: { platform: 'server', settings: { y: '$flow.c.settings.z' } },
+        },
+        c: {
+          config: { platform: 'web', settings: { z: '$flow.a.settings.x' } },
+        },
+      },
+    };
+    expect(() => getFlowSettings(config, 'a')).toThrow(
+      /Cyclic \$flow reference/,
+    );
+    // The chain message should mention all three flows in order.
+    try {
+      getFlowSettings(config, 'a');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      expect(msg).toMatch(/a/);
+      expect(msg).toMatch(/b/);
+      expect(msg).toMatch(/c/);
+    }
+  });
+
   test('soft mode collects warnings instead of throwing for missing key', () => {
     const config: Flow.Json = {
       version: 4,

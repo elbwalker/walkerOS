@@ -1,5 +1,6 @@
-import type { Mapping, WalkerOS, Collector } from '../types';
+import type { Mapping, WalkerOS } from '../types';
 import { flattenIncludeSections, getEvent, isObject } from '..';
+import { createMockCollector } from './helpers/mocks';
 
 describe('flattenIncludeSections', () => {
   const event = getEvent('order complete');
@@ -100,9 +101,7 @@ describe('flattenIncludeSections', () => {
 describe('processEventMapping with include', () => {
   const { processEventMapping } = require('..');
 
-  const mockCollector = {
-    consent: {},
-  } as unknown as Collector.Instance;
+  const mockCollector = createMockCollector({ consent: {} });
 
   test('config.include flattens sections into data', async () => {
     const event = getEvent('order complete');
@@ -113,9 +112,10 @@ describe('processEventMapping with include', () => {
     const result = await processEventMapping(event, config, mockCollector);
 
     expect(isObject(result.data)).toBe(true);
-    const data = result.data as Record<string, unknown>;
-    expect(data.data_total).toBe(555);
-    expect(data.data_currency).toBe('EUR');
+    expect(result.data).toMatchObject({
+      data_total: 555,
+      data_currency: 'EUR',
+    });
   });
 
   test('rule.include replaces config.include', async () => {
@@ -133,10 +133,9 @@ describe('processEventMapping with include', () => {
 
     const result = await processEventMapping(event, config, mockCollector);
 
-    const data = result.data as Record<string, unknown>;
     // Rule-level include wins - only globals, no data
-    expect(data.globals_pagegroup).toBe('shop');
-    expect(data.data_total).toBeUndefined();
+    expect(result.data).toMatchObject({ globals_pagegroup: 'shop' });
+    expect(isObject(result.data) && 'data_total' in result.data).toBe(false);
   });
 
   test('config.data wins over include on key conflict', async () => {
@@ -152,10 +151,11 @@ describe('processEventMapping with include', () => {
 
     const result = await processEventMapping(event, config, mockCollector);
 
-    const data = result.data as Record<string, unknown>;
-    expect(data.data_total).toBe('overridden');
-    // Other include keys still present
-    expect(data.data_currency).toBe('EUR');
+    expect(result.data).toMatchObject({
+      data_total: 'overridden',
+      // Other include keys still present
+      data_currency: 'EUR',
+    });
   });
 
   test('rule.data wins over include on key conflict', async () => {
@@ -177,8 +177,7 @@ describe('processEventMapping with include', () => {
 
     const result = await processEventMapping(event, config, mockCollector);
 
-    const data = result.data as Record<string, unknown>;
-    expect(data.globals_pagegroup).toBe('custom');
+    expect(result.data).toMatchObject({ globals_pagegroup: 'custom' });
   });
 
   test('no include means no include data', async () => {
@@ -198,8 +197,7 @@ describe('processEventMapping with include', () => {
 
     const result = await processEventMapping(event, config, mockCollector);
 
-    const data = result.data as Record<string, unknown>;
     // context: { shopping: ['complete', 0] } → 'complete'
-    expect(data.context_shopping).toBe('complete');
+    expect(result.data).toMatchObject({ context_shopping: 'complete' });
   });
 });

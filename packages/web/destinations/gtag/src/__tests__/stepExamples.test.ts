@@ -41,7 +41,7 @@ function makeTestEnv(): {
   calls: CallRecord[];
 } {
   const calls: CallRecord[] = [];
-  const env = clone(examples.env.push) as TestEnv;
+  const env = clone(examples.env.push) as unknown as TestEnv;
   const mockGtag = jest.fn((...args: unknown[]) => {
     calls.push(['gtag', ...args] as CallRecord);
   });

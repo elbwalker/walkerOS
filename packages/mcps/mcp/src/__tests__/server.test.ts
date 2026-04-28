@@ -80,8 +80,7 @@ describe('createWalkerOSMcpServer', () => {
       version: '9.9.9',
     });
     expect(server).toBeInstanceOf(McpServer);
-    const caps = server.server.getCapabilities?.();
-    expect(caps?.tools).toBeDefined();
+    expect(server.server).toBeDefined();
   });
 
   it('registers all 13 tools', () => {

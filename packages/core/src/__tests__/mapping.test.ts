@@ -1,4 +1,4 @@
-import type { Mapping, WalkerOS, Collector } from '../types';
+import type { Mapping, WalkerOS } from '../types';
 import {
   createEvent,
   getEvent,
@@ -7,6 +7,7 @@ import {
   isObject,
   isString,
 } from '..';
+import { createMockCollector } from './helpers/mocks';
 
 describe('getMappingEvent', () => {
   test('basic', async () => {
@@ -338,9 +339,9 @@ describe('getMappingValue', () => {
   });
 
   test('consent', async () => {
-    const collector = {
+    const collector = createMockCollector({
       consent: { collectorLevel: true },
-    } as unknown as Collector.Instance;
+    });
 
     expect(collector.consent.collectorLevel).toBeTruthy();
 
@@ -480,9 +481,7 @@ describe('getMappingValue', () => {
 describe('processEventMapping', () => {
   const { processEventMapping } = require('..');
 
-  const mockCollector = {
-    consent: {},
-  } as unknown as Collector.Instance;
+  const mockCollector = createMockCollector({ consent: {} });
 
   test('config-level policy', async () => {
     const event = { name: 'page view', data: { title: 'Home' } };
@@ -798,7 +797,7 @@ describe('processEventMapping', () => {
         { mapping: { user: { login: { silent: true } } } },
         mockCollector,
       );
-      expect((result as unknown as { skip?: boolean }).skip).toBeUndefined();
+      expect('skip' in result).toBe(false);
       expect(result.silent).toBe(true);
     });
   });

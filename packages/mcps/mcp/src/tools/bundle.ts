@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { bundle, bundleRemote } from '@walkeros/cli';
+import { bundle } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
@@ -11,21 +10,10 @@ const TITLE = 'Bundle Flow';
 const DESCRIPTION =
   'Bundle a walkerOS flow configuration into deployable JavaScript. ' +
   'Resolves all destinations, sources, and transformers, then outputs ' +
-  'a tree-shaken production bundle. Returns bundle statistics. ' +
-  'Set remote: true to use the walkerOS cloud service instead of local build tools.';
+  'a tree-shaken production bundle. Returns bundle statistics.';
 
 const inputSchema = {
   ...schemas.BundleInputShape,
-  remote: z
-    .boolean()
-    .optional()
-    .describe(
-      'Use remote cloud bundling (requires authentication). Default: false (local)',
-    ),
-  content: z
-    .record(z.string(), z.unknown())
-    .optional()
-    .describe('Flow.Json content (required when remote: true)'),
 };
 
 const annotations = {
@@ -47,33 +35,13 @@ export function createFlowBundleToolSpec(): ToolSpec {
 }
 
 async function flowBundleHandlerBody(input: unknown) {
-  const { configPath, flow, stats, output, remote, content } = (input ??
-    {}) as {
+  const { configPath, flow, stats, output } = (input ?? {}) as {
     configPath: string;
     flow?: string;
     stats?: boolean;
     output?: string;
-    remote?: boolean;
-    content?: Record<string, unknown>;
   };
   try {
-    if (remote) {
-      if (!content) throw new Error('content is required when remote: true');
-      const result = await bundleRemote({
-        content: content as Record<string, unknown>,
-        flowName: flow,
-      });
-      return mcpResult(
-        { success: true, ...result },
-        {
-          next: [
-            'Use flow_simulate to test',
-            'Use deploy_manage with action "deploy" to publish',
-          ],
-        },
-      );
-    }
-
     const result = await bundle(configPath, {
       flowName: flow,
       stats: stats ?? true,

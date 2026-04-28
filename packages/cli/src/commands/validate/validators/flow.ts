@@ -1,7 +1,7 @@
 // walkerOS/packages/cli/src/commands/validate/validators/flow.ts
 
 import type { Flow } from '@walkeros/core';
-import { getFlowSettings } from '@walkeros/core';
+import { getFlowSettings, isObject } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import type {
   ValidateResult,
@@ -20,13 +20,9 @@ interface FlowValidateOptions {
  * Used only in soft-resolve so we can call core's resolver without casts.
  */
 function isFlowJson(value: unknown): value is Flow.Json {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'version' in value &&
-    'flows' in value &&
-    typeof (value as { flows: unknown }).flows === 'object'
-  );
+  if (!isObject(value)) return false;
+  if (!('version' in value) || !('flows' in value)) return false;
+  return isObject(value.flows);
 }
 
 export function validateFlow(
@@ -73,12 +69,12 @@ export function validateFlow(
   }
 
   // 5. CLI-specific: check for empty flows
-  const config = (
-    typeof input === 'object' && input !== null ? input : {}
-  ) as Record<string, unknown>;
-
-  const flows = config.flows as Record<string, unknown> | undefined;
-  if (flows && typeof flows === 'object' && Object.keys(flows).length === 0) {
+  const config: Record<string, unknown> = isObject(input) ? input : {};
+  const flowsValue = config.flows;
+  const flows: Record<string, unknown> | undefined = isObject(flowsValue)
+    ? flowsValue
+    : undefined;
+  if (flows && Object.keys(flows).length === 0) {
     errors.push({
       path: 'flows',
       message: 'At least one flow is required',
@@ -87,7 +83,7 @@ export function validateFlow(
   }
 
   // 6. Extract flow details
-  if (flows && typeof flows === 'object') {
+  if (flows) {
     const flowNames = Object.keys(flows);
     details.flowNames = flowNames;
     details.flowCount = flowNames.length;
@@ -108,29 +104,27 @@ export function validateFlow(
 
   // 8. CLI-specific: warn about packages without version (per-flow config.bundle.packages)
   let totalPackageCount = 0;
-  if (flows && typeof flows === 'object') {
-    for (const [flowName, flowValue] of Object.entries(
-      flows as Record<string, unknown>,
-    )) {
-      const flow = flowValue as {
-        config?: { bundle?: { packages?: unknown } };
-      };
-      const packages = flow.config?.bundle?.packages as
-        | Record<string, Record<string, unknown>>
-        | undefined;
-      if (packages && typeof packages === 'object') {
-        for (const [pkgName, pkgConfig] of Object.entries(packages)) {
-          if (!pkgConfig.version && !pkgConfig.path) {
-            warnings.push({
-              path: `flows.${flowName}.config.bundle.packages.${pkgName}`,
-              message: `Package "${pkgName}" has no version specified`,
-              suggestion:
-                'Consider specifying a version for reproducible builds',
-            });
-          }
+  if (flows) {
+    for (const [flowName, flowValue] of Object.entries(flows)) {
+      if (!isObject(flowValue)) continue;
+      const flowConfig = flowValue.config;
+      if (!isObject(flowConfig)) continue;
+      const bundle = flowConfig.bundle;
+      if (!isObject(bundle)) continue;
+      const packages = bundle.packages;
+      if (!isObject(packages)) continue;
+
+      for (const [pkgName, pkgConfigValue] of Object.entries(packages)) {
+        if (!isObject(pkgConfigValue)) continue;
+        if (!pkgConfigValue.version && !pkgConfigValue.path) {
+          warnings.push({
+            path: `flows.${flowName}.config.bundle.packages.${pkgName}`,
+            message: `Package "${pkgName}" has no version specified`,
+            suggestion: 'Consider specifying a version for reproducible builds',
+          });
         }
-        totalPackageCount += Object.keys(packages).length;
       }
+      totalPackageCount += Object.keys(packages).length;
     }
   }
   if (totalPackageCount > 0) {
@@ -142,14 +136,15 @@ export function validateFlow(
     details.context = coreResult.context;
   }
 
-  // 10. Deep validation: cross-step example compatibility
-  if (flows && typeof flows === 'object' && errors.length === 0) {
-    const flowNames = Object.keys(flows);
+  // 10. Deep validation: cross-step example compatibility (typed Flow.Json shape)
+  if (errors.length === 0 && isFlowJson(input)) {
+    const typedFlows: Record<string, Flow> = input.flows;
+    const flowNames = Object.keys(typedFlows);
     const flowsToCheck = options.flow ? [options.flow] : flowNames;
 
     let totalConnections = 0;
     for (const name of flowsToCheck) {
-      const flowSettings = (flows as Record<string, Flow>)[name];
+      const flowSettings = typedFlows[name];
       if (!flowSettings) continue;
 
       const connections = buildConnectionGraph(flowSettings);
@@ -159,7 +154,7 @@ export function validateFlow(
       totalConnections += connections.length;
 
       // Contract compliance (contracts live on Config level only)
-      const contract = config.contract as Flow.Contract | undefined;
+      const contract = input.contract;
       if (contract) {
         checkContractCompliance(flowSettings, contract, warnings);
       }
@@ -168,17 +163,15 @@ export function validateFlow(
 
     // Check for flat dot-separated mapping keys (common mistake)
     for (const name of flowsToCheck) {
-      const flowSettings = (flows as Record<string, Flow>)[name];
+      const flowSettings = typedFlows[name];
       if (!flowSettings) continue;
 
       for (const [destName, dest] of Object.entries(
         flowSettings.destinations || {},
       )) {
-        const destConfig = dest as {
-          config?: { mapping?: Record<string, unknown> };
-        };
-        const mapping = destConfig.config?.mapping;
-        if (!mapping || typeof mapping !== 'object') continue;
+        if (!isObject(dest.config)) continue;
+        const mapping = dest.config.mapping;
+        if (!isObject(mapping)) continue;
 
         for (const key of Object.keys(mapping)) {
           if (key.includes('.') && !key.includes(' ')) {

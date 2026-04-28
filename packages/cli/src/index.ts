@@ -58,7 +58,7 @@ export {
 
 // === Programmatic API ===
 // High-level functions for library usage
-export { bundle, bundleRemote } from './commands/bundle/index.js';
+export { bundle } from './commands/bundle/index.js';
 export { wrapSkeleton } from './commands/bundle/wrap.js';
 export type { WrapSkeletonOptions } from './commands/bundle/wrap.js';
 export {

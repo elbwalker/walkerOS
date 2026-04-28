@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Mapping } from '@walkeros/core';
 import type { DestinationSnowplow } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
@@ -15,14 +15,20 @@ import {
 } from '.';
 import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
 
+// Step example `.mapping` is typed as `unknown` (it can be any rule shape).
+// Narrow to the destination's Rule type for use in `mappingConfig`.
+type SnowplowRule = Mapping.Rule<DestinationSnowplow.Mapping>;
+
+const asRule = (m: unknown): SnowplowRule => m as SnowplowRule;
+
 const mappingConfig = {
-  page: { view: examples.step.pageView.mapping },
+  page: { view: asRule(examples.step.pageView.mapping) },
   product: {
-    view: examples.step.productView.mapping,
-    add: examples.step.addToCart.mapping,
+    view: asRule(examples.step.productView.mapping),
+    add: asRule(examples.step.addToCart.mapping),
   },
-  order: { complete: examples.step.transaction.mapping },
-  promotion: { view: examples.step.promoView.mapping },
+  order: { complete: asRule(examples.step.transaction.mapping) },
+  promotion: { view: asRule(examples.step.promoView.mapping) },
 };
 
 describe('destination snowplow', () => {
@@ -114,7 +120,7 @@ describe('destination snowplow', () => {
 
     const destinationWithEnv = {
       ...destination,
-      env: testEnv,
+      env: testEnv as DestinationSnowplow.Env,
     };
     elb('walker destination', destinationWithEnv, {
       settings: {}, // No collectorUrl
@@ -1958,10 +1964,9 @@ describe('destination snowplow', () => {
               settings: {
                 context: [
                   // Entry without schema - should be skipped
-                  { data: { id: 'data.id' } } as unknown as {
-                    schema: string;
-                    data: unknown;
-                  },
+                  {
+                    data: { id: 'data.id' },
+                  } as unknown as DestinationSnowplow.ContextEntity,
                   // Valid entry - should be included
                   {
                     schema: 'iglu:com.example/product/jsonschema/1-0-0',
@@ -2008,12 +2013,9 @@ describe('destination snowplow', () => {
               settings: {
                 context: [
                   // Non-object entries - should be skipped
-                  null as unknown as { schema: string; data: unknown },
-                  'string entry' as unknown as {
-                    schema: string;
-                    data: unknown;
-                  },
-                  123 as unknown as { schema: string; data: unknown },
+                  null as unknown as DestinationSnowplow.ContextEntity,
+                  'string entry' as unknown as DestinationSnowplow.ContextEntity,
+                  123 as unknown as DestinationSnowplow.ContextEntity,
                   // Valid entry - should be included
                   {
                     schema: 'iglu:com.example/product/jsonschema/1-0-0',
@@ -2241,7 +2243,10 @@ describe('destination snowplow', () => {
         consentScopes: expect.arrayContaining(['necessary', 'analytics']),
       });
       // marketing should not be in scopes since it's false
-      expect(consentCall?.args[1].consentScopes).not.toContain('marketing');
+      const consentArgs = consentCall?.args[1] as
+        | { consentScopes?: string[] }
+        | undefined;
+      expect(consentArgs?.consentScopes).not.toContain('marketing');
     });
 
     test('includes optional gdprApplies and domainsApplied', async () => {
@@ -2286,7 +2291,9 @@ describe('destination snowplow', () => {
 
   describe('code-based plugins (plugin.code)', () => {
     test('uses plugin code directly when provided as object', async () => {
-      const mockPlugin = { trackerId: 'test' };
+      const mockPlugin = {
+        trackerId: 'test',
+      } as unknown as DestinationSnowplow.BrowserPlugin;
 
       const destinationWithEnv = {
         ...destination,
@@ -2369,8 +2376,12 @@ describe('destination snowplow', () => {
     });
 
     test('handles multiple code-based plugins', async () => {
-      const mockPlugin1 = { trackerId: 'plugin1' };
-      const mockPlugin2 = { trackerId: 'plugin2' };
+      const mockPlugin1 = {
+        trackerId: 'plugin1',
+      } as unknown as DestinationSnowplow.BrowserPlugin;
+      const mockPlugin2 = {
+        trackerId: 'plugin2',
+      } as unknown as DestinationSnowplow.BrowserPlugin;
 
       const destinationWithEnv = {
         ...destination,
@@ -2582,7 +2593,9 @@ describe('destination snowplow', () => {
     });
 
     test('adds code-based plugins via adapter', async () => {
-      const mockPlugin = { name: 'TestPlugin' };
+      const mockPlugin = {
+        name: 'TestPlugin',
+      } as unknown as DestinationSnowplow.BrowserPlugin;
 
       elb('walker destination', destination, {
         settings: {
@@ -2712,7 +2725,7 @@ describe('destination snowplow', () => {
           tracker: {
             // Missing newTracker - should fail
             trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-          },
+          } as unknown as DestinationSnowplow.Settings['tracker'],
         },
       });
 
@@ -2734,7 +2747,7 @@ describe('destination snowplow', () => {
           tracker: {
             newTracker: mockNewTracker,
             // Missing trackSelfDescribingEvent - should fail
-          },
+          } as unknown as DestinationSnowplow.Settings['tracker'],
         },
       });
 

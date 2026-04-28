@@ -24,6 +24,36 @@ function isInlineCode(code: unknown): code is Flow.Code {
 }
 
 /**
+ * Type-narrowed accessor for a Flow section. Returns the typed step record
+ * (or undefined) — exhaustive switch over the literal-union parameter avoids
+ * a generic indexed-access cast.
+ *
+ * Returns the union of all section types when the caller passes a runtime
+ * variable. Call sites that need a specific section type access the field
+ * directly (e.g. `flow.sources`).
+ */
+type FlowStepRecord =
+  | Record<string, Flow.Source>
+  | Record<string, Flow.Destination>
+  | Record<string, Flow.Transformer>
+  | Record<string, Flow.Store>;
+function getFlowSection(
+  flow: Flow,
+  section: 'sources' | 'destinations' | 'transformers' | 'stores',
+): FlowStepRecord | undefined {
+  switch (section) {
+    case 'sources':
+      return flow.sources;
+    case 'destinations':
+      return flow.destinations;
+    case 'transformers':
+      return flow.transformers;
+    case 'stores':
+      return flow.stores;
+  }
+}
+
+/**
  * Validates that a reference has either package XOR code, not both or neither.
  * Throws descriptive error for invalid configurations.
  */
@@ -193,72 +223,6 @@ function generateCacheKeyContent(
   return JSON.stringify(configForCache);
 }
 
-/**
- * Validates flow config and warns about deprecated features.
- * Returns true if there are any issues that should stop the build.
- *
- * Note: We use (code as unknown) === true to check for deprecated code: true
- * because the type no longer includes true, but runtime values may still have it.
- */
-function validateFlowConfig(
-  flowSettings: Flow,
-  logger: Logger.Instance,
-): boolean {
-  let hasDeprecatedCodeTrue = false;
-
-  // Check sources for code: true (deprecated, removed from types)
-  const sources = flowSettings.sources || {};
-  for (const [sourceId, source] of Object.entries(sources)) {
-    if (
-      source &&
-      typeof source === 'object' &&
-      (source.code as unknown) === true
-    ) {
-      logger.warn(
-        `DEPRECATED: Source "${sourceId}" uses code: true which is no longer supported. ` +
-          `Use $code: prefix in config values or create a source package instead.`,
-      );
-      hasDeprecatedCodeTrue = true;
-    }
-  }
-
-  // Check destinations for code: true (deprecated, removed from types)
-  const destinations = flowSettings.destinations || {};
-  for (const [destId, dest] of Object.entries(destinations)) {
-    if (dest && typeof dest === 'object' && (dest.code as unknown) === true) {
-      logger.warn(
-        `DEPRECATED: Destination "${destId}" uses code: true which is no longer supported. ` +
-          `Use $code: prefix in config values or create a destination package instead.`,
-      );
-      hasDeprecatedCodeTrue = true;
-    }
-  }
-
-  // Check transformers for code: true (deprecated, removed from types)
-  const transformers = flowSettings.transformers || {};
-  for (const [transformerId, transformer] of Object.entries(transformers)) {
-    if (
-      transformer &&
-      typeof transformer === 'object' &&
-      (transformer.code as unknown) === true
-    ) {
-      logger.warn(
-        `DEPRECATED: Transformer "${transformerId}" uses code: true which is no longer supported. ` +
-          `Use $code: prefix in config values or create a transformer package instead.`,
-      );
-      hasDeprecatedCodeTrue = true;
-    }
-  }
-
-  if (hasDeprecatedCodeTrue) {
-    logger.warn(
-      `See https://www.elbwalker.com/docs/walkeros/getting-started/flow for migration guide.`,
-    );
-  }
-
-  return hasDeprecatedCodeTrue;
-}
-
 export async function bundleCore(
   flowSettings: Flow,
   buildOptions: BuildOptions,
@@ -266,12 +230,6 @@ export async function bundleCore(
   showStats = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
-
-  // Validate flow config and warn about deprecated features
-  const hasDeprecatedFeatures = validateFlowConfig(flowSettings, logger);
-  if (hasDeprecatedFeatures) {
-    logger.warn('Skipping deprecated code: true entries from bundle.');
-  }
 
   // Per-build isolation: unique working dir, shared cache
   const buildId = crypto.randomUUID();
@@ -330,14 +288,8 @@ export async function bundleCore(
 
     // Step 1.5: Auto-add collector if sources/destinations exist but collector not specified
     const hasSourcesOrDests =
-      Object.keys(
-        (flowSettings as unknown as { sources?: Record<string, unknown> })
-          .sources || {},
-      ).length > 0 ||
-      Object.keys(
-        (flowSettings as unknown as { destinations?: Record<string, unknown> })
-          .destinations || {},
-      ).length > 0;
+      Object.keys(flowSettings.sources || {}).length > 0 ||
+      Object.keys(flowSettings.destinations || {}).length > 0;
 
     if (hasSourcesOrDests && !buildOptions.packages['@walkeros/collector']) {
       buildOptions.packages['@walkeros/collector'] = {};
@@ -366,12 +318,7 @@ export async function bundleCore(
           'transformers',
           'stores',
         ] as const) {
-          const steps = (
-            flowSettings as Record<
-              string,
-              Record<string, Record<string, unknown>>
-            >
-          )[section];
+          const steps = getFlowSection(flowSettings, section);
           if (!steps) continue;
           for (const step of Object.values(steps)) {
             if (step.package === pkg) {
@@ -738,26 +685,19 @@ function createEsbuildOptions(
 /**
  * Detects packages from a flow config section (sources, destinations, transformers, stores).
  * Extracts package names from steps that have an explicit 'package' field.
- * Skips steps with code: true (inline code).
  */
 export function detectStepPackages(
   flowSettings: Flow,
   section: 'sources' | 'destinations' | 'transformers' | 'stores',
 ): Set<string> {
   const packages = new Set<string>();
-  const steps = (
-    flowSettings as unknown as {
-      [key: string]: Record<string, unknown> | undefined;
-    }
-  )[section];
+  const steps = getFlowSection(flowSettings, section);
 
   if (steps) {
     for (const [, stepConfig] of Object.entries(steps)) {
       if (typeof stepConfig !== 'object' || stepConfig === null) continue;
-      // Skip if code: true (uses built-in inline code)
-      if ('code' in stepConfig && stepConfig.code === true) continue;
       // Require explicit package field
-      if ('package' in stepConfig && typeof stepConfig.package === 'string') {
+      if (typeof stepConfig.package === 'string') {
         packages.add(stepConfig.package);
       }
     }
@@ -812,27 +752,12 @@ export function detectExplicitCodeImports(
   const explicitCodeImports = new Map<string, Set<string>>();
 
   // Check destinations
-  const destinations = (
-    flowSettings as unknown as { destinations?: Record<string, unknown> }
-  ).destinations;
+  const destinations = flowSettings.destinations;
 
   if (destinations) {
-    for (const [destKey, destConfig] of Object.entries(destinations)) {
-      // Skip code: true (built-in inline code)
+    for (const [, destConfig] of Object.entries(destinations)) {
       if (
-        typeof destConfig === 'object' &&
-        destConfig !== null &&
-        'code' in destConfig &&
-        destConfig.code === true
-      ) {
-        continue;
-      }
-      if (
-        typeof destConfig === 'object' &&
-        destConfig !== null &&
-        'package' in destConfig &&
         typeof destConfig.package === 'string' &&
-        'code' in destConfig &&
         typeof destConfig.code === 'string'
       ) {
         // Only treat as explicit if code doesn't match auto-generated pattern
@@ -849,27 +774,12 @@ export function detectExplicitCodeImports(
   }
 
   // Check sources
-  const sources = (
-    flowSettings as unknown as { sources?: Record<string, unknown> }
-  ).sources;
+  const sources = flowSettings.sources;
 
   if (sources) {
-    for (const [sourceKey, sourceConfig] of Object.entries(sources)) {
-      // Skip code: true (built-in inline code)
+    for (const [, sourceConfig] of Object.entries(sources)) {
       if (
-        typeof sourceConfig === 'object' &&
-        sourceConfig !== null &&
-        'code' in sourceConfig &&
-        sourceConfig.code === true
-      ) {
-        continue;
-      }
-      if (
-        typeof sourceConfig === 'object' &&
-        sourceConfig !== null &&
-        'package' in sourceConfig &&
         typeof sourceConfig.package === 'string' &&
-        'code' in sourceConfig &&
         typeof sourceConfig.code === 'string'
       ) {
         // Only treat as explicit if code doesn't match auto-generated pattern
@@ -886,29 +796,12 @@ export function detectExplicitCodeImports(
   }
 
   // Check transformers
-  const transformers = (
-    flowSettings as unknown as { transformers?: Record<string, unknown> }
-  ).transformers;
+  const transformers = flowSettings.transformers;
 
   if (transformers) {
-    for (const [transformerKey, transformerConfig] of Object.entries(
-      transformers,
-    )) {
-      // Skip code: true (built-in inline code)
+    for (const [, transformerConfig] of Object.entries(transformers)) {
       if (
-        typeof transformerConfig === 'object' &&
-        transformerConfig !== null &&
-        'code' in transformerConfig &&
-        transformerConfig.code === true
-      ) {
-        continue;
-      }
-      if (
-        typeof transformerConfig === 'object' &&
-        transformerConfig !== null &&
-        'package' in transformerConfig &&
         typeof transformerConfig.package === 'string' &&
-        'code' in transformerConfig &&
         typeof transformerConfig.code === 'string'
       ) {
         // Only treat as explicit if code doesn't match auto-generated pattern
@@ -926,18 +819,12 @@ export function detectExplicitCodeImports(
   }
 
   // Check stores
-  const stores = (
-    flowSettings as unknown as { stores?: Record<string, unknown> }
-  ).stores;
+  const stores = flowSettings.stores;
 
   if (stores) {
     for (const [, storeConfig] of Object.entries(stores)) {
       if (
-        typeof storeConfig === 'object' &&
-        storeConfig !== null &&
-        'package' in storeConfig &&
         typeof storeConfig.package === 'string' &&
-        'code' in storeConfig &&
         typeof storeConfig.code === 'string'
       ) {
         const isAutoGenerated = storeConfig.code.startsWith('_');
@@ -1107,22 +994,25 @@ function validateStoreReferences(
   function collectRefs(obj: unknown, path: string) {
     if (typeof obj === 'string' && obj.startsWith('$store.')) {
       refs.push({ ref: obj.slice(7), location: path });
-    } else if (obj && typeof obj === 'object') {
-      for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
-        collectRefs(val, `${path}.${key}`);
-      }
+      return;
+    }
+    if (obj === null || typeof obj !== 'object') return;
+    // Boundary: walker traverses arbitrary JSON. After typeof === 'object'
+    // narrowing, indexing as a Record<string, unknown> is the typed way
+    // to enumerate keys.
+    for (const [key, val] of Object.entries(obj)) {
+      collectRefs(val, `${path}.${key}`);
     }
   }
 
   // Scan all component env/config values
-  for (const [section, components] of Object.entries({
+  const sectionMap = {
     sources: flowSettings.sources || {},
     destinations: flowSettings.destinations || {},
     transformers: flowSettings.transformers || {},
-  })) {
-    for (const [id, component] of Object.entries(
-      components as Record<string, Record<string, unknown>>,
-    )) {
+  };
+  for (const [section, components] of Object.entries(sectionMap)) {
+    for (const [id, component] of Object.entries(components)) {
       collectRefs(component, `${section}.${id}`);
     }
   }
@@ -1157,29 +1047,18 @@ export async function createEntryPoint(
   const explicitCodeImports = detectExplicitCodeImports(flowSettings);
 
   // Validate $store. references before code generation
-  const storeIds = new Set(
-    Object.keys(
-      (flowSettings as unknown as { stores?: Record<string, unknown> })
-        .stores || {},
-    ),
-  );
+  const storeIds = new Set(Object.keys(flowSettings.stores || {}));
   validateStoreReferences(flowSettings, storeIds);
 
   // Validate component names are valid JS identifiers (they become property names in generated code)
-  const flowWithSections = flowSettings as unknown as {
-    sources?: Record<string, unknown>;
-    destinations?: Record<string, unknown>;
-    transformers?: Record<string, unknown>;
-    stores?: Record<string, unknown>;
-  };
-  if (flowWithSections.sources)
-    validateComponentNames(flowWithSections.sources, 'sources');
-  if (flowWithSections.destinations)
-    validateComponentNames(flowWithSections.destinations, 'destinations');
-  if (flowWithSections.transformers)
-    validateComponentNames(flowWithSections.transformers, 'transformers');
-  if (flowWithSections.stores)
-    validateComponentNames(flowWithSections.stores, 'stores');
+  if (flowSettings.sources)
+    validateComponentNames(flowSettings.sources, 'sources');
+  if (flowSettings.destinations)
+    validateComponentNames(flowSettings.destinations, 'destinations');
+  if (flowSettings.transformers)
+    validateComponentNames(flowSettings.transformers, 'transformers');
+  if (flowSettings.stores)
+    validateComponentNames(flowSettings.stores, 'stores');
 
   // Generate import statements.
   // withDev is resolved from the BundleTarget preset by the public `bundle()`
@@ -1307,69 +1186,23 @@ export function buildSplitConfigObject(
   codeConfigObject: string;
   dataPayload: string;
 } {
-  const flowWithProps = flowSettings as unknown as {
-    sources?: Record<
-      string,
-      {
-        package?: string;
-        code?: string | true;
-        config?: unknown;
-        env?: unknown;
-        before?: string | string[];
-        next?: string | string[] | Array<{ match: unknown; next: unknown }>;
-        cache?: unknown;
-        primary?: boolean;
-      }
-    >;
-    destinations?: Record<
-      string,
-      {
-        package?: string;
-        code?: string | true;
-        config?: unknown;
-        env?: unknown;
-        before?: string | string[];
-        next?: string | string[];
-        cache?: unknown;
-      }
-    >;
-    transformers?: Record<
-      string,
-      {
-        package?: string;
-        code?: string | true;
-        config?: unknown;
-        env?: unknown;
-        before?: string | string[];
-        next?: string;
-        cache?: unknown;
-      }
-    >;
-    stores?: Record<
-      string,
-      {
-        package?: string;
-        code?: string | true;
-        config?: unknown;
-        env?: unknown;
-      }
-    >;
-    collector?: unknown;
-  };
-
-  const sources = flowWithProps.sources || {};
-  const destinations = flowWithProps.destinations || {};
-  const transformers = flowWithProps.transformers || {};
-  const stores = flowWithProps.stores || {};
+  const sources = flowSettings.sources || {};
+  const destinations = flowSettings.destinations || {};
+  const transformers = flowSettings.transformers || {};
+  const stores = flowSettings.stores || {};
 
   // Data payload accumulator
   const dataPayloadObj: Record<string, Record<string, unknown>> = {};
 
+  // Union of all step types — share helpers across sources/destinations/transformers/stores
+  type FlowStep =
+    | Flow.Source
+    | Flow.Destination
+    | Flow.Transformer
+    | Flow.Store;
+
   // Helper to resolve the code variable for a package-based step
-  function resolveCodeVar(step: {
-    package?: string;
-    code?: string | true;
-  }): string {
+  function resolveCodeVar(step: FlowStep): string {
     // String code without package = named import from packages section
     if (step.code && typeof step.code === 'string' && !step.package) {
       return step.code;
@@ -1386,9 +1219,7 @@ export function buildSplitConfigObject(
   }
 
   // Helper to build step properties (excluding 'code' and 'package')
-  function getStepProps(
-    step: Record<string, unknown>,
-  ): Record<string, unknown> {
+  function getStepProps(step: FlowStep): Record<string, unknown> {
     const props: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(step)) {
       if (key === 'code' || key === 'package') continue;
@@ -1403,11 +1234,9 @@ export function buildSplitConfigObject(
   function buildSplitStepEntry(
     section: string,
     stepId: string,
-    step: Record<string, unknown>,
+    step: FlowStep,
   ): string {
-    const codeVar = resolveCodeVar(
-      step as { package?: string; code?: string | true },
-    );
+    const codeVar = resolveCodeVar(step);
     const stepProps = getStepProps(step);
     const { codeProps, dataProps } = classifyStepProperties(stepProps);
 
@@ -1434,75 +1263,48 @@ export function buildSplitConfigObject(
     return `    ${stepId}: {\n      ${codeEntries.join(',\n      ')}\n    }`;
   }
 
-  // Validate references (skip deprecated code: true entries)
+  // Validate references
   Object.entries(sources).forEach(([name, source]) => {
-    if ((source.code as unknown) !== true) {
-      validateReference('Source', name, source);
-    }
+    validateReference('Source', name, source);
   });
   Object.entries(destinations).forEach(([name, dest]) => {
-    if ((dest.code as unknown) !== true) {
-      validateReference('Destination', name, dest);
-    }
+    validateReference('Destination', name, dest);
   });
   Object.entries(transformers).forEach(([name, transformer]) => {
-    if ((transformer.code as unknown) !== true) {
-      validateReference('Transformer', name, transformer);
-    }
+    validateReference('Transformer', name, transformer);
   });
 
   // Build sources
   const sourcesEntries = Object.entries(sources)
-    .filter(
-      ([, source]) =>
-        (source.code as unknown) !== true &&
-        (source.package || hasCodeReference(source.code)),
-    )
+    .filter(([, source]) => source.package || hasCodeReference(source.code))
     .map(([key, source]) => {
       if (isInlineCode(source.code)) {
         return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next as string | string[] | undefined, 'next')}`;
       }
-      return buildSplitStepEntry(
-        'sources',
-        key,
-        source as Record<string, unknown>,
-      );
+      return buildSplitStepEntry('sources', key, source);
     });
 
   // Build destinations
   const destinationsEntries = Object.entries(destinations)
-    .filter(
-      ([, dest]) =>
-        (dest.code as unknown) !== true &&
-        (dest.package || hasCodeReference(dest.code)),
-    )
+    .filter(([, dest]) => dest.package || hasCodeReference(dest.code))
     .map(([key, dest]) => {
       if (isInlineCode(dest.code)) {
         return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, dest.before, 'before', true)}`;
       }
-      return buildSplitStepEntry(
-        'destinations',
-        key,
-        dest as Record<string, unknown>,
-      );
+      return buildSplitStepEntry('destinations', key, dest);
     });
 
   // Build transformers
   const transformersEntries = Object.entries(transformers)
     .filter(
       ([, transformer]) =>
-        (transformer.code as unknown) !== true &&
-        (transformer.package || hasCodeReference(transformer.code)),
+        transformer.package || hasCodeReference(transformer.code),
     )
     .map(([key, transformer]) => {
       if (isInlineCode(transformer.code)) {
         return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, transformer.next, 'next')}`;
       }
-      return buildSplitStepEntry(
-        'transformers',
-        key,
-        transformer as Record<string, unknown>,
-      );
+      return buildSplitStepEntry('transformers', key, transformer);
     });
 
   // Build stores
@@ -1520,7 +1322,7 @@ export function buildSplitConfigObject(
       }
 
       const codeVar = resolveCodeVar(store);
-      const storeProps = getStepProps(store as Record<string, unknown>);
+      const storeProps = getStepProps(store);
       const { codeProps, dataProps } = classifyStepProperties(storeProps);
 
       const codeEntries: string[] = [];
@@ -1551,16 +1353,14 @@ export function buildSplitConfigObject(
 
   // Build collector
   let collectorStr = '';
-  if (flowWithProps.collector) {
-    if (containsCodeMarkers(flowWithProps.collector)) {
+  if (flowSettings.collector) {
+    if (containsCodeMarkers(flowSettings.collector)) {
       // Collector has code markers — keep in code skeleton
-      collectorStr = `,\n  ...${processConfigValue(flowWithProps.collector)}`;
+      collectorStr = `,\n  ...${processConfigValue(flowSettings.collector)}`;
     } else {
-      // Plain collector — put in data payload
-      dataPayloadObj['collector'] = flowWithProps.collector as Record<
-        string,
-        unknown
-      >;
+      // Plain collector — put in data payload. Spread copies own enumerable
+      // properties into a Record<string, unknown>-compatible target.
+      dataPayloadObj['collector'] = { ...flowSettings.collector };
       collectorStr = `,\n  ...__data.collector`;
     }
   }

@@ -32,6 +32,10 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { loadJsonConfig } from '@walkeros/cli';
+// Pull the real v4 schema via the `/dev` entry — separate from the mocked
+// `@walkeros/core` main entry, so the schema bypasses the mock above.
+import { schemas } from '@walkeros/core/dev';
+const FlowJsonSchema = schemas.FlowJsonSchema;
 const mockLoadJsonConfig = jest.mocked(loadJsonConfig);
 
 function createMockServer() {
@@ -136,5 +140,27 @@ describe('flow_load tool', () => {
 
     expect(mockLoadJsonConfig).toHaveBeenCalledWith('./flow.json');
     expect(result.structuredContent).toMatchObject(mockConfig);
+  });
+
+  it('flow_load skeleton round-trips through v4 schema', async () => {
+    const tool = server.getTool('flow_load');
+
+    const webResult = await tool.handler({ platform: 'web' });
+    const webSkeleton = JSON.parse(webResult.content[0].text);
+    const webParse = FlowJsonSchema.safeParse(webSkeleton);
+    if (!webParse.success) {
+      // eslint-disable-next-line no-console
+      console.error(JSON.stringify(webParse.error.issues, null, 2));
+    }
+    expect(webParse.success).toBe(true);
+
+    const serverResult = await tool.handler({ platform: 'server' });
+    const serverSkeleton = JSON.parse(serverResult.content[0].text);
+    const serverParse = FlowJsonSchema.safeParse(serverSkeleton);
+    if (!serverParse.success) {
+      // eslint-disable-next-line no-console
+      console.error(JSON.stringify(serverParse.error.issues, null, 2));
+    }
+    expect(serverParse.success).toBe(true);
   });
 });

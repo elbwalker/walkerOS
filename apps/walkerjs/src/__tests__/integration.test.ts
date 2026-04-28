@@ -26,10 +26,10 @@ describe('Walker.js Integration Tests', () => {
   describe('Initialization', () => {
     test('should create instance with minimal configuration', async () => {
       const instance = await createWalkerjs({
+        session: false, // Disable session to avoid browser API issues
+        run: false, // Disable auto-run
         browser: {
-          session: false, // Disable session to avoid browser API issues
           pageview: false, // Disable pageview to avoid URL parsing issues
-          run: false, // Disable auto-run
         },
       });
 
@@ -41,10 +41,10 @@ describe('Walker.js Integration Tests', () => {
     test('should create global elb function when configured', async () => {
       const instance = await createWalkerjs({
         elb: 'elb',
+        session: false,
+        run: false,
         browser: {
-          session: false,
           pageview: false,
-          run: false,
         },
       });
 
@@ -54,10 +54,10 @@ describe('Walker.js Integration Tests', () => {
     test('should initialize dataLayer source when enabled', async () => {
       const instance = await createWalkerjs({
         dataLayer: true,
+        session: false,
+        run: false,
         browser: {
-          session: false,
           pageview: false,
-          run: false,
         },
       });
 
@@ -79,10 +79,10 @@ describe('Walker.js Integration Tests', () => {
 
       // Initialize walker.js with mock destination to capture events
       const instance = await createWalkerjs({
+        session: false,
+        run: false,
         browser: {
-          session: false,
           pageview: false,
-          run: false,
         },
         collector: {
           destinations: {
@@ -124,10 +124,10 @@ describe('Walker.js Integration Tests', () => {
 
     test('should support manual event tracking', async () => {
       const instance = await createWalkerjs({
+        session: false,
+        run: false,
         browser: {
-          session: false,
           pageview: false,
-          run: false,
         },
         collector: {
           destinations: {
@@ -208,10 +208,10 @@ describe('Walker.js Integration Tests', () => {
   describe('Configuration Options', () => {
     test('should accept custom browser source settings', async () => {
       const instance = await createWalkerjs({
+        session: false,
+        run: false,
         browser: {
-          session: false,
           pageview: false,
-          run: false,
         },
       });
 
@@ -220,8 +220,6 @@ describe('Walker.js Integration Tests', () => {
         config: {
           settings: {
             pageview: false,
-            run: false,
-            session: false,
           },
         },
       });
@@ -248,10 +246,10 @@ describe('Walker.js Integration Tests', () => {
 
     test('should initialize with default configuration including dataLayer destination', async () => {
       const instance = await createWalkerjs({
+        session: false,
+        run: false,
         browser: {
-          session: false,
           pageview: false,
-          run: false,
         },
       });
 

@@ -6,21 +6,10 @@
  */
 
 import type { Flow } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 
 const { safeParseConfig } = schemas;
-
-/**
- * Type guard: Check if value is a plain object.
- */
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.prototype.toString.call(value) === '[object Object]'
-  );
-}
 
 /**
  * Detect platform from a single flow.
@@ -31,8 +20,8 @@ export function detectPlatform(
   flow: Record<string, unknown>,
 ): 'web' | 'server' | undefined {
   const config = flow.config;
-  if (!config || typeof config !== 'object') return undefined;
-  const platform = (config as Record<string, unknown>).platform;
+  if (!isObject(config)) return undefined;
+  const platform = config.platform;
   if (platform === 'web' || platform === 'server') return platform;
   return undefined;
 }
@@ -68,23 +57,27 @@ export function isFlowConfig(data: unknown): data is Flow.Json {
  * @throws Error with descriptive message if validation fails
  */
 export function validateFlowConfig(data: unknown): Flow.Json {
+  // After successful Zod parse, the data conforms structurally to Flow.Json.
+  // The existing `isFlowConfig` guard re-narrows `unknown` to `Flow.Json` via
+  // the same schema — TS can't see through `safeParseConfig` because it
+  // returns a Zod-inferred type that differs nominally (not structurally)
+  // from the Flow.Json interface.
+  if (isFlowConfig(data)) return data;
+
+  // Not parseable — format Zod errors for CLI display.
   const result = safeParseConfig(data);
-
-  if (!result.success) {
-    // Format Zod errors for CLI display
-    const errors = result.error.issues
-      .map((issue) => {
-        const path =
-          issue.path.length > 0 ? issue.path.map(String).join('.') : 'root';
-        return `  - ${path}: ${issue.message}`;
-      })
-      .join('\n');
-
-    throw new Error(`Invalid configuration:\n${errors}`);
+  if (result.success) {
+    // Defensive: isFlowConfig and safeParseConfig disagreed (cannot happen).
+    throw new Error('Invalid configuration: failed Flow.Json type guard.');
   }
-
-  // Cast to Flow.Json since Zod's inferred type is compatible but not identical
-  return result.data as Flow.Json;
+  const errors = result.error.issues
+    .map((issue) => {
+      const path =
+        issue.path.length > 0 ? issue.path.map(String).join('.') : 'root';
+      return `  - ${path}: ${issue.message}`;
+    })
+    .join('\n');
+  throw new Error(`Invalid configuration:\n${errors}`);
 }
 
 /**

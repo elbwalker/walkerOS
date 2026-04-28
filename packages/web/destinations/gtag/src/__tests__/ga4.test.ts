@@ -11,9 +11,10 @@ describe('GA4 Implementation', () => {
   // Create a mock logger that actually throws
   const createThrowingLogger = () => {
     const logger = createMockLogger();
-    logger.throw = (message: string) => {
-      throw new Error(message);
-    };
+    logger.throw = jest.fn((message: string | Error): never => {
+      const msg = message instanceof Error ? message.message : message;
+      throw new Error(msg);
+    });
     return logger;
   };
 
@@ -34,7 +35,7 @@ describe('GA4 Implementation', () => {
     it('should initialize GA4 with basic settings', () => {
       const settings: GA4Settings = { measurementId: 'G-XXXXXXXXXX' };
 
-      initGA4(settings, true, mockEnv);
+      initGA4(settings, true, mockEnv, createMockLogger());
 
       expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
       expect(mockGtag).toHaveBeenCalledWith('config', 'G-XXXXXXXXXX', {});
@@ -46,7 +47,7 @@ describe('GA4 Implementation', () => {
         transport_url: 'https://example.com/gtag',
       };
 
-      initGA4(settings, false, mockEnv);
+      initGA4(settings, false, mockEnv, createMockLogger());
 
       expect(mockGtag).toHaveBeenCalledWith('config', 'G-XXXXXXXXXX', {
         transport_url: 'https://example.com/gtag',
@@ -59,7 +60,7 @@ describe('GA4 Implementation', () => {
         server_container_url: 'https://example.com/gtm',
       };
 
-      initGA4(settings, false, mockEnv);
+      initGA4(settings, false, mockEnv, createMockLogger());
 
       expect(mockGtag).toHaveBeenCalledWith('config', 'G-XXXXXXXXXX', {
         server_container_url: 'https://example.com/gtm',
@@ -72,7 +73,7 @@ describe('GA4 Implementation', () => {
         pageview: false,
       };
 
-      initGA4(settings, false, mockEnv);
+      initGA4(settings, false, mockEnv, createMockLogger());
 
       expect(mockGtag).toHaveBeenCalledWith('config', 'G-XXXXXXXXXX', {
         send_page_view: false,
@@ -100,7 +101,13 @@ describe('GA4 Implementation', () => {
     it('should push event with snake_case name by default', () => {
       const settings: GA4Settings = { measurementId: 'G-TEST123' };
 
-      pushGA4Event(mockEvent, settings, { value: 123.45 }, mockEnv);
+      pushGA4Event(
+        mockEvent,
+        settings,
+        { value: 123.45 },
+        mockEnv,
+        createMockLogger(),
+      );
 
       expect(mockGtag).toHaveBeenCalledWith(
         'event',
@@ -120,6 +127,7 @@ describe('GA4 Implementation', () => {
         settings,
         { price: 99.99, currency: 'USD' },
         mockEnv,
+        createMockLogger(),
       );
 
       expect(mockGtag).toHaveBeenCalledWith(
@@ -139,7 +147,7 @@ describe('GA4 Implementation', () => {
         debug: true,
       };
 
-      pushGA4Event(mockEvent, settings, {}, mockEnv);
+      pushGA4Event(mockEvent, settings, {}, mockEnv, createMockLogger());
 
       expect(mockGtag).toHaveBeenCalledWith(
         'event',
@@ -157,7 +165,7 @@ describe('GA4 Implementation', () => {
         snakeCase: false,
       };
 
-      pushGA4Event(mockEvent, settings, {}, mockEnv);
+      pushGA4Event(mockEvent, settings, {}, mockEnv, createMockLogger());
 
       expect(mockGtag).toHaveBeenCalledWith(
         'event',

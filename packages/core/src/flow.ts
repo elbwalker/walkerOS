@@ -140,7 +140,30 @@ export type FlowConfigResolver = (flowName: string) => unknown;
  * - $env.NAME or $env.NAME:default → Look up process.env[NAME]
  * - $contract.name(.path)? → Resolved contract value (when contracts available)
  * - $flow.name(.path)? → Sibling flow's resolved {@link Flow.Config} (when resolver available)
+ *
+ * Top-level object keys are preserved verbatim (only values are walked), so an
+ * object input retains its declared shape after resolution. The overload below
+ * lets callers pass a typed object (e.g. `Flow.Config`) and get the same type
+ * back without an unsafe cast. Strings that are whole-pattern references may
+ * resolve to arbitrary types — callers passing a typed object should not rely
+ * on individual string fields being preserved as strings.
  */
+function resolvePatterns<T extends object>(
+  value: T,
+  variables: Flow.Variables,
+  definitions: Flow.Definitions,
+  options?: ResolveOptions,
+  resolvedContracts?: Record<string, Flow.ContractRule>,
+  resolveFlow?: FlowConfigResolver,
+): T;
+function resolvePatterns(
+  value: unknown,
+  variables: Flow.Variables,
+  definitions: Flow.Definitions,
+  options?: ResolveOptions,
+  resolvedContracts?: Record<string, Flow.ContractRule>,
+  resolveFlow?: FlowConfigResolver,
+): unknown;
 function resolvePatterns(
   value: unknown,
   variables: Flow.Variables,
@@ -506,7 +529,7 @@ function resolveFlowSettings(
   if (result.config) {
     const vars = mergeVariables(config.variables, settings.variables);
     const defs = mergeDefinitions(config.definitions, settings.definitions);
-    const processedFlowConfig = resolvePatterns(
+    result.config = resolvePatterns(
       result.config,
       vars,
       defs,
@@ -514,7 +537,6 @@ function resolveFlowSettings(
       resolvedContracts,
       resolveFlow,
     );
-    result.config = processedFlowConfig as Flow.Config;
   }
 
   // Process sources with variable and definition cascade
