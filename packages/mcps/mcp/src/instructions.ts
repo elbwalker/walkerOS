@@ -30,10 +30,10 @@ Every component in a flow is a **step**: sources capture events, transformers pr
 
 \`\`\`json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {},
+      "config": { "platform": "web" },
       "sources": { "<name>": { "package": "<npm-package>", "config": {} } },
       "destinations": { "<name>": { "package": "<npm-package>", "config": { "settings": {} } } }
     }
@@ -41,8 +41,8 @@ Every component in a flow is a **step**: sources capture events, transformers pr
 }
 \`\`\`
 
-- \`version: 3\` is required
-- Each flow must have exactly one of \`web: {}\` or \`server: {}\`
+- \`version: 4\` is required
+- Each flow declares its target via \`config.platform\` (\`"web"\` or \`"server"\`)
 - Destination settings go inside \`config.settings\`, not directly on the destination
 - Event format: \`{ name: "entity action", data: {...}, entity: "...", action: "..." }\`
 

@@ -518,6 +518,14 @@ const sidebars: SidebarsConfig = {
       ],
     },
 
+    // ── Migrating ────────────────────────────────────────────────
+    {
+      type: 'category',
+      label: 'Migrating',
+      collapsed: true,
+      items: ['migrating/v3-to-v4'],
+    },
+
     // ── vs. Alternatives ─────────────────────────────────────────
     {
       type: 'category',

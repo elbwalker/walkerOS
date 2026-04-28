@@ -137,7 +137,7 @@ describe('segment destination — step examples', () => {
 
     const { env, collected } = spyEnv();
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const baseInitSettings = (initConfig.settings || {}) as Partial<Settings>;
     const baseSettings: Partial<Settings> & { apiKey: string } = {

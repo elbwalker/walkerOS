@@ -49,7 +49,7 @@ export interface PushOverrides {
  */
 export function buildOverrides(
   flags: { simulate?: string[]; mock?: string[] },
-  flowConfig: Flow.Settings,
+  flowConfig: Flow,
 ): PushOverrides {
   const simulateFlags = flags.simulate ?? [];
   const mockFlags = flags.mock ?? [];

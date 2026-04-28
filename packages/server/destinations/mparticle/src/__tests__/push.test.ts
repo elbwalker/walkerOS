@@ -45,7 +45,7 @@ describe('push', () => {
     event: WalkerOS.Event,
     config: Config,
   ): Promise<void> {
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
     await elb('walker destination', { ...destination, env: testEnv }, config);
     await elb(event);
   }

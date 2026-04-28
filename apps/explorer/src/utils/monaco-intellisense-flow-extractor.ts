@@ -1,14 +1,14 @@
 import type { IntelliSenseContext, PackageInfo } from '../types/intellisense';
 
 /**
- * Extract IntelliSense context from a Flow.Config JSON string.
+ * Extract IntelliSense context from a Flow.Json JSON string.
  *
- * Parses the JSON, walks config → settings → steps, and collects
+ * Parses the JSON, walks root → flow → steps, and collects
  * all discoverable variables, definitions, step names, packages,
  * platform, and contract entities.
  *
  * Returns `{}` for invalid JSON or non-Flow structures.
- * Pure function — no side effects, no state.
+ * Pure function, no side effects, no state.
  */
 export function extractFlowIntelliSenseContext(
   json: string,
@@ -43,10 +43,10 @@ export function extractFlowIntelliSenseContext(
   for (const settings of Object.values(parsed.flows)) {
     if (!isObject(settings)) continue;
 
-    // Platform detection (first match wins)
-    if (!platform) {
-      if ('web' in settings) platform = 'web';
-      else if ('server' in settings) platform = 'server';
+    // Platform detection (first match wins) - reads config.platform in v4
+    if (!platform && isObject(settings.config)) {
+      const p = settings.config.platform;
+      if (p === 'web' || p === 'server') platform = p;
     }
 
     // Settings-level variables/definitions/contract

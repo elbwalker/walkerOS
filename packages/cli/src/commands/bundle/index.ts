@@ -294,7 +294,7 @@ export async function bundleCommand(
  *
  * Handles configuration loading, parsing, and logger creation internally.
  *
- * @param configOrPath - Bundle configuration (Flow.Config) or path to config file
+ * @param configOrPath - Bundle configuration (Flow.Json) or path to config file
  * @param options - Bundle options
  * @param options.silent - Suppress all output (default: false)
  * @param options.verbose - Enable verbose logging (default: false)
@@ -305,13 +305,15 @@ export async function bundleCommand(
  *
  * @example
  * ```typescript
- * // With Flow.Config config object
+ * // With Flow.Json config object
  * await bundle({
- *   version: 1,
+ *   version: 4,
  *   flows: {
  *     default: {
- *       web: {},
- *       packages: { '@walkeros/collector': { imports: ['startFlow'] } },
+ *       config: {
+ *         platform: 'web',
+ *         bundle: { packages: { '@walkeros/collector': { imports: ['startFlow'] } } },
+ *       },
  *       destinations: { api: { code: 'destinationApi' } },
  *     }
  *   }
@@ -377,7 +379,7 @@ export async function bundle(
     rawConfig = configOrPath;
   }
 
-  // 2. Load and resolve config using Flow.Config format.
+  // 2. Load and resolve config using Flow.Json format.
   // Merge target-derived flags into buildOverrides so loadBundleConfig sees them.
   const mergedOverrides: Partial<BuildOptions> = {
     ...(options.buildOverrides ?? {}),

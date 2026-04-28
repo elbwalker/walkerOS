@@ -8,7 +8,13 @@
 
 import type { Flow } from './types';
 import { resolveContracts } from './contract';
-import { REF_CONTRACT, REF_DEF, REF_ENV, REF_VAR } from './references';
+import {
+  REF_CONTRACT,
+  REF_DEF,
+  REF_ENV,
+  REF_FLOW,
+  REF_VAR,
+} from './references';
 import { throwError } from './throwError';
 
 /**
@@ -48,6 +54,32 @@ export const ENV_MARKER_PREFIX = '__WALKEROS_ENV:';
 
 export interface ResolveOptions {
   deferred?: boolean;
+  /**
+   * When false, unresolved `$flow.X.Y` refs (unknown flow, missing key,
+   * empty value) trigger {@link onWarning} and the original `$flow…` string
+   * is left in place. Cycles always throw regardless of this flag.
+   * Default: true (strict — throws as today).
+   */
+  strictFlowRefs?: boolean;
+  /** Called for each unresolved $flow ref when {@link strictFlowRefs} is false. */
+  onWarning?: (message: string) => void;
+}
+
+/** Format an actionable hint when `$flow.X.Y` cannot be resolved. */
+function formatUnresolvedFlowMessage(
+  flowName: string,
+  path: string | undefined,
+  reason: 'unknown-flow' | 'missing-key',
+): string {
+  const ref = `$flow.${flowName}${path ? `.${path}` : ''}`;
+  if (reason === 'unknown-flow') {
+    return `${ref} cannot resolve: flow "${flowName}" does not exist in this config.`;
+  }
+  // missing-key (includes empty url / missing settings.X)
+  const target = path
+    ? `flows.${flowName}.config.${path}`
+    : `flows.${flowName}.config`;
+  return `${ref} is empty. Set ${target}, or run \`walkeros deploy ${flowName}\` first.`;
 }
 
 /**
@@ -88,6 +120,17 @@ export function walkPath(
 }
 
 /**
+ * Resolver callback for `$flow.X.Y` references.
+ *
+ * Given a sibling flow name, returns its fully resolved `Flow.Config` block
+ * (with `$env`/`$var`/`$def`/`$contract` already resolved) as `unknown` so
+ * that {@link walkPath} can traverse it. Returns `undefined` if the flow
+ * does not exist. Implementations are responsible for cycle detection across
+ * recursive calls.
+ */
+export type FlowConfigResolver = (flowName: string) => unknown;
+
+/**
  * Resolve all dynamic patterns in a value.
  *
  * Patterns:
@@ -95,13 +138,16 @@ export function walkPath(
  * - $def.name.path → Look up definitions[name], then walk dot-separated path
  * - $var.name → Look up variables[name]
  * - $env.NAME or $env.NAME:default → Look up process.env[NAME]
+ * - $contract.name(.path)? → Resolved contract value (when contracts available)
+ * - $flow.name(.path)? → Sibling flow's resolved {@link Flow.Config} (when resolver available)
  */
 function resolvePatterns(
   value: unknown,
   variables: Flow.Variables,
   definitions: Flow.Definitions,
   options?: ResolveOptions,
-  resolvedContracts?: Record<string, Flow.ContractEntry>,
+  resolvedContracts?: Record<string, Flow.ContractRule>,
+  resolveFlow?: FlowConfigResolver,
 ): unknown {
   if (typeof value === 'string') {
     // Check if entire string is a $def reference with optional deep path
@@ -121,6 +167,7 @@ function resolvePatterns(
         definitions,
         options,
         resolvedContracts,
+        resolveFlow,
       );
 
       // Walk deep path if present
@@ -145,6 +192,57 @@ function resolvePatterns(
 
       if (path) {
         resolved = walkPath(resolved, path, `$contract.${contractName}`);
+      }
+
+      return resolved;
+    }
+
+    // Check if entire string is a $flow reference with optional path
+    const flowMatch = value.match(REF_FLOW);
+    if (flowMatch) {
+      const flowName = flowMatch[1];
+      const path = flowMatch[2]; // 'url' or 'settings.region' or undefined
+      const softMode = options?.strictFlowRefs === false;
+
+      if (!resolveFlow) {
+        throwError(
+          `$flow.${flowName}${path ? `.${path}` : ''} cannot be resolved without a flow resolver`,
+        );
+      }
+
+      // resolveFlow may throw on cycle — that always propagates (cycles are bugs).
+      const targetConfig = resolveFlow(flowName);
+      if (!targetConfig) {
+        if (softMode) {
+          options?.onWarning?.(
+            formatUnresolvedFlowMessage(flowName, path, 'unknown-flow'),
+          );
+          return value;
+        }
+        throwError(`Flow "${flowName}" not found in $flow.${flowName}`);
+      }
+
+      let resolved: unknown = targetConfig;
+      if (path) {
+        if (softMode) {
+          // Try to walk; if walk fails OR result is empty/undefined, soft-warn and keep original.
+          try {
+            resolved = walkPath(resolved, path, `$flow.${flowName}`);
+          } catch {
+            options?.onWarning?.(
+              formatUnresolvedFlowMessage(flowName, path, 'missing-key'),
+            );
+            return value;
+          }
+          if (resolved === undefined || resolved === null || resolved === '') {
+            options?.onWarning?.(
+              formatUnresolvedFlowMessage(flowName, path, 'missing-key'),
+            );
+            return value;
+          }
+        } else {
+          resolved = walkPath(resolved, path, `$flow.${flowName}`);
+        }
       }
 
       return resolved;
@@ -181,7 +279,14 @@ function resolvePatterns(
 
   if (Array.isArray(value)) {
     return value.map((item) =>
-      resolvePatterns(item, variables, definitions, options, resolvedContracts),
+      resolvePatterns(
+        item,
+        variables,
+        definitions,
+        options,
+        resolvedContracts,
+        resolveFlow,
+      ),
     );
   }
 
@@ -194,6 +299,7 @@ function resolvePatterns(
         definitions,
         options,
         resolvedContracts,
+        resolveFlow,
       );
     }
     return result;
@@ -230,9 +336,9 @@ export function packageNameToVariable(packageName: string): string {
  */
 function resolveCodeFromPackage(
   packageName: string | undefined,
-  existingCode: string | Flow.InlineCode | undefined,
-  packages: Flow.Packages | undefined,
-): string | Flow.InlineCode | undefined {
+  existingCode: string | Flow.Code | undefined,
+  packages: Record<string, Flow.BundlePackage> | undefined,
+): string | Flow.Code | undefined {
   // Preserve explicit code first (including InlineCode objects)
   if (existingCode) return existingCode;
 
@@ -246,12 +352,26 @@ function resolveCodeFromPackage(
 }
 
 /**
- * Get resolved flow settings for a named flow.
+ * Get resolved flow for a named flow.
  *
- * @param config - The complete Flow.Config configuration
+ * Resolution pass order:
+ * 1. `$env` / `$var` resolve per-flow in isolation (no cross-flow context).
+ * 2. `$flow.X.Y` resolves against pass-1 outputs of sibling flows (so `$env`/`$var`
+ *    inside the referenced flow are already resolved when `$flow` reads it).
+ * 3. `$def` / `$contract` resolve last (with `$flow` results available).
+ *
+ * In practice these passes are interleaved by the resolver: when `$flow.X.Y`
+ * is encountered, the sibling flow X's `Flow.Config` block is recursively
+ * resolved on demand (with all its own `$env`/`$var`/`$def`/`$contract`
+ * references resolved first), then the deep path is walked. Cycles are
+ * detected via a visiting set.
+ *
+ * @param config - The complete Flow.Json (root multi-flow config)
  * @param flowName - Flow name (auto-selected if only one exists)
- * @returns Resolved Settings with $var, $env, and $def patterns resolved
+ * @param options - Resolution options
+ * @returns Resolved {@link Flow} with $var, $env, $def, $contract, and $flow patterns resolved
  * @throws Error if flow selection is required but not specified, or flow not found
+ * @throws Error if a `$flow.X.Y` reference forms a cycle
  *
  * @example
  * ```typescript
@@ -260,17 +380,65 @@ function resolveCodeFromPackage(
  * const config = JSON.parse(fs.readFileSync('walkeros.config.json', 'utf8'));
  *
  * // Auto-select if only one flow
- * const settings = getFlowSettings(config);
+ * const flow = getFlowSettings(config);
  *
  * // Or specify flow
- * const prodSettings = getFlowSettings(config, 'production');
+ * const prodFlow = getFlowSettings(config, 'production');
  * ```
  */
 export function getFlowSettings(
-  config: Flow.Config,
+  config: Flow.Json,
   flowName?: string,
   options?: ResolveOptions,
-): Flow.Settings {
+): Flow {
+  // Per-call shared state for cross-flow resolution.
+  const resolvedFlowConfigs = new Map<string, unknown>();
+  const visiting = new Set<string>();
+  const visitOrder: string[] = [];
+
+  /**
+   * Recursively resolve a sibling flow's `Flow.Config` block.
+   * Used by the resolver when it encounters `$flow.X.Y`.
+   * Throws on cycles. Returns undefined if the flow does not exist.
+   */
+  const resolveFlowConfig: FlowConfigResolver = (targetName): unknown => {
+    if (resolvedFlowConfigs.has(targetName)) {
+      return resolvedFlowConfigs.get(targetName);
+    }
+
+    const targetSettings = config.flows[targetName];
+    if (!targetSettings) return undefined;
+
+    if (visiting.has(targetName)) {
+      const chain = [...visitOrder, targetName].join(' -> ');
+      throwError(`Cyclic $flow reference: ${chain}`);
+    }
+
+    visiting.add(targetName);
+    visitOrder.push(targetName);
+    try {
+      const vars = mergeVariables(config.variables, targetSettings.variables);
+      const defs = mergeDefinitions(
+        config.definitions,
+        targetSettings.definitions,
+      );
+      // Resolve only the public config block: that is what $flow may read.
+      const resolved = resolvePatterns(
+        targetSettings.config ?? {},
+        vars,
+        defs,
+        options,
+        undefined, // contracts not consulted inside Flow.Config
+        resolveFlowConfig,
+      );
+      resolvedFlowConfigs.set(targetName, resolved);
+      return resolved;
+    } finally {
+      visiting.delete(targetName);
+      visitOrder.pop();
+    }
+  };
+
   const flowNames = Object.keys(config.flows);
 
   // Auto-select if only one flow
@@ -292,11 +460,31 @@ export function getFlowSettings(
     );
   }
 
+  // Cycle guard for the top-level flow being resolved as well.
+  // Without this, a cycle initiated from the entry flow (a → b → a) would
+  // not be detected when control returned to "a".
+  visiting.add(flowName);
+  visitOrder.push(flowName);
+
+  try {
+    return resolveFlowSettings(config, settings, options, resolveFlowConfig);
+  } finally {
+    visiting.delete(flowName);
+    visitOrder.pop();
+  }
+}
+
+function resolveFlowSettings(
+  config: Flow.Json,
+  settings: Flow,
+  options: ResolveOptions | undefined,
+  resolveFlow: FlowConfigResolver,
+): Flow {
   // Deep clone to avoid mutations
-  const result = JSON.parse(JSON.stringify(settings)) as Flow.Settings;
+  const result = JSON.parse(JSON.stringify(settings)) as Flow;
 
   // Pre-process contracts: resolve $def inside contracts, then extends + wildcards
-  let resolvedContracts: Record<string, Flow.ContractEntry> | undefined;
+  let resolvedContracts: Record<string, Flow.ContractRule> | undefined;
   if (config.contract) {
     // Two-pass: resolve $def/$var/$env inside contract first
     const vars = mergeVariables(config.variables, settings.variables);
@@ -306,9 +494,27 @@ export function getFlowSettings(
       vars,
       defs,
       options,
+      undefined,
+      resolveFlow,
     ) as Flow.Contract;
 
     resolvedContracts = resolveContracts(resolvedContractInput);
+  }
+
+  // Process the flow's own config block so $flow/$env/$var refs inside
+  // it (e.g. settings.url = '$flow.server.url') are resolved.
+  if (result.config) {
+    const vars = mergeVariables(config.variables, settings.variables);
+    const defs = mergeDefinitions(config.definitions, settings.definitions);
+    const processedFlowConfig = resolvePatterns(
+      result.config,
+      vars,
+      defs,
+      options,
+      resolvedContracts,
+      resolveFlow,
+    );
+    result.config = processedFlowConfig as Flow.Config;
   }
 
   // Process sources with variable and definition cascade
@@ -331,6 +537,7 @@ export function getFlowSettings(
         defs,
         options,
         resolvedContracts,
+        resolveFlow,
       );
 
       const processedEnv = resolvePatterns(
@@ -339,13 +546,14 @@ export function getFlowSettings(
         defs,
         options,
         resolvedContracts,
+        resolveFlow,
       );
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
         source.package,
         source.code,
-        result.bundle?.packages,
+        result.config?.bundle?.packages,
       );
 
       // Exclude deprecated code: true, only keep valid string or InlineCode
@@ -365,7 +573,7 @@ export function getFlowSettings(
         next: source.next,
         cache: source.cache,
         code: finalCode,
-      } as Flow.SourceReference;
+      } as Flow.Source;
     }
   }
 
@@ -389,6 +597,7 @@ export function getFlowSettings(
         defs,
         options,
         resolvedContracts,
+        resolveFlow,
       );
 
       const processedEnv = resolvePatterns(
@@ -397,13 +606,14 @@ export function getFlowSettings(
         defs,
         options,
         resolvedContracts,
+        resolveFlow,
       );
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
         dest.package,
         dest.code,
-        result.bundle?.packages,
+        result.config?.bundle?.packages,
       );
 
       // Exclude deprecated code: true, only keep valid string or InlineCode
@@ -422,7 +632,7 @@ export function getFlowSettings(
         next: dest.next,
         cache: dest.cache,
         code: finalCode,
-      } as Flow.DestinationReference;
+      } as Flow.Destination;
     }
   }
 
@@ -446,6 +656,7 @@ export function getFlowSettings(
         defs,
         options,
         resolvedContracts,
+        resolveFlow,
       );
 
       const processedEnv = resolvePatterns(
@@ -454,12 +665,13 @@ export function getFlowSettings(
         defs,
         options,
         resolvedContracts,
+        resolveFlow,
       );
 
       const resolvedCode = resolveCodeFromPackage(
         store.package,
         store.code,
-        result.bundle?.packages,
+        result.config?.bundle?.packages,
       );
 
       const validCode =
@@ -474,7 +686,7 @@ export function getFlowSettings(
         variables: store.variables,
         definitions: store.definitions,
         code: finalCode,
-      } as Flow.StoreReference;
+      } as Flow.Store;
     }
   }
 
@@ -498,6 +710,7 @@ export function getFlowSettings(
         defs,
         options,
         resolvedContracts,
+        resolveFlow,
       );
 
       const processedEnv = resolvePatterns(
@@ -506,12 +719,13 @@ export function getFlowSettings(
         defs,
         options,
         resolvedContracts,
+        resolveFlow,
       );
 
       const resolvedCode = resolveCodeFromPackage(
         transformer.package,
         transformer.code,
-        result.bundle?.packages,
+        result.config?.bundle?.packages,
       );
 
       const validCode =
@@ -530,7 +744,7 @@ export function getFlowSettings(
         next: transformer.next,
         cache: transformer.cache,
         code: finalCode,
-      } as Flow.TransformerReference;
+      } as Flow.Transformer;
     }
   }
 
@@ -545,6 +759,7 @@ export function getFlowSettings(
       defs,
       options,
       resolvedContracts,
+      resolveFlow,
     );
     result.collector = processedCollector as typeof result.collector;
   }
@@ -553,22 +768,24 @@ export function getFlowSettings(
 }
 
 /**
- * Get platform from settings (web or server).
+ * Get the platform of a flow ('web' or 'server').
  *
- * @param settings - Flow settings
+ * Reads from `flow.config.platform`.
+ *
+ * @param flow - Resolved flow (output of {@link getFlowSettings})
  * @returns "web" or "server"
- * @throws Error if neither web nor server is present
+ * @throws Error if `config.platform` is missing
  *
  * @example
  * ```typescript
  * import { getPlatform } from '@walkeros/core';
  *
- * const platform = getPlatform(settings);
+ * const platform = getPlatform(flow);
  * // Returns "web" or "server"
  * ```
  */
-export function getPlatform(settings: Flow.Settings): 'web' | 'server' {
-  if (settings.web !== undefined) return 'web';
-  if (settings.server !== undefined) return 'server';
-  throwError('Settings must have web or server key');
+export function getPlatform(flow: Flow): 'web' | 'server' {
+  const platform = flow.config?.platform;
+  if (platform === 'web' || platform === 'server') return platform;
+  throwError('Flow must have config.platform set to "web" or "server"');
 }

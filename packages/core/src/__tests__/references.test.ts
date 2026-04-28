@@ -4,6 +4,7 @@ import {
   REF_DEF,
   REF_ENV,
   REF_CONTRACT,
+  REF_FLOW,
   REF_STORE,
   REF_SECRET,
   REF_CODE_PREFIX,
@@ -38,5 +39,30 @@ describe('reference regex constants', () => {
   });
   it('REF_CODE_PREFIX is literal', () => {
     expect('$code:(e) => e.x'.startsWith(REF_CODE_PREFIX)).toBe(true);
+  });
+});
+
+describe('REF_FLOW', () => {
+  test('matches simple reference', () => {
+    const m = '$flow.server.url'.match(REF_FLOW)!;
+    expect(m[1]).toBe('server');
+    expect(m[2]).toBe('url');
+  });
+
+  test('matches reference with deep path', () => {
+    const m = '$flow.server.settings.region'.match(REF_FLOW)!;
+    expect(m[1]).toBe('server');
+    expect(m[2]).toBe('settings.region');
+  });
+
+  test('matches reference with no path', () => {
+    const m = '$flow.server'.match(REF_FLOW)!;
+    expect(m[1]).toBe('server');
+    expect(m[2]).toBeUndefined();
+  });
+
+  test('does not match partial / inline references', () => {
+    expect('prefix$flow.server.url'.match(REF_FLOW)).toBeNull();
+    expect('$flow.server.url suffix'.match(REF_FLOW)).toBeNull();
   });
 });

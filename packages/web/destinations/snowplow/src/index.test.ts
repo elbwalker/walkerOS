@@ -43,9 +43,7 @@ describe('destination snowplow', () => {
       calls.push({ path, args });
     });
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   test('init creates tracker', async () => {

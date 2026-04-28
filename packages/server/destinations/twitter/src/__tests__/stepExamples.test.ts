@@ -31,7 +31,7 @@ describe('Step Examples', () => {
     testEnv.sendServer = mockSendServer;
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const mappingConfig = mapping
       ? { [event.entity]: { [event.action]: mapping } }

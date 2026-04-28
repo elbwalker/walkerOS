@@ -79,7 +79,7 @@ export function translateToCoreCollector(
     ).find((obj) => obj.entity === entity);
     if (entityObj) {
       if (dataIsElem) eventData = entityObj.data;
-      eventContext = entityObj.context;
+      if (entityObj.context) eventContext = entityObj.context;
     }
   }
 

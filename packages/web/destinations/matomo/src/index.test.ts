@@ -36,7 +36,7 @@ describe('Destination Matomo', () => {
     settings = { siteId, url };
     destination = jest.requireActual('.').default;
     jest.clearAllMocks();
-    ({ elb } = await startFlow({ tagging: 2 }));
+    ({ elb } = await startFlow());
   });
 
   test('init with loadScript loads matomo.js and configures tracker', async () => {

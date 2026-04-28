@@ -1,4 +1,7 @@
-import type { StepOut, StepEffect } from '../types/flow';
+import type { Flow } from '../types/flow';
+
+type StepOut = Flow.StepOut;
+type StepEffect = Flow.StepEffect;
 
 /**
  * Format a step example's `out` as readable code for docs/app rendering.

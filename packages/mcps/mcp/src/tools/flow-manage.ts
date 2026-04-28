@@ -5,13 +5,25 @@ import { isAuthError, AUTH_HINT } from '../types.js';
 import { wrapUserData, redactNestedStrings } from '../user-data.js';
 import { flowCanvasResult } from '../ui-parts.js';
 
-/** Peek at a Flow.Config and decide whether it's web-flavoured or
- *  server-flavoured. Flow.Config is keyed by platform at the top level. If
- *  both exist the web half wins (rare — dual-platform flows are an
- *  advanced case we don't render in chat bubbles). */
-function pickPlatform(config: unknown): 'web' | 'server' {
-  if (config && typeof config === 'object' && 'web' in (config as object)) {
-    return 'web';
+/** Peek at a Flow.Json root (v4) and decide whether the bubble should render
+ *  as web-flavoured or server-flavoured. The platform is recorded on
+ *  `flows[name].config.platform`. We pick the first flow's platform; if no
+ *  platform is set we fall back to `'server'` so the chat bubble can still
+ *  render even if the user is mid-edit. */
+function pickPlatform(content: unknown): 'web' | 'server' {
+  if (content && typeof content === 'object') {
+    const flows = (content as { flows?: unknown }).flows;
+    if (flows && typeof flows === 'object') {
+      for (const flow of Object.values(flows as Record<string, unknown>)) {
+        if (flow && typeof flow === 'object') {
+          const config = (flow as { config?: unknown }).config;
+          if (config && typeof config === 'object') {
+            const platform = (config as { platform?: unknown }).platform;
+            if (platform === 'web' || platform === 'server') return platform;
+          }
+        }
+      }
+    }
   }
   return 'server';
 }
@@ -95,7 +107,7 @@ const inputSchema = {
   content: z
     .record(z.string(), z.unknown())
     .optional()
-    .describe('Flow.Config JSON content. Used for create and update.'),
+    .describe('Flow.Json content. Used for create and update.'),
   patch: z
     .boolean()
     .optional()

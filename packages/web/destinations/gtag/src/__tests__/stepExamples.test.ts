@@ -136,7 +136,7 @@ describe('gtag web destination -- step examples', () => {
 
     const { env, calls } = makeTestEnv();
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     // Command examples: route `in` through elb('walker <command>', in).
     if (example.command) {

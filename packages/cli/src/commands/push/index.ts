@@ -512,16 +512,16 @@ export interface SimulateSourceOptions {
  * content shapes. The source's createTrigger defines what it expects.
  */
 export async function simulateSource(
-  configOrPath: string | Flow.Config,
+  configOrPath: string | Flow.Json,
   input: unknown,
   options: SimulateSourceOptions,
 ): Promise<PushResult> {
   const startTime = Date.now();
 
   // Resolve config: accept either file path or config object
-  let config: Flow.Config;
+  let config: Flow.Json;
   if (typeof configOrPath === 'string') {
-    config = (await loadJsonConfig(configOrPath)) as Flow.Config;
+    config = (await loadJsonConfig(configOrPath)) as Flow.Json;
   } else {
     config = configOrPath;
   }
@@ -668,7 +668,7 @@ export interface SimulateTransformerOptions {
  * If the transformer drops the event (returns false), output event is null.
  */
 export async function simulateTransformer(
-  configOrPath: string | Flow.Config,
+  configOrPath: string | Flow.Json,
   event: WalkerOS.DeepPartialEvent,
   options: SimulateTransformerOptions,
 ): Promise<PushResult> {
@@ -685,9 +685,9 @@ export async function simulateTransformer(
   }
 
   // Resolve config: accept either file path or config object
-  let config: Flow.Config;
+  let config: Flow.Json;
   if (typeof configOrPath === 'string') {
-    config = (await loadJsonConfig(configOrPath)) as Flow.Config;
+    config = (await loadJsonConfig(configOrPath)) as Flow.Json;
   } else {
     config = configOrPath;
   }
@@ -884,7 +884,7 @@ export interface SimulateDestinationOptions {
  * before chains — without manual wiring.
  */
 export async function simulateDestination(
-  configOrPath: string | Flow.Config,
+  configOrPath: string | Flow.Json,
   event: WalkerOS.DeepPartialEvent,
   options: SimulateDestinationOptions,
 ): Promise<PushResult> {
@@ -901,9 +901,9 @@ export async function simulateDestination(
   }
 
   // Resolve config: accept either file path or config object
-  let config: Flow.Config;
+  let config: Flow.Json;
   if (typeof configOrPath === 'string') {
-    config = (await loadJsonConfig(configOrPath)) as Flow.Config;
+    config = (await loadJsonConfig(configOrPath)) as Flow.Json;
   } else {
     config = configOrPath;
   }

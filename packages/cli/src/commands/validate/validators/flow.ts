@@ -1,6 +1,7 @@
 // walkerOS/packages/cli/src/commands/validate/validators/flow.ts
 
 import type { Flow } from '@walkeros/core';
+import { getFlowSettings } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import type {
   ValidateResult,
@@ -12,6 +13,20 @@ const { validateFlowConfig } = schemas;
 
 interface FlowValidateOptions {
   flow?: string;
+}
+
+/**
+ * Type guard for a parsed Flow.Json shape (after schema validation).
+ * Used only in soft-resolve so we can call core's resolver without casts.
+ */
+function isFlowJson(value: unknown): value is Flow.Json {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'version' in value &&
+    'flows' in value &&
+    typeof (value as { flows: unknown }).flows === 'object'
+  );
 }
 
 export function validateFlow(
@@ -91,21 +106,23 @@ export function validateFlow(
     }
   }
 
-  // 8. CLI-specific: warn about packages without version (per-flow bundle.packages)
+  // 8. CLI-specific: warn about packages without version (per-flow config.bundle.packages)
   let totalPackageCount = 0;
   if (flows && typeof flows === 'object') {
     for (const [flowName, flowValue] of Object.entries(
       flows as Record<string, unknown>,
     )) {
-      const flow = flowValue as { bundle?: { packages?: unknown } };
-      const packages = flow.bundle?.packages as
+      const flow = flowValue as {
+        config?: { bundle?: { packages?: unknown } };
+      };
+      const packages = flow.config?.bundle?.packages as
         | Record<string, Record<string, unknown>>
         | undefined;
       if (packages && typeof packages === 'object') {
         for (const [pkgName, pkgConfig] of Object.entries(packages)) {
           if (!pkgConfig.version && !pkgConfig.path) {
             warnings.push({
-              path: `flows.${flowName}.bundle.packages.${pkgName}`,
+              path: `flows.${flowName}.config.bundle.packages.${pkgName}`,
               message: `Package "${pkgName}" has no version specified`,
               suggestion:
                 'Consider specifying a version for reproducible builds',
@@ -132,7 +149,7 @@ export function validateFlow(
 
     let totalConnections = 0;
     for (const name of flowsToCheck) {
-      const flowSettings = (flows as Record<string, Flow.Settings>)[name];
+      const flowSettings = (flows as Record<string, Flow>)[name];
       if (!flowSettings) continue;
 
       const connections = buildConnectionGraph(flowSettings);
@@ -151,7 +168,7 @@ export function validateFlow(
 
     // Check for flat dot-separated mapping keys (common mistake)
     for (const name of flowsToCheck) {
-      const flowSettings = (flows as Record<string, Flow.Settings>)[name];
+      const flowSettings = (flows as Record<string, Flow>)[name];
       if (!flowSettings) continue;
 
       for (const [destName, dest] of Object.entries(
@@ -172,6 +189,41 @@ export function validateFlow(
               suggestion: `Use nested format: { "${parts[0]}": { "${parts.slice(1).join('.')}": { ... } } }`,
             });
           }
+        }
+      }
+    }
+  }
+
+  // 11. Soft-resolve $flow refs to surface warnings (does NOT throw on missing
+  //     keys / unknown flows; cycles still throw and become errors).
+  if (errors.length === 0 && isFlowJson(input)) {
+    const flowsMap = input.flows;
+    const flowsToResolve = options.flow
+      ? options.flow in flowsMap
+        ? [options.flow]
+        : []
+      : Object.keys(flowsMap);
+
+    for (const name of flowsToResolve) {
+      try {
+        getFlowSettings(input, name, {
+          deferred: true, // don't fail on missing $env when validating
+          strictFlowRefs: false,
+          onWarning: (message) => {
+            warnings.push({ path: `flows.${name}`, message });
+          },
+        });
+      } catch (err) {
+        // Only surface CYCLES as errors here; other resolver failures (missing
+        // $var / $def / etc.) are already reported by the schema/reference
+        // checker above and should not double-fail this pass.
+        const message = err instanceof Error ? err.message : String(err);
+        if (/Cyclic \$flow reference/.test(message)) {
+          errors.push({
+            path: `flows.${name}`,
+            message,
+            code: 'FLOW_CYCLE',
+          });
         }
       }
     }
@@ -199,7 +251,7 @@ interface StepConnection {
   to: StepInfo;
 }
 
-function buildConnectionGraph(config: Flow.Settings): StepConnection[] {
+function buildConnectionGraph(config: Flow): StepConnection[] {
   const connections: StepConnection[] = [];
 
   // Source → next transformer
@@ -329,7 +381,7 @@ function isStructurallyCompatible(a: unknown, b: unknown): boolean {
 }
 
 function checkContractCompliance(
-  config: Flow.Settings,
+  config: Flow,
   contract: Flow.Contract,
   warnings: ValidationWarning[],
 ): void {
@@ -342,13 +394,24 @@ function checkContractCompliance(
       const event = example.in as { entity?: string; action?: string };
       if (!event.entity || !event.action) continue;
 
-      const entityContract = contract[event.entity] as
-        | Record<string, unknown>
-        | undefined;
-      if (!entityContract || typeof entityContract !== 'object') continue;
+      // Walk every named contract rule and look in its events map.
+      // First match (entity exact or wildcard, action exact or wildcard) wins.
+      let matched = false;
+      for (const rule of Object.values(contract)) {
+        const events = rule.events;
+        if (!events) continue;
 
-      const actionSchema = entityContract[event.action] || entityContract['*'];
-      if (actionSchema) {
+        const entityActions = events[event.entity] || events['*'];
+        if (!entityActions) continue;
+
+        const actionSchema = entityActions[event.action] || entityActions['*'];
+        if (actionSchema) {
+          matched = true;
+          break;
+        }
+      }
+
+      if (matched) {
         warnings.push({
           path: `destination.${name}.examples.${exName}`,
           message: `Example has contract for ${event.entity}.${event.action}`,

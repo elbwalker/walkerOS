@@ -23,19 +23,19 @@ Per writing-skills guidelines, technique skills require:
 
 **Expected Baseline Behavior (without skill):**
 
-- Agent would need to guess Flow.Config format
+- Agent would need to guess Flow.Json format
 - May not know about platform selection (web/server)
 - Would search README for examples
 - May produce invalid JSON structure
 
 **Skill Coverage:**
 
-| Feature Needed        | Covered in Skill | Location                                |
-| --------------------- | ---------------- | --------------------------------------- |
-| Flow.Config structure | ✅               | Flow.Config Configuration section       |
-| Platform selection    | ✅               | flow-configuration.md                   |
-| Bundle command        | ✅               | Quick Reference + commands-reference.md |
-| Destination config    | ✅               | flow-configuration.md                   |
+| Feature Needed      | Covered in Skill | Location                                |
+| ------------------- | ---------------- | --------------------------------------- |
+| Flow.Json structure | ✅               | Flow.Json Configuration section         |
+| Platform selection  | ✅               | flow-configuration.md                   |
+| Bundle command      | ✅               | Quick Reference + commands-reference.md |
+| Destination config  | ✅               | flow-configuration.md                   |
 
 **Result:** ✅ PASS
 

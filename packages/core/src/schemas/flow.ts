@@ -1,5 +1,5 @@
 /**
- * Flow Configuration System - Zod Schemas
+ * Flow Configuration System - Zod Schemas (v4)
  *
  * Mirrors: types/flow.ts
  * Purpose: Runtime validation and JSON Schema generation for Flow configurations
@@ -12,7 +12,7 @@
  * - Type-safe parsing with Zod
  *
  * SCHEMA SYNC: Run `npx tsx scripts/generate-flow-schema.ts` from the repo root
- * to regenerate website/static/schema/flow/v1.json and v2.json.
+ * to regenerate website/static/schema/flow/v4.json.
  *
  * @packageDocumentation
  */
@@ -30,7 +30,7 @@ import { CacheSchema } from './cache';
  *
  * @remarks
  * Variables can be strings, numbers, or booleans.
- * Used in Setup.variables and Config.env.
+ * Used at root, flow, source, destination, transformer, and store levels.
  */
 export const PrimitiveSchema = z
   .union([z.string(), z.number(), z.boolean()])
@@ -77,68 +77,58 @@ export const DefinitionsSchema = z
   .describe('Reusable configuration definitions');
 
 /**
- * Packages schema for build configuration.
+ * Settings schema - free-form key-value bag inside Flow.Config.settings.
+ */
+export const SettingsSchema = z
+  .record(z.string(), z.unknown())
+  .meta({
+    id: 'FlowSettings',
+    title: 'Flow.Settings',
+    description:
+      'Free-form key-value settings consumed by the platform runtime.',
+  })
+  .describe('Free-form platform settings bag');
+
+/**
+ * NPM package name validation pattern.
  */
 const npmPackageNamePattern =
   /^(@[a-z0-9\-~][a-z0-9\-._~]*\/)?[a-z0-9\-~][a-z0-9\-._~]*$/;
 
 /**
- * Single package spec - version / imports / local path triple.
- * Extracted from PackagesSchema so it renders with its canonical name in
- * the generated JSON Schema.
+ * Single bundle package entry.
  */
-export const FlowPackageSpecSchema = z
+export const BundlePackageSchema = z
   .object({
     version: z.string().optional(),
     imports: z.array(z.string()).optional(),
     path: z.string().optional(), // Local path (takes precedence over version)
   })
   .meta({
-    id: 'FlowPackageSpec',
-    title: 'Flow.PackageSpec',
+    id: 'FlowBundlePackage',
+    title: 'Flow.BundlePackage',
     description: 'Per-package bundle spec (version / imports / local path).',
   });
-
-export const PackagesSchema = z
-  .record(
-    z.string().regex(npmPackageNamePattern, 'Invalid npm package name'),
-    FlowPackageSpecSchema,
-  )
-  .meta({
-    id: 'FlowPackages',
-    title: 'Flow.Packages',
-    description: 'Map of npm package names to bundle specs.',
-  })
-  .describe('NPM packages to bundle');
-
-/**
- * Overrides schema - pin transitive dependency versions.
- *
- * @remarks
- * Flat `Record<string, string>` matching npm's `overrides` semantics.
- * Only affects transitive deps; direct package specs always win.
- */
-export const OverridesSchema = z
-  .record(
-    z.string().regex(npmPackageNamePattern, 'Invalid npm package name'),
-    z.string().min(1, 'Override version cannot be empty'),
-  )
-  .meta({
-    id: 'FlowOverrides',
-    title: 'Flow.Overrides',
-    description: 'Transitive dependency version overrides (flat record).',
-  })
-  .describe('Transitive dependency version overrides');
 
 /**
  * Bundle schema - build-time configuration for the bundler.
  */
 export const BundleSchema = z
   .object({
-    packages: PackagesSchema.optional().describe('NPM packages to bundle'),
-    overrides: OverridesSchema.optional().describe(
-      'Transitive dependency overrides',
-    ),
+    packages: z
+      .record(
+        z.string().regex(npmPackageNamePattern, 'Invalid npm package name'),
+        BundlePackageSchema,
+      )
+      .optional()
+      .describe('NPM packages to bundle, keyed by package name'),
+    overrides: z
+      .record(
+        z.string().regex(npmPackageNamePattern, 'Invalid npm package name'),
+        z.string().min(1, 'Override version cannot be empty'),
+      )
+      .optional()
+      .describe('Transitive dependency version pins'),
   })
   .strict()
   .meta({
@@ -149,51 +139,6 @@ export const BundleSchema = z
   .describe('Bundle configuration (packages + overrides)');
 
 // ========================================
-// Platform Configuration Schemas
-// ========================================
-
-/**
- * Web platform configuration schema.
- */
-export const WebSchema = z
-  .object({
-    windowCollector: z
-      .string()
-      .default('collector')
-      .optional()
-      .describe(
-        'Window property name for the collector instance (default: "collector")',
-      ),
-    windowElb: z
-      .string()
-      .default('elb')
-      .optional()
-      .describe(
-        'Window property name for the elb command queue (default: "elb")',
-      ),
-  })
-  .meta({
-    id: 'FlowWeb',
-    title: 'Flow.Web',
-    description: 'Web platform configuration (browser-based tracking).',
-  })
-  .describe('Web platform configuration');
-
-/**
- * Server platform configuration schema.
- */
-export const ServerSchema = z
-  .object({})
-  .passthrough()
-  .meta({
-    id: 'FlowServer',
-    title: 'Flow.Server',
-    description:
-      'Server platform configuration (Node.js) - reserved for future options.',
-  })
-  .describe('Server platform configuration (reserved for future options)');
-
-// ========================================
 // Inline Code Schema
 // ========================================
 
@@ -201,8 +146,8 @@ export const ServerSchema = z
  * Inline code schema for embedding JavaScript functions in JSON configs.
  *
  * @remarks
- * Enables custom sources, transformers, and destinations without npm packages.
- * The `push` function is required; `type` and `init` are optional.
+ * Enables custom sources, transformers, destinations, and stores without
+ * npm packages. The `push` function is required; `type` and `init` are optional.
  *
  * @example
  * ```json
@@ -214,13 +159,13 @@ export const ServerSchema = z
  * }
  * ```
  */
-export const InlineCodeSchema = z
+export const CodeSchema = z
   .object({
     push: z
       .string()
       .min(1, 'Push function cannot be empty')
       .describe(
-        'JavaScript function for processing events. Must start with "$code:" prefix. Example: "$code:(event) => { console.log(event); }"',
+        'JavaScript function for processing events. Must start with "$code:" prefix.',
       ),
     type: z
       .string()
@@ -234,24 +179,19 @@ export const InlineCodeSchema = z
       ),
   })
   .meta({
-    id: 'FlowInlineCode',
-    title: 'Flow.InlineCode',
+    id: 'FlowCode',
+    title: 'Flow.Code',
     description:
-      'Inline code block for custom sources / transformers / destinations - declared directly in JSON configs.',
+      'Inline code block for custom sources / transformers / destinations / stores.',
   })
-  .describe('Inline code for custom sources/transformers/destinations');
+  .describe('Inline code for custom components');
 
 // ========================================
 // Step Example Schemas
 // ========================================
 
 /**
- * Step example schema - a named { in, out } pair.
- */
-/**
  * Trigger descriptor - source trigger metadata for step examples.
- * Extracted from inline StepExampleSchema.trigger so it renders as
- * `Trigger.Descriptor` in PropertyTable.
  */
 export const TriggerDescriptorSchema = z
   .object({
@@ -268,6 +208,9 @@ export const TriggerDescriptorSchema = z
       'Source trigger metadata (mechanism + options) used by step examples.',
   });
 
+/**
+ * Step example schema - a named { in, out } pair.
+ */
 export const StepExampleSchema = z
   .object({
     title: z
@@ -314,18 +257,18 @@ export const StepExamplesSchema = z
   .describe('Named step examples for testing and documentation');
 
 // ========================================
-// Source Reference Schema
+// Source / Destination / Transformer / Store Schemas
 // ========================================
 
 /**
- * Source reference schema.
+ * Source reference schema (Flow.Source).
  *
  * @remarks
  * Defines how to reference and configure a source package.
  * Sources capture events from various origins (browser, HTTP, etc.).
- * Either `package` (npm package) or `code` (inline object) must be provided, but not both.
+ * Either `package` (npm package) or `code` (inline object) may be provided.
  */
-export const SourceReferenceSchema = z
+export const SourceSchema = z
   .object({
     package: z
       .string()
@@ -335,7 +278,7 @@ export const SourceReferenceSchema = z
         'Package specifier with optional version (e.g., "@walkeros/web-source-browser@2.0.0")',
       ),
     code: z
-      .union([z.string(), InlineCodeSchema])
+      .union([z.string(), CodeSchema])
       .optional()
       .describe(
         'Either a named export string (e.g., "sourceExpress") or an inline code object with push function',
@@ -343,7 +286,7 @@ export const SourceReferenceSchema = z
     config: z
       .unknown()
       .meta({
-        id: 'FlowSourceReferenceConfig',
+        id: 'FlowSourceConfig',
         title: 'Source.Config',
         description: 'Source-specific configuration object (Source.Config).',
       })
@@ -352,7 +295,7 @@ export const SourceReferenceSchema = z
     env: z
       .unknown()
       .meta({
-        id: 'FlowSourceReferenceEnv',
+        id: 'FlowSourceEnv',
         title: 'Source.BaseEnv',
         description:
           'Source environment configuration (Source.BaseEnv overrides).',
@@ -385,25 +328,17 @@ export const SourceReferenceSchema = z
     ),
   })
   .meta({
-    id: 'FlowSourceReference',
-    title: 'Flow.SourceReference',
+    id: 'FlowSource',
+    title: 'Flow.Source',
     description:
       'Source package reference with configuration, env, chains, and examples.',
   })
   .describe('Source package reference with configuration');
 
-// ========================================
-// Transformer Reference Schema
-// ========================================
-
 /**
- * Transformer reference schema.
- *
- * @remarks
- * Defines how to reference and configure a transformer package.
- * Transformers transform events in the pipeline between sources and destinations.
+ * Transformer reference schema (Flow.Transformer).
  */
-export const TransformerReferenceSchema = z
+export const TransformerSchema = z
   .object({
     package: z
       .string()
@@ -413,7 +348,7 @@ export const TransformerReferenceSchema = z
         'Package specifier with optional version (e.g., "@walkeros/transformer-enricher@1.0.0")',
       ),
     code: z
-      .union([z.string(), InlineCodeSchema])
+      .union([z.string(), CodeSchema])
       .optional()
       .describe(
         'Either a named export string (e.g., "transformerEnricher") or an inline code object with push function',
@@ -421,7 +356,7 @@ export const TransformerReferenceSchema = z
     config: z
       .unknown()
       .meta({
-        id: 'FlowTransformerReferenceConfig',
+        id: 'FlowTransformerConfig',
         title: 'Transformer.Config',
         description: 'Transformer-specific configuration object.',
       })
@@ -430,7 +365,7 @@ export const TransformerReferenceSchema = z
     env: z
       .unknown()
       .meta({
-        id: 'FlowTransformerReferenceEnv',
+        id: 'FlowTransformerEnv',
         title: 'Transformer.Env',
         description: 'Transformer environment configuration.',
       })
@@ -456,25 +391,17 @@ export const TransformerReferenceSchema = z
     ),
   })
   .meta({
-    id: 'FlowTransformerReference',
-    title: 'Flow.TransformerReference',
+    id: 'FlowTransformer',
+    title: 'Flow.Transformer',
     description:
       'Transformer package reference with configuration, env, chains, and cache.',
   })
   .describe('Transformer package reference with configuration');
 
-// ========================================
-// Destination Reference Schema
-// ========================================
-
 /**
- * Destination reference schema.
- *
- * @remarks
- * Defines how to reference and configure a destination package.
- * Destinations send processed events to external services.
+ * Destination reference schema (Flow.Destination).
  */
-export const DestinationReferenceSchema = z
+export const DestinationSchema = z
   .object({
     package: z
       .string()
@@ -484,7 +411,7 @@ export const DestinationReferenceSchema = z
         'Package specifier with optional version (e.g., "@walkeros/web-destination-gtag@2.0.0")',
       ),
     code: z
-      .union([z.string(), InlineCodeSchema])
+      .union([z.string(), CodeSchema])
       .optional()
       .describe(
         'Either a named export string (e.g., "destinationAnalytics") or an inline code object with push function',
@@ -492,7 +419,7 @@ export const DestinationReferenceSchema = z
     config: z
       .unknown()
       .meta({
-        id: 'FlowDestinationReferenceConfig',
+        id: 'FlowDestinationConfig',
         title: 'Destination.Config',
         description: 'Destination-specific configuration object.',
       })
@@ -501,7 +428,7 @@ export const DestinationReferenceSchema = z
     env: z
       .unknown()
       .meta({
-        id: 'FlowDestinationReferenceEnv',
+        id: 'FlowDestinationEnv',
         title: 'Destination.Env',
         description: 'Destination environment configuration.',
       })
@@ -527,21 +454,21 @@ export const DestinationReferenceSchema = z
     ),
   })
   .meta({
-    id: 'FlowDestinationReference',
-    title: 'Flow.DestinationReference',
+    id: 'FlowDestination',
+    title: 'Flow.Destination',
     description:
       'Destination package reference with configuration, env, chains, and cache.',
   })
   .describe('Destination package reference with configuration');
 
 /**
- * Store package reference.
+ * Store reference schema (Flow.Store).
  *
  * @remarks
  * Stores are passive key-value infrastructure - no chain properties (next/before).
  * Consumed by other components via `$store.storeId` env wiring.
  */
-export const StoreReferenceSchema = z
+export const StoreSchema = z
   .object({
     package: z
       .string()
@@ -549,13 +476,13 @@ export const StoreReferenceSchema = z
       .optional()
       .describe('Store package specifier with optional version'),
     code: z
-      .union([z.string(), InlineCodeSchema])
+      .union([z.string(), CodeSchema])
       .optional()
       .describe('Named export string or inline code definition'),
     config: z
       .unknown()
       .meta({
-        id: 'FlowStoreReferenceConfig',
+        id: 'FlowStoreConfig',
         title: 'Store.Config',
         description: 'Store-specific configuration object.',
       })
@@ -564,7 +491,7 @@ export const StoreReferenceSchema = z
     env: z
       .unknown()
       .meta({
-        id: 'FlowStoreReferenceEnv',
+        id: 'FlowStoreEnv',
         title: 'Store.Env',
         description: 'Store environment configuration.',
       })
@@ -581,8 +508,8 @@ export const StoreReferenceSchema = z
     ),
   })
   .meta({
-    id: 'FlowStoreReference',
-    title: 'Flow.StoreReference',
+    id: 'FlowStore',
+    title: 'Flow.Store',
     description:
       'Store package reference with configuration, env, and examples.',
   })
@@ -633,14 +560,18 @@ export const ContractEventsSchema = z
   .describe('Entity-action event schemas');
 
 /**
- * Single named contract entry.
+ * Single named contract rule.
  */
-export const ContractEntrySchema = z
+export const ContractRuleSchema = z
   .object({
     extends: z
       .string()
       .optional()
       .describe('Inherit from another named contract'),
+    tagging: z
+      .number()
+      .optional()
+      .describe('Tagging level (used by validators / runtime tagging policy)'),
     description: z.string().optional().describe('Human-readable description'),
     globals: ContractSchemaEntry.optional().describe(
       'JSON Schema for event.globals',
@@ -660,18 +591,18 @@ export const ContractEntrySchema = z
     ),
   })
   .meta({
-    id: 'FlowContractEntry',
-    title: 'Flow.ContractEntry',
+    id: 'FlowContractRule',
+    title: 'Flow.ContractRule',
     description:
-      'Named contract entry with optional sections (globals/context/custom/user/consent) and event schemas.',
+      'Named contract rule with optional sections (globals/context/custom/user/consent) and event schemas.',
   })
-  .describe('Named contract entry with optional sections and events');
+  .describe('Named contract rule with optional sections and events');
 
 /**
  * Named contract map.
  */
 export const ContractSchema = z
-  .record(z.string(), ContractEntrySchema)
+  .record(z.string(), ContractRuleSchema)
   .meta({
     id: 'FlowContract',
     title: 'Flow.Contract',
@@ -680,45 +611,77 @@ export const ContractSchema = z
   .describe('Named contracts with optional extends inheritance');
 
 // ========================================
-// Flow Settings Schema (Single Flow)
+// Per-flow Config block + Single Flow
 // ========================================
 
 /**
- * Single flow settings schema.
+ * Per-flow Config schema (Flow.Config).
  *
  * @remarks
- * Represents a single deployment target (e.g., web_prod, server_stage).
- * Platform is determined by presence of `web` or `server` key.
- * Exactly one must be present.
+ * Groups platform identity, optional public URL, free-form settings bag,
+ * and bundle (build-time) configuration.
  */
-export const SettingsSchema = z
+export const ConfigSchema = z
   .object({
-    web: WebSchema.optional().describe(
-      'Web platform configuration (browser-based tracking). Mutually exclusive with server.',
+    platform: z
+      .enum(['web', 'server'])
+      .describe(
+        'Platform identity for this flow. Drives bundle target/format.',
+      ),
+    url: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Public URL where this flow is reachable (for cross-flow $flow.X.url references).',
+      ),
+    settings: SettingsSchema.optional().describe(
+      'Free-form key-value settings consumed by the platform runtime.',
     ),
-    server: ServerSchema.optional().describe(
-      'Server platform configuration (Node.js). Mutually exclusive with web.',
+    bundle: BundleSchema.optional().describe(
+      'Bundle configuration: NPM packages, transitive dependency overrides.',
+    ),
+  })
+  .meta({
+    id: 'FlowConfig',
+    title: 'Flow.Config',
+    description:
+      'Per-flow configuration block: platform identity, optional public URL, settings, bundle.',
+  })
+  .describe('Per-flow configuration block');
+
+/**
+ * Single flow schema (Flow).
+ *
+ * @remarks
+ * Represents one deployment target (e.g., web_prod, server_stage).
+ * The platform is determined by `config.platform`.
+ */
+export const FlowSchema = z
+  .object({
+    config: ConfigSchema.optional().describe(
+      'Per-flow configuration: platform, url, settings, bundle.',
     ),
     sources: z
-      .record(z.string(), SourceReferenceSchema)
+      .record(z.string(), SourceSchema)
       .optional()
       .describe(
         'Source configurations (data capture) keyed by unique identifier',
       ),
     destinations: z
-      .record(z.string(), DestinationReferenceSchema)
+      .record(z.string(), DestinationSchema)
       .optional()
       .describe(
         'Destination configurations (data output) keyed by unique identifier',
       ),
     transformers: z
-      .record(z.string(), TransformerReferenceSchema)
+      .record(z.string(), TransformerSchema)
       .optional()
       .describe(
         'Transformer configurations (event transformation) keyed by unique identifier',
       ),
     stores: z
-      .record(z.string(), StoreReferenceSchema)
+      .record(z.string(), StoreSchema)
       .optional()
       .describe(
         'Store configurations (key-value storage) keyed by unique identifier',
@@ -726,7 +689,7 @@ export const SettingsSchema = z
     collector: z
       .unknown()
       .meta({
-        id: 'FlowSettingsCollector',
+        id: 'FlowCollector',
         title: 'Collector.InitConfig',
         description:
           'Collector configuration for event processing (Collector.InitConfig).',
@@ -735,106 +698,83 @@ export const SettingsSchema = z
       .describe(
         'Collector configuration for event processing (uses Collector.InitConfig)',
       ),
-    bundle: BundleSchema.optional().describe(
-      'Build-time configuration (packages + overrides)',
-    ),
-    packages: z
-      .unknown()
-      .optional()
-      .refine((val) => val === undefined, {
-        message:
-          '`packages` must live under `bundle.packages`. ' +
-          'Move your packages block to `flow.<name>.bundle.packages`. ' +
-          'This is a breaking change - see CHANGELOG migration guide.',
-      })
-      .describe('Legacy top-level packages (moved to bundle.packages)'),
     variables: VariablesSchema.optional().describe(
-      'Flow-level variables (override Config.variables, overridden by source/destination variables)',
+      'Flow-level variables (override root variables, overridden by source/destination variables)',
     ),
     definitions: DefinitionsSchema.optional().describe(
-      'Flow-level definitions (extend Config.definitions, overridden by source/destination definitions)',
+      'Flow-level definitions (extend root definitions, overridden by source/destination definitions)',
     ),
   })
-  .refine(
-    (data) => {
-      const hasWeb = data.web !== undefined;
-      const hasServer = data.server !== undefined;
-      return (hasWeb || hasServer) && !(hasWeb && hasServer);
-    },
-    {
-      message: 'Exactly one of "web" or "server" must be present',
-    },
-  )
   .meta({
-    id: 'FlowSettings',
-    title: 'Flow.Settings',
+    id: 'Flow',
+    title: 'Flow',
     description:
-      'Single flow settings for one deployment target (web/server, sources, destinations, transformers, stores, collector, bundle).',
+      'Single flow definition (one deployment target): config, sources, destinations, transformers, stores, collector.',
   })
-  .describe('Single flow settings for one deployment target');
+  .describe('Single flow definition for one deployment target');
 
 // ========================================
-// Flow Config Schema (Root Configuration)
+// Root Json Schema (walkeros.config.json)
 // ========================================
 
 /**
- * Flow config schema - root configuration.
+ * Root walkerOS multi-flow configuration schema (Flow.Json, v4).
  *
  * @remarks
  * This is the complete schema for walkeros.config.json files.
- * Contains multiple named flows with shared variables and definitions.
+ * Contains multiple named flows with shared variables, definitions, and contracts.
  */
-const ConfigBaseSchema = z.object({
-  $schema: z
-    .string()
-    .url('Schema URL must be a valid URL')
-    .optional()
-    .describe(
-      'JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v2.json")',
+export const JsonSchema = z
+  .object({
+    version: z
+      .literal(4)
+      .describe('Configuration schema version (v4, current).'),
+    $schema: z
+      .string()
+      .url('Schema URL must be a valid URL')
+      .optional()
+      .describe(
+        'JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v4.json")',
+      ),
+    include: z
+      .array(z.string())
+      .optional()
+      .describe('Folders to include in the bundle output'),
+    variables: VariablesSchema.optional().describe(
+      'Shared variables for interpolation across all flows (use $var.name syntax)',
     ),
-  include: z
-    .array(z.string())
-    .optional()
-    .describe('Folders to include in the bundle output'),
-  variables: VariablesSchema.optional().describe(
-    'Shared variables for interpolation across all flows (use $var.name syntax)',
-  ),
-  definitions: DefinitionsSchema.optional().describe(
-    'Reusable configuration definitions (use $def.name syntax)',
-  ),
-  flows: z
-    .record(z.string(), SettingsSchema)
-    .refine((flows) => Object.keys(flows).length > 0, {
-      message: 'At least one flow is required',
-    })
-    .describe(
-      'Named flow configurations (e.g., production, staging, development)',
+    definitions: DefinitionsSchema.optional().describe(
+      'Reusable configuration definitions (use $def.name syntax)',
     ),
-});
-
-export const ConfigSchema = ConfigBaseSchema.extend({
-  version: z.literal(3).describe('Configuration schema version'),
-  contract: ContractSchema.optional().describe(
-    'Named contracts with extends inheritance and dot-path references',
-  ),
-})
-  .meta({
-    id: 'FlowConfig',
-    title: 'Flow.Config',
-    description:
-      'walkerOS flow configuration root (walkeros.config.json) with version, variables, definitions, contract and named flows.',
+    contract: ContractSchema.optional().describe(
+      'Named contracts with extends inheritance and dot-path references',
+    ),
+    flows: z
+      .record(z.string(), FlowSchema)
+      .refine((flows) => Object.keys(flows).length > 0, {
+        message: 'At least one flow is required',
+      })
+      .describe(
+        'Named flow configurations (e.g., production, staging, development)',
+      ),
   })
-  .describe('walkerOS flow configuration (walkeros.config.json)');
+  .meta({
+    id: 'FlowJson',
+    title: 'Flow.Json',
+    description:
+      'walkerOS root configuration (walkeros.config.json) v4: version, variables, definitions, contract, named flows.',
+  })
+  .describe('walkerOS root configuration (walkeros.config.json)');
 
 // ========================================
 // Helper Functions
 // ========================================
 
 /**
- * Parse and validate Flow.Config configuration.
+ * Parse and validate a Flow.Json (root) configuration.
  *
  * @param data - Raw JSON data from config file
- * @returns Validated Flow.Config object
+ * @returns Validated Flow.Json object
  * @throws ZodError if validation fails with detailed error messages
  *
  * @example
@@ -847,159 +787,98 @@ export const ConfigSchema = ConfigBaseSchema.extend({
  * console.log(`Found ${Object.keys(config.flows).length} flows`);
  * ```
  */
-export function parseConfig(data: unknown): z.infer<typeof ConfigSchema> {
-  return ConfigSchema.parse(data);
+export function parseConfig(data: unknown): z.infer<typeof JsonSchema> {
+  return JsonSchema.parse(data);
 }
 
 /**
- * Safely parse Flow.Config configuration without throwing.
+ * Safely parse a Flow.Json (root) configuration without throwing.
  *
  * @param data - Raw JSON data from config file
  * @returns Success result with data or error result with issues
- *
- * @example
- * ```typescript
- * import { safeParseConfig } from '@walkeros/core/dev';
- *
- * const result = safeParseConfig(rawData);
- * if (result.success) {
- *   console.log('Valid config:', result.data);
- * } else {
- *   console.error('Validation errors:', result.error.issues);
- * }
- * ```
  */
 export function safeParseConfig(data: unknown) {
-  return ConfigSchema.safeParse(data);
+  return JsonSchema.safeParse(data);
 }
 
 /**
- * Parse and validate Flow.Settings (single flow).
+ * Parse and validate a single Flow definition.
  *
- * @param data - Raw JSON data for single flow
- * @returns Validated Flow.Settings object
+ * @param data - Raw JSON data for a single flow
+ * @returns Validated Flow object
  * @throws ZodError if validation fails
- *
- * @example
- * ```typescript
- * import { parseSettings } from '@walkeros/core/dev';
- *
- * const flowSettings = parseSettings(rawFlowData);
- * console.log(`Platform: ${flowSettings.web ? 'web' : 'server'}`);
- * ```
  */
-export function parseSettings(data: unknown): z.infer<typeof SettingsSchema> {
-  return SettingsSchema.parse(data);
+export function parseFlow(data: unknown): z.infer<typeof FlowSchema> {
+  return FlowSchema.parse(data);
 }
 
 /**
- * Safely parse Flow.Settings without throwing.
- *
- * @param data - Raw JSON data for single flow
- * @returns Success result with data or error result with issues
+ * Safely parse a single Flow definition without throwing.
  */
-export function safeParseSettings(data: unknown) {
-  return SettingsSchema.safeParse(data);
+export function safeParseFlow(data: unknown) {
+  return FlowSchema.safeParse(data);
 }
 
 // ========================================
-// JSON Schema Generation
+// JSON Schema Generation (consumed by IDE / tooling)
 // ========================================
 
 /**
- * Generate JSON Schema for Flow.Config.
+ * JSON Schema for Flow.Json (root walkeros.config.json).
  *
  * @remarks
  * Used for IDE validation and autocomplete.
- * Hosted at https://walkeros.io/schema/flow/v3.json
- *
- * @returns JSON Schema (Draft 7) representation of ConfigSchema
+ * Hosted at https://walkeros.io/schema/flow/v4.json
  */
-export const configJsonSchema = z.toJSONSchema(ConfigSchema, {
+export const configJsonSchema = z.toJSONSchema(JsonSchema, {
   target: 'draft-7',
 });
 
 /**
- * Generate JSON Schema for Flow.Settings.
- *
- * @remarks
- * Used for validating individual flow settings.
- *
- * @returns JSON Schema (Draft 7) representation of SettingsSchema
+ * JSON Schema for a single Flow.
  */
-export const settingsJsonSchema = toJsonSchema(SettingsSchema, 'FlowSettings');
+export const flowJsonSchema = toJsonSchema(FlowSchema, 'Flow');
 
 /**
- * Generate JSON Schema for SourceReference.
- *
- * @remarks
- * Used for validating source package references.
- *
- * @returns JSON Schema (Draft 7) representation of SourceReferenceSchema
+ * JSON Schema for the per-flow Config block (Flow.Config).
  */
-export const sourceReferenceJsonSchema = toJsonSchema(
-  SourceReferenceSchema,
-  'SourceReference',
+export const flowConfigJsonSchema = toJsonSchema(ConfigSchema, 'FlowConfig');
+
+/**
+ * JSON Schema for Flow.Source.
+ */
+export const sourceJsonSchema = toJsonSchema(SourceSchema, 'Source');
+
+/**
+ * JSON Schema for Flow.Destination.
+ */
+export const destinationJsonSchema = toJsonSchema(
+  DestinationSchema,
+  'Destination',
 );
 
 /**
- * Generate JSON Schema for DestinationReference.
- *
- * @remarks
- * Used for validating destination package references.
- *
- * @returns JSON Schema (Draft 7) representation of DestinationReferenceSchema
+ * JSON Schema for Flow.Transformer.
  */
-export const destinationReferenceJsonSchema = toJsonSchema(
-  DestinationReferenceSchema,
-  'DestinationReference',
+export const transformerJsonSchema = toJsonSchema(
+  TransformerSchema,
+  'Transformer',
 );
 
 /**
- * Generate JSON Schema for TransformerReference.
- *
- * @remarks
- * Used for validating transformer package references.
- *
- * @returns JSON Schema (Draft 7) representation of TransformerReferenceSchema
+ * JSON Schema for Flow.Store.
  */
-export const transformerReferenceJsonSchema = toJsonSchema(
-  TransformerReferenceSchema,
-  'TransformerReference',
+export const storeJsonSchema = toJsonSchema(StoreSchema, 'Store');
+
+/**
+ * JSON Schema for a single Contract rule (Flow.ContractRule).
+ */
+export const contractRuleJsonSchema = toJsonSchema(
+  ContractRuleSchema,
+  'ContractRule',
 );
 
 /**
- * Generate JSON Schema for StoreReference.
- *
- * @remarks
- * Used for validating store package references.
- *
- * @returns JSON Schema (Draft 7) representation of StoreReferenceSchema
- */
-export const storeReferenceJsonSchema = toJsonSchema(
-  StoreReferenceSchema,
-  'StoreReference',
-);
-
-/**
- * Generate JSON Schema for ContractEntry.
- *
- * @remarks
- * Used for validating individual contract entries.
- *
- * @returns JSON Schema (Draft 7) representation of ContractEntrySchema
- */
-export const contractEntryJsonSchema = toJsonSchema(
-  ContractEntrySchema,
-  'ContractEntry',
-);
-
-/**
- * Generate JSON Schema for Contract.
- *
- * @remarks
- * Used for validating named contract maps.
- *
- * @returns JSON Schema (Draft 7) representation of ContractSchema
+ * JSON Schema for the named Contract map (Flow.Contract).
  */
 export const contractJsonSchema = toJsonSchema(ContractSchema, 'Contract');

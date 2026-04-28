@@ -593,15 +593,15 @@ active schemas whenever one is added or removed.
 **Usage:**
 
 ```tsx
-// Static schema (e.g., Flow.Setup)
-import { setupV2JsonSchema } from '@walkeros/core/dev';
+// Static schema (e.g., Flow.Json)
+import { schemas } from '@walkeros/core/dev';
 
 <CodeBox
   code={flowJson}
   onChange={setFlowJson}
   language="json"
   showFormat
-  jsonSchema={setupV2JsonSchema as Record<string, unknown>}
+  jsonSchema={schemas.configJsonSchema as Record<string, unknown>}
 />;
 ```
 

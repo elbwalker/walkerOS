@@ -17,7 +17,7 @@ export function registerReferenceResources(server: McpServer) {
     'walkeros://reference/flow-schema',
     {
       description:
-        'JSON Schema for Flow.Config — the complete flow configuration structure',
+        'JSON Schema for Flow.Json — the complete flow configuration structure',
       mimeType: 'application/json',
     },
     async () => ({

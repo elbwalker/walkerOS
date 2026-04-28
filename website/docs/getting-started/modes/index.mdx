@@ -37,10 +37,10 @@ The collector is a **separate artifact** you configure with JSON and build with 
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {},
+      "config": { "platform": "web" },
       "sources": { "browser": { "package": "@walkeros/web-source-browser" } }
     }
   }

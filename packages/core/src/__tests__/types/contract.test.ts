@@ -1,9 +1,9 @@
 import type { Flow } from '../../types';
 
 describe('Contract types', () => {
-  it('should accept a valid named contract at Config level', () => {
-    const setup: Flow.Config = {
-      version: 3,
+  it('should accept a valid named contract at root config level', () => {
+    const setup: Flow.Json = {
+      version: 4,
       contract: {
         default: {
           description: 'Base contract',
@@ -37,7 +37,7 @@ describe('Contract types', () => {
         },
       },
       flows: {
-        default: { web: {} },
+        default: { config: { platform: 'web' } },
       },
     };
     expect(setup.contract).toBeDefined();

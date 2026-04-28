@@ -160,7 +160,7 @@ describe('flow_bundle tool', () => {
 
   describe('remote bundling', () => {
     it('calls bundleRemote when remote is true', async () => {
-      const content = { version: 3, flows: {} };
+      const content = { version: 4, flows: {} };
       mockBundleRemote.mockResolvedValue({ bundle: 'code', size: 512 });
 
       const tool = server.getTool('flow_bundle');

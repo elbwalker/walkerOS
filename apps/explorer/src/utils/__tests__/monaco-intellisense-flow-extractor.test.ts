@@ -14,9 +14,9 @@ describe('extractFlowIntelliSenseContext', () => {
 
   it('extracts setup-level variables', () => {
     const json = JSON.stringify({
-      version: 1,
+      version: 4,
       variables: { gaId: 'G-XXX', debug: false },
-      flows: { default: { web: {} } },
+      flows: { default: { config: { platform: 'web' } } },
     });
     const ctx = extractFlowIntelliSenseContext(json);
     expect(ctx.variables).toEqual({ gaId: 'G-XXX', debug: false });
@@ -24,11 +24,11 @@ describe('extractFlowIntelliSenseContext', () => {
 
   it('merges variables from setup, config, and step levels', () => {
     const json = JSON.stringify({
-      version: 1,
+      version: 4,
       variables: { gaId: 'G-XXX', shared: 'setup' },
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           variables: { flowVar: 'flow', shared: 'flow-override' },
           destinations: {
             ga4: {
@@ -50,11 +50,11 @@ describe('extractFlowIntelliSenseContext', () => {
 
   it('extracts definitions from all levels', () => {
     const json = JSON.stringify({
-      version: 1,
+      version: 4,
       definitions: { commonSettings: { key: 'value' } },
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           definitions: { flowDef: { x: 1 } },
           sources: {
             browser: {
@@ -75,10 +75,10 @@ describe('extractFlowIntelliSenseContext', () => {
 
   it('extracts step names by type', () => {
     const json = JSON.stringify({
-      version: 1,
+      version: 4,
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           sources: { browser: {}, dataLayer: {} },
           destinations: { ga4: {}, meta: {} },
           transformers: { validate: {}, enrich: {} },
@@ -95,10 +95,10 @@ describe('extractFlowIntelliSenseContext', () => {
 
   it('extracts packages from step references', () => {
     const json = JSON.stringify({
-      version: 1,
+      version: 4,
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           sources: {
             browser: { package: '@walkeros/web-source-browser' },
           },
@@ -136,29 +136,29 @@ describe('extractFlowIntelliSenseContext', () => {
 
   it('detects web platform', () => {
     const json = JSON.stringify({
-      version: 1,
-      flows: { default: { web: {} } },
+      version: 4,
+      flows: { default: { config: { platform: 'web' } } },
     });
     expect(extractFlowIntelliSenseContext(json).platform).toBe('web');
   });
 
   it('detects server platform', () => {
     const json = JSON.stringify({
-      version: 1,
-      flows: { default: { server: {} } },
+      version: 4,
+      flows: { default: { config: { platform: 'server' } } },
     });
     expect(extractFlowIntelliSenseContext(json).platform).toBe('server');
   });
 
   it('extracts contract entities and actions', () => {
     const json = JSON.stringify({
-      version: 1,
+      version: 4,
       contract: {
         $tagging: 1,
         page: { view: {}, read: {} },
         product: { add: {}, remove: {} },
       },
-      flows: { default: { web: {} } },
+      flows: { default: { config: { platform: 'web' } } },
     });
     const ctx = extractFlowIntelliSenseContext(json);
     expect(ctx.contract).toEqual([
@@ -169,11 +169,11 @@ describe('extractFlowIntelliSenseContext', () => {
 
   it('merges contract from setup and config level', () => {
     const json = JSON.stringify({
-      version: 1,
+      version: 4,
       contract: { page: { view: {} } },
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           contract: { product: { add: {} } },
         },
       },
@@ -187,15 +187,15 @@ describe('extractFlowIntelliSenseContext', () => {
 
   it('handles multiple flows by merging all', () => {
     const json = JSON.stringify({
-      version: 1,
+      version: 4,
       flows: {
         web_prod: {
-          web: {},
+          config: { platform: 'web' },
           variables: { gaId: 'G-PROD' },
           sources: { browser: {} },
         },
         server_prod: {
-          server: {},
+          config: { platform: 'server' },
           variables: { apiUrl: 'https://api.example.com' },
           sources: { express: {} },
         },
@@ -212,8 +212,8 @@ describe('extractFlowIntelliSenseContext', () => {
 
   it('handles partial flow (only version and flows key)', () => {
     const json = JSON.stringify({
-      version: 1,
-      flows: { default: { web: {} } },
+      version: 4,
+      flows: { default: { config: { platform: 'web' } } },
     });
     const ctx = extractFlowIntelliSenseContext(json);
     expect(ctx.variables).toEqual({});
@@ -230,10 +230,10 @@ describe('extractFlowIntelliSenseContext — stores', () => {
   it('collects store IDs from active flow', () => {
     const result = extractFlowIntelliSenseContext(
       JSON.stringify({
-        version: 3,
+        version: 4,
         flows: {
           server: {
-            server: {},
+            config: { platform: 'server' },
             stores: {
               cache: { package: '@walkeros/store-memory' },
               ttl: {},
@@ -250,11 +250,11 @@ describe('extractFlowIntelliSenseContext — cascade priority', () => {
   it('step-level variables override flow-level override config', () => {
     const result = extractFlowIntelliSenseContext(
       JSON.stringify({
-        version: 3,
+        version: 4,
         variables: { mode: 'config' },
         flows: {
           web: {
-            web: {},
+            config: { platform: 'web' },
             variables: { mode: 'flow' },
             sources: {
               browser: { variables: { mode: 'step' } },
@@ -269,11 +269,11 @@ describe('extractFlowIntelliSenseContext — cascade priority', () => {
   it('missing step variables fall back to flow then config', () => {
     const result = extractFlowIntelliSenseContext(
       JSON.stringify({
-        version: 3,
+        version: 4,
         variables: { foo: 'config' },
         flows: {
           web: {
-            web: {},
+            config: { platform: 'web' },
             variables: { bar: 'flow' },
             sources: { browser: { variables: { baz: 'step' } } },
           },

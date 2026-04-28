@@ -64,7 +64,7 @@ async function flowExamplesHandlerBody(input: unknown) {
     includeHidden?: boolean;
   };
   try {
-    const rawConfig = await loadJsonConfig<Flow.Config>(configPath);
+    const rawConfig = await loadJsonConfig<Flow.Json>(configPath);
 
     // Resolve flow name
     const flowNames = Object.keys(rawConfig.flows || {});

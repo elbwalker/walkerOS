@@ -2,7 +2,7 @@
  * Configuration Type Guards and Validators
  *
  * Type checking utilities for configuration validation.
- * Uses Zod schemas from @walkeros/core for Flow.Config validation.
+ * Uses Zod schemas from @walkeros/core for Flow.Json validation.
  */
 
 import type { Flow } from '@walkeros/core';
@@ -23,24 +23,22 @@ export function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Detect platform from flow config.
+ * Detect platform from a single flow.
  *
- * Platform is determined by the presence of `web` or `server` key.
+ * Platform is determined by `flow.config.platform`.
  */
 export function detectPlatform(
-  flowConfig: Record<string, unknown>,
+  flow: Record<string, unknown>,
 ): 'web' | 'server' | undefined {
-  if ('web' in flowConfig && flowConfig.web !== undefined) {
-    return 'web';
-  }
-  if ('server' in flowConfig && flowConfig.server !== undefined) {
-    return 'server';
-  }
+  const config = flow.config;
+  if (!config || typeof config !== 'object') return undefined;
+  const platform = (config as Record<string, unknown>).platform;
+  if (platform === 'web' || platform === 'server') return platform;
   return undefined;
 }
 
 /**
- * Type guard: Check if config is a valid Flow.Config structure.
+ * Type guard: Check if config is a valid Flow.Json structure.
  *
  * @remarks
  * Uses Zod validation from @walkeros/core.
@@ -53,23 +51,23 @@ export function detectPlatform(
  * }
  * ```
  */
-export function isFlowConfig(data: unknown): data is Flow.Config {
+export function isFlowConfig(data: unknown): data is Flow.Json {
   const result = safeParseConfig(data);
   return result.success;
 }
 
 /**
- * Validate Flow.Config and throw descriptive error if invalid.
+ * Validate Flow.Json and throw descriptive error if invalid.
  *
  * @remarks
  * Uses Zod validation from @walkeros/core.
  * Provides detailed error messages from Zod.
  *
  * @param data - Raw configuration data
- * @returns Validated Flow.Config
+ * @returns Validated Flow.Json
  * @throws Error with descriptive message if validation fails
  */
-export function validateFlowConfig(data: unknown): Flow.Config {
+export function validateFlowConfig(data: unknown): Flow.Json {
   const result = safeParseConfig(data);
 
   if (!result.success) {
@@ -85,16 +83,16 @@ export function validateFlowConfig(data: unknown): Flow.Config {
     throw new Error(`Invalid configuration:\n${errors}`);
   }
 
-  // Cast to Flow.Config since Zod's inferred type is compatible but not identical
-  return result.data as Flow.Config;
+  // Cast to Flow.Json since Zod's inferred type is compatible but not identical
+  return result.data as Flow.Json;
 }
 
 /**
- * Get available flow names from a Flow.Config.
+ * Get available flow names from a Flow.Json.
  *
- * @param config - Flow.Config configuration
+ * @param config - Flow.Json configuration
  * @returns Array of flow names
  */
-export function getAvailableFlows(config: Flow.Config): string[] {
+export function getAvailableFlows(config: Flow.Json): string[] {
   return Object.keys(config.flows);
 }

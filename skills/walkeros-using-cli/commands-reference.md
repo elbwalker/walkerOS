@@ -6,7 +6,7 @@ Detailed reference for all walkerOS CLI commands.
 
 ## bundle
 
-Generate optimized JavaScript bundles from Flow.Config configurations.
+Generate optimized JavaScript bundles from Flow.Json configurations.
 
 ### Usage
 
@@ -319,8 +319,7 @@ Validate flow configurations, events, mappings, or contracts.
 walkeros validate <input> [options]
 ```
 
-Default: validates input as Flow.Config (schema, references, cross-step
-examples).
+Default: validates input as Flow.Json (schema, references, cross-step examples).
 
 ### Options
 
@@ -338,7 +337,7 @@ examples).
 
 | Type             | Input        | What it checks                          |
 | ---------------- | ------------ | --------------------------------------- |
-| `flow` (default) | Flow.Config  | Schema, references, cross-step examples |
+| `flow` (default) | Flow.Json    | Schema, references, cross-step examples |
 | `event`          | Event object | Name format, schema, consent            |
 | `mapping`        | Mapping      | Pattern format, rule structure          |
 | `contract`       | Contract     | Named entries, extends, sections        |

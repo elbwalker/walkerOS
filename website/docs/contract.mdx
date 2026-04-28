@@ -266,7 +266,7 @@ The contract is fully resolved (extends + wildcards) before path access:
 <CodeSnippet
   code={`"flows": {
   "web-shop": {
-    "web": {},
+    "config": { "platform": "web" },
     "sources": {
       "cmp": {
         "config": {
@@ -312,7 +312,7 @@ Reduce repetition by aliasing a contract in definitions:
   },
   "flows": {
     "web-shop": {
-      "web": {},
+      "config": { "platform": "web" },
       "transformers": {
         "validator": {
           "config": {
@@ -380,7 +380,7 @@ runtime. Wire contract sections to the validator settings:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "contract": {
     "default": {
       "tagging": 1,
@@ -398,7 +398,7 @@ runtime. Wire contract sections to the validator settings:
   },
   "flows": {
     "default": {
-      "web": {},
+      "config": { "platform": "web" },
       "transformers": {
         "validator": {
           "package": "@walkeros/transformer-validator",
@@ -444,7 +444,7 @@ The contract validator checks:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "contract": {
     "default": {
       "tagging": 1,
@@ -544,7 +544,7 @@ The contract validator checks:
   },
   "flows": {
     "web-shop": {
-      "web": {},
+      "config": { "platform": "web" },
       "transformers": {
         "validator": {
           "package": "@walkeros/transformer-validator",

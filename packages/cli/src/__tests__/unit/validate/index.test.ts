@@ -29,8 +29,8 @@ describe('validate programmatic API', () => {
   describe('flow validation', () => {
     it('validates flow object', async () => {
       const result = await validate('flow', {
-        version: 3,
-        flows: { default: { web: {} } },
+        version: 4,
+        flows: { default: { config: { platform: 'web' } } },
       });
 
       expect(result.valid).toBe(true);
@@ -38,7 +38,10 @@ describe('validate programmatic API', () => {
     });
 
     it('validates flow from file path', async () => {
-      const flow = { version: 3, flows: { default: { web: {} } } };
+      const flow = {
+        version: 4,
+        flows: { default: { config: { platform: 'web' } } },
+      };
       const tmpFile = path.join(os.tmpdir(), 'test-flow.json');
       fs.writeFileSync(tmpFile, JSON.stringify(flow));
 
@@ -52,7 +55,10 @@ describe('validate programmatic API', () => {
     });
 
     it('validates flow from JSON string', async () => {
-      const flow = { version: 3, flows: { default: { web: {} } } };
+      const flow = {
+        version: 4,
+        flows: { default: { config: { platform: 'web' } } },
+      };
       const result = await validate('flow', JSON.stringify(flow));
 
       expect(result.valid).toBe(true);
@@ -74,10 +80,10 @@ describe('validate programmatic API', () => {
   describe('flow validation includes deep checks', () => {
     it('validates cross-step examples as part of flow validation', async () => {
       const result = await validate('flow', {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
+            config: { platform: 'web' },
             destinations: {
               gtag: {
                 package: '@walkeros/web-destination-gtag',

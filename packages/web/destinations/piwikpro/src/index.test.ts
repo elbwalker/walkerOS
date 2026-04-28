@@ -40,9 +40,7 @@ describe('Destination PiwikPro', () => {
 
     jest.clearAllMocks();
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   afterEach(() => {});

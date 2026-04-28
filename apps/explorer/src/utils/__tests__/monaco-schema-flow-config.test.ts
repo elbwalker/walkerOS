@@ -1,35 +1,20 @@
 import { enrichFlowConfigSchema } from '../monaco-schema-flow-config';
 
 describe('enrichFlowConfigSchema', () => {
-  // Use a simplified version of the actual schema structure (anyOf-based)
+  // Simplified Flow.Json (v4) schema shape:
+  // root: { allOf: [{ $ref: '#/definitions/FlowJson' }], definitions: {...} }
   const baseSchema = {
-    anyOf: [
-      {
+    allOf: [{ $ref: '#/definitions/FlowJson' }],
+    definitions: {
+      FlowJson: {
         type: 'object',
         properties: {
-          version: { type: 'number', const: 1, description: 'Version' },
+          version: { type: 'number', const: 4, description: 'Version' },
           flows: {
             type: 'object',
             description: 'Flow configs',
             additionalProperties: {
-              type: 'object',
-              properties: {
-                web: { type: 'object' },
-                server: { type: 'object' },
-                sources: {
-                  type: 'object',
-                  description: 'Source configurations',
-                },
-                destinations: {
-                  type: 'object',
-                  description: 'Destination configurations',
-                },
-                transformers: {
-                  type: 'object',
-                  description: 'Transformer configurations',
-                },
-                collector: {},
-              },
+              $ref: '#/definitions/Flow',
             },
           },
           variables: { type: 'object', description: 'Variables' },
@@ -38,18 +23,43 @@ describe('enrichFlowConfigSchema', () => {
           include: { type: 'array' },
         },
       },
-    ],
+      Flow: {
+        type: 'object',
+        properties: {
+          config: { $ref: '#/definitions/FlowConfig' },
+          sources: { type: 'object', description: 'Source configurations' },
+          destinations: {
+            type: 'object',
+            description: 'Destination configurations',
+          },
+          transformers: {
+            type: 'object',
+            description: 'Transformer configurations',
+          },
+          collector: {},
+        },
+      },
+      FlowConfig: {
+        type: 'object',
+        properties: {
+          platform: { type: 'string', enum: ['web', 'server'] },
+          url: { type: 'string' },
+          settings: { type: 'object' },
+          bundle: { type: 'object' },
+        },
+      },
+    },
   };
 
   it('adds markdownDescription to version', () => {
     const result = enrichFlowConfigSchema(baseSchema);
-    const version = result.anyOf[0].properties.version;
+    const version = result.definitions.FlowJson.properties.version;
     expect(version.markdownDescription).toContain('version');
   });
 
   it('adds defaultSnippets to flows', () => {
     const result = enrichFlowConfigSchema(baseSchema);
-    const flows = result.anyOf[0].properties.flows;
+    const flows = result.definitions.FlowJson.properties.flows;
     const snippets = flows.defaultSnippets;
     expect(snippets).toBeDefined();
     expect(snippets.length).toBeGreaterThanOrEqual(3);
@@ -57,7 +67,7 @@ describe('enrichFlowConfigSchema', () => {
 
   it('includes web flow, server flow, and web+GA4 snippets', () => {
     const result = enrichFlowConfigSchema(baseSchema);
-    const flows = result.anyOf[0].properties.flows;
+    const flows = result.definitions.FlowJson.properties.flows;
     const labels = flows.defaultSnippets.map((s: { label: string }) =>
       s.label.toLowerCase(),
     );
@@ -68,24 +78,36 @@ describe('enrichFlowConfigSchema', () => {
     ).toBe(true);
   });
 
-  it('adds defaultSnippets to sources inside FlowSettings', () => {
+  it('adds defaultSnippets to sources inside Flow', () => {
     const result = enrichFlowConfigSchema(baseSchema);
-    const sources =
-      result.anyOf[0].properties.flows.additionalProperties.properties.sources;
+    const sources = result.definitions.Flow.properties.sources;
     expect(sources?.defaultSnippets).toBeDefined();
   });
 
-  it('adds defaultSnippets to destinations inside FlowSettings', () => {
+  it('adds defaultSnippets to destinations inside Flow', () => {
     const result = enrichFlowConfigSchema(baseSchema);
-    const dests =
-      result.anyOf[0].properties.flows.additionalProperties.properties
-        .destinations;
+    const dests = result.definitions.Flow.properties.destinations;
     expect(dests?.defaultSnippets).toBeDefined();
+  });
+
+  it('adds markdownDescription to config inside Flow', () => {
+    const result = enrichFlowConfigSchema(baseSchema);
+    const config = result.definitions.Flow.properties.config;
+    expect(config.markdownDescription).toBeDefined();
+    expect(config.markdownDescription).toContain('platform');
+  });
+
+  it('adds markdownDescription to platform inside FlowConfig', () => {
+    const result = enrichFlowConfigSchema(baseSchema);
+    const platform = result.definitions.FlowConfig.properties.platform;
+    expect(platform.markdownDescription).toBeDefined();
+    expect(platform.markdownDescription).toContain('web');
+    expect(platform.markdownDescription).toContain('server');
   });
 
   it('adds markdownDescription to variables with $var syntax example', () => {
     const result = enrichFlowConfigSchema(baseSchema);
-    const variables = result.anyOf[0].properties.variables;
+    const variables = result.definitions.FlowJson.properties.variables;
     expect(variables.markdownDescription).toContain('$var.');
   });
 

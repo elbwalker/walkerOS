@@ -1,8 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
       "packages": {
         "@walkeros/collector": {
           "imports": ["startFlow"]
@@ -13,6 +12,9 @@
         "demo": {
           "code": "destinationDemo"
         }
+      },
+      "config": {
+        "platform": "server"
       }
     }
   }

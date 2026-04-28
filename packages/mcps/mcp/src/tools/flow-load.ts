@@ -19,11 +19,10 @@ const KEEP_LITERAL = new Set([
 const keepLiteral = (key: string) => KEEP_LITERAL.has(key);
 
 const WEB_SKELETON = {
-  version: 3,
+  version: 4,
   flows: {
     default: {
-      web: {},
-      packages: {},
+      config: { platform: 'web', bundle: { packages: {} } },
       sources: {},
       destinations: {},
     },
@@ -31,11 +30,10 @@ const WEB_SKELETON = {
 };
 
 const SERVER_SKELETON = {
-  version: 3,
+  version: 4,
   flows: {
     default: {
-      server: {},
-      packages: {},
+      config: { platform: 'server', bundle: { packages: {} } },
       sources: {},
       destinations: {},
     },

@@ -2,11 +2,11 @@ import { getFlowSettings } from '../flow';
 import type { Flow } from '../types';
 
 describe('Step Examples', () => {
-  const setup: Flow.Config = {
-    version: 3,
+  const setup: Flow.Json = {
+    version: 4,
     flows: {
       default: {
-        web: {},
+        config: { platform: 'web' },
         sources: {
           browser: {
             package: '@walkeros/web-source-browser',
@@ -64,7 +64,11 @@ describe('Step Examples', () => {
   it('should strip examples during getFlowSettings resolution', () => {
     const config = getFlowSettings(setup);
     // examples should be stripped by the field whitelist
-    expect((config.sources!.browser as any).examples).toBeUndefined();
-    expect((config.destinations!.gtag as any).examples).toBeUndefined();
+    expect(
+      (config.sources!.browser as { examples?: unknown }).examples,
+    ).toBeUndefined();
+    expect(
+      (config.destinations!.gtag as { examples?: unknown }).examples,
+    ).toBeUndefined();
   });
 });

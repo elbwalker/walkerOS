@@ -149,7 +149,7 @@ describe('reference resources', () => {
       const result = await resource.handler();
       const parsed = JSON.parse(result.contents[0].text);
 
-      expect(parsed.version).toBe(3);
+      expect(parsed.version).toBe(4);
       expect(parsed.flows).toBeDefined();
     });
   });

@@ -324,6 +324,42 @@ transformers: {
 - `destination.before` → starts post-collector chain per destination
 - `destination.next` → post-push processing chain
 
+## Cross-Flow References (`$flow`)
+
+When a single flow.json defines multiple flows, any flow can pull values from
+another flow's `config` block via `$flow.<name>(.<path>)?`. The most common case
+is wiring a web flow's API destination to a server flow's deployed URL, so the
+two stay in sync without duplication.
+
+```json
+{
+  "version": 4,
+  "flows": {
+    "server": {
+      "config": {
+        "platform": "server",
+        "url": "https://collect.example.com"
+      },
+      "sources": {
+        "http": { "package": "@walkeros/server-source-express" }
+      }
+    },
+    "web": {
+      "config": { "platform": "web" },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": { "settings": { "url": "$flow.server.url" } }
+        }
+      }
+    }
+  }
+}
+```
+
+`validate` warns on unresolved `$flow` references (lenient), `bundle` errors out
+(strict), so production builds never ship with an empty cross-flow value.
+
 ## Step Examples
 
 Each step in a flow (source, transformer, destination) can ship **step

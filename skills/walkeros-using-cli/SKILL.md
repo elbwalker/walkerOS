@@ -2,7 +2,7 @@
 name: walkeros-using-cli
 description:
   Use when bundling walkerOS flows, testing events with simulate/push, running
-  local servers, validating configs, or configuring Flow.Settings JSON files.
+  local servers, validating configs, or configuring Flow JSON files.
 ---
 
 # Using the walkerOS CLI
@@ -13,7 +13,7 @@ The walkerOS CLI (`walkeros`) bundles, tests, and runs event collection flows.
 
 **Core workflow:**
 
-1. **Configure** - Write Flow.Config JSON config
+1. **Configure** - Write Flow.Json JSON config
 2. **Bundle** - Generate optimized JS bundle
 3. **Test** - Simulate events (mocked) or push (real)
 4. **Deploy** - Run locally or deploy to production
@@ -91,19 +91,21 @@ runtime override it.
 
 ---
 
-## Flow.Config Configuration
+## Flow.Json Configuration
 
 ### Minimal Config
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/web-destination-gtag": {}
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@walkeros/web-destination-gtag": {}
+          }
         }
       },
       "destinations": {
@@ -121,19 +123,22 @@ runtime override it.
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "<flowName>": {
-      "web": {} | "server": {},     // Platform (required)
-      "bundle": {                   // Build-time config
-        "packages": {},             // NPM packages to bundle
-        "overrides": {}             // Transitive dep version pins (npm-style)
+      "config": {
+        "platform": "web" | "server",  // Platform (required)
+        "settings": {},                // Platform-specific settings (optional)
+        "bundle": {                    // Build-time config
+          "packages": {},              // NPM packages to bundle
+          "overrides": {}              // Transitive dep version pins (npm-style)
+        }
       },
-      "sources": {},                // Event sources
-      "destinations": {},           // Event destinations
-      "transformers": {},           // Transformer chain (optional)
-      "mappings": {},               // Event transformation rules
-      "collector": {}               // Collector configuration
+      "sources": {},                   // Event sources
+      "destinations": {},              // Event destinations
+      "transformers": {},              // Transformer chain (optional)
+      "mappings": {},                  // Event transformation rules
+      "collector": {}                  // Collector configuration
     }
   }
 }
@@ -428,6 +433,5 @@ before consent.
 
 - [commands-reference.md](commands-reference.md) - All commands with full
   options
-- [flow-configuration.md](flow-configuration.md) - Complete Flow.Config
-  reference
+- [flow-configuration.md](flow-configuration.md) - Complete Flow.Json reference
 - [server-deployment.md](server-deployment.md) - Server flow deployment guide

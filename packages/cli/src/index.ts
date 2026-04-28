@@ -160,7 +160,7 @@ export * as telemetry from './telemetry/index.js';
 
 // === Types ===
 // Export types for programmatic usage
-// Config structure uses Flow.Config and Flow.Settings from @walkeros/core
+// Config structure uses Flow.Json (root) and Flow (single flow) from @walkeros/core
 export type {
   Flow,
   CLIBuildOptions,

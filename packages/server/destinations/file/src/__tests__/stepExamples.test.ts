@@ -62,7 +62,7 @@ describe('@walkeros/server-destination-file step examples', () => {
     const env = makeSpyEnv();
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     // FileSettingsJson is the serialisable view of Settings;
     // walkerOS resolves `$code:` fn strings at flow start.

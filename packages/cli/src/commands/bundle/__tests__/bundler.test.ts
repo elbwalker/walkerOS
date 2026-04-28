@@ -123,7 +123,7 @@ describe('validateComponentNames', () => {
 
 describe('collectAllStepPackages', () => {
   it('returns empty set for flow with no steps', () => {
-    const settings = {} as Flow.Settings;
+    const settings = {} as Flow;
     expect(collectAllStepPackages(settings)).toEqual(new Set());
   });
 
@@ -132,7 +132,7 @@ describe('collectAllStepPackages', () => {
       sources: {
         http: { package: '@walkeros/server-source-express' },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     expect(collectAllStepPackages(settings)).toEqual(
       new Set(['@walkeros/server-source-express']),
     );
@@ -143,7 +143,7 @@ describe('collectAllStepPackages', () => {
       destinations: {
         bigquery: { package: '@walkeros/server-destination-bigquery' },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     expect(collectAllStepPackages(settings)).toEqual(
       new Set(['@walkeros/server-destination-bigquery']),
     );
@@ -154,7 +154,7 @@ describe('collectAllStepPackages', () => {
       transformers: {
         fingerprint: { package: '@walkeros/server-transformer-fingerprint' },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     expect(collectAllStepPackages(settings)).toEqual(
       new Set(['@walkeros/server-transformer-fingerprint']),
     );
@@ -165,7 +165,7 @@ describe('collectAllStepPackages', () => {
       stores: {
         fs: { package: '@walkeros/server-store-fs' },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     expect(collectAllStepPackages(settings)).toEqual(
       new Set(['@walkeros/server-store-fs']),
     );
@@ -181,7 +181,7 @@ describe('collectAllStepPackages', () => {
         fingerprint: { package: '@walkeros/server-transformer-fingerprint' },
       },
       stores: { fs: { package: '@walkeros/server-store-fs' } },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     const result = collectAllStepPackages(settings);
     expect(result.size).toBe(4);
     expect(result.has('@walkeros/server-source-express')).toBe(true);
@@ -195,7 +195,7 @@ describe('collectAllStepPackages', () => {
       sources: {
         custom: { code: { push: 'myPush()' } },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     expect(collectAllStepPackages(settings)).toEqual(new Set());
   });
 
@@ -205,7 +205,7 @@ describe('collectAllStepPackages', () => {
         local1: { package: './relative/source' },
         local2: { package: '/abs/path/source' },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     const result = collectAllStepPackages(settings);
     expect(result.has('./relative/source')).toBe(true);
     expect(result.has('/abs/path/source')).toBe(true);
@@ -216,7 +216,7 @@ describe('collectAllStepPackages', () => {
       sources: {
         s: { package: '@walkeros/server-source-express' },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     const result = collectAllStepPackages(settings);
     expect(result.has('@walkeros/server-source-express')).toBe(true);
   });
@@ -226,7 +226,7 @@ describe('collectAllStepPackages', () => {
       destinations: {
         d: { package: 'some-destination' },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     const result = collectAllStepPackages(settings);
     expect(result.has('some-destination')).toBe(true);
   });
@@ -235,7 +235,7 @@ describe('collectAllStepPackages', () => {
     const settings = {
       sources: { s1: { package: '@walkeros/core' } },
       destinations: { d1: { package: '@walkeros/core' } },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
     const result = collectAllStepPackages(settings);
     expect(result.size).toBe(1);
   });
@@ -247,11 +247,9 @@ describe('buildSplitConfigObject string code references', () => {
       destinations: {
         ga4: { code: 'destinationGa4Web', config: {} },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
 
-    expect(() =>
-      buildSplitConfigObject(flowSettings, new Map()),
-    ).not.toThrow();
+    expect(() => buildSplitConfigObject(flowSettings, new Map())).not.toThrow();
   });
 
   it('accepts a source with string code (named import)', () => {
@@ -259,11 +257,9 @@ describe('buildSplitConfigObject string code references', () => {
       sources: {
         cmp: { code: 'sourceCmpCustom', config: {} },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
 
-    expect(() =>
-      buildSplitConfigObject(flowSettings, new Map()),
-    ).not.toThrow();
+    expect(() => buildSplitConfigObject(flowSettings, new Map())).not.toThrow();
   });
 
   it('accepts a transformer with string code (named import)', () => {
@@ -271,11 +267,9 @@ describe('buildSplitConfigObject string code references', () => {
       transformers: {
         decoder: { code: 'transformerBase64Decoder', config: {} },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
 
-    expect(() =>
-      buildSplitConfigObject(flowSettings, new Map()),
-    ).not.toThrow();
+    expect(() => buildSplitConfigObject(flowSettings, new Map())).not.toThrow();
   });
 });
 
@@ -283,7 +277,7 @@ describe('collectAllStepPackages auto-add merge logic', () => {
   it('adds source package to buildOptions.packages when not present', () => {
     const flowSettings = {
       sources: { http: { package: '@walkeros/server-source-express' } },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
 
     const packages: Record<string, Record<string, unknown>> = {};
 
@@ -300,7 +294,7 @@ describe('collectAllStepPackages auto-add merge logic', () => {
   it('does not overwrite existing package config', () => {
     const flowSettings = {
       sources: { http: { package: '@walkeros/server-source-express' } },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
 
     const packages: Record<string, Record<string, unknown>> = {
       '@walkeros/server-source-express': { version: '2.0.0' },
@@ -325,10 +319,12 @@ describe('path-based package: normalization', () => {
       sources: {
         express: { package: '/workspaces/dev/packages/server/sources/express' },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
 
     const result = collectAllStepPackages(flowSettings);
-    expect(result.has('/workspaces/dev/packages/server/sources/express')).toBe(true);
+    expect(result.has('/workspaces/dev/packages/server/sources/express')).toBe(
+      true,
+    );
   });
 
   it('should handle relative path in source package: field', () => {
@@ -336,7 +332,7 @@ describe('path-based package: normalization', () => {
       sources: {
         express: { package: './packages/server/sources/express' },
       },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
 
     const result = collectAllStepPackages(flowSettings);
     expect(result.has('./packages/server/sources/express')).toBe(true);

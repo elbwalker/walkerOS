@@ -87,8 +87,11 @@ describe('flow_load tool', () => {
     const result = await tool.handler({ platform: 'web' });
 
     expect(mockLoadJsonConfig).not.toHaveBeenCalled();
-    expect(result.structuredContent.version).toBe(3);
-    expect(result.structuredContent.flows.default.web).toEqual({});
+    expect(result.structuredContent.version).toBe(4);
+    expect(result.structuredContent.flows.default.config).toEqual({
+      platform: 'web',
+      bundle: { packages: {} },
+    });
     expect(result.isError).toBeUndefined();
   });
 
@@ -96,8 +99,11 @@ describe('flow_load tool', () => {
     const tool = server.getTool('flow_load');
     const result = await tool.handler({ platform: 'server' });
 
-    expect(result.structuredContent.version).toBe(3);
-    expect(result.structuredContent.flows.default.server).toEqual({});
+    expect(result.structuredContent.version).toBe(4);
+    expect(result.structuredContent.flows.default.config).toEqual({
+      platform: 'server',
+      bundle: { packages: {} },
+    });
   });
 
   it('errors when neither source nor platform provided', async () => {

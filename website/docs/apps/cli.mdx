@@ -56,11 +56,12 @@ The `push` command accepts either a config JSON or a pre-built bundle as input.
 
 The CLI uses types from `@walkeros/core`:
 
-- **`Flow.Config`** - Root config file format (`version`, `flows`)
-- **`Flow.Settings`** - Single flow (has `web`/`server`, `sources`, `destinations`)
+- **`Flow.Json`** - Root config file format (`version`, `flows`)
+- **`Flow`** - Single flow (has `config`, `sources`, `destinations`, `transformers`, `collector`)
+- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`)
 - **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
-The CLI transforms `Flow.Config` → `Flow.Settings` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
+The CLI transforms `Flow.Json` → `Flow` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
 
 ## The `bundle` section
 
@@ -235,15 +236,17 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/server-source-express": {},
-          "@walkeros/destination-demo": {}
-        },
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/server-source-express": {},
+            "@walkeros/destination-demo": {}
+          }
+        }
       },
       "sources": {
         "http": {
@@ -304,15 +307,17 @@ Create `server-collect.json`:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/server-source-express": {},
-          "@walkeros/destination-demo": {}
-        },
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/server-source-express": {},
+            "@walkeros/destination-demo": {}
+          }
+        }
       },
       "sources": {
         "http": {
@@ -449,14 +454,16 @@ Create `api-flow.json` with a destination that makes real HTTP calls:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/web-destination-api": {}
-        },
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/web-destination-api": {}
+          }
+        }
       },
       "destinations": {
         "api": {
@@ -673,7 +680,7 @@ The `--type` option accepts four validation types. Default is `flow`:
 | Type | What it validates |
 |------|-------------------|
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
-| `flow` (default) | Flow.Config config: schema, references, packages, and cross-step example compatibility |
+| `flow` (default) | Flow.Json config: schema, references, packages, and cross-step example compatibility |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
 | `contract` | Contract structure: entity-action entries map to JSON Schema objects, optional `$tagging` metadata |
 
@@ -1057,7 +1064,7 @@ The `flows` command group manages flow configurations within a project. All comm
 
 ### Get a flow
 
-Retrieves a flow with its full `Flow.Config` JSON content.
+Retrieves a flow with its full `Flow.Json` content.
 
 <CodeSnippet
   code={`walkeros flows get cfg_abc123`}
@@ -1072,7 +1079,7 @@ Retrieves a flow with its full `Flow.Config` JSON content.
 
 <CodeSnippet
   code={`# With inline JSON
-walkeros flows create "My Flow" --content '{"version":1,"flows":{"default":{"server":{}}}}'
+walkeros flows create "My Flow" --content '{"version":4,"flows":{"default":{"config":{"platform":"server"}}}}'
 
 # From a file via stdin
 cat flow.json | walkeros flows create "My Flow"`}
@@ -1082,7 +1089,7 @@ cat flow.json | walkeros flows create "My Flow"`}
 | Option | Description |
 |--------|-------------|
 | `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `-c, --content <json>` | Flow.Config JSON string or file path |
+| `-c, --content <json>` | Flow.Json string or file path |
 
 ### Update a flow
 
@@ -1091,7 +1098,7 @@ cat flow.json | walkeros flows create "My Flow"`}
 walkeros flows update cfg_abc123 --name "Updated Flow"
 
 # Update content
-walkeros flows update cfg_abc123 --content '{"version":1,"flows":{"default":{"server":{}}}}'`}
+walkeros flows update cfg_abc123 --content '{"version":4,"flows":{"default":{"config":{"platform":"server"}}}}'`}
   language="bash"
 />
 
@@ -1391,15 +1398,17 @@ Create `collect.json`:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/server-source-express": {},
-          "@walkeros/destination-demo": {}
-        },
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/server-source-express": {},
+            "@walkeros/destination-demo": {}
+          }
+        }
       },
       "sources": {
         "http": {
@@ -1565,15 +1574,17 @@ Create `server-collect.json`:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/server-source-express": {},
-          "@walkeros/destination-demo": {}
-        },
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/server-source-express": {},
+            "@walkeros/destination-demo": {}
+          }
+        }
       },
       "sources": {
         "http": {
@@ -1604,17 +1615,18 @@ Create `web-track.json`:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {
-        "windowElb": "track"
-      },
-      "bundle": {
-        "packages": {
-          "@walkeros/web-source-browser": {},
-          "@walkeros/web-destination-api": {}
-        },
+      "config": {
+        "platform": "web",
+        "settings": { "windowElb": "track" },
+        "bundle": {
+          "packages": {
+            "@walkeros/web-source-browser": {},
+            "@walkeros/web-destination-api": {}
+          }
+        }
       },
       "sources": {
         "browser": {

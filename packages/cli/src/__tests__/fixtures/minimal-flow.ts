@@ -3,10 +3,10 @@
  * Browser source + api destination — the smallest meaningful production shape.
  */
 export const MINIMAL_FLOW = {
-  version: 3,
+  version: 4,
   flows: {
     default: {
-      web: {},
+      config: { platform: 'web' },
       sources: {
         browser: {
           package: '@walkeros/web-source-browser',

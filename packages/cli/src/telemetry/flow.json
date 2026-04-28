@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "contract": {
     "telemetry": {
       "description": "walkerOS internal usage telemetry from @walkeros/cli and @walkeros/mcp. Anonymous, opt-out, no PII.",
@@ -14,17 +14,30 @@
             "type": "string",
             "description": "Ephemeral per-process UUID. Only present on MCP events; CLI omits because its session is a single event."
           },
-          "os": { "type": "string" },
-          "osVersion": { "type": "string" },
-          "node": { "type": "string" },
-          "language": { "type": "string" },
-          "timezone": { "type": "string" }
+          "os": {
+            "type": "string"
+          },
+          "osVersion": {
+            "type": "string"
+          },
+          "node": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
         }
       },
       "consent": {
         "type": "object",
         "properties": {
-          "telemetry": { "type": "boolean", "const": true }
+          "telemetry": {
+            "type": "boolean",
+            "const": true
+          }
         },
         "required": ["telemetry"]
       },
@@ -33,8 +46,12 @@
           "start": {
             "type": "object",
             "properties": {
-              "ci": { "type": "boolean" },
-              "ci_name": { "type": "string" },
+              "ci": {
+                "type": "boolean"
+              },
+              "ci_name": {
+                "type": "string"
+              },
               "client": {
                 "type": "string",
                 "description": "Raw clientInfo.name from the MCP initialize handshake (e.g. 'claude-ai', 'claude-code', 'vscode')."

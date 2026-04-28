@@ -14,7 +14,7 @@ import {
  * Type guard to check if a code value is an InlineCode object.
  * InlineCode has { push: string, type?: string, init?: string }
  */
-function isInlineCode(code: unknown): code is Flow.InlineCode {
+function isInlineCode(code: unknown): code is Flow.Code {
   return (
     code !== null &&
     typeof code === 'object' &&
@@ -65,7 +65,7 @@ function validateReference(
  * @param isDestination - Whether this is a destination (uses different code structure)
  */
 function generateInlineCode(
-  inline: Flow.InlineCode,
+  inline: Flow.Code,
   config: object,
   env?: object,
   chain?: string | string[],
@@ -178,7 +178,7 @@ export async function copyIncludes(
  * Excludes non-deterministic fields (tempDir, output) from cache key.
  */
 function generateCacheKeyContent(
-  flowSettings: Flow.Settings,
+  flowSettings: Flow,
   buildOptions: BuildOptions,
 ): string {
   const configForCache = {
@@ -201,7 +201,7 @@ function generateCacheKeyContent(
  * because the type no longer includes true, but runtime values may still have it.
  */
 function validateFlowConfig(
-  flowSettings: Flow.Settings,
+  flowSettings: Flow,
   logger: Logger.Instance,
 ): boolean {
   let hasDeprecatedCodeTrue = false;
@@ -260,7 +260,7 @@ function validateFlowConfig(
 }
 
 export async function bundleCore(
-  flowSettings: Flow.Settings,
+  flowSettings: Flow,
   buildOptions: BuildOptions,
   logger: Logger.Instance,
   showStats = false,
@@ -741,7 +741,7 @@ function createEsbuildOptions(
  * Skips steps with code: true (inline code).
  */
 export function detectStepPackages(
-  flowSettings: Flow.Settings,
+  flowSettings: Flow,
   section: 'sources' | 'destinations' | 'transformers' | 'stores',
 ): Set<string> {
   const packages = new Set<string>();
@@ -784,9 +784,7 @@ export function getNodeExternals(): string[] {
  * Collects all package names declared in flow steps.
  * Returns both npm packages and local paths — caller handles routing.
  */
-export function collectAllStepPackages(
-  flowSettings: Flow.Settings,
-): Set<string> {
+export function collectAllStepPackages(flowSettings: Flow): Set<string> {
   const allPackages = new Set<string>();
   const sections = [
     'sources',
@@ -809,7 +807,7 @@ export function collectAllStepPackages(
  * Returns a map of package names to sets of export names.
  */
 export function detectExplicitCodeImports(
-  flowSettings: Flow.Settings,
+  flowSettings: Flow,
 ): Map<string, Set<string>> {
   const explicitCodeImports = new Map<string, Set<string>>();
 
@@ -1101,7 +1099,7 @@ export function validateComponentNames(
  * Throws descriptive error on mismatch.
  */
 function validateStoreReferences(
-  flowSettings: Flow.Settings,
+  flowSettings: Flow,
   storeIds: Set<string>,
 ): void {
   const refs: Array<{ ref: string; location: string }> = [];
@@ -1147,7 +1145,7 @@ function validateStoreReferences(
  * Generates imports, config object, and platform-specific wrapper programmatically.
  */
 export async function createEntryPoint(
-  flowSettings: Flow.Settings,
+  flowSettings: Flow,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
 ): Promise<{ codeEntry: string; dataPayload: string; hasFlow: boolean }> {
@@ -1302,7 +1300,7 @@ function createBuildError(buildError: EsbuildError, code: string): Error {
  * Package-based steps are split via classifyStepProperties.
  */
 export function buildSplitConfigObject(
-  flowSettings: Flow.Settings,
+  flowSettings: Flow,
   explicitCodeImports: Map<string, Set<string>>,
 ): {
   storesDeclaration: string;

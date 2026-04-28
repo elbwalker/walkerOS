@@ -25,7 +25,7 @@ const inputSchema = {
   content: z
     .record(z.string(), z.unknown())
     .optional()
-    .describe('Flow.Config JSON content (required when remote: true)'),
+    .describe('Flow.Json content (required when remote: true)'),
 };
 
 const annotations = {

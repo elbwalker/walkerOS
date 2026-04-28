@@ -353,10 +353,10 @@ Note: `hints` is a direct export (not `* as`), because it's already a
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {},
+      "config": { "platform": "web" },
       "[sources|destinations]": {
         "[name]": {
           "package": "@walkeros/[package-name]",

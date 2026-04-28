@@ -32,9 +32,7 @@ describe('Server Destination Reddit', () => {
 
     destination = jest.requireActual('../').default;
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   async function getConfig(settings: Partial<Settings> = {}) {

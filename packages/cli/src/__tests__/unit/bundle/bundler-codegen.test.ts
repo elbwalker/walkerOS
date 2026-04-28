@@ -25,12 +25,14 @@ import type { BuildOptions } from '../../../types/bundle.js';
 
 describe('createEntryPoint integration', () => {
   it('generates default import even when imports are specified', async () => {
-    const flowSettings: Flow.Settings = {
-      web: {},
-      bundle: {
-        packages: {
-          '@walkeros/web-source-browser': {
-            imports: ['createTagger'],
+    const flowSettings: Flow = {
+      config: {
+        platform: 'web',
+        bundle: {
+          packages: {
+            '@walkeros/web-source-browser': {
+              imports: ['createTagger'],
+            },
           },
         },
       },
@@ -71,12 +73,14 @@ describe('createEntryPoint integration', () => {
   });
 
   it('uses named import only when explicit code is specified', async () => {
-    const flowSettings: Flow.Settings = {
-      web: {},
-      bundle: {
-        packages: {
-          '@some/no-default-pkg': {
-            imports: ['namedSource'],
+    const flowSettings: Flow = {
+      config: {
+        platform: 'web',
+        bundle: {
+          packages: {
+            '@some/no-default-pkg': {
+              imports: ['namedSource'],
+            },
           },
         },
       },
@@ -115,13 +119,15 @@ describe('createEntryPoint integration', () => {
   });
 
   it('generates complete entry point with explicit code', async () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      bundle: {
-        packages: {
-          '@walkeros/collector': { imports: ['startFlow'] },
-          '@walkeros/server-source-express': {},
-          '@walkeros/destination-demo': {},
+    const flowSettings: Flow = {
+      config: {
+        platform: 'server',
+        bundle: {
+          packages: {
+            '@walkeros/collector': { imports: ['startFlow'] },
+            '@walkeros/server-source-express': {},
+            '@walkeros/destination-demo': {},
+          },
         },
       },
       sources: {
@@ -177,14 +183,16 @@ describe('createEntryPoint integration', () => {
   });
 
   it('generates valid store references in full entry point', async () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      bundle: {
-        packages: {
-          '@walkeros/collector': { imports: ['startFlow'] },
-          '@walkeros/server-source-express': {},
-          '@walkeros/server-transformer-fingerprint': {},
-          '@walkeros/store-memory': {},
+    const flowSettings: Flow = {
+      config: {
+        platform: 'server',
+        bundle: {
+          packages: {
+            '@walkeros/collector': { imports: ['startFlow'] },
+            '@walkeros/server-source-express': {},
+            '@walkeros/server-transformer-fingerprint': {},
+            '@walkeros/store-memory': {},
+          },
         },
       },
       sources: {
@@ -211,7 +219,7 @@ describe('createEntryPoint integration', () => {
           config: { settings: { maxSize: 1000 } },
         },
       },
-    } as Flow.Settings;
+    } as Flow;
 
     const buildOptions = {
       platform: 'node',
@@ -248,12 +256,14 @@ describe('createEntryPoint integration', () => {
 
 describe('Implicit Collector', () => {
   it('auto-imports startFlow when collector is in packages without imports specified', async () => {
-    const flowSettings: Flow.Settings = {
-      web: {},
-      bundle: {
-        packages: {
-          '@walkeros/collector': {}, // No imports specified
-          '@walkeros/web-source-browser': {},
+    const flowSettings: Flow = {
+      config: {
+        platform: 'web',
+        bundle: {
+          packages: {
+            '@walkeros/collector': {}, // No imports specified
+            '@walkeros/web-source-browser': {},
+          },
         },
       },
       sources: {
@@ -289,12 +299,14 @@ describe('Implicit Collector', () => {
   });
 
   it('auto-imports startFlow when collector has version but no imports', async () => {
-    const flowSettings: Flow.Settings = {
-      web: {},
-      bundle: {
-        packages: {
-          '@walkeros/collector': { version: '0.5.0' }, // Version only, no imports
-          '@walkeros/web-source-browser': {},
+    const flowSettings: Flow = {
+      config: {
+        platform: 'web',
+        bundle: {
+          packages: {
+            '@walkeros/collector': { version: '0.5.0' }, // Version only, no imports
+            '@walkeros/web-source-browser': {},
+          },
         },
       },
       sources: {
@@ -330,12 +342,14 @@ describe('Implicit Collector', () => {
   });
 
   it('preserves explicit collector imports while adding startFlow', async () => {
-    const flowSettings: Flow.Settings = {
-      web: {},
-      bundle: {
-        packages: {
-          '@walkeros/collector': { imports: ['createCollector'] }, // Explicit import, no startFlow
-          '@walkeros/web-source-browser': {},
+    const flowSettings: Flow = {
+      config: {
+        platform: 'web',
+        bundle: {
+          packages: {
+            '@walkeros/collector': { imports: ['createCollector'] }, // Explicit import, no startFlow
+            '@walkeros/web-source-browser': {},
+          },
         },
       },
       sources: {
@@ -374,8 +388,8 @@ describe('Implicit Collector', () => {
 
 describe('detectStepPackages', () => {
   it('detects transformer packages from flow config', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
       sources: {},
       destinations: {},
       transformers: {
@@ -401,8 +415,8 @@ describe('detectStepPackages', () => {
   });
 
   it('returns empty set when section is missing', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
       sources: {},
       destinations: {},
     };
@@ -415,8 +429,8 @@ describe('detectStepPackages', () => {
 
 describe('detectExplicitCodeImports', () => {
   it('detects explicit code imports from transformers', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
       sources: {},
       destinations: {},
       transformers: {
@@ -448,8 +462,8 @@ describe('$store. prefix', () => {
   });
 
   it('should generate stores as hoisted variable referenced by config', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
       sources: {},
       destinations: {},
       transformers: {
@@ -467,7 +481,7 @@ describe('$store. prefix', () => {
           config: { settings: { maxSize: 1000 } },
         },
       },
-    } as Flow.Settings;
+    } as Flow;
 
     const explicitCodeImports = new Map([
       [
@@ -515,9 +529,11 @@ describe('Error Handling', () => {
 describe('buildSplitConfigObject', () => {
   it('splits plain config values into data payload', () => {
     const flowSettings = {
-      server: {},
-      bundle: {
-        packages: { '@walkeros/server-source-express': {} },
+      config: {
+        platform: 'server',
+        bundle: {
+          packages: { '@walkeros/server-source-express': {} },
+        },
       },
       sources: {
         express: {
@@ -526,7 +542,7 @@ describe('buildSplitConfigObject', () => {
         },
       },
       destinations: {},
-    } as Flow.Settings;
+    } as Flow;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
@@ -538,9 +554,11 @@ describe('buildSplitConfigObject', () => {
 
   it('keeps $store. env in code skeleton', () => {
     const flowSettings = {
-      server: {},
-      bundle: {
-        packages: { '@walkeros/web-destination-ga4': {} },
+      config: {
+        platform: 'server',
+        bundle: {
+          packages: { '@walkeros/web-destination-ga4': {} },
+        },
       },
       sources: {},
       destinations: {
@@ -550,7 +568,7 @@ describe('buildSplitConfigObject', () => {
           env: { store: '$store.memory' },
         },
       },
-    } as Flow.Settings;
+    } as Flow;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
@@ -562,7 +580,7 @@ describe('buildSplitConfigObject', () => {
 
   it('keeps $code: config in code skeleton', () => {
     const flowSettings = {
-      server: {},
+      config: { platform: 'server' },
       sources: {},
       destinations: {
         custom: {
@@ -572,7 +590,7 @@ describe('buildSplitConfigObject', () => {
           },
         },
       },
-    } as Flow.Settings;
+    } as Flow;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
@@ -585,7 +603,7 @@ describe('buildSplitConfigObject', () => {
 
   it('handles inline code steps entirely in code skeleton', () => {
     const flowSettings = {
-      server: {},
+      config: { platform: 'server' },
       sources: {
         custom: {
           code: { type: 'test', push: '$code:(e) => e' },
@@ -594,7 +612,7 @@ describe('buildSplitConfigObject', () => {
         },
       },
       destinations: {},
-    } as Flow.Settings;
+    } as Flow;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
@@ -606,7 +624,7 @@ describe('buildSplitConfigObject', () => {
 
   it('handles transformers section', () => {
     const flowSettings = {
-      server: {},
+      config: { platform: 'server' },
       sources: {},
       destinations: {},
       transformers: {
@@ -617,7 +635,7 @@ describe('buildSplitConfigObject', () => {
           },
         },
       },
-    } as Flow.Settings;
+    } as Flow;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
@@ -630,7 +648,7 @@ describe('buildSplitConfigObject', () => {
 
   it('handles stores with plain config in data payload', () => {
     const flowSettings = {
-      server: {},
+      config: { platform: 'server' },
       sources: {},
       destinations: {},
       stores: {
@@ -639,7 +657,7 @@ describe('buildSplitConfigObject', () => {
           config: { settings: { maxSize: 1000 } },
         },
       },
-    } as Flow.Settings;
+    } as Flow;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
@@ -651,11 +669,11 @@ describe('buildSplitConfigObject', () => {
 
   it('puts plain collector in data payload', () => {
     const flowSettings = {
-      server: {},
+      config: { platform: 'server' },
       sources: {},
       destinations: {},
       collector: { settings: { batchSize: 10 } },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
@@ -665,11 +683,11 @@ describe('buildSplitConfigObject', () => {
 
   it('keeps code-marker collector in code skeleton', () => {
     const flowSettings = {
-      server: {},
+      config: { platform: 'server' },
       sources: {},
       destinations: {},
       collector: { onError: '$code:(err) => console.error(err)' },
-    } as unknown as Flow.Settings;
+    } as unknown as Flow;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
@@ -680,7 +698,7 @@ describe('buildSplitConfigObject', () => {
 
   it('handles explicit code imports', () => {
     const flowSettings = {
-      server: {},
+      config: { platform: 'server' },
       sources: {
         http: {
           package: '@walkeros/server-source-express',
@@ -689,7 +707,7 @@ describe('buildSplitConfigObject', () => {
         },
       },
       destinations: {},
-    } as Flow.Settings;
+    } as Flow;
 
     const explicitCodeImports = new Map([
       ['@walkeros/server-source-express', new Set(['sourceExpress'])],
@@ -705,7 +723,7 @@ describe('buildSplitConfigObject', () => {
 
   it('handles next/before/cache/primary as data props when plain', () => {
     const flowSettings = {
-      server: {},
+      config: { platform: 'server' },
       sources: {
         http: {
           package: '@walkeros/server-source-express',
@@ -722,7 +740,7 @@ describe('buildSplitConfigObject', () => {
           before: ['fingerprint'],
         },
       },
-    } as Flow.Settings;
+    } as Flow;
 
     const result = buildSplitConfigObject(flowSettings, new Map());
 
@@ -928,13 +946,15 @@ describe('previewScope / previewOrigin validation', () => {
 describe('bundle() target resolution', () => {
   // Minimal config shape — extracted properly by Task 6a.
   const MINIMAL_FLOW = {
-    version: 3,
+    version: 4,
     flows: {
       default: {
-        web: {},
-        bundle: {
-          packages: {
-            '@walkeros/core': { imports: ['getId'] },
+        config: {
+          platform: 'web',
+          bundle: {
+            packages: {
+              '@walkeros/core': { imports: ['getId'] },
+            },
           },
         },
       },

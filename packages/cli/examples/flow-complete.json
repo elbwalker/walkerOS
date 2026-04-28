@@ -1,6 +1,6 @@
 {
-  "$schema": "https://walkeros.io/schema/flow/v3.json",
-  "version": 3,
+  "$schema": "https://walkeros.io/schema/flow/v4.json",
+  "version": 4,
   "variables": {
     "currency": "EUR",
     "flowVersion": "1.0.0",
@@ -127,10 +127,6 @@
   },
   "flows": {
     "web": {
-      "web": {
-        "windowCollector": "collector",
-        "windowElb": "elb"
-      },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
@@ -577,20 +573,26 @@
           "campaign": "flow-demo"
         }
       },
-      "bundle": {
-        "packages": {
-          "@walkeros/collector": {},
-          "@walkeros/web-source-browser": {},
-          "@walkeros/web-source-datalayer": {},
-          "@walkeros/source-demo": {},
-          "@walkeros/web-destination-gtag": {},
-          "@walkeros/web-destination-api": {},
-          "@walkeros/transformer-validator": {}
+      "config": {
+        "platform": "web",
+        "settings": {
+          "windowCollector": "collector",
+          "windowElb": "elb"
+        },
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {},
+            "@walkeros/web-source-browser": {},
+            "@walkeros/web-source-datalayer": {},
+            "@walkeros/source-demo": {},
+            "@walkeros/web-destination-gtag": {},
+            "@walkeros/web-destination-api": {},
+            "@walkeros/transformer-validator": {}
+          }
         }
       }
     },
     "server": {
-      "server": {},
       "variables": {
         "metaPixelId": "$env.META_PIXEL_ID:123456789012345",
         "metaAccessToken": "$env.META_ACCESS_TOKEN:demo_token"
@@ -926,21 +928,24 @@
           "startedAt": "$code:Date.now()"
         }
       },
-      "bundle": {
-        "packages": {
-          "@walkeros/core": {
-            "path": "../../core"
-          },
-          "@walkeros/collector": {
-            "path": "../../collector"
-          },
-          "@walkeros/server-source-express": {},
-          "@walkeros/server-destination-meta": {},
-          "@walkeros/destination-demo": {},
-          "@walkeros/transformer-validator": {},
-          "@walkeros/server-transformer-fingerprint": {},
-          "@walkeros/store-memory": {
-            "path": "../../stores/memory"
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/core": {
+              "path": "../../core"
+            },
+            "@walkeros/collector": {
+              "path": "../../collector"
+            },
+            "@walkeros/server-source-express": {},
+            "@walkeros/server-destination-meta": {},
+            "@walkeros/destination-demo": {},
+            "@walkeros/transformer-validator": {},
+            "@walkeros/server-transformer-fingerprint": {},
+            "@walkeros/store-memory": {
+              "path": "../../stores/memory"
+            }
           }
         }
       }

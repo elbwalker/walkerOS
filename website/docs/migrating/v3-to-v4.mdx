@@ -1,0 +1,311 @@
+---
+title: Flow v3 to v4
+description: Upgrade existing flow.json files to the v4 schema introduced in walkerOS Flow v4.
+sidebar_position: 1
+---
+
+# Migrating flow.json from v3 to v4
+
+walkerOS Flow v4 reshapes `flow.json` so each flow has a dedicated `config`
+block (platform, url, settings, bundle), and adds the `$flow.X.Y` reference
+syntax for cross-flow lookups inside the same file. The v4 CLI rejects v3
+input outright, so every existing `flow.json` needs a one-time edit.
+
+This guide walks through the four mechanical JSON transforms, then covers
+the matching TypeScript type renames for code that imports `Flow.*` from
+`@walkeros/core`.
+
+## What changed at a glance
+
+- **Type renames in `@walkeros/core`:** `Flow.Settings` (whole flow) becomes
+  `Flow`, `Flow.Config` (root file) becomes `Flow.Json`, and the new
+  `Flow.Settings` is now the small key-value bag inside `Flow.Config.settings`.
+- **New per-flow `config` block** with `platform`, `url`, `settings`, and
+  `bundle`.
+- **`web` and `server` keys are gone.** Their fields move into
+  `config.platform` and `config.settings`.
+- **`bundle` is no longer a top-level flow key.** It moves into
+  `config.bundle`.
+- **New `$flow.X.Y` reference syntax** lets one flow read another flow's
+  resolved `config` (e.g., `$flow.server.url`).
+- **Hard cut:** the v4 CLI refuses v3 input. There is no compat shim.
+- **No automated migration command.** Edits are mechanical, see below.
+
+## Step-by-step JSON migration
+
+The transforms are independent; apply them in any order.
+
+### Transform 1: bump `version`
+
+```json
+{
+  "version": 4
+}
+```
+
+Was `"version": 3`. The v4 CLI fails fast on any other value with a clear
+`unsupported flow.json version` error.
+
+### Transform 2: update `$schema`
+
+```json
+{
+  "$schema": "https://walkeros.io/schema/flow/v4.json"
+}
+```
+
+Was `https://walkeros.io/schema/flow/v3.json`. The v3 schema file has been
+removed from the docs site.
+
+### Transform 3: lift `web` / `server` into `config`
+
+Every flow had either a `"web": { ... }` or a `"server": { ... }` block.
+Both are gone in v4. Replace them with a `config` block that carries
+`platform` plus any web settings:
+
+v3:
+
+```json
+{
+  "flows": {
+    "default": {
+      "web": {
+        "windowCollector": "collector",
+        "windowElb": "elb"
+      }
+    }
+  }
+}
+```
+
+v4:
+
+```json
+{
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "web",
+        "settings": {
+          "windowCollector": "collector",
+          "windowElb": "elb"
+        }
+      }
+    }
+  }
+}
+```
+
+For server flows, the transform is the same: drop `"server": {}`, add
+`"config": { "platform": "server" }`. Server flows can also set
+`config.url` (used by `$flow.X.url` lookups, see below).
+
+### Transform 4: lift `bundle` into `config`
+
+In v3, `bundle` was a top-level sibling of `web` / `server`. In v4, it
+moves under `config`:
+
+v3:
+
+```json
+{
+  "flows": {
+    "default": {
+      "web": {},
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": { "version": "latest" }
+        }
+      }
+    }
+  }
+}
+```
+
+v4:
+
+```json
+{
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": { "version": "latest" }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`bundle.overrides` (transitive dependency pins) lives in the same place,
+under `config.bundle.overrides`.
+
+## Worked example
+
+A small v3 web flow:
+
+```json
+{
+  "version": 3,
+  "$schema": "https://walkeros.io/schema/flow/v3.json",
+  "flows": {
+    "default": {
+      "web": {
+        "windowCollector": "collector",
+        "windowElb": "elb"
+      },
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+          "@walkeros/web-destination-gtag": { "version": "latest", "imports": ["destinationGtag"] }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+The same flow in v4:
+
+```json
+{
+  "version": 4,
+  "$schema": "https://walkeros.io/schema/flow/v4.json",
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "web",
+        "settings": {
+          "windowCollector": "collector",
+          "windowElb": "elb"
+        },
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+            "@walkeros/web-destination-gtag": { "version": "latest", "imports": ["destinationGtag"] }
+          }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Notice that `sources`, `destinations`, `transformers`, `stores`, and
+`collector` keep their old shapes. Only the platform/bundle plumbing
+moves.
+
+## The new `$flow.X.Y` reference
+
+`$flow.<flowName>(.<path>)?` resolves to the value at
+`flows.<flowName>.config.<path>` in the same `flow.json` file. The
+`config` segment is implicit, so `$flow.server.url` walks to
+`flows.server.config.url`. This is useful when a web flow needs to point
+its API destination at the URL of a sibling server flow:
+
+```json
+{
+  "version": 4,
+  "flows": {
+    "server": {
+      "config": {
+        "platform": "server",
+        "url": "https://api.example.com/collect"
+      }
+    },
+    "web": {
+      "config": { "platform": "web" },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": { "settings": { "url": "$flow.server.url" } }
+        }
+      }
+    }
+  }
+}
+```
+
+Strictness rules:
+
+- `walkeros bundle` and `walkeros deploy` error if `$flow.X.Y` resolves
+  to an empty value.
+- `walkeros validate` warns by default, escalates to error with
+  `--strict`.
+- The error message points you to the source: set
+  `flows.server.config.url`, or run `walkeros deploy server` first.
+
+## TypeScript type renames
+
+If your code imports `Flow.*` types from `@walkeros/core`, apply this
+rename catalog. Sub-namespaces are gone; everything is flat under `Flow`.
+
+| v3 | v4 |
+|---|---|
+| `Flow.Config` (root file) | `Flow.Json` |
+| `Flow.Settings` (single flow) | `Flow` (interface) |
+| _(none)_ | `Flow.Settings` (NEW: kv-bag inside `Flow.Config`) |
+| `Flow.Web`, `Flow.Server` | _(removed)_ `config.platform` is a string |
+| `Flow.InlineCode` | `Flow.Code` |
+| `Flow.Packages` | `Flow.Bundle.packages` |
+| `Flow.Overrides` | `Flow.Bundle.overrides` |
+| `Flow.SourceReference` | `Flow.Source` |
+| `Flow.DestinationReference` | `Flow.Destination` |
+| `Flow.TransformerReference` | `Flow.Transformer` |
+| `Flow.StoreReference` | `Flow.Store` |
+| `Flow.ContractEntry` | `Flow.ContractRule` |
+
+Step-related types (`Flow.StepExample`, `Flow.StepExamples`,
+`Flow.StepCommand`, `Flow.StepEffect`, `Flow.StepOut`) are unchanged.
+`Flow.ContractSchema`, `Flow.ContractActions`, and `Flow.ContractEvents`
+are also unchanged.
+
+A typical TypeScript change looks like this:
+
+```ts
+// v3
+import type { Flow } from '@walkeros/core';
+function buildFlow(): Flow.Settings {
+  return { web: {}, destinations: {} };
+}
+```
+
+```ts
+// v4
+import type { Flow } from '@walkeros/core';
+function buildFlow(): Flow {
+  return { config: { platform: 'web' }, destinations: {} };
+}
+```
+
+## No automated codemod
+
+walkerOS v4 does not ship a `walkeros migrate` command. The transforms
+are mechanical (four edits per file, all string-level), and even complex
+configs produce a small, readable diff. Apply the four transforms
+manually, run `walkeros validate` to confirm the result parses, and
+you're done.
+
+If validate reports an error, the message will name the exact path that
+still looks like v3, e.g., a stray top-level `bundle` or a `web` block
+left behind.

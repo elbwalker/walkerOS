@@ -1,8 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "server": {
-      "server": {},
       "packages": {
         "@walkeros/server-source-express": {},
         "@walkeros/destination-demo": {},
@@ -44,6 +43,9 @@
             }
           }
         }
+      },
+      "config": {
+        "platform": "server"
       }
     }
   }

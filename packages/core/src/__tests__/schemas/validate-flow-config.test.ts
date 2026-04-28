@@ -20,7 +20,11 @@ describe('validateFlowConfig', () => {
   // --- Schema Errors ---
 
   it('returns error for missing version', () => {
-    const json = JSON.stringify({ flows: { default: { web: {} } } }, null, 2);
+    const json = JSON.stringify(
+      { flows: { default: { config: { platform: 'web' } } } },
+      null,
+      2,
+    );
     const result = validateFlowConfig(json);
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
@@ -28,7 +32,7 @@ describe('validateFlowConfig', () => {
 
   it('returns error for invalid version', () => {
     const json = JSON.stringify(
-      { version: 99, flows: { default: { web: {} } } },
+      { version: 99, flows: { default: { config: { platform: 'web' } } } },
       null,
       2,
     );
@@ -37,14 +41,14 @@ describe('validateFlowConfig', () => {
   });
 
   it('returns error for missing flows', () => {
-    const json = JSON.stringify({ version: 3 }, null, 2);
+    const json = JSON.stringify({ version: 4 }, null, 2);
     const result = validateFlowConfig(json);
     expect(result.valid).toBe(false);
   });
 
   it('passes for minimal valid config', () => {
     const json = JSON.stringify(
-      { version: 3, flows: { default: { web: {} } } },
+      { version: 4, flows: { default: { config: { platform: 'web' } } } },
       null,
       2,
     );
@@ -71,11 +75,11 @@ describe('validateFlowConfig', () => {
   it('warns for dangling $var. reference', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         variables: { gaId: 'G-XXX' },
         flows: {
           default: {
-            web: {},
+            config: { platform: 'web' },
             destinations: {
               ga4: {
                 package: '@walkeros/web-destination-gtag',
@@ -99,11 +103,11 @@ describe('validateFlowConfig', () => {
   it('does not warn for valid $var. reference', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         variables: { gaId: 'G-XXX' },
         flows: {
           default: {
-            web: {},
+            config: { platform: 'web' },
             destinations: {
               ga4: {
                 config: { settings: { id: '$var.gaId' } },
@@ -124,11 +128,11 @@ describe('validateFlowConfig', () => {
   it('warns for dangling $def. reference', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         definitions: { clean: {} },
         flows: {
           default: {
-            web: {},
+            config: { platform: 'web' },
             destinations: {
               ga4: { config: { transform: '$def.missing' } },
             },
@@ -149,9 +153,9 @@ describe('validateFlowConfig', () => {
   it('returns context with variables', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         variables: { gaId: 'G-XXX', debug: false },
-        flows: { default: { web: {} } },
+        flows: { default: { config: { platform: 'web' } } },
       },
       null,
       2,
@@ -163,10 +167,10 @@ describe('validateFlowConfig', () => {
   it('returns context with step names', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
+            config: { platform: 'web' },
             sources: { browser: {} },
             destinations: { ga4: {}, meta: {} },
           },
@@ -182,7 +186,7 @@ describe('validateFlowConfig', () => {
 
   it('returns context with platform', () => {
     const json = JSON.stringify(
-      { version: 3, flows: { default: { server: {} } } },
+      { version: 4, flows: { default: { config: { platform: 'server' } } } },
       null,
       2,
     );
@@ -193,10 +197,10 @@ describe('validateFlowConfig', () => {
   it('returns context with packages', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
+            config: { platform: 'web' },
             sources: {
               browser: { package: '@walkeros/web-source-browser' },
             },
@@ -220,13 +224,13 @@ describe('validateFlowConfig', () => {
   it('returns context with contract entities', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         contract: {
           default: {
             events: { page: { view: {}, read: {} } },
           },
         },
-        flows: { default: { web: {} } },
+        flows: { default: { config: { platform: 'web' } } },
       },
       null,
       2,
@@ -247,10 +251,10 @@ describe('validateFlowConfig', () => {
   it('accepts source with before property', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         flows: {
           test: {
-            server: {},
+            config: { platform: 'server' },
             sources: {
               express: {
                 package: '@walkeros/server-source-express',
@@ -275,10 +279,10 @@ describe('validateFlowConfig', () => {
   it('accepts transformer with before property', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         flows: {
           test: {
-            server: {},
+            config: { platform: 'server' },
             sources: { s: { package: '@walkeros/server-source-express' } },
             transformers: {
               enrich: {
@@ -302,10 +306,10 @@ describe('validateFlowConfig', () => {
   it('accepts destination with next property', () => {
     const json = JSON.stringify(
       {
-        version: 3,
+        version: 4,
         flows: {
           test: {
-            server: {},
+            config: { platform: 'server' },
             sources: { s: { package: '@walkeros/server-source-express' } },
             destinations: {
               ga4: {

@@ -1,6 +1,6 @@
-# Flow.Config Configuration Reference
+# Flow.Json Configuration Reference
 
-Complete reference for Flow.Config JSON configuration format.
+Complete reference for Flow.Json JSON configuration format.
 
 ---
 
@@ -8,11 +8,17 @@ Complete reference for Flow.Config JSON configuration format.
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "<flowName>": {
-      "web": {} | "server": {},
-      "packages": {},
+      "config": {
+        "platform": "web" | "server",
+        "settings": {},
+        "bundle": {
+          "packages": {},
+          "overrides": {}
+        }
+      },
       "sources": {},
       "destinations": {},
       "transformers": {},
@@ -27,14 +33,15 @@ Complete reference for Flow.Config JSON configuration format.
 
 ## Platform Selection
 
-Every flow must specify exactly one platform:
+Every flow must specify exactly one platform via `config.platform`:
 
 ```json
 {
   "flows": {
     "myFlow": {
-      "web": {}, // Browser environment
-      "packages": {}
+      "config": {
+        "platform": "web"
+      }
     }
   }
 }
@@ -46,24 +53,34 @@ Or:
 {
   "flows": {
     "myFlow": {
-      "server": {}, // Node.js environment
-      "packages": {}
+      "config": {
+        "platform": "server"
+      }
     }
   }
 }
 ```
 
+Platform-specific options live under `config.settings` (for example, server
+runtime options or web bootstrap behavior).
+
 ---
 
 ## Packages
+
+Bundle-time packages are configured under `config.bundle.packages`.
 
 ### NPM Packages
 
 ```json
 {
-  "packages": {
-    "@walkeros/web-destination-gtag": {},
-    "@walkeros/destination-demo": {}
+  "config": {
+    "bundle": {
+      "packages": {
+        "@walkeros/web-destination-gtag": {},
+        "@walkeros/destination-demo": {}
+      }
+    }
   }
 }
 ```
@@ -72,9 +89,13 @@ Or:
 
 ```json
 {
-  "packages": {
-    "@walkeros/collector": {
-      "imports": ["startFlow", "stopFlow"]
+  "config": {
+    "bundle": {
+      "packages": {
+        "@walkeros/collector": {
+          "imports": ["startFlow", "stopFlow"]
+        }
+      }
     }
   }
 }
@@ -84,12 +105,33 @@ Or:
 
 ```json
 {
-  "packages": {
-    "my-custom-destination": {
-      "path": "./local/my-destination"
-    },
-    "another-package": {
-      "path": "/absolute/path/to/package"
+  "config": {
+    "bundle": {
+      "packages": {
+        "my-custom-destination": {
+          "path": "./local/my-destination"
+        },
+        "another-package": {
+          "path": "/absolute/path/to/package"
+        }
+      }
+    }
+  }
+}
+```
+
+### Overrides
+
+`config.bundle.overrides` pins transitive dependency versions (npm-style):
+
+```json
+{
+  "config": {
+    "bundle": {
+      "packages": { "@walkeros/web-destination-amplitude": {} },
+      "overrides": {
+        "@amplitude/analytics-types": "2.11.1"
+      }
     }
   }
 }
@@ -244,25 +286,31 @@ Embed JavaScript in JSON for mappings:
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "analytics": {
-      "web": {},
-      "packages": { "@walkeros/web-destination-gtag": {} },
+      "config": {
+        "platform": "web",
+        "bundle": { "packages": { "@walkeros/web-destination-gtag": {} } }
+      },
       "destinations": {
         /* ... */
       }
     },
     "marketing": {
-      "web": {},
-      "packages": { "@walkeros/web-destination-meta": {} },
+      "config": {
+        "platform": "web",
+        "bundle": { "packages": { "@walkeros/web-destination-meta": {} } }
+      },
       "destinations": {
         /* ... */
       }
     },
     "server": {
-      "server": {},
-      "packages": { "@walkeros/destination-api": {} },
+      "config": {
+        "platform": "server",
+        "bundle": { "packages": { "@walkeros/destination-api": {} } }
+      },
       "destinations": {
         /* ... */
       }
@@ -287,13 +335,17 @@ walkeros bundle config.json --all
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "ecommerce": {
-      "web": {},
-      "packages": {
-        "@walkeros/web-source": {},
-        "@walkeros/web-destination-gtag": {}
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@walkeros/web-source": {},
+            "@walkeros/web-destination-gtag": {}
+          }
+        }
       },
       "sources": {
         "web": {

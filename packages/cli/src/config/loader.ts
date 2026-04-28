@@ -1,7 +1,7 @@
 /**
  * Configuration Loader
  *
- * Loads and parses Flow.Config configurations using core getFlowSettings().
+ * Loads and parses Flow.Json configurations using core getFlowSettings().
  * Build options are determined by static platform defaults.
  */
 
@@ -24,8 +24,8 @@ const DEFAULT_INCLUDE_FOLDER = './shared';
  * Result of configuration loading.
  */
 export interface LoadConfigResult {
-  /** Runtime event processing configuration */
-  flowSettings: Flow.Settings;
+  /** Runtime event processing configuration (resolved single Flow) */
+  flowSettings: Flow;
   /** Build-time configuration */
   buildOptions: BuildOptions;
   /** Name of the selected flow */
@@ -57,7 +57,7 @@ export interface LoadConfigOptions {
  * Load and parse bundle configuration.
  *
  * @remarks
- * Uses Flow.Config from @walkeros/core as the only config format.
+ * Uses Flow.Json from @walkeros/core as the only config format.
  * - Validates config structure
  * - Uses core getFlowSettings() for variable/definition resolution
  * - Determines platform from resolved config
@@ -79,7 +79,7 @@ export function loadBundleConfig(
   rawConfig: unknown,
   options: LoadConfigOptions,
 ): LoadConfigResult {
-  // Validate as Flow.Config
+  // Validate as Flow.Json
   const config = validateFlowConfig(rawConfig);
   const availableFlows = getFlowNames(config);
 
@@ -91,7 +91,7 @@ export function loadBundleConfig(
   const platform = getPlatform(flowSettings);
   if (!platform) {
     throw new Error(
-      `Invalid configuration: flow "${flowName}" must have a "web" or "server" key.`,
+      `Invalid configuration: flow "${flowName}" must have config.platform set to "web" or "server".`,
     );
   }
 
@@ -103,9 +103,9 @@ export function loadBundleConfig(
   // Get static build defaults based on platform
   const buildDefaults = getBuildDefaults(platform);
 
-  // Extract packages + overrides from flowSettings.bundle (if present)
-  const packages = flowSettings.bundle?.packages || {};
-  const overrides = flowSettings.bundle?.overrides || {};
+  // Extract packages + overrides from flowSettings.config.bundle (if present)
+  const packages = flowSettings.config?.bundle?.packages || {};
+  const overrides = flowSettings.config?.bundle?.overrides || {};
 
   // Output path: use --output if provided, otherwise default
   // Always relative to cwd, no dynamic resolution
@@ -157,14 +157,14 @@ export function loadBundleConfig(
 /**
  * Resolve which flow to use.
  *
- * @param config - Flow.Config configuration
+ * @param config - Flow.Json configuration
  * @param requestedFlow - Flow name from CLI (optional)
  * @param available - Available flow names
  * @returns Flow name to use
  * @throws Error if flow selection is invalid
  */
 function resolveFlow(
-  config: Flow.Config,
+  config: Flow.Json,
   requestedFlow: string | undefined,
   available: string[],
 ): string {
@@ -206,7 +206,7 @@ export function loadAllFlows(
   rawConfig: unknown,
   options: Omit<LoadConfigOptions, 'flowName'>,
 ): LoadConfigResult[] {
-  // Validate as Flow.Config
+  // Validate as Flow.Json
   const config = validateFlowConfig(rawConfig);
   const flows = getFlowNames(config);
 

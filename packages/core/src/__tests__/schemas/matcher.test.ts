@@ -84,10 +84,10 @@ describe('RoutableNextSchema', () => {
 describe('Flow config with NextRule[] in source.next', () => {
   it('validates source.next with NextRule array', () => {
     const config = {
-      version: 3,
+      version: 4,
       flows: {
         default: {
-          server: {},
+          config: { platform: 'server' },
           sources: {
             express: {
               package: '@walkeros/server-source-express',
