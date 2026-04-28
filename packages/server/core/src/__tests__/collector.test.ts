@@ -111,6 +111,7 @@ describe('Server Collector', () => {
       source: {
         type: 'collector',
         schema: '4',
+        version: expect.any(String),
       },
     };
 
