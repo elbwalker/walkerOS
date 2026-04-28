@@ -142,7 +142,7 @@ export const destinationPostHog: Destination = {
     const mappingSettings = rule?.settings || {};
     const state: RuntimeState = settings._state || {};
 
-    // 1. Reset — fires first so subsequent identity calls start clean.
+    // 1. Reset - fires first so subsequent identity calls start clean.
     if (mappingSettings.reset !== undefined) {
       const resolved =
         typeof mappingSettings.reset === 'boolean'
@@ -157,7 +157,7 @@ export const destinationPostHog: Destination = {
       }
     }
 
-    // 2. Identity — rule-level override wins over destination-level.
+    // 2. Identity - rule-level override wins over destination-level.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     if (identifyMapping !== undefined) {
       const resolved = await getMappingValue(event, identifyMapping, {
@@ -172,7 +172,7 @@ export const destinationPostHog: Destination = {
       }
     }
 
-    // 3. Group — rule-level override wins over destination-level.
+    // 3. Group - rule-level override wins over destination-level.
     const groupMapping = mappingSettings.group ?? settings.group;
     if (groupMapping !== undefined) {
       const resolved = await getMappingValue(event, groupMapping, {
@@ -187,8 +187,8 @@ export const destinationPostHog: Destination = {
       }
     }
 
-    // 4. Default capture — unless rule opts out via skip.
-    if (rule?.skip !== true) {
+    // 4. Default capture - unless rule opts out via silent.
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       const properties = isObject(data)
         ? (data as Record<string, unknown>)

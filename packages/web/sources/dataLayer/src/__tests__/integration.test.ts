@@ -16,9 +16,7 @@ describe('DataLayer Source - Integration', () => {
 
     const mockPush = createMockPush(collectedEvents);
 
-    ({ collector } = await startFlow({
-      tagging: 2,
-    }));
+    ({ collector } = await startFlow());
 
     collector.push = mockPush;
   });

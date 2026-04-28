@@ -73,7 +73,7 @@ export const destinationClarity: Destination = {
     const settings = (config.settings || {}) as Partial<Settings>;
     const mappingSettings = (rule?.settings || {}) as Mapping;
 
-    // 1. Identify — rule-level override wins over destination-level.
+    // 1. Identify - rule-level override wins over destination-level.
     //    Fires first per Clarity's own guidance so subsequent tag/event
     //    calls are associated with the right user.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
@@ -99,7 +99,7 @@ export const destinationClarity: Destination = {
       }
     }
 
-    // 2. Include tags — pre-flattened by core into context.data
+    // 2. Include tags - pre-flattened by core into context.data
     if (isObject(data)) {
       for (const [key, raw] of Object.entries(
         data as Record<string, unknown>,
@@ -126,8 +126,8 @@ export const destinationClarity: Destination = {
       }
     }
 
-    // 5. Default event forwarding — unless rule.skip is set
-    if (rule?.skip !== true) {
+    // 5. Default event forwarding - unless rule.silent is set
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       clarity.event(eventName);
     }

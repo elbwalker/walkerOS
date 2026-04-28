@@ -37,7 +37,7 @@
                           "marketing": true
                         }
                       },
-                      "source_url": "source.id"
+                      "source_url": "source.url"
                     }
                   }
                 }

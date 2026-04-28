@@ -8,17 +8,15 @@ import { createCommand } from './command';
 import { initSources } from './source';
 import { initStores, resolveStoreReferences } from './store';
 
+// Replaced at build time by tsup's `define` (see packages/config/tsup).
 declare const __VERSION__: string;
 
 export async function collector(
   initConfig: Collector.InitConfig,
 ): Promise<Collector.Instance> {
-  const version = __VERSION__;
-
   const defaultConfig: Collector.Config = {
     globalsStatic: {},
     sessionStatic: {},
-    tagging: 0,
     run: true,
   };
 
@@ -41,13 +39,11 @@ export async function collector(
     allowed: false,
     config,
     consent: initConfig.consent || {},
-    count: 0,
     custom: initConfig.custom || {},
     destinations: {},
     transformers: {},
     stores: {},
     globals: finalGlobals,
-    group: '',
     hooks: initConfig.hooks || {},
     logger,
     on: {},
@@ -64,7 +60,6 @@ export async function collector(
     },
     timing: Date.now(),
     user: initConfig.user || {},
-    version,
     sources: {},
     pending: { sources: {}, destinations: {} },
     push: undefined as unknown as Collector.PushFn, // Placeholder, will be set below
@@ -77,14 +72,14 @@ export async function collector(
     (event: WalkerOS.DeepPartialEvent): WalkerOS.PartialEvent =>
       ({
         timing: Math.round((Date.now() - collector.timing) / 10) / 100,
-        source: { type: 'collector', id: '', previous_id: '' },
+        source: { type: 'collector', schema: '4', version: __VERSION__ },
         ...event,
       }) as WalkerOS.PartialEvent,
   );
 
   collector.command = createCommand(collector, commonHandleCommand);
 
-  // Initialize stores (first — other components may depend on them)
+  // Initialize stores (first - other components may depend on them)
   const rawStores = initConfig.stores || {};
   collector.stores = await initStores(collector, rawStores);
 

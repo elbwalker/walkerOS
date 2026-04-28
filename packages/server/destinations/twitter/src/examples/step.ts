@@ -33,10 +33,11 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order is sent to the X (Twitter) Conversions API with conversion value and the hashed email.',
   in: getEvent('order complete', {
+    id: 'ev-1700000900000',
     timestamp: 1700000900000,
     data: { total: 249.99, currency: 'EUR' },
     user: { email: 'jane@example.com' },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     settings: {
@@ -59,7 +60,7 @@ export const purchase: Flow.StepExample = {
                   '8c87b489ce35cf2e2f39f80e282cb2e804932a56a213983eeeb428407d43b52d',
               },
             ],
-            conversion_id: '1700000900000-gr0up-1',
+            conversion_id: 'ev-1700000900000',
             value: '249.99',
           },
         ],
@@ -74,9 +75,10 @@ export const lead: Flow.StepExample = {
   description:
     'A form submission is sent to X as a conversion with the SHA-256 hashed email as the identifier.',
   in: getEvent('form submit', {
+    id: 'ev-1700000901000',
     timestamp: 1700000901000,
     user: { email: 'user@example.com' },
-    source: { type: 'server', id: 'https://example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: undefined,
   out: [
@@ -94,7 +96,7 @@ export const lead: Flow.StepExample = {
                   'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514',
               },
             ],
-            conversion_id: '1700000901000-gr0up-1',
+            conversion_id: 'ev-1700000901000',
           },
         ],
       }),
@@ -108,11 +110,12 @@ export const purchaseWithTwclid: Flow.StepExample = {
   description:
     'A purchase is sent to X with both the hashed email and the twclid click id for ads attribution.',
   in: getEvent('order complete', {
+    id: 'ev-1700000902000',
     timestamp: 1700000902000,
     data: { total: 89.99, currency: 'USD' },
     user: { email: 'buyer@co.com' },
     context: { twclid: ['23opevjt88psuo13lu8d020qkn', 0] },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     settings: {
@@ -145,7 +148,7 @@ export const purchaseWithTwclid: Flow.StepExample = {
               },
               { twclid: '23opevjt88psuo13lu8d020qkn' },
             ],
-            conversion_id: '1700000902000-gr0up-1',
+            conversion_id: 'ev-1700000902000',
             value: '89.99',
           },
         ],

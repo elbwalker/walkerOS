@@ -43,7 +43,6 @@
   },
   "contract": {
     "default": {
-      "tagging": 1,
       "description": "Web shop tracking contract",
       "globals": {
         "type": "object",
@@ -563,7 +562,6 @@
         }
       },
       "collector": {
-        "tagging": 1,
         "consent": {
           "functional": true,
           "marketing": false
@@ -918,7 +916,6 @@
         }
       },
       "collector": {
-        "tagging": 1,
         "consent": {
           "functional": true
         },

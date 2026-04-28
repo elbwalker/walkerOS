@@ -59,7 +59,7 @@ describe('getContractPathCompletions', () => {
     const keys = result.map((r) => r.key);
     // After resolution, web inherits default's globals + events
     expect(keys).toEqual(
-      expect.arrayContaining(['tagging', 'description', 'globals', 'events']),
+      expect.arrayContaining(['description', 'globals', 'events']),
     );
     // extends is stripped after resolution
     expect(keys).not.toContain('extends');

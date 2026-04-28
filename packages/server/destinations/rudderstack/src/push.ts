@@ -121,8 +121,8 @@ export const push: PushFn = async function (
     );
   }
 
-  // 7. Track (unless skip: true)
-  if (rule?.skip !== true) {
+  // 7. Track (unless silent: true)
+  if (rule?.silent !== true) {
     const eventName = isString(rule?.name) ? rule.name : event.name;
     const properties = isObject(data) ? (data as Record<string, unknown>) : {};
 

@@ -56,7 +56,7 @@ type StepOut = readonly StepEffect[];
 
 interface StepExample {
   in: unknown; // Platform-specific input
-  out: StepOut; // Array of effect tuples — see shape rules below
+  out: StepOut; // Array of effect tuples - see shape rules below
   trigger?: { type?: string; options?: unknown }; // How to invoke
   mapping?: unknown; // Destination mapping rule
   command?: 'config' | 'consent' | 'user' | 'run'; // Route to walker command
@@ -73,7 +73,7 @@ tuple is `[callable, ...args]`. The first element is the callable's public name
 | ------------------------------ | --------------------------------------- | --------------------------------------------------------------------------------------- |
 | Destination (SDK function)     | `'gtag'`, `'fbq'`, `'ttq.track'`        | Public SDK name. Dotted paths render literally.                                         |
 | Destination (method on global) | `'analytics.track'`, `'dataLayer.push'` | Method notation.                                                                        |
-| Destination (HTTP)             | `'fetch'`, `'sendServer'`               | The actual call users would make. NOT `env.*` prop names — those are internal plumbing. |
+| Destination (HTTP)             | `'fetch'`, `'sendServer'`               | The actual call users would make. NOT `env.*` prop names - those are internal plumbing. |
 | Source                         | `'elb'`                                 | The walker public push API.                                                             |
 | Transformer                    | `'return'`                              | Reserved keyword. Renders as `return <value>` (no parens).                              |
 
@@ -83,7 +83,7 @@ Empty `out: []` means the step produced no observable effect (filtered input,
 transformer passthrough, validator rejection). Reserved only for cases where the
 destination/source deliberately emits nothing.
 
-### Source Step Example — Server (Express)
+### Source Step Example - Server (Express)
 
 `in` is an HTTP request shape, `out` is a tuple of the `elb()` call the source
 makes:
@@ -102,7 +102,7 @@ export const checkoutPost: Flow.StepExample = {
 };
 ```
 
-### Source Step Example — Browser
+### Source Step Example - Browser
 
 `in` is an HTML string, `out` is a tuple of the `elb()` call:
 
@@ -150,7 +150,7 @@ export const step = {
 ### Destination Step Example
 
 `in` is a walkerOS event, `mapping` is the mapping rule that transforms it,
-`out` is an array of call tuples — one per observable effect the destination
+`out` is an array of call tuples - one per observable effect the destination
 produces. Multi-call events (e.g., GA4 + Ads + GTM for a single walker event)
 flatten into a single array in execution order:
 
@@ -186,12 +186,12 @@ out: [
 ],
 ```
 
-Each export is a self-contained `Flow.StepExample` — no intermediate variables,
+Each export is a self-contained `Flow.StepExample` - no intermediate variables,
 no `all` aggregation. The `mapping` field ties the mapping rule to the example
 so tests can register it dynamically:
 `{ [event.entity]: { [event.action]: example.mapping } }`.
 
-Consumers iterate all examples via `Object.entries(examples.step)` —
+Consumers iterate all examples via `Object.entries(examples.step)` -
 `export * as step` exposes every named export directly.
 
 ### Command Step Example
@@ -216,7 +216,7 @@ Supported commands: `config`, `consent`, `user`, `run`.
 
 - When `command` is absent (default), `in` is pushed as a regular event via
   `elb(in)`.
-- When `command` is set, `mapping` is **not** applied — commands don't flow
+- When `command` is set, `mapping` is **not** applied - commands don't flow
   through event mapping.
 - The `out` format is destination-specific. For gtag it's
   `[action, subAction, params]` matching `gtag(...)` calls.
@@ -241,7 +241,7 @@ Supported commands: `config`, `consent`, `user`, `run`.
 ### File Structure
 
 ```typescript
-// src/examples/step.ts — only Flow.StepExample exports, nothing else
+// src/examples/step.ts - only Flow.StepExample exports, nothing else
 import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
@@ -264,12 +264,12 @@ no `all`, no `config`. Consumers iterate via `Object.entries(examples.step)`.
 Every `Flow.StepExample` accepts three optional metadata fields that control how
 it surfaces in docs and MCP output:
 
-- **`title?: string`** — overrides the default camelCase-to-spaced heading in
+- **`title?: string`** - overrides the default camelCase-to-spaced heading in
   website docs. Keep it short (2-5 words), human-readable.
-- **`description?: string`** — one short sentence (10-25 words) rendered above
+- **`description?: string`** - one short sentence (10-25 words) rendered above
   each example in docs and surfaced in MCP `flow_examples` output. Explains what
   the example demonstrates, not how.
-- **`public?: boolean`** — defaults to `true`. When `false`, the example is
+- **`public?: boolean`** - defaults to `true`. When `false`, the example is
   excluded from the website docs render and from default MCP `flow_examples`
   output. It still runs in tests and remains callable via CLI/MCP
   `flow_simulate`.
@@ -284,7 +284,7 @@ export const purchase: Flow.StepExample = {
   out: [['fbq', 'track', 'Purchase', { value: 555, currency: 'EUR' }]],
 };
 
-// Internal fixture — runs in tests, hidden from docs and default MCP output.
+// Internal fixture - runs in tests, hidden from docs and default MCP output.
 export const debugFiltered: Flow.StepExample = {
   public: false,
   in: { name: 'debug test', data: { message: 'noise' } },
@@ -482,7 +482,7 @@ describe('Step Examples', () => {
     env.window.fbq = mockFn;
 
     const dest = jest.requireActual('.').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow({});
 
     // Build mapping config from event entity/action
     const mappingConfig = mapping

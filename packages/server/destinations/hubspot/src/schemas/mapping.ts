@@ -10,7 +10,7 @@ export const MappingSchema = z.object({
   identify: z
     .unknown()
     .describe(
-      'Per-event contact upsert. Resolves to { email, properties }. Overrides destination-level identify. Use with skip: true on login/identify events.',
+      'Per-event contact upsert. Resolves to { email, properties }. Overrides destination-level identify. Use with silent: true on login/identify events.',
     )
     .optional(),
   properties: z

@@ -20,7 +20,7 @@ export const destinationDataLayer: Destination.Instance = {
         entity: event.entity,
         action: event.action,
         timestamp: event.timestamp,
-        group: event.group,
+        id: event.id,
         user: event.user,
         nested: event.nested,
         context: event.context,

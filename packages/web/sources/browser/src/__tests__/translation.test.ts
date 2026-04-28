@@ -68,8 +68,9 @@ describe('Translation Layer', () => {
           context: { page: ['test', 0] },
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
-            previous_id: 'https://previous.com/page',
+            platform: 'web',
+            url: 'https://example.com/test-page',
+            referrer: 'https://previous.com/page',
           },
         }),
       );
@@ -92,8 +93,9 @@ describe('Translation Layer', () => {
           context: { context: ['info', 0] },
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
-            previous_id: 'https://previous.com/page',
+            platform: 'web',
+            url: 'https://example.com/test-page',
+            referrer: 'https://previous.com/page',
           },
         }),
       );
@@ -116,8 +118,9 @@ describe('Translation Layer', () => {
           context: { page: ['test', 0] },
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
-            previous_id: 'https://previous.com/page',
+            platform: 'web',
+            url: 'https://example.com/test-page',
+            referrer: 'https://previous.com/page',
           },
         }),
       );
@@ -151,12 +154,14 @@ describe('Translation Layer', () => {
         { elb: mockElb, settings: createTestSettings() },
         'walker config',
         {
-          tagging: 2,
+          prefix: 'data-elb',
         },
       );
 
       // Walker commands should pass through without source info
-      expect(mockPush).toHaveBeenCalledWith('walker config', { tagging: 2 });
+      expect(mockPush).toHaveBeenCalledWith('walker config', {
+        prefix: 'data-elb',
+      });
     });
 
     test('does not add source information to object events', async () => {
@@ -164,7 +169,12 @@ describe('Translation Layer', () => {
       const eventObject = {
         name: 'custom event',
         data: { test: true },
-        source: { type: 'custom', id: 'custom-id', previous_id: '' },
+        source: {
+          type: 'custom',
+          platform: 'web',
+          url: 'custom-id',
+          referrer: '',
+        },
       };
 
       await translateToCoreCollector(
@@ -193,8 +203,9 @@ describe('Translation Layer', () => {
         expect.objectContaining({
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
-            previous_id: '',
+            platform: 'web',
+            url: 'https://example.com/test-page',
+            referrer: '',
           },
         }),
       );
@@ -216,8 +227,9 @@ describe('Translation Layer', () => {
         expect.objectContaining({
           source: {
             type: 'browser',
-            id: 'https://example.com/path?query=value#section',
-            previous_id: 'https://previous.com/page',
+            platform: 'web',
+            url: 'https://example.com/path?query=value#section',
+            referrer: 'https://previous.com/page',
           },
         }),
       );
@@ -244,8 +256,9 @@ describe('Translation Layer', () => {
           trigger: 'click',
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
-            previous_id: 'https://previous.com/page',
+            platform: 'web',
+            url: 'https://example.com/test-page',
+            referrer: 'https://previous.com/page',
           },
         }),
       );
@@ -257,8 +270,9 @@ describe('Translation Layer', () => {
           trigger: 'load',
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
-            previous_id: 'https://previous.com/page',
+            platform: 'web',
+            url: 'https://example.com/test-page',
+            referrer: 'https://previous.com/page',
           },
         }),
       );
@@ -284,8 +298,9 @@ describe('Translation Layer', () => {
           trigger: 'load',
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
-            previous_id: 'https://previous.com/page',
+            platform: 'web',
+            url: 'https://example.com/test-page',
+            referrer: 'https://previous.com/page',
           },
         }),
       );
@@ -386,8 +401,9 @@ describe('Translation Layer', () => {
         expect.objectContaining({
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
-            previous_id: null,
+            platform: 'web',
+            url: 'https://example.com/test-page',
+            referrer: null,
           },
         }),
       );
@@ -407,8 +423,9 @@ describe('Translation Layer', () => {
           data: { test: true },
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
-            previous_id: 'https://previous.com/page',
+            platform: 'web',
+            url: 'https://example.com/test-page',
+            referrer: 'https://previous.com/page',
           },
         }),
       );

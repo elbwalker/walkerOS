@@ -6,7 +6,6 @@ describe('Contract types', () => {
       version: 3,
       contract: {
         default: {
-          tagging: 1,
           description: 'Base contract',
           globals: {
             required: ['country'],
@@ -46,7 +45,7 @@ describe('Contract types', () => {
 
   it('should accept contract with extends chain', () => {
     const contract: Flow.Contract = {
-      default: { tagging: 1 },
+      default: { description: 'base' },
       web: { extends: 'default', events: { product: { view: {} } } },
       web_loggedin: {
         extends: 'web',

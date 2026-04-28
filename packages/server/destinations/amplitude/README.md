@@ -76,7 +76,7 @@ Use per-rule mapping to set, increment, or clear user properties:
   "mapping": {
     "user": {
       "login": {
-        "skip": true,
+        "silent": true,
         "settings": {
           "identify": {
             "map": {
@@ -114,7 +114,7 @@ Supported identify operations: `set`, `setOnce`, `add`, `append`, `prepend`,
   "mapping": {
     "subscription": {
       "renew": {
-        "skip": true,
+        "silent": true,
         "settings": {
           "revenue": {
             "map": {

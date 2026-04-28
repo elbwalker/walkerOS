@@ -225,7 +225,6 @@ describe('Flow Schemas', () => {
           },
         },
         collector: {
-          tagging: 1,
           globals: {
             currency: 'USD',
           },
@@ -523,7 +522,6 @@ describe('Flow Schemas', () => {
         version: 3 as const,
         contract: {
           default: {
-            tagging: 1,
             events: {
               product: {
                 add: { properties: { data: { type: 'object' } } },
@@ -692,9 +690,7 @@ describe('Flow Schemas', () => {
           REGION: 'us-east-1',
         },
         definitions: {
-          base_collector: {
-            tagging: 1,
-          },
+          base_collector: {},
           gtag_mapping: {
             page: {
               view: { name: 'page_view' },
@@ -733,7 +729,6 @@ describe('Flow Schemas', () => {
               },
             },
             collector: {
-              tagging: 1,
               globals: {
                 currency: 'USD',
                 environment: 'production',
@@ -770,7 +765,6 @@ describe('Flow Schemas', () => {
               },
             },
             collector: {
-              tagging: 1,
               globals: {
                 currency: 'USD',
                 environment: 'staging',
@@ -2545,23 +2539,6 @@ describe('$contract reference resolution', () => {
     const schema = (config.sources?.test?.config as any).schema;
     // Wildcards should be expanded: add has both id and qty
     expect(schema.properties.data.required).toEqual(['id', 'qty']);
-  });
-
-  test('resolves $contract.name.tagging', () => {
-    const setup = {
-      version: 3,
-      contract: {
-        web: { tagging: 5 },
-      },
-      flows: {
-        default: {
-          web: {},
-          collector: { tagging: '$contract.web.tagging' },
-        },
-      },
-    };
-    const config = getFlowSettings(setup as any);
-    expect((config.collector as any).tagging).toBe(5);
   });
 
   test('resolves extends before path resolution', () => {

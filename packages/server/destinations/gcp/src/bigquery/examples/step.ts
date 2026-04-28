@@ -34,7 +34,7 @@ function expectedRow(event: WalkerOS.Event): WalkerOS.AnyObject {
 const pageViewEvent = getEvent('page view', {
   timestamp: 1700001100,
   data: { title: 'Documentation', url: 'https://example.com/docs' },
-  source: { type: 'server', id: '', previous_id: '' },
+  source: { type: 'express', platform: 'server' },
 });
 
 export const pageView: Flow.StepExample = {
@@ -64,7 +64,7 @@ const purchaseEvent = getEvent('order complete', {
     total: 199.99,
     items: [{ sku: 'SKU-1', qty: 2 }],
   },
-  source: { type: 'server', id: '', previous_id: '' },
+  source: { type: 'express', platform: 'server' },
 });
 
 export const purchase: Flow.StepExample = {

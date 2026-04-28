@@ -17,7 +17,7 @@ export type PostHogStepExample = Flow.StepExample & {
 };
 
 /**
- * Default event forwarding — every walkerOS event becomes
+ * Default event forwarding - every walkerOS event becomes
  * client.capture({ distinctId, event, properties }). With no mapping
  * and no include, properties is {}. distinctId falls back to event.user.id.
  */
@@ -39,7 +39,7 @@ export const defaultCapture: PostHogStepExample = {
 };
 
 /**
- * Capture with include — destination-level include flattens data and
+ * Capture with include - destination-level include flattens data and
  * globals sections into prefixed properties.
  */
 export const captureWithInclude: PostHogStepExample = {
@@ -68,8 +68,8 @@ export const captureWithInclude: PostHogStepExample = {
 };
 
 /**
- * Identify with $set and $set_once — per-event mapping fires
- * client.identify() with person properties. skip: true suppresses capture.
+ * Identify with $set and $set_once - per-event mapping fires
+ * client.identify() with person properties. silent: true suppresses capture.
  */
 export const identifyWithSetAndSetOnce: PostHogStepExample = {
   title: 'Identify with $set',
@@ -84,7 +84,7 @@ export const identifyWithSetAndSetOnce: PostHogStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -124,8 +124,8 @@ export const identifyWithSetAndSetOnce: PostHogStepExample = {
 };
 
 /**
- * Group identify with properties — per-event mapping fires
- * client.groupIdentify() with group properties. skip: true suppresses capture.
+ * Group identify with properties - per-event mapping fires
+ * client.groupIdentify() with group properties. silent: true suppresses capture.
  */
 export const groupIdentifyWithProperties: PostHogStepExample = {
   title: 'Group identify',
@@ -140,7 +140,7 @@ export const groupIdentifyWithProperties: PostHogStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       group: {
         map: {
@@ -172,7 +172,7 @@ export const groupIdentifyWithProperties: PostHogStepExample = {
 };
 
 /**
- * Capture with group context — destination-level settings.group resolves
+ * Capture with group context - destination-level settings.group resolves
  * type + key (no properties). The capture call includes groups.
  */
 export const captureWithGroupContext: PostHogStepExample = {
@@ -205,7 +205,7 @@ export const captureWithGroupContext: PostHogStepExample = {
 };
 
 /**
- * Consent revoked — client.disable() is called.
+ * Consent revoked - client.disable() is called.
  */
 export const consentRevoke: PostHogStepExample = {
   title: 'Consent revoked',
@@ -218,7 +218,7 @@ export const consentRevoke: PostHogStepExample = {
 };
 
 /**
- * Consent granted — client.enable() is called.
+ * Consent granted - client.enable() is called.
  */
 export const consentGrant: PostHogStepExample = {
   title: 'Consent granted',

@@ -44,6 +44,8 @@ describeIfBuilt('CLI emits telemetry via debug mode', () => {
     });
 
     expect(result.stderr).toContain('"name":"cmd invoke"');
-    expect(result.stderr).toContain('"source":{"type":"terminal","id":"cli"');
+    expect(result.stderr).toContain(
+      '"source":{"type":"cli","platform":"terminal"',
+    );
   });
 });

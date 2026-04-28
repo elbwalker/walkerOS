@@ -1,7 +1,7 @@
 # LinkedIn Web Destination for walkerOS
 
 Forward walkerOS events as LinkedIn Insight Tag conversions
-(`window.lintrk('track', ...)`) — opt-in, per-event, with value + currency +
+(`window.lintrk('track', ...)`) - opt-in, per-event, with value + currency +
 deduplication support.
 
 ## Source Code
@@ -18,22 +18,22 @@ deduplication support.
 
 ## Features
 
-- **Opt-in conversion forwarding** — only events with
+- **Opt-in conversion forwarding** - only events with
   `mapping.settings.conversion` fire a `lintrk('track')` call. Unmapped events
   are silently ignored (Campaign Manager requires pre-registered conversion
   rules).
-- **Automatic page view + retargeting** — the Insight Tag script fires its own
+- **Automatic page view + retargeting** - the Insight Tag script fires its own
   page view on load for audience building. The destination does not suppress or
   duplicate it.
-- **Conversion value + currency** — `data.total`-style mappings with a currency
+- **Conversion value + currency** - `data.total`-style mappings with a currency
   fallback via `{ key, value }` syntax (defaults to `"EUR"`).
-- **Deduplication ready** — maps the walkerOS event `id` to LinkedIn's
+- **Deduplication ready** - maps the walkerOS event `id` to LinkedIn's
   `event_id`, ready for cross-channel deduplication with a future server
   (Conversions API) destination.
-- **Consent-gated** — LinkedIn requires `marketing` consent. The collector's
+- **Consent-gated** - LinkedIn requires `marketing` consent. The collector's
   `config.consent` gate blocks events until granted; deferred script injection
   is supported via `loadScript: true`.
-- **Script-tag loader** — no npm SDK dependency. The destination injects
+- **Script-tag loader** - no npm SDK dependency. The destination injects
   `https://snap.licdn.com/li.lms-analytics/insight.min.js` at runtime (opt-in
   via `loadScript: true`), or you can embed the Insight Tag snippet in your HTML
   and leave `loadScript: false`.
@@ -86,7 +86,7 @@ npm install @walkeros/web-destination-linkedin
 | Key       | Type       | Required | Notes                                                                                                                                                                                          |
 | --------- | ---------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `apiKey`  | `string`   | yes      | LinkedIn Partner ID (numeric string, e.g. `"123456"`). Find it in Campaign Manager → Insight Tag → Manage Insight Tag.                                                                         |
-| `include` | `string[]` | no       | Event sections made available for mapping resolution. Present for consistency with other destinations — `lintrk()` only accepts four fixed fields, so included data is not automatically sent. |
+| `include` | `string[]` | no       | Event sections made available for mapping resolution. Present for consistency with other destinations - `lintrk()` only accepts four fixed fields, so included data is not automatically sent. |
 
 ### Mapping (per-event)
 
@@ -108,7 +108,7 @@ npm install @walkeros/web-destination-linkedin
 LinkedIn is an **opt-in conversion platform**. Every tracked event must
 reference a pre-created Conversion Rule in Campaign Manager via its numeric
 `conversion_id`. Events without an explicit `mapping.settings.conversion` are
-silently ignored — they produce zero `lintrk` calls.
+silently ignored - they produce zero `lintrk` calls.
 
 This is the opposite of analytics destinations (Amplitude, Clarity, PostHog)
 which forward every event by default.
@@ -137,13 +137,13 @@ which forward every event by default.
 Resolves to:
 `lintrk('track', { conversion_id: 67890, conversion_value: 555, currency: 'EUR', event_id: '<walker-event-id>' })`.
 
-### Skipping a fully configured rule
+### Suppressing a fully configured rule
 
 ```json
 "mapping": {
   "form": {
     "submit": {
-      "skip": true,
+      "silent": true,
       "settings": {
         "conversion": { "map": { "id": { "value": 12345 } } }
       }
@@ -152,8 +152,8 @@ Resolves to:
 }
 ```
 
-`mapping.skip: true` suppresses the call while keeping the rule on disk for
-quick reactivation. Alternatively, simply omit `settings.conversion` —
+`mapping.silent: true` suppresses the call while keeping the rule on disk for
+quick reactivation. Alternatively, simply omit `settings.conversion` -
 LinkedIn's opt-in model makes that equivalent.
 
 ## Consent
@@ -168,7 +168,7 @@ consent (not analytics):
 ```
 
 walkerOS's collector blocks all events to this destination until `marketing` is
-granted. When consent is later revoked, walkerOS stops sending events — the
+granted. When consent is later revoked, walkerOS stops sending events - the
 LinkedIn Insight Tag itself has no `opt_out()` API, so the tag remains loaded
 but receives no further calls.
 
@@ -181,7 +181,7 @@ when an `on('consent')` event grants marketing.
 
 ## No identity tracking
 
-LinkedIn identity on the web is cookie-based — the Insight Tag manages its own
+LinkedIn identity on the web is cookie-based - the Insight Tag manages its own
 first-party cookies and matches visitors against LinkedIn member profiles
 server-side. There is no `lintrk('identify', ...)` API. The destination does
 **not** forward user IDs, emails, phone numbers, or the `li_fat_id` click ID.

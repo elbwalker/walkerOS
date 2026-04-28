@@ -11,7 +11,7 @@
 [NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-hotjar)
 &bull; [Documentation](https://www.walkeros.io/docs/destinations/web/hotjar)
 
-This package forwards walkerOS events to [Hotjar](https://www.hotjar.com/) —
+This package forwards walkerOS events to [Hotjar](https://www.hotjar.com/) -
 session recordings, heatmaps, surveys, and on-page feedback. Built on the
 official [`@hotjar/browser`](https://www.npmjs.com/package/@hotjar/browser) SDK.
 
@@ -21,13 +21,13 @@ forwards them as Hotjar events, identities, and SPA route notifications.
 
 ## Features
 
-- **Default event forwarding** — every walkerOS event becomes
+- **Default event forwarding** - every walkerOS event becomes
   `Hotjar.event(name)` with no additional config
-- **Identity** — `Hotjar.identify(userId, attributes)` with userId extracted
+- **Identity** - `Hotjar.identify(userId, attributes)` with userId extracted
   from the resolved mapping value; remaining keys become user attributes
-- **SPA state change** — `Hotjar.stateChange(path)` for accurate heatmaps on
+- **SPA state change** - `Hotjar.stateChange(path)` for accurate heatmaps on
   virtual page views in single-page applications
-- **Snippet injection** — `@hotjar/browser` handles script loading, including
+- **Snippet injection** - `@hotjar/browser` handles script loading, including
   CSP `nonce` and debug mode
 
 ## Installation
@@ -77,14 +77,14 @@ await startFlow({
 
 Standard mapping features also apply:
 
-- `name` — rename the forwarded event (`Hotjar.event(<new name>)`)
-- `skip` — suppress the default `Hotjar.event(...)` call while still running
+- `name` - rename the forwarded event (`Hotjar.event(<new name>)`)
+- `silent` - suppress the default `Hotjar.event(...)` call while still running
   `identify` / `stateChange`
-- `ignore` — drop the event entirely (no calls produced)
+- `ignore` - drop the event entirely (no calls produced)
 
 ## Event Forwarding
 
-Hotjar's `event(actionName)` API is name-only — no properties, no payload. The
+Hotjar's `event(actionName)` API is name-only - no properties, no payload. The
 destination forwards the walkerOS `event.name` (e.g. `"order complete"`) by
 default. Rename with `mapping.name`:
 
@@ -132,7 +132,7 @@ emit a walkerOS event:
 mapping: {
   page: {
     view: {
-      skip: true, // Suppress default Hotjar.event('page view')
+      silent: true, // Suppress default Hotjar.event('page view')
       settings: {
         stateChange: 'data.id', // Resolves to the new path
       },

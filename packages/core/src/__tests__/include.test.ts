@@ -39,8 +39,6 @@ describe('flattenIncludeSections', () => {
     expect(result.event_timing).toBe(event.timing);
     expect(result.event_id).toBe(event.id);
     expect(result.event_timestamp).toBe(event.timestamp);
-    expect(result.event_group).toBe(event.group);
-    expect(result.event_count).toBe(event.count);
   });
 
   test('flattens user section', () => {
@@ -54,15 +52,8 @@ describe('flattenIncludeSections', () => {
 
   test('flattens source section', () => {
     const result = flattenIncludeSections(event, ['source']);
-    expect(result.source_type).toBe('web');
-    expect(result.source_id).toBeDefined();
-    expect(result.source_previous_id).toBeDefined();
-  });
-
-  test('flattens version section', () => {
-    const result = flattenIncludeSections(event, ['version']);
-    expect(result.version_tagging).toBe(1);
-    expect(result.version_source).toBeDefined();
+    expect(result.source_type).toBe('collector');
+    expect(result.source_schema).toBe('4');
   });
 
   test('"all" expands to every section', () => {
@@ -73,8 +64,7 @@ describe('flattenIncludeSections', () => {
     expect(result.context_shopping).toBe('complete');
     expect(result.user_id).toBe('us3r');
     expect(result.event_name).toBe('order complete');
-    expect(result.source_type).toBe('web');
-    expect(result.version_tagging).toBe(1);
+    expect(result.source_type).toBe('collector');
   });
 
   test('multiple sections combined', () => {
@@ -100,7 +90,6 @@ describe('flattenIncludeSections', () => {
   });
 
   test('section with non-object value is skipped', () => {
-    // version.source is a string, not an object — but version itself is an object
     // Test with a section that returns a non-object
     const minimal: WalkerOS.DeepPartialEvent = { name: 'test action' };
     const result = flattenIncludeSections(minimal, ['data']);
@@ -145,7 +134,7 @@ describe('processEventMapping with include', () => {
     const result = await processEventMapping(event, config, mockCollector);
 
     const data = result.data as Record<string, unknown>;
-    // Rule-level include wins — only globals, no data
+    // Rule-level include wins - only globals, no data
     expect(data.globals_pagegroup).toBe('shop');
     expect(data.data_total).toBeUndefined();
   });

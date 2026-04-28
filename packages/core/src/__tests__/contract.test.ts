@@ -61,7 +61,6 @@ describe('resolveContracts', () => {
   it('should resolve extends chain', () => {
     const contract: Flow.Contract = {
       default: {
-        tagging: 1,
         globals: { required: ['country'] },
         consent: { required: ['analytics'] },
       },
@@ -74,7 +73,6 @@ describe('resolveContracts', () => {
     };
     const resolved = resolveContracts(contract);
     // web inherits from default
-    expect(resolved.web.tagging).toBe(1);
     expect(resolved.web.globals).toEqual({ required: ['country'] });
     expect(resolved.web.consent).toEqual({ required: ['analytics'] });
     expect(resolved.web.events?.product.view).toBeDefined();

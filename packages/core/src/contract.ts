@@ -103,9 +103,6 @@ function mergeContractEntries(
   const result: Flow.ContractEntry = {};
 
   // Merge metadata (child wins)
-  if (parent.tagging !== undefined || child.tagging !== undefined) {
-    result.tagging = child.tagging ?? parent.tagging;
-  }
   if (parent.description !== undefined || child.description !== undefined) {
     result.description = child.description ?? parent.description;
   }

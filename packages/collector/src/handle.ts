@@ -5,7 +5,7 @@ import {
   pushToDestinations,
   createPushResult,
 } from './destination';
-import { assign, getId, isFunction, isString } from '@walkeros/core';
+import { assign, getSpanId, isFunction, isString } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { processConsent } from './consent';
 import { on, onApply } from './on';
@@ -155,15 +155,8 @@ export function createEvent(
   const [entityValue, actionValue] = partialEvent.name.split(' ');
   if (!entityValue || !actionValue) throw new Error('Event name is invalid');
 
-  ++collector.count;
-
   const {
     timestamp = Date.now(),
-    group = collector.group,
-    count = collector.count,
-  } = partialEvent;
-
-  const {
     name = `${entityValue} ${actionValue}`,
     data = {},
     context = {},
@@ -172,16 +165,12 @@ export function createEvent(
     user = collector.user,
     nested = [],
     consent = collector.consent,
-    id = `${timestamp}-${group}-${count}`,
+    id = getSpanId(),
     trigger = '',
     entity = entityValue,
     action = actionValue,
     timing = 0,
-    version = {
-      source: collector.version,
-      tagging: collector.config.tagging || 0,
-    },
-    source = { type: 'collector', id: '', previous_id: '' },
+    source = { type: 'collector', schema: '4' },
   } = partialEvent;
 
   return {
@@ -199,9 +188,6 @@ export function createEvent(
     action,
     timestamp,
     timing,
-    group,
-    count,
-    version,
     source,
   };
 }
@@ -219,10 +205,6 @@ export async function runCollector(
 ): Promise<Elb.PushResult> {
   // Set the collector to allowed state
   collector.allowed = true;
-
-  // Reset count and generate new group ID
-  collector.count = 0;
-  collector.group = getId();
 
   // Update timing for this run
   collector.timing = Date.now();

@@ -496,7 +496,6 @@ describe('Config Loader', () => {
             },
             collector: {
               run: true,
-              tagging: 1,
             },
           },
         },

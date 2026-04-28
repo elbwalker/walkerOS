@@ -83,7 +83,7 @@ const npmPackageNamePattern =
   /^(@[a-z0-9\-~][a-z0-9\-._~]*\/)?[a-z0-9\-~][a-z0-9\-._~]*$/;
 
 /**
- * Single package spec — version / imports / local path triple.
+ * Single package spec - version / imports / local path triple.
  * Extracted from PackagesSchema so it renders with its canonical name in
  * the generated JSON Schema.
  */
@@ -112,7 +112,7 @@ export const PackagesSchema = z
   .describe('NPM packages to bundle');
 
 /**
- * Overrides schema — pin transitive dependency versions.
+ * Overrides schema - pin transitive dependency versions.
  *
  * @remarks
  * Flat `Record<string, string>` matching npm's `overrides` semantics.
@@ -131,7 +131,7 @@ export const OverridesSchema = z
   .describe('Transitive dependency version overrides');
 
 /**
- * Bundle schema — build-time configuration for the bundler.
+ * Bundle schema - build-time configuration for the bundler.
  */
 export const BundleSchema = z
   .object({
@@ -189,7 +189,7 @@ export const ServerSchema = z
     id: 'FlowServer',
     title: 'Flow.Server',
     description:
-      'Server platform configuration (Node.js) — reserved for future options.',
+      'Server platform configuration (Node.js) - reserved for future options.',
   })
   .describe('Server platform configuration (reserved for future options)');
 
@@ -237,7 +237,7 @@ export const InlineCodeSchema = z
     id: 'FlowInlineCode',
     title: 'Flow.InlineCode',
     description:
-      'Inline code block for custom sources / transformers / destinations — declared directly in JSON configs.',
+      'Inline code block for custom sources / transformers / destinations - declared directly in JSON configs.',
   })
   .describe('Inline code for custom sources/transformers/destinations');
 
@@ -246,10 +246,10 @@ export const InlineCodeSchema = z
 // ========================================
 
 /**
- * Step example schema — a named { in, out } pair.
+ * Step example schema - a named { in, out } pair.
  */
 /**
- * Trigger descriptor — source trigger metadata for step examples.
+ * Trigger descriptor - source trigger metadata for step examples.
  * Extracted from inline StepExampleSchema.trigger so it renders as
  * `Trigger.Descriptor` in PropertyTable.
  */
@@ -302,7 +302,7 @@ export const StepExampleSchema = z
   .describe('Named example with input/output pair');
 
 /**
- * Step examples record — keyed by scenario name.
+ * Step examples record - keyed by scenario name.
  */
 export const StepExamplesSchema = z
   .record(z.string(), StepExampleSchema)
@@ -538,7 +538,7 @@ export const DestinationReferenceSchema = z
  * Store package reference.
  *
  * @remarks
- * Stores are passive key-value infrastructure — no chain properties (next/before).
+ * Stores are passive key-value infrastructure - no chain properties (next/before).
  * Consumed by other components via `$store.storeId` env wiring.
  */
 export const StoreReferenceSchema = z
@@ -593,7 +593,7 @@ export const StoreReferenceSchema = z
 // ========================================
 
 /**
- * Contract schema entry — a JSON Schema object.
+ * Contract schema entry - a JSON Schema object.
  * Passthrough to allow any valid JSON Schema keywords.
  */
 export const ContractSchemaEntry = z
@@ -609,7 +609,7 @@ export const ContractSchemaEntry = z
   );
 
 /**
- * Contract actions — keyed by action name (or "*" wildcard).
+ * Contract actions - keyed by action name (or "*" wildcard).
  */
 export const ContractActionsSchema = z
   .record(z.string(), ContractSchemaEntry)
@@ -621,7 +621,7 @@ export const ContractActionsSchema = z
   .describe('Action-level contract entries');
 
 /**
- * Contract events map — entity → action keyed.
+ * Contract events map - entity → action keyed.
  */
 export const ContractEventsSchema = z
   .record(z.string(), ContractActionsSchema)
@@ -641,12 +641,6 @@ export const ContractEntrySchema = z
       .string()
       .optional()
       .describe('Inherit from another named contract'),
-    tagging: z
-      .number()
-      .int()
-      .min(0)
-      .optional()
-      .describe('Contract version number'),
     description: z.string().optional().describe('Human-readable description'),
     globals: ContractSchemaEntry.optional().describe(
       'JSON Schema for event.globals',
@@ -751,7 +745,7 @@ export const SettingsSchema = z
         message:
           '`packages` must live under `bundle.packages`. ' +
           'Move your packages block to `flow.<name>.bundle.packages`. ' +
-          'This is a breaking change — see CHANGELOG migration guide.',
+          'This is a breaking change - see CHANGELOG migration guide.',
       })
       .describe('Legacy top-level packages (moved to bundle.packages)'),
     variables: VariablesSchema.optional().describe(

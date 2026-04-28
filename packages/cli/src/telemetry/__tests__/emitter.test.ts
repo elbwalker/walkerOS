@@ -31,8 +31,7 @@ describe('emitter', () => {
   it('returns a no-op sender when opted out (no config written, no startFlow)', async () => {
     process.env.DO_NOT_TRACK = '1';
     const emitter = await createEmitter({
-      sourceId: 'cli',
-      sourceType: 'terminal',
+      source: { type: 'cli', platform: 'terminal' },
       packageVersion: '3.4.2',
     });
     await emitter.send('cmd invoke', {
@@ -49,16 +48,16 @@ describe('emitter', () => {
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true);
     const emitter = await createEmitter({
-      sourceId: 'cli',
-      sourceType: 'terminal',
+      source: { type: 'cli', platform: 'terminal' },
       packageVersion: '3.4.2',
     });
     await emitter.send('cmd invoke', { command: 'x', outcome: 'success' }, 42);
     const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
     expect(out).toContain('"name":"cmd invoke"');
     expect(out).toContain('"timing":42');
-    expect(out).toContain('"source":{"type":"terminal","id":"cli"');
-    expect(out).toContain('"version":{"source":"3.4.2","tagging":1}');
+    expect(out).toContain('"source":{"type":"cli","platform":"terminal"');
+    expect(out).toContain('"version":"3.4.2"');
+    expect(out).not.toContain('"version":{');
     expect(out).toContain('"consent":{"telemetry":true}');
     errSpy.mockRestore();
   });
@@ -67,8 +66,7 @@ describe('emitter', () => {
     writeConfig({ installationId: 'install-x', telemetryEnabled: true });
     process.env.TELEMETRY_ENDPOINT = 'http://127.0.0.1:1'; // unreachable
     const emitter = await createEmitter({
-      sourceId: 'cli',
-      sourceType: 'terminal',
+      source: { type: 'cli', platform: 'terminal' },
       packageVersion: '3.4.2',
     });
     await expect(
@@ -83,8 +81,7 @@ describe('emitter', () => {
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true);
     const emitter = await createEmitter({
-      sourceId: 'mcp',
-      sourceType: 'claude-ai',
+      source: { type: 'mcp', platform: 'server' },
       packageVersion: '3.4.2',
       session: 'sess-xyz',
     });
@@ -98,8 +95,7 @@ describe('emitter', () => {
     writeConfig({ installationId: 'install-x', telemetryEnabled: true });
     // No TELEMETRY_ENDPOINT env var; flow.json still has the $TELEMETRY_ENDPOINT placeholder.
     const emitter = await createEmitter({
-      sourceId: 'cli',
-      sourceType: 'terminal',
+      source: { type: 'cli', platform: 'terminal' },
       packageVersion: '3.4.2',
     });
     // send resolves, does not throw, never attempts network.
@@ -120,8 +116,7 @@ describe('emitter', () => {
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true);
     const emitter = await createEmitter({
-      sourceId: 'cli',
-      sourceType: 'terminal',
+      source: { type: 'cli', platform: 'terminal' },
       packageVersion: '3.4.2',
     });
     await emitter.send('cmd invoke', { command: 'x', outcome: 'success' }, 10);

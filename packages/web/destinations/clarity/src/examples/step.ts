@@ -14,7 +14,7 @@ export type ClarityStepExample = Flow.StepExample & {
 };
 
 /**
- * Default event forwarding — every walkerOS event becomes Clarity.event(name).
+ * Default event forwarding - every walkerOS event becomes Clarity.event(name).
  * No mapping rule; the destination's default push behavior fires.
  */
 export const defaultEventForwarding: ClarityStepExample = {
@@ -26,9 +26,9 @@ export const defaultEventForwarding: ClarityStepExample = {
 };
 
 /**
- * Wildcard ignore pattern — the standard walkerOS way to suppress noisy events.
+ * Wildcard ignore pattern - the standard walkerOS way to suppress noisy events.
  * The destination forwards by default; users opt OUT via `"*": { "*": { ignore: true } }`
- * plus explicit allows. This example IS an ignored event — the destination
+ * plus explicit allows. This example IS an ignored event - the destination
  * must produce zero calls.
  */
 export const wildcardIgnored: ClarityStepExample = {
@@ -72,7 +72,7 @@ export const userLoginIdentify: ClarityStepExample = {
 };
 
 /**
- * Destination-level settings.identify — Clarity officially recommends calling
+ * Destination-level settings.identify - Clarity officially recommends calling
  * identify() on every page load. walkerOS expresses this via destination-level
  * `settings.identify`, which fires on every push.
  */
@@ -122,9 +122,9 @@ export const productViewWithTags: ClarityStepExample = {
 };
 
 /**
- * Array tag values — Clarity.setTag(key, value) natively accepts string[].
+ * Array tag values - Clarity.setTag(key, value) natively accepts string[].
  * walkerOS array values are passed through unchanged (each element is
- * coerced to string, but the array shape is preserved — no flattening,
+ * coerced to string, but the array shape is preserved - no flattening,
  * no splitting into multiple calls).
  */
 export const arrayTagValue: ClarityStepExample = {
@@ -158,7 +158,7 @@ export const arrayTagValue: ClarityStepExample = {
 };
 
 /**
- * Session priority upgrade — mark this session as important so Clarity retains
+ * Session priority upgrade - mark this session as important so Clarity retains
  * it beyond the sampling cap. upgrade fires before the default event.
  */
 export const orderCompleteUpgrade: ClarityStepExample = {
@@ -202,7 +202,7 @@ export const orderCompleteInclude: ClarityStepExample = {
 };
 
 /**
- * Combined-feature rule — Clarity's canonical usage pattern: identify the
+ * Combined-feature rule - Clarity's canonical usage pattern: identify the
  * user, set session tags, upgrade session priority, then fire the event.
  * This is the authoritative test for the push execution order
  * (identify → tags → upgrade → event).
@@ -229,17 +229,17 @@ export const combinedFeatures: ClarityStepExample = {
 };
 
 /**
- * mapping.skip — the rule runs (set/identify/upgrade all execute) but the
+ * mapping.silent - the rule runs (set/identify/upgrade all execute) but the
  * default Clarity.event(...) call is suppressed. Useful for page view, where
  * Clarity has its own page tracking and you only want to set tags.
  */
-export const pageViewSkip: ClarityStepExample = {
+export const pageViewSilent: ClarityStepExample = {
   title: 'Tags without event',
   description:
-    'A page view sets Clarity tags while skip suppresses the event, letting Clarity handle page tracking itself.',
+    'A page view sets Clarity tags while silent suppresses the event, letting Clarity handle page tracking itself.',
   in: getEvent('page view', { timestamp: 1700000109 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       set: {
         map: {
@@ -281,9 +281,9 @@ export const consentGrantBoth: ClarityStepExample = {
 };
 
 /**
- * Consent revocation — denied categories call Clarity.consentV2(...) with
+ * Consent revocation - denied categories call Clarity.consentV2(...) with
  * denied flags. The destination does NOT call the legacy `Clarity.consent(false)`
- * API at all — consentV2 is the single source of truth for consent state.
+ * API at all - consentV2 is the single source of truth for consent state.
  */
 export const consentRevoke: ClarityStepExample = {
   title: 'Consent revoked',

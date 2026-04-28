@@ -59,8 +59,8 @@ export const push: PushFn = async function (
     user_data: userData,
   };
 
-  if (action_source === 'website')
-    serverEvent.event_source_url = event.source.id;
+  if (action_source === 'website' && event.source?.url)
+    serverEvent.event_source_url = event.source.url;
 
   const hashedServerEvent = await hashEvent(serverEvent, doNotHash);
 

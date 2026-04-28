@@ -95,15 +95,15 @@ const { collector, elb } = await startFlow({
 
 walkerOS uses a two-layer data model:
 
-- **Event** — strict schema, structured analytics data (name, data, context,
+- **Event** - strict schema, structured analytics data (name, data, context,
   etc.)
-- **Ingest** — free-form mutable context that flows alongside events
+- **Ingest** - free-form mutable context that flows alongside events
 
 Any step can read and write arbitrary keys on ingest. The runtime manages
 `_meta`:
 
-- `_meta.hops` — increments per step (safety valve at 256)
-- `_meta.path` — ordered list of step IDs visited (path[0] = source ID)
+- `_meta.hops` - increments per step (safety valve at 256)
+- `_meta.path` - ordered list of step IDs visited (path[0] = source ID)
 
 ```typescript
 // In a transformer
@@ -121,15 +121,17 @@ processing. After a destination push, the response is available at
 
 ## Stores
 
-Stores are the 4th component type — passive key-value infrastructure that other
-components consume via `env`.
+Three pipeline components (Source / Transformer / Destination) plus Stores as
+**passive infrastructure**. Stores are not a fourth pipeline stage - they're
+key-value storage that other components consume via `env`. They have no `push`,
+no `next`, no `before`; they sit alongside the pipeline rather than inside it.
 
 - Referenced via `$store.storeId` in `env` values (bundled mode) or passed
   directly as store instances (integrated mode)
-- **Init first, destroy last** — stores are available before any source,
+- **Init first, destroy last** - stores are available before any source,
   transformer, or destination starts, and outlive them on shutdown
-- **No chains** — stores have no `next` or `before`. They don't participate in
-  the event pipeline. Components access them through their `env`.
+- **No chains** - stores don't participate in the event pipeline. Components
+  access them through their `env`.
 - Implementations: `@walkeros/store-memory` (sync, LRU),
   `@walkeros/server-store-fs` (async, filesystem), `@walkeros/server-store-s3`
   (async, S3-compatible)
@@ -383,8 +385,8 @@ validating configurations, and rendering UI visualizations.
 | Source      | Transformer | `source.before`             | Yes (consent-exempt)  |
 | Source      | Transformer | `source.next`               | Yes (pre-collector)   |
 | Source      | Collector   | (implicit, no next)         | Yes                   |
-| Source      | Source      | —                           | No                    |
-| Source      | Destination | —                           | No                    |
+| Source      | Source      | -                           | No                    |
+| Source      | Destination | -                           | No                    |
 | Transformer | Transformer | `transformer.before`        | Yes (pre-transform)   |
 | Transformer | Transformer | `transformer.next`          | Yes (chain continues) |
 | Transformer | Collector   | (implicit, pre-chain ends)  | Yes                   |
@@ -392,7 +394,7 @@ validating configurations, and rendering UI visualizations.
 | Collector   | Destination | (implicit, no before)       | Yes                   |
 | Collector   | Transformer | `destination.before`        | Yes (post-chain)      |
 | Destination | Transformer | `destination.next`          | Yes (post-push)       |
-| Collector   | Source      | —                           | No                    |
+| Collector   | Source      | -                           | No                    |
 
 ### Pre-transformer chains (`source.next`)
 
@@ -426,7 +428,7 @@ for the implementation.
 
 ### Conditional routing (Route[])
 
-The `next` and `before` properties support conditional routing via `Route[]` —
+The `next` and `before` properties support conditional routing via `Route[]` -
 an array of `{ match, next }` objects evaluated against ingest data:
 
 ```json
@@ -436,7 +438,7 @@ an array of `{ match, next }` objects evaluated against ingest data:
 ]
 ```
 
-- Routes are evaluated in order — first match wins
+- Routes are evaluated in order - first match wins
 - No match and no wildcard = event passes through unchanged
 - Works on all chain positions: `source.before`, `source.next`,
   `transformer.before`, `transformer.next`, `destination.before`, and
@@ -453,18 +455,18 @@ depends on which chain references it.
 
 ### Deferred activation (`require`)
 
-- `source.config.require: ["consent"]` — source deferred until "consent" event
+- `source.config.require: ["consent"]` - source deferred until "consent" event
   fires
-- `destination.config.require: ["user"]` — destination deferred until "user"
+- `destination.config.require: ["user"]` - destination deferred until "user"
   event fires
 - Multiple requirements: all must be fulfilled (each fires independently)
 
 ### Mapping and consent gating
 
-- **Source-level:** `source.config.mapping` and `source.config.consent` —
+- **Source-level:** `source.config.mapping` and `source.config.consent` -
   applied before pre-chain; blocks event entirely
 - **Destination-level:** `destination.config.mapping` and
-  `destination.config.consent` — applied after post-chain; skips only that
+  `destination.config.consent` - applied after post-chain; skips only that
   destination, queues denied events
 
 ### Canvas rendering rules (for UI graph visualization)

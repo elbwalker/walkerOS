@@ -38,10 +38,11 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order is sent to the LinkedIn Conversions API with conversion value, currency, and hashed email.',
   in: getEvent('order complete', {
+    id: 'ev-1700000900000',
     timestamp: 1700000900000,
     data: { total: 249.99, currency: 'EUR' },
     user: { email: 'jane@example.com' },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     settings: {
@@ -72,7 +73,7 @@ export const purchase: Flow.StepExample = {
                 },
               ],
             },
-            eventId: '1700000900000-gr0up-1',
+            eventId: 'ev-1700000900000',
             conversionValue: {
               currencyCode: 'EUR',
               amount: '249.99',
@@ -90,9 +91,10 @@ export const lead: Flow.StepExample = {
   description:
     'A form submission is posted to LinkedIn as a conversion with the SHA-256 hashed email as the user identifier.',
   in: getEvent('form submit', {
+    id: 'ev-1700000901000',
     timestamp: 1700000901000,
     user: { email: 'user@example.com' },
-    source: { type: 'server', id: 'https://example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: undefined,
   out: [
@@ -114,7 +116,7 @@ export const lead: Flow.StepExample = {
                 },
               ],
             },
-            eventId: '1700000901000-gr0up-1',
+            eventId: 'ev-1700000901000',
           },
         ],
       }),
@@ -128,11 +130,12 @@ export const purchaseWithLiFatId: Flow.StepExample = {
   description:
     'A purchase is sent to LinkedIn with both the hashed email and the first-party li_fat_id tracking identifier.',
   in: getEvent('order complete', {
+    id: 'ev-1700000902000',
     timestamp: 1700000902000,
     data: { total: 89.99, currency: 'USD' },
     user: { email: 'buyer@co.com' },
     context: { li_fat_id: ['abc123-fat-id', 0] },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     settings: {
@@ -176,7 +179,7 @@ export const purchaseWithLiFatId: Flow.StepExample = {
                 },
               ],
             },
-            eventId: '1700000902000-gr0up-1',
+            eventId: 'ev-1700000902000',
             conversionValue: {
               currencyCode: 'USD',
               amount: '89.99',

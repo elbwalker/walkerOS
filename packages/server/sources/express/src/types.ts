@@ -9,6 +9,12 @@ import type {
 } from './schemas';
 import type { z } from '@walkeros/core/dev';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    express: { type: 'express'; platform: 'server' };
+  }
+}
+
 // Types inferred from Zod schemas
 export type Settings = z.infer<typeof SettingsSchema>;
 export type CorsOptions = z.infer<typeof CorsOptionsSchema>;

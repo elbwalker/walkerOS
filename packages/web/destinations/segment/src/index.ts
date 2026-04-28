@@ -15,7 +15,7 @@ import type {
 export * as DestinationSegment from './types';
 
 /**
- * Real-SDK adapter — wraps AnalyticsBrowser's static load() in our
+ * Real-SDK adapter - wraps AnalyticsBrowser's static load() in our
  * SegmentSDK shape so `env?.analytics ?? realSegment` works.
  *
  * Task 1 confirmed AnalyticsBrowser.load(settings, options) returns an
@@ -73,7 +73,7 @@ function resolveAnalytics(
 
 /**
  * Stable hash of a traits object for state-diffing. Uses a deterministic
- * JSON stringify — key order matters but is consistent within a session
+ * JSON stringify - key order matters but is consistent within a session
  * because object literal keys come in insertion order.
  */
 function hashTraits(traits: Record<string, unknown> | undefined): string {
@@ -88,7 +88,7 @@ function hashTraits(traits: Record<string, unknown> | undefined): string {
 /**
  * Build the Segment event options object with consent context from the
  * current walker consent state. Returns undefined unless the user has
- * explicitly opted in by configuring `settings.consent` — this keeps the
+ * explicitly opted in by configuring `settings.consent` - this keeps the
  * consent forwarding feature off-by-default so events stay clean.
  *
  * `settings.consent` maps walkerOS consent keys → Segment category names.
@@ -294,7 +294,7 @@ export const destinationSegment: Destination = {
       }
     }
 
-    // 2. Identity — rule-level override wins over destination-level.
+    // 2. Identity - rule-level override wins over destination-level.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     if (identifyMapping !== undefined) {
       const resolved = await getMappingValue(event, identifyMapping, {
@@ -310,7 +310,7 @@ export const destinationSegment: Destination = {
       }
     }
 
-    // 3. Group — rule-level override wins over destination-level.
+    // 3. Group - rule-level override wins over destination-level.
     const groupMapping = mappingSettings.group ?? settings.group;
     if (groupMapping !== undefined) {
       const resolved = await getMappingValue(event, groupMapping, {
@@ -337,8 +337,8 @@ export const destinationSegment: Destination = {
       );
     }
 
-    // 5. Default track call unless rule opts out via skip.
-    if (rule?.skip !== true) {
+    // 5. Default track call unless rule opts out via silent.
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       const properties = isObject(data)
         ? (data as Record<string, unknown>)
@@ -375,7 +375,7 @@ export const destinationSegment: Destination = {
       settings._state = state;
     }
     // If not all granted, walkerOS's config.consent gate blocks subsequent
-    // push() calls — no SDK action needed (Segment has no opt-out method).
+    // push() calls - no SDK action needed (Segment has no opt-out method).
   },
 };
 

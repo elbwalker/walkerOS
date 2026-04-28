@@ -224,7 +224,7 @@ export async function processEventMapping<
   mapping?: Mapping.Rule;
   mappingKey?: string;
   ignore: boolean;
-  skip: boolean;
+  silent: boolean;
 }> {
   // Step 1: Apply config-level policy (modifies event)
   if (config.policy) {
@@ -256,7 +256,7 @@ export async function processEventMapping<
   let data =
     config.data && (await getMappingValue(event, config.data, { collector }));
 
-  const skip = Boolean(eventMapping?.skip);
+  const silent = Boolean(eventMapping?.silent);
 
   if (eventMapping) {
     // Check if event should be ignored
@@ -267,7 +267,7 @@ export async function processEventMapping<
         mapping: eventMapping,
         mappingKey,
         ignore: true,
-        skip,
+        silent,
       };
     }
 
@@ -291,7 +291,7 @@ export async function processEventMapping<
   if (effectiveInclude && effectiveInclude.length > 0) {
     const includeData = flattenIncludeSections(event, effectiveInclude);
     if (Object.keys(includeData).length > 0) {
-      // Include is the bottom layer — data wins on key conflict.
+      // Include is the bottom layer - data wins on key conflict.
       data = isObject(data)
         ? (assign(
             includeData,
@@ -307,6 +307,6 @@ export async function processEventMapping<
     mapping: eventMapping,
     mappingKey,
     ignore: false,
-    skip,
+    silent,
   };
 }

@@ -21,7 +21,7 @@
  * Transformers use `next` to chain to other transformers. The same transformer
  * pool is shared by both pre-collector and post-collector chains.
  *
- * The collector is implicit — it is never referenced directly in connections.
+ * The collector is implicit - it is never referenced directly in connections.
  * It sits between the source chain and the destination chain automatically.
  *
  * Circular `next` references are safely handled at runtime by `walkChain()`
@@ -69,9 +69,6 @@ export type ContractEvents = Record<string, ContractActions>;
 export interface ContractEntry {
   /** Inherit from another named contract (additive merge). */
   extends?: string;
-
-  /** Contract version number (syncs to event.version.tagging). */
-  tagging?: number;
 
   /** Human-readable description of the contract. */
   description?: string;
@@ -440,7 +437,6 @@ export interface Settings {
    * {
    *   "collector": {
    *     "run": true,
-   *     "tagging": 1,
    *     "consent": {
    *       "functional": true,
    *       "marketing": false
@@ -481,13 +477,13 @@ export interface Settings {
  * its `in` as a regular event. Mirrors the `elb('walker <command>', ...)`
  * surface in `WalkerCommands` (see types/elb.ts).
  *
- * - `config` — update collector config (maps to `elb('walker config', in)`)
- * - `consent` — update consent state (maps to `elb('walker consent', in)`)
- * - `user` — update user identification (maps to `elb('walker user', in)`)
- * - `run` — fire run state (maps to `elb('walker run', in)`)
+ * - `config` - update collector config (maps to `elb('walker config', in)`)
+ * - `consent` - update consent state (maps to `elb('walker consent', in)`)
+ * - `user` - update user identification (maps to `elb('walker user', in)`)
+ * - `run` - fire run state (maps to `elb('walker run', in)`)
  *
  * Note: `walker destination`, `walker hook`, and `walker on` are
- * intentionally excluded — they configure wiring, not test data.
+ * intentionally excluded - they configure wiring, not test data.
  */
 export type StepCommand = 'config' | 'consent' | 'user' | 'run';
 
@@ -518,7 +514,7 @@ export interface StepExample {
    */
   public?: boolean;
   in?: unknown;
-  /** Trigger metadata for sources — type and options for the trigger call. */
+  /** Trigger metadata for sources - type and options for the trigger call. */
   trigger?: {
     /** Which mechanism to activate (e.g., 'click', 'POST', 'load'). */
     type?: string;
@@ -661,7 +657,7 @@ export interface SourceReference {
    *
    * @remarks
    * Runs before source.next chain. Consent-exempt because no analytics
-   * event exists yet — these transformers handle transport-level preprocessing
+   * event exists yet - these transformers handle transport-level preprocessing
    * (decode, validate, authenticate, normalize raw input).
    * Raw request data is available in context.ingest.
    */
@@ -787,7 +783,7 @@ export interface TransformerReference {
  * References a store package and provides configuration.
  * Stores provide key-value storage consumed by other components via env.
  * Unlike sources/transformers/destinations, stores have no chain properties
- * (no `next` or `before`) — they are passive infrastructure.
+ * (no `next` or `before`) - they are passive infrastructure.
  */
 export interface StoreReference {
   /**
@@ -939,7 +935,7 @@ export interface DestinationReference {
    * @remarks
    * Runs after destination.push completes. The push response is available
    * at context.ingest._response. Consent is inherited from the destination
-   * gate — no separate consent check needed.
+   * gate - no separate consent check needed.
    */
   next?: string | string[];
 

@@ -223,7 +223,6 @@ describe('validateFlowConfig', () => {
         version: 3,
         contract: {
           default: {
-            tagging: 1,
             events: { page: { view: {}, read: {} } },
           },
         },

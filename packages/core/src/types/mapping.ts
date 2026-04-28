@@ -33,7 +33,7 @@ export interface Rule<Settings = unknown> {
   data?: Data; // Mapping of event data
   include?: string[]; // Event sections to flatten into context.data
   ignore?: boolean; // Choose to no process an event when set to true
-  skip?: boolean; // Process settings side effects, but skip destination's default push call
+  silent?: boolean; // Process settings side effects, but suppress the destination's default push call
   name?: string; // Use a custom event name
   policy?: Policy; // Event-level policy applied after config-level policy
 }

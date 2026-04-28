@@ -139,7 +139,7 @@ export const setUserProperties: FullStoryStepExample = {
 
 /**
  * Page properties via mapping.settings.set with setType: 'page'.
- * skip: true suppresses trackEvent -- useful for page views where
+ * silent: true suppresses trackEvent -- useful for page views where
  * FullStory already auto-captures navigation.
  */
 export const setPageProperties: FullStoryStepExample = {
@@ -151,7 +151,7 @@ export const setPageProperties: FullStoryStepExample = {
     data: { id: '/docs/', title: 'Getting Started' },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       set: {
         map: {
@@ -196,17 +196,17 @@ export const combinedFeatures: FullStoryStepExample = {
 };
 
 /**
- * skip: true with identify -- mapping.skip suppresses trackEvent but
+ * silent: true with identify -- mapping.silent suppresses trackEvent but
  * still executes identify and set from the mapping rule.
  */
-export const skipWithIdentify: FullStoryStepExample = {
+export const silentWithIdentify: FullStoryStepExample = {
   public: false,
   in: getEvent('user login', {
     timestamp: 1700000108,
     data: { id: 'u-123', name: 'Jane Doe' },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {

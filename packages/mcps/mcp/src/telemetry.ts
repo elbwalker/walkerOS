@@ -5,8 +5,10 @@ import { telemetry } from '@walkeros/cli';
  * Options for the MCP telemetry emitter wrapper.
  *
  * `clientInfo` mirrors the MCP SDK shape negotiated during initialize.
- * When the client doesn't send one, we record `source.type` as "unknown"
- * so downstream analytics can still bucket the event.
+ * When the client doesn't send one, we record the client name as "unknown"
+ * inside the per-event data so downstream analytics can still bucket the
+ * event. The walkerOS source identifier is the package itself (`mcp`), not
+ * the client.
  */
 export interface McpEmitterOptions {
   clientInfo?: { name: string; version: string };
@@ -17,8 +19,9 @@ export interface McpEmitterOptions {
  * MCP-specific event emitter.
  *
  * Wraps `@walkeros/cli`'s `telemetry.createEmitter` with:
- * - `source.id` fixed to `"mcp"`
- * - `source.type` mapped from `clientInfo.name` (MCP client identity)
+ * - `source.type` fixed to `"mcp"`
+ * - `source.platform` fixed to `"server"`
+ * - per-emission `source.tool` for `cmd invoke` events
  * - a fresh session UUID per MCP server instance
  *
  * Surfaces the narrow set of events the MCP server needs to emit.
@@ -47,8 +50,10 @@ export async function createMcpEmitter(
   const session = randomUUID();
 
   const emitter = await telemetry.createEmitter({
-    sourceId: 'mcp',
-    sourceType: clientName,
+    source: {
+      type: 'mcp',
+      platform: 'server',
+    },
     packageVersion: opts.packageVersion,
     session,
   });
@@ -62,7 +67,12 @@ export async function createMcpEmitter(
       });
     },
     async emitInvoke(tool, outcome, timingMs) {
-      await emitter.send('cmd invoke', { tool, outcome }, timingMs);
+      await emitter.send(
+        'cmd invoke',
+        { outcome, client: clientName },
+        timingMs,
+        { tool },
+      );
     },
     async emitError(kind) {
       await emitter.send('error throw', { kind });

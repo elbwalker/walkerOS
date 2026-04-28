@@ -37,7 +37,7 @@ describe('MCP emitter wrapper', () => {
     rmSync(testDir, { recursive: true, force: true });
   });
 
-  it('maps clientInfo.name to source.type and emits mcp start in debug', async () => {
+  it('emits mcp start with source.type=mcp, platform=server, no version block', async () => {
     process.env.WALKEROS_TELEMETRY_DEBUG = '1';
     const errSpy = jest
       .spyOn(process.stderr, 'write')
@@ -51,13 +51,15 @@ describe('MCP emitter wrapper', () => {
 
     const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
     expect(out).toContain('"name":"mcp start"');
-    expect(out).toContain('"type":"claude-ai","id":"mcp"');
+    expect(out).toContain('"source":{"type":"mcp","platform":"server"');
+    expect(out).toContain('"version":"3.4.2"');
+    expect(out).not.toContain('"version":{');
     expect(out).toContain('"client":"claude-ai"');
 
     errSpy.mockRestore();
   });
 
-  it('falls back to "unknown" source.type when clientInfo is missing', async () => {
+  it('records client="unknown" in event data when clientInfo is missing', async () => {
     process.env.WALKEROS_TELEMETRY_DEBUG = '1';
     const errSpy = jest
       .spyOn(process.stderr, 'write')
@@ -70,13 +72,13 @@ describe('MCP emitter wrapper', () => {
     await emitter.emitStart();
 
     const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
-    expect(out).toContain('"type":"unknown"');
+    expect(out).toContain('"source":{"type":"mcp","platform":"server"');
     expect(out).toContain('"client":"unknown"');
 
     errSpy.mockRestore();
   });
 
-  it('emitInvoke sends cmd invoke with tool name and timing', async () => {
+  it('emitInvoke sets per-emission source.tool and includes outcome+client in data', async () => {
     process.env.WALKEROS_TELEMETRY_DEBUG = '1';
     const errSpy = jest
       .spyOn(process.stderr, 'write')
@@ -92,6 +94,7 @@ describe('MCP emitter wrapper', () => {
     expect(out).toContain('"name":"cmd invoke"');
     expect(out).toContain('"tool":"flow_simulate"');
     expect(out).toContain('"outcome":"success"');
+    expect(out).toContain('"client":"claude-code"');
     expect(out).toContain('"timing":42');
 
     errSpy.mockRestore();

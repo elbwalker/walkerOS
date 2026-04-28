@@ -35,7 +35,6 @@ export const sourceSession: Source.Init<Types> = async (context) => {
   // Create minimal collector interface for sessionStart
   const collectorInterface: Partial<Collector.Instance> = {
     push: elb,
-    group: undefined,
     command,
   };
 

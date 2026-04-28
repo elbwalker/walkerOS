@@ -230,8 +230,10 @@ describe('Handle Commands', () => {
     });
 
     test('walker config passes config data to source.on', async () => {
-      await collector.command('config', { tagging: 2 });
-      expect(mockOn).toHaveBeenCalledWith('config', { tagging: 2 });
+      await collector.command('config', { globalsStatic: { x: 1 } });
+      expect(mockOn).toHaveBeenCalledWith('config', {
+        globalsStatic: { x: 1 },
+      });
     });
   });
 
@@ -269,7 +271,7 @@ describe('Handle Commands', () => {
       expect(vetoOn).toHaveBeenCalledWith('consent', { marketing: true });
       expect(normalOn).toHaveBeenCalledWith('consent', { marketing: true });
 
-      // Veto doesn't prevent notification — it signals to the before mechanism (future)
+      // Veto doesn't prevent notification - it signals to the before mechanism (future)
     });
   });
 });

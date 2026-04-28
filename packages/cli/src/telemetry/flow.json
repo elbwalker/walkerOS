@@ -3,7 +3,6 @@
   "contract": {
     "telemetry": {
       "description": "walkerOS internal usage telemetry from @walkeros/cli and @walkeros/mcp. Anonymous, opt-out, no PII.",
-      "tagging": 1,
       "user": {
         "type": "object",
         "properties": {
@@ -50,11 +49,11 @@
             "properties": {
               "command": {
                 "type": "string",
-                "description": "CLI command, space-joined for subcommands (e.g. 'bundle', 'projects list', 'auth login'). Present when source.id = 'cli'."
+                "description": "CLI command, space-joined for subcommands (e.g. 'bundle', 'projects list', 'auth login'). Set on source.command when source.type = 'cli'."
               },
               "tool": {
                 "type": "string",
-                "description": "MCP tool name (e.g. 'flow_simulate', 'flow_bundle'). Present when source.id = 'mcp'."
+                "description": "MCP tool name (e.g. 'flow_simulate', 'flow_bundle'). Set on source.tool when source.type = 'mcp'."
               },
               "outcome": {
                 "type": "string",

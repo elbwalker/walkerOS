@@ -53,8 +53,7 @@ setClientContext({ type: 'cli', version: VERSION });
 // in debug mode, which writes to stderr before any await point. Microtasks
 // don't run after `exit` fires.
 const emitter = await createEmitter({
-  sourceId: 'cli',
-  sourceType: 'terminal',
+  source: { type: 'cli', platform: 'terminal' },
   packageVersion: VERSION,
 });
 
@@ -405,7 +404,7 @@ const deployCmd = program
   .command('deploy')
   .description('Create, manage, and deploy flows');
 
-// deploy create [config] — placeholder until Task 2
+// deploy create [config] - placeholder until Task 2
 deployCmd
   .command('create [config]')
   .description(
@@ -422,7 +421,7 @@ deployCmd
     await createDeployCommand(config, options);
   });
 
-// deploy start <flowId> — existing cloud deploy (unchanged logic)
+// deploy start <flowId> - existing cloud deploy (unchanged logic)
 deployCmd
   .command('start <flowId>')
   .description('Deploy a flow to walkerOS cloud (auto-detects web or server)')
@@ -530,7 +529,7 @@ previewsCmd
   .option('--project <projectId>', 'Project ID (overrides default)')
   .action(async (flowId, options) => {
     try {
-      // Validate --url BEFORE creating the preview — otherwise an invalid URL
+      // Validate --url BEFORE creating the preview - otherwise an invalid URL
       // would produce a server-side preview that can't be used, wasting a
       // quota slot and forcing manual cleanup.
       if (options.url) {
@@ -635,7 +634,7 @@ telemetryCmd
 // Cache command
 registerCacheCommand(program);
 
-// Telemetry hooks — populate cmdPath/cmdStart for action-bound commands.
+// Telemetry hooks - populate cmdPath/cmdStart for action-bound commands.
 program.hook('preAction', (_thisCmd, actionCmd) => {
   cmdStart = Date.now();
   // Space-joined command path: `walkeros projects list` → "projects list".
@@ -654,6 +653,7 @@ program.hook('postAction', async () => {
       'cmd invoke',
       { command: cmdPath, outcome: 'success' },
       Date.now() - cmdStart,
+      { command: cmdPath },
     );
     telemetryEmitted = true;
   } catch {
@@ -661,7 +661,7 @@ program.hook('postAction', async () => {
   }
 });
 
-// Fallback emit for paths that bypass action hooks — `--version`, `--help`,
+// Fallback emit for paths that bypass action hooks - `--version`, `--help`,
 // or subcommand-less invocations that Commander handles via `this._exit`.
 // In debug mode the `send` call writes to stderr synchronously before its
 // first await, so the emission is observable on exit. In production mode the
@@ -686,6 +686,7 @@ process.on('exit', () => {
       'cmd invoke',
       { command: argvCmd, outcome: 'success' },
       cmdStart ? Date.now() - cmdStart : 0,
+      { command: argvCmd },
     )
     .catch(() => {
       /* never throw from telemetry */
@@ -707,6 +708,7 @@ try {
       'cmd invoke',
       { command: cmdPath || 'unknown', outcome: 'error' },
       cmdStart ? Date.now() - cmdStart : 0,
+      { command: cmdPath || 'unknown' },
     );
     telemetryEmitted = true;
   } catch {

@@ -30,10 +30,47 @@ Before starting, read these skills:
 
 ## Source Types
 
-| Type   | Platform | Input                   | Example                             |
-| ------ | -------- | ----------------------- | ----------------------------------- |
-| Web    | Browser  | DOM events, dataLayer   | `browser`, `dataLayer`              |
-| Server | Node.js  | HTTP requests, webhooks | `gcp`, `express`, `lambda`, `fetch` |
+A source's identity is split into two fields:
+
+| Field             | Meaning                                                         | Examples                                       |
+| ----------------- | --------------------------------------------------------------- | ---------------------------------------------- |
+| `source.type`     | The kind of source (its role / mechanism)                       | `browser`, `dataLayer`, `cookiefirst`, `fetch` |
+| `source.platform` | The runtime that hosts the source (`web`, `server`, `app`, ...) | `web`, `server`                                |
+
+| Platform | Input                   | Example types                       |
+| -------- | ----------------------- | ----------------------------------- |
+| `web`    | DOM events, dataLayer   | `browser`, `dataLayer`              |
+| `server` | HTTP requests, webhooks | `gcp`, `express`, `lambda`, `fetch` |
+
+## Augmenting `SourceMap`
+
+Every source registers its `type` literal and any source-specific `source.*`
+fields by augmenting `SourceMap` from `@walkeros/core`. This is how the
+collector and downstream consumers know about the new source kind without
+loosening the union to `string`.
+
+Add this to the source's `src/types.ts` (or `src/types/index.ts`):
+
+```typescript
+import type { Source, Elb } from '@walkeros/core';
+
+declare module '@walkeros/core' {
+  interface SourceMap {
+    // Replace `mySource` with the source's package-level identifier.
+    mySource: {
+      type: 'mySource'; // matches the literal you return from Source.Init
+      platform?: 'web'; // 'web' | 'server' | 'app' | ...
+      // Add any extra fields the source surfaces in `event.source.*` here.
+      // e.g. `version?: string;` is already on the base Source - only add
+      // truly source-specific keys.
+    };
+  }
+}
+```
+
+Reference implementations: `packages/web/sources/browser/src/types/index.ts`,
+`packages/web/sources/demo/src/types.ts`. Conflicting declarations cause compile
+errors on purpose, this surfaces naming collisions early.
 
 ## Source Categories
 
@@ -74,14 +111,14 @@ Research quality determines implementation quality.
 ### 1.1 Find and Install Official SDK
 
 Always prefer the vendor's official SDK package over raw HTTP API calls. The SDK
-handles transport, data formatting, and platform specifics — don't reinvent
+handles transport, data formatting, and platform specifics - don't reinvent
 these.
 
-- [ ] **Install the SDK** — `npm install @vendor/sdk` and read the actual source
-- [ ] **Read TypeScript types** — Import types from the SDK package directly.
+- [ ] **Install the SDK** - `npm install @vendor/sdk` and read the actual source
+- [ ] **Read TypeScript types** - Import types from the SDK package directly.
       Never duplicate type definitions. This ensures IntelliSense completeness
       and consistency with SDK updates.
-- [ ] **Understand the full API surface** — List every public method and type
+- [ ] **Understand the full API surface** - List every public method and type
       export. What data structures does the platform provide? What request/event
       formats exist?
 
@@ -97,16 +134,16 @@ ls node_modules/@vendor/sdk/lib/esm/
 
 ### 1.2 Understand SDK Architecture
 
-- [ ] **Init options** — What does the SDK expose? How is the platform
+- [ ] **Init options** - What does the SDK expose? How is the platform
       connection established?
-- [ ] **Call ordering** — When does data arrive? Is it pushed (webhooks,
+- [ ] **Call ordering** - When does data arrive? Is it pushed (webhooks,
       callbacks) or pulled (polling, intercepting)? What are the timing
       implications?
-- [ ] **Data format** — What does the raw event/request look like? Headers, body
+- [ ] **Data format** - What does the raw event/request look like? Headers, body
       structure, query params, authentication tokens?
-- [ ] **Identity signals** — Does the external system provide user IDs, session
+- [ ] **Identity signals** - Does the external system provide user IDs, session
       IDs, device IDs? How are they delivered (headers, cookies, body fields)?
-- [ ] **Consent** — Does the platform have consent signals? How are they
+- [ ] **Consent** - Does the platform have consent signals? How are they
       communicated?
 
 ### 1.3 Identify All Data Entry Points
@@ -167,9 +204,9 @@ determines implementation complexity.
 
 | Category           | Description                                | Mapping Needed                  | Example Sources          |
 | ------------------ | ------------------------------------------ | ------------------------------- | ------------------------ |
-| **Transformation** | Converts external event format to walkerOS | Essential — must map fields     | `dataLayer`, `fetch`     |
-| **Transport**      | Receives events from a specific platform   | Structural — platform unwrap    | `gcp`, `aws`, `express`  |
-| **Interception**   | Intercepts existing data flows             | Varies — depends on data format | `dataLayer`, CMP sources |
+| **Transformation** | Converts external event format to walkerOS | Essential - must map fields     | `dataLayer`, `fetch`     |
+| **Transport**      | Receives events from a specific platform   | Structural - platform unwrap    | `gcp`, `aws`, `express`  |
+| **Interception**   | Intercepts existing data flows             | Varies - depends on data format | `dataLayer`, CMP sources |
 
 ### 2.2 Determine Integration Approach
 
@@ -180,7 +217,7 @@ determines implementation complexity.
 | **HTTP handler**            | Generic webhook/API receiver        | Parse request, extract events, forward to collector       |
 | **Callback/event listener** | Platform provides event emitter     | Register listener, transform events, forward to collector |
 
-**Prefer the vendor SDK** — it provides typed request/response objects and
+**Prefer the vendor SDK** - it provides typed request/response objects and
 handles platform specifics. Raw HTTP parsing is a fallback when no SDK exists.
 
 When using the vendor SDK:
@@ -200,14 +237,14 @@ When using the vendor SDK:
 ## Phase 3: Create Input Examples (BEFORE Implementation)
 
 **Mandatory.** Examples are the test fixtures for Phase 8. Define expected
-`trigger` / `in` / `out` triples FIRST — start with the end result in mind.
+`trigger` / `in` / `out` triples FIRST - start with the end result in mind.
 Without examples, you cannot test. Even for simple sources, step examples are
 the single source of truth for tests, simulations, and documentation.
 
 > **Authoritative pattern:** See
 > [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
 > Type Zones, `createTrigger` contract, and CI integration. This skill reuses
-> that contract — do not diverge.
+> that contract - do not diverge.
 
 ### 3.1 Scaffold Directory Structure
 
@@ -216,10 +253,10 @@ mkdir -p packages/<platform>/sources/[name]/src/examples
 mkdir -p packages/<platform>/sources/[name]/src/{schemas,types}
 ```
 
-### 3.2 Required Files (3–4 files)
+### 3.2 Required Files (3-4 files)
 
 All reference sources in the monorepo use this exact layout in `src/examples/`.
-Match it — no `inputs.ts`, `outputs.ts`, `requests.ts`, or standalone
+Match it - no `inputs.ts`, `outputs.ts`, `requests.ts`, or standalone
 `mapping.ts`.
 
 | File                  | Required? | Purpose                                                             |
@@ -230,12 +267,13 @@ Match it — no `inputs.ts`, `outputs.ts`, `requests.ts`, or standalone
 | `examples/env.ts`     | if needed | Mock env for platform deps (browser window/document, express, etc.) |
 
 `env.ts` is included whenever the source touches platform globals or injected
-deps — all web sources and every server source that wraps a platform SDK ship
+deps - all web sources and every server source that wraps a platform SDK ship
 one. Sources whose tests drive the collector entirely through `trigger.ts` (e.g.
 `web/sources/session`) may omit it. When in doubt, **include it**.
 
 The old `inputs.ts` / `outputs.ts` / `requests.ts` / `mapping.ts` files are gone
-— their contents now live inline in each `Flow.StepExample` entry in `step.ts`.
+
+- their contents now live inline in each `Flow.StepExample` entry in `step.ts`.
 
 ### 3.3 Three Type Zones for Sources
 
@@ -244,7 +282,7 @@ Sources are the **inverse** of destinations in the Three Type Zones model:
 | Zone      | Source semantics                                                                      |
 | --------- | ------------------------------------------------------------------------------------- |
 | `trigger` | How to simulate the invocation (HTTP method, DOM event type, cloud event)             |
-| `in`      | External trigger content — HTTP request, DOM HTML, SDK payload (NOT a walkerOS event) |
+| `in`      | External trigger content - HTTP request, DOM HTML, SDK payload (NOT a walkerOS event) |
 | `out`     | The walkerOS event(s) the source should emit (`WalkerOS.Event`)                       |
 
 Where a destination does `WalkerOS.Event → vendor output`, a source does
@@ -265,17 +303,17 @@ entries.
 - **`out`** uses `WalkerOS.Event` (or `DeepPartialEvent` for fragments).
 - **Step entries** are typed `Flow.StepExample` from `@walkeros/core`.
 - **Mock env** is typed against the source's local `Env` type from `../types`.
-- `createTrigger` is typed as `Trigger.CreateFn<Content, Result>` — the
+- `createTrigger` is typed as `Trigger.CreateFn<Content, Result>` - the
   `Content` and `Result` generics come from the source's own types module.
 
-### 3.5 Code Template — `examples/step.ts`
+### 3.5 Code Template - `examples/step.ts`
 
 ```typescript
 import type { Flow } from '@walkeros/core';
 
 // One step example per captured trigger / input shape.
 // `trigger` tells createTrigger how to simulate the invocation.
-// `in` is the platform-specific content (HTTP request, DOM HTML, SDK payload) —
+// `in` is the platform-specific content (HTTP request, DOM HTML, SDK payload) -
 //      typed against the platform SDK's published types where available.
 // `out` is the walkerOS event the source is expected to emit.
 
@@ -291,14 +329,18 @@ export const pageView: Flow.StepExample = {
       title: 'Documentation',
     },
   },
-  in: '', // no external content — DOM-driven trigger
+  in: '', // no external content - DOM-driven trigger
   out: {
     name: 'page view',
     data: { domain: 'example.com', title: 'Documentation', id: '/docs' },
     entity: 'page',
     action: 'view',
     trigger: 'load',
-    source: { type: 'browser', id: 'https://example.com/docs' },
+    source: {
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/docs',
+    },
   },
 };
 
@@ -327,11 +369,11 @@ export * as step from './step';
 export { createTrigger, trigger } from './trigger';
 ```
 
-### 3.7 `examples/trigger.ts` — `createTrigger`
+### 3.7 `examples/trigger.ts` - `createTrigger`
 
 Every source exports a `createTrigger` following the unified
 `Trigger.CreateFn<Content, Result>` interface. It simulates real-world
-invocations from the outside — no source instance access, full blackbox.
+invocations from the outside - no source instance access, full blackbox.
 
 ```typescript
 import type { Trigger } from '@walkeros/core';
@@ -364,23 +406,23 @@ export const createTrigger: Trigger.CreateFn<Content, Result> = async (
 
 Reference implementations:
 
-- **Browser:** `packages/web/sources/browser/src/examples/trigger.ts` — DOM
+- **Browser:** `packages/web/sources/browser/src/examples/trigger.ts` - DOM
   injection + native event dispatch
-- **Session:** `packages/web/sources/session/src/examples/trigger.ts` — no
+- **Session:** `packages/web/sources/session/src/examples/trigger.ts` - no
   env.ts, trigger drives collector directly
-- **Express:** `packages/server/sources/express/src/examples/trigger.ts` — real
+- **Express:** `packages/server/sources/express/src/examples/trigger.ts` - real
   HTTP `fetch()` to running server
 - **CMP (Usercentrics):**
-  `packages/web/sources/cmps/usercentrics/src/examples/trigger.ts` — dispatches
+  `packages/web/sources/cmps/usercentrics/src/examples/trigger.ts` - dispatches
   CMP events, asserts on collector consent state
 - **Fetch (function handler):**
-  `packages/server/sources/fetch/src/examples/trigger.ts` — accesses source
+  `packages/server/sources/fetch/src/examples/trigger.ts` - accesses source
   instance via `collector.sources`, calls `source.push()` with platform-native
   `Request`
-- **AWS Lambda:** `packages/server/sources/aws/src/lambda/examples/trigger.ts` —
+- **AWS Lambda:** `packages/server/sources/aws/src/lambda/examples/trigger.ts` -
   constructs API Gateway event + Lambda context
 - **GCP CloudFunction:**
-  `packages/server/sources/gcp/src/cloudfunction/examples/trigger.ts` —
+  `packages/server/sources/gcp/src/cloudfunction/examples/trigger.ts` -
   synthesizes mock req/res (matching GCP Functions Framework)
 
 ### 3.8 Test Fixture Contract (hard rule)
@@ -410,24 +452,24 @@ export * as examples from './examples';
 
 ### Phase 3 Acceptance Checklist
 
-- [ ] `src/examples/step.ts` — one `Flow.StepExample` per captured trigger /
+- [ ] `src/examples/step.ts` - one `Flow.StepExample` per captured trigger /
       input shape, typed `trigger` / `in` / `out`
-- [ ] `src/examples/trigger.ts` — exports `createTrigger` typed as
+- [ ] `src/examples/trigger.ts` - exports `createTrigger` typed as
       `Trigger.CreateFn<Content, Result>`
-- [ ] `src/examples/index.ts` — barrel exports `step`, `createTrigger`, and
+- [ ] `src/examples/index.ts` - barrel exports `step`, `createTrigger`, and
       `env` (when present)
-- [ ] `src/examples/env.ts` — included whenever the source touches platform
+- [ ] `src/examples/env.ts` - included whenever the source touches platform
       globals or injected deps; typed against local `Env`; no real network
 - [ ] No standalone `inputs.ts`, `outputs.ts`, `requests.ts`, or `mapping.ts`
       files
-- [ ] All platform / SDK types imported from the official package — no `any`, no
+- [ ] All platform / SDK types imported from the official package - no `any`, no
       reinvented request / response shapes
 - [ ] `src/index.test.ts` iterates `examples.step` via
       `it.each(Object.entries(...))`
-- [ ] Tests contain zero hardcoded payloads, requests, or expected events —
+- [ ] Tests contain zero hardcoded payloads, requests, or expected events -
       everything flows from `examples.step`
 - [ ] Edge cases included (minimal input, invalid input)
-- [ ] `npm run build` passes — examples compile against published types
+- [ ] `npm run build` passes - examples compile against published types
 - [ ] Each example traces: `trigger` + `in` → source push → matches `out`
 
 ---
@@ -436,7 +478,7 @@ export * as examples from './examples';
 
 **Goal:** Document transformation from input format to walkerOS events.
 
-Mapping lives **inside** each `Flow.StepExample` entry in `step.ts` — no
+Mapping lives **inside** each `Flow.StepExample` entry in `step.ts` - no
 separate `mapping.ts` file. Sources typically carry the mapping either in the
 source's own `settings` (see `dataLayer` for an example) or inline via the
 `trigger` → `in` → `out` relationship: the `in` content is the raw platform
@@ -565,13 +607,13 @@ export { hints } from './hints';
 
 Guidelines:
 
-- Expand awareness — describe capabilities ("supports X, Y, Z"), don't prescribe
+- Expand awareness - describe capabilities ("supports X, Y, Z"), don't prescribe
   one path
 - Reference schemas and examples, don't duplicate them
 - Verify every claim against actual implementation before publishing
 - Key naming: kebab-case, group with prefixes (auth-\*, capture-\*,
   troubleshoot-\*)
-- Most sources don't need hints — schemas and examples cover the common case
+- Most sources don't need hints - schemas and examples cover the common case
 
 ### Gate: Convention Met
 
@@ -637,15 +679,15 @@ Canonical references:
 
 ### Key Test Patterns
 
-1. **`it.each(Object.entries(examples.step))` is mandatory** — one iteration per
+1. **`it.each(Object.entries(examples.step))` is mandatory** - one iteration per
    step example. Do not write per-feature tests with hand-rolled payloads.
-2. **Drive via `createTrigger`** — construct the trigger with `startFlow`
+2. **Drive via `createTrigger`** - construct the trigger with `startFlow`
    config, then dispatch each example's `trigger.type` + `in` content.
 3. **Use `createSourceContext()` helper** for any direct context construction.
-4. **Zero hardcoded payloads** — every trigger type, request body, DOM HTML, and
+4. **Zero hardcoded payloads** - every trigger type, request body, DOM HTML, and
    expected event comes from `examples.step` or `examples.env`. If you need
    something new, add it to examples first.
-5. **Test error paths** — verify graceful error handling and logging for invalid
+5. **Test error paths** - verify graceful error handling and logging for invalid
    input (add an error example to `examples.step` if needed).
 
 ### Gate: Tests Pass
@@ -707,9 +749,9 @@ requirements (build, test, lint, no `any`):
   interface and push pattern
 - [understanding-events](../walkeros-understanding-events/SKILL.md) - Event
   structure
-- [using-step-examples](../walkeros-using-step-examples/SKILL.md) —
+- [using-step-examples](../walkeros-using-step-examples/SKILL.md) -
   Authoritative `Flow.StepExample` + `createTrigger` pattern, Three Type Zones
-- [testing-strategy](../walkeros-testing-strategy/SKILL.md) — Testing with env
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - Testing with env
   mocking and dev-examples-as-fixtures conventions
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
   Documentation standards

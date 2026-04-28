@@ -1,3 +1,9 @@
+declare module '@walkeros/core' {
+  interface SourceMap {
+    cli: { type: 'cli'; platform: 'terminal'; command?: string };
+  }
+}
+
 // === CLI Commands ===
 // Export CLI command handlers
 export { bundleCommand } from './commands/bundle/index.js';

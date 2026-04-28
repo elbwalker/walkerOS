@@ -32,9 +32,7 @@ describe('Server Destination Bing', () => {
 
     destination = jest.requireActual('../').default;
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   async function getConfig(settings: Partial<Settings> = {}) {
@@ -137,9 +135,9 @@ describe('Server Destination Bing', () => {
     const event = getEvent('page view', {
       timestamp: 1700000900000,
       source: {
-        type: 'server',
-        id: 'https://example.com/page',
-        previous_id: '',
+        type: 'browser',
+        platform: 'web',
+        url: 'https://example.com/page',
       },
     });
     const config: Config = {
@@ -171,9 +169,9 @@ describe('Server Destination Bing', () => {
     const event = getEvent('page view', {
       timestamp: 1700000900000,
       source: {
-        type: 'server',
-        id: 'https://example.com/home',
-        previous_id: '',
+        type: 'browser',
+        platform: 'web',
+        url: 'https://example.com/home',
       },
     });
 
@@ -207,9 +205,9 @@ describe('Server Destination Bing', () => {
       timestamp: 1700000900000,
       data: { id: 'ORD-1', total: 100, currency: 'EUR' },
       source: {
-        type: 'server',
-        id: 'https://example.com/checkout',
-        previous_id: '',
+        type: 'browser',
+        platform: 'web',
+        url: 'https://example.com/checkout',
       },
     });
 
@@ -418,9 +416,9 @@ describe('Server Destination Bing', () => {
     const event = getEvent('page view', {
       timestamp: 1700000900000,
       source: {
-        type: 'server',
-        id: 'https://example.com/home',
-        previous_id: '',
+        type: 'browser',
+        platform: 'web',
+        url: 'https://example.com/home',
       },
     });
 

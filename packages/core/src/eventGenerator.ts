@@ -1,7 +1,6 @@
 import type { WalkerOS } from './types';
 import { assign } from './assign';
-
-declare const __VERSION__: string;
+import { getSpanId } from './getSpanId';
 
 /**
  * Creates a complete event with default values.
@@ -14,9 +13,7 @@ export function createEvent(
   props: WalkerOS.DeepPartialEvent = {},
 ): WalkerOS.Event {
   const timestamp = props.timestamp || new Date().setHours(0, 13, 37, 0);
-  const group = props.group || 'gr0up';
-  const count = props.count || 1;
-  const id = `${timestamp}-${group}-${count}`;
+  const id = props.id || getSpanId();
 
   const defaultEvent: WalkerOS.Event = {
     name: 'entity action',
@@ -35,8 +32,6 @@ export function createEvent(
       {
         entity: 'child',
         data: { is: 'subordinated' },
-        nested: [],
-        context: { element: ['child', 0] },
       },
     ],
     consent: { functional: true },
@@ -46,16 +41,9 @@ export function createEvent(
     action: 'action',
     timestamp,
     timing: 3.14,
-    group,
-    count,
-    version: {
-      source: __VERSION__,
-      tagging: 1,
-    },
     source: {
-      type: 'web',
-      id: 'https://localhost:80',
-      previous_id: 'http://remotehost:9001',
+      type: 'collector',
+      schema: '4',
     },
   };
 

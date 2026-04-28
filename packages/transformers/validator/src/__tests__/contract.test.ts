@@ -34,10 +34,12 @@ describe('Contract Integration Tests', () => {
     trigger: 'click',
     timestamp: Date.now(),
     timing: 100,
-    group: 'grp-123',
-    count: 1,
-    version: { source: '1.0.0', tagging: 1 },
-    source: { type: 'web', id: 'src-123', previous_id: '' },
+    source: {
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/',
+      schema: '4',
+    },
   });
 
   beforeEach(() => {

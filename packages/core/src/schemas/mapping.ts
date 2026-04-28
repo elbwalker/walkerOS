@@ -287,11 +287,11 @@ export const RuleSchema = z
       .describe(
         'Skip the event entirely. No push, no side effects. Use for suppression.',
       ),
-    skip: z
+    silent: z
       .boolean()
       .optional()
       .describe(
-        'Run side effects (settings.identify, ...) but skip the default push call.',
+        'Run side effects (settings.identify, ...) but suppress the destination default push call.',
       ),
   })
   .meta({

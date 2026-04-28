@@ -57,19 +57,19 @@ function callFuncAndCb(
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
-  // Track the last processed group to prevent duplicate processing
-  let lastProcessedGroup: string | undefined;
+  // Track the last processed round to prevent duplicate processing
+  let lastProcessedRound: number | undefined;
 
   const func = (collector: Collector.Instance, consent: WalkerOS.Consent) => {
-    // Skip if we've already processed this group
+    // Skip if we've already processed this round
     if (
-      isDefined(lastProcessedGroup) &&
-      lastProcessedGroup === collector?.group
+      isDefined(lastProcessedRound) &&
+      lastProcessedRound === collector?.round
     )
       return;
 
-    // Remember this group has been processed
-    lastProcessedGroup = collector?.group;
+    // Remember this round has been processed
+    lastProcessedRound = collector?.round;
 
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 

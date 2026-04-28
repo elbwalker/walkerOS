@@ -89,7 +89,8 @@ export function getAllEvents(
   };
 
   // Check if the scope element itself has action attributes
-  const doc = (actualScope as Element).ownerDocument || (actualScope as Document);
+  const doc =
+    (actualScope as Element).ownerDocument || (actualScope as Document);
   if (
     actualScope !== doc &&
     (actualScope as Element).matches?.(actionSelector)
@@ -157,7 +158,7 @@ export function getEvents(
         data: entity.data,
         trigger,
         context: entity.context,
-        nested: entity.nested,
+        nested: entity.nested ?? [],
       });
     });
   });
@@ -197,7 +198,8 @@ export function getPageViewData(
   const win = doc.defaultView!;
   const loc = win.location;
   const page = 'page';
-  const scopeElement = 'body' in scope ? (scope as Document).body : (scope as Element);
+  const scopeElement =
+    'body' in scope ? (scope as Document).body : (scope as Element);
   const [data, context] = getThisAndParentProperties(
     scopeElement,
     `[${getElbAttributeName(prefix, page)}]`,

@@ -31,31 +31,29 @@ const OPT_OUT: ReadonlySet<string> = new Set<string>([
   'Identifier',
   'Timestamp',
   'Counter',
-  'TaggingVersion',
-  // Pattern primitives — URLs / emails / ids, not docs-facing.
+  // Pattern primitives - URLs / emails / ids, not docs-facing.
   'HttpsUrl',
   'HttpUrl',
   'Email',
   'CssSelector',
   'SemVer',
-  // Hint schemas live in hint.ts — flat key/value, not surfaced in PropertyTable.
+  // Hint schemas live in hint.ts - flat key/value, not surfaced in PropertyTable.
   'CodeSchema',
   'HintSchema',
   'HintsSchema',
-  // Marketing — flat click-id table entry, not linked from PropertyTable.
+  // Marketing - flat click-id table entry, not linked from PropertyTable.
   'ClickIdEntrySchema',
   // Zod 4 limitation: schemas built via `.and()` composition
-  // (UserSchema / VersionSchema / SourceSchema) emit a collapsed `allOf`
+  // (UserSchema / SourceSchema) emit a collapsed `allOf`
   // without surfacing the wrapper's `.meta()` id/title to the JSON Schema
   // output. The meta is set on the schema for direct-reference cases, but
   // docs that render these via PropertyTable see `allOf` directly. Track as
   // a future Zod / JSON-schema toolchain follow-up.
   'UserSchema',
-  'VersionSchema',
   'SourceSchema',
 ]);
 
-/** Type guard — does `val` look like a Zod schema with usable meta? */
+/** Type guard - does `val` look like a Zod schema with usable meta? */
 function isZodSchema(val: unknown): val is z.ZodTypeAny {
   if (val === null || typeof val !== 'object') return false;
   const candidate = val as { _zod?: unknown; parse?: unknown; meta?: unknown };
@@ -70,7 +68,7 @@ function isZodSchema(val: unknown): val is z.ZodTypeAny {
 /**
  * Read the resolved meta ({ id, title, description }) from the emitted JSON
  * Schema. Reading from the JSON Schema (not the in-memory `.meta()` accessor)
- * is deliberate — it's what the website's PropertyTable actually consumes,
+ * is deliberate - it's what the website's PropertyTable actually consumes,
  * and it surfaces `id` correctly (the `.meta()` accessor does not).
  *
  * The emitted shape for a decorated top-level schema is either:
@@ -119,7 +117,7 @@ describe('Schema meta coverage', () => {
     .filter((entry): entry is [string, z.ZodTypeAny] => {
       const [name, value] = entry;
       if (!name.endsWith('Schema')) return false;
-      // Skip re-exports that alias schemas we test elsewhere — they share
+      // Skip re-exports that alias schemas we test elsewhere - they share
       // the underlying Zod instance and inherit its meta.
       return isZodSchema(value);
     });
@@ -140,7 +138,7 @@ describe('Schema meta coverage', () => {
       // Titles use dotted PascalCase (`Namespace.Something`) or a bare
       // PascalCase namespace (`Handler`, `Storage`).
       expect(title.length).toBeGreaterThan(0);
-      // IDs are camelCase-free — PascalCase prefixed with a namespace.
+      // IDs are camelCase-free - PascalCase prefixed with a namespace.
       expect(id).toMatch(/^[A-Z][A-Za-z0-9]+$/);
     },
   );

@@ -6,6 +6,12 @@ import type {
 } from './schemas';
 import type { z } from '@walkeros/core/dev';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    fetch: { type: 'fetch'; platform: 'server' };
+  }
+}
+
 export type Settings = z.infer<typeof SettingsSchema>;
 export type CorsOptions = z.infer<typeof CorsOptionsSchema>;
 export type RouteConfig = z.infer<typeof RouteConfigSchema>;

@@ -18,8 +18,8 @@ import { getEvent, isObject } from '@walkeros/core';
  *   3. account
  *   4. id (identity block)
  *   5. events (always a single-element array)
- *   6. full_url (only when event.source.id is set)
- *   7. previous_url (only when event.source.previous_id is set)
+ *   6. full_url (only when event.source.url is set)
+ *   7. previous_url (only when event.source.referrer is set)
  */
 const ENDPOINT = 'https://widget.criteo.com/m/event?version=s2s_v0';
 
@@ -38,9 +38,10 @@ export const purchase: Flow.StepExample = {
     ],
     user: { id: 'user-123', device: 'device-456' },
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/checkout/complete',
-      previous_id: 'https://shop.example.com/cart',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/checkout/complete',
+      referrer: 'https://shop.example.com/cart',
     },
   }),
   mapping: {
@@ -120,9 +121,9 @@ export const addToCart: Flow.StepExample = {
       },
     ],
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/products/running-shoes',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/products/running-shoes',
     },
   }),
   mapping: {
@@ -190,9 +191,9 @@ export const viewItem: Flow.StepExample = {
       },
     ],
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/products/coffee-maker',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/products/coffee-maker',
     },
   }),
   mapping: {
@@ -249,9 +250,9 @@ export const pageView: Flow.StepExample = {
   in: getEvent('page view', {
     timestamp: 1700000903000,
     source: {
-      type: 'server',
-      id: 'https://example.com/',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/',
     },
   }),
   mapping: {

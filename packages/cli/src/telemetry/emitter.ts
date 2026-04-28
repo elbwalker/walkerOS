@@ -10,12 +10,11 @@ import { getInstallationId } from './install-id.js';
 import { isTelemetryEnabled, isDebugMode } from './consent.js';
 import { maybePrintFirstRunNotice } from './first-run-notice.js';
 
-const CONTRACT_VERSION = 1;
 const SEND_TIMEOUT_MS = 1000;
 
 export interface EmitterOptions {
-  sourceId: 'cli' | 'mcp';
-  sourceType: string;
+  /** Caller supplies the v4 source verbatim (type, platform, etc). */
+  source: WalkerOS.Source;
   packageVersion: string;
   session?: string;
 }
@@ -25,6 +24,7 @@ export interface Emitter {
     name: string,
     data: WalkerOS.Properties,
     timingMs?: number,
+    sourceOverride?: Partial<WalkerOS.Source>,
   ): Promise<void>;
 }
 
@@ -89,16 +89,9 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
 
   const environment = getEnvironment();
 
-  const eventBase: Pick<WalkerOS.DeepPartialEvent, 'source' | 'version'> = {
-    source: {
-      type: opts.sourceType,
-      id: opts.sourceId,
-      previous_id: '',
-    },
-    version: {
-      source: opts.packageVersion,
-      tagging: CONTRACT_VERSION,
-    },
+  const baseSource: WalkerOS.Source = {
+    ...opts.source,
+    version: opts.packageVersion,
   };
 
   // Lazy collector init: only pay the cost on first send.
@@ -114,7 +107,6 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
     });
 
     const collectorConfig: Collector.InitConfig = {
-      tagging: telemetryConfig.tagging,
       consent: telemetryConfig.consent,
       user: telemetryConfig.user,
       destinations: {
@@ -133,12 +125,12 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
   }
 
   return {
-    async send(name, data, timingMs = 0) {
+    async send(name, data, timingMs = 0, sourceOverride) {
       const partialEvent: WalkerOS.DeepPartialEvent = {
         name,
         data,
         timing: timingMs,
-        ...eventBase,
+        source: { ...baseSource, ...sourceOverride },
       };
 
       if (debug) {

@@ -74,7 +74,7 @@ export {
   NextRuleSchema,
 } from './matcher';
 
-// Hint schemas (direct export — flat record, no namespace needed)
+// Hint schemas (direct export - flat record, no namespace needed)
 export { CodeSchema, HintSchema, HintsSchema } from './hint';
 export { ClickIdEntrySchema } from './marketing';
 
@@ -97,7 +97,6 @@ export {
   EntitiesSchema,
   ConsentSchema,
   SourceTypeSchema,
-  VersionSchema,
   SourceSchema,
   PropertySchema,
   PropertyTypeSchema,

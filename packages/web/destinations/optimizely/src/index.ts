@@ -117,8 +117,8 @@ export const destinationOptimizely: Destination = {
       }
     }
 
-    // 5. Track event (unless skip: true)
-    if (rule?.skip !== true) {
+    // 5. Track event (unless silent: true)
+    if (rule?.silent !== true) {
       const eventKey = isString(rule?.name) ? rule.name : event.name;
 
       // Build eventTags

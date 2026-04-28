@@ -32,7 +32,8 @@ export function translateToCoreCollector(
   if (isObject(eventOrCommand)) {
     const event = eventOrCommand;
     if (!event.source && settings.scope) {
-      const scopeDoc = ((settings.scope as Element).ownerDocument || settings.scope) as Document;
+      const scopeDoc = ((settings.scope as Element).ownerDocument ||
+        settings.scope) as Document;
       const scopeWin = scopeDoc.defaultView!;
       event.source = getBrowserSource(scopeWin, scopeDoc);
     }
@@ -84,7 +85,8 @@ export function translateToCoreCollector(
 
   // Derive win/doc from scope for browser-specific APIs
   const scopeDoc = settings.scope
-    ? (((settings.scope as Element).ownerDocument || settings.scope) as Document)
+    ? (((settings.scope as Element).ownerDocument ||
+        settings.scope) as Document)
     : undefined;
   const scopeWin = scopeDoc?.defaultView;
 
@@ -105,7 +107,8 @@ export function translateToCoreCollector(
     nested,
     custom,
     trigger: isString(options) ? options : '',
-    source: scopeWin && scopeDoc ? getBrowserSource(scopeWin, scopeDoc) : undefined,
+    source:
+      scopeWin && scopeDoc ? getBrowserSource(scopeWin, scopeDoc) : undefined,
   };
 
   return elb(event);
@@ -117,7 +120,8 @@ export function translateToCoreCollector(
 function getBrowserSource(win: Window, doc: Document): WalkerOS.Source {
   return {
     type: 'browser',
-    id: win.location.href,
-    previous_id: doc.referrer,
+    platform: 'web',
+    url: win.location.href,
+    referrer: doc.referrer,
   };
 }

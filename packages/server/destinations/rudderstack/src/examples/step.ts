@@ -11,7 +11,7 @@ export type RudderStackStepExample = Flow.StepExample & {
 
 /**
  * RudderStack server destination invokes the injected `env.analytics` SDK
- * methods (`track`, `identify`, `group`, `page`, `screen`, `alias`) — not a
+ * methods (`track`, `identify`, `group`, `page`, `screen`, `alias`) - not a
  * raw HTTP endpoint. Each `out` entry is therefore
  * `[callable, params]` where `callable` is the dotted method name
  * (e.g. `'analytics.track'`) and `params` is the object passed to the SDK.
@@ -121,7 +121,7 @@ export const destinationIdentify: RudderStackStepExample = {
 };
 
 /**
- * Per-event identify with skip -- user login fires identify() only.
+ * Per-event identify with silent -- user login fires identify() only.
  */
 export const userLoginIdentify: RudderStackStepExample = {
   title: 'User login identify',
@@ -138,7 +138,7 @@ export const userLoginIdentify: RudderStackStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -168,7 +168,7 @@ export const userLoginIdentify: RudderStackStepExample = {
 };
 
 /**
- * Per-event group with skip -- company update fires group() only.
+ * Per-event group with silent -- company update fires group() only.
  */
 export const companyGroup: RudderStackStepExample = {
   title: 'Group company',
@@ -185,7 +185,7 @@ export const companyGroup: RudderStackStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       group: {
         map: {
@@ -217,7 +217,7 @@ export const companyGroup: RudderStackStepExample = {
 
 /**
  * Explicit page() call with properties. RudderStack requires name -- resolved
- * from mapping. skip: true suppresses track().
+ * from mapping. silent: true suppresses track().
  */
 export const pageView: RudderStackStepExample = {
   title: 'Page view',
@@ -232,7 +232,7 @@ export const pageView: RudderStackStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       page: {
         map: {
@@ -278,7 +278,7 @@ export const screenView: RudderStackStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       screen: {
         map: {
@@ -308,7 +308,7 @@ export const screenView: RudderStackStepExample = {
 
 /**
  * Alias call -- links anonymous user identity to registered user.
- * skip: true suppresses track(). Requires previousId from mapping.
+ * silent: true suppresses track(). Requires previousId from mapping.
  */
 export const aliasUser: RudderStackStepExample = {
   title: 'Alias user',
@@ -322,7 +322,7 @@ export const aliasUser: RudderStackStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       alias: {
         map: {

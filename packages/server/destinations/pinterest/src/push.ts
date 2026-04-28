@@ -60,8 +60,8 @@ export const push: PushFn = async function (
   }
 
   // Set event_source_url for web events
-  if (action_source === 'web') {
-    serverEvent.event_source_url = event.source.id;
+  if (action_source === 'web' && event.source?.url) {
+    serverEvent.event_source_url = event.source.url;
   }
 
   // Add partner_name from settings

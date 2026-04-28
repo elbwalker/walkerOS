@@ -1,21 +1,18 @@
 import type { Flow } from '@walkeros/core';
 
-/** Default passthrough — logs the event and returns void (no modification). */
+/** Default passthrough - logs the event and returns void (no modification). */
 export const passthrough: Flow.StepExample = {
   public: false,
   description: 'Default config: logs event, passes through unchanged',
   in: {
     name: 'page view',
     data: { title: 'Getting Started', id: '/docs/getting-started' },
-    id: '1700000600-gr0up-1',
+    id: 'ev-1700000600',
     trigger: 'load',
     entity: 'page',
     action: 'view',
     timestamp: 1700000600,
-    group: 'gr0up',
-    count: 1,
-    version: { tagging: 1 },
-    source: { type: 'web', id: '', previous_id: '' },
+    source: { type: 'browser', platform: 'web', url: 'https://example.com/' },
   },
   out: [],
 };
@@ -28,15 +25,12 @@ export const addProcessedFlag: Flow.StepExample = {
   in: {
     name: 'product add',
     data: { name: 'Everyday Ruck Snack', price: 420 },
-    id: '1700000601-gr0up-2',
+    id: 'ev-1700000601',
     trigger: 'click',
     entity: 'product',
     action: 'add',
     timestamp: 1700000601,
-    group: 'gr0up',
-    count: 2,
-    version: { tagging: 1 },
-    source: { type: 'web', id: '', previous_id: '' },
+    source: { type: 'browser', platform: 'web', url: 'https://example.com/' },
   },
   out: [
     [
@@ -49,15 +43,16 @@ export const addProcessedFlag: Flow.StepExample = {
           _processed: true,
           _processedBy: 'transformer-demo',
         },
-        id: '1700000601-gr0up-2',
+        id: 'ev-1700000601',
         trigger: 'click',
         entity: 'product',
         action: 'add',
         timestamp: 1700000601,
-        group: 'gr0up',
-        count: 2,
-        version: { tagging: 1 },
-        source: { type: 'web', id: '', previous_id: '' },
+        source: {
+          type: 'browser',
+          platform: 'web',
+          url: 'https://example.com/',
+        },
       },
     ],
   ],

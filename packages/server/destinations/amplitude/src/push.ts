@@ -282,8 +282,8 @@ export const push: PushFn = async function (
     }
   }
 
-  // 8. Default track (unless skip: true)
-  if (rule?.skip !== true) {
+  // 8. Default track (unless silent: true)
+  if (rule?.silent !== true) {
     const eventType = isString(rule?.name) ? rule.name : event.name;
 
     // Resolve include: rule-level replaces destination-level.

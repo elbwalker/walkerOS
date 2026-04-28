@@ -77,8 +77,8 @@ export const destinationHotjar: Destination = {
       }
     }
 
-    // 3. Default event forwarding -- unless rule.skip is set
-    if (rule?.skip !== true) {
+    // 3. Default event forwarding -- unless rule.silent is set
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       hotjar.event(eventName);
     }

@@ -1,6 +1,12 @@
 import type { ToolClient } from './tool-client.js';
 import type { ToolSpec } from './tool-spec.js';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    mcp: { type: 'mcp'; platform: 'server'; tool?: string };
+  }
+}
+
 import { createAuthToolSpec } from './tools/auth.js';
 import { createProjectManageToolSpec } from './tools/project-manage.js';
 import { createFlowManageToolSpec } from './tools/flow-manage.js';

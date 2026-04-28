@@ -6,7 +6,6 @@ describe('Contract schema validation', () => {
       version: 3,
       contract: {
         default: {
-          tagging: 1,
           globals: { required: ['country'] },
           events: {
             product: {
@@ -63,16 +62,5 @@ describe('Contract schema validation', () => {
       flows: { default: { web: {} } },
     });
     expect(result.success).toBe(true);
-  });
-
-  it('should reject contract entry with invalid tagging', () => {
-    const result = ConfigSchema.safeParse({
-      version: 3,
-      contract: {
-        web: { tagging: -1 },
-      },
-      flows: { default: { web: {} } },
-    });
-    expect(result.success).toBe(false);
   });
 });

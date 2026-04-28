@@ -35,6 +35,7 @@ export const checkout: Flow.StepExample = {
   description:
     'A completed order is sent to the Pinterest Conversions API as a checkout event with value, currency, and contents.',
   in: getEvent('order complete', {
+    id: 'a1b2c3d4e5f60001',
     timestamp: 1700000900,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
     nested: [
@@ -49,7 +50,11 @@ export const checkout: Flow.StepExample = {
       },
     ],
     user: { id: 'user-123', device: 'device-456' },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: {
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com',
+    },
   }),
   mapping: {
     name: 'checkout',
@@ -94,7 +99,7 @@ export const checkout: Flow.StepExample = {
         data: [
           {
             event_name: 'checkout',
-            event_id: '1700000900-gr0up-1',
+            event_id: 'a1b2c3d4e5f60001',
             event_time: 1700001,
             action_source: 'web',
             user_data: {},
@@ -126,13 +131,14 @@ export const addToCart: Flow.StepExample = {
   description:
     'A product add is sent to Pinterest as an add_to_cart conversion with the added item details.',
   in: getEvent('product add', {
+    id: 'a1b2c3d4e5f60002',
     timestamp: 1700000901,
     data: { id: 'SKU-B2', name: 'Cool Cap', price: '42.00', quantity: 1 },
     user: { id: 'user-456' },
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/products',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/products',
     },
   }),
   mapping: {
@@ -168,7 +174,7 @@ export const addToCart: Flow.StepExample = {
         data: [
           {
             event_name: 'add_to_cart',
-            event_id: '1700000901-gr0up-1',
+            event_id: 'a1b2c3d4e5f60002',
             event_time: 1700001,
             action_source: 'web',
             user_data: {},
@@ -198,12 +204,13 @@ export const pageVisit: Flow.StepExample = {
   description:
     'A page view is sent to Pinterest as a page_visit conversion with the source URL.',
   in: getEvent('page view', {
+    id: 'a1b2c3d4e5f60003',
     timestamp: 1700000902,
     user: { id: 'user-789' },
     source: {
-      type: 'server',
-      id: 'https://www.example.com/docs/',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://www.example.com/docs/',
     },
   }),
   mapping: {
@@ -217,7 +224,7 @@ export const pageVisit: Flow.StepExample = {
         data: [
           {
             event_name: 'page_visit',
-            event_id: '1700000902-gr0up-1',
+            event_id: 'a1b2c3d4e5f60003',
             event_time: 1700001,
             action_source: 'web',
             user_data: {},
@@ -235,14 +242,15 @@ export const search: Flow.StepExample = {
   description:
     'A site search event is forwarded to Pinterest as a search conversion with the query in custom data.',
   in: getEvent('entity action', {
+    id: 'a1b2c3d4e5f60004',
     timestamp: 1700000903,
     name: 'site search',
     data: { query: 'walkerOS destinations' },
     user: { id: 'user-101' },
     source: {
-      type: 'server',
-      id: 'https://www.example.com/search',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://www.example.com/search',
     },
   }),
   mapping: {
@@ -265,7 +273,7 @@ export const search: Flow.StepExample = {
         data: [
           {
             event_name: 'search',
-            event_id: '1700000903-gr0up-1',
+            event_id: 'a1b2c3d4e5f60004',
             event_time: 1700001,
             action_source: 'web',
             user_data: {},
@@ -286,14 +294,15 @@ export const signup: Flow.StepExample = {
   description:
     'A user signup is sent to Pinterest as a signup conversion with the hashed email and external id.',
   in: getEvent('entity action', {
+    id: 'a1b2c3d4e5f60005',
     timestamp: 1700000904,
     name: 'user signup',
     data: { method: 'email' },
     user: { id: 'new-user-1', email: 'new@example.com' },
     source: {
-      type: 'server',
-      id: 'https://www.example.com/register',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://www.example.com/register',
     },
   }),
   mapping: {
@@ -317,7 +326,7 @@ export const signup: Flow.StepExample = {
         data: [
           {
             event_name: 'signup',
-            event_id: '1700000904-gr0up-1',
+            event_id: 'a1b2c3d4e5f60005',
             event_time: 1700001,
             action_source: 'web',
             user_data: {

@@ -18,9 +18,9 @@ import { getEvent, isObject } from '@walkeros/core';
  *   2. eventId
  *   3. eventTime (unix seconds; `Math.round(event.timestamp / 1000)`)
  *   4. adStorageConsent
- *   5. userData (hashed — only `em`, `ph` via SHA-256)
+ *   5. userData (hashed - only `em`, `ph` via SHA-256)
  *   6. eventName (only when eventType === 'custom')
- *   7. eventSourceUrl (only when event.source.id is set)
+ *   7. eventSourceUrl (only when event.source.url is set)
  *   8. customData (only when it has keys)
  *
  * The `options` argument carries the Authorization + Content-Type headers.
@@ -38,6 +38,7 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order is sent to the Bing UET CAPI with transaction id, value, items, and hashed user data.',
   in: getEvent('order complete', {
+    id: 'b1c2d3e4f5a60001',
     timestamp: 1700000900000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
     nested: [
@@ -48,9 +49,9 @@ export const purchase: Flow.StepExample = {
     ],
     user: { id: 'user-123', device: 'device-456' },
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/checkout/complete',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/checkout/complete',
     },
   }),
   mapping: {
@@ -96,7 +97,7 @@ export const purchase: Flow.StepExample = {
         data: [
           {
             eventType: 'custom',
-            eventId: '1700000900000-gr0up-1',
+            eventId: 'b1c2d3e4f5a60001',
             eventTime: 1700000900,
             adStorageConsent: 'G',
             userData: {
@@ -132,11 +133,12 @@ export const pageView: Flow.StepExample = {
   description:
     'A page view is sent to the Bing UET CAPI with eventType pageLoad and the source URL.',
   in: getEvent('page view', {
+    id: 'b1c2d3e4f5a60002',
     timestamp: 1700000901000,
     source: {
-      type: 'server',
-      id: 'https://example.com/docs/',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/docs/',
     },
   }),
   mapping: {
@@ -150,7 +152,7 @@ export const pageView: Flow.StepExample = {
         data: [
           {
             eventType: 'pageLoad',
-            eventId: '1700000901000-gr0up-1',
+            eventId: 'b1c2d3e4f5a60002',
             eventTime: 1700000901,
             adStorageConsent: 'G',
             userData: {},
@@ -169,13 +171,14 @@ export const lead: Flow.StepExample = {
   description:
     'A newsletter form submission is sent to Bing UET as a lead event with the SHA-256 hashed email.',
   in: getEvent('form submit', {
+    id: 'b1c2d3e4f5a60003',
     timestamp: 1700000902000,
     data: { type: 'newsletter' },
     user: { email: 'user@example.com' },
     source: {
-      type: 'server',
-      id: 'https://example.com/contact',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/contact',
     },
   }),
   mapping: {
@@ -198,7 +201,7 @@ export const lead: Flow.StepExample = {
         data: [
           {
             eventType: 'custom',
-            eventId: '1700000902000-gr0up-1',
+            eventId: 'b1c2d3e4f5a60003',
             eventTime: 1700000902,
             adStorageConsent: 'G',
             userData: {
@@ -221,6 +224,7 @@ export const addToCart: Flow.StepExample = {
   description:
     'A product add is sent to Bing UET as an add_to_cart event with value, currency, and item details.',
   in: getEvent('product add', {
+    id: 'b1c2d3e4f5a60004',
     timestamp: 1700000903000,
     data: {
       id: 'SKU-B2',
@@ -240,9 +244,9 @@ export const addToCart: Flow.StepExample = {
       },
     ],
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/products/running-shoes',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/products/running-shoes',
     },
   }),
   mapping: {
@@ -281,7 +285,7 @@ export const addToCart: Flow.StepExample = {
         data: [
           {
             eventType: 'custom',
-            eventId: '1700000903000-gr0up-1',
+            eventId: 'b1c2d3e4f5a60004',
             eventTime: 1700000903,
             adStorageConsent: 'G',
             userData: {},

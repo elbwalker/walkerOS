@@ -1,6 +1,12 @@
 import type { Source, Elb } from '@walkeros/core';
 import type { SessionConfig, SessionCallback } from '../lib';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    session: { type: 'session'; platform?: 'web' };
+  }
+}
+
 // Settings: configuration for session source
 export interface Settings extends SessionConfig {
   // All settings inherited from SessionConfig:

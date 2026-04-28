@@ -2,9 +2,6 @@ import { createEvent, getEvent } from '..';
 
 describe('createEvent', () => {
   const timestamp = new Date().setHours(0, 13, 37, 0);
-  const group = 'gr0up';
-  const count = 1;
-  const id = `${timestamp}-${group}-${count}`;
 
   const defaultEvent = {
     name: 'entity action',
@@ -23,32 +20,30 @@ describe('createEvent', () => {
       {
         entity: 'child',
         data: { is: 'subordinated' },
-        nested: [],
-        context: { element: ['child', 0] },
       },
     ],
     consent: { functional: true },
-    id,
+    id: expect.stringMatching(/^[0-9a-f]{16}$/),
     trigger: 'test',
     entity: 'entity',
     action: 'action',
     timestamp,
     timing: 3.14,
-    group,
-    count,
-    version: {
-      source: expect.stringMatching(/^\d+\.\d+\./),
-      tagging: 1,
-    },
     source: {
-      type: 'web',
-      id: 'https://localhost:80',
-      previous_id: 'http://remotehost:9001',
+      type: 'collector',
+      schema: '4',
     },
   };
 
   test('regular', () => {
     expect(createEvent()).toStrictEqual(defaultEvent);
+  });
+
+  it('produces v4-shaped events with W3C span_id', () => {
+    const ev = createEvent({ name: 'page view' });
+    expect(ev.id).toMatch(/^[0-9a-f]{16}$/);
+    expect(ev.source.type).toBe('collector');
+    expect(ev.source.schema).toBe('4');
   });
 
   test('getEvent', () => {

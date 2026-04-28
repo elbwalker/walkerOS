@@ -7,7 +7,7 @@ type Captured = [callable: string, ...args: unknown[]];
 
 /**
  * Snapchat Conversions API destination invokes `env.sendServer(url, body)`
- * exactly once per push. There are no init-time calls to filter — the
+ * exactly once per push. There are no init-time calls to filter - the
  * destination is stateless; each event becomes one HTTP request.
  */
 describe('Step Examples', () => {
@@ -29,7 +29,7 @@ describe('Step Examples', () => {
     testEnv.sendServer = mockSendServer;
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const mappingConfig = mapping
       ? { [event.entity]: { [event.action]: mapping } }

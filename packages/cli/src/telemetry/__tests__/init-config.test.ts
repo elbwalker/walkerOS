@@ -9,13 +9,12 @@ describe('buildInitConfig', () => {
     timezone: 'UTC',
   };
 
-  it('produces an init config with user, consent, tagging, and destination', () => {
+  it('produces an init config with user, consent, and destination', () => {
     const cfg = buildInitConfig({
       installationId: 'install-1',
       environment: env,
       endpoint: 'http://example/api/telemetry',
     });
-    expect(cfg.tagging).toBe(1);
     expect(cfg.consent).toEqual({ telemetry: true });
     expect(cfg.user).toMatchObject({
       device: 'install-1',

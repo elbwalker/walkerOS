@@ -73,8 +73,8 @@ export const push: PushFn = async function (
     custom_data: customData,
   };
 
-  if (action_source === 'WEB' && event.source?.id) {
-    snapchatEvent.event_source_url = event.source.id;
+  if (action_source === 'WEB' && event.source?.url) {
+    snapchatEvent.event_source_url = event.source.url;
   }
 
   const body: RequestBody = { data: [snapchatEvent] };

@@ -2,6 +2,12 @@ import type { WalkerOS, Source, Elb } from '@walkeros/core';
 import type { SettingsSchema, Mapping } from '../schemas';
 import type { z } from '@walkeros/core/dev';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    dataLayer: { type: 'dataLayer'; platform?: 'web' };
+  }
+}
+
 declare global {
   interface Window {
     dataLayer?: DataLayer;

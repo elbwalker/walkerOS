@@ -42,11 +42,6 @@ describe('Server Collector', () => {
     jest.useRealTimers();
   });
 
-  test('version has correct format', async () => {
-    const { collector: instance } = await getCollector({});
-    expect(instance.version).toMatch(/^\d+\.\d+\./);
-  });
-
   test('create', async () => {
     const { elb, collector: instance } = await getCollector();
     expect(elb).toBeDefined();
@@ -97,7 +92,6 @@ describe('Server Collector', () => {
       globalsStatic: { glow: 'balls' },
       user: { id: 'us3r1d' },
       consent: { test: true },
-      tagging: 42,
     });
     const event = {
       name: 'e a',
@@ -114,16 +108,9 @@ describe('Server Collector', () => {
       action: 'a',
       timestamp: expect.any(Number),
       timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-      version: {
-        source: expect.any(String),
-        tagging: 42,
-      },
       source: {
         type: 'collector',
-        id: '',
-        previous_id: '',
+        schema: '4',
       },
     };
 
@@ -161,12 +148,10 @@ describe('Server Collector', () => {
     collector.globals.a = 1;
     await collector.command('globals', { b: 2 });
     let result = await collector.push({ name: 'e a' });
-    expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', a: 1, b: 2 });
 
     await collector.command('run', { globals: { c: 3 } });
     result = await collector.push({ name: 'e a' });
-    expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', c: 3 });
   });
 
@@ -193,29 +178,17 @@ describe('Server Collector', () => {
   test('source', async () => {
     const { elb } = await getCollector();
 
-    mockEvent.source = { type: 'server', id: '1d', previous_id: 'pr3v10us' };
+    mockEvent.source = {
+      type: 'server',
+      url: 'https://example.com/',
+      referrer: 'https://google.com/',
+    };
     result = await elb(mockEvent);
 
     expect(result.event).toHaveProperty('source', {
       type: 'server',
-      id: '1d',
-      previous_id: 'pr3v10us',
+      url: 'https://example.com/',
+      referrer: 'https://google.com/',
     });
-  });
-
-  test('version', async () => {
-    const { elb } = await getCollector();
-
-    mockEvent.version = { source: 'cl13nt', tagging: 42 };
-    result = await elb(mockEvent);
-
-    expect(result.event).toEqual(
-      expect.objectContaining({
-        version: {
-          source: 'cl13nt',
-          tagging: 42,
-        },
-      }),
-    );
   });
 });

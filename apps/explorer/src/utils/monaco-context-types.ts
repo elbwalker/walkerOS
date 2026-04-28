@@ -72,19 +72,27 @@ declare namespace WalkerOS {
     internal?: boolean;
   }
 
-  // Version
-  interface Version extends Properties {
-    source: string;
-    tagging: number;
-  }
-
   // Source
-  type SourceType = 'web' | 'server' | 'app' | 'other' | string;
+  type SourcePlatform =
+    | 'web'
+    | 'server'
+    | 'app'
+    | 'ios'
+    | 'android'
+    | 'terminal'
+    | string;
 
   interface Source extends Properties {
-    type: SourceType;
-    id: string;
-    previous_id: string;
+    type: string;
+    platform?: SourcePlatform;
+    version?: string;
+    schema?: string;
+    count?: number;
+    trace?: string;
+    url?: string;
+    referrer?: string;
+    tool?: string;
+    command?: string;
   }
 
   // Entity
@@ -93,8 +101,8 @@ declare namespace WalkerOS {
   interface Entity {
     entity: string;
     data: Properties;
-    nested: Entities;
-    context: OrderedProperties;
+    nested?: Entities;
+    context?: OrderedProperties;
   }
 
   // Event
@@ -113,9 +121,6 @@ declare namespace WalkerOS {
     action: string;
     timestamp: number;
     timing: number;
-    group: string;
-    count: number;
-    version: Version;
     source: Source;
   }
 
@@ -259,19 +264,27 @@ declare namespace WalkerOS {
     internal?: boolean;
   }
 
-  // Version
-  interface Version extends Properties {
-    source: string;
-    tagging: number;
-  }
-
   // Source
-  type SourceType = 'web' | 'server' | 'app' | 'other' | string;
+  type SourcePlatform =
+    | 'web'
+    | 'server'
+    | 'app'
+    | 'ios'
+    | 'android'
+    | 'terminal'
+    | string;
 
   interface Source extends Properties {
-    type: SourceType;
-    id: string;
-    previous_id: string;
+    type: string;
+    platform?: SourcePlatform;
+    version?: string;
+    schema?: string;
+    count?: number;
+    trace?: string;
+    url?: string;
+    referrer?: string;
+    tool?: string;
+    command?: string;
   }
 
   // Entity
@@ -280,8 +293,8 @@ declare namespace WalkerOS {
   interface Entity {
     entity: string;
     data: Properties;
-    nested: Entities;
-    context: OrderedProperties;
+    nested?: Entities;
+    context?: OrderedProperties;
   }
 
   // Event
@@ -300,9 +313,6 @@ declare namespace WalkerOS {
     action: string;
     timestamp: number;
     timing: number;
-    group: string;
-    count: number;
-    version: Version;
     source: Source;
   }
 
