@@ -18,18 +18,25 @@ complete.
 
 ## Commands
 
-| Command             | Purpose                     |
-| ------------------- | --------------------------- |
-| `npm install`       | Install all dependencies    |
-| `npm run dev`       | Watch mode for all packages |
-| `npm run build`     | Build all packages          |
-| `npm run test`      | Run all tests               |
-| `npm run typecheck` | TypeScript type check       |
-| `npm run lint`      | ESLint                      |
-| `npm run format`    | Prettier formatting         |
+| Command                       | Purpose                                                  |
+| ----------------------------- | -------------------------------------------------------- |
+| `npm install`                 | Install all dependencies                                 |
+| `npm run dev`                 | Watch mode for all packages                              |
+| `npm run build`               | Build all packages                                       |
+| `npm run verify:touched -- X` | L1: typecheck + lint + test for one package              |
+| `npm run verify:affected`     | L2: same, only for packages affected since `origin/main` |
+| `npm run test:smoke`          | L3: critical path (core, collector, cli) + affected      |
+| `npm run test`                | L4: full suite (10-15 min, release / on demand)          |
+| `npm run typecheck`           | Full typecheck                                           |
+| `npm run lint`                | Full lint                                                |
+| `npm run format`              | Prettier formatting                                      |
 
-**Validation before commit:**
-`npm run typecheck && npm run lint && npm run build && npm run test`
+**Validation while iterating:** `npm run verify:touched -- <pkg>`
+
+**Validation before opening a PR:** `npm run verify:affected` (or
+`npm run test:smoke`)
+
+See `/workspaces/developer/AGENT.md` rule 11 for the full tier doctrine.
 
 ## XP Principles (Non-Negotiable)
 
@@ -112,7 +119,7 @@ When adding, renaming, or removing a Config field, update BOTH files. A
 compile-time drift guard at
 `packages/core/src/schemas/__tests__/config-drift.test-d.ts` fails `tsc` if the
 key sets diverge. The guard checks keys only; value types may differ (recursion,
-generic slots). Run `npm run typecheck` in `packages/core/` to verify.
+generic slots). Run `npm run verify:touched -- core` to verify.
 
 ## Testing
 

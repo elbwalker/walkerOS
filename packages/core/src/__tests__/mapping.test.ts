@@ -1,4 +1,4 @@
-import type { Mapping, WalkerOS, Collector } from '../types';
+import type { Mapping, WalkerOS } from '../types';
 import {
   createEvent,
   getEvent,
@@ -7,6 +7,7 @@ import {
   isObject,
   isString,
 } from '..';
+import { createMockCollector } from './helpers/mocks';
 
 describe('getMappingEvent', () => {
   test('basic', async () => {
@@ -338,9 +339,9 @@ describe('getMappingValue', () => {
   });
 
   test('consent', async () => {
-    const collector = {
+    const collector = createMockCollector({
       consent: { collectorLevel: true },
-    } as unknown as Collector.Instance;
+    });
 
     expect(collector.consent.collectorLevel).toBeTruthy();
 
@@ -480,9 +481,7 @@ describe('getMappingValue', () => {
 describe('processEventMapping', () => {
   const { processEventMapping } = require('..');
 
-  const mockCollector = {
-    consent: {},
-  } as unknown as Collector.Instance;
+  const mockCollector = createMockCollector({ consent: {} });
 
   test('config-level policy', async () => {
     const event = { name: 'page view', data: { title: 'Home' } };
@@ -751,45 +750,55 @@ describe('processEventMapping', () => {
     expect(result.data).toEqual({ email: 'john@example.com' });
   });
 
-  describe('skip flag', () => {
-    test('returns skip: false when rule has no skip flag', async () => {
+  describe('silent flag', () => {
+    test('returns silent: false when rule has no silent flag', async () => {
       const result = await processEventMapping(
         { name: 'user login', data: {} },
         { mapping: { user: { login: { settings: {} } } } },
         mockCollector,
       );
-      expect(result.skip).toBe(false);
+      expect(result.silent).toBe(false);
       expect(result.ignore).toBe(false);
     });
 
-    test('returns skip: true when rule has skip: true', async () => {
+    test('returns silent: true when rule has silent: true', async () => {
       const result = await processEventMapping(
         { name: 'user login', data: {} },
-        { mapping: { user: { login: { skip: true, settings: {} } } } },
+        { mapping: { user: { login: { silent: true, settings: {} } } } },
         mockCollector,
       );
-      expect(result.skip).toBe(true);
+      expect(result.silent).toBe(true);
       expect(result.ignore).toBe(false);
     });
 
-    test('ignore wins over skip when both set, but skip still reported', async () => {
+    test('ignore wins over silent when both set, but silent still reported', async () => {
       const result = await processEventMapping(
         { name: 'user login', data: {} },
-        { mapping: { user: { login: { ignore: true, skip: true } } } },
+        { mapping: { user: { login: { ignore: true, silent: true } } } },
         mockCollector,
       );
       expect(result.ignore).toBe(true);
-      expect(result.skip).toBe(true);
+      expect(result.silent).toBe(true);
     });
 
-    test('skip: false when no matching rule', async () => {
+    test('silent: false when no matching rule', async () => {
       const result = await processEventMapping(
         { name: 'user login', data: {} },
         { mapping: {} },
         mockCollector,
       );
-      expect(result.skip).toBe(false);
+      expect(result.silent).toBe(false);
       expect(result.ignore).toBe(false);
+    });
+
+    test('exposes silent on processEventMapping result, not skip', async () => {
+      const result = await processEventMapping(
+        { name: 'user login', data: {} },
+        { mapping: { user: { login: { silent: true } } } },
+        mockCollector,
+      );
+      expect('skip' in result).toBe(false);
+      expect(result.silent).toBe(true);
     });
   });
 });

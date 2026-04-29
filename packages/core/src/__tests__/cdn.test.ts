@@ -82,9 +82,7 @@ describe('fetchPackageSchema', () => {
   it('should throw when package not found', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
 
-    await expect(fetchPackageSchema('nonexistent')).rejects.toThrow(
-      'HTTP 404',
-    );
+    await expect(fetchPackageSchema('nonexistent')).rejects.toThrow('HTTP 404');
   });
 
   it('should throw when walkerOS.json not found', async () => {
@@ -95,9 +93,7 @@ describe('fetchPackageSchema', () => {
       })
       .mockResolvedValueOnce({ ok: false, status: 404 });
 
-    await expect(fetchPackageSchema('pkg')).rejects.toThrow(
-      'HTTP 404',
-    );
+    await expect(fetchPackageSchema('pkg')).rejects.toThrow('HTTP 404');
   });
 
   it('should support version parameter', async () => {
@@ -274,5 +270,195 @@ describe('fetchPackage', () => {
     expect(result.examples).toEqual({});
     expect(result.hintKeys).toEqual([]);
     expect(result.exampleSummaries).toEqual([]);
+  });
+
+  it('attaches X-Walkeros-Client header when client option is set (jsdelivr branch)', async () => {
+    setupMocks();
+    await fetchPackage('@walkeros/web-destination-gtag', {
+      client: 'walkeros-cli/3.4.2',
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    for (const call of mockFetch.mock.calls) {
+      expect(call[1]).toEqual(
+        expect.objectContaining({
+          headers: { 'X-Walkeros-Client': 'walkeros-cli/3.4.2' },
+        }),
+      );
+    }
+  });
+
+  it('omits headers when client option is not set (jsdelivr branch)', async () => {
+    setupMocks();
+    await fetchPackage('@walkeros/web-destination-gtag');
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    for (const call of mockFetch.mock.calls) {
+      const init = call[1] as RequestInit;
+      expect(init.headers).toBeUndefined();
+    }
+  });
+});
+
+describe('fetchPackage — baseUrl branch (single round-trip)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const mockDetailResponse = {
+    package: '@walkeros/web-destination-gtag',
+    version: '2.1.1',
+    description: 'Google gtag destination',
+    type: 'destination',
+    platform: ['web'],
+    docs: 'https://www.walkeros.io/docs/destinations/web/gtag',
+    source:
+      'https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/gtag/src',
+    schemas: {
+      settings: { type: 'object' },
+      config: { type: 'object' },
+    },
+    hints: {
+      'consent-mode': { text: 'Consent Mode v2 enabled by default' },
+    },
+    hintKeys: ['consent-mode'],
+    exampleSummaries: [
+      { name: 'purchase', description: 'GA4 purchase' },
+      { name: 'pageView' },
+    ],
+    examples: {
+      step: {
+        purchase: { description: 'GA4 purchase', in: {}, out: [] },
+        pageView: { in: {}, out: [] },
+      },
+    },
+  };
+
+  function setupDetailMock(
+    response: Record<string, unknown> = mockDetailResponse,
+  ) {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(response),
+    });
+  }
+
+  it('makes a single GET to /api/packages/[name]?expand=all', async () => {
+    setupDetailMock();
+    await fetchPackage('@walkeros/web-destination-gtag', {
+      baseUrl: 'http://app.test',
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      'http://app.test/api/packages/%40walkeros%2Fweb-destination-gtag?version=latest&expand=all',
+    );
+  });
+
+  it('respects the version option in the request URL', async () => {
+    setupDetailMock();
+    await fetchPackage('@walkeros/web-destination-gtag', {
+      baseUrl: 'http://app.test',
+      version: '2.1.1',
+    });
+
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      'http://app.test/api/packages/%40walkeros%2Fweb-destination-gtag?version=2.1.1&expand=all',
+    );
+  });
+
+  it('parses the unified response into a WalkerOSPackage', async () => {
+    setupDetailMock();
+    const result = await fetchPackage('@walkeros/web-destination-gtag', {
+      baseUrl: 'http://app.test',
+    });
+
+    expect(result.packageName).toBe('@walkeros/web-destination-gtag');
+    expect(result.version).toBe('2.1.1');
+    expect(result.description).toBe('Google gtag destination');
+    expect(result.type).toBe('destination');
+    expect(result.platform).toEqual(['web']);
+    expect(result.docs).toBe(
+      'https://www.walkeros.io/docs/destinations/web/gtag',
+    );
+    expect(result.source).toBe(
+      'https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/gtag/src',
+    );
+    expect(result.schemas).toEqual({
+      settings: { type: 'object' },
+      config: { type: 'object' },
+    });
+    expect(result.hints).toEqual({
+      'consent-mode': { text: 'Consent Mode v2 enabled by default' },
+    });
+    expect(result.hintKeys).toEqual(['consent-mode']);
+    expect(result.examples).toEqual(mockDetailResponse.examples);
+    expect(result.exampleSummaries).toEqual([
+      { name: 'purchase', description: 'GA4 purchase' },
+      { name: 'pageView' },
+    ]);
+  });
+
+  it('derives hintKeys from hints when hintKeys is omitted', async () => {
+    setupDetailMock({
+      package: 'pkg',
+      version: '1.0.0',
+      platform: ['web'],
+      schemas: {},
+      hints: { a: { text: 'A' }, b: { text: 'B' } },
+      exampleSummaries: [],
+    });
+    const result = await fetchPackage('pkg', {
+      baseUrl: 'http://app.test',
+    });
+    expect(result.hintKeys.sort()).toEqual(['a', 'b']);
+    expect(result.hints).toBeDefined();
+  });
+
+  it('handles a minimal response with no hints/examples', async () => {
+    setupDetailMock({
+      package: 'pkg',
+      version: '1.0.0',
+      platform: [],
+      schemas: {},
+      exampleSummaries: [],
+    });
+    const result = await fetchPackage('pkg', {
+      baseUrl: 'http://app.test',
+    });
+    expect(result.hints).toBeUndefined();
+    expect(result.hintKeys).toEqual([]);
+    expect(result.examples).toEqual({});
+    expect(result.exampleSummaries).toEqual([]);
+  });
+
+  it('attaches X-Walkeros-Client header on baseUrl branch', async () => {
+    setupDetailMock();
+    await fetchPackage('@walkeros/web-destination-gtag', {
+      baseUrl: 'http://app.test',
+      client: 'walkeros-mcp/3.4.2',
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const init = mockFetch.mock.calls[0][1] as RequestInit;
+    expect(init.headers).toEqual({
+      'X-Walkeros-Client': 'walkeros-mcp/3.4.2',
+    });
+  });
+
+  it('omits headers when client option is not set', async () => {
+    setupDetailMock();
+    await fetchPackage('@walkeros/web-destination-gtag', {
+      baseUrl: 'http://app.test',
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const init = mockFetch.mock.calls[0][1] as RequestInit;
+    expect(init.headers).toBeUndefined();
+  });
+
+  it('throws on non-OK responses with HTTP status in the message', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+    await expect(
+      fetchPackage('@walkeros/x', { baseUrl: 'http://app.test' }),
+    ).rejects.toThrow('HTTP 404');
   });
 });

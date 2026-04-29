@@ -3,10 +3,10 @@ import { loadBundleConfig } from '../loader';
 describe('loadBundleConfig deferred env by platform', () => {
   it('produces markers for server flows', () => {
     const config = {
-      version: 3,
+      version: 4,
       flows: {
         serverflow: {
-          server: {},
+          config: { platform: 'server' },
           collector: { url: '$env.COLLECTOR_URL' },
           destinations: {
             d: { config: { apiKey: '$env.API_KEY' } },
@@ -24,10 +24,10 @@ describe('loadBundleConfig deferred env by platform', () => {
   it('resolves env normally for web flows', () => {
     process.env.WEB_KEY = 'baked-value';
     const config = {
-      version: 3,
+      version: 4,
       flows: {
         webflow: {
-          web: {},
+          config: { platform: 'web' },
           collector: { url: '$env.WEB_KEY' },
           destinations: {},
         },

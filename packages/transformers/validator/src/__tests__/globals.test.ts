@@ -30,10 +30,12 @@ function makeEvent(overrides: Partial<WalkerOS.Event> = {}): WalkerOS.Event {
     trigger: 'load',
     timestamp: Date.now(),
     timing: 0,
-    group: 'test',
-    count: 1,
-    version: { source: 'test', tagging: 1 },
-    source: { type: 'web', id: 'test', previous_id: '' },
+    source: {
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/',
+      schema: '4',
+    },
     ...overrides,
   };
 }

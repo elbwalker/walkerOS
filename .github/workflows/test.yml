@@ -43,12 +43,17 @@ jobs:
       - run: npm ci
       - name: Validate documentation
         run: npm run validate:links
-      - name: Typecheck
-        run: npx turbo run typecheck
-      - name: Test, lint
-        run: npx turbo run test lint
+      - name: Verify (PR, affected only)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin main --depth=1
+          npx turbo run typecheck lint test --filter='[origin/main]'
+      - name: Verify (push to main or manual, full)
+        if: github.event_name != 'pull_request'
+        run: npx turbo run typecheck lint test
       - name: Run integration tests
-        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        if:
+          github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: npm run test:integration
       - name: Upload test results on failure
         if: failure()

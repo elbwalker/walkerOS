@@ -1,5 +1,7 @@
-import type { StepOut } from '../../types/flow';
+import type { Flow } from '../../types/flow';
 import { formatOut } from '../formatOut';
+
+type StepOut = Flow.StepOut;
 
 describe('formatOut', () => {
   it('returns "// no output" for empty out', () => {

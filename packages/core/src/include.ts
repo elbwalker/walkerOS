@@ -7,7 +7,6 @@ const SECTIONS: Record<string, (e: WalkerOS.DeepPartialEvent) => unknown> = {
   context: (e) => e.context,
   user: (e) => e.user,
   source: (e) => e.source,
-  version: (e) => e.version,
   event: (e) => ({
     entity: e.entity,
     action: e.action,
@@ -15,8 +14,6 @@ const SECTIONS: Record<string, (e: WalkerOS.DeepPartialEvent) => unknown> = {
     timestamp: e.timestamp,
     name: e.name,
     trigger: e.trigger,
-    group: e.group,
-    count: e.count,
     timing: (e as WalkerOS.Event).timing,
   }),
 };
@@ -36,7 +33,7 @@ export function flattenIncludeSections(
 
     for (const [key, raw] of Object.entries(bag as Record<string, unknown>)) {
       if (raw === undefined) continue;
-      // Context values are OrderedProperties tuples — extract the label.
+      // Context values are OrderedProperties tuples - extract the label.
       const value = section === 'context' && Array.isArray(raw) ? raw[0] : raw;
       out[`${section}_${key}`] = value;
     }

@@ -78,8 +78,8 @@ export const push: PushFn = async function (
     capiEvent.eventName = rule?.name || event.name;
   }
 
-  if (event.source?.id) {
-    capiEvent.eventSourceUrl = event.source.id;
+  if (event.source?.url) {
+    capiEvent.eventSourceUrl = event.source.url;
   }
 
   if (Object.keys(customData).length > 0) {

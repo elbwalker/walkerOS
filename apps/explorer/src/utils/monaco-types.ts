@@ -251,6 +251,29 @@ export interface LoadPackageTypesOptions {
   version?: string;
 }
 
+/**
+ * Configurable base URL for package types fetching.
+ *
+ * When unset (default), `loadPackageTypes` fetches `.d.ts` directly from
+ * jsdelivr — keeping the explorer self-contained for docs and standalone use.
+ *
+ * When set, callers route requests through their own origin (e.g. an app's
+ * `/api/packages/[name]/types` proxy) so CSP and caching can be controlled
+ * by the host. The base URL must NOT include a trailing slash; the resolver
+ * inserts one. Pass `undefined` to reset to the default.
+ */
+let packageTypesBaseUrl: string | undefined;
+
+export function setPackageTypesBaseUrl(url: string | undefined): void {
+  packageTypesBaseUrl = url;
+}
+
+export function resolveTypesUrl(packageName: string, version: string): string {
+  return packageTypesBaseUrl
+    ? `${packageTypesBaseUrl}/${encodeURIComponent(packageName)}/types?version=${encodeURIComponent(version)}`
+    : `https://cdn.jsdelivr.net/npm/${packageName}@${version}/dist/index.d.ts`;
+}
+
 export async function loadPackageTypes(
   monaco: Monaco,
   options: LoadPackageTypesOptions,
@@ -262,7 +285,7 @@ export async function loadPackageTypes(
     return true;
   }
 
-  const url = `https://cdn.jsdelivr.net/npm/${packageName}@${version}/dist/index.d.ts`;
+  const url = resolveTypesUrl(packageName, version);
 
   try {
     const response = await fetch(url);

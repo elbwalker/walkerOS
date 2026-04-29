@@ -105,8 +105,8 @@ export const destinationFullStory: Destination = {
       }
     }
 
-    // 3. Default trackEvent -- unless rule.skip is set
-    if (rule?.skip !== true) {
+    // 3. Default trackEvent -- unless rule.silent is set
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       const properties = isObject(data)
         ? (data as Record<string, unknown>)

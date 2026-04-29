@@ -1,0 +1,230 @@
+---
+title: Reference Syntax
+description: Dynamic references inside flow.json — variables, definitions, env vars, contracts, stores, secrets, inline code.
+path: /docs/guides/reference-syntax
+sidebar_position: 20
+---
+
+# Reference Syntax
+
+walkerOS flow configs (flow.json) support dynamic references inside string
+values. They let you pull in variables, definitions, environment values,
+contract fragments, store instances, secrets, and inline JavaScript — without
+duplicating configuration.
+
+## The one rule
+
+walkerOS uses **two separator characters**, each with a clear meaning:
+
+| Separator | Meaning |
+|---|---|
+| **`.`** | A key or path. The resolver looks up what follows in a map or walks it as a dotted path. |
+| **`:`** | A literal value or raw-code payload. The resolver uses what follows verbatim — it is not a name. |
+
+Every reference follows that rule. There are no exceptions.
+
+## All references
+
+```
+$var.name              look up variables[name]
+$def.name              inject definitions[name] as a whole fragment
+$def.name.deep.path    inject a path inside the definition
+$env.NAME              read process.env[NAME]
+$env.NAME:default      read process.env[NAME] with a literal fallback
+$contract.name         inject a whole named contract entry
+$contract.name.events  walk the contract path
+$store.id              inject a store instance (resolved at bundle time)
+$secret.NAME           inject a secret value (resolved at deploy time)
+$code:(event) => ...   inline JavaScript (resolved at bundle time)
+```
+
+## `$var.` — variables
+
+Look up a value in the `variables` map at config, flow, or step level. Step
+overrides flow overrides config.
+
+```json
+{
+  "variables": { "measurementId": "G-XXXXXX" },
+  "flows": {
+    "web": {
+      "destinations": {
+        "gtag": {
+          "config": {
+            "settings": {
+              "ga4": { "measurementId": "$var.measurementId" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Variables are primitives (string, number, boolean). Values can be inlined
+inside strings: `"Bearer $var.token"`.
+
+## `$def.` — definitions
+
+Inject a reusable fragment from `definitions`. The reference either replaces
+the entire string value or walks a dotted path inside the fragment.
+
+```json
+{
+  "definitions": {
+    "ga4Items": {
+      "loop": ["nested", { "map": { "item_id": "data.id" } }]
+    }
+  },
+  "flows": {
+    "web": {
+      "destinations": {
+        "gtag": {
+          "config": {
+            "mapping": {
+              "order": {
+                "complete": {
+                  "data": { "map": { "items": "$def.ga4Items" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`$def.` must be the entire string value (not inlined in prose).
+
+## `$env.` — environment variables
+
+Read from `process.env` at runtime. Optionally provide a literal fallback with
+the `:default` suffix.
+
+```json
+{
+  "variables": {
+    "apiUrl": "$env.API_URL:http://localhost:8080/collect",
+    "pixelId": "$env.META_PIXEL_ID"
+  }
+}
+```
+
+The `:` here is the **default-value separator**, not a name delimiter. The
+token after `:` is used verbatim.
+
+## `$contract.` — contract references
+
+Inject a fragment of a named contract entry. Same "whole string, optional deep
+path" rules as `$def.`.
+
+```json
+{
+  "contract": {
+    "default": { "events": { "product": { "add": { /* schema */ } } } }
+  },
+  "flows": {
+    "server": {
+      "transformers": {
+        "validator": {
+          "package": "@walkeros/transformer-validator",
+          "config": { "schemas": "$contract.default.events" }
+        }
+      }
+    }
+  }
+}
+```
+
+## `$store.` — store wiring
+
+Inject a store instance declared under `stores`. Wired through a component's
+`env` so the bundler can resolve to the real store at build time.
+
+```json
+{
+  "flows": {
+    "server": {
+      "stores": {
+        "cache": { "package": "@walkeros/store-memory" }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-http",
+          "env": { "store": "$store.cache" }
+        }
+      }
+    }
+  }
+}
+```
+
+Store IDs are plain identifiers (camelCase). The `.` is the separator, not a
+path walker — store IDs do not contain dots.
+
+## `$secret.` — secrets
+
+Inject a secret resolved at deploy time. Secrets are stored outside the config
+and never written into customer databases alongside the flow.
+
+```json
+{
+  "flows": {
+    "web": {
+      "destinations": {
+        "api": {
+          "config": {
+            "settings": {
+              "headers": { "Authorization": "Bearer $secret.API_TOKEN" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Secret names are uppercase: `[A-Z0-9_]+`. The `.` is the separator — secrets
+have no internal structure.
+
+## `$code:` — inline code
+
+Embed a JavaScript function as a string. The bundler compiles the payload into
+real JS at build time. Everything after `$code:` is the raw function body.
+
+```json
+{
+  "definitions": {
+    "onlyProducts": {
+      "condition": "$code:(entity) => entity.entity === 'product'"
+    }
+  }
+}
+```
+
+The `:` here marks the **payload**. Nothing after the colon is looked up — it
+is compiled as-is.
+
+## Cascade and resolution order
+
+`variables` and `definitions` can live at three levels. Priority (highest wins):
+
+1. Step level (`sources.*`, `transformers.*`, `destinations.*`, `stores.*`)
+2. Flow level (`flows.<name>.variables`, `flows.<name>.definitions`)
+3. Config root (`variables`, `definitions`)
+
+Resolution runs at `getFlowSettings()` in `@walkeros/core` — the runtime
+replaces every reference before the bundler or collector sees the config.
+
+## What else to read
+
+- [`@walkeros/core` reference exports](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/references.ts) —
+  `REF_VAR`, `REF_DEF`, `REF_ENV`, `REF_CONTRACT`, `REF_STORE`, `REF_SECRET`,
+  `REF_CODE_PREFIX`. The single source of truth for the regex patterns.
+- [Stores guide](../stores/index.mdx) — wiring stores via `$store.`.
+- [Mapping guide](../mapping/index.mdx) — `$code:`, `$def.`, and mapping-value
+  shortcuts.

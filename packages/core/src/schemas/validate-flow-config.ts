@@ -1,4 +1,4 @@
-import { ConfigSchema } from './flow';
+import { JsonSchema } from './flow';
 import type { ValidationIssue, ValidationResult } from './validate';
 import type { IntelliSenseContext, PackageInfo } from './intellisense';
 
@@ -38,7 +38,7 @@ export function validateFlowConfig(json: string): ValidationResult {
   const warnings: ValidationIssue[] = [];
 
   // 2. Schema validation
-  const zodResult = ConfigSchema.safeParse(parsed);
+  const zodResult = JsonSchema.safeParse(parsed);
   if (!zodResult.success) {
     for (const issue of zodResult.error.issues) {
       const path = issue.path.join('.');
@@ -96,16 +96,21 @@ function extractContext(
   extractContractEntities(contractEntities, parsed.contract);
 
   // Walk each flow config
-  for (const config of Object.values(parsed.flows)) {
-    if (!isObject(config)) continue;
+  for (const flow of Object.values(parsed.flows)) {
+    if (!isObject(flow)) continue;
 
     if (!platform) {
-      if ('web' in config) platform = 'web';
-      else if ('server' in config) platform = 'server';
+      const cfg = flow.config;
+      if (
+        isObject(cfg) &&
+        (cfg.platform === 'web' || cfg.platform === 'server')
+      ) {
+        platform = cfg.platform;
+      }
     }
 
-    mergeVars(variables, config.variables);
-    mergeDefs(definitions, config.definitions);
+    mergeVars(variables, flow.variables);
+    mergeDefs(definitions, flow.definitions);
 
     for (const type of ['sources', 'destinations', 'transformers'] as const) {
       const stepType =
@@ -121,9 +126,9 @@ function extractContext(
             ? destinations
             : transformers;
 
-      if (isObject(config[type])) {
+      if (isObject(flow[type])) {
         for (const [name, ref] of Object.entries(
-          config[type] as Record<string, unknown>,
+          flow[type] as Record<string, unknown>,
         )) {
           list.push(name);
           if (isObject(ref)) {

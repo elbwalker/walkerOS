@@ -23,11 +23,11 @@ type EnrichmentMap = Record<string, MonacoSchemaExtension>;
  * Keys in the enrichment map are dot-paths (e.g., 'properties.sources').
  * Empty string '' targets the root. Does not mutate the original.
  */
-export function enrichSchema(
-  baseSchema: Record<string, unknown>,
+export function enrichSchema<T extends Record<string, unknown>>(
+  baseSchema: T,
   enrichments: EnrichmentMap,
-): Record<string, unknown> {
-  const schema = JSON.parse(JSON.stringify(baseSchema));
+): T {
+  const schema: T = JSON.parse(JSON.stringify(baseSchema));
 
   for (const [path, extensions] of Object.entries(enrichments)) {
     const target = path === '' ? schema : getNestedObject(schema, path);

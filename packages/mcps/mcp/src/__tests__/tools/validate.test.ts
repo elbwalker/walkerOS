@@ -1,5 +1,6 @@
 import { registerFlowValidateTool } from '../../tools/validate.js';
 import { ValidateOutputShape } from '../../schemas/output.js';
+import type { ValidateResult } from '@walkeros/cli';
 
 jest.mock('@walkeros/cli/dev', () => ({
   schemas: {
@@ -87,7 +88,13 @@ describe('flow_validate tool', () => {
   });
 
   it('calls validate with correct params', async () => {
-    const mockResult = { valid: true, errors: [], warnings: [] };
+    const mockResult: ValidateResult = {
+      valid: true,
+      type: 'event',
+      errors: [],
+      warnings: [],
+      details: {},
+    };
     mockValidate.mockResolvedValue(mockResult);
 
     const tool = server.getTool('flow_validate');
@@ -107,7 +114,13 @@ describe('flow_validate tool', () => {
   });
 
   it('passes file path string to validate', async () => {
-    const mockResult = { valid: true, errors: [] };
+    const mockResult: ValidateResult = {
+      valid: true,
+      type: 'flow',
+      errors: [],
+      warnings: [],
+      details: {},
+    };
     mockValidate.mockResolvedValue(mockResult);
 
     const tool = server.getTool('flow_validate');
@@ -124,7 +137,13 @@ describe('flow_validate tool', () => {
   });
 
   it('returns summary "Valid" on success', async () => {
-    const mockResult = { valid: true, errors: [], warnings: [] };
+    const mockResult: ValidateResult = {
+      valid: true,
+      type: 'event',
+      errors: [],
+      warnings: [],
+      details: {},
+    };
     mockValidate.mockResolvedValue(mockResult);
 
     const tool = server.getTool('flow_validate');
@@ -138,10 +157,12 @@ describe('flow_validate tool', () => {
   });
 
   it('returns summary with error count on failure', async () => {
-    const mockResult = {
+    const mockResult: ValidateResult = {
       valid: false,
+      type: 'event',
       errors: [{ path: '/name', message: 'required' }],
       warnings: [],
+      details: {},
     };
     mockValidate.mockResolvedValue(mockResult);
 
@@ -171,7 +192,13 @@ describe('flow_validate tool', () => {
   });
 
   it('passes path option to CLI validate', async () => {
-    const mockResult = { valid: true, errors: [], warnings: [], details: {} };
+    const mockResult: ValidateResult = {
+      valid: true,
+      type: 'flow',
+      errors: [],
+      warnings: [],
+      details: {},
+    };
     mockValidate.mockResolvedValue(mockResult);
 
     const tool = server.getTool('flow_validate');
@@ -189,7 +216,7 @@ describe('flow_validate tool', () => {
   });
 
   it('accepts entry type in output when path is used', async () => {
-    const mockResult = {
+    const mockResult: ValidateResult = {
       valid: true,
       type: 'entry',
       errors: [],

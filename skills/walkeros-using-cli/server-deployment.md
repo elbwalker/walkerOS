@@ -11,18 +11,23 @@ collection flow.
 
 ## 1. Create the Flow Config
 
-Server flows use `"server": {}` instead of `"web": {}`. A minimal server flow
-needs an HTTP source (Express) for health checks and event collection:
+Server flows use `"platform": "server"` instead of `"platform": "web"`. A
+minimal server flow needs an HTTP source (Express) for health checks and event
+collection:
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
-      "packages": {
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {}
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/server-source-express": {},
+            "@walkeros/destination-demo": {}
+          }
+        }
       },
       "sources": {
         "http": {
@@ -112,17 +117,17 @@ curl -X POST https://your-flow-url/collect \
 ## How It Works
 
 ```
-Flow.Config JSON → CLI bundles → API stores config → Scaleway builds container
+Flow.Json JSON → CLI bundles → API stores config → Scaleway builds container
 → Container starts → Express listens on PORT → Health check passes → Active
 ```
 
 **Port resolution:** The config sets `port: 8080` as default. At runtime, the
 `PORT` environment variable (set by the hosting platform) overrides it
-automatically — you don't need to change the config per environment.
+automatically. You don't need to change the config per environment.
 
-**Platform detection:** The bundler reads `"server": {}` and generates an ESM
-bundle (`bundle.mjs`) with a default export function. Web flows (`"web": {}`)
-generate an IIFE (`walker.js`) instead.
+**Platform detection:** The bundler reads `config.platform: "server"` and
+generates an ESM bundle (`bundle.mjs`) with a default export function. Web flows
+(`config.platform: "web"`) generate an IIFE (`walker.js`) instead.
 
 ## Troubleshooting
 
@@ -138,5 +143,5 @@ generate an IIFE (`walker.js`) instead.
 
 - [commands-reference.md](commands-reference.md) — Full `deploy` command
   reference
-- [flow-configuration.md](flow-configuration.md) — Complete Flow.Config schema
+- [flow-configuration.md](flow-configuration.md) — Complete Flow.Json schema
 - [SKILL.md](SKILL.md) — CLI overview

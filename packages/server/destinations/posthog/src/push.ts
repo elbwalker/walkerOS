@@ -37,7 +37,7 @@ export const push: PushFn = async function (
       'anonymous';
   }
 
-  // 1. Identity — if $set or $set_once present, call client.identify()
+  // 1. Identity - if $set or $set_once present, call client.identify()
   if (identifyResolved) {
     const $set = isObject(identifyResolved.$set)
       ? (identifyResolved.$set as Record<string, unknown>)
@@ -54,7 +54,7 @@ export const push: PushFn = async function (
     }
   }
 
-  // 2. Group — resolve group mapping (rule-level wins)
+  // 2. Group - resolve group mapping (rule-level wins)
   const groupMapping = mappingSettings.group ?? settings.group;
   let groups: Record<string, string | number> | undefined;
 
@@ -85,8 +85,8 @@ export const push: PushFn = async function (
     }
   }
 
-  // 3. Capture — unless rule opts out via skip
-  if (rule?.skip !== true) {
+  // 3. Capture - unless rule opts out via silent
+  if (rule?.silent !== true) {
     const eventName = isString(rule?.name) ? rule.name : event.name;
     const properties = isObject(data) ? (data as Record<string, unknown>) : {};
 

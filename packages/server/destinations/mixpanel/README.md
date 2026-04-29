@@ -79,7 +79,7 @@ By default, events are sent via `/track` (real-time, last 5 days only). Set
   "mapping": {
     "user": {
       "login": {
-        "skip": true,
+        "silent": true,
         "settings": {
           "identify": { "map": { "distinctId": "data.user_id" } },
           "people": {
@@ -123,7 +123,7 @@ Update group profiles:
   "mapping": {
     "company": {
       "update": {
-        "skip": true,
+        "silent": true,
         "settings": {
           "groupProfile": {
             "map": {

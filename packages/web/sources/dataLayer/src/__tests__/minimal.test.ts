@@ -20,9 +20,7 @@ describe('DataLayer Source - Minimal', () => {
     const mockPush = createMockPush(collectedEvents);
 
     // Initialize collector
-    ({ collector } = await startFlow({
-      tagging: 2,
-    }));
+    ({ collector } = await startFlow());
 
     // Override push with synchronous mock
     collector.push = mockPush;

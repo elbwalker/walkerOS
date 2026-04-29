@@ -198,7 +198,10 @@ describe('applyUpdate', () => {
       { 'headers.X-Cache': { value: 'HIT' } },
       {},
     );
-    expect((result as any).headers).toEqual({ 'X-Cache': 'HIT' });
+    expect(result).toEqual({
+      body: 'data',
+      headers: { 'X-Cache': 'HIT' },
+    });
   });
 
   it('resolves dynamic values from context via getMappingValue', async () => {
@@ -207,7 +210,10 @@ describe('applyUpdate', () => {
       { 'headers.X-Cache': { key: 'cache.status' } },
       { cache: { status: 'MISS' } },
     );
-    expect((result as any).headers).toEqual({ 'X-Cache': 'MISS' });
+    expect(result).toEqual({
+      body: 'data',
+      headers: { 'X-Cache': 'MISS' },
+    });
   });
 
   it('preserves existing fields', async () => {
@@ -216,9 +222,13 @@ describe('applyUpdate', () => {
       { 'headers.X-Cache': { value: 'HIT' } },
       {},
     );
-    expect((result as any).body).toBe('data');
-    expect((result as any).headers['Content-Type']).toBe('text/plain');
-    expect((result as any).headers['X-Cache']).toBe('HIT');
+    expect(result).toEqual({
+      body: 'data',
+      headers: {
+        'Content-Type': 'text/plain',
+        'X-Cache': 'HIT',
+      },
+    });
   });
 
   it('returns value unchanged when no update rules', async () => {
@@ -236,9 +246,11 @@ describe('applyUpdate', () => {
       },
       {},
     );
-    expect((result as any).headers).toEqual({
-      'X-Cache': 'HIT',
-      'Cache-Control': 'max-age=300',
+    expect(result).toEqual({
+      headers: {
+        'X-Cache': 'HIT',
+        'Cache-Control': 'max-age=300',
+      },
     });
   });
 });

@@ -13,7 +13,7 @@ import type { Flow } from '@walkeros/core';
  */
 export function resolvePackageImportPath(
   packageName: string,
-  packages: Flow.Packages | undefined,
+  packages: Record<string, Flow.BundlePackage> | undefined,
   configDir: string,
   subpath?: string,
 ): string {

@@ -164,7 +164,6 @@ describe('sourceFetch', () => {
         nested: [{ entity: 'category', data: { name: 'Electronics' } }],
         consent: { functional: true, marketing: true },
         trigger: 'click',
-        group: 'ecommerce',
       };
 
       const request = new Request('https://example.com/collect', {

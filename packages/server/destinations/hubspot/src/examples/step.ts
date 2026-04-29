@@ -8,13 +8,13 @@ import type { Settings } from '../types';
  * At push time, the destination invokes the `@hubspot/api-client` SDK. The
  * public method paths users see on the client are:
  *
- *   - `events.send.basicApi.send(eventRequest)` — fires an event
- *   - `events.send.batchApi.send({ inputs: [...] })` — flushes a batch
- *   - `crm.contacts.basicApi.update(id, data, idProperty)` — contact upsert
+ *   - `events.send.basicApi.send(eventRequest)` - fires an event
+ *   - `events.send.batchApi.send({ inputs: [...] })` - flushes a batch
+ *   - `crm.contacts.basicApi.update(id, data, idProperty)` - contact upsert
  *
  * Each `out` is therefore a list of tuples `[['method.path', ...args], ...]`
  * matching the actual SDK call order. `identify` fires before the event.
- * When the destination skips an event (`skip: true`, `ignore: true`, or
+ * When the destination skips an event (`silent: true`, `ignore: true`, or
  * missing identity), `out` is `[]`.
  */
 
@@ -172,7 +172,7 @@ export const destinationIdentify: HubSpotStepExample = {
 };
 
 /**
- * Per-event identify with skip -- user login fires contact upsert only,
+ * Per-event identify with silent -- user login fires contact upsert only,
  * no custom event sent.
  */
 export const userLoginIdentify: HubSpotStepExample = {
@@ -190,7 +190,7 @@ export const userLoginIdentify: HubSpotStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {

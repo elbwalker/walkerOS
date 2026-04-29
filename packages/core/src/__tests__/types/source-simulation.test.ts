@@ -1,4 +1,5 @@
-import type { Collector, Elb, Source, Trigger } from '../../index';
+import type { Collector, Source, Trigger } from '../../index';
+import { createMockElb } from '../helpers/mocks';
 
 describe('Trigger types', () => {
   it('Fn type is curried and async', () => {
@@ -20,7 +21,7 @@ describe('Trigger types', () => {
         if (!flow) {
           flow = {
             collector: {} as Collector.Instance,
-            elb: (() => {}) as unknown as Elb.Fn,
+            elb: createMockElb(),
           };
         }
       },
@@ -43,7 +44,7 @@ describe('Trigger types', () => {
           if (!flow) {
             flow = {
               collector: {} as Collector.Instance,
-              elb: (() => {}) as unknown as Elb.Fn,
+              elb: createMockElb(),
             };
           }
         },

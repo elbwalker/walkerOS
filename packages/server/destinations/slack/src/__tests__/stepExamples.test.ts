@@ -69,7 +69,7 @@ describe('slack server destination -- step examples', () => {
 
     const { env, collected } = spyEnv();
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     // Default: Web API mode with bot token + #default channel.
     // Step examples may override via `example.settings`.

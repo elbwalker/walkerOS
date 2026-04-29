@@ -44,7 +44,7 @@ npm install @walkeros/server-destination-klaviyo
 
 Per-event mapping settings control additional behavior:
 
-| Setting    | Effect                                     | Use with `skip: true`        |
+| Setting    | Effect                                     | Use with `silent: true`      |
 | ---------- | ------------------------------------------ | ---------------------------- |
 | `identify` | Calls `createOrUpdateProfile()`            | Yes, for login/signup events |
 | `value`    | Sets revenue value + currency on the event | No                           |

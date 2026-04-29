@@ -32,16 +32,9 @@ export function createMockPush(collectedEvents: WalkerOS.Event[]) {
       trigger: event.trigger || '',
       timestamp: event.timestamp || Date.now(),
       timing: event.timing || 0,
-      group: event.group || '',
-      count: event.count || 0,
-      version: {
-        source: event.version?.source || '1.0.0',
-        tagging: event.version?.tagging || 2,
-      },
       source: {
         type: event.source?.type || 'session',
-        id: event.source?.id || '',
-        previous_id: event.source?.previous_id || '',
+        platform: event.source?.platform || 'web',
       },
     };
     collectedEvents.push(fullEvent);

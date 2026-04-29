@@ -29,7 +29,7 @@ function getTTQ(env: unknown): TTQ {
  * parameter changed since last push, call ttq.identify() with the full
  * resolved object. Returns the updated lastIdentity snapshot.
  *
- * The destination never partial-updates identity — TikTok treats each
+ * The destination never partial-updates identity - TikTok treats each
  * ttq.identify() call as a full replacement of Advanced Matching state.
  */
 function applyIdentify(
@@ -103,7 +103,7 @@ export const destinationTikTok: Destination = {
 
     const state: RuntimeState = settings._state || {};
 
-    // Identity — rule-level override wins over destination-level.
+    // Identity - rule-level override wins over destination-level.
     // Resolved and diffed against runtime state; only changes fire
     // ttq.identify(). Order: identify BEFORE track so Advanced Matching
     // is set for the conversion event.
@@ -119,9 +119,9 @@ export const destinationTikTok: Destination = {
       }
     }
 
-    // Default track. rule.skip suppresses the call entirely (e.g., for
+    // Default track. rule.silent suppresses the call entirely (e.g., for
     // rules that are identify-only).
-    if (rule?.skip !== true) {
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       const params: Record<string, unknown> = isObject(data)
         ? (data as Record<string, unknown>)

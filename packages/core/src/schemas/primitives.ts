@@ -57,12 +57,6 @@ export const Timestamp = z.number().int().positive();
  */
 export const Counter = z.number().int().nonnegative();
 
-/**
- * TaggingVersion - Version number for event tagging
- * Standardized description used in both Version and Config schemas
- */
-export const TaggingVersion = z.number().describe('Tagging version number');
-
 // ========================================
 // Primitive Value Unions
 // ========================================

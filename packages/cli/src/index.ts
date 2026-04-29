@@ -1,3 +1,9 @@
+declare module '@walkeros/core' {
+  interface SourceMap {
+    cli: { type: 'cli'; platform: 'terminal'; command?: string };
+  }
+}
+
 // === CLI Commands ===
 // Export CLI command handlers
 export { bundleCommand } from './commands/bundle/index.js';
@@ -44,10 +50,15 @@ export {
   deleteDeploymentCommand,
 } from './commands/deployments/index.js';
 export { feedbackCommand } from './commands/feedback/index.js';
+export {
+  telemetryStatusCommand,
+  telemetryEnableCommand,
+  telemetryDisableCommand,
+} from './commands/telemetry/index.js';
 
 // === Programmatic API ===
 // High-level functions for library usage
-export { bundle, bundleRemote } from './commands/bundle/index.js';
+export { bundle } from './commands/bundle/index.js';
 export { wrapSkeleton } from './commands/bundle/wrap.js';
 export type { WrapSkeletonOptions } from './commands/bundle/wrap.js';
 export {
@@ -144,9 +155,12 @@ export { loadConfig, loadJsonConfig } from './config/utils.js';
 export { findExample } from './commands/simulate/example-loader.js';
 export { compareOutput } from './commands/simulate/compare.js';
 
+// === Telemetry ===
+export * as telemetry from './telemetry/index.js';
+
 // === Types ===
 // Export types for programmatic usage
-// Config structure uses Flow.Config and Flow.Settings from @walkeros/core
+// Config structure uses Flow.Json (root) and Flow (single flow) from @walkeros/core
 export type {
   Flow,
   CLIBuildOptions,

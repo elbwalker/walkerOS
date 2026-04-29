@@ -31,14 +31,12 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
     const mockLogger = createMockLogger();
     return {
       allowed: true,
-      config: { tagging: 1, globalsStatic: {}, sessionStatic: {} },
+      config: { globalsStatic: {}, sessionStatic: {} },
       consent: {},
-      count: 0,
       custom: {},
       destinations: {},
       transformers: {},
       globals: {},
-      group: '',
       hooks: {},
       logger: mockLogger,
       on: {},
@@ -47,7 +45,6 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
       session: undefined,
       timing: Date.now(),
       user: {},
-      version: '1.0.0',
       sources: {},
       pendingSources: [],
       push: jest.fn(),
@@ -449,7 +446,9 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
       );
 
       expect(transformedEvent.event).not.toBeNull();
-      expect(!Array.isArray(transformedEvent.event) && transformedEvent.event!.data).toEqual({
+      expect(
+        !Array.isArray(transformedEvent.event) && transformedEvent.event!.data,
+      ).toEqual({
         source: 'test',
         transformed: true,
       });

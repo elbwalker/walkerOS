@@ -11,7 +11,7 @@
 [NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-amplitude)
 &bull; [Documentation](https://www.walkeros.io/docs/destinations/web/amplitude)
 
-This package forwards walkerOS events to [Amplitude](https://amplitude.com/) —
+This package forwards walkerOS events to [Amplitude](https://amplitude.com/) -
 product analytics with identity, revenue, groups, and optional session replay,
 experiments, and guides & surveys. Built on the official
 [`@amplitude/unified`](https://www.npmjs.com/package/@amplitude/unified) SDK
@@ -23,23 +23,23 @@ forwards them as Amplitude track, identify, revenue, group, and consent calls.
 
 ## Features
 
-- **Default event forwarding** — every walkerOS event becomes
+- **Default event forwarding** - every walkerOS event becomes
   `amplitude.track(name, event_properties)` with no additional config
-- **Custom event properties** — flatten walkerOS event sections
+- **Custom event properties** - flatten walkerOS event sections
   (`settings.include`) or map freely via the standard walkerOS `mapping.data`
   DSL
-- **Identity** — destination-level and per-event `settings.identify` with the
+- **Identity** - destination-level and per-event `settings.identify` with the
   full Amplitude operation vocabulary (`set`, `setOnce`, `add`, `append`,
   `prepend`, `preInsert`, `postInsert`, `remove`, `unset`, `clearAll`). Runtime
   state diffing skips redundant setter calls.
-- **Revenue** — `settings.revenue` supports both single-object and `loop`-based
+- **Revenue** - `settings.revenue` supports both single-object and `loop`-based
   multi-product orders. Currency defaults to `"EUR"`.
-- **Groups** — `settings.group` and `settings.groupIdentify` for B2B flows
-- **Consent** — `on('consent')` handler derives the consent keys from
+- **Groups** - `settings.group` and `settings.groupIdentify` for B2B flows
+- **Consent** - `on('consent')` handler derives the consent keys from
   `config.consent` and toggles `amplitude.setOptOut()`
 - **Optional plugins** (all npm-bundled via `@amplitude/unified`, opt-in via
   settings): Session Replay, Feature Experiments, Engagement (Guides & Surveys)
-- **Async init** — awaits `amplitude.initAll(...)` so downstream pushes are
+- **Async init** - awaits `amplitude.initAll(...)` so downstream pushes are
   truly ready before returning
 
 > **Bundle cost:** All three plugin packages are statically imported and
@@ -98,7 +98,7 @@ All fields of Amplitude's `BrowserOptions` pass through to
 | `revenue`       | `Mapping.Value`            | Resolves to a single object or (via `loop`) an array, each with `productId`, `price`, `quantity`, `revenueType`, `currency`, `revenue`, `receipt`, `receiptSig`, `eventProperties`. One `amplitude.revenue()` call fires per item. |
 | `group`         | `Mapping.Value`            | Resolves to `{ type, name }` → `amplitude.setGroup(type, name)`                                                                                                                                                                    |
 | `groupIdentify` | `Mapping.Value`            | Resolves to `{ type, name, set?, setOnce?, ... }` → `amplitude.groupIdentify(type, name, identify)`                                                                                                                                |
-| `reset`         | `boolean \| Mapping.Value` | Truthy → `amplitude.reset()` (logout). Typically paired with `skip: true`.                                                                                                                                                         |
+| `reset`         | `boolean \| Mapping.Value` | Truthy → `amplitude.reset()` (logout). Typically paired with `silent: true`.                                                                                                                                                       |
 
 ## Custom Event Properties
 
@@ -120,7 +120,7 @@ Per-rule override via `mapping.settings.include` replaces destination-level
 mapping: {
   user: {
     login: {
-      skip: true, // suppress default track()
+      silent: true, // suppress default track()
       settings: {
         identify: {
           map: {
@@ -150,7 +150,7 @@ mapping: {
 mapping: {
   subscription: {
     renew: {
-      skip: true,
+      silent: true,
       settings: {
         revenue: {
           map: {
@@ -217,7 +217,7 @@ settings: {
 mapping: {
   user: {
     logout: {
-      skip: true,
+      silent: true,
       settings: { reset: true },
     },
   },
@@ -231,7 +231,7 @@ clears its runtime identity cache so the next push re-fires the setters.
 ## Consent
 
 Declare the required consent keys on the destination config, then push a walker
-consent event — the destination's `on('consent')` handler toggles
+consent event - the destination's `on('consent')` handler toggles
 `amplitude.setOptOut()` accordingly. Semantics are strict: all required keys
 must be granted for opt-in; any missing grant opts out.
 

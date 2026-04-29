@@ -41,7 +41,7 @@ function makeTestEnv(): {
   calls: CallRecord[];
 } {
   const calls: CallRecord[] = [];
-  const env = clone(examples.env.push) as TestEnv;
+  const env = clone(examples.env.push) as unknown as TestEnv;
   const mockGtag = jest.fn((...args: unknown[]) => {
     calls.push(['gtag', ...args] as CallRecord);
   });
@@ -136,7 +136,7 @@ describe('gtag web destination -- step examples', () => {
 
     const { env, calls } = makeTestEnv();
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     // Command examples: route `in` through elb('walker <command>', in).
     if (example.command) {

@@ -1,5 +1,11 @@
 import type { Source, Elb } from '@walkeros/core';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    cookiefirst: { type: 'cookiefirst'; platform?: 'web' };
+  }
+}
+
 /**
  * CookieFirst consent object structure
  */

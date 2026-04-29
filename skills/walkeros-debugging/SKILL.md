@@ -127,7 +127,7 @@ mapping: {
   name: 'order complete',
   data: { total: 100 },
   nested: [
-    { type: 'product', data: { id: 'P1' } }
+    { entity: 'product', data: { id: 'P1' } }
   ]
 }
 

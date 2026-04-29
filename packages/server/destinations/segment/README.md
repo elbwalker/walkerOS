@@ -50,7 +50,7 @@ npm install @walkeros/server-destination-segment
 
 Per-event mapping settings control which Segment methods are called:
 
-| Setting    | Effect                       | Use with `skip: true`   |
+| Setting    | Effect                       | Use with `silent: true` |
 | ---------- | ---------------------------- | ----------------------- |
 | `identify` | Calls `analytics.identify()` | Yes, for login events   |
 | `group`    | Calls `analytics.group()`    | Yes, for company events |

@@ -18,8 +18,6 @@ import type { Ingest } from './ingest';
 export interface Config {
   /** Whether to run collector automatically */
   run?: boolean;
-  /** Version for event tagging */
-  tagging: number;
   /** Static global properties even on a new run */
   globalsStatic: WalkerOS.Properties;
   /** Static session data even on a new run */
@@ -188,14 +186,12 @@ export interface Instance {
   allowed: boolean;
   config: Config;
   consent: WalkerOS.Consent;
-  count: number;
   custom: WalkerOS.Properties;
   sources: Sources;
   destinations: Destinations;
   transformers: Transformers;
   stores: Stores;
   globals: WalkerOS.Properties;
-  group: string;
   hooks: Hooks.Functions;
   logger: Logger.Instance;
   on: On.OnConfig;
@@ -205,7 +201,6 @@ export interface Instance {
   status: Status;
   timing: number;
   user: WalkerOS.User;
-  version: string;
   pending: {
     sources: Source.InitSources;
     destinations: Destination.InitDestinations;

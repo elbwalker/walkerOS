@@ -6,7 +6,7 @@ import type { Settings } from '../types';
  * Examples may optionally override destination-level settings for a test.
  * The test runner reads `settings` from the example and merges it into the
  * base destination settings (on top of the fixed `apiKey`). Rarely needed
- * for LinkedIn — conversion config lives on the rule, not destination-level.
+ * for LinkedIn - conversion config lives on the rule, not destination-level.
  */
 export type LinkedInStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
@@ -17,7 +17,7 @@ export type LinkedInStepExample = Flow.StepExample & {
  *
  * LinkedIn's core behavioral difference from analytics destinations: events
  * without `mapping.settings.conversion` produce ZERO lintrk() calls. The
- * destination is opt-in — each conversion must reference a pre-created
+ * destination is opt-in - each conversion must reference a pre-created
  * Conversion Rule from Campaign Manager.
  */
 export const unmappedEventIgnored: LinkedInStepExample = {
@@ -27,7 +27,7 @@ export const unmappedEventIgnored: LinkedInStepExample = {
 };
 
 /**
- * Simplest possible conversion — just a `conversion_id` from Campaign Manager.
+ * Simplest possible conversion - just a `conversion_id` from Campaign Manager.
  *
  * Form submission → LinkedIn Lead conversion. The mapping resolves `id` as a
  * literal value (no walker event field needed). The destination translates
@@ -51,25 +51,28 @@ export const simpleConversionId: LinkedInStepExample = {
 };
 
 /**
- * Full e-commerce conversion — every supported lintrk field populated.
+ * Full e-commerce conversion - every supported lintrk field populated.
  *
  * mapping config uses short walkerOS keys (`id`, `value`, `currency`, `eventId`);
  * the destination translates them to the vendor parameter names
  * (`conversion_id`, `conversion_value`, `currency`, `event_id`).
  *
- * Currency uses the walkerOS fallback syntax: `{ key, value }` — pull from
+ * Currency uses the walkerOS fallback syntax: `{ key, value }` - pull from
  * `data.currency` first, fall back to `"EUR"` if absent. The default
  * `order complete` fixture from `getEvent` already sets `data.currency: "EUR"`,
  * so the resolved value is "EUR" here.
  *
- * `eventId` maps from the walkerOS event.id — stable per event, unique, and
+ * `eventId` maps from the walkerOS event.id - stable per event, unique, and
  * ready for deduplication with a future server (Conversions API) destination.
  */
 export const orderCompleteFullConversion: LinkedInStepExample = {
   title: 'Ecommerce conversion',
   description:
     'A completed order fires a LinkedIn lintrk track with conversion_id, value, currency, and event_id for deduplication.',
-  in: getEvent('order complete', { timestamp: 1700000102 }),
+  in: getEvent('order complete', {
+    timestamp: 1700000102,
+    id: '1700000102abcdef',
+  }),
   mapping: {
     settings: {
       conversion: {
@@ -90,7 +93,7 @@ export const orderCompleteFullConversion: LinkedInStepExample = {
         conversion_id: 67890,
         conversion_value: 555,
         currency: 'EUR',
-        event_id: '1700000102-gr0up-1',
+        event_id: '1700000102abcdef',
       },
     ],
   ],
@@ -100,7 +103,7 @@ export const orderCompleteFullConversion: LinkedInStepExample = {
  * Page view as an explicit conversion.
  *
  * LinkedIn's Insight Tag automatically fires a page view on load for
- * retargeting / audience building — that call is NOT something the
+ * retargeting / audience building - that call is NOT something the
  * destination controls. This example tests the OTHER case: mapping a
  * specific walkerOS `page view` event to a Campaign Manager KEY_PAGE_VIEW
  * conversion rule, which fires an EXPLICIT lintrk('track') call in addition
@@ -110,7 +113,10 @@ export const pageViewConversion: LinkedInStepExample = {
   title: 'Key page view',
   description:
     'A page view fires an explicit lintrk track mapped to a LinkedIn KEY_PAGE_VIEW conversion rule.',
-  in: getEvent('page view', { timestamp: 1700000103 }),
+  in: getEvent('page view', {
+    timestamp: 1700000103,
+    id: '1700000103abcdef',
+  }),
   mapping: {
     settings: {
       conversion: {
@@ -127,25 +133,28 @@ export const pageViewConversion: LinkedInStepExample = {
       'track',
       {
         conversion_id: 11111,
-        event_id: '1700000103-gr0up-1',
+        event_id: '1700000103abcdef',
       },
     ],
   ],
 };
 
 /**
- * Middle-funnel LEAD conversion — demo request without monetary value.
+ * Middle-funnel LEAD conversion - demo request without monetary value.
  *
  * LinkedIn's conversion types include LEAD, CONTACT, SIGN_UP, etc. The
  * destination is agnostic to the type (set in Campaign Manager, not at call
- * time) — all we forward is the conversion_id. This fixture exercises the
+ * time) - all we forward is the conversion_id. This fixture exercises the
  * "id + eventId only" shape.
  */
 export const demoRequestLead: LinkedInStepExample = {
   title: 'Lead conversion',
   description:
     'A demo request fires a LinkedIn lintrk track for a lead conversion with id and event_id only.',
-  in: getEvent('demo request', { timestamp: 1700000104 }),
+  in: getEvent('demo request', {
+    timestamp: 1700000104,
+    id: '1700000104abcdef',
+  }),
   mapping: {
     settings: {
       conversion: {
@@ -162,25 +171,25 @@ export const demoRequestLead: LinkedInStepExample = {
       'track',
       {
         conversion_id: 44444,
-        event_id: '1700000104-gr0up-1',
+        event_id: '1700000104abcdef',
       },
     ],
   ],
 };
 
 /**
- * rule.skip — fully-configured conversion rule temporarily disabled.
+ * rule.silent - fully-configured conversion rule temporarily disabled.
  *
- * The rule has a valid `conversion.map` but `skip: true` tells the destination
+ * The rule has a valid `conversion.map` but `silent: true` tells the destination
  * to produce zero calls. This is distinct from the opt-in default (no
- * `conversion` at all): skip explicitly keeps the rule on disk for quick
+ * `conversion` at all): silent explicitly keeps the rule on disk for quick
  * reactivation without deleting it.
  */
-export const conversionSkipped: LinkedInStepExample = {
+export const conversionSilenced: LinkedInStepExample = {
   public: false,
   in: getEvent('form submit', { timestamp: 1700000105 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       conversion: {
         map: {
@@ -199,7 +208,7 @@ export const conversionSkipped: LinkedInStepExample = {
  * NOT call lintrk at all. This protects against misconfigured mappings
  * (e.g. pulling id from a non-existent field).
  *
- * Here we map `id` from `data.nonexistentField` — it resolves to undefined,
+ * Here we map `id` from `data.nonexistentField` - it resolves to undefined,
  * so zero calls are produced.
  */
 export const missingConversionIdIgnored: LinkedInStepExample = {
@@ -218,15 +227,18 @@ export const missingConversionIdIgnored: LinkedInStepExample = {
 };
 
 /**
- * Partial conversion — value missing → omitted from the lintrk call.
+ * Partial conversion - value missing → omitted from the lintrk call.
  *
  * The rule asks for `value: 'data.missingTotal'` (undefined), `currency`
  * (undefined), and `eventId: 'id'` (present). Only `conversion_id` and
- * `event_id` appear in the final call — no `conversion_value`, no `currency`.
+ * `event_id` appear in the final call - no `conversion_value`, no `currency`.
  */
 export const partialFieldsOmitted: LinkedInStepExample = {
   public: false,
-  in: getEvent('order complete', { timestamp: 1700000107 }),
+  in: getEvent('order complete', {
+    timestamp: 1700000107,
+    id: '1700000107abcdef',
+  }),
   mapping: {
     settings: {
       conversion: {
@@ -244,7 +256,7 @@ export const partialFieldsOmitted: LinkedInStepExample = {
       'track',
       {
         conversion_id: 67890,
-        event_id: '1700000107-gr0up-1',
+        event_id: '1700000107abcdef',
       },
     ],
   ],

@@ -473,6 +473,35 @@ Use the test template: [index.test.ts](./templates/cmp/index.test.ts)
 
 **Goal:** Wire up detection paths, handleConsent, and destroy. Make tests pass.
 
+### v4 source identity
+
+CMP sources register their `type` literal via `SourceMap` in `src/types.ts`.
+CMPs are web by default - `platform` is optional in the augmentation:
+
+```typescript
+import type { Source } from '@walkeros/core';
+
+declare module '@walkeros/core' {
+  interface SourceMap {
+    // Replace with the CMP's package-level identifier.
+    cookiefirst: {
+      type: 'cookiefirst';
+      platform?: 'web'; // optional: CMP runs on web by default
+    };
+  }
+}
+```
+
+The source returns `{ type: 'cookiefirst', config, push }` from `Source.Init`
+
+- the `type` literal must match the `SourceMap` key.
+
+**CMP sources do NOT set `source.url` or `source.referrer`.** A CMP only knows
+about consent state, not the page that produced it. Setting page context belongs
+to a future web-context transformer that runs in the source's `next` chain.
+Don't reach for `window.location` in CMP source code, leave those fields
+untouched.
+
 ### Settings interface pattern
 
 See [types.ts](./templates/cmp/types.ts) for the complete type definitions
@@ -509,9 +538,9 @@ CMP uses for each detection path.
 
 ### Gate: All tests pass
 
-- [ ] `npm run test` -- all tests pass
+- [ ] `npm run verify:touched -- <cmp-name>` passes (L1: typecheck + lint +
+      test)
 - [ ] `npm run build` passes
-- [ ] `npm run lint` passes
 
 ---
 

@@ -28,7 +28,7 @@ describe('pinterest destination — init', () => {
     const calls = spy(env);
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     await elb(
       'walker destination',
@@ -48,7 +48,7 @@ describe('pinterest destination — init', () => {
     const calls = spy(env);
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     await elb(
       'walker destination',

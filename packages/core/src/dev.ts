@@ -4,4 +4,4 @@ export { ClickIdEntrySchema } from './schemas';
 export { mergeConfigSchema } from './merge-config-schema';
 
 export { formatOut } from './examples/formatOut';
-export type { StepEffect, StepOut } from './types/flow';
+export type { Flow } from './types/flow';

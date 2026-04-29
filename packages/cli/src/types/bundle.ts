@@ -2,7 +2,7 @@
  * CLI Build Configuration
  *
  * CLI-specific build options for walkerOS bundle generation.
- * Uses Flow.Config and Flow.Settings from @walkeros/core for config structure.
+ * Uses Flow.Json (root) and Flow (single flow) from @walkeros/core for config structure.
  *
  * @packageDocumentation
  */
@@ -18,7 +18,7 @@ export type { Flow };
  *
  * @remarks
  * These are CLI-only options not part of the config file.
- * The config file uses Flow.Config from @walkeros/core.
+ * The config file uses Flow.Json from @walkeros/core.
  *
  * Platform-derived defaults:
  * - web: format=iife, target=es2020, platform=browser
@@ -68,14 +68,14 @@ export interface BuildOptions extends CLIBuildOptions {
   /**
    * Packages to include in the bundle.
    */
-  packages: Flow.Packages;
+  packages: Record<string, Flow.BundlePackage>;
 
   /**
    * Transitive dependency version overrides.
    * Flat `Record<string, string>` matching npm's `overrides` semantics.
    * Only substitutes transitive specs; direct package specs always win.
    */
-  overrides?: Flow.Overrides;
+  overrides?: Record<string, string>;
 
   /**
    * Output format.

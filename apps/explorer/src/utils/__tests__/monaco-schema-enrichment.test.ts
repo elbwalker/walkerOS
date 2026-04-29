@@ -11,11 +11,15 @@ describe('enrichSchema', () => {
         defaultSnippets: [{ label: 'example', body: 'hello' }],
       },
     });
-    expect(result.properties.name.defaultSnippets).toEqual([
-      { label: 'example', body: 'hello' },
-    ]);
-    expect(result.properties.name.type).toBe('string');
-    expect(result.properties.name.description).toBe('A name');
+    expect(result).toMatchObject({
+      properties: {
+        name: {
+          type: 'string',
+          description: 'A name',
+          defaultSnippets: [{ label: 'example', body: 'hello' }],
+        },
+      },
+    });
   });
 
   it('adds markdownDescription alongside description', () => {
@@ -28,10 +32,14 @@ describe('enrichSchema', () => {
         markdownDescription: '**Version** `1`',
       },
     });
-    expect(result.properties.version.markdownDescription).toContain(
-      '**Version**',
-    );
-    expect(result.properties.version.description).toBe('Version');
+    expect(result).toMatchObject({
+      properties: {
+        version: {
+          description: 'Version',
+          markdownDescription: expect.stringContaining('**Version**'),
+        },
+      },
+    });
   });
 
   it('adds enumDescriptions', () => {
@@ -39,10 +47,9 @@ describe('enrichSchema', () => {
     const result = enrichSchema(base, {
       '': { enumDescriptions: ['Browser platform', 'Node.js platform'] },
     });
-    expect(result.enumDescriptions).toEqual([
-      'Browser platform',
-      'Node.js platform',
-    ]);
+    expect(result).toMatchObject({
+      enumDescriptions: ['Browser platform', 'Node.js platform'],
+    });
   });
 
   it('does not mutate the original schema', () => {
@@ -66,9 +73,15 @@ describe('enrichSchema', () => {
     const result = enrichSchema(base, {
       '$defs.Config.properties.name': { markdownDescription: 'Config name' },
     });
-    expect(result.$defs.Config.properties.name.markdownDescription).toBe(
-      'Config name',
-    );
+    expect(result).toMatchObject({
+      $defs: {
+        Config: {
+          properties: {
+            name: { markdownDescription: 'Config name' },
+          },
+        },
+      },
+    });
   });
 
   it('ignores paths that do not exist', () => {

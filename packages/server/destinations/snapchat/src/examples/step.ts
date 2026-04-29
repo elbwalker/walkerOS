@@ -31,6 +31,7 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order is sent to the Snapchat Conversions API as a PURCHASE with value, currency, and contents.',
   in: getEvent('order complete', {
+    id: 'e1f2a3b4c5d60001',
     timestamp: 1700000900000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
     nested: [
@@ -41,9 +42,9 @@ export const purchase: Flow.StepExample = {
     ],
     user: { id: 'user-123', device: 'device-456' },
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/checkout/complete',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/checkout/complete',
     },
   }),
   mapping: {
@@ -89,7 +90,7 @@ export const purchase: Flow.StepExample = {
             event_name: 'PURCHASE',
             event_time: 1700000900,
             action_source: 'WEB',
-            event_id: '1700000900000-gr0up-1',
+            event_id: 'e1f2a3b4c5d60001',
             user_data: {
               external_id:
                 'fcdec6df4d44dbc637c7c5b58efface52a7f8a88535423430255be0bb89bedd8',
@@ -113,6 +114,7 @@ export const addToCart: Flow.StepExample = {
   description:
     'A product add is sent to Snapchat as an ADD_CART conversion with value and product details.',
   in: getEvent('product add', {
+    id: 'e1f2a3b4c5d60002',
     timestamp: 1700000901000,
     data: {
       id: 'SKU-B2',
@@ -132,9 +134,9 @@ export const addToCart: Flow.StepExample = {
       },
     ],
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/products/running-shoes',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/products/running-shoes',
     },
   }),
   mapping: {
@@ -174,7 +176,7 @@ export const addToCart: Flow.StepExample = {
             event_name: 'ADD_CART',
             event_time: 1700000901,
             action_source: 'WEB',
-            event_id: '1700000901000-gr0up-1',
+            event_id: 'e1f2a3b4c5d60002',
             user_data: {},
             custom_data: {
               value: 89.99,
@@ -194,11 +196,12 @@ export const pageView: Flow.StepExample = {
   description:
     'A page view is forwarded to Snapchat with the event source URL and no extra custom data.',
   in: getEvent('page view', {
+    id: 'e1f2a3b4c5d60003',
     timestamp: 1700000902000,
     source: {
-      type: 'server',
-      id: 'https://example.com/docs/',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/docs/',
     },
   }),
   mapping: undefined,
@@ -212,7 +215,7 @@ export const pageView: Flow.StepExample = {
             event_name: 'page view',
             event_time: 1700000902,
             action_source: 'WEB',
-            event_id: '1700000902000-gr0up-1',
+            event_id: 'e1f2a3b4c5d60003',
             user_data: {},
             custom_data: {},
             event_source_url: 'https://example.com/docs/',
@@ -228,13 +231,14 @@ export const lead: Flow.StepExample = {
   description:
     'A newsletter form submission is sent to Snapchat as a SIGN_UP conversion with a hashed email.',
   in: getEvent('form submit', {
+    id: 'e1f2a3b4c5d60004',
     timestamp: 1700000903000,
     data: { type: 'newsletter' },
     user: { email: 'user@example.com' },
     source: {
-      type: 'server',
-      id: 'https://example.com/contact',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/contact',
     },
   }),
   mapping: {
@@ -264,7 +268,7 @@ export const lead: Flow.StepExample = {
             event_name: 'SIGN_UP',
             event_time: 1700000903,
             action_source: 'WEB',
-            event_id: '1700000903000-gr0up-1',
+            event_id: 'e1f2a3b4c5d60004',
             user_data: {
               // sha256('user@example.com')
               em: 'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514',

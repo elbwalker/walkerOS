@@ -100,7 +100,7 @@ export const destinationLevelIdentify: AmplitudeStepExample = {
 
 /**
  * Per-event identify with the full operation vocabulary -- this is the
- * "user login" pattern: set user_id, enrich user properties. `skip: true`
+ * "user login" pattern: set user_id, enrich user properties. `silent: true`
  * suppresses the default amplitude.track() call because we're running
  * identity side effects only.
  *
@@ -120,7 +120,7 @@ export const userLoginIdentify: AmplitudeStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -175,7 +175,7 @@ export const userLoginIdentify: AmplitudeStepExample = {
  * value: "EUR" }` fallback syntax: try data.currency, default to "EUR".
  *
  * The custom event has no data.currency, so the fallback fires.
- * `skip: true` suppresses the default track().
+ * `silent: true` suppresses the default track().
  */
 export const subscriptionRenewRevenue: AmplitudeStepExample = {
   title: 'Subscription revenue',
@@ -189,7 +189,7 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       revenue: {
         map: {
@@ -308,7 +308,7 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       group: {
         map: {
@@ -363,7 +363,10 @@ export const eventOptionsTimeInsertId: AmplitudeStepExample = {
   title: 'Event options',
   description:
     'Destination-level eventOptions map walker fields into Amplitude per-event metadata such as time and insert_id.',
-  in: getEvent('page view', { timestamp: 1700000110 }),
+  in: getEvent('page view', {
+    timestamp: 1700000110,
+    id: '1700000110abcdef',
+  }),
   settings: {
     eventOptions: {
       map: {
@@ -379,7 +382,7 @@ export const eventOptionsTimeInsertId: AmplitudeStepExample = {
       {},
       {
         time: 1700000110,
-        insert_id: '1700000110-gr0up-1',
+        insert_id: '1700000110abcdef',
       },
     ],
   ],

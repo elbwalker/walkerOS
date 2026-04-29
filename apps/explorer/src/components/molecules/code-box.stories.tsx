@@ -45,8 +45,10 @@ console.log('Event:', event);`,
 };
 
 const flowJsonCode = `{
+  "version": 4,
   "flows": {
     "default": {
+      "config": { "platform": "web" },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
@@ -132,7 +134,7 @@ elb('walker run', config);`,
 export const WithJsonSchema: Story = {
   render: () => {
     const [code, setCode] = useState(
-      JSON.stringify({ version: 1, flows: {} }, null, 2),
+      JSON.stringify({ version: 4, flows: {} }, null, 2),
     );
     return (
       <CodeBox
@@ -148,7 +150,7 @@ export const WithJsonSchema: Story = {
             version: {
               type: 'number',
               description: 'Flow configuration version',
-              enum: [1, 2],
+              enum: [4],
             },
             flows: {
               type: 'object',
@@ -156,10 +158,16 @@ export const WithJsonSchema: Story = {
               additionalProperties: {
                 type: 'object',
                 properties: {
-                  web: { type: 'object', description: 'Web platform config' },
-                  server: {
+                  config: {
                     type: 'object',
-                    description: 'Server platform config',
+                    description: 'Per-flow config (platform, settings, bundle)',
+                    properties: {
+                      platform: {
+                        type: 'string',
+                        enum: ['web', 'server'],
+                        description: 'Platform identity for this flow',
+                      },
+                    },
                   },
                 },
               },
@@ -182,9 +190,10 @@ export const WithSettings: Story = {
     const [code, setCode] = useState(
       JSON.stringify(
         {
-          version: 1,
+          version: 4,
           flows: {
             default: {
+              config: { platform: 'web' },
               sources: {
                 browser: {
                   package: '@walkeros/web-source-browser',
@@ -232,18 +241,18 @@ export const WithSettings: Story = {
 // ============================================================
 
 /**
- * Enriched Flow.Config schema with defaultSnippets and markdownDescription
+ * Enriched Flow.Json schema with defaultSnippets and markdownDescription
  *
- * Uses the real Flow.Config JSON Schema from @walkeros/core, enriched with
+ * Uses the real Flow.Json JSON Schema from @walkeros/core, enriched with
  * Monaco-specific extensions (snippets, markdown hover docs).
  *
  * **How to verify:** Place cursor inside `{}` after `"flows":`, press
- * Ctrl+Space — autocomplete shows property suggestions from the schema.
+ * Ctrl+Space, autocomplete shows property suggestions from the schema.
  */
 export const EnrichedFlowConfig: Story = {
   render: () => {
     const [code, setCode] = useState(
-      JSON.stringify({ version: 1, flows: {} }, null, 2),
+      JSON.stringify({ version: 4, flows: {} }, null, 2),
     );
     return (
       <CodeBox
@@ -365,12 +374,12 @@ export const DynamicFlowContext: Story = {
     const [code, setCode] = useState(
       JSON.stringify(
         {
-          version: 1,
+          version: 4,
           variables: { gaId: 'G-XXXXXXXXXX', debug: false },
           definitions: { cleanEvent: { filter: true } },
           flows: {
             default: {
-              web: {},
+              config: { platform: 'web' },
               sources: {
                 browser: { package: '@walkeros/web-source-browser' },
               },

@@ -115,8 +115,8 @@ export const push: PushFn = async function (
     events: [criteoEvent],
   };
 
-  if (event.source?.id) body.full_url = event.source.id;
-  if (event.source?.previous_id) body.previous_url = event.source.previous_id;
+  if (event.source?.url) body.full_url = event.source.url;
+  if (event.source?.referrer) body.previous_url = event.source.referrer;
 
   const retailerVisitorId = toStringOrUndef(
     resolvedUserData.retailer_visitor_id,

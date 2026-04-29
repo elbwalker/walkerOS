@@ -26,7 +26,7 @@ Learn the concepts before coding:
 | [understanding-destinations](skills/understanding-destinations/SKILL.md) | Destination interface, env pattern                 |
 | [understanding-sources](skills/understanding-sources/SKILL.md)           | Source interface, capture patterns                 |
 | [understanding-transformers](skills/understanding-transformers/SKILL.md) | Transformer interface, chaining, pipeline          |
-| [understanding-stores](skills/understanding-stores/SKILL.md)             | Store interface, $store: wiring, lifecycle         |
+| [understanding-stores](skills/understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle         |
 | [using-logger](skills/using-logger/SKILL.md)                             | Logger access, DRY principles, when to log         |
 | [using-step-examples](skills/using-step-examples/SKILL.md)               | Step examples lifecycle, Three Type Zones, testing |
 
@@ -80,7 +80,9 @@ apps/
 - **No `any`:** Never in production code
 - **XP principles:** DRY, KISS, YAGNI, TDD
 - **Test first:** Watch it fail before implementing
-- **Verify:** Run tests before claiming complete
+- **Verify:** Use the verification tiers from `/workspaces/developer/AGENT.md`
+  rule 11. Default L1 (touched package) per task. L2 at plan completion. Never
+  L4 unless the plan touched shared infra or the user asked.
 
 ## Creating/Maintaining Skills
 

@@ -7,18 +7,31 @@ const packageJson = JSON.parse(
 );
 const version = packageJson.version || '0.0.0';
 
-export default defineConfig({
+const common = {
   ...baseConfig,
-  entry: ['src/index.ts'],
-  format: ['esm'],
+  format: ['esm'] as const,
   dts: true,
   sourcemap: true,
   minify: false,
-  banner: {
-    js: '#!/usr/bin/env node',
-  },
+  external: [
+    'zod',
+    '@modelcontextprotocol/sdk',
+    '@walkeros/cli',
+    '@walkeros/core',
+  ],
   define: {
     __VERSION__: JSON.stringify(version),
   },
-  external: ['zod'],
-});
+};
+
+export default defineConfig([
+  {
+    ...common,
+    entry: { index: 'src/index.ts' },
+  },
+  {
+    ...common,
+    entry: { stdio: 'src/stdio.ts' },
+    banner: { js: '#!/usr/bin/env node' },
+  },
+]);

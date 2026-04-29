@@ -191,7 +191,7 @@ describe('mixpanel server destination — step examples', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const dest = require('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const baseSettings: Partial<Settings> & { apiKey: string } = {
       apiKey: 'test-project-token',

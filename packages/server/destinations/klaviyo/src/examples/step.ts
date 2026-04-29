@@ -8,12 +8,12 @@ import type { Settings } from '../types';
  * At push time, the destination invokes the `klaviyo-api` SDK. The public
  * method paths users see on the client are:
  *
- *   - `eventsApi.createEvent(body)` — fires a metric event with inline profile
- *   - `profilesApi.createOrUpdateProfile(body)` — upserts a profile
+ *   - `eventsApi.createEvent(body)` - fires a metric event with inline profile
+ *   - `profilesApi.createOrUpdateProfile(body)` - upserts a profile
  *
  * Each `out` is therefore `[['method.path', ...args], ...]` matching the
  * actual SDK call order. `identify` fires before the event. When the rule
- * uses `skip: true` or `ignore: true`, `out` is `[]` or the identify-only
+ * uses `silent: true` or `ignore: true`, `out` is `[]` or the identify-only
  * list.
  */
 
@@ -199,7 +199,7 @@ export const revenueEvent: KlaviyoStepExample = {
 };
 
 /**
- * Per-event identify with skip -- user login fires
+ * Per-event identify with silent -- user login fires
  * profilesApi.createOrUpdateProfile() only, no event tracked.
  */
 export const userLoginIdentify: KlaviyoStepExample = {
@@ -217,7 +217,7 @@ export const userLoginIdentify: KlaviyoStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {

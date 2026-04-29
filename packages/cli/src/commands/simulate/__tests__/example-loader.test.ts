@@ -1,11 +1,11 @@
 import type { Flow } from '@walkeros/core';
 import { findExample } from '../example-loader';
 
-function makeConfig(overrides: Partial<Flow.Settings> = {}): Flow.Settings {
+function makeConfig(overrides: Partial<Flow> = {}): Flow {
   return {
-    web: {},
+    config: { platform: 'web' },
     ...overrides,
-  } as Flow.Settings;
+  };
 }
 
 describe('findExample', () => {
@@ -20,14 +20,14 @@ describe('findExample', () => {
               name: 'purchase',
               data: { map: { value: 'data.total' } },
             },
-            out: [{ type: 'call', path: 'gtag', args: ['event', 'purchase'] }],
+            out: [['call', 'gtag', 'event', 'purchase']],
           },
           pageview: {
             in: { name: 'page view' },
-            out: [{ type: 'call', path: 'gtag', args: ['event', 'page_view'] }],
+            out: [['call', 'gtag', 'event', 'page_view']],
           },
         },
-      } as unknown as Flow.DestinationReference,
+      },
     },
     sources: {
       browser: {
@@ -37,7 +37,7 @@ describe('findExample', () => {
             in: { name: 'page view' },
           },
         },
-      } as unknown as Flow.SourceReference,
+      },
     },
     transformers: {
       enrich: {
@@ -45,10 +45,12 @@ describe('findExample', () => {
         examples: {
           purchase: {
             in: { name: 'order complete' },
-            out: { name: 'order complete', data: { enriched: true } },
+            out: [
+              ['return', { name: 'order complete', data: { enriched: true } }],
+            ],
           },
         },
-      } as unknown as Flow.TransformerReference,
+      },
     },
   });
 
@@ -60,7 +62,7 @@ describe('findExample', () => {
       exampleName: 'pageview',
       example: {
         in: { name: 'page view' },
-        out: [{ type: 'call', path: 'gtag', args: ['event', 'page_view'] }],
+        out: [['call', 'gtag', 'event', 'page_view']],
       },
     });
   });

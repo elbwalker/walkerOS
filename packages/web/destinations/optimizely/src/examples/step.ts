@@ -124,7 +124,7 @@ export const wildcardIgnored: OptimizelyStepExample = {
  * Skip track with attributes only -- fires setAttribute calls but no
  * trackEvent. Useful for enriching user context without a conversion.
  */
-export const attributesOnlySkipTrack: OptimizelyStepExample = {
+export const attributesOnlySilent: OptimizelyStepExample = {
   title: 'Attributes only',
   description:
     'A profile update sets Optimizely user attributes without firing a trackEvent for user enrichment.',
@@ -136,7 +136,7 @@ export const attributesOnlySkipTrack: OptimizelyStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       attributes: {
         map: {

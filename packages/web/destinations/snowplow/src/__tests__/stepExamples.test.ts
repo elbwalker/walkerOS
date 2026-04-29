@@ -75,7 +75,7 @@ describe('snowplow destination — step examples', () => {
     const { env: spiedEnv, collected } = spySnowplow(env);
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     if (example.command === 'consent') {
       await elb('walker destination', { ...dest, env: spiedEnv }, initConfig);

@@ -45,9 +45,7 @@ describe('destination plausible', () => {
       testEnv.document.querySelector = jest.fn();
     }
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   afterEach(() => {});

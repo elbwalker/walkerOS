@@ -304,7 +304,7 @@ export const consentModeV2: Flow.StepExample = {
  * GA4 event flattening selected event sections into prefixed params.
  * Each listed section (data, context, globals, user, source, event) is
  * flattened into params like data_*, context_*, user_*, etc.
- * The `version` section is intentionally omitted — version_source is baked
+ * The `version` section is intentionally omitted - version_source is baked
  * in at build time from @walkeros/core's package.json, so asserting on it
  * would couple the fixture to the release version.
  */
@@ -312,7 +312,7 @@ export const ga4WithIncludeAll: Flow.StepExample = {
   title: 'GA4 include all',
   description:
     'Include flattens every event section into prefixed GA4 params, exposing data, context, user, source, and event fields.',
-  in: getEvent('page view', { timestamp: 1700000106 }),
+  in: getEvent('page view', { id: 'ev-1700000106', timestamp: 1700000106 }),
   mapping: {
     include: ['data', 'context', 'globals', 'user', 'source', 'event'],
   },
@@ -338,16 +338,13 @@ export const ga4WithIncludeAll: Flow.StepExample = {
         user_device: 'c00k13',
         user_session: 's3ss10n',
         // source_* params from event.source
-        source_type: 'web',
-        source_id: 'https://localhost:80',
-        source_previous_id: 'http://remotehost:9001',
+        source_type: 'collector',
+        source_schema: '4',
         // event_* params from event properties
         event_entity: 'page',
         event_action: 'view',
         event_trigger: 'load',
-        event_group: 'gr0up',
-        event_count: 1,
-        event_id: '1700000106-gr0up-1',
+        event_id: 'ev-1700000106',
         event_name: 'page view',
         event_timestamp: 1700000106,
         event_timing: 3.14,

@@ -2,6 +2,12 @@ import type { WalkerOS, Source as CoreSource } from '@walkeros/core';
 import type { SettingsSchema, CorsOptionsSchema } from './schemas';
 import type { z } from '@walkeros/core/dev';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    cloudfunction: { type: 'cloudfunction'; platform: 'server' };
+  }
+}
+
 // Minimal request/response interfaces
 export interface Request {
   method: string;

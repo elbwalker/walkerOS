@@ -25,7 +25,6 @@ describe('Destination', () => {
     overrides: Partial<Collector.Config> = {},
   ): Collector.Config {
     return {
-      tagging: 1,
       globalsStatic: {},
       sessionStatic: {},
       ...overrides,
@@ -703,35 +702,35 @@ describe('Destination', () => {
     });
   });
 
-  describe('skip flag', () => {
-    test('still calls destination.push when rule.skip is true', async () => {
-      const skipDestination: Destination.Instance = {
+  describe('silent flag', () => {
+    test('still calls destination.push when rule.silent is true', async () => {
+      const silentDestination: Destination.Instance = {
         init: jest.fn(),
         push: jest.fn(),
         config: {
           init: true,
           mapping: {
-            user: { login: { skip: true, settings: { identify: true } } },
+            user: { login: { silent: true, settings: { identify: true } } },
           },
         },
       };
 
       const collector = createWalkerjs({
-        destinations: { skipDest: skipDestination },
+        destinations: { silentDest: silentDestination },
       });
 
       await pushToDestinations(
         collector,
         createEvent({ name: 'user login' }),
         {},
-        { skipDest: skipDestination },
+        { silentDest: silentDestination },
       );
 
-      // Destination IS still called — settings.* side effects can run.
-      expect(skipDestination.push).toHaveBeenCalledTimes(1);
-      const callArgs = (skipDestination.push as jest.Mock).mock.calls[0];
-      // Context.rule.skip is true so the destination can branch on it.
-      expect(callArgs[1].rule.skip).toBe(true);
+      // Destination IS still called - settings.* side effects can run.
+      expect(silentDestination.push).toHaveBeenCalledTimes(1);
+      const callArgs = (silentDestination.push as jest.Mock).mock.calls[0];
+      // Context.rule.silent is true so the destination can branch on it.
+      expect(callArgs[1].rule.silent).toBe(true);
     });
 
     test('rule.ignore still short-circuits (unchanged behavior)', async () => {
@@ -757,24 +756,24 @@ describe('Destination', () => {
         { ignoreDest: ignoreDestination },
       );
 
-      // ignore short-circuits — push must NOT be called.
+      // ignore short-circuits - push must NOT be called.
       expect(ignoreDestination.push).not.toHaveBeenCalled();
     });
 
-    test('skip + settings: destination decides what to run', async () => {
+    test('silent + settings: destination decides what to run', async () => {
       const calls: string[] = [];
       const fakeDestination: Destination.Instance = {
         init: jest.fn(),
         push: jest.fn().mockImplementation((_event, context) => {
           if (context.rule?.settings?.identify) calls.push('identify');
-          if (!context.rule?.skip) calls.push('track');
+          if (!context.rule?.silent) calls.push('track');
         }),
         config: {
           init: true,
           mapping: {
             user: {
               login: {
-                skip: true,
+                silent: true,
                 settings: { identify: { map: { user: 'data.id' } } },
               },
             },
@@ -793,7 +792,7 @@ describe('Destination', () => {
         { fake: fakeDestination },
       );
 
-      // Destination ran identify side effect but skipped the default track call.
+      // Destination ran identify side effect but suppressed the default track call.
       expect(calls).toEqual(['identify']);
     });
   });

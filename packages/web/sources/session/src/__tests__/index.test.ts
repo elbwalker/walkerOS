@@ -17,9 +17,7 @@ describe('Session Source', () => {
     mockCommand = createMockCommand();
 
     // Initialize collector
-    ({ collector } = await startFlow({
-      tagging: 2,
-    }));
+    ({ collector } = await startFlow());
 
     // Override push with synchronous mock
     collector.push = createMockPush(collectedEvents);

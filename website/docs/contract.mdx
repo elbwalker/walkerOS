@@ -266,7 +266,7 @@ The contract is fully resolved (extends + wildcards) before path access:
 <CodeSnippet
   code={`"flows": {
   "web-shop": {
-    "web": {},
+    "config": { "platform": "web" },
     "sources": {
       "cmp": {
         "config": {
@@ -285,9 +285,6 @@ The contract is fully resolved (extends + wildcards) before path access:
           }
         }
       }
-    },
-    "collector": {
-      "tagging": "$contract.web.tagging"
     }
   }
 }`}
@@ -301,7 +298,7 @@ Access nested values with dot notation:
 - `$contract.web.events`: all event schemas for the "web" contract
 - `$contract.web.events.product.add`: single event schema
 - `$contract.web.consent`: consent section
-- `$contract.web.tagging`: tagging version number
+- `$contract.web.tagging`: contract version metadata
 
 <details>
 <summary>Advanced: `$def` aliasing</summary>
@@ -315,7 +312,7 @@ Reduce repetition by aliasing a contract in definitions:
   },
   "flows": {
     "web-shop": {
-      "web": {},
+      "config": { "platform": "web" },
       "transformers": {
         "validator": {
           "config": {
@@ -364,32 +361,17 @@ Definitions can be used inside contracts for shared schema fragments:
 
 ## Versioning
 
-The `tagging` field tracks contract versions as an incrementing integer:
+Contract versions are tracked alongside the contract definition itself, not on
+the runtime event. As of v4 the event payload no longer carries a `version`
+field - track contract evolution through your source of truth (Git, your
+deployment pipeline, or contract metadata) instead.
 
-<CodeSnippet
-  code={`"contract": {
-  "default": {
-    "tagging": 3,
-    "events": { ... }
-  }
-}`}
-  language="json"
-/>
+Recommended workflow:
 
-Use `$contract.default.tagging` to inject the version into collector config:
-
-<CodeSnippet
-  code={`"collector": {
-  "tagging": "$contract.default.tagging"
-}`}
-  language="json"
-/>
-
-This lets you:
-
-- Know which contract version validated an event
-- Compare `event.version.tagging` against the current contract
-- Track contract evolution over time
+- Store the contract in version control next to your flow config
+- Tag releases of the deployed contract in your CI/CD pipeline
+- Compare the currently deployed contract against the previous release as part
+  of your review process
 
 ## Using contracts with the validator
 
@@ -398,7 +380,7 @@ runtime. Wire contract sections to the validator settings:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "contract": {
     "default": {
       "tagging": 1,
@@ -416,7 +398,7 @@ runtime. Wire contract sections to the validator settings:
   },
   "flows": {
     "default": {
-      "web": {},
+      "config": { "platform": "web" },
       "transformers": {
         "validator": {
           "package": "@walkeros/transformer-validator",
@@ -428,9 +410,6 @@ runtime. Wire contract sections to the validator settings:
             }
           }
         }
-      },
-      "collector": {
-        "tagging": "$contract.default.tagging"
       }
     }
   }
@@ -465,7 +444,7 @@ The contract validator checks:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "contract": {
     "default": {
       "tagging": 1,
@@ -565,7 +544,7 @@ The contract validator checks:
   },
   "flows": {
     "web-shop": {
-      "web": {},
+      "config": { "platform": "web" },
       "transformers": {
         "validator": {
           "package": "@walkeros/transformer-validator",
@@ -578,9 +557,6 @@ The contract validator checks:
             }
           }
         }
-      },
-      "collector": {
-        "tagging": "$contract.web.tagging"
       },
       "sources": {},
       "destinations": {}

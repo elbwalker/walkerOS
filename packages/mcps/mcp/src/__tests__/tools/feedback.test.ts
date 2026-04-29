@@ -1,13 +1,5 @@
-// @ts-expect-error — __VERSION__ is injected by tsup at build time
+// @ts-expect-error __VERSION__ is injected by tsup at build time
 globalThis.__VERSION__ = '0.0.0-test';
-
-import { registerFeedbackTool } from '../../tools/feedback.js';
-
-jest.mock('@walkeros/cli', () => ({
-  feedback: jest.fn(),
-  getFeedbackPreference: jest.fn(),
-  setFeedbackPreference: jest.fn(),
-}));
 
 jest.mock('@walkeros/core', () => ({
   mcpResult: jest.fn((result, hints) => ({
@@ -36,19 +28,15 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import {
-  feedback,
-  getFeedbackPreference,
-  setFeedbackPreference,
-} from '@walkeros/cli';
-const mockFeedback = jest.mocked(feedback);
-const mockGetPref = jest.mocked(getFeedbackPreference);
-const mockSetPref = jest.mocked(setFeedbackPreference);
+import { registerFeedbackTool } from '../../tools/feedback.js';
+import { stubClient } from '../support/stub-client.js';
+
+type HandlerFn = (input: Record<string, unknown>) => Promise<unknown>;
 
 function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
+  const tools: Record<string, { config: unknown; handler: HandlerFn }> = {};
   return {
-    registerTool(name: string, config: unknown, handler: Function) {
+    registerTool(name: string, config: unknown, handler: HandlerFn) {
       tools[name] = { config, handler };
     },
     getTool(name: string) {
@@ -63,14 +51,16 @@ describe('feedback tool', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     server = createMockServer();
-    registerFeedbackTool(server as any);
   });
 
   it('registers with correct name, title, and annotations', () => {
+    registerFeedbackTool(server as never, stubClient());
     const tool = server.getTool('feedback');
     expect(tool).toBeDefined();
-
-    const config = tool.config as any;
+    const config = tool!.config as {
+      title: string;
+      annotations: Record<string, boolean>;
+    };
     expect(config.title).toBe('Send Feedback');
     expect(config.annotations).toEqual({
       readOnlyHint: false,
@@ -81,26 +71,41 @@ describe('feedback tool', () => {
   });
 
   it('passes version to feedback function', async () => {
-    mockGetPref.mockReturnValue(true);
-    mockFeedback.mockResolvedValue(undefined);
+    const submitFeedback = jest.fn().mockResolvedValue(undefined);
+    registerFeedbackTool(
+      server as never,
+      stubClient({
+        getFeedbackPreference: () => true,
+        submitFeedback,
+      }),
+    );
 
-    const tool = server.getTool('feedback');
+    const tool = server.getTool('feedback')!;
     await tool.handler({ text: 'Test feedback' });
 
-    expect(mockFeedback).toHaveBeenCalledWith('Test feedback', {
+    expect(submitFeedback).toHaveBeenCalledWith('Test feedback', {
       anonymous: true,
       version: '0.0.0-test',
     });
   });
 
   it('calls feedback with anonymous: true when preference is true', async () => {
-    mockGetPref.mockReturnValue(true);
-    mockFeedback.mockResolvedValue(undefined);
+    const submitFeedback = jest.fn().mockResolvedValue(undefined);
+    registerFeedbackTool(
+      server as never,
+      stubClient({
+        getFeedbackPreference: () => true,
+        submitFeedback,
+      }),
+    );
 
-    const tool = server.getTool('feedback');
-    const result = await tool.handler({ text: 'Great tool!' });
+    const tool = server.getTool('feedback')!;
+    const result = (await tool.handler({ text: 'Great tool!' })) as {
+      structuredContent: { ok: boolean };
+      content: Array<{ text: string }>;
+    };
 
-    expect(mockFeedback).toHaveBeenCalledWith('Great tool!', {
+    expect(submitFeedback).toHaveBeenCalledWith('Great tool!', {
       anonymous: true,
       version: '0.0.0-test',
     });
@@ -109,13 +114,21 @@ describe('feedback tool', () => {
   });
 
   it('calls feedback with anonymous: false when preference is false', async () => {
-    mockGetPref.mockReturnValue(false);
-    mockFeedback.mockResolvedValue(undefined);
+    const submitFeedback = jest.fn().mockResolvedValue(undefined);
+    registerFeedbackTool(
+      server as never,
+      stubClient({
+        getFeedbackPreference: () => false,
+        submitFeedback,
+      }),
+    );
 
-    const tool = server.getTool('feedback');
-    const result = await tool.handler({ text: 'Needs improvement' });
+    const tool = server.getTool('feedback')!;
+    const result = (await tool.handler({ text: 'Needs improvement' })) as {
+      structuredContent: { ok: boolean };
+    };
 
-    expect(mockFeedback).toHaveBeenCalledWith('Needs improvement', {
+    expect(submitFeedback).toHaveBeenCalledWith('Needs improvement', {
       anonymous: false,
       version: '0.0.0-test',
     });
@@ -123,12 +136,21 @@ describe('feedback tool', () => {
   });
 
   it('returns consent prompt when preference is undefined and no anonymous param', async () => {
-    mockGetPref.mockReturnValue(undefined);
+    const submitFeedback = jest.fn();
+    registerFeedbackTool(
+      server as never,
+      stubClient({
+        getFeedbackPreference: () => undefined,
+        submitFeedback,
+      }),
+    );
 
-    const tool = server.getTool('feedback');
-    const result = await tool.handler({ text: 'Some feedback' });
+    const tool = server.getTool('feedback')!;
+    const result = (await tool.handler({ text: 'Some feedback' })) as {
+      structuredContent: { needsConsent: boolean; _hints: { next: string[] } };
+    };
 
-    expect(mockFeedback).not.toHaveBeenCalled();
+    expect(submitFeedback).not.toHaveBeenCalled();
     expect(result.structuredContent.needsConsent).toBe(true);
     expect(result.structuredContent._hints.next).toEqual([
       'Ask the user if they want to include their info',
@@ -137,17 +159,25 @@ describe('feedback tool', () => {
   });
 
   it('calls feedback and stores preference when preference is undefined but anonymous param is provided', async () => {
-    mockGetPref.mockReturnValue(undefined);
-    mockFeedback.mockResolvedValue(undefined);
+    const submitFeedback = jest.fn().mockResolvedValue(undefined);
+    const setFeedbackPreference = jest.fn();
+    registerFeedbackTool(
+      server as never,
+      stubClient({
+        getFeedbackPreference: () => undefined,
+        setFeedbackPreference,
+        submitFeedback,
+      }),
+    );
 
-    const tool = server.getTool('feedback');
-    const result = await tool.handler({
+    const tool = server.getTool('feedback')!;
+    const result = (await tool.handler({
       text: 'Feedback with consent',
       anonymous: true,
-    });
+    })) as { structuredContent: { ok: boolean } };
 
-    expect(mockSetPref).toHaveBeenCalledWith(true);
-    expect(mockFeedback).toHaveBeenCalledWith('Feedback with consent', {
+    expect(setFeedbackPreference).toHaveBeenCalledWith(true);
+    expect(submitFeedback).toHaveBeenCalledWith('Feedback with consent', {
       anonymous: true,
       version: '0.0.0-test',
     });
@@ -155,11 +185,22 @@ describe('feedback tool', () => {
   });
 
   it('returns error on feedback failure', async () => {
-    mockGetPref.mockReturnValue(true);
-    mockFeedback.mockRejectedValue(new Error('Network error'));
+    const submitFeedback = jest
+      .fn()
+      .mockRejectedValue(new Error('Network error'));
+    registerFeedbackTool(
+      server as never,
+      stubClient({
+        getFeedbackPreference: () => true,
+        submitFeedback,
+      }),
+    );
 
-    const tool = server.getTool('feedback');
-    const result = await tool.handler({ text: 'Will fail' });
+    const tool = server.getTool('feedback')!;
+    const result = (await tool.handler({ text: 'Will fail' })) as {
+      isError: boolean;
+      content: Array<{ text: string }>;
+    };
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
@@ -167,41 +208,45 @@ describe('feedback tool', () => {
   });
 
   it('stores preference via CLI when no prior preference and anonymous param provided', async () => {
-    mockGetPref.mockReturnValue(undefined);
-    mockFeedback.mockResolvedValue(undefined);
+    const submitFeedback = jest.fn().mockResolvedValue(undefined);
+    const setFeedbackPreference = jest.fn();
+    registerFeedbackTool(
+      server as never,
+      stubClient({
+        getFeedbackPreference: () => undefined,
+        setFeedbackPreference,
+        submitFeedback,
+      }),
+    );
 
-    const tool = server.getTool('feedback');
-    const result = await tool.handler({
+    const tool = server.getTool('feedback')!;
+    const result = (await tool.handler({
       text: 'No config feedback',
       anonymous: false,
-    });
+    })) as { structuredContent: { ok: boolean } };
 
-    expect(mockSetPref).toHaveBeenCalledWith(false);
-    expect(mockFeedback).toHaveBeenCalledWith('No config feedback', {
+    expect(setFeedbackPreference).toHaveBeenCalledWith(false);
+    expect(submitFeedback).toHaveBeenCalledWith('No config feedback', {
       anonymous: false,
       version: '0.0.0-test',
     });
     expect(result.structuredContent).toEqual({ ok: true });
   });
 
-  it('returns consent prompt when preference undefined and no anonymous param', async () => {
-    mockGetPref.mockReturnValue(undefined);
-
-    const tool = server.getTool('feedback');
-    const result = await tool.handler({ text: 'Some feedback' });
-
-    expect(mockFeedback).not.toHaveBeenCalled();
-    expect(result.structuredContent.needsConsent).toBe(true);
-  });
-
   it('uses explicit anonymous override even when preference is stored', async () => {
-    mockGetPref.mockReturnValue(true);
-    mockFeedback.mockResolvedValue(undefined);
+    const submitFeedback = jest.fn().mockResolvedValue(undefined);
+    registerFeedbackTool(
+      server as never,
+      stubClient({
+        getFeedbackPreference: () => true,
+        submitFeedback,
+      }),
+    );
 
-    const tool = server.getTool('feedback');
+    const tool = server.getTool('feedback')!;
     await tool.handler({ text: 'Override test', anonymous: false });
 
-    expect(mockFeedback).toHaveBeenCalledWith('Override test', {
+    expect(submitFeedback).toHaveBeenCalledWith('Override test', {
       anonymous: false,
       version: '0.0.0-test',
     });

@@ -5,6 +5,8 @@ export type ReferenceType =
   | 'definition'
   | 'secret'
   | 'env'
+  | 'store'
+  | 'contract'
   | 'code';
 
 export interface WalkerOSReference {
@@ -14,6 +16,11 @@ export interface WalkerOSReference {
   endIndex: number;
 }
 
+// Covers every canonical walkerOS reference form. Aligned with REF_* constants
+// in @walkeros/core, but relaxed here because the decorator scans free-form
+// substrings inside quoted JSON/TS strings rather than whole-string values.
+// Name regex allows trailing dot + optional name/path so that prefix-only
+// typing (e.g. `"$var."`) still lights up for IntelliSense.
 export const REFERENCE_PATTERNS: Array<{
   type: ReferenceType;
   regex: RegExp;
@@ -22,11 +29,21 @@ export const REFERENCE_PATTERNS: Array<{
   { type: 'variable', regex: /\$var\.(\w*)/g, className: 'elb-ref-variable' },
   {
     type: 'definition',
-    regex: /\$def\.(\w*)/g,
+    regex: /\$def\.(\w*(?:\.[\w.]*)?)/g,
     className: 'elb-ref-definition',
   },
   { type: 'secret', regex: /\$secret\.(\w*)/g, className: 'elb-ref-secret' },
-  { type: 'env', regex: /\$env\.(\w*)/g, className: 'elb-ref-env' },
+  {
+    type: 'env',
+    regex: /\$env\.(\w*)(?::[^"}\s]*)?/g,
+    className: 'elb-ref-env',
+  },
+  {
+    type: 'contract',
+    regex: /\$contract\.(\w*(?:\.[\w.]*)?)/g,
+    className: 'elb-ref-contract',
+  },
+  { type: 'store', regex: /\$store\.(\w*)/g, className: 'elb-ref-store' },
   { type: 'code', regex: /\$code:/g, className: 'elb-ref-code' },
 ];
 
@@ -114,6 +131,8 @@ export function registerWalkerOSDecorationStyles(): void {
     .monaco-editor .elb-ref-definition { color: #c3e88d !important; font-style: italic; }
     .monaco-editor .elb-ref-secret { color: #ffcb6b !important; font-style: italic; }
     .monaco-editor .elb-ref-env { color: #ffcb6b !important; font-style: italic; }
+    .monaco-editor .elb-ref-contract { color: #c3e88d !important; font-style: italic; }
+    .monaco-editor .elb-ref-store { color: #89ddff !important; font-style: italic; }
     .monaco-editor .elb-ref-code { color: #c084fc !important; }
   `;
   document.head.appendChild(style);

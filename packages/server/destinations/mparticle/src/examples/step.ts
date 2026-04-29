@@ -33,7 +33,7 @@ const OPTIONS = {
 };
 
 /**
- * Default custom_event — a walkerOS event with no `eventType` mapping.
+ * Default custom_event - a walkerOS event with no `eventType` mapping.
  * mParticle wraps it as a `custom_event` with the default `other` category.
  * user_identities are resolved at the batch level from
  * `settings.userIdentities`.
@@ -43,10 +43,11 @@ export const customEvent: Flow.StepExample = {
   description:
     'A walker event is sent to mParticle as a custom_event with user identities resolved from destination settings.',
   in: getEvent('product view', {
+    id: 'ev-1700000100000',
     timestamp: 1700000100000,
     data: { id: 'SKU-A1', name: 'Shoe', price: 129.99 },
     user: { id: 'user-123' },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: undefined,
   out: [
@@ -61,7 +62,7 @@ export const customEvent: Flow.StepExample = {
               event_name: 'product view',
               custom_event_type: 'other',
               timestamp_unixtime_ms: 1700000100000,
-              source_message_id: '1700000100000-gr0up-1',
+              source_message_id: 'ev-1700000100000',
             },
           },
         ],
@@ -69,7 +70,7 @@ export const customEvent: Flow.StepExample = {
         user_identities: {
           customer_id: 'user-123',
         },
-        source_request_id: '1700000100000-gr0up-1',
+        source_request_id: 'ev-1700000100000',
       }),
       OPTIONS,
     ],
@@ -77,7 +78,7 @@ export const customEvent: Flow.StepExample = {
 };
 
 /**
- * screen_view event — mapping.settings.eventType switches the mParticle
+ * screen_view event - mapping.settings.eventType switches the mParticle
  * event shape. Uses event name as the `screen_name`.
  */
 export const screenView: Flow.StepExample = {
@@ -85,10 +86,11 @@ export const screenView: Flow.StepExample = {
   description:
     'A page view is mapped to an mParticle screen_view event with the event name as the screen name.',
   in: getEvent('page view', {
+    id: 'ev-1700000200000',
     timestamp: 1700000200000,
     data: { title: 'Checkout', path: '/checkout' },
     user: { id: 'user-123' },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     settings: { eventType: 'screen_view' },
@@ -104,7 +106,7 @@ export const screenView: Flow.StepExample = {
             data: {
               screen_name: 'page view',
               timestamp_unixtime_ms: 1700000200000,
-              source_message_id: '1700000200000-gr0up-1',
+              source_message_id: 'ev-1700000200000',
             },
           },
         ],
@@ -112,7 +114,7 @@ export const screenView: Flow.StepExample = {
         user_identities: {
           customer_id: 'user-123',
         },
-        source_request_id: '1700000200000-gr0up-1',
+        source_request_id: 'ev-1700000200000',
       }),
       OPTIONS,
     ],
@@ -120,7 +122,7 @@ export const screenView: Flow.StepExample = {
 };
 
 /**
- * commerce_event — mapping.settings.eventType: 'commerce_event' plus a
+ * commerce_event - mapping.settings.eventType: 'commerce_event' plus a
  * `commerce` mapping resolves a ProductAction block. Products, currency,
  * and transaction metadata are all driven by the commerce mapping value.
  */
@@ -129,10 +131,11 @@ export const commercePurchase: Flow.StepExample = {
   description:
     'A completed order becomes an mParticle commerce_event with a purchase product_action block.',
   in: getEvent('order complete', {
+    id: 'ev-1700000300000',
     timestamp: 1700000300000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
     user: { id: 'user-123' },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     settings: {
@@ -167,7 +170,7 @@ export const commercePurchase: Flow.StepExample = {
                 total_amount: 249.99,
               },
               timestamp_unixtime_ms: 1700000300000,
-              source_message_id: '1700000300000-gr0up-1',
+              source_message_id: 'ev-1700000300000',
             },
           },
         ],
@@ -175,7 +178,7 @@ export const commercePurchase: Flow.StepExample = {
         user_identities: {
           customer_id: 'user-123',
         },
-        source_request_id: '1700000300000-gr0up-1',
+        source_request_id: 'ev-1700000300000',
       }),
       OPTIONS,
     ],
@@ -183,7 +186,7 @@ export const commercePurchase: Flow.StepExample = {
 };
 
 /**
- * Identity + attributes — verifies `user_identities` and `user_attributes`
+ * Identity + attributes - verifies `user_identities` and `user_attributes`
  * come from the batch-level settings mappings, not the event payload.
  */
 export const identityAndAttributes: Flow.StepExample = {
@@ -191,13 +194,14 @@ export const identityAndAttributes: Flow.StepExample = {
   description:
     'A form submission sends a custom_event whose batch carries user_identities resolved from destination settings.',
   in: getEvent('form submit', {
+    id: 'ev-1700000400000',
     timestamp: 1700000400000,
     data: { type: 'newsletter' },
     user: {
       id: 'user-123',
       email: 'user@example.com',
     },
-    source: { type: 'server', id: 'https://example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: undefined,
   out: [
@@ -212,7 +216,7 @@ export const identityAndAttributes: Flow.StepExample = {
               event_name: 'form submit',
               custom_event_type: 'other',
               timestamp_unixtime_ms: 1700000400000,
-              source_message_id: '1700000400000-gr0up-1',
+              source_message_id: 'ev-1700000400000',
             },
           },
         ],
@@ -221,7 +225,7 @@ export const identityAndAttributes: Flow.StepExample = {
           customer_id: 'user-123',
           email: 'user@example.com',
         },
-        source_request_id: '1700000400000-gr0up-1',
+        source_request_id: 'ev-1700000400000',
       }),
       OPTIONS,
     ],

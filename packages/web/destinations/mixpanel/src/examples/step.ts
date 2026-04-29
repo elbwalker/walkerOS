@@ -13,7 +13,7 @@ export type MixpanelStepExample = Flow.StepExample & {
 };
 
 /**
- * Default event forwarding — every walkerOS event becomes
+ * Default event forwarding - every walkerOS event becomes
  * mixpanel.track(event.name, properties). With no mapping and no
  * destination-level include, properties is `{}`.
  */
@@ -26,7 +26,7 @@ export const defaultEventForwarding: MixpanelStepExample = {
 };
 
 /**
- * Wildcard ignore — walkerOS's standard way to drop events. The rule
+ * Wildcard ignore - walkerOS's standard way to drop events. The rule
  * matches but does nothing. The destination fires zero SDK calls.
  */
 export const wildcardIgnored: MixpanelStepExample = {
@@ -111,8 +111,8 @@ export const destinationLevelIdentify: MixpanelStepExample = {
 };
 
 /**
- * Per-event identify + people operations — the canonical "user login"
- * pattern. `skip: true` suppresses the default mixpanel.track() call
+ * Per-event identify + people operations - the canonical "user login"
+ * pattern. `silent: true` suppresses the default mixpanel.track() call
  * because we're running identity side effects only.
  */
 export const userLoginIdentifyAndPeople: MixpanelStepExample = {
@@ -129,7 +129,7 @@ export const userLoginIdentifyAndPeople: MixpanelStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -185,9 +185,9 @@ export const userLoginIdentifyAndPeople: MixpanelStepExample = {
 };
 
 /**
- * Full people operation vocabulary — a profile update rule that exercises
+ * Full people operation vocabulary - a profile update rule that exercises
  * set, set_once, increment, append, union, remove, and unset in a single
- * rule. `skip: true` because only side effects are needed.
+ * rule. `silent: true` because only side effects are needed.
  */
 export const profileUpdateAllPeopleOperations: MixpanelStepExample = {
   title: 'All people operations',
@@ -204,7 +204,7 @@ export const profileUpdateAllPeopleOperations: MixpanelStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       people: {
         map: {
@@ -256,7 +256,7 @@ export const profileUpdateAllPeopleOperations: MixpanelStepExample = {
 };
 
 /**
- * people.delete_user — destructive operation. The resolved people object
+ * people.delete_user - destructive operation. The resolved people object
  * uses `{ delete_user: true }` to trigger the call.
  */
 export const accountDeleteUser: MixpanelStepExample = {
@@ -265,7 +265,7 @@ export const accountDeleteUser: MixpanelStepExample = {
     'An account delete fires Mixpanel people.delete_user to remove the user profile from the project.',
   in: getEvent('account delete', { timestamp: 1700000107 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       people: {
         map: {
@@ -278,7 +278,7 @@ export const accountDeleteUser: MixpanelStepExample = {
 };
 
 /**
- * User logout — reset: true fires mixpanel.reset(), which clears all
+ * User logout - reset: true fires mixpanel.reset(), which clears all
  * persistence and generates a new anonymous distinct_id.
  */
 export const userLogoutReset: MixpanelStepExample = {
@@ -287,7 +287,7 @@ export const userLogoutReset: MixpanelStepExample = {
     'A user logout calls mixpanel.reset to clear persistence and generate a new anonymous distinct id.',
   in: getEvent('user logout', { timestamp: 1700000108 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       reset: true,
     },
@@ -296,7 +296,7 @@ export const userLogoutReset: MixpanelStepExample = {
 };
 
 /**
- * User-group association — settings.group resolves to { key, id } and
+ * User-group association - settings.group resolves to { key, id } and
  * calls mixpanel.set_group(key, id). Fires default track too.
  */
 export const userGroupAssociation: MixpanelStepExample = {
@@ -327,7 +327,7 @@ export const userGroupAssociation: MixpanelStepExample = {
 };
 
 /**
- * Group profile properties — settings.groupProfile resolves to
+ * Group profile properties - settings.groupProfile resolves to
  * { key, id, set?, set_once?, ... } and calls
  * mixpanel.get_group(key, id).set(...), .set_once(...), etc.
  */
@@ -346,7 +346,7 @@ export const companyUpdateGroupProfile: MixpanelStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       groupProfile: {
         map: {

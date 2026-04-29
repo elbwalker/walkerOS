@@ -102,13 +102,15 @@ describeIfBuilt('CLI E2E', () => {
 
     it('should output JSON format for successful bundle', async () => {
       const testConfig = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
-            bundle: {
-              packages: {
-                '@walkeros/core': { imports: ['getId'] },
+            config: {
+              platform: 'web',
+              bundle: {
+                packages: {
+                  '@walkeros/core': { imports: ['getId'] },
+                },
               },
             },
           },
@@ -154,14 +156,17 @@ describeIfBuilt('CLI E2E', () => {
 
     it('should output JSON format for failed bundle', async () => {
       const testConfig = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
-            bundle: {
-              packages: {},
-              '@walkeros/nonexistent-package-xyz': {
-                imports: ['nonexistent'],
+            config: {
+              platform: 'web',
+              bundle: {
+                packages: {
+                  '@walkeros/nonexistent-package-xyz': {
+                    imports: ['nonexistent'],
+                  },
+                },
               },
             },
           },
@@ -193,13 +198,15 @@ describeIfBuilt('CLI E2E', () => {
 
     it('should suppress decorative output in JSON mode', async () => {
       const testConfig = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
-            bundle: {
-              packages: {
-                '@walkeros/core': { imports: ['getId'] },
+            config: {
+              platform: 'web',
+              bundle: {
+                packages: {
+                  '@walkeros/core': { imports: ['getId'] },
+                },
               },
             },
           },

@@ -17,19 +17,19 @@ tracking, enhanced matching, and dynamic retargeting.
 
 ## Features
 
-- **Standard event taxonomy** — explicit `mapping.name` rename to Pinterest's
+- **Standard event taxonomy** - explicit `mapping.name` rename to Pinterest's
   lowercase concatenated names (`pagevisit`, `addtocart`, `checkout`,
   `viewcontent`, `lead`, `signup`, `search`, `custom`, ...).
-- **Inline `line_items` for multi-product** — single
+- **Inline `line_items` for multi-product** - single
   `pintrk('track', 'checkout', { line_items: [...] })` call (NOT N separate
   calls). Built via the standard walkerOS `loop` mapping syntax.
-- **Enhanced matching** — strict allow-list of `em` (email) and `external_id`.
-  The Pinterest JS tag auto-hashes `em` with SHA-256 — the destination passes
+- **Enhanced matching** - strict allow-list of `em` (email) and `external_id`.
+  The Pinterest JS tag auto-hashes `em` with SHA-256 - the destination passes
   raw values through and never hashes.
-- **Auto `event_id` for dedup** — every `pintrk('track', ...)` call attaches the
+- **Auto `event_id` for dedup** - every `pintrk('track', ...)` call attaches the
   walkerOS event `id` as `event_id`, ready for cross-channel deduplication with
   a future server (Conversions API) destination.
-- **Consent-aware suppression** — `on('consent')` flips a runtime state flag.
+- **Consent-aware suppression** - `on('consent')` flips a runtime state flag.
   After revocation, subsequent track calls are suppressed even though Pinterest
   has no `opt_in`/`opt_out` SDK API.
 
@@ -84,7 +84,7 @@ npm install @walkeros/web-destination-pinterest
 | `apiKey`     | `string`                | yes      | Pinterest Tag ID (numeric string, e.g. `"2612345678901"`). Found in Pinterest Ads Manager under Conversions → Pinterest Tag. Passed to `pintrk('load', tagId)`.              |
 | `pageview`   | `boolean`               | no       | Fire `pintrk('page')` once in init after `core.js` loads. Default `true`. Set `false` when walkerOS sources already emit page view events to avoid a duplicate initial fire. |
 | `identify`   | `Mapping.Value`         | no       | Mapping value resolving to `{ em?, external_id? }`. Resolved on the first event and fired via `pintrk('set', data)` whenever the resolved identity changes.                  |
-| `include`    | `string[]`              | no       | Sections to forward as prefixed properties in track payloads. Pinterest expects specific parameter names — explicit `mapping.data` is usually preferred over `include`.      |
+| `include`    | `string[]`              | no       | Sections to forward as prefixed properties in track payloads. Pinterest expects specific parameter names - explicit `mapping.data` is usually preferred over `include`.      |
 | `loadScript` | `boolean` (on `config`) | no       | If `true`, the destination injects `https://s.pinimg.com/ct/core.js` on init. Set `false` when the host page already loads the Pinterest Tag snippet.                        |
 
 ### Mapping (per-event)
@@ -95,12 +95,12 @@ npm install @walkeros/web-destination-pinterest
 | `data` (top-level)  | `EventData`             | Standard walkerOS data resolution. The resolved object is sent verbatim as the third arg to `track()`.                                          |
 | `settings.identify` | `{ em?, external_id? }` | Per-event identity override. Fires `pintrk('set', data)` BEFORE the track call when the resolved identity differs from the current state.       |
 | `settings.include`  | `string[]`              | Overrides destination-level `include` for this rule.                                                                                            |
-| `skip`              | `boolean`               | Process side effects (identify) but suppress the default `pintrk('track', ...)` call.                                                           |
+| `silent`            | `boolean`               | Process side effects (identify) but suppress the default `pintrk('track', ...)` call.                                                           |
 
 ## Event Mapping
 
 Pinterest expects lowercase concatenated event names. The destination never
-auto-maps — every conversion event needs an explicit `mapping.name`.
+auto-maps - every conversion event needs an explicit `mapping.name`.
 
 | walkerOS event   | Pinterest event | Notes                                                                              |
 | ---------------- | --------------- | ---------------------------------------------------------------------------------- |
@@ -155,7 +155,7 @@ the JS tag:
 
 | Field         | Source                             | Notes                                                    |
 | ------------- | ---------------------------------- | -------------------------------------------------------- |
-| `em`          | `data.email` / `user.email` / etc. | Pinterest auto-hashes — pass raw email, do NOT pre-hash. |
+| `em`          | `data.email` / `user.email` / etc. | Pinterest auto-hashes - pass raw email, do NOT pre-hash. |
 | `external_id` | `data.id` / `user.id`              | Stable user identifier. Auto-hashed by Pinterest.        |
 
 The destination strictly limits to these two fields. CAPI-only fields (`ph`,
@@ -181,7 +181,7 @@ destination and are intentionally not accepted here.
 }
 ```
 
-Identity is diffed against the destination's runtime state —
+Identity is diffed against the destination's runtime state -
 `pintrk('set', ...)` only fires when the resolved identity actually changes.
 Destination-level `settings.identify` is resolved lazily on the first event
 (init has no event to bind to), so `pintrk('load', tagId)` is called without an
@@ -189,7 +189,7 @@ identity object.
 
 ## Consent
 
-Pinterest is an advertising platform — the Pinterest Tag falls under
+Pinterest is an advertising platform - the Pinterest Tag falls under
 **marketing** consent:
 
 ```json
@@ -209,15 +209,15 @@ implements consent revocation as a runtime suppression flag:
 3. If consent is later re-granted (all required keys `true`), the flag flips
    back and tracking resumes.
 
-The Pinterest Tag itself stays loaded throughout — only the walkerOS bridge goes
+The Pinterest Tag itself stays loaded throughout - only the walkerOS bridge goes
 silent.
 
-### Skipping a fully configured rule
+### Suppressing the default track on a fully configured rule
 
 ```json
 "user": {
   "update": {
-    "skip": true,
+    "silent": true,
     "settings": {
       "identify": {
         "map": { "em": "data.email", "external_id": "data.id" }
@@ -227,7 +227,7 @@ silent.
 }
 ```
 
-`mapping.skip: true` processes side effects (the `pintrk('set', ...)` identity
+`mapping.silent: true` processes side effects (the `pintrk('set', ...)` identity
 update) but suppresses the default `pintrk('track', ...)` call. Useful when you
 only want to refresh enhanced matching without firing a conversion.
 

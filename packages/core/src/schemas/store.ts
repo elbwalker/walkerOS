@@ -9,7 +9,7 @@ import { LoggerConfigSchema } from './logger';
  * Purpose: Runtime validation and JSON Schema generation for store configurations
  *
  * Stores are the 4th component type — passive key-value infrastructure that
- * other components consume via `env`. They are referenced via `$store:storeId`
+ * other components consume via `env`. They are referenced via `$store.storeId`
  * in `env` values. Init first, destroy last. No chains.
  */
 
@@ -26,7 +26,7 @@ import { LoggerConfigSchema } from './logger';
 export const ConfigSchema = z
   .object({
     settings: z
-      .any()
+      .unknown()
       .meta({
         id: 'StoreSettings',
         title: 'Store.Settings',
@@ -36,7 +36,7 @@ export const ConfigSchema = z
       .describe('Implementation-specific configuration')
       .optional(),
     env: z
-      .any()
+      .unknown()
       .meta({
         id: 'StoreEnv',
         title: 'Store.Env',

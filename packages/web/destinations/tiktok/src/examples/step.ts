@@ -13,33 +13,26 @@ export type TikTokStepExample = Flow.StepExample & {
 };
 
 /**
- * Default event forwarding — every walkerOS event becomes a ttq.track()
+ * Default event forwarding - every walkerOS event becomes a ttq.track()
  * call. With no mapping and no destination-level include, the params
  * object is empty. event_id is always passed as the 3rd argument (TikTok
  * dedup between pixel and Events API).
  *
  * NOTE: The raw walkerOS event name "product view" (with space) is NOT a
  * TikTok standard event. Without a mapping.name override, TikTok treats
- * it as a custom event — functional for audience building, no
+ * it as a custom event - functional for audience building, no
  * optimization. The next example shows the recommended override.
  */
 export const defaultEventForwarding: TikTokStepExample = {
   title: 'Default track',
   description:
     'Without a mapping the walker event name is forwarded to ttq.track with an event_id for TikTok dedup.',
-  in: getEvent('product view'),
-  out: [
-    [
-      'ttq.track',
-      'product view',
-      {},
-      { event_id: getEvent('product view').id },
-    ],
-  ],
+  in: getEvent('product view', { id: '0123456789abcdef' }),
+  out: [['ttq.track', 'product view', {}, { event_id: '0123456789abcdef' }]],
 };
 
 /**
- * Wildcard ignore — walkerOS's standard way to drop events. The rule
+ * Wildcard ignore - walkerOS's standard way to drop events. The rule
  * matches but does nothing. The destination fires zero SDK calls.
  */
 export const wildcardIgnored: TikTokStepExample = {
@@ -60,7 +53,7 @@ export const productViewContent: TikTokStepExample = {
   title: 'View content',
   description:
     'A product view is renamed to the TikTok ViewContent standard event with content_type, id, value, and currency.',
-  in: getEvent('product view'),
+  in: getEvent('product view', { id: '11111111aaaaaaaa' }),
   mapping: {
     name: 'ViewContent',
     data: {
@@ -86,9 +79,9 @@ export const productViewContent: TikTokStepExample = {
         // content_category is absent from the default product view fixture;
         // the mapper skips undefined resolutions.
         value: 420,
-        currency: 'EUR', // fallback — default fixture has no globals.currency
+        currency: 'EUR', // fallback - default fixture has no globals.currency
       },
-      { event_id: getEvent('product view').id },
+      { event_id: '11111111aaaaaaaa' },
     ],
   ],
 };
@@ -96,14 +89,14 @@ export const productViewContent: TikTokStepExample = {
 /**
  * Destination-level settings.include flattens the walkerOS `data` section
  * into prefixed TikTok event parameters on every push. This is the
- * "dump everything" mode — useful for custom events where TikTok won't
+ * "dump everything" mode - useful for custom events where TikTok won't
  * do optimization anyway, and no mapping.data is needed.
  */
 export const destinationLevelInclude: TikTokStepExample = {
   title: 'Include data',
   description:
     'Destination-level include flattens the event data section into prefixed TikTok event parameters.',
-  in: getEvent('product view'),
+  in: getEvent('product view', { id: '22222222bbbbbbbb' }),
   configInclude: ['data'],
   out: [
     [
@@ -116,7 +109,7 @@ export const destinationLevelInclude: TikTokStepExample = {
         data_size: 'l',
         data_price: 420,
       },
-      { event_id: getEvent('product view').id },
+      { event_id: '22222222bbbbbbbb' },
     ],
   ],
 };
@@ -130,7 +123,7 @@ export const ruleIncludeReplaces: TikTokStepExample = {
   title: 'Rule include overrides',
   description:
     'A per-rule include replaces the destination-level include so this event forwards only globals.',
-  in: getEvent('order complete'),
+  in: getEvent('order complete', { id: '33333333cccccccc' }),
   configInclude: ['data'],
   mapping: {
     include: ['globals'],
@@ -142,7 +135,7 @@ export const ruleIncludeReplaces: TikTokStepExample = {
       {
         globals_pagegroup: 'shop',
       },
-      { event_id: getEvent('order complete').id },
+      { event_id: '33333333cccccccc' },
     ],
   ],
 };
@@ -152,7 +145,7 @@ export const ruleIncludeReplaces: TikTokStepExample = {
  * state cache is empty). Advanced Matching parameters (email,
  * phone_number, external_id) are passed to ttq.identify() which
  * auto-hashes them SHA256 before sending. Subsequent pushes with
- * unchanged values do NOT re-fire ttq.identify() — runtime state tracks
+ * unchanged values do NOT re-fire ttq.identify() - runtime state tracks
  * the last-resolved identity.
  *
  * walkerOS's default user fixture has user.id='us3r' and no email/phone,
@@ -163,6 +156,7 @@ export const destinationLevelIdentify: TikTokStepExample = {
   description:
     'Destination-level identify calls ttq.identify with email, phone, and external id for TikTok advanced matching.',
   in: getEvent('page view', {
+    id: '44444444dddddddd',
     data: {
       email: 'user@acme.com',
       phone: '+14135552671',
@@ -186,7 +180,7 @@ export const destinationLevelIdentify: TikTokStepExample = {
         external_id: 'us3r',
       },
     ],
-    ['ttq.track', 'page view', {}, { event_id: getEvent('page view').id }],
+    ['ttq.track', 'page view', {}, { event_id: '44444444dddddddd' }],
   ],
 };
 
@@ -201,6 +195,7 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
   description:
     'A user register fires ttq.identify for advanced matching and then tracks CompleteRegistration.',
   in: getEvent('user register', {
+    id: '55555555eeeeeeee',
     data: {
       email: 'new@acme.com',
       phone: '+14135551234',
@@ -240,7 +235,7 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
       {
         content_type: 'product',
       },
-      { event_id: getEvent('user register').id },
+      { event_id: '55555555eeeeeeee' },
     ],
   ],
 };
@@ -256,13 +251,13 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
  *    is absent (here data.currency is 'EUR' so the key wins)
  *
  * The default "order complete" fixture has 3 nested entries: two
- * products (ers, cc) and one gift (Surprise — no id, no price).
+ * products (ers, cc) and one gift (Surprise - no id, no price).
  */
 export const orderCompleteCompletePayment: TikTokStepExample = {
   title: 'Complete payment',
   description:
     'A completed order is mapped to TikTok CompletePayment with value, currency, and nested product contents.',
-  in: getEvent('order complete'),
+  in: getEvent('order complete', { id: '66666666ffffffff' }),
   mapping: {
     name: 'CompletePayment',
     data: {
@@ -301,7 +296,7 @@ export const orderCompleteCompletePayment: TikTokStepExample = {
           {
             content_id: 'ers',
             content_name: 'Everyday Ruck Snack',
-            quantity: 1, // fallback — fixture has no data.quantity
+            quantity: 1, // fallback - fixture has no data.quantity
             price: 420,
           },
           {
@@ -311,14 +306,14 @@ export const orderCompleteCompletePayment: TikTokStepExample = {
             price: 42,
           },
           {
-            // gift entry — { name: 'Surprise' }, no id and no price.
+            // gift entry - { name: 'Surprise' }, no id and no price.
             // walkerOS map skips keys whose resolved value is undefined.
             content_name: 'Surprise',
             quantity: 1,
           },
         ],
       },
-      { event_id: getEvent('order complete').id },
+      { event_id: '66666666ffffffff' },
     ],
   ],
 };
@@ -333,6 +328,7 @@ export const searchSubmitSearch: TikTokStepExample = {
   description:
     'A search submit fires TikTok Search with the query field mapped from event data.',
   in: getEvent('search submit', {
+    id: '777777770000aaaa',
     data: {
       term: 'hiking backpack',
     },
@@ -353,14 +349,14 @@ export const searchSubmitSearch: TikTokStepExample = {
       {
         query: 'hiking backpack',
       },
-      { event_id: getEvent('search submit').id },
+      { event_id: '777777770000aaaa' },
     ],
   ],
 };
 
 /**
  * Consent granted → ttq.enableCookie(). The destination checks the
- * consent keys declared in config.consent (here "marketing" — TikTok is
+ * consent keys declared in config.consent (here "marketing" - TikTok is
  * an ad platform, not analytics) and toggles cookie behavior.
  *
  * Uses the canonical StepExample.command='consent' pattern: the test

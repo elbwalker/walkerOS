@@ -34,13 +34,24 @@ assistant.
 If you prefer a local setup:
 
 <CodeSnippet
-  code={`npm install    # Install dependencies
-npm run build  # Build all packages
-npm run dev    # Start watch mode
-npm run test   # Run tests
-npm run lint   # Check code quality`}
+  code={`npm install                    # Install dependencies
+npm run build                  # Build all packages
+npm run dev                    # Start watch mode
+
+# Verification scripts (use the smallest scope that proves your change)
+npm run verify:touched -- core # One package: typecheck + lint + test
+npm run verify:affected        # All packages affected since origin/main
+npm run test:smoke             # Critical path + affected (PR-ready check)
+npm run test                   # Full suite (release / on demand)
+npm run lint                   # Full lint
+npm run typecheck              # Full typecheck`}
   language="bash"
 />
+
+The verification scripts compose with turbo cache and the `[origin/main]`
+filter. For day-to-day work, prefer `verify:touched` for the package you
+edited and `verify:affected` before opening a PR. Save the full root-level
+runs for release prep.
 
 ## Ways to contribute
 

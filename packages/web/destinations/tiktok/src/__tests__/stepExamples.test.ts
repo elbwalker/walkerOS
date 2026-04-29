@@ -50,7 +50,7 @@ describe('tiktok destination — step examples', () => {
     const { env: spiedEnv, collected } = spyTtq(env);
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const baseSettings: Partial<Settings> & { apiKey: string } = {
       apiKey: 'test-pixel-id',

@@ -50,11 +50,11 @@ npm install @walkeros/server-destination-hubspot
 
 Per-event mapping settings control behavior per rule:
 
-| Setting      | Effect                                                       | Use with `skip: true` |
-| ------------ | ------------------------------------------------------------ | --------------------- |
-| `eventName`  | Overrides auto-generated event name (prefix still prepended) | No                    |
-| `identify`   | Upserts contact via CRM API                                  | Yes, for login events |
-| `properties` | Maps event data to HubSpot event properties                  | No                    |
+| Setting      | Effect                                                       | Use with `silent: true` |
+| ------------ | ------------------------------------------------------------ | ----------------------- |
+| `eventName`  | Overrides auto-generated event name (prefix still prepended) | No                      |
+| `identify`   | Upserts contact via CRM API                                  | Yes, for login events   |
+| `properties` | Maps event data to HubSpot event properties                  | No                      |
 
 ## Identity
 

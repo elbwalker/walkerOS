@@ -6,6 +6,17 @@ import type { z } from '@walkeros/core/dev';
 export * from './elb';
 import type { BrowserPush } from './elb';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    browser: {
+      type: 'browser';
+      platform: 'web';
+      url?: string;
+      referrer?: string;
+    };
+  }
+}
+
 // Base settings from Zod schema
 type BaseSettings = z.infer<typeof SettingsSchema>;
 

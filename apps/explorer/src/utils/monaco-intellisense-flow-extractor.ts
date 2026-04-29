@@ -1,14 +1,14 @@
 import type { IntelliSenseContext, PackageInfo } from '../types/intellisense';
 
 /**
- * Extract IntelliSense context from a Flow.Config JSON string.
+ * Extract IntelliSense context from a Flow.Json JSON string.
  *
- * Parses the JSON, walks config → settings → steps, and collects
+ * Parses the JSON, walks root → flow → steps, and collects
  * all discoverable variables, definitions, step names, packages,
  * platform, and contract entities.
  *
  * Returns `{}` for invalid JSON or non-Flow structures.
- * Pure function — no side effects, no state.
+ * Pure function, no side effects, no state.
  */
 export function extractFlowIntelliSenseContext(
   json: string,
@@ -27,6 +27,7 @@ export function extractFlowIntelliSenseContext(
   const sources: string[] = [];
   const destinations: string[] = [];
   const transformers: string[] = [];
+  const stores: string[] = [];
   const packages: PackageInfo[] = [];
   const contractEntities: Array<{ entity: string; actions: string[] }> = [];
   const contractRaw: Record<string, unknown> = {};
@@ -42,10 +43,10 @@ export function extractFlowIntelliSenseContext(
   for (const settings of Object.values(parsed.flows)) {
     if (!isObject(settings)) continue;
 
-    // Platform detection (first match wins)
-    if (!platform) {
-      if ('web' in settings) platform = 'web';
-      else if ('server' in settings) platform = 'server';
+    // Platform detection (first match wins) - reads config.platform in v4
+    if (!platform && isObject(settings.config)) {
+      const p = settings.config.platform;
+      if (p === 'web' || p === 'server') platform = p;
     }
 
     // Settings-level variables/definitions/contract
@@ -111,6 +112,17 @@ export function extractFlowIntelliSenseContext(
         }
       }
     }
+
+    // Stores — collect IDs and cascade their variables/definitions
+    if (isObject(settings.stores)) {
+      for (const [name, ref] of Object.entries(settings.stores)) {
+        stores.push(name);
+        if (isObject(ref)) {
+          mergeVars(variables, ref.variables);
+          mergeDefs(definitions, ref.definitions);
+        }
+      }
+    }
   }
 
   const result: Partial<IntelliSenseContext> = {
@@ -123,6 +135,7 @@ export function extractFlowIntelliSenseContext(
   if (packages.length > 0) result.packages = packages;
   if (contractEntities.length > 0) result.contract = contractEntities;
   if (Object.keys(contractRaw).length > 0) result.contractRaw = contractRaw;
+  if (stores.length > 0) result.stores = stores;
 
   return result;
 }

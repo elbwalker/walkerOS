@@ -23,9 +23,6 @@ export interface Event {
   action: string;
   timestamp: number;
   timing: number;
-  group: string;
-  count: number;
-  version: Version;
   source: Source;
 }
 
@@ -60,18 +57,44 @@ export interface User extends Properties {
   internal?: boolean;
 }
 
-export interface Version extends Properties {
-  source: string;
-  tagging: number;
+export type SourcePlatform =
+  | 'web'
+  | 'server'
+  | 'app'
+  | 'ios'
+  | 'android'
+  | 'terminal'
+  | string;
+
+/**
+ * SourceMap is the discriminated-union registry for source kinds.
+ * Each source package augments this interface via `declare module
+ * '@walkeros/core'` to register its own `type` literal and any
+ * source-specific fields. Conflicting declarations cause compile errors,
+ * intentional, to surface naming collisions early.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface SourceMap {
+  collector: { type: 'collector' };
 }
 
 export interface Source extends Properties {
-  type: SourceType;
-  id: string; // https://github.com/elbwalker/walkerOS
-  previous_id: string; // https://www.elbwalker.com/
+  type: string;
+  platform?: SourcePlatform;
+  /** Deployment version of the source emitter (string). */
+  version?: string;
+  /** Event-model spec version. Collector defaults to "4". */
+  schema?: string;
+  /** Emission sequence per run (was: event.count). */
+  count?: number;
+  /** W3C traceparent full string; set when the emission is part of a chained trace. */
+  trace?: string;
+  /** Walker-controlled standard suggestions (sources may set). */
+  url?: string;
+  referrer?: string;
+  tool?: string;
+  command?: string;
 }
-
-export type SourceType = 'web' | 'server' | 'app' | 'other' | string;
 
 export type PropertyType =
   | boolean
@@ -92,8 +115,8 @@ export type Entities = Array<Entity>;
 export interface Entity {
   entity: string;
   data: Properties;
-  nested: Entities;
-  context: OrderedProperties;
+  nested?: Entities;
+  context?: OrderedProperties;
 }
 
 export type ConsentHandler = Record<string, AnyFunction>;

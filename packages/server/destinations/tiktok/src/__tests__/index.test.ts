@@ -33,9 +33,7 @@ describe('Server Destination TikTok', () => {
 
     destination = jest.requireActual('../').default;
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   async function getConfig(settings: Partial<Settings> = {}) {
@@ -199,12 +197,12 @@ describe('Server Destination TikTok', () => {
     expect(requestBody.test_event_code).toBe('TEST12345');
   });
 
-  test('context.page.url from event.source.id', async () => {
+  test('context.page.url from event.source.url', async () => {
     const event = getEvent('page view', {
       source: {
-        type: 'server',
-        id: 'https://example.com/page',
-        previous_id: '',
+        type: 'browser',
+        platform: 'web',
+        url: 'https://example.com/page',
       },
     });
     const config: Config = {

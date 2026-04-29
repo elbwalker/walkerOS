@@ -244,7 +244,7 @@ export const destinationAmplitude: Destination = {
     const mappingSettings = rule?.settings || {};
     const state: RuntimeState = settings._state || {};
 
-    // 1. Reset — fires first so subsequent identity calls start clean.
+    // 1. Reset - fires first so subsequent identity calls start clean.
     if (mappingSettings.reset !== undefined) {
       const resolved =
         typeof mappingSettings.reset === 'boolean'
@@ -258,7 +258,7 @@ export const destinationAmplitude: Destination = {
       }
     }
 
-    // 2. Identity setters — rule-level override wins over destination-level.
+    // 2. Identity setters - rule-level override wins over destination-level.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     let identifyResolved: Record<string, unknown> | undefined;
     if (identifyMapping !== undefined) {
@@ -275,7 +275,7 @@ export const destinationAmplitude: Destination = {
       }
     }
 
-    // 3. Identify operations — fires amplitude.identify() if the resolved
+    // 3. Identify operations - fires amplitude.identify() if the resolved
     //    object has any op keys (set, setOnce, add, ...).
     if (identifyResolved) {
       const id = buildIdentify(amp, identifyResolved);
@@ -317,7 +317,7 @@ export const destinationAmplitude: Destination = {
       }
     }
 
-    // 6. Revenue — single object or array from loop → N revenue() calls.
+    // 6. Revenue - single object or array from loop → N revenue() calls.
     if (mappingSettings.revenue !== undefined) {
       const resolved = await getMappingValue(event, mappingSettings.revenue, {
         collector,
@@ -334,7 +334,7 @@ export const destinationAmplitude: Destination = {
     }
 
     // 7. Default track
-    if (rule?.skip !== true) {
+    if (rule?.silent !== true) {
       const eventType = isString(rule?.name) ? rule.name : event.name;
       const eventProperties = isObject(data)
         ? (data as Record<string, unknown>)
@@ -351,7 +351,7 @@ export const destinationAmplitude: Destination = {
     const amp = getAmplitude(context.env as Env | undefined);
 
     const consent = context.data as WalkerOS.Consent;
-    // Derive the consent key from config.consent — iterate every key the
+    // Derive the consent key from config.consent - iterate every key the
     // destination declared as required. If ALL required keys are granted,
     // opt IN; otherwise opt OUT. A missing config.consent means nothing
     // to check and we take no action.

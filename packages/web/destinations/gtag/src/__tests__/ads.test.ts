@@ -11,9 +11,10 @@ describe('Google Ads Implementation', () => {
   // Create a mock logger that actually throws
   const createThrowingLogger = () => {
     const logger = createMockLogger();
-    logger.throw = (message: string) => {
-      throw new Error(message);
-    };
+    logger.throw = jest.fn((message: string | Error): never => {
+      const msg = message instanceof Error ? message.message : message;
+      throw new Error(msg);
+    });
     return logger;
   };
 
@@ -34,7 +35,7 @@ describe('Google Ads Implementation', () => {
     it('should initialize Ads with basic settings', () => {
       const settings: AdsSettings = { conversionId: 'AW-XXXXXXXXX' };
 
-      initAds(settings, true, mockEnv);
+      initAds(settings, true, mockEnv, createMockLogger());
 
       expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
       expect(mockGtag).toHaveBeenCalledWith('config', 'AW-XXXXXXXXX');
@@ -43,7 +44,7 @@ describe('Google Ads Implementation', () => {
     it('should set default currency to EUR', () => {
       const settings: AdsSettings = { conversionId: 'AW-XXXXXXXXX' };
 
-      initAds(settings, true, mockEnv);
+      initAds(settings, true, mockEnv, createMockLogger());
 
       expect(settings.currency).toBe('EUR');
     });
@@ -54,7 +55,7 @@ describe('Google Ads Implementation', () => {
         currency: 'EUR',
       };
 
-      initAds(settings, true, mockEnv);
+      initAds(settings, true, mockEnv, createMockLogger());
 
       expect(settings.currency).toBe('EUR');
     });
@@ -62,7 +63,7 @@ describe('Google Ads Implementation', () => {
     it('should still initialize gtag when loadScript is false', () => {
       const settings: AdsSettings = { conversionId: 'AW-XXXXXXXXX' };
 
-      initAds(settings, false, mockEnv);
+      initAds(settings, false, mockEnv, createMockLogger());
 
       expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
       expect(mockGtag).toHaveBeenCalledWith('config', 'AW-XXXXXXXXX');
@@ -101,7 +102,15 @@ describe('Google Ads Implementation', () => {
     it('should push conversion event with correct parameters', () => {
       const mappingName = 'PURCHASE_CONVERSION';
 
-      pushAdsEvent(mockEvent as any, settings, {}, {}, mappingName, mockEnv);
+      pushAdsEvent(
+        mockEvent as any,
+        settings,
+        {},
+        {},
+        mappingName,
+        mockEnv,
+        createMockLogger(),
+      );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
         send_to: 'AW-XXXXXXXXX/PURCHASE_CONVERSION',
@@ -123,6 +132,7 @@ describe('Google Ads Implementation', () => {
         additionalData,
         mappingName,
         mockEnv,
+        createMockLogger(),
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
@@ -146,6 +156,7 @@ describe('Google Ads Implementation', () => {
         {},
         mappingName,
         mockEnv,
+        createMockLogger(),
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
@@ -164,6 +175,7 @@ describe('Google Ads Implementation', () => {
         'invalid-data',
         mappingName,
         mockEnv,
+        createMockLogger(),
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
@@ -183,6 +195,7 @@ describe('Google Ads Implementation', () => {
         {},
         mappingName,
         mockEnv,
+        createMockLogger(),
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
@@ -202,6 +215,7 @@ describe('Google Ads Implementation', () => {
         {},
         mappingName,
         mockEnv,
+        createMockLogger(),
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {

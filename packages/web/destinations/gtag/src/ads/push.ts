@@ -8,7 +8,7 @@ export function pushAdsEvent(
   event: WalkerOS.Event,
   settings: AdsSettings,
   mapping: AdsMapping = {},
-  data: WalkerOS.AnyObject,
+  data: unknown,
   mappingName: string | undefined,
   env: DestinationWeb.Env | undefined,
   logger: Logger.Instance,

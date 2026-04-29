@@ -36,7 +36,7 @@ implementation.
 3. Apply rule.policy (modifies event)
 4. Transform config.data (global)
 5. Check rule.ignore (short-circuits if true)
-5b. Read rule.skip (informational — destination honors it)
+5b. Read rule.silent (informational - destination honors it)
 6. Override event.name if rule.name
 7. Transform rule.data (event-specific)
 ```
@@ -51,8 +51,36 @@ implementation.
 interface Config {
   consent?: Consent; // Required consent for ALL events
   data?: Value; // Global data transformation
+  include?: string[]; // Event sections to flatten into context.data
   policy?: Policy; // Pre-processing for ALL events
   mapping?: Rules; // Event-specific rules
+}
+```
+
+#### Mapping.Config.include
+
+`include` lists event sections to **flatten** into the destination's
+`PushContext.data` before the rule runs. Sections are top-level keys of the
+event (`globals`, `user`, `consent`, `data`, `context`, `nested`, `source`,
+`custom`). The runtime helper `flattenIncludeSections` (in
+`packages/core/src/include.ts`) handles the merge.
+
+Use this when your mapping needs values from multiple event sections without
+plumbing each path through a `key:`/`map:` config. `include` is also available
+on `Mapping.Rule` (rule-level overrides config-level).
+
+```typescript
+{
+  include: ['globals', 'user'],
+  mapping: {
+    page: {
+      view: {
+        // user.id and globals.* are now reachable via top-level paths in
+        // data/key/map values, e.g. `key: 'id'` for user.id.
+        data: { map: { user_id: 'id', site: 'language' } },
+      },
+    },
+  },
 }
 ```
 
@@ -62,8 +90,9 @@ interface Config {
 interface Rule {
   name?: string; // Override event name
   data?: Value; // Event-specific data transformation
+  include?: string[]; // Event sections to flatten into context.data (rule-level)
   ignore?: boolean; // Skip this event entirely (no processing, no push)
-  skip?: boolean; // Process settings side effects, skip destination default push
+  silent?: boolean; // Process settings side effects, skip destination default push
   policy?: Policy; // Event-specific pre-processing
   condition?: Function; // Match condition (for arrays)
   consent?: Consent; // Required consent for this rule
@@ -72,13 +101,13 @@ interface Rule {
 }
 ```
 
-### Skip vs Ignore
+### Silent vs Ignore
 
 Both flags control rule behavior but have different semantics:
 
-- `ignore: true` — the rule matched but **nothing happens**. No data transform,
+- `ignore: true` - the rule matched but **nothing happens**. No data transform,
   no destination call, no side effects. Use for suppression.
-- `skip: true` — the rule matched and the destination `push()` **is** called.
+- `silent: true` - the rule matched and the destination `push()` **is** called.
   `settings.identify`, `settings.revenue`, `settings.group`, etc. still run.
   Only the destination's default forwarding call (e.g. `track()`, `capture()`,
   `event()`) is suppressed. Use for "identify without an event" style flows.
@@ -355,7 +384,7 @@ JSON strings to actual JavaScript functions during build.
 | `name`      | Override event name                                |
 | `data`      | Transform event data                               |
 | `ignore`    | Skip event entirely (no processing, no push)       |
-| `skip`      | Run settings side effects, skip default forwarding |
+| `silent`    | Run settings side effects, skip default forwarding |
 | `policy`    | Pre-process event                                  |
 | `condition` | Match condition (arrays)                           |
 | `consent`   | Required consent                                   |

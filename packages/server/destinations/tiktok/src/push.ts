@@ -67,7 +67,7 @@ export const push: PushFn = async function (
 
   // Page context from event source
   context.page = {
-    url: event.source.id,
+    url: event.source?.url,
   };
 
   // Build event data

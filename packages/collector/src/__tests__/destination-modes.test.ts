@@ -1,9 +1,4 @@
-import type {
-  Destination,
-  Transformer,
-  Source,
-  Elb,
-} from '@walkeros/core';
+import type { Destination, Transformer, Source, Elb } from '@walkeros/core';
 import { createEvent, createMockLogger } from '@walkeros/core';
 import { pushToDestinations, startFlow } from '..';
 import type { Collector } from '@walkeros/core';
@@ -41,7 +36,6 @@ describe('destination modes (disabled/mock)', () => {
         destinations: {},
       },
       config: {
-        tagging: 1,
         globalsStatic: {},
         sessionStatic: {},
       },

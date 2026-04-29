@@ -12,7 +12,7 @@ export type HeapStepExample = Flow.StepExample & {
 };
 
 /**
- * Default event forwarding — every walkerOS event becomes
+ * Default event forwarding - every walkerOS event becomes
  * heap.track(event.name, properties). With no mapping, properties is `{}`.
  */
 export const defaultEventForwarding: HeapStepExample = {
@@ -52,7 +52,7 @@ export const destinationLevelInclude: HeapStepExample = {
 };
 
 /**
- * Destination-level settings.identify — heap.identify() resolves user.id,
+ * Destination-level settings.identify - heap.identify() resolves user.id,
  * then the default heap.track() call fires.
  */
 export const destinationLevelIdentify: HeapStepExample = {
@@ -70,8 +70,8 @@ export const destinationLevelIdentify: HeapStepExample = {
 };
 
 /**
- * Per-event login identify — heap.identify() from data.email + user
- * properties from the same rule. skip: true suppresses the track() call.
+ * Per-event login identify - heap.identify() from data.email + user
+ * properties from the same rule. silent: true suppresses the track() call.
  */
 export const userLoginIdentify: HeapStepExample = {
   title: 'User login identify',
@@ -86,7 +86,7 @@ export const userLoginIdentify: HeapStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: 'data.email',
       userProperties: {
@@ -104,7 +104,7 @@ export const userLoginIdentify: HeapStepExample = {
 };
 
 /**
- * User logout — heap.resetIdentity(). skip: true suppresses the track() call.
+ * User logout - heap.resetIdentity(). silent: true suppresses the track() call.
  */
 export const userLogoutReset: HeapStepExample = {
   title: 'User logout reset',
@@ -112,7 +112,7 @@ export const userLogoutReset: HeapStepExample = {
     'A user logout calls heap.resetIdentity to clear the identified user from the Heap client.',
   in: getEvent('user logout', { timestamp: 1700000104 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       reset: true,
     },
@@ -121,7 +121,7 @@ export const userLogoutReset: HeapStepExample = {
 };
 
 /**
- * Event with user properties from mapping — heap.addUserProperties() fires,
+ * Event with user properties from mapping - heap.addUserProperties() fires,
  * then the default heap.track() call.
  */
 export const eventWithUserProperties: HeapStepExample = {
@@ -156,8 +156,8 @@ export const eventWithUserProperties: HeapStepExample = {
 };
 
 /**
- * Global event properties — heap.addEventProperties() sets persistent
- * properties on all subsequent events. skip: true on this rule.
+ * Global event properties - heap.addEventProperties() sets persistent
+ * properties on all subsequent events. silent: true on this rule.
  */
 export const globalEventProperties: HeapStepExample = {
   title: 'Global event properties',
@@ -168,7 +168,7 @@ export const globalEventProperties: HeapStepExample = {
     data: { category: 'docs' },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       eventProperties: {
         map: {
@@ -181,7 +181,7 @@ export const globalEventProperties: HeapStepExample = {
 };
 
 /**
- * Consent revoked — on('consent') handler calls heap.stopTracking()
+ * Consent revoked - on('consent') handler calls heap.stopTracking()
  * when a required consent key is false.
  */
 export const consentRevokeStopTracking: HeapStepExample = {
@@ -194,7 +194,7 @@ export const consentRevokeStopTracking: HeapStepExample = {
 };
 
 /**
- * Consent granted — on('consent') handler calls heap.startTracking()
+ * Consent granted - on('consent') handler calls heap.startTracking()
  * when all required consent keys are true.
  */
 export const consentGrantStartTracking: HeapStepExample = {

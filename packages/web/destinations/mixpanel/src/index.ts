@@ -15,7 +15,7 @@ import type {
   Settings,
 } from './types';
 
-// Types export — consumers can import as DestinationMixpanel.Settings etc.
+// Types export - consumers can import as DestinationMixpanel.Settings etc.
 export * as DestinationMixpanel from './types';
 
 /**
@@ -73,7 +73,7 @@ function applyPeople(mp: MixpanelSDK, resolved: Record<string, unknown>): void {
     const bag = resolved[op];
     if (!isObject(bag)) continue;
     if (Object.keys(bag).length === 0) continue;
-    // Typed dispatch — each op's first arg is a Record<string, unknown>.
+    // Typed dispatch - each op's first arg is a Record<string, unknown>.
     (mp.people[op] as (props: Record<string, unknown>) => void)(
       bag as Record<string, unknown>,
     );
@@ -174,7 +174,7 @@ export const destinationMixpanel: Destination = {
     const mappingSettings = rule?.settings || {};
     const state: RuntimeState = settings._state || {};
 
-    // 1. Reset — fires first so subsequent identity calls start clean.
+    // 1. Reset - fires first so subsequent identity calls start clean.
     if (mappingSettings.reset !== undefined) {
       const resolved = isBoolean(mappingSettings.reset)
         ? mappingSettings.reset
@@ -185,7 +185,7 @@ export const destinationMixpanel: Destination = {
       }
     }
 
-    // 2. Identity — rule-level override wins over destination-level.
+    // 2. Identity - rule-level override wins over destination-level.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     if (identifyMapping !== undefined) {
       const resolved = await getMappingValue(event, identifyMapping, {
@@ -200,7 +200,7 @@ export const destinationMixpanel: Destination = {
       }
     }
 
-    // 3. People operations — fires zero or more mp.people.* calls.
+    // 3. People operations - fires zero or more mp.people.* calls.
     if (mappingSettings.people !== undefined) {
       const resolved = await getMappingValue(event, mappingSettings.people, {
         collector,
@@ -210,7 +210,7 @@ export const destinationMixpanel: Destination = {
       }
     }
 
-    // 4. Group assignment — resolves to { key, id } and calls set_group.
+    // 4. Group assignment - resolves to { key, id } and calls set_group.
     const groupMapping = mappingSettings.group ?? settings.group;
     if (groupMapping !== undefined) {
       const resolved = await getMappingValue(event, groupMapping, {
@@ -229,7 +229,7 @@ export const destinationMixpanel: Destination = {
       }
     }
 
-    // 5. Group profile — resolves to { key, id, set?, set_once?, ... }
+    // 5. Group profile - resolves to { key, id, set?, set_once?, ... }
     if (mappingSettings.groupProfile !== undefined) {
       const resolved = await getMappingValue(
         event,
@@ -241,8 +241,8 @@ export const destinationMixpanel: Destination = {
       }
     }
 
-    // 6. Default track — unless the rule opts out via skip.
-    if (rule?.skip !== true) {
+    // 6. Default track - unless the rule opts out via silent.
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       const properties = isObject(data)
         ? (data as Record<string, unknown>)
@@ -259,7 +259,7 @@ export const destinationMixpanel: Destination = {
     const mp = getMixpanel(context.env as Env | undefined);
 
     const consent = context.data as WalkerOS.Consent;
-    // Derive the consent keys from config.consent — iterate every key the
+    // Derive the consent keys from config.consent - iterate every key the
     // destination declared as required. If ALL required keys are granted,
     // opt IN; otherwise opt OUT.
     const required = context.config?.consent;

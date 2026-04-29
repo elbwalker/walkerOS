@@ -22,7 +22,7 @@ complete event tracking architecture.
 │   HTTP Source ──▶ [Filter] ──▶ [Fingerprint] ──▶ [Validator] ──▶ Collector  │
 │        │              │                                          │          │
 │        │ ingest:      │ env:                    before:          ▼          │
-│        │ IP, UA,      │ $store:cache    [Fingerprint]+[Validator]           │
+│        │ IP, UA,      │ $store.cache    [Fingerprint]+[Validator]           │
 │        │ lang, ref,   │                                          │          │
 │        │ anon-IP(fn)  │                                          ▼          │
 │        │              │                                   Meta Destination  │
@@ -121,7 +121,7 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 | Definition (complex) | Root definitions   | `"ga4ItemsLoop": { "loop": [...] }`            |
 | $def reference       | GA4 purchase items | `"$def.ga4ItemsLoop"`                          |
 | $contract reference  | serverValidator    | `"$contract.default.events"`                   |
-| $store reference     | filter transformer | `"env": { "store": "$store:cache" }`           |
+| $store reference     | filter transformer | `"env": { "store": "$store.cache" }`           |
 
 #### Sources
 

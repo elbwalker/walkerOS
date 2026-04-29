@@ -31,9 +31,7 @@ describe('Server Destination LinkedIn', () => {
 
     destination = jest.requireActual('../').default;
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   async function getConfig(settings: Partial<Settings> = {}) {
@@ -302,7 +300,7 @@ describe('Server Destination LinkedIn', () => {
       } as Rules,
     };
 
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
     await elb('walker destination', destinationWithEnv, config);
     await elb(event);
@@ -336,7 +334,7 @@ describe('Server Destination LinkedIn', () => {
       } as Rules,
     };
 
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
     await elb('walker destination', destinationWithEnv, config);
     await elb(event);

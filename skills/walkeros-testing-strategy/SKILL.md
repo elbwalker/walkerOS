@@ -196,9 +196,13 @@ walkeros push flow.json -e event.json --mock destination.ga4='{"status":"ok"}'
 import { push } from '@walkeros/cli';
 
 // Simulate a destination
-const result = await push('flow.json', { entity: 'page', action: 'view' }, {
-  simulate: ['destination.ga4'],
-});
+const result = await push(
+  'flow.json',
+  { entity: 'page', action: 'view' },
+  {
+    simulate: ['destination.ga4'],
+  },
+);
 // result.usage = API call tracking data from wrapEnv
 
 // Simulate a source
@@ -331,19 +335,49 @@ in non-browser environments.
 
 ## Commands
 
+Verification tier (per `/workspaces/developer/AGENT.md` rule 11):
+
 ```bash
-# Run all tests
-npm run test
+# L1, the default during a task: typecheck, lint, test for the touched package
+cd /workspaces/developer/walkerOS
+npm run verify:touched -- core
+npm run verify:touched -- web-destination-gtag
 
-# Run tests for specific package
-cd packages/[name] && npm run test
+# L2, at plan completion: only packages affected since origin/main
+git fetch origin main --depth=1
+npm run verify:affected
 
-# Run single test file
-npm run test -- path/to/file.test.ts
+# L3, before pushing or marking PR-ready: critical path + affected
+npm run test:smoke
 
-# Watch mode
-npm run test -- --watch
+# Single test file (still useful while iterating)
+cd packages/<name> && npm run test -- path/to/file.test.ts
+
+# Watch mode (single package)
+cd packages/<name> && npm run test -- --watch
 ```
+
+Avoid bare `npm run test` at root inside per-task steps. That is L4 (full suite,
+10-15 min) and is reserved for plan completion when the plan touched shared
+infra, or for explicit user request.
+
+## Destination Test Duplication, Pending Cleanup
+
+As of 2026-04-29, web and server destination tests share substantial scaffolding
+(init validation, missing-settings rejection, mock setup, push assertions) with
+no shared harness. Audit found roughly 1500-2500 lines of repetition across 47
+destinations. A typed shared harness is planned as a follow-on initiative.
+
+When writing a new destination test today:
+
+- Keep destination-specific behavior (mapping rules, vendor-specific batch
+  shapes, edge cases) in the test file.
+- The boilerplate sections (env clone, `jest.clearAllMocks`,
+  missing-required-settings, init returns valid contract) are candidates for
+  extraction. Mirror the shape used by an existing destination of the same
+  family (web vs server) so the future migration is mechanical.
+- Do NOT invent a new private harness inside the destination. If the missing
+  harness blocks you, flag it.
 
 ## Related Skills
 

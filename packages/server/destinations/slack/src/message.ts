@@ -91,11 +91,11 @@ function defaultBlocks(
     blocks.push({ type: 'section', fields });
   }
 
-  const sourceId = event.source?.id;
-  if (sourceId) {
+  const sourceType = event.source?.type;
+  if (sourceType) {
     blocks.push({
       type: 'context',
-      elements: [{ type: 'mrkdwn', text: `Source: ${sourceId}` }],
+      elements: [{ type: 'mrkdwn', text: `Source: ${sourceType}` }],
     });
   }
 

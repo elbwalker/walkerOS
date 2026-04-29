@@ -49,10 +49,11 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order is posted to Google Data Manager as a purchase conversion with hashed user identifiers.',
   in: getEvent('order complete', {
+    id: 'ev-1700000900000',
     timestamp: 1700000900000,
     data: { id: 'ORD-600', total: 149.99, currency: 'EUR' },
     user: { id: 'user-abc', email: 'buyer@example.com' },
-    source: { type: 'server', id: '', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     name: 'purchase',
@@ -105,10 +106,11 @@ export const lead: Flow.StepExample = {
   description:
     'A demo request form submission is sent to Data Manager as a generate_lead conversion with a hashed email.',
   in: getEvent('form submit', {
+    id: 'ev-1700000901000',
     timestamp: 1700000901000,
     data: { type: 'demo-request' },
     user: { email: 'prospect@example.com' },
-    source: { type: 'server', id: '', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     name: 'generate_lead',
@@ -131,7 +133,7 @@ export const lead: Flow.StepExample = {
           events: [
             {
               eventTimestamp: '2023-11-14T22:28:21.000Z',
-              transactionId: '1700000901000-gr0up-1',
+              transactionId: 'ev-1700000901000',
               userData: {
                 userIdentifiers: [
                   {
@@ -159,10 +161,11 @@ export const ga4PageView: Flow.StepExample = {
   description:
     'A page view is sent to Data Manager as a page_view event tied to the walker user id.',
   in: getEvent('page view', {
+    id: 'ev-1700000902000',
     timestamp: 1700000902000,
     data: { title: 'Pricing', url: 'https://example.com/pricing' },
     user: { id: 'visitor-55' },
-    source: { type: 'server', id: '', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     name: 'page_view',
@@ -183,7 +186,7 @@ export const ga4PageView: Flow.StepExample = {
           events: [
             {
               eventTimestamp: '2023-11-14T22:28:22.000Z',
-              transactionId: '1700000902000-gr0up-1',
+              transactionId: 'ev-1700000902000',
               userId: 'visitor-55',
               eventName: 'page_view',
               eventSource: 'WEB',

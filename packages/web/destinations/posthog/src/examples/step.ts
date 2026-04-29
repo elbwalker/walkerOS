@@ -13,7 +13,7 @@ export type PostHogStepExample = Flow.StepExample & {
 };
 
 /**
- * Default event forwarding — every walkerOS event becomes
+ * Default event forwarding - every walkerOS event becomes
  * posthog.capture(event.name, properties). With no mapping and no
  * destination-level include, properties is `{}`.
  */
@@ -26,7 +26,7 @@ export const defaultEventForwarding: PostHogStepExample = {
 };
 
 /**
- * Wildcard ignore — walkerOS's standard way to drop events. The rule
+ * Wildcard ignore - walkerOS's standard way to drop events. The rule
  * matches but does nothing. The destination fires zero SDK calls.
  */
 export const wildcardIgnored: PostHogStepExample = {
@@ -116,7 +116,7 @@ export const destinationLevelIdentify: PostHogStepExample = {
 /**
  * Per-event identify with the full PostHog identity vocabulary.
  * This is the "user login" pattern: set a new distinctId and enrich
- * person properties. `skip: true` suppresses the default posthog.capture()
+ * person properties. `silent: true` suppresses the default posthog.capture()
  * call because we're running identity side effects only.
  *
  * PostHog identify signature:
@@ -137,7 +137,7 @@ export const userLoginIdentify: PostHogStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -177,12 +177,12 @@ export const userLoginIdentify: PostHogStepExample = {
 };
 
 /**
- * Person-properties-only update — when the resolved identify object has
+ * Person-properties-only update - when the resolved identify object has
  * NO `distinctId` key, the destination calls setPersonProperties($set, $set_once)
  * instead of identify(). This is the "profile update" pattern: enrich
  * user properties without changing identity.
  *
- * `skip` defaults to false here — we intentionally ALSO capture a
+ * `silent` defaults to false here - we intentionally ALSO capture a
  * "profile update" event so it shows up in PostHog's event stream.
  */
 export const profileUpdateSetPersonProperties: PostHogStepExample = {
@@ -224,8 +224,8 @@ export const profileUpdateSetPersonProperties: PostHogStepExample = {
 };
 
 /**
- * User logout — reset: true fires posthog.reset(), which clears the
- * distinct ID and generates a new anonymous one. `skip: true` because
+ * User logout - reset: true fires posthog.reset(), which clears the
+ * distinct ID and generates a new anonymous one. `silent: true` because
  * we're only running the reset side effect, no default capture().
  */
 export const userLogoutReset: PostHogStepExample = {
@@ -234,7 +234,7 @@ export const userLogoutReset: PostHogStepExample = {
     'A user logout calls posthog.reset to clear the distinct id and generate a new anonymous one.',
   in: getEvent('user logout', { timestamp: 1700000107 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       reset: true,
     },
@@ -246,8 +246,8 @@ export const userLogoutReset: PostHogStepExample = {
  * Group assignment + group properties. PostHog's group analytics (paid)
  * aggregates events by company / team / project. The destination resolves
  * `settings.group` to { type, key, properties? } and calls
- * posthog.group(type, key, properties). `skip: true` keeps this a
- * pure side-effect rule — no "company update" capture().
+ * posthog.group(type, key, properties). `silent: true` keeps this a
+ * pure side-effect rule - no "company update" capture().
  */
 export const groupAssignmentWithProperties: PostHogStepExample = {
   title: 'Group assignment',
@@ -263,7 +263,7 @@ export const groupAssignmentWithProperties: PostHogStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       group: {
         map: {
@@ -295,7 +295,7 @@ export const groupAssignmentWithProperties: PostHogStepExample = {
 };
 
 /**
- * Order complete — PostHog has no dedicated revenue API. Revenue tracking
+ * Order complete - PostHog has no dedicated revenue API. Revenue tracking
  * is just a capture() call with the revenue properties in data. This
  * example pairs `include: ["data", "globals"]` with a destination-level
  * capture. The order total, shipping, currency, etc. all become

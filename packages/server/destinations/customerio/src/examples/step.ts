@@ -157,7 +157,7 @@ export const destinationIdentify: CustomerIoStepExample = {
 };
 
 /**
- * Per-event identify with skip -- user login fires identify() only.
+ * Per-event identify with silent -- user login fires identify() only.
  */
 export const userLoginIdentify: CustomerIoStepExample = {
   title: 'User login identify',
@@ -173,7 +173,7 @@ export const userLoginIdentify: CustomerIoStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -195,7 +195,7 @@ export const userLoginIdentify: CustomerIoStepExample = {
 
 /**
  * Page view -- fires trackClient.trackPageView() with url.
- * skip: true suppresses track(); settings.page fires trackPageView().
+ * silent: true suppresses track(); settings.page fires trackPageView().
  */
 export const pageView: CustomerIoStepExample = {
   title: 'Page view',
@@ -210,7 +210,7 @@ export const pageView: CustomerIoStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       page: {
         map: {
@@ -242,7 +242,7 @@ export const destroyPerson: CustomerIoStepExample = {
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       destroy: true,
     },
@@ -262,7 +262,7 @@ export const suppressPerson: CustomerIoStepExample = {
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       suppress: true,
     },
@@ -282,7 +282,7 @@ export const unsuppressPerson: CustomerIoStepExample = {
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       unsuppress: true,
     },

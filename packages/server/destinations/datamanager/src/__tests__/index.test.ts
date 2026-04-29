@@ -51,9 +51,7 @@ describe('Server Destination Data Manager', () => {
 
     destination = jest.requireActual('../').default;
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   afterEach(() => {

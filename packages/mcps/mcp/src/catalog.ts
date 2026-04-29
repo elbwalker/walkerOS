@@ -1,7 +1,13 @@
+// __VERSION__ is replaced at build time by tsup's `define` (see tsup.config.ts).
+// In tests, it's set on globalThis (see src/__tests__/support/version.ts).
+declare const __VERSION__: string;
+
 const NPM_SEARCH_URL = 'https://registry.npmjs.org/-/v1/search';
 const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm';
 const WALKEROS_JSON_PATH = 'dist/walkerOS.json';
 const CACHE_TTL = 5 * 60 * 1000;
+
+export const CLIENT_HEADER = 'walkeros-mcp/' + __VERSION__;
 
 export interface CatalogEntry {
   name: string;
@@ -64,7 +70,10 @@ async function fetchCatalogFrom(
   if (filters?.platform) params.set('platform', filters.platform);
 
   const url = `${baseUrl}/api/packages${params.toString() ? `?${params}` : ''}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(15000),
+    headers: { 'X-Walkeros-Client': CLIENT_HEADER },
+  });
   if (!res.ok) throw new Error(`Catalog fetch failed: ${res.status}`);
 
   const data = (await res.json()) as { catalog: CatalogEntry[] };
@@ -74,6 +83,7 @@ async function fetchCatalogFrom(
 async function fetchFromNpm(): Promise<CatalogEntry[]> {
   const res = await fetch(`${NPM_SEARCH_URL}?text=@walkeros/&size=250`, {
     signal: AbortSignal.timeout(10000),
+    headers: { 'X-Walkeros-Client': CLIENT_HEADER },
   });
   if (!res.ok) throw new Error(`npm search failed: ${res.status}`);
 
@@ -104,7 +114,10 @@ async function enrichWithMeta(pkg: {
   try {
     const res = await fetch(
       `${JSDELIVR_BASE}/${pkg.name}@${pkg.version}/${WALKEROS_JSON_PATH}`,
-      { signal: AbortSignal.timeout(5000) },
+      {
+        signal: AbortSignal.timeout(5000),
+        headers: { 'X-Walkeros-Client': CLIENT_HEADER },
+      },
     );
     if (!res.ok) return undefined;
 

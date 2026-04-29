@@ -5,7 +5,6 @@ describe('validateContract', () => {
   it('should validate a valid named contract', () => {
     const result = validateContract({
       default: {
-        tagging: 1,
         globals: { required: ['country'] },
         consent: { required: ['analytics'] },
       },
@@ -28,20 +27,13 @@ describe('validateContract', () => {
     expect(result.errors[0].code).toBe('INVALID_CONTRACT');
   });
 
-  it('should report error for invalid tagging', () => {
+  it('should silently accept legacy tagging field (deprecated, ignored)', () => {
+    // tagging was a v3 field; v4 contracts no longer carry it. Existing
+    // configs with `tagging` should still validate without error.
     const result = validateContract({
-      web: { tagging: -1 },
+      web: { tagging: 1 },
     });
-    expect(result.valid).toBe(false);
-    expect(result.errors[0].code).toBe('INVALID_TAGGING');
-  });
-
-  it('should report error for tagging as string', () => {
-    const result = validateContract({
-      web: { tagging: 'v1' },
-    });
-    expect(result.valid).toBe(false);
-    expect(result.errors[0].code).toBe('INVALID_TAGGING');
+    expect(result.valid).toBe(true);
   });
 
   it('should report error for extends referencing non-existent contract', () => {

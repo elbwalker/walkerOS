@@ -94,7 +94,6 @@ export const completeEvent: WalkerOS.DeepPartialEvent = {
     analytics: false,
   },
   trigger: 'click',
-  group: 'ecommerce',
 };
 
 // Minimal valid event

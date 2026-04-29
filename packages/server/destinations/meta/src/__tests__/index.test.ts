@@ -1,6 +1,11 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Rules, Settings } from '../types';
-import { clone, getEvent, createMockContext, createMockLogger } from '@walkeros/core';
+import {
+  clone,
+  getEvent,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import { hashEvent } from '../hash';
@@ -32,9 +37,7 @@ describe('Server Destination Meta', () => {
 
     destination = jest.requireActual('../').default;
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   afterEach(() => {});
@@ -263,7 +266,13 @@ describe('Server Destination Meta', () => {
   });
 
   test('event Purchase', async () => {
-    const event = getEvent('order complete');
+    const event = getEvent('order complete', {
+      source: {
+        type: 'browser',
+        platform: 'web',
+        url: 'https://shop.example.com/checkout',
+      },
+    });
 
     const config: Config = {
       settings: {
@@ -295,7 +304,7 @@ describe('Server Destination Meta', () => {
           event_name: 'Purchase',
           event_time: event.timestamp / 1000,
           event_id: event.id,
-          event_source_url: event.source.id,
+          event_source_url: event.source.url,
           action_source: 'website',
           user_data: {
             external_id: [

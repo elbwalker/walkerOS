@@ -8,6 +8,12 @@ import type {
 import type { SettingsSchema, CorsOptionsSchema } from './schemas';
 import type { z } from '@walkeros/core/dev';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    lambda: { type: 'lambda'; platform: 'server' };
+  }
+}
+
 // Lambda event types
 export type LambdaEvent = APIGatewayProxyEvent | APIGatewayProxyEventV2;
 export type LambdaResult = APIGatewayProxyResult;

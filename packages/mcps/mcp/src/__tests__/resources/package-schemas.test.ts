@@ -60,7 +60,12 @@ describe('package-schemas resource', () => {
   it('should have a ResourceTemplate with URI pattern', () => {
     const resource = server.getResource('package-schema');
     expect(resource.template).toBeDefined();
-    expect(resource.template.constructor.name).toBe('ResourceTemplate');
+    const template = resource.template;
+    expect(
+      template && typeof template === 'object'
+        ? template.constructor.name
+        : null,
+    ).toBe('ResourceTemplate');
   });
 
   it('should list known walkerOS packages', async () => {

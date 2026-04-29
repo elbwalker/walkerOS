@@ -36,9 +36,7 @@ describe('Server Destination Pinterest', () => {
 
     destination = jest.requireActual('../').default;
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   async function getConfig(settings: Partial<Settings> = {}) {
@@ -318,7 +316,13 @@ describe('Server Destination Pinterest', () => {
   });
 
   test('event checkout', async () => {
-    const event = getEvent('order complete');
+    const event = getEvent('order complete', {
+      source: {
+        type: 'browser',
+        platform: 'web',
+        url: 'https://shop.example.com/checkout',
+      },
+    });
 
     const config: Config = {
       settings: {
@@ -347,7 +351,7 @@ describe('Server Destination Pinterest', () => {
     expect(requestBody.data[0].event_name).toBe('checkout');
     expect(requestBody.data[0].event_time).toBe(event.timestamp / 1000);
     expect(requestBody.data[0].event_id).toBe(event.id);
-    expect(requestBody.data[0].event_source_url).toBe(event.source.id);
+    expect(requestBody.data[0].event_source_url).toBe(event.source.url);
     expect(requestBody.data[0].action_source).toBe('web');
     expect(requestBody.data[0].custom_data).toBeDefined();
     expect(requestBody.data[0].custom_data.order_id).toBe('0rd3r1d');

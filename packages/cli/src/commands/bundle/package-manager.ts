@@ -171,7 +171,13 @@ export async function collectAllSpecs(
 
       if (hasPkgJson) {
         try {
-          const pkgJson = await fs.readJson(candidatePath);
+          // Local package.json shape — only the fields we read.
+          interface LocalPackageJson {
+            dependencies?: Record<string, string>;
+            peerDependencies?: Record<string, string>;
+            peerDependenciesMeta?: Record<string, { optional?: boolean }>;
+          }
+          const pkgJson: LocalPackageJson = await fs.readJson(candidatePath);
 
           // Queue regular dependencies
           const deps = pkgJson.dependencies || {};
@@ -188,9 +194,7 @@ export async function collectAllSpecs(
           const peerMeta = pkgJson.peerDependenciesMeta || {};
           for (const [depName, depSpec] of Object.entries(peerDeps)) {
             if (typeof depSpec === 'string') {
-              const isOptional =
-                (peerMeta as Record<string, { optional?: boolean }>)[depName]
-                  ?.optional === true;
+              const isOptional = peerMeta[depName]?.optional === true;
               queue.push(
                 substituteDep(
                   depName,
@@ -212,8 +216,15 @@ export async function collectAllSpecs(
       continue;
     }
 
-    // Fetch manifest from registry
-    let manifest: pacote.ManifestResult;
+    // Fetch manifest from registry. pacote.manifest returns
+    // AbbreviatedManifest & ManifestResult — typed dependencies/peerDependencies.
+    // peerDependenciesMeta isn't in the upstream type but is a valid npm field;
+    // declare a local extension for it.
+    interface ManifestWithMeta
+      extends pacote.AbbreviatedManifest, pacote.ManifestResult {
+      peerDependenciesMeta?: Record<string, { optional?: boolean }>;
+    }
+    let manifest: ManifestWithMeta;
     try {
       manifest = await withTimeout(
         pacote.manifest(`${item.name}@${item.spec}`, PACOTE_OPTS),
@@ -228,8 +239,7 @@ export async function collectAllSpecs(
     }
 
     // Queue regular dependencies
-    const m = manifest as unknown as Record<string, unknown>;
-    const deps = (m.dependencies as Record<string, string> | undefined) || {};
+    const deps = manifest.dependencies || {};
     for (const [depName, depSpec] of Object.entries(deps)) {
       if (typeof depSpec === 'string') {
         queue.push(
@@ -239,12 +249,8 @@ export async function collectAllSpecs(
     }
 
     // Queue peerDependencies with metadata
-    const peerDeps =
-      (m.peerDependencies as Record<string, string> | undefined) || {};
-    const peerMeta =
-      (m.peerDependenciesMeta as
-        | Record<string, { optional?: boolean }>
-        | undefined) || {};
+    const peerDeps = manifest.peerDependencies || {};
+    const peerMeta = manifest.peerDependenciesMeta || {};
     for (const [depName, depSpec] of Object.entries(peerDeps)) {
       if (typeof depSpec === 'string') {
         const isOptional = peerMeta[depName]?.optional === true;
@@ -539,8 +545,7 @@ export async function downloadPackages(
           PACKAGE_DOWNLOAD_TIMEOUT_MS,
           `Manifest fetch timed out: ${resolvedSpec}`,
         );
-        const resolved = (manifest as unknown as { version: string }).version;
-        resolvedSpec = `${nestedPkg.name}@${resolved}`;
+        resolvedSpec = `${nestedPkg.name}@${manifest.version}`;
       } catch (error) {
         throw new Error(
           `Failed to resolve nested dependency ${resolvedSpec}: ${error}`,

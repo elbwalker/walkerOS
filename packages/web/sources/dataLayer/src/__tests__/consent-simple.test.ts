@@ -16,9 +16,7 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
 
     const mockPush = createMockPush(collectedEvents);
 
-    ({ collector } = await startFlow({
-      tagging: 2,
-    }));
+    ({ collector } = await startFlow());
 
     collector.push = mockPush;
   });

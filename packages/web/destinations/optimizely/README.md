@@ -52,9 +52,9 @@ elb('walker destination', destinationOptimizely, {
 
 | Key              | Type      | Default | Description                                                                                               |
 | ---------------- | --------- | ------- | --------------------------------------------------------------------------------------------------------- |
-| `sdkKey`         | `string`  | —       | Required. Optimizely Feature Experimentation SDK key (Settings > Environments).                           |
-| `userId`         | `Mapping` | —       | walkerOS mapping value resolving to the userId used for bucketing (e.g. `"user.id"`). Required per event. |
-| `attributes`     | `Mapping` | —       | Destination-level user attributes for audience targeting. Applied via `createUserContext()`.              |
+| `sdkKey`         | `string`  | -       | Required. Optimizely Feature Experimentation SDK key (Settings > Environments).                           |
+| `userId`         | `Mapping` | -       | walkerOS mapping value resolving to the userId used for bucketing (e.g. `"user.id"`). Required per event. |
+| `attributes`     | `Mapping` | -       | Destination-level user attributes for audience targeting. Applied via `createUserContext()`.              |
 | `updateInterval` | `number`  | `60000` | Datafile polling interval (ms).                                                                           |
 | `autoUpdate`     | `boolean` | `true`  | Poll for datafile updates.                                                                                |
 | `batchSize`      | `number`  | `10`    | Events per batch (batch event processor).                                                                 |
@@ -73,13 +73,13 @@ Per-rule overrides under `mapping.<entity>.<action>.settings`:
 | `eventTags`  | `Mapping` | Extra tags. Spread into the `eventTags` object.                                         |
 | `attributes` | `Mapping` | Per-event user attributes. Applied via `setAttribute()` before the `trackEvent()` call. |
 
-Use `rule.name` to rename the event key and `rule.skip = true` to fire
+Use `rule.name` to rename the event key and `rule.silent = true` to fire
 attributes without a `trackEvent()` call.
 
 ## Revenue
 
 Optimizely expects revenue as an **integer in cents** (e.g. `7281` = `$72.81`).
-The destination passes the resolved value through without conversion — you must
+The destination passes the resolved value through without conversion - you must
 provide cents.
 
 ```json
@@ -100,9 +100,9 @@ provide cents.
 
 Two layers:
 
-1. **`config.consent`** — walkerOS gates delivery. Events are queued until
+1. **`config.consent`** - walkerOS gates delivery. Events are queued until
    required consent keys resolve to `true`.
-2. **`on('consent')`** — the destination closes the Optimizely client (flushing
+2. **`on('consent')`** - the destination closes the Optimizely client (flushing
    queued events and stopping polling) when any required key flips to `false`.
    On re-grant, the next push re-initializes the client.
 
@@ -112,7 +112,7 @@ Two layers:
 
 ## Decide / Feature Flags
 
-This destination intentionally does **not** expose `decide()` — experiment
+This destination intentionally does **not** expose `decide()` - experiment
 decisions belong in application code where UI branching happens. This package
 covers the outbound conversion-tracking use case.
 
