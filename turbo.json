@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "//": "concurrency: 2 is intentional (Docker OOM history). dependsOn: ['^build'] on typecheck/lint is required because @walkeros/core/package.json points types to ./dist/*.d.ts; downstream typecheck resolves through compiled declarations. See /workspaces/developer/AGENT.md rule 11 for verification tiers.",
   "globalDependencies": ["**/.env.*local", "website/.env"],
   "concurrency": "2",
   "remoteCache": {
@@ -26,15 +27,43 @@
     },
     "typecheck": {
       "dependsOn": ["^build"],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.json",
+        "tsconfig*.json",
+        "package.json"
+      ],
       "outputs": [],
       "outputLogs": "errors-only"
     },
     "lint": {
       "dependsOn": ["^build"],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.js",
+        "src/**/*.mjs",
+        "eslint.config.*",
+        ".eslintrc*",
+        "tsconfig*.json",
+        "package.json"
+      ],
       "outputs": [],
       "outputLogs": "errors-only"
     },
     "test": {
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.js",
+        "src/**/*.json",
+        "src/**/*.snap",
+        "src/**/__fixtures__/**",
+        "jest.config.*",
+        "tsconfig*.json",
+        "package.json"
+      ],
       "outputs": [],
       "outputLogs": "errors-only"
     },

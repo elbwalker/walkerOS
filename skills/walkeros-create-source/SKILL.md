@@ -655,7 +655,8 @@ Guidelines:
 ### Gate: Implementation Compiles
 
 - [ ] `npm run build` passes
-- [ ] `npm run lint` passes
+- [ ] `npm run verify:touched -- <source-name>` passes (L1: typecheck + lint +
+      test)
 
 ---
 
@@ -692,7 +693,7 @@ Canonical references:
 
 ### Gate: Tests Pass
 
-- [ ] `npm run test` passes
+- [ ] `npm run verify:touched -- <source-name>` passes (L1)
 - [ ] Tests iterate via `it.each(Object.entries(examples.step))`
 - [ ] Tests contain no hardcoded payloads, requests, or expected events
 - [ ] Every assertion reads from `examples.step[...].out`

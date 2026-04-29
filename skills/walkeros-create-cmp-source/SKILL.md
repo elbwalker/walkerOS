@@ -538,9 +538,9 @@ CMP uses for each detection path.
 
 ### Gate: All tests pass
 
-- [ ] `npm run test` -- all tests pass
+- [ ] `npm run verify:touched -- <cmp-name>` passes (L1: typecheck + lint +
+      test)
 - [ ] `npm run build` passes
-- [ ] `npm run lint` passes
 
 ---
 

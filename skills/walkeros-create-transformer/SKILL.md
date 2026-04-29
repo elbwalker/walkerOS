@@ -301,7 +301,8 @@ export type { Settings, Types } from './types';
 ### Gate: Implementation Compiles
 
 - [ ] `npm run build` passes
-- [ ] `npm run lint` passes
+- [ ] `npm run verify:touched -- <transformer-name>` passes (L1: typecheck +
+      lint + test)
 
 ---
 
@@ -319,7 +320,7 @@ a complete test suite showing:
 
 ### Gate: Tests Pass
 
-- [ ] `npm run test` passes
+- [ ] `npm run verify:touched -- <transformer-name>` passes (L1)
 - [ ] Tests verify against example outputs
 
 ---

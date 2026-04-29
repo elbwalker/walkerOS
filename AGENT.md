@@ -80,7 +80,9 @@ apps/
 - **No `any`:** Never in production code
 - **XP principles:** DRY, KISS, YAGNI, TDD
 - **Test first:** Watch it fail before implementing
-- **Verify:** Run tests before claiming complete
+- **Verify:** Use the verification tiers from `/workspaces/developer/AGENT.md`
+  rule 11. Default L1 (touched package) per task. L2 at plan completion. Never
+  L4 unless the plan touched shared infra or the user asked.
 
 ## Creating/Maintaining Skills
 

@@ -537,7 +537,7 @@ When adding step examples to a package or flow:
 - [ ] For transformers, include a `false` (filtered) case
 - [ ] Add `it.each` test using step examples
 - [ ] Verify examples compile: `npm run build`
-- [ ] Run tests: `npm run test`
+- [ ] Run tests: `npm run verify:touched -- <pkg>` (L1)
 - [ ] Add `title` and `description` to every public example.
 - [ ] Mark internal/test-only examples with `public: false`.
 

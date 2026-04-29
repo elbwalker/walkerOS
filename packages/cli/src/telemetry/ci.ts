@@ -16,7 +16,9 @@ interface CiInput {
  */
 export function getCiInfo(input?: CiInput): CiInfo {
   const isCI = input?.isCI ?? ciInfo.isCI;
-  const name = input?.name ?? ciInfo.name ?? null;
+  // Use property presence (not nullishness) so callers can pass `name: null`
+  // explicitly to mean "vendor unknown" without falling through to ciInfo.name.
+  const name = input && 'name' in input ? input.name : (ciInfo.name ?? null);
   if (!isCI) return { ci: false };
   return name ? { ci: true, ci_name: name } : { ci: true };
 }
