@@ -70,6 +70,19 @@ describe('findWalkerOSReferences', () => {
     expect(refs).toHaveLength(1);
     expect(refs[0].type).toBe('env');
   });
+
+  it('finds $flow. references', () => {
+    const matches = findWalkerOSReferences('"$flow.server.url"');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].type).toBe('flow');
+    expect(matches[0].name).toBe('server.url');
+  });
+
+  it('finds $flow. prefix only', () => {
+    const refs = findWalkerOSReferences('"$flow."');
+    expect(refs).toHaveLength(1);
+    expect(refs[0].type).toBe('flow');
+  });
 });
 
 describe('REFERENCE_PATTERNS', () => {

@@ -6,6 +6,7 @@ export type ReferenceType =
   | 'secret'
   | 'env'
   | 'store'
+  | 'flow'
   | 'contract'
   | 'code';
 
@@ -44,6 +45,11 @@ export const REFERENCE_PATTERNS: Array<{
     className: 'elb-ref-contract',
   },
   { type: 'store', regex: /\$store\.(\w*)/g, className: 'elb-ref-store' },
+  {
+    type: 'flow',
+    regex: /\$flow\.(\w*(?:\.[\w.]*)?)/g,
+    className: 'elb-ref-flow',
+  },
   { type: 'code', regex: /\$code:/g, className: 'elb-ref-code' },
 ];
 
@@ -133,6 +139,7 @@ export function registerWalkerOSDecorationStyles(): void {
     .monaco-editor .elb-ref-env { color: #ffcb6b !important; font-style: italic; }
     .monaco-editor .elb-ref-contract { color: #c3e88d !important; font-style: italic; }
     .monaco-editor .elb-ref-store { color: #89ddff !important; font-style: italic; }
+    .monaco-editor .elb-ref-flow { color: #82aaff !important; font-style: italic; }
     .monaco-editor .elb-ref-code { color: #c084fc !important; }
   `;
   document.head.appendChild(style);

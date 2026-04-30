@@ -132,4 +132,26 @@ describe('validateWalkerOSReferences', () => {
     const issues = validateWalkerOSReferences(json, {});
     expect(issues).toHaveLength(0);
   });
+
+  it('flags dangling $flow. references', () => {
+    const json = '{"config": "$flow.missing"}';
+    const context = { flows: ['web_prod'] };
+    const issues = validateWalkerOSReferences(json, context);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain('missing');
+    expect(issues[0].severity).toBe('warning');
+  });
+
+  it('does not flag valid $flow. references with deep path', () => {
+    const json = '{"config": "$flow.web_prod.url"}';
+    const context = { flows: ['web_prod'] };
+    const issues = validateWalkerOSReferences(json, context);
+    expect(issues).toHaveLength(0);
+  });
+
+  it('does not validate $flow. when flows inventory is absent', () => {
+    const json = '{"config": "$flow.anything"}';
+    const issues = validateWalkerOSReferences(json, {});
+    expect(issues).toHaveLength(0);
+  });
 });

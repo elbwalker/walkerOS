@@ -15,6 +15,10 @@
       "types": "./dist/dev.d.ts",
       "default": "./dist/dev.js"
     },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "default": "./dist/examples/index.js"
+    },
     "./examples/*": "./examples/*"
   },
   "bin": {

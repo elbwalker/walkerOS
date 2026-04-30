@@ -4,6 +4,7 @@ import {
   REF_DEF,
   REF_ENV,
   REF_CONTRACT,
+  REF_FLOW,
   REF_STORE,
   REF_SECRET,
 } from '@walkeros/core';
@@ -13,6 +14,7 @@ import {
   getDefinitionCompletions,
   getSecretCompletions,
   getStoreCompletions,
+  getFlowCompletions,
   getEnvCompletions,
   getPackageCompletions,
   getStepNameCompletions,
@@ -155,6 +157,11 @@ export function registerWalkerOSProviders(
         ) {
           entries.push(...getStoreCompletions(context.stores));
         } else if (
+          textBeforeCursor.includes('$flow.') ||
+          textBeforeCursor.endsWith('"$flow')
+        ) {
+          entries.push(...getFlowCompletions(context.flows));
+        } else if (
           textBeforeCursor.includes('$env.') ||
           textBeforeCursor.endsWith('"$env')
         ) {
@@ -191,6 +198,7 @@ export function registerWalkerOSProviders(
           entries.push(...getDefinitionCompletions(context.definitions));
           entries.push(...getSecretCompletions(context.secrets));
           entries.push(...getStoreCompletions(context.stores));
+          entries.push(...getFlowCompletions(context.flows));
           entries.push(...getEnvCompletions(context.envNames));
           entries.push(...getContractCompletions(context.contractRaw, []));
         }
@@ -221,7 +229,7 @@ export function registerWalkerOSProviders(
         // Monaco's getWordUntilPosition doesn't understand $ or . as word chars,
         // so we scan backwards to find the $ that starts the reference.
         const refStartMatch = textBeforeCursor.match(
-          /\$(?:var|def|secret|env|code|contract|store)[.:]?[\w.]*$/,
+          /\$(?:var|def|secret|env|code|contract|store|flow)[.:]?[\w.]*$/,
         );
         const mappingPathMatch = !refStartMatch
           ? textBeforeCursor.match(/[a-z_][\w.]*$/i)
@@ -385,6 +393,31 @@ export function registerWalkerOSProviders(
                 value: `**Unknown store** \`$store.${name}\`\n\nAvailable: ${context.stores?.join(', ') || 'none'}`,
               },
             ],
+          };
+        }
+
+        // $flow.name(.path)?
+        const flowMatch = matchAtCursor(inlineGlobal(REF_FLOW));
+        if (flowMatch && context.flows) {
+          const flowName = flowMatch[1];
+          const path = flowMatch[2];
+          const known = context.flows.includes(flowName);
+          const headline = known
+            ? `**Flow reference:** \`$flow.${flowName}${path ? `.${path}` : ''}\``
+            : `**Unknown flow** \`$flow.${flowName}\``;
+          const body = known
+            ? path
+              ? `Resolves to \`flows.${flowName}.config.${path}\` at runtime.`
+              : `Resolves to the full \`Flow.Config\` block of "${flowName}" at runtime.`
+            : `Available: ${context.flows.join(', ') || 'none'}`;
+          return {
+            range: {
+              startLineNumber: position.lineNumber,
+              startColumn: flowMatch.index + 1,
+              endLineNumber: position.lineNumber,
+              endColumn: flowMatch.index + flowMatch[0].length + 1,
+            },
+            contents: [{ value: `${headline}\n\n${body}` }],
           };
         }
 

@@ -25,6 +25,13 @@ describe('IntelliSense context registry', () => {
     setIntelliSenseContext('/test/contract.json', { contractRaw });
     removeIntelliSenseContext('/test/contract.json');
   });
+
+  it('stores flows inventory in context for $flow completions', () => {
+    setIntelliSenseContext('/test/flow.json', {
+      flows: ['web_prod', 'server_prod'],
+    });
+    removeIntelliSenseContext('/test/flow.json');
+  });
 });
 
 /**

@@ -9,6 +9,7 @@ import {
   REF_SECRET,
   REF_CODE_PREFIX,
 } from '../references';
+import * as core from '@walkeros/core';
 
 describe('reference regex constants', () => {
   it('REF_VAR matches $var.name inline', () => {
@@ -64,5 +65,28 @@ describe('REF_FLOW', () => {
   test('does not match partial / inline references', () => {
     expect('prefix$flow.server.url'.match(REF_FLOW)).toBeNull();
     expect('$flow.server.url suffix'.match(REF_FLOW)).toBeNull();
+  });
+});
+
+describe('core barrel re-exports', () => {
+  // Every REF_* constant defined in references.ts must also be reachable
+  // through the public package barrel `@walkeros/core`. Consumers like
+  // @walkeros/explorer rely on this surface; missing one (as REF_FLOW
+  // historically was) is a silent breakage.
+  it.each([
+    ['REF_VAR'],
+    ['REF_DEF'],
+    ['REF_ENV'],
+    ['REF_CONTRACT'],
+    ['REF_FLOW'],
+    ['REF_STORE'],
+    ['REF_SECRET'],
+    ['REF_CODE_PREFIX'],
+  ])('%s is exported from the core barrel', (name) => {
+    expect(name in core).toBe(true);
+  });
+
+  it('REF_FLOW exported from the barrel matches inputs', () => {
+    expect('$flow.server.url'.match(core.REF_FLOW)?.[1]).toBe('server');
   });
 });

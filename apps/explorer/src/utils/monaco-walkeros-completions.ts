@@ -67,6 +67,20 @@ export function getStoreCompletions(
   }));
 }
 
+export function getFlowCompletions(
+  flows: IntelliSenseContext['flows'],
+): CompletionEntry[] {
+  if (!flows || flows.length === 0) return [];
+  return flows.map((name) => ({
+    label: `$flow.${name}`,
+    insertText: `$flow.${name}`,
+    detail: '(flow)',
+    documentation: `Cross-flow reference. Resolves to the resolved Flow.Config of "${name}" at runtime. Append \`.url\`, \`.settings.<key>\`, or another path inside that flow's config.`,
+    kind: 'reference' as const,
+    sortText: '0_flow_' + name,
+  }));
+}
+
 export function getEnvCompletions(
   envNames: IntelliSenseContext['envNames'],
 ): CompletionEntry[] {

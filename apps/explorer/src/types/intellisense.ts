@@ -41,6 +41,9 @@ export interface IntelliSenseContext {
   /** Store IDs from the active flow's `stores` map. Enables `$store.` completion. */
   stores?: string[];
 
+  /** Sibling flow names from the parsed root document. Enables `$flow.` completion. */
+  flows?: string[];
+
   /** Known environment variable names. If omitted, `$env.` offers only the prefix. */
   envNames?: string[];
 }

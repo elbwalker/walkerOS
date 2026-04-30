@@ -3,6 +3,7 @@ import {
   getDefinitionCompletions,
   getSecretCompletions,
   getStoreCompletions,
+  getFlowCompletions,
   getEnvCompletions,
   getPackageCompletions,
   getStepNameCompletions,
@@ -54,6 +55,23 @@ describe('getStoreCompletions', () => {
   it('returns empty when no stores', () => {
     expect(getStoreCompletions(undefined)).toEqual([]);
     expect(getStoreCompletions([])).toEqual([]);
+  });
+});
+
+describe('getFlowCompletions', () => {
+  it('returns entries for each flow name', () => {
+    const entries = getFlowCompletions(['web_prod', 'server_prod']);
+    expect(entries.map((e) => e.label)).toEqual([
+      '$flow.web_prod',
+      '$flow.server_prod',
+    ]);
+    expect(entries[0].detail).toBe('(flow)');
+    expect(entries[0].kind).toBe('reference');
+  });
+
+  it('returns empty when no flows', () => {
+    expect(getFlowCompletions(undefined)).toEqual([]);
+    expect(getFlowCompletions([])).toEqual([]);
   });
 });
 

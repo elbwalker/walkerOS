@@ -63,4 +63,16 @@ export default defineConfig([
     sourcemap: true,
     minify: false,
   },
+
+  // Examples barrel (typed re-export of bundled flow.json examples).
+  // Emits dist/examples/index.{js,d.ts} so consumers can import
+  // `@walkeros/cli/examples` and receive Flow.Json without casting.
+  {
+    ...baseConfig,
+    entry: { 'examples/index': 'src/examples/index.ts' },
+    format: ['esm'],
+    dts: true,
+    sourcemap: true,
+    minify: false,
+  },
 ]);

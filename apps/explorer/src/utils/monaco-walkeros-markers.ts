@@ -2,6 +2,7 @@ import {
   REF_VAR,
   REF_DEF,
   REF_ENV,
+  REF_FLOW,
   REF_STORE,
   REF_SECRET,
 } from '@walkeros/core';
@@ -96,6 +97,22 @@ export function validateWalkerOSReferences(
       if (!context.stores.includes(match[1])) {
         issues.push({
           message: `Unknown store "$store.${match[1]}". Available: ${context.stores.join(', ') || 'none'}`,
+          severity: 'warning',
+          startIndex: match.index,
+          endIndex: match.index + match[0].length,
+        });
+      }
+    }
+  }
+
+  // Check $flow. references (only when flows inventory is present)
+  if (context.flows) {
+    const flowRegex = inlineGlobal(REF_FLOW);
+    let match: RegExpExecArray | null;
+    while ((match = flowRegex.exec(text)) !== null) {
+      if (!context.flows.includes(match[1])) {
+        issues.push({
+          message: `Unknown flow "$flow.${match[1]}". Available: ${context.flows.join(', ') || 'none'}`,
           severity: 'warning',
           startIndex: match.index,
           endIndex: match.index + match[0].length,
