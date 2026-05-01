@@ -1,5 +1,5 @@
 import type { Cache, CacheRule } from './types/cache';
-import type { Mapping, Store } from './types';
+import type { Collector, Mapping, Store } from './types';
 import type { CompiledMatcher } from './types/matcher';
 import { compileMatcher } from './matcher';
 import { getByPath, setByPath } from './byPath';
@@ -95,6 +95,7 @@ export async function applyUpdate(
   value: unknown,
   update: Record<string, unknown> | undefined,
   context: Record<string, unknown>,
+  collector: Collector.Instance,
 ): Promise<unknown> {
   if (!update) return value;
 
@@ -103,6 +104,7 @@ export async function applyUpdate(
     const resolved = await getMappingValue(
       context,
       valueConfig as Mapping.Data,
+      { collector },
     );
     result = setByPath(result, path, resolved);
   }

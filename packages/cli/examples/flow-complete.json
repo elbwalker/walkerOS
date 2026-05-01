@@ -12,7 +12,7 @@
       "loop": [
         "nested",
         {
-          "condition": "$code:(entity) => entity.entity === 'product'",
+          "condition": "$code:(value, context) => value.entity === 'product'",
           "map": {
             "item_id": "data.id",
             "item_name": "data.name",

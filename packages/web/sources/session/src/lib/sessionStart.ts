@@ -31,7 +31,7 @@ export function sessionStart(
 
     const consentConfig = (
       isArray(consent) ? consent : [consent]
-    ).reduce<On.ConsentConfig>(
+    ).reduce<On.ConsentRule>(
       (acc, key) => ({ ...acc, [key]: consentHandler }),
       {},
     );
@@ -56,11 +56,16 @@ function callFuncAndCb(
   return cb(session, collector, defaultCb);
 }
 
-function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
+function onConsentFn(
+  config: SessionConfig,
+  cb?: SessionCallback | false,
+): On.ConsentFn {
   // Track the last processed round to prevent duplicate processing
   let lastProcessedRound: number | undefined;
 
-  const func = (collector: Collector.Instance, consent: WalkerOS.Consent) => {
+  const func: On.ConsentFn = (consent, context) => {
+    const collector = context.collector;
+
     // Skip if we've already processed this round
     if (
       isDefined(lastProcessedRound) &&
@@ -83,7 +88,7 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
         sessionFn = () => sessionStorage(config);
     }
 
-    return callFuncAndCb(sessionFn(), collector, cb);
+    callFuncAndCb(sessionFn(), collector, cb);
   };
 
   return func;

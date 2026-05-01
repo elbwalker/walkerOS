@@ -95,7 +95,7 @@ Another example of how to use the `on consent` command might be to update
 [Googles consent mode v2](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic):
 
 <CodeSnippet
-  code={`elb('walker on', 'consent', (instance, consent) => {
+  code={`elb('walker on', 'consent', (consent, context) => {
 // Check if marketing consent is granted
 if (consent.marketing) {
 gtag('consent', 'update', {

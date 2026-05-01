@@ -121,7 +121,7 @@ getId(5, 'abcdefghijklmnopqrstuvwxyz'); // Lowercase letters only`}
 
 ### getMappingValue
 
-`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, options?: Mapping.Options): Promise<WalkerOS.Property | undefined>`
+`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, context?: Partial<Mapping.Context>): Promise<WalkerOS.Property | undefined>`
 extracts values from events using
 
 <Link to="/docs/mapping">mapping configurations</Link>.

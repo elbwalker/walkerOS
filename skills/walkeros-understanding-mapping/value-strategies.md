@@ -55,9 +55,9 @@ Fixed value regardless of event:
 Custom transformation logic:
 
 ```typescript
-{ fn: (event) => event.data.price * 100 }           // Convert to cents
-{ fn: (event) => event.user.email?.split('@')[1] }  // Extract domain
-{ fn: (event, mapping, options) => /* ... */ }      // Full signature
+{ fn: (value) => value.data.price * 100 }            // Convert to cents
+{ fn: (value) => value.user.email?.split('@')[1] }   // Extract domain
+{ fn: (value, context) => /* ... */ }                // Full signature: context = { event, mapping, collector, logger, consent? }
 ```
 
 **JSON with $code:**
@@ -247,10 +247,17 @@ Validate transformed value, return undefined if invalid:
 
 ## Function Signatures Reference
 
-| Context             | Signature                                |
-| ------------------- | ---------------------------------------- |
-| `fn`                | `(value, mapping, options) => result`    |
-| `condition` (value) | `(value, mapping, collector) => boolean` |
-| `condition` (rule)  | `(event) => boolean`                     |
-| `validate`          | `(value) => boolean`                     |
-| `loop` condition    | `(item) => boolean`                      |
+All mapping callbacks share `(value, context)`. The `context` argument is a
+`Mapping.Context` object with `event`, `mapping`, `collector`, `logger`, and
+optional `consent`.
+
+| Context             | Signature                     |
+| ------------------- | ----------------------------- |
+| `fn`                | `(value, context) => result`  |
+| `condition` (value) | `(value, context) => boolean` |
+| `condition` (rule)  | `(event, context) => boolean` |
+| `validate`          | `(value, context) => boolean` |
+| `loop` condition    | `(value, context) => boolean` |
+
+One-arg signatures like `(value) => value > 0` continue to work, TypeScript
+ignores the unused `context` argument.

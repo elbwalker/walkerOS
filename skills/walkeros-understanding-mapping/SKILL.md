@@ -348,13 +348,29 @@ JSON strings to actual JavaScript functions during build.
 
 ### Function Signatures
 
-| Context             | Signature                                |
-| ------------------- | ---------------------------------------- |
-| `fn`                | `(value, mapping, options) => result`    |
-| `condition` (value) | `(value, mapping, collector) => boolean` |
-| `condition` (rule)  | `(event) => boolean`                     |
-| `validate`          | `(value) => boolean`                     |
-| `loop` condition    | `(item) => boolean`                      |
+All mapping callbacks share `(value, context)`. The second argument is a
+`Mapping.Context` object (see "Context object" below).
+
+| Context             | Signature                     |
+| ------------------- | ----------------------------- |
+| `fn`                | `(value, context) => result`  |
+| `condition` (value) | `(value, context) => boolean` |
+| `condition` (rule)  | `(event, context) => boolean` |
+| `validate`          | `(value, context) => boolean` |
+| `loop` condition    | `(value, context) => boolean` |
+
+One-arg signatures like `(value) => value.toUpperCase()` continue to work,
+TypeScript ignores the unused second arg.
+
+### Context object
+
+| Field       | Type                            | Required | Description                                |
+| ----------- | ------------------------------- | -------- | ------------------------------------------ |
+| `event`     | `WalkerOS.DeepPartialEvent`     | yes      | The root event being mapped                |
+| `mapping`   | `Mapping.Value \| Mapping.Rule` | yes      | The surrounding mapping config (or rule)   |
+| `collector` | `Collector.Instance`            | yes      | Active collector, use for `push` and queue |
+| `logger`    | `Logger.Instance`               | yes      | Use for `info`/`warn`/`error`/`debug`      |
+| `consent`   | `WalkerOS.Consent` (optional)   | no       | Resolved consent at this evaluation point  |
 
 ---
 

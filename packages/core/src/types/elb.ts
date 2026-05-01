@@ -30,7 +30,7 @@ export interface WalkerCommands<R = Promise<PushResult>, Config = unknown> {
   (
     event: 'walker on',
     type: On.Types,
-    rules: WalkerOS.SingleOrArray<On.Options>,
+    rules: WalkerOS.SingleOrArray<On.Subscription>,
   ): R;
   (event: 'walker user', user: WalkerOS.User): R;
   (

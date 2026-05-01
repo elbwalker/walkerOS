@@ -6,6 +6,7 @@ import {
   buildCacheContext,
 } from '../cache';
 import type { Store } from '../types';
+import { createMockCollector } from './helpers/mocks';
 
 function createMockStore(): Store.Instance & { _data: Map<string, unknown> } {
   const data = new Map<string, unknown>();
@@ -197,6 +198,7 @@ describe('applyUpdate', () => {
       { body: 'data', headers: {} },
       { 'headers.X-Cache': { value: 'HIT' } },
       {},
+      createMockCollector(),
     );
     expect(result).toEqual({
       body: 'data',
@@ -209,6 +211,7 @@ describe('applyUpdate', () => {
       { body: 'data', headers: {} },
       { 'headers.X-Cache': { key: 'cache.status' } },
       { cache: { status: 'MISS' } },
+      createMockCollector(),
     );
     expect(result).toEqual({
       body: 'data',
@@ -221,6 +224,7 @@ describe('applyUpdate', () => {
       { body: 'data', headers: { 'Content-Type': 'text/plain' } },
       { 'headers.X-Cache': { value: 'HIT' } },
       {},
+      createMockCollector(),
     );
     expect(result).toEqual({
       body: 'data',
@@ -233,7 +237,12 @@ describe('applyUpdate', () => {
 
   it('returns value unchanged when no update rules', async () => {
     const original = { body: 'data' };
-    const result = await applyUpdate(original, undefined, {});
+    const result = await applyUpdate(
+      original,
+      undefined,
+      {},
+      createMockCollector(),
+    );
     expect(result).toEqual(original);
   });
 
@@ -245,6 +254,7 @@ describe('applyUpdate', () => {
         'headers.Cache-Control': { value: 'max-age=300' },
       },
       {},
+      createMockCollector(),
     );
     expect(result).toEqual({
       headers: {

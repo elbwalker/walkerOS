@@ -12,11 +12,13 @@ import { flattenIncludeSections } from './include';
  *
  * @param event The event to get the mapping for (can be partial or full).
  * @param mapping The mapping rules.
+ * @param collector Required to evaluate rule-level conditions against the unified Context. Legacy callers may omit; rule-level conditions then run with `undefined as never` (defensive).
  * @returns The mapping result.
  */
 export async function getMappingEvent(
   event: WalkerOS.DeepPartialEvent | WalkerOS.PartialEvent | WalkerOS.Event,
   mapping?: Mapping.Rules,
+  collector?: Collector.Instance,
 ): Promise<Mapping.Result> {
   const [entity, action] = (event.name || '').split(' ');
   if (!mapping || !entity || !action) return {};
@@ -27,15 +29,29 @@ export async function getMappingEvent(
   let actionKey = action;
 
   const resolveEventMapping = (
-    eventMapping?: Mapping.Rule | Mapping.Rule[],
-  ) => {
-    if (!eventMapping) return;
-    eventMapping = isArray(eventMapping) ? eventMapping : [eventMapping];
-
-    return eventMapping.find(
-      (eventMapping) =>
-        !eventMapping.condition || eventMapping.condition(event),
-    );
+    rules?: Mapping.Rule | Mapping.Rule[],
+  ): Mapping.Rule | undefined => {
+    if (!rules) return;
+    const list = isArray(rules) ? rules : [rules];
+    return list.find((rule) => {
+      if (!rule.condition) return true;
+      if (!collector) {
+        // Rule-level condition without a collector cannot be evaluated against
+        // the unified Context. Treat as match (legacy behavior) — internal
+        // callers should always pass collector; this branch is defensive.
+        return Boolean(rule.condition(event, undefined as never));
+      }
+      const ctx: Mapping.Context = {
+        event,
+        mapping: rule,
+        collector,
+        logger: collector.logger,
+        consent: ((isObject(event) &&
+          (event as WalkerOS.PartialEvent).consent) ||
+          collector.consent) as WalkerOS.Consent,
+      };
+      return Boolean(rule.condition(event, ctx));
+    });
   };
 
   if (!mapping[entityKey]) entityKey = '*';
@@ -46,7 +62,6 @@ export async function getMappingEvent(
     eventMapping = resolveEventMapping(entityMapping[actionKey]);
   }
 
-  // Fallback to * *
   if (!eventMapping) {
     entityKey = '*';
     actionKey = '*';
@@ -69,44 +84,56 @@ export async function getMappingEvent(
 export async function getMappingValue(
   value: WalkerOS.DeepPartialEvent | unknown | undefined,
   data: Mapping.Data = {},
-  options: Mapping.Options = {},
+  context: Partial<Mapping.Context> = {},
 ): Promise<WalkerOS.Property | undefined> {
   if (!isDefined(value)) return;
 
-  // Get consent state in priority order: value.consent > options.consent > collector?.consent
-  const consentState =
+  // Resolve consent in priority order: value.consent > context.consent > collector.consent
+  const consent =
     ((isObject(value) && value.consent) as WalkerOS.Consent) ||
-    options.consent ||
-    options.collector?.consent;
+    context.consent ||
+    context.collector?.consent;
+
+  // Resolve event: explicit context.event wins; else infer from value when it is an event-shaped object.
+  const event = (context.event ??
+    (isObject(value) ? value : {})) as WalkerOS.DeepPartialEvent;
+
+  if (!context.collector) {
+    // Internal sites (cache.ts, top-level callers) MUST pass a collector.
+    // This guard catches plumbing bugs early instead of silent type-narrowing.
+    throw new Error('getMappingValue: context.collector is required');
+  }
+
+  const baseContext: Mapping.Context = {
+    event,
+    mapping: data as Mapping.Value,
+    collector: context.collector,
+    logger: context.collector.logger,
+    consent,
+  };
 
   const mappings = isArray(data) ? data : [data];
-
   for (const mapping of mappings) {
     const result = await tryCatchAsync(processMappingValue)(value, mapping, {
-      ...options,
-      consent: consentState,
+      ...baseContext,
+      mapping,
     });
     if (isDefined(result)) return result;
   }
-
   return;
 }
 
 async function processMappingValue(
   value: WalkerOS.DeepPartialEvent | unknown,
   mapping: Mapping.Value,
-  options: Mapping.Options = {},
+  context: Mapping.Context,
 ): Promise<WalkerOS.Property | undefined> {
-  const { collector, consent: consentState } = options;
-
-  // Ensure mapping is an array for uniform processing
   const mappings = isArray(mapping) ? mapping : [mapping];
 
-  // Loop over each mapping and return the first valid result
   return mappings.reduce(
     async (accPromise, mappingItem) => {
       const acc = await accPromise;
-      if (acc) return acc; // A valid result was already found
+      if (acc) return acc;
 
       const mapping = isString(mappingItem)
         ? { key: mappingItem }
@@ -126,41 +153,36 @@ async function processMappingValue(
         value: staticValue,
       } = mapping;
 
-      // Check if this mapping should be used
-      if (
-        condition &&
-        !(await tryCatchAsync(condition)(value, mappingItem, collector))
-      )
+      // Per-mapping context — `mapping` reflects the current item.
+      const cbContext: Mapping.Context = { ...context, mapping: mappingItem };
+
+      if (condition && !(await tryCatchAsync(condition)(value, cbContext)))
         return;
 
-      // Check if consent is required and granted
-      if (consent && !getGrantedConsent(consent, consentState))
+      if (consent && !getGrantedConsent(consent, cbContext.consent))
         return staticValue;
 
       let mappingValue: unknown = isDefined(staticValue) ? staticValue : value;
 
-      // Use a custom function to get the value
       if (fn) {
-        mappingValue = await tryCatchAsync(fn)(value, mappingItem, options);
+        mappingValue = await tryCatchAsync(fn)(value, cbContext);
       }
 
-      // Get dynamic value from the event
       if (key) {
         mappingValue = getByPath(value, key, staticValue);
       }
 
       if (loop) {
         const [scope, itemMapping] = loop;
-
         const data =
           scope === 'this'
             ? [value]
-            : await getMappingValue(value, scope, options);
+            : await getMappingValue(value, scope, cbContext);
 
         if (isArray(data)) {
           mappingValue = (
             await Promise.all(
-              data.map((item) => getMappingValue(item, itemMapping, options)),
+              data.map((item) => getMappingValue(item, itemMapping, cbContext)),
             )
           ).filter(isDefined);
         }
@@ -168,7 +190,7 @@ async function processMappingValue(
         mappingValue = await Object.entries(map).reduce(
           async (mappedObjPromise, [mapKey, mapValue]) => {
             const mappedObj = await mappedObjPromise;
-            const result = await getMappingValue(value, mapValue, options);
+            const result = await getMappingValue(value, mapValue, cbContext);
             if (isDefined(result)) mappedObj[mapKey] = result;
             return mappedObj;
           },
@@ -176,18 +198,15 @@ async function processMappingValue(
         );
       } else if (set) {
         mappingValue = await Promise.all(
-          set.map((item) => processMappingValue(value, item, options)),
+          set.map((item) => processMappingValue(value, item, cbContext)),
         );
       }
 
-      // Validate the value
-      if (validate && !(await tryCatchAsync(validate)(mappingValue)))
+      if (validate && !(await tryCatchAsync(validate)(mappingValue, cbContext)))
         mappingValue = undefined;
 
       const property = castToProperty(mappingValue);
-
-      // Finally, check and convert the type
-      return isDefined(property) ? property : castToProperty(staticValue); // Always use value as a fallback
+      return isDefined(property) ? property : castToProperty(staticValue);
     },
     Promise.resolve(undefined as WalkerOS.Property | undefined),
   );
@@ -230,7 +249,10 @@ export async function processEventMapping<
   if (config.policy) {
     await Promise.all(
       Object.entries(config.policy).map(async ([key, mapping]) => {
-        const value = await getMappingValue(event, mapping, { collector });
+        const value = await getMappingValue(event, mapping, {
+          collector,
+          event,
+        });
         event = setByPath(event, key, value);
       }),
     );
@@ -240,13 +262,17 @@ export async function processEventMapping<
   const { eventMapping, mappingKey } = await getMappingEvent(
     event,
     config.mapping,
+    collector,
   );
 
   // Step 2.5: Apply event-level policy (modifies event)
   if (eventMapping?.policy) {
     await Promise.all(
       Object.entries(eventMapping.policy).map(async ([key, mapping]) => {
-        const value = await getMappingValue(event, mapping, { collector });
+        const value = await getMappingValue(event, mapping, {
+          collector,
+          event,
+        });
         event = setByPath(event, key, value);
       }),
     );
@@ -254,7 +280,8 @@ export async function processEventMapping<
 
   // Step 3: Transform global data
   let data =
-    config.data && (await getMappingValue(event, config.data, { collector }));
+    config.data &&
+    (await getMappingValue(event, config.data, { collector, event }));
 
   const silent = Boolean(eventMapping?.silent);
 
@@ -278,7 +305,10 @@ export async function processEventMapping<
     if (eventMapping.data) {
       const dataEvent =
         eventMapping.data &&
-        (await getMappingValue(event, eventMapping.data, { collector }));
+        (await getMappingValue(event, eventMapping.data, {
+          collector,
+          event,
+        }));
       data =
         isObject(data) && isObject(dataEvent) // Only merge objects
           ? assign(data, dataEvent)

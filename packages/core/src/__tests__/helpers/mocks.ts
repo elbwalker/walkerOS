@@ -31,6 +31,7 @@ export function createMockCollector(
     allowed: false,
     on: {},
     push: jest.fn(),
+    logger: createMockLogger(),
     ...overrides,
   };
   return base as Collector.Instance;

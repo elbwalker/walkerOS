@@ -274,11 +274,14 @@ Embed JavaScript in JSON for mappings:
 
 ### Supported Contexts
 
-| Property    | Signature                             |
-| ----------- | ------------------------------------- |
-| `fn`        | `(value, mapping, options) => result` |
-| `condition` | `(event) => boolean`                  |
-| `validate`  | `(value) => boolean`                  |
+| Property    | Signature                     |
+| ----------- | ----------------------------- |
+| `fn`        | `(value, context) => result`  |
+| `condition` | `(value, context) => boolean` |
+| `validate`  | `(value, context) => boolean` |
+
+`context` is a `Mapping.Context` object with `event`, `mapping`, `collector`,
+`logger`, and optional `consent`. One-arg signatures still work.
 
 ---
 

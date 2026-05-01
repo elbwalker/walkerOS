@@ -98,7 +98,7 @@ export async function commonHandleCommand(
         await on(
           collector,
           data as On.Types,
-          options as WalkerOS.SingleOrArray<On.Options>,
+          options as WalkerOS.SingleOrArray<On.Subscription>,
         );
         // on() handles its own onApply (fires only new callbacks)
       }

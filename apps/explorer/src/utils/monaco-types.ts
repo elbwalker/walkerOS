@@ -339,10 +339,10 @@ export type FunctionType = 'condition' | 'fn' | 'validate';
  * Add context-specific globals for function editors
  *
  * Provides type definitions for inline function parameters without imports.
- * Supports three function types:
- * - fn: Transform functions (value, mapping, options) => Property
- * - condition: Condition functions (value, mapping, collector) => boolean
- * - validate: Validation functions (value) => boolean
+ * All three function types share the same signature:
+ * - fn:        (value, context) => Property | unknown
+ * - condition: (value, context) => boolean
+ * - validate:  (value, context) => boolean
  */
 export interface FunctionContext {
   type: FunctionType;

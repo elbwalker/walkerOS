@@ -160,7 +160,7 @@ export interface CommandFn {
   (
     command: 'on',
     type: On.Types,
-    rules: WalkerOS.SingleOrArray<On.Options>,
+    rules: WalkerOS.SingleOrArray<On.Subscription>,
   ): Promise<ElbTypes.PushResult>;
   (command: 'user', user: WalkerOS.User): Promise<ElbTypes.PushResult>;
   (

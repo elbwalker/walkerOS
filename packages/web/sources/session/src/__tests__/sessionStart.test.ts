@@ -1,7 +1,8 @@
 import type { On, Collector } from '@walkeros/core';
+import { createLogger } from '@walkeros/core';
 import { sessionStart, sessionStorage, sessionWindow } from '../lib';
 
-let consent: On.ConsentConfig = {};
+let consent: On.ConsentRule = {};
 
 jest.mock('../lib/sessionStorage', () => ({
   sessionStorage: jest.fn().mockImplementation((config) => {
@@ -67,16 +68,18 @@ describe('sessionStart', () => {
 
     // Simulate granted consent call from collector
     expect(mockSessionStorage).toHaveBeenCalledTimes(0);
-    consent[consentName](collector, {
-      [consentName]: true,
-    });
+    consent[consentName](
+      { [consentName]: true },
+      { collector, logger: createLogger() },
+    );
     expect(mockSessionStorage).toHaveBeenCalledWith(config);
 
     // Denied
     expect(mockSessionWindow).toHaveBeenCalledTimes(0);
-    consent[consentName](collector, {
-      [consentName]: false,
-    });
+    consent[consentName](
+      { [consentName]: false },
+      { collector, logger: createLogger() },
+    );
     expect(mockSessionWindow).toHaveBeenCalledWith(config);
   });
 
@@ -109,9 +112,10 @@ describe('sessionStart', () => {
     sessionStart(config);
 
     // Granted, use sessionStorage
-    consent[consentName](collector, {
-      [consentName]: true,
-    });
+    consent[consentName](
+      { [consentName]: true },
+      { collector, logger: createLogger() },
+    );
     expect(mockCb).toHaveBeenCalledTimes(1);
     expect(mockCb).toHaveBeenCalledWith(
       {
@@ -122,9 +126,10 @@ describe('sessionStart', () => {
     );
 
     // Denied, use sessionWindow
-    consent[consentName](collector, {
-      [consentName]: false,
-    });
+    consent[consentName](
+      { [consentName]: false },
+      { collector, logger: createLogger() },
+    );
     expect(mockCb).toHaveBeenCalledTimes(2);
     expect(mockCb).toHaveBeenCalledWith(
       {
