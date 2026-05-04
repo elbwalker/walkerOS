@@ -4,6 +4,8 @@ import type { RJSFSchema } from '@rjsf/utils';
 export interface PropertyTableProps {
   schema: RJSFSchema;
   className?: string;
+  /** Message to display when the schema has no properties. Default: 'No specific properties available.' */
+  emptyMessage?: string;
 }
 
 // Mapping of type titles (from $ref targets' `title` meta) to doc links.
@@ -373,13 +375,28 @@ function renderTypeWithRefs(type: string, refs: TypeRef[]): React.ReactNode {
   });
 }
 
-export function PropertyTable({ schema, className }: PropertyTableProps) {
+export function PropertyTable({
+  schema,
+  className,
+  emptyMessage,
+}: PropertyTableProps) {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(
     null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const properties = schemaToProperties(schema);
+
+  if (properties.length === 0) {
+    return (
+      <div
+        className={`elb-explorer elb-property-table__empty ${className || ''}`}
+        role="note"
+      >
+        {emptyMessage ?? 'No specific properties available.'}
+      </div>
+    );
+  }
 
   const hasRequiredProperties = properties.some(
     (property) => property.required,

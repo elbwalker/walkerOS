@@ -28,21 +28,23 @@ describe('Programmatic Bundle API', () => {
     jest.restoreAllMocks();
   });
 
-  const simpleConfig: Flow.Config = {
-    version: 3,
+  const simpleConfig: Flow.Json = {
+    version: 4,
     flows: {
       default: {
-        web: {},
-        bundle: {
-          packages: {
-            '@walkeros/core': { imports: ['getId', 'trim'] },
+        config: {
+          platform: 'web',
+          bundle: {
+            packages: {
+              '@walkeros/core': { imports: ['getId', 'trim'] },
+            },
           },
         },
       },
     },
   };
 
-  it('should bundle with Flow.Config config object', async () => {
+  it('should bundle with Flow.Json config object', async () => {
     await expect(bundle(simpleConfig, { silent: true })).resolves.not.toThrow();
 
     expect(mockBundleCore).toHaveBeenCalledWith(
@@ -114,19 +116,23 @@ describe('Programmatic Bundle API', () => {
   });
 
   it('should select flow from multi-flow config', async () => {
-    const multiFlowConfig: Flow.Config = {
-      version: 3,
+    const multiFlowConfig: Flow.Json = {
+      version: 4,
       flows: {
         production: {
-          web: {},
-          bundle: {
-            packages: { '@walkeros/core': { imports: ['getId'] } },
+          config: {
+            platform: 'web',
+            bundle: {
+              packages: { '@walkeros/core': { imports: ['getId'] } },
+            },
           },
         },
         staging: {
-          web: {},
-          bundle: {
-            packages: { '@walkeros/core': { imports: ['getId'] } },
+          config: {
+            platform: 'web',
+            bundle: {
+              packages: { '@walkeros/core': { imports: ['getId'] } },
+            },
           },
         },
       },
@@ -151,5 +157,29 @@ describe('Programmatic Bundle API', () => {
   it('should use convention-based output paths', () => {
     expect(getDefaultOutput('web')).toBe('./dist/walker.js');
     expect(getDefaultOutput('server')).toBe('./dist/bundle.mjs');
+  });
+
+  it('should error on unresolved $flow.X.url (strict by default for bundle)', async () => {
+    const cfg: Flow.Json = {
+      version: 4,
+      flows: {
+        server: { config: { platform: 'server' } }, // url missing
+        web: {
+          config: {
+            platform: 'web',
+            bundle: {
+              packages: { '@walkeros/core': { imports: ['getId'] } },
+            },
+          },
+          destinations: {
+            api: { config: { settings: { url: '$flow.server.url' } } },
+          },
+        },
+      },
+    };
+
+    await expect(
+      bundle(cfg, { silent: true, flowName: 'web' }),
+    ).rejects.toThrow(/\$flow/);
   });
 });

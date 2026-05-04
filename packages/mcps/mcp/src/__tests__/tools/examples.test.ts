@@ -48,10 +48,10 @@ function createMockServer() {
 }
 
 const sampleConfig = {
-  version: 3,
+  version: 4,
   flows: {
     default: {
-      web: {},
+      config: { platform: 'web' },
       sources: {
         browser: {
           package: '@walkeros/web-source-browser',
@@ -196,10 +196,10 @@ describe('flow_examples tool', () => {
 
   it('errors on multi-flow without flow param', async () => {
     const multiFlowConfig = {
-      version: 3,
+      version: 4,
       flows: {
-        production: { web: {} },
-        staging: { web: {} },
+        production: { config: { platform: 'web' } },
+        staging: { config: { platform: 'web' } },
       },
     };
     mockLoadJsonConfig.mockResolvedValue(multiFlowConfig as any);
@@ -241,10 +241,10 @@ describe('flow_examples tool', () => {
 
   it('excludes examples with public: false by default', async () => {
     const configWithHidden = {
-      version: 3,
+      version: 4,
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           destinations: {
             gtag: {
               package: '@walkeros/web-destination-gtag',
@@ -268,10 +268,10 @@ describe('flow_examples tool', () => {
 
   it('includes public: false examples when includeHidden: true', async () => {
     const configWithHidden = {
-      version: 3,
+      version: 4,
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           destinations: {
             gtag: {
               package: '@walkeros/web-destination-gtag',
@@ -306,10 +306,10 @@ describe('flow_examples tool', () => {
 
   it('surfaces title and description on output items when set', async () => {
     const configWithMetadata = {
-      version: 3,
+      version: 4,
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           destinations: {
             gtag: {
               package: '@walkeros/web-destination-gtag',
@@ -339,10 +339,10 @@ describe('flow_examples tool', () => {
 
   it('returns empty examples array when no examples exist', async () => {
     const configNoExamples = {
-      version: 3,
+      version: 4,
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           destinations: {
             gtag: { package: '@walkeros/web-destination-gtag' },
           },

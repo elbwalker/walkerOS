@@ -32,6 +32,7 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order is sent to the TikTok Events API as a CompletePayment with value, currency, and contents.',
   in: getEvent('order complete', {
+    id: 'd1e2f3a4b5c60001',
     timestamp: 1700000900000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
     nested: [
@@ -42,9 +43,9 @@ export const purchase: Flow.StepExample = {
     ],
     user: { id: 'user-123', device: 'device-456' },
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/checkout/complete',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/checkout/complete',
     },
   }),
   mapping: {
@@ -88,7 +89,7 @@ export const purchase: Flow.StepExample = {
         data: [
           {
             event: 'CompletePayment',
-            event_id: '1700000900000-gr0up-1',
+            event_id: 'd1e2f3a4b5c60001',
             timestamp: '2023-11-14T22:28:20.000Z',
             context: {
               user: {
@@ -126,6 +127,7 @@ export const addToCart: Flow.StepExample = {
   description:
     'A product add is sent to TikTok as an AddToCart event with value, currency, and product contents.',
   in: getEvent('product add', {
+    id: 'd1e2f3a4b5c60002',
     timestamp: 1700000901000,
     data: {
       id: 'SKU-B2',
@@ -145,9 +147,9 @@ export const addToCart: Flow.StepExample = {
       },
     ],
     source: {
-      type: 'server',
-      id: 'https://shop.example.com/products/running-shoes',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com/products/running-shoes',
     },
   }),
   mapping: {
@@ -185,7 +187,7 @@ export const addToCart: Flow.StepExample = {
         data: [
           {
             event: 'AddToCart',
-            event_id: '1700000901000-gr0up-1',
+            event_id: 'd1e2f3a4b5c60002',
             timestamp: '2023-11-14T22:28:21.000Z',
             context: {
               page: {
@@ -218,11 +220,12 @@ export const pageView: Flow.StepExample = {
   description:
     'A page view is forwarded to TikTok as a page view event with the source URL in the page context.',
   in: getEvent('page view', {
+    id: 'd1e2f3a4b5c60003',
     timestamp: 1700000902000,
     source: {
-      type: 'server',
-      id: 'https://example.com/docs/',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/docs/',
     },
   }),
   mapping: undefined,
@@ -236,7 +239,7 @@ export const pageView: Flow.StepExample = {
         data: [
           {
             event: 'page view',
-            event_id: '1700000902000-gr0up-1',
+            event_id: 'd1e2f3a4b5c60003',
             timestamp: '2023-11-14T22:28:22.000Z',
             context: {
               page: {
@@ -257,13 +260,14 @@ export const lead: Flow.StepExample = {
   description:
     'A newsletter form submission is sent to TikTok as a SubmitForm event with the hashed email in user context.',
   in: getEvent('form submit', {
+    id: 'd1e2f3a4b5c60004',
     timestamp: 1700000903000,
     data: { type: 'newsletter' },
     user: { email: 'user@example.com' },
     source: {
-      type: 'server',
-      id: 'https://example.com/contact',
-      previous_id: '',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/contact',
     },
   }),
   mapping: {
@@ -288,7 +292,7 @@ export const lead: Flow.StepExample = {
         data: [
           {
             event: 'SubmitForm',
-            event_id: '1700000903000-gr0up-1',
+            event_id: 'd1e2f3a4b5c60004',
             timestamp: '2023-11-14T22:28:23.000Z',
             context: {
               user: {

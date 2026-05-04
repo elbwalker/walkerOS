@@ -32,9 +32,7 @@ describe('Server Destination Criteo', () => {
 
     destination = jest.requireActual('../').default;
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   async function getConfig(settings: Partial<Settings> = {}) {
@@ -100,7 +98,7 @@ describe('Server Destination Criteo', () => {
     expect(mockSendServer).toHaveBeenCalled();
     const [url, , options] = mockSendServer.mock.calls[0];
     expect(url).toBe(DEFAULT_URL);
-    // Auth is in-body — no custom options/headers required.
+    // Auth is in-body - no custom options/headers required.
     expect(options).toBeUndefined();
   });
 
@@ -195,12 +193,13 @@ describe('Server Destination Criteo', () => {
     expect(body2.events[0].event).toBe('order complete');
   });
 
-  test('full_url taken from event.source.id', async () => {
+  test('full_url taken from event.source.url', async () => {
     const event = getEvent('page view', {
       source: {
-        type: 'server',
-        id: 'https://example.com/page',
-        previous_id: 'https://example.com/prev',
+        type: 'browser',
+        platform: 'web',
+        url: 'https://example.com/page',
+        referrer: 'https://example.com/prev',
       },
     });
     const config: Config = { settings: { partnerId, callerId } };
@@ -310,7 +309,7 @@ describe('Server Destination Criteo', () => {
       createMockContext({ config, env: testEnv, id: 'test-criteo' }),
     );
 
-    // sendServer only called with (url, body) — third arg options is undefined.
+    // sendServer only called with (url, body) - third arg options is undefined.
     const [, body, options] = mockSendServer.mock.calls[0];
     expect(typeof body).toBe('string');
     expect(options).toBeUndefined();
@@ -359,9 +358,9 @@ describe('Server Destination Criteo', () => {
         },
       ],
       source: {
-        type: 'server',
-        id: 'https://example.com/checkout/complete',
-        previous_id: '',
+        type: 'browser',
+        platform: 'web',
+        url: 'https://example.com/checkout/complete',
       },
     });
 

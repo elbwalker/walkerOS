@@ -68,6 +68,18 @@ describe('resolveDeploymentSlug', () => {
     });
   });
 
+  it('treats empty-string slug as explicit non-match, not as missing', async () => {
+    await expect(
+      resolveDeploymentSlug({
+        ...baseArgs,
+        slug: '',
+        list: fakeList([makeSummary({ slug: 'abc123456789' })]),
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+
   it('throws MULTIPLE_DEPLOYMENTS with details when >=2 matches and no slug', async () => {
     const matches = [
       makeSummary({

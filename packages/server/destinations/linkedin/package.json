@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-linkedin",
   "description": "LinkedIn Conversions API server destination for walkerOS",
-  "version": "3.4.2",
+  "version": "4.0.0",
   "license": "MIT",
   "exports": {
     ".": {
@@ -34,11 +34,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "3.4.2",
-    "@walkeros/server-core": "3.4.2"
+    "@walkeros/core": "4.0.0",
+    "@walkeros/server-core": "4.0.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "3.4.2"
+    "@walkeros/collector": "4.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

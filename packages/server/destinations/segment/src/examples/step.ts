@@ -11,7 +11,7 @@ export type SegmentStepExample = Flow.StepExample & {
 
 /**
  * Segment server destination invokes the injected `env.analytics` SDK methods
- * (`track`, `identify`, `group`, `page`, `screen`) — not a raw HTTP endpoint.
+ * (`track`, `identify`, `group`, `page`, `screen`) - not a raw HTTP endpoint.
  * Each `out` entry is therefore `[callable, params]` where `callable` is the
  * dotted method name (e.g. `'analytics.track'`) and `params` is the object
  * passed to the SDK.
@@ -121,7 +121,7 @@ export const destinationIdentify: SegmentStepExample = {
 };
 
 /**
- * Per-event identify with skip -- user login fires identify() only.
+ * Per-event identify with silent -- user login fires identify() only.
  */
 export const userLoginIdentify: SegmentStepExample = {
   title: 'User login identify',
@@ -138,7 +138,7 @@ export const userLoginIdentify: SegmentStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -168,7 +168,7 @@ export const userLoginIdentify: SegmentStepExample = {
 };
 
 /**
- * Per-event group with skip -- company update fires group() only.
+ * Per-event group with silent -- company update fires group() only.
  */
 export const companyGroup: SegmentStepExample = {
   title: 'Group company',
@@ -185,7 +185,7 @@ export const companyGroup: SegmentStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       group: {
         map: {
@@ -217,7 +217,7 @@ export const companyGroup: SegmentStepExample = {
 
 /**
  * Explicit page() call with properties -- the canonical Segment page view.
- * skip: true suppresses track(); settings.page fires analytics.page().
+ * silent: true suppresses track(); settings.page fires analytics.page().
  */
 export const pageView: SegmentStepExample = {
   title: 'Page view',
@@ -233,7 +233,7 @@ export const pageView: SegmentStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       page: {
         map: {
@@ -280,7 +280,7 @@ export const screenView: SegmentStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       screen: {
         map: {

@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/cli",
-  "version": "3.4.2",
+  "version": "4.0.0",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
@@ -15,6 +15,10 @@
       "types": "./dist/dev.d.ts",
       "default": "./dist/dev.js"
     },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "default": "./dist/examples/index.js"
+    },
     "./examples/*": "./examples/*"
   },
   "bin": {
@@ -23,6 +27,7 @@
   "files": [
     "dist/**",
     "examples/**",
+    "src/telemetry/flow.json",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -44,10 +49,13 @@
     "docker:publish": "bash scripts/publish-docker.sh"
   },
   "dependencies": {
-    "@walkeros/core": "3.4.2",
-    "@walkeros/server-core": "3.4.2",
+    "@walkeros/collector": "4.0.0",
+    "@walkeros/core": "4.0.0",
+    "@walkeros/server-core": "4.0.0",
+    "@walkeros/server-destination-api": "4.0.0",
     "ajv": "^8.17.1",
     "chalk": "^5.6.2",
+    "ci-info": "^4.4.0",
     "commander": "^14.0.2",
     "cors": "^2.8.5",
     "esbuild": "^0.27.1",
@@ -67,8 +75,8 @@
     "@types/jsdom": "^21.1.7",
     "@types/pacote": "^11.1.8",
     "@types/semver": "^7.7.1",
-    "@walkeros/config": "3.4.2",
-    "@walkeros/core": "3.4.2",
+    "@walkeros/config": "4.0.0",
+    "@walkeros/core": "4.0.0",
     "msw": "^2.12.10",
     "openapi-typescript": "^7.13.0",
     "tsx": "^4.21.0"

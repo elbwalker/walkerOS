@@ -13,8 +13,7 @@
  *
  * Provides types for:
  * - value: WalkerOS.DeepPartialEvent | unknown
- * - mapping: Mapping.Value
- * - options: Mapping.Options
+ * - context: Mapping.Context (event, mapping, collector, logger, consent?)
  */
 export const FN_CONTEXT_TYPES = `
 // WalkerOS Core Types
@@ -72,19 +71,27 @@ declare namespace WalkerOS {
     internal?: boolean;
   }
 
-  // Version
-  interface Version extends Properties {
-    source: string;
-    tagging: number;
-  }
-
   // Source
-  type SourceType = 'web' | 'server' | 'app' | 'other' | string;
+  type SourcePlatform =
+    | 'web'
+    | 'server'
+    | 'app'
+    | 'ios'
+    | 'android'
+    | 'terminal'
+    | string;
 
   interface Source extends Properties {
-    type: SourceType;
-    id: string;
-    previous_id: string;
+    type: string;
+    platform?: SourcePlatform;
+    version?: string;
+    schema?: string;
+    count?: number;
+    trace?: string;
+    url?: string;
+    referrer?: string;
+    tool?: string;
+    command?: string;
   }
 
   // Entity
@@ -93,8 +100,8 @@ declare namespace WalkerOS {
   interface Entity {
     entity: string;
     data: Properties;
-    nested: Entities;
-    context: OrderedProperties;
+    nested?: Entities;
+    context?: OrderedProperties;
   }
 
   // Event
@@ -113,9 +120,6 @@ declare namespace WalkerOS {
     action: string;
     timestamp: number;
     timing: number;
-    group: string;
-    count: number;
-    version: Version;
     source: Source;
   }
 
@@ -141,30 +145,47 @@ declare namespace Mapping {
   }
 
   type Loop = [Value, Value];
+  type Map = { [key: string]: Value };
 
-  type Map = {
-    [key: string]: Value;
-  };
-
-  interface Options {
+  interface Context {
+    event: WalkerOS.DeepPartialEvent;
+    mapping: Value | Rule;
+    collector: Collector.Instance;
+    logger: Logger.Instance;
     consent?: WalkerOS.Consent;
-    collector?: Collector.Instance;
-    props?: unknown;
   }
 
   type Condition = (
     value: WalkerOS.DeepPartialEvent | unknown,
-    mapping?: Value,
-    collector?: Collector.Instance
+    context: Context,
   ) => WalkerOS.PromiseOrValue<boolean>;
 
   type Fn = (
     value: WalkerOS.DeepPartialEvent | unknown,
-    mapping: Value,
-    options: Options
+    context: Context,
   ) => WalkerOS.PromiseOrValue<WalkerOS.Property | unknown>;
 
-  type Validate = (value?: unknown) => WalkerOS.PromiseOrValue<boolean>;
+  type Validate = (
+    value: unknown,
+    context: Context,
+  ) => WalkerOS.PromiseOrValue<boolean>;
+
+  interface Rule {
+    condition?: Condition;
+    consent?: WalkerOS.Consent;
+    name?: string;
+    ignore?: boolean;
+    silent?: boolean;
+  }
+}
+
+declare namespace Logger {
+  interface Instance {
+    error: (msg: string, ...args: unknown[]) => void;
+    warn: (msg: string, ...args: unknown[]) => void;
+    info: (msg: string, ...args: unknown[]) => void;
+    debug: (msg: string, ...args: unknown[]) => void;
+  }
 }
 
 // Collector Types (minimal for fn context)
@@ -191,8 +212,7 @@ declare namespace Collector {
 
 // Parameter declarations for fn context
 declare const value: WalkerOS.DeepPartialEvent | unknown;
-declare const mapping: Mapping.Value;
-declare const options: Mapping.Options;
+declare const context: Mapping.Context;
 `;
 
 /**
@@ -200,8 +220,7 @@ declare const options: Mapping.Options;
  *
  * Provides types for:
  * - value: WalkerOS.DeepPartialEvent | unknown
- * - mapping: Mapping.Value
- * - collector: Collector.Instance | undefined
+ * - context: Mapping.Context (event, mapping, collector, logger, consent?)
  */
 export const CONDITION_CONTEXT_TYPES = `
 // WalkerOS Core Types
@@ -259,19 +278,27 @@ declare namespace WalkerOS {
     internal?: boolean;
   }
 
-  // Version
-  interface Version extends Properties {
-    source: string;
-    tagging: number;
-  }
-
   // Source
-  type SourceType = 'web' | 'server' | 'app' | 'other' | string;
+  type SourcePlatform =
+    | 'web'
+    | 'server'
+    | 'app'
+    | 'ios'
+    | 'android'
+    | 'terminal'
+    | string;
 
   interface Source extends Properties {
-    type: SourceType;
-    id: string;
-    previous_id: string;
+    type: string;
+    platform?: SourcePlatform;
+    version?: string;
+    schema?: string;
+    count?: number;
+    trace?: string;
+    url?: string;
+    referrer?: string;
+    tool?: string;
+    command?: string;
   }
 
   // Entity
@@ -280,8 +307,8 @@ declare namespace WalkerOS {
   interface Entity {
     entity: string;
     data: Properties;
-    nested: Entities;
-    context: OrderedProperties;
+    nested?: Entities;
+    context?: OrderedProperties;
   }
 
   // Event
@@ -300,9 +327,6 @@ declare namespace WalkerOS {
     action: string;
     timestamp: number;
     timing: number;
-    group: string;
-    count: number;
-    version: Version;
     source: Source;
   }
 
@@ -313,6 +337,7 @@ declare namespace WalkerOS {
 declare namespace Mapping {
   type ValueType = string | ValueConfig;
   type Value = ValueType | Array<ValueType>;
+  type Values = Array<Value>;
 
   interface ValueConfig {
     condition?: Condition;
@@ -327,24 +352,47 @@ declare namespace Mapping {
   }
 
   type Loop = [Value, Value];
+  type Map = { [key: string]: Value };
 
-  type Map = {
-    [key: string]: Value;
-  };
+  interface Context {
+    event: WalkerOS.DeepPartialEvent;
+    mapping: Value | Rule;
+    collector: Collector.Instance;
+    logger: Logger.Instance;
+    consent?: WalkerOS.Consent;
+  }
 
   type Condition = (
     value: WalkerOS.DeepPartialEvent | unknown,
-    mapping?: Value,
-    collector?: Collector.Instance
+    context: Context,
   ) => WalkerOS.PromiseOrValue<boolean>;
 
   type Fn = (
     value: WalkerOS.DeepPartialEvent | unknown,
-    mapping: Value,
-    options: any
+    context: Context,
   ) => WalkerOS.PromiseOrValue<WalkerOS.Property | unknown>;
 
-  type Validate = (value?: unknown) => WalkerOS.PromiseOrValue<boolean>;
+  type Validate = (
+    value: unknown,
+    context: Context,
+  ) => WalkerOS.PromiseOrValue<boolean>;
+
+  interface Rule {
+    condition?: Condition;
+    consent?: WalkerOS.Consent;
+    name?: string;
+    ignore?: boolean;
+    silent?: boolean;
+  }
+}
+
+declare namespace Logger {
+  interface Instance {
+    error: (msg: string, ...args: unknown[]) => void;
+    warn: (msg: string, ...args: unknown[]) => void;
+    info: (msg: string, ...args: unknown[]) => void;
+    debug: (msg: string, ...args: unknown[]) => void;
+  }
 }
 
 // Collector Types (full interface for condition context)
@@ -397,8 +445,7 @@ declare namespace Collector {
 
 // Parameter declarations for condition context
 declare const value: WalkerOS.DeepPartialEvent | unknown;
-declare const mapping: Mapping.Value;
-declare const collector: Collector.Instance | undefined;
+declare const context: Mapping.Context;
 `;
 
 /**
@@ -406,10 +453,206 @@ declare const collector: Collector.Instance | undefined;
  *
  * Provides types for:
  * - value: unknown
+ * - context: Mapping.Context (event, mapping, collector, logger, consent?)
  */
 export const VALIDATE_CONTEXT_TYPES = `
-// Parameter declaration for validate context
+// WalkerOS Core Types
+declare namespace WalkerOS {
+  // Utility types
+  type DeepPartial<T> = {
+    [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+  };
+
+  type PromiseOrValue<T> = T | Promise<T>;
+
+  // Property types
+  type PropertyType = boolean | string | number | {
+    [key: string]: Property;
+  };
+
+  type Property = PropertyType | Array<PropertyType>;
+
+  interface Properties {
+    [key: string]: Property | undefined;
+  }
+
+  interface OrderedProperties {
+    [key: string]: [Property, number] | undefined;
+  }
+
+  // Consent
+  interface Consent {
+    [name: string]: boolean;
+  }
+
+  // User
+  interface User extends Properties {
+    id?: string;
+    device?: string;
+    session?: string;
+    hash?: string;
+    address?: string;
+    email?: string;
+    phone?: string;
+    userAgent?: string;
+    browser?: string;
+    browserVersion?: string;
+    deviceType?: string;
+    language?: string;
+    country?: string;
+    region?: string;
+    city?: string;
+    zip?: string;
+    timezone?: string;
+    os?: string;
+    osVersion?: string;
+    screenSize?: string;
+    ip?: string;
+    internal?: boolean;
+  }
+
+  // Source
+  type SourcePlatform =
+    | 'web'
+    | 'server'
+    | 'app'
+    | 'ios'
+    | 'android'
+    | 'terminal'
+    | string;
+
+  interface Source extends Properties {
+    type: string;
+    platform?: SourcePlatform;
+    version?: string;
+    schema?: string;
+    count?: number;
+    trace?: string;
+    url?: string;
+    referrer?: string;
+    tool?: string;
+    command?: string;
+  }
+
+  // Entity
+  type Entities = Array<Entity>;
+
+  interface Entity {
+    entity: string;
+    data: Properties;
+    nested?: Entities;
+    context?: OrderedProperties;
+  }
+
+  // Event
+  interface Event {
+    name: string;
+    data: Properties;
+    context: OrderedProperties;
+    globals: Properties;
+    custom: Properties;
+    user: User;
+    nested: Entities;
+    consent: Consent;
+    id: string;
+    trigger: string;
+    entity: string;
+    action: string;
+    timestamp: number;
+    timing: number;
+    source: Source;
+  }
+
+  type DeepPartialEvent = DeepPartial<Event>;
+}
+
+// Mapping Types
+declare namespace Mapping {
+  type ValueType = string | ValueConfig;
+  type Value = ValueType | Array<ValueType>;
+  type Values = Array<Value>;
+
+  interface ValueConfig {
+    condition?: Condition;
+    consent?: WalkerOS.Consent;
+    fn?: Fn;
+    key?: string;
+    loop?: Loop;
+    map?: Map;
+    set?: Value[];
+    validate?: Validate;
+    value?: WalkerOS.PropertyType;
+  }
+
+  type Loop = [Value, Value];
+  type Map = { [key: string]: Value };
+
+  interface Context {
+    event: WalkerOS.DeepPartialEvent;
+    mapping: Value | Rule;
+    collector: Collector.Instance;
+    logger: Logger.Instance;
+    consent?: WalkerOS.Consent;
+  }
+
+  type Condition = (
+    value: WalkerOS.DeepPartialEvent | unknown,
+    context: Context,
+  ) => WalkerOS.PromiseOrValue<boolean>;
+
+  type Fn = (
+    value: WalkerOS.DeepPartialEvent | unknown,
+    context: Context,
+  ) => WalkerOS.PromiseOrValue<WalkerOS.Property | unknown>;
+
+  type Validate = (
+    value: unknown,
+    context: Context,
+  ) => WalkerOS.PromiseOrValue<boolean>;
+
+  interface Rule {
+    condition?: Condition;
+    consent?: WalkerOS.Consent;
+    name?: string;
+    ignore?: boolean;
+    silent?: boolean;
+  }
+}
+
+declare namespace Logger {
+  interface Instance {
+    error: (msg: string, ...args: unknown[]) => void;
+    warn: (msg: string, ...args: unknown[]) => void;
+    info: (msg: string, ...args: unknown[]) => void;
+    debug: (msg: string, ...args: unknown[]) => void;
+  }
+}
+
+// Collector Types (minimal for validate context)
+declare namespace Collector {
+  interface Instance {
+    push: any;
+    command: any;
+    allowed: boolean;
+    config: any;
+    consent: WalkerOS.Consent;
+    count: number;
+    custom: WalkerOS.Properties;
+    globals: WalkerOS.Properties;
+    group: string;
+    queue: any[];
+    round: number;
+    session: any;
+    timing: number;
+    user: WalkerOS.User;
+    version: string;
+    [key: string]: any;
+  }
+}
+
+// Parameter declarations for validate context
 declare const value: unknown;
+declare const context: Mapping.Context;
 `;
 
 /**

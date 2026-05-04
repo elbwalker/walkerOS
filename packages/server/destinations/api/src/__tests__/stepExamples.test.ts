@@ -29,7 +29,7 @@ describe('Step Examples', () => {
     testEnv.sendServer = mockSendServer;
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const expectedCalls = example.out as ReadonlyArray<
       [string, string, string, { headers?: Record<string, string> }]

@@ -34,13 +34,18 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order is sent to the Meta Conversions API as a Purchase event with value, currency, and contents.',
   in: getEvent('order complete', {
+    id: 'c1d2e3f4a5b60001',
     timestamp: 1700000900,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
     nested: [
       { entity: 'product', data: { id: 'SKU-A1', price: 129.99, quantity: 2 } },
     ],
     user: { id: 'user-123', device: 'device-456' },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: {
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com',
+    },
   }),
   mapping: {
     name: 'Purchase',
@@ -80,7 +85,7 @@ export const purchase: Flow.StepExample = {
         data: [
           {
             event_name: 'Purchase',
-            event_id: '1700000900-gr0up-1',
+            event_id: 'c1d2e3f4a5b60001',
             event_time: 1700001,
             action_source: 'website',
             order_id: 'ORD-300',
@@ -102,10 +107,15 @@ export const lead: Flow.StepExample = {
   description:
     'A form submission is forwarded to Meta CAPI as a custom event with the event source URL.',
   in: getEvent('form submit', {
+    id: 'c1d2e3f4a5b60002',
     timestamp: 1700000901,
     data: { type: 'newsletter' },
     user: { email: 'user@example.com' },
-    source: { type: 'server', id: 'https://example.com', previous_id: '' },
+    source: {
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com',
+    },
   }),
   mapping: undefined,
   out: [
@@ -116,7 +126,7 @@ export const lead: Flow.StepExample = {
         data: [
           {
             event_name: 'form submit',
-            event_id: '1700000901-gr0up-1',
+            event_id: 'c1d2e3f4a5b60002',
             event_time: 1700001,
             action_source: 'website',
             user_data: {},
@@ -133,11 +143,16 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
   description:
     'A purchase is sent to Meta CAPI with an external_id and a formatted fbc click id for ads attribution.',
   in: getEvent('order complete', {
+    id: 'c1d2e3f4a5b60003',
     timestamp: 1700000902,
     data: { id: 'ORD-700', total: 89.99, currency: 'USD' },
     user: { id: 'cust-42' },
     context: { fbclid: ['abc123xyz', 0] },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: {
+      type: 'browser',
+      platform: 'web',
+      url: 'https://shop.example.com',
+    },
   }),
   mapping: {
     name: 'Purchase',
@@ -163,7 +178,7 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
         data: [
           {
             event_name: 'Purchase',
-            event_id: '1700000902-gr0up-1',
+            event_id: 'c1d2e3f4a5b60003',
             event_time: 1700001,
             action_source: 'website',
             currency: 'USD',
@@ -173,7 +188,7 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
               // sha256('cust-42')
               external_id:
                 '8a3c5a67cad508582b5edf6b8352cea3ffbad7f44812c1a736b4444c0f5746aa',
-              // formatClickId(['abc123xyz', 0], event.timestamp) — array joins
+              // formatClickId(['abc123xyz', 0], event.timestamp) - array joins
               // to 'abc123xyz,0' when coerced to string inside the template.
               fbc: 'fb.1.1700000902.abc123xyz,0',
             },

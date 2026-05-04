@@ -10,7 +10,7 @@ import { buildOverrides, type PushOverrides } from './overrides.js';
 export type PrepareInput =
   | {
       mode: 'build';
-      config: Flow.Config;
+      config: Flow.Json;
       flow?: string;
       simulate?: string[];
       mock?: string[];
@@ -20,7 +20,7 @@ export type PrepareInput =
   | {
       mode: 'prebuilt';
       bundlePath: string;
-      config: Flow.Config;
+      config: Flow.Json;
       flow?: string;
       simulate?: string[];
       mock?: string[];
@@ -32,7 +32,7 @@ export interface PreparedFlow {
   bundlePath: string;
   platform: 'web' | 'server';
   overrides: PushOverrides;
-  flowSettings: Flow.Settings;
+  flowSettings: Flow;
   cleanup: () => Promise<void>;
 }
 

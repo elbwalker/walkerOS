@@ -19,14 +19,12 @@ describe('Transformer', () => {
 
     return {
       allowed: true,
-      config: { tagging: 1, globalsStatic: {}, sessionStatic: {} },
+      config: { globalsStatic: {}, sessionStatic: {} },
       consent: {},
-      count: 0,
       custom: {},
       destinations: {},
       transformers: {},
       globals: {},
-      group: '',
       hooks: {},
       logger: mockLogger,
       on: {},
@@ -35,7 +33,6 @@ describe('Transformer', () => {
       session: undefined,
       timing: Date.now(),
       user: {},
-      version: '1.0.0',
       sources: {},
       pendingSources: [],
       push: jest.fn(),

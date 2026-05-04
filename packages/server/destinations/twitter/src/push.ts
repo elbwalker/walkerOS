@@ -27,7 +27,7 @@ function normalizeString(value: unknown): string | undefined {
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, env, logger },
+  { config, rule, data, env, logger, collector },
 ) {
   const {
     pixelId,
@@ -44,7 +44,7 @@ export const push: PushFn = async function (
 
   // Resolve user data from settings-level mapping
   const userDataCustom = user_data
-    ? await getMappingValue(event, { map: user_data })
+    ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
 
   // Merge user data sources: config mapping + event mapping data
@@ -115,19 +115,23 @@ export const push: PushFn = async function (
   // Resolve per-event mapping settings
   const mappingSettings = (rule?.settings || {}) as Mapping;
   const eventIdResolved = mappingSettings.eventId
-    ? await getMappingValue(event, mappingSettings.eventId)
+    ? await getMappingValue(event, mappingSettings.eventId, { collector })
     : undefined;
   const valueResolved =
     mappingSettings.value !== undefined
-      ? await getMappingValue(event, mappingSettings.value)
+      ? await getMappingValue(event, mappingSettings.value, { collector })
       : undefined;
   const numberItemsResolved =
     mappingSettings.number_items !== undefined
-      ? await getMappingValue(event, mappingSettings.number_items)
+      ? await getMappingValue(event, mappingSettings.number_items, {
+          collector,
+        })
       : undefined;
   const descriptionResolved =
     mappingSettings.description !== undefined
-      ? await getMappingValue(event, mappingSettings.description)
+      ? await getMappingValue(event, mappingSettings.description, {
+          collector,
+        })
       : undefined;
 
   const resolvedEventId = isString(eventIdResolved)

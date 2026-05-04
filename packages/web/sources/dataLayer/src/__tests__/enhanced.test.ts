@@ -19,9 +19,7 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     const mockPush = createMockPush(collectedEvents);
 
     // Initialize collector
-    ({ collector } = await startFlow({
-      tagging: 2,
-    }));
+    ({ collector } = await startFlow());
 
     // Override push with synchronous mock
     collector.push = mockPush;

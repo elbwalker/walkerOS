@@ -9,9 +9,9 @@ export interface PathCompletion {
 
 // Cache resolved contracts to avoid re-resolving on every keystroke.
 let cachedRawJson = '';
-let cachedResolved: Record<string, Flow.ContractEntry> = {};
+let cachedResolved: Record<string, Flow.ContractRule> = {};
 
-function getResolved(raw: Flow.Contract): Record<string, Flow.ContractEntry> {
+function getResolved(raw: Flow.Contract): Record<string, Flow.ContractRule> {
   const json = JSON.stringify(raw);
   if (json !== cachedRawJson) {
     try {
@@ -99,7 +99,7 @@ export function getContractPathCompletions(
   // Section schemas (globals, context, custom, user, consent)
   const sectionKeys = ['globals', 'context', 'custom', 'user', 'consent'];
   if (sectionKeys.includes(firstKey)) {
-    const schema = entry[firstKey as keyof Flow.ContractEntry];
+    const schema = entry[firstKey as keyof Flow.ContractRule];
     if (!schema || typeof schema !== 'object') return [];
     if (rest.length === 1) {
       return getSchemaPropertyCompletions(schema as Record<string, unknown>);

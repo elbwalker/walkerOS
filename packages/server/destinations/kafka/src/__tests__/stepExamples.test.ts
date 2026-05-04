@@ -126,7 +126,7 @@ describe('kafka server destination -- step examples', () => {
 
     const { env, collected } = spyEnv();
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const exampleKafka = example.settings?.kafka;
     const baseSettings: Settings = {

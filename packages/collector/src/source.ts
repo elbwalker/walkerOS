@@ -137,6 +137,7 @@ export async function initSource(
                   respondValue,
                   cacheResult.rule.update as Record<string, unknown>,
                   { ...cacheContext, cache: { status: 'HIT' } },
+                  collector,
                 );
               }
               currentRespond?.(respondValue as Record<string, unknown>);
@@ -182,6 +183,7 @@ export async function initSource(
                   respondOptions,
                   missUpdate as Record<string, unknown>,
                   missContext,
+                  collector,
                 );
                 unwrappedRespond(updated as RespondOptions);
               })();

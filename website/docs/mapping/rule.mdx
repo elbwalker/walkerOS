@@ -183,7 +183,7 @@ that matched (including wildcards).
 getMappingValue(
   value: unknown,
   mapping: Mapping.Data,
-  options?: Mapping.Options,
+  context?: Partial<Mapping.Context>,
 ): Promise<WalkerOS.Property | undefined>
 ```
 

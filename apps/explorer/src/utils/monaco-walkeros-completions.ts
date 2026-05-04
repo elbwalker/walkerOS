@@ -53,6 +53,48 @@ export function getSecretCompletions(
   }));
 }
 
+export function getStoreCompletions(
+  stores: IntelliSenseContext['stores'],
+): CompletionEntry[] {
+  if (!stores || stores.length === 0) return [];
+  return stores.map((id) => ({
+    label: `$store.${id}`,
+    insertText: `$store.${id}`,
+    detail: '(store)',
+    documentation: `Store reference. Injected as store instance at runtime.`,
+    kind: 'reference' as const,
+    sortText: '0_store_' + id,
+  }));
+}
+
+export function getFlowCompletions(
+  flows: IntelliSenseContext['flows'],
+): CompletionEntry[] {
+  if (!flows || flows.length === 0) return [];
+  return flows.map((name) => ({
+    label: `$flow.${name}`,
+    insertText: `$flow.${name}`,
+    detail: '(flow)',
+    documentation: `Cross-flow reference. Resolves to the resolved Flow.Config of "${name}" at runtime. Append \`.url\`, \`.settings.<key>\`, or another path inside that flow's config.`,
+    kind: 'reference' as const,
+    sortText: '0_flow_' + name,
+  }));
+}
+
+export function getEnvCompletions(
+  envNames: IntelliSenseContext['envNames'],
+): CompletionEntry[] {
+  if (!envNames || envNames.length === 0) return [];
+  return envNames.map((name) => ({
+    label: `$env.${name}`,
+    insertText: `$env.${name}`,
+    detail: '(env var)',
+    documentation: `Environment variable. Resolved from process.env at runtime. Add a literal default with $env.${name}:default.`,
+    kind: 'variable' as const,
+    sortText: '0_env_' + name,
+  }));
+}
+
 export function getPackageCompletions(
   packages: PackageInfo[] | undefined,
   platform: IntelliSenseContext['platform'],

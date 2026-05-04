@@ -15,7 +15,7 @@ export type AmplitudeStepExample = Flow.StepExample & {
 };
 
 /**
- * Default event forwarding — every walkerOS event becomes
+ * Default event forwarding - every walkerOS event becomes
  * amplitude.track(event.name, event_properties). With no mapping and
  * no destination-level include, event_properties is `{}`.
  */
@@ -28,7 +28,7 @@ export const defaultEventForwarding: AmplitudeStepExample = {
 };
 
 /**
- * Wildcard ignore — walkerOS's standard way to drop events. The rule
+ * Wildcard ignore - walkerOS's standard way to drop events. The rule
  * matches but does nothing. The destination fires zero SDK calls.
  */
 export const wildcardIgnored: AmplitudeStepExample = {
@@ -125,8 +125,8 @@ export const destinationLevelIdentify: AmplitudeStepExample = {
 };
 
 /**
- * Per-event identify with the full operation vocabulary — this is the
- * "user login" pattern: set user_id, enrich user properties. `skip: true`
+ * Per-event identify with the full operation vocabulary - this is the
+ * "user login" pattern: set user_id, enrich user properties. `silent: true`
  * suppresses the default amplitude.track() call because we're running
  * identity side effects only.
  */
@@ -144,7 +144,7 @@ export const userLoginIdentify: AmplitudeStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -192,8 +192,8 @@ export const userLoginIdentify: AmplitudeStepExample = {
 };
 
 /**
- * User logout — reset: true fires amplitude.reset(), which clears userId
- * and regenerates deviceId. `skip: true` because we're only running the
+ * User logout - reset: true fires amplitude.reset(), which clears userId
+ * and regenerates deviceId. `silent: true` because we're only running the
  * reset side effect, no default track().
  */
 export const userLogoutReset: AmplitudeStepExample = {
@@ -202,7 +202,7 @@ export const userLogoutReset: AmplitudeStepExample = {
     'A user logout calls amplitude.reset to clear the userId and regenerate the deviceId.',
   in: getEvent('user logout', { timestamp: 1700000106 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       reset: true,
     },
@@ -211,7 +211,7 @@ export const userLogoutReset: AmplitudeStepExample = {
 };
 
 /**
- * Single-product revenue — resolves `settings.revenue` to one object and
+ * Single-product revenue - resolves `settings.revenue` to one object and
  * fires one amplitude.revenue() call. Note the `{ key: "data.currency",
  * value: "EUR" }` fallback syntax: try data.currency, default to "EUR".
  *
@@ -229,7 +229,7 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       revenue: {
         map: {
@@ -255,7 +255,7 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
 };
 
 /**
- * Multi-product order — the canonical Amplitude ecommerce pattern.
+ * Multi-product order - the canonical Amplitude ecommerce pattern.
  * `revenue.loop: ["nested", { map: ... }]` iterates event.nested and
  * resolves one revenue item per entry. Each becomes a separate
  * amplitude.revenue() call. The order-level track() fires once with
@@ -349,7 +349,7 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       group: {
         map: {

@@ -1,0 +1,146 @@
+---
+title: Telemetry
+description: What walkerOS CLI and MCP can collect, how to opt in, and what "opt in" means legally.
+sidebar_position: 6
+---
+
+# Telemetry
+
+walkerOS `@walkeros/cli` and `@walkeros/mcp` support anonymous usage
+telemetry to help us improve the tools. Telemetry is **off by default** and
+requires explicit opt-in. Nothing is sent from your machine until you run
+`walkeros telemetry enable`.
+
+This page describes the data contract, how to enable or disable it, and the
+legal basis.
+
+:::info Status
+
+In the current release, no ingest endpoint is shipped. Opting in records
+your consent locally; actual data collection begins in a future release
+and will continue to honor your stored choice.
+
+:::
+
+## Why opt-in
+
+walkerOS is a privacy-aware data-collection product built in the EU. The
+ePrivacy Directive (Article 5(3)) requires prior consent for any storing of
+or access to information on a user's terminal equipment that is not strictly
+necessary for the service the user asked for. Installing a persistent
+installation UUID on your machine to help us improve the tools is not
+strictly necessary to run `walkeros bundle`, so we ask first and we default
+off. This is the same consent model we encourage on the web.
+
+## The three states
+
+Your choice is stored in `~/.config/walkeros/config.json` under
+`telemetryEnabled`:
+
+| State | Meaning |
+|-------|---------|
+| field absent | You have not made a choice yet. Default: nothing is collected, no installation UUID is written. |
+| `true` | You opted in via `walkeros telemetry enable`. An installation UUID is generated at that moment and the emitter is active. |
+| `false` | You opted out via `walkeros telemetry disable`. Nothing is collected. |
+
+## Commands
+
+```bash
+# Opt in
+walkeros telemetry enable
+
+# Opt out
+walkeros telemetry disable
+
+# Show current state
+walkeros telemetry status
+```
+
+## What we would collect (after opt-in)
+
+Every event is an `entity action` (the same event model the rest of walkerOS
+uses). The emitted events:
+
+| Event | When |
+|-------|------|
+| `mcp start` | MCP server starts up and completes the `initialize` handshake |
+| `cmd invoke` | A CLI command or MCP tool is invoked |
+| `error throw` | An unhandled error is thrown during a command or tool call |
+
+For each event we attach:
+
+- **Installation UUID**: generated at opt-in, stored in
+  `~/.config/walkeros/config.json`, not linked to any account or user.
+- **Environment**: OS, OS version, Node.js version, language, timezone,
+  whether the process is running in CI.
+- **Command or tool name**: for example `bundle`, `push`, `flow_validate`.
+- **Outcome**: success or error. Never the error message.
+- **Duration**: how long the command or tool call took, in milliseconds.
+- **Client version**: the installed `@walkeros/cli` or `@walkeros/mcp`
+  version.
+
+## What we do NOT collect
+
+- File paths, file names, or file contents
+- Environment variable names or values
+- Error messages, stack traces, or code snippets
+- Project names, flow names, destination settings, or any flow config
+  content
+- Account identifiers, email addresses, or auth tokens
+- IP addresses
+
+## Source of truth
+
+The full contract, with JSON Schemas for every event and every property,
+lives in the CLI source tree:
+
+[`packages/cli/src/telemetry/flow.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/src/telemetry/flow.json)
+
+If it is not declared there, we do not emit it.
+
+## Headless environments
+
+MCP servers, CI jobs, piped invocations, and any other non-interactive
+process inherit the stored choice but cannot prompt. In practice:
+
+- If you have opted in via `walkeros telemetry enable` on the same machine,
+  MCP and CI invocations emit telemetry normally.
+- If you have never opted in on the machine, those surfaces stay silent.
+
+There is no environment variable to force-enable telemetry on a machine
+that has not opted in. That is intentional: consent must be an explicit
+act.
+
+## Env var overrides
+
+Two legacy env vars force telemetry off regardless of your stored choice:
+
+```bash
+export DO_NOT_TRACK=1
+export WALKEROS_TELEMETRY_DISABLED=1
+```
+
+These are honored for backward compatibility and for users who want a
+belt-and-braces guarantee even after opting in. They are not a substitute
+for opt-in: telemetry is already off by default.
+
+## Debug mode
+
+To inspect exactly what would be sent after opt-in, set:
+
+```bash
+export WALKEROS_TELEMETRY_DEBUG=1
+```
+
+In debug mode the CLI and MCP print each telemetry payload to `stderr` as
+JSON and do not send anything to the network.
+
+## Where it goes (future)
+
+When an ingest endpoint ships, telemetry events will be sent to the
+walkerOS managed endpoint operated by elbwalker GmbH on EU infrastructure.
+We will not share the data with any third party and we will not use it for
+advertising. It exists to help us prioritize fixes and improvements to the
+open-source tools.
+
+Until then, opting in records your consent locally and emits nothing.

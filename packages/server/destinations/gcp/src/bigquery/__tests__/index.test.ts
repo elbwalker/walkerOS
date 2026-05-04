@@ -1,6 +1,11 @@
 import type { Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { clone, createEvent, createMockContext, createMockLogger } from '@walkeros/core';
+import {
+  clone,
+  createEvent,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
 import * as examples from '../examples';
 
 const { env } = examples;
@@ -115,15 +120,10 @@ describe('Server Destination BigQuery', () => {
         globals: '{"lang":"elb"}',
         custom: '{"completely":"random"}',
         user: '{"id":"us3r","device":"c00k13","session":"s3ss10n"}',
-        nested:
-          '[{"entity":"child","data":{"is":"subordinated"},"nested":[],"context":{"element":["child",0]}}]',
+        nested: '[{"entity":"child","data":{"is":"subordinated"}}]',
         trigger: 'test',
         timing: 3.14,
-        group: 'gr0up',
-        count: 1,
-        version: expect.any(String),
-        source:
-          '{"type":"web","id":"https://localhost:80","previous_id":"http://remotehost:9001"}',
+        source: '{"type":"collector","schema":"4"}',
         createdAt: expect.any(Date),
       },
     ]);

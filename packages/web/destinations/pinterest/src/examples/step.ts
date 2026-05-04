@@ -9,7 +9,7 @@ import { getEvent } from '@walkeros/core';
  */
 
 /**
- * Default event forwarding — no rule. Without a mapping.name, the walkerOS
+ * Default event forwarding - no rule. Without a mapping.name, the walkerOS
  * event name is forwarded as-is. Pinterest accepts it but won't match a
  * standard conversion event. event_id is auto-attached for deduplication.
  */
@@ -23,7 +23,7 @@ export const defaultForward: Flow.StepExample = {
 };
 
 /**
- * Wildcard ignore pattern — the standard walkerOS way to suppress noisy
+ * Wildcard ignore pattern - the standard walkerOS way to suppress noisy
  * events. `mapping.ignore: true` at rule level produces zero SDK calls.
  */
 export const wildcardIgnored: Flow.StepExample = {
@@ -36,7 +36,7 @@ export const wildcardIgnored: Flow.StepExample = {
 /**
  * Standard Pinterest event rename via mapping.name. walkerOS "page view"
  * → Pinterest "pagevisit". The ONLY way to get Pinterest to recognize
- * a conversion event — the destination never auto-maps.
+ * a conversion event - the destination never auto-maps.
  */
 export const pageViewRename: Flow.StepExample = {
   title: 'Page visit',
@@ -48,7 +48,7 @@ export const pageViewRename: Flow.StepExample = {
 };
 
 /**
- * Search — walkerOS site search → Pinterest "search" with search_query.
+ * Search - walkerOS site search → Pinterest "search" with search_query.
  * Illustrates single-field mapping.data resolution.
  */
 export const siteSearch: Flow.StepExample = {
@@ -176,7 +176,7 @@ export const productAddToCart: Flow.StepExample = {
 };
 
 /**
- * Multi-product checkout — the canonical Pinterest ecommerce pattern.
+ * Multi-product checkout - the canonical Pinterest ecommerce pattern.
  */
 export const orderCompleteCheckout: Flow.StepExample = {
   title: 'Checkout',
@@ -287,13 +287,13 @@ export const userLoginLead: Flow.StepExample = {
 };
 
 /**
- * mapping.skip — processes side effects (identify set) but suppresses
+ * mapping.silent - processes side effects (identify set) but suppresses
  * the default pintrk('track', ...) call.
  */
-export const identifyOnlySkip: Flow.StepExample = {
+export const identifyOnlySilent: Flow.StepExample = {
   title: 'Identify only',
   description:
-    'A user update fires pintrk set for enhanced matching without a track call via mapping skip.',
+    'A user update fires pintrk set for enhanced matching without a track call via mapping silent.',
   in: getEvent('user update', {
     timestamp: 1700000108,
     id: 'ev-1700000108',
@@ -303,7 +303,7 @@ export const identifyOnlySkip: Flow.StepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -317,7 +317,7 @@ export const identifyOnlySkip: Flow.StepExample = {
 };
 
 /**
- * Consent revocation — walkerOS walker consent { marketing: false }.
+ * Consent revocation - walkerOS walker consent { marketing: false }.
  * The destination's on('consent') handler flips the runtime state flag
  * and stops calling pintrk('track', ...) for subsequent events.
  */
@@ -329,7 +329,7 @@ export const consentRevoke: Flow.StepExample = {
 };
 
 /**
- * Consent grant — explicit opt-in.
+ * Consent grant - explicit opt-in.
  */
 export const consentGrant: Flow.StepExample = {
   public: false,

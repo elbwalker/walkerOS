@@ -15,16 +15,6 @@ describe('Commands', () => {
     jest.resetModules();
   });
 
-  test('walker config', async () => {
-    const { elb, collector } = await getCollector();
-    expect(collector).toHaveProperty('user', {});
-    expect(collector.config.tagging).toBe(0); // Initial value
-
-    const result = await elb('walker config', { tagging: 42 });
-    expect(result.ok).toBe(true);
-    expect(collector.config.tagging).toBe(42);
-  });
-
   test('walker custom', async () => {
     const { elb, collector } = await getCollector({
       custom: { static: 'value' },

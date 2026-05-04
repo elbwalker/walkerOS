@@ -67,8 +67,8 @@ export class DeploymentAmbiguityError extends Error {
  * Delete a deployment identified by flowId, optionally disambiguated by slug
  * when the flow has more than one active deployment. Throws
  * DeploymentAmbiguityError when the flow has >= 2 active deployments and no
- * slug is provided. Throws a plain Error (via throwApiError) when no match is
- * found.
+ * slug is provided. Throws a plain Error when the flow has no matches or when
+ * a provided slug does not belong to the flow.
  */
 export async function deleteDeploymentByFlowId(options: {
   projectId?: string;
@@ -78,10 +78,6 @@ export async function deleteDeploymentByFlowId(options: {
   const { flowId, slug } = options;
   const projectId = options.projectId ?? requireProjectId();
 
-  if (slug) {
-    return deleteDeployment({ slug, projectId });
-  }
-
   const listResp = (await listDeployments({ projectId, flowId })) as {
     deployments?: DeploymentSummaryForFlow[];
   };
@@ -90,6 +86,15 @@ export async function deleteDeploymentByFlowId(options: {
   if (matches.length === 0) {
     throw new Error(`No deployments found for flow ${flowId}`);
   }
+
+  if (slug !== undefined) {
+    const hit = matches.find((m) => m.slug === slug);
+    if (!hit) {
+      throw new Error(`No deployment with slug ${slug} in flow ${flowId}`);
+    }
+    return deleteDeployment({ slug: hit.slug, projectId });
+  }
+
   if (matches.length > 1) {
     throw new DeploymentAmbiguityError(
       `Flow ${flowId} has ${matches.length} active deployments; pass slug to disambiguate`,

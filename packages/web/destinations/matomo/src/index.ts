@@ -52,7 +52,7 @@ export const destinationMatomo: Destination = {
     }
   },
 
-  async push(event, { rule = {}, data, env }) {
+  async push(event, { rule = {}, data, env, collector }) {
     const { window } = getEnv(env);
     const w = window as Window;
     const paq = w._paq!.push.bind(w._paq!);
@@ -60,7 +60,10 @@ export const destinationMatomo: Destination = {
 
     // Default page view (no mapping settings)
     if (event.name === 'page view' && !rule.settings) {
-      paq(['trackPageView', await getMappingValue(event, 'data.title')]);
+      paq([
+        'trackPageView',
+        await getMappingValue(event, 'data.title', { collector }),
+      ]);
       return;
     }
 
@@ -87,7 +90,7 @@ export const destinationMatomo: Destination = {
     // Per-event custom dimensions (action-scope)
     if (eventMapping.customDimensions) {
       for (const [id, path] of Object.entries(eventMapping.customDimensions)) {
-        const value = await getMappingValue(event, path);
+        const value = await getMappingValue(event, path, { collector });
         if (value !== undefined) {
           paq(['setCustomDimension', Number(id), value]);
         }
@@ -100,7 +103,7 @@ export const destinationMatomo: Destination = {
     // Goal tracking alongside event
     if (eventMapping.goalId) {
       const goalValue = eventMapping.goalValue
-        ? await getMappingValue(event, eventMapping.goalValue)
+        ? await getMappingValue(event, eventMapping.goalValue, { collector })
         : undefined;
       paq(['trackGoal', eventMapping.goalId, goalValue]);
     }

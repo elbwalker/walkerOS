@@ -24,7 +24,10 @@ export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
     'An order complete event is mapped to the Meta Pixel Purchase standard event with value, currency, and product contents.',
-  in: getEvent('order complete', { timestamp: 1700000000 }),
+  in: getEvent('order complete', {
+    timestamp: 1700000000,
+    id: '1700000000-gr0up-1',
+  }),
   mapping: {
     name: 'Purchase',
     data: {
@@ -78,7 +81,10 @@ export const addToCart: Flow.StepExample = {
   title: 'Add to cart',
   description:
     'A product add event is mapped to the Meta Pixel AddToCart standard event with product contents and value.',
-  in: getEvent('product add', { timestamp: 1700000001 }),
+  in: getEvent('product add', {
+    timestamp: 1700000001,
+    id: '1700000001-gr0up-1',
+  }),
   mapping: {
     name: 'AddToCart',
     data: {
@@ -119,7 +125,10 @@ export const viewContent: Flow.StepExample = {
   title: 'View content',
   description:
     'A product view event is mapped to the Meta Pixel ViewContent standard event with single-product contents.',
-  in: getEvent('product view', { timestamp: 1700000002 }),
+  in: getEvent('product view', {
+    timestamp: 1700000002,
+    id: '1700000002-gr0up-1',
+  }),
   mapping: {
     name: 'ViewContent',
     data: {
@@ -160,7 +169,10 @@ export const initiateCheckout: Flow.StepExample = {
   title: 'Initiate checkout',
   description:
     'A cart view event is mapped to the Meta Pixel InitiateCheckout standard event with value and product contents.',
-  in: getEvent('cart view', { timestamp: 1700000003 }),
+  in: getEvent('cart view', {
+    timestamp: 1700000003,
+    id: '1700000003-gr0up-1',
+  }),
   mapping: {
     name: 'InitiateCheckout',
     data: {
@@ -209,7 +221,10 @@ export const pageView: Flow.StepExample = {
   title: 'Page view',
   description:
     'A page view event is forwarded to Meta Pixel as the PageView standard event with no extra parameters.',
-  in: getEvent('page view', { timestamp: 1700000004 }),
+  in: getEvent('page view', {
+    timestamp: 1700000004,
+    id: '1700000004-gr0up-1',
+  }),
   mapping: undefined,
   out: [['fbq', 'track', 'PageView', {}, { eventID: '1700000004-gr0up-1' }]],
 };
@@ -220,6 +235,7 @@ export const customEventWithTrackCustom: Flow.StepExample = {
     'A video complete event is sent as a Meta Pixel trackCustom call with a custom event name and parameters.',
   in: getEvent('video complete', {
     timestamp: 1700000005,
+    id: '1700000005-gr0up-1',
     data: { video_id: 'v1d30', duration: 120 },
   }),
   mapping: {

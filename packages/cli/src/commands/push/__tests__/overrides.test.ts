@@ -1,12 +1,12 @@
 import type { Flow } from '@walkeros/core';
 import { buildOverrides } from '../overrides';
 
-// Minimal Flow.Settings fixture with destinations
+// Minimal Flow fixture with destinations
 function makeFlowSettings(
   destinations: Record<string, { package?: string }> = {},
-): Flow.Settings {
+): Flow {
   return {
-    web: {},
+    config: { platform: 'web' },
     destinations: Object.fromEntries(
       Object.entries(destinations).map(([name, dest]) => [
         name,
@@ -175,10 +175,10 @@ describe('buildOverrides', () => {
 
   it('should parse --simulate source.express', () => {
     const result = buildOverrides({ simulate: ['source.express'] }, {
-      server: {},
+      config: { platform: 'server' },
       sources: { express: { package: '@walkeros/server-source-express' } },
       destinations: {},
-    } as Flow.Settings);
+    } as Flow);
     expect(result.sources).toEqual({ express: { simulate: true } });
     expect(result.destinations).toBeUndefined(); // no destination overrides
   });
@@ -186,36 +186,36 @@ describe('buildOverrides', () => {
   it('rejects mixed source and destination simulate', () => {
     expect(() =>
       buildOverrides({ simulate: ['source.express', 'destination.ga4'] }, {
-        server: {},
+        config: { platform: 'server' },
         sources: { express: {} },
         destinations: { ga4: {}, meta: {} },
-      } as Flow.Settings),
+      } as Flow),
     ).toThrow('Cannot simulate both');
   });
 
   it('should reject --mock on source', () => {
     expect(() =>
       buildOverrides({ mock: ['source.express={}'] }, {
-        server: {},
+        config: { platform: 'server' },
         sources: { express: {} },
-      } as Flow.Settings),
+      } as Flow),
     ).toThrow('--mock is not supported for sources');
   });
 
   it('should accept source. prefix in parseStep', () => {
     // Test via buildOverrides since parseStep is private
     const result = buildOverrides({ simulate: ['source.browser'] }, {
-      web: {},
+      config: { platform: 'web' },
       sources: { browser: {} },
       destinations: {},
-    } as Flow.Settings);
+    } as Flow);
     expect(result.sources).toEqual({ browser: { simulate: true } });
   });
 
   describe('transformer simulate', () => {
     it('parses --simulate transformer.redact', () => {
       const result = buildOverrides({ simulate: ['transformer.redact'] }, {
-        server: {},
+        config: { platform: 'server' },
         transformers: { redact: {} },
       } as any);
       expect(result.transformers).toEqual({ redact: { simulate: true } });
@@ -226,7 +226,7 @@ describe('buildOverrides', () => {
         buildOverrides(
           { simulate: ['transformer.redact', 'destination.ga4'] },
           {
-            server: {},
+            config: { platform: 'server' },
             destinations: { ga4: {}, meta: {} },
             transformers: { redact: {} },
           } as any,
@@ -237,7 +237,7 @@ describe('buildOverrides', () => {
     it('rejects --mock transformer.X without chain path', () => {
       expect(() =>
         buildOverrides({ mock: ['transformer.redact={}'] }, {
-          server: {},
+          config: { platform: 'server' },
           transformers: { redact: {} },
         } as any),
       ).toThrow('Use --mock destination');
@@ -245,7 +245,7 @@ describe('buildOverrides', () => {
 
     it('transformer simulate does not affect destination disabled logic', () => {
       const result = buildOverrides({ simulate: ['transformer.redact'] }, {
-        server: {},
+        config: { platform: 'server' },
         destinations: { ga4: {} },
         transformers: { redact: {} },
       } as any);
@@ -259,7 +259,7 @@ describe('buildOverrides', () => {
       const result = buildOverrides(
         { mock: ['destination.ga4.before.redact={"name":"mocked"}'] },
         {
-          web: {},
+          config: { platform: 'web' },
           destinations: { ga4: {} },
           transformers: { redact: {} },
         } as any,
@@ -278,7 +278,7 @@ describe('buildOverrides', () => {
           ],
         },
         {
-          web: {},
+          config: { platform: 'web' },
           destinations: { ga4: {}, piwik: {} },
           transformers: { redact: {} },
         } as any,
@@ -292,7 +292,7 @@ describe('buildOverrides', () => {
     it('rejects invalid chain type in path', () => {
       expect(() =>
         buildOverrides({ mock: ['destination.ga4.invalid.redact={}'] }, {
-          web: {},
+          config: { platform: 'web' },
           destinations: { ga4: {} },
         } as any),
       ).toThrow('Invalid chain type');
@@ -301,7 +301,7 @@ describe('buildOverrides', () => {
     it('rejects 3-part path without transformer', () => {
       expect(() =>
         buildOverrides({ mock: ['destination.ga4.before={}'] }, {
-          web: {},
+          config: { platform: 'web' },
           destinations: { ga4: {} },
         } as any),
       ).toThrow('Specify a transformer');
@@ -311,7 +311,7 @@ describe('buildOverrides', () => {
       const result = buildOverrides(
         { mock: ['destination.ga4.before.redact={}'] },
         {
-          web: {},
+          config: { platform: 'web' },
           destinations: { ga4: {}, piwik: {} },
           transformers: { redact: {} },
         } as any,

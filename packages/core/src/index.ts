@@ -13,6 +13,7 @@ export * from './createDestination';
 export * from './deepMerge';
 export * from './eventGenerator';
 export * from './getId';
+export * from './getSpanId';
 export * from './getMarketingParameters';
 export * from './invocations';
 export * from './is';
@@ -38,3 +39,13 @@ export * from './matcher';
 export * from './route';
 export * from './cache';
 export * from './examples/formatOut';
+export {
+  REF_VAR,
+  REF_DEF,
+  REF_ENV,
+  REF_CONTRACT,
+  REF_FLOW,
+  REF_STORE,
+  REF_SECRET,
+  REF_CODE_PREFIX,
+} from './references';

@@ -46,7 +46,7 @@ describe('buildMessage', () => {
   it('auto-generates default blocks when no text or blocks supplied', () => {
     const event = getEvent('lead submit', {
       data: { name: 'Acme', email: 'sales@acme.test' },
-      source: { type: 'server', id: 'crm', previous_id: '' },
+      source: { type: 'crm', platform: 'server' },
     });
     const msg = buildMessage(event, baseSettings, {});
     expect(msg.text).toBe('lead submit');

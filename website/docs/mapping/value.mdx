@@ -38,7 +38,7 @@ as `Value = ValueType | Array<ValueType>`, where `ValueType` is either a string
 | [Map](#map)                     | `{ map: { key: Value, … } }`              | Builds an object from multiple paths. Use when the destination expects a structured payload.  |
 | [Loop](#loop)                   | `{ loop: [source, Value] }`               | Iterates an array source and transforms each item. Use for nested product, cart, or item lists. |
 | [Set](#set)                     | `{ set: [Value, Value, …] }`              | Picks the first defined value from a list. Use as a fallback chain like email then user_id.   |
-| [Fn](#fn)                       | `{ fn: (event, mapping, options) => … }` | Runs a custom function on the event. Use only when no declarative form fits.                  |
+| [Fn](#fn)                       | `{ fn: (value, context) => … }`          | Runs a custom function on the event. Use only when no declarative form fits.                  |
 | [Condition](#condition)         | `{ condition, value }`                    | Gates the value on a predicate. Use for branching logic inside a single rule.                 |
 | [Consent](#consent)             | `{ consent: {…}, value }`                 | Gates the value on consent states. Use to make individual fields privacy-aware.               |
 
@@ -170,8 +170,22 @@ fallback chain.
 
 ## Fn
 
-Run a custom function. The handler receives `(event, mapping, options)` and may
-return a promise.
+Run a custom function. The handler receives `(value, context)` and may return
+a promise. All three callbacks (`fn`, `condition`, `validate`) share the same
+shape.
+
+### Context object
+
+| Field       | Type                            | Required | Description                                |
+| ----------- | ------------------------------- | -------- | ------------------------------------------ |
+| `event`     | `WalkerOS.DeepPartialEvent`     | yes      | The root event being mapped                |
+| `mapping`   | `Mapping.Value \| Mapping.Rule` | yes      | The surrounding mapping config (or rule)   |
+| `collector` | `Collector.Instance`            | yes      | Active collector, use for `push` and queue |
+| `logger`    | `Logger.Instance`               | yes      | Use for `info`/`warn`/`error`/`debug`      |
+| `consent`   | `WalkerOS.Consent` (optional)   | no       | Resolved consent at this evaluation point  |
+
+One-arg callbacks like `(value) => value.toUpperCase()` continue to work,
+TypeScript ignores the unused `context` argument.
 
 <LiveCode
   language="typescript"

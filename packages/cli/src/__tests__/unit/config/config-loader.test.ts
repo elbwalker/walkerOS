@@ -1,7 +1,7 @@
 /**
  * Config Loader Tests
  *
- * Tests for Flow.Config configuration loading with the new format.
+ * Tests for Flow.Json configuration loading with the new format.
  */
 
 import {
@@ -12,19 +12,21 @@ import {
 
 describe('Config Loader', () => {
   // ========================================
-  // Single Flow (Flow.Config with one flow)
+  // Single Flow (Flow.Json with one flow)
   // ========================================
 
-  describe('Single Flow (Flow.Config)', () => {
-    test('loads Flow.Config with single flow automatically', () => {
+  describe('Single Flow (Flow.Json)', () => {
+    test('loads Flow.Json with single flow automatically', () => {
       const config = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
-            bundle: {
-              packages: {
-                '@walkeros/core': { imports: ['getId'] },
+            config: {
+              platform: 'web',
+              bundle: {
+                packages: {
+                  '@walkeros/core': { imports: ['getId'] },
+                },
               },
             },
             sources: {
@@ -50,17 +52,19 @@ describe('Config Loader', () => {
 
       expect(result.flowName).toBe('default');
       expect(result.isMultiFlow).toBe(false);
-      expect(result.flowSettings.web).toBeDefined();
+      expect(result.flowSettings.config?.platform).toBe('web');
       expect(result.flowSettings.sources).toBeDefined();
     });
 
     test('applies platform-specific defaults for web', () => {
       const config = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
-            bundle: { packages: {} },
+            config: {
+              platform: 'web',
+              bundle: { packages: {} },
+            },
           },
         },
       };
@@ -79,11 +83,13 @@ describe('Config Loader', () => {
 
     test('applies platform-specific defaults for server', () => {
       const config = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            server: {},
-            bundle: { packages: {} },
+            config: {
+              platform: 'server',
+              bundle: { packages: {} },
+            },
           },
         },
       };
@@ -102,15 +108,17 @@ describe('Config Loader', () => {
 
     test('extracts packages from flowSettings', () => {
       const config = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
-            bundle: {
-              packages: {
-                '@walkeros/core': { imports: ['getId', 'clone'] },
-                '@walkeros/destination-demo': {
-                  imports: ['destinationDemo'],
+            config: {
+              platform: 'web',
+              bundle: {
+                packages: {
+                  '@walkeros/core': { imports: ['getId', 'clone'] },
+                  '@walkeros/destination-demo': {
+                    imports: ['destinationDemo'],
+                  },
                 },
               },
             },
@@ -130,14 +138,16 @@ describe('Config Loader', () => {
 
     test('extracts overrides from bundle.overrides', () => {
       const config = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
-            bundle: {
-              packages: { '@walkeros/core': {} },
-              overrides: {
-                '@amplitude/analytics-types': '2.11.1',
+            config: {
+              platform: 'web',
+              bundle: {
+                packages: { '@walkeros/core': {} },
+                overrides: {
+                  '@amplitude/analytics-types': '2.11.1',
+                },
               },
             },
           },
@@ -155,11 +165,13 @@ describe('Config Loader', () => {
 
     test('respects build overrides from CLI', () => {
       const config = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
-            bundle: { packages: {} },
+            config: {
+              platform: 'web',
+              bundle: { packages: {} },
+            },
           },
         },
       };
@@ -183,11 +195,13 @@ describe('Config Loader', () => {
 
   describe('Multi-Flow Config', () => {
     const multiFlowConfig = {
-      version: 3,
+      version: 4,
       flows: {
         web_prod: {
-          web: {},
-          bundle: { packages: {} },
+          config: {
+            platform: 'web',
+            bundle: { packages: {} },
+          },
           sources: {
             browser: {
               package: '@walkeros/web-source-browser',
@@ -201,8 +215,10 @@ describe('Config Loader', () => {
           },
         },
         web_stage: {
-          web: {},
-          bundle: { packages: {} },
+          config: {
+            platform: 'web',
+            bundle: { packages: {} },
+          },
           sources: {
             browser: {
               package: '@walkeros/web-source-browser',
@@ -216,8 +232,10 @@ describe('Config Loader', () => {
           },
         },
         server_prod: {
-          server: {},
-          bundle: { packages: {} },
+          config: {
+            platform: 'server',
+            bundle: { packages: {} },
+          },
           destinations: {
             api: {
               package: '@walkeros/server-destination-api',
@@ -240,7 +258,7 @@ describe('Config Loader', () => {
         'web_stage',
         'server_prod',
       ]);
-      expect(result.flowSettings.web).toBeDefined();
+      expect(result.flowSettings.config?.platform).toBe('web');
     });
 
     test('throws error if flow not specified for multi-flow config', () => {
@@ -271,8 +289,8 @@ describe('Config Loader', () => {
         'web_stage',
         'server_prod',
       ]);
-      expect(results[0].flowSettings.web).toBeDefined();
-      expect(results[2].flowSettings.server).toBeDefined();
+      expect(results[0].flowSettings.config?.platform).toBe('web');
+      expect(results[2].flowSettings.config?.platform).toBe('server');
     });
 
     test('gets available flows from multi-flow config', () => {
@@ -290,7 +308,7 @@ describe('Config Loader', () => {
     test('throws error for invalid config format (missing version)', () => {
       const invalidConfig = {
         flows: {
-          default: { web: {} },
+          default: { config: { platform: 'web' } },
         },
       };
 
@@ -305,7 +323,7 @@ describe('Config Loader', () => {
       const invalidConfig = {
         version: 99,
         flows: {
-          default: { web: {} },
+          default: { config: { platform: 'web' } },
         },
       };
 
@@ -318,7 +336,7 @@ describe('Config Loader', () => {
 
     test('throws error for invalid config format (missing flows)', () => {
       const invalidConfig = {
-        version: 3,
+        version: 4,
       };
 
       expect(() =>
@@ -330,7 +348,7 @@ describe('Config Loader', () => {
 
     test('throws error for empty flows', () => {
       const invalidConfig = {
-        version: 3,
+        version: 4,
         flows: {},
       };
 
@@ -341,12 +359,12 @@ describe('Config Loader', () => {
       ).toThrow(/at least one flow/i);
     });
 
-    test('throws error for flow without web/server key', () => {
+    test('throws error for flow without config.platform', () => {
       const invalidConfig = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            bundle: { packages: {} },
+            config: { bundle: { packages: {} } },
           },
         },
       };
@@ -355,28 +373,10 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/web.*or.*server|Exactly one of/i);
+      ).toThrow(/platform/i);
     });
 
-    test('rejects legacy top-level packages with migration error', () => {
-      const legacyConfig = {
-        version: 3,
-        flows: {
-          default: {
-            web: {},
-            packages: { '@walkeros/core': {} },
-          },
-        },
-      };
-
-      expect(() =>
-        loadBundleConfig(legacyConfig, {
-          configPath: '/test/config.json',
-        }),
-      ).toThrow(/bundle\.packages/);
-    });
-
-    test('returns empty array for non-Flow.Config config', () => {
+    test('returns empty array for non-Flow.Json config', () => {
       const oldFormatConfig = {
         flow: { platform: 'web' },
         build: { packages: {} },
@@ -399,15 +399,19 @@ describe('Config Loader', () => {
       };
 
       const config = {
-        version: 3,
+        version: 4,
         flows: {
           prod: {
-            web: {},
-            bundle: { packages: {} },
+            config: {
+              platform: 'web',
+              bundle: { packages: {} },
+            },
           },
           stage: {
-            web: {},
-            bundle: { packages: {} },
+            config: {
+              platform: 'web',
+              bundle: { packages: {} },
+            },
           },
         },
       };
@@ -430,11 +434,13 @@ describe('Config Loader', () => {
       };
 
       const config = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {},
-            bundle: { packages: {} },
+            config: {
+              platform: 'web',
+              bundle: { packages: {} },
+            },
           },
         },
       };
@@ -456,7 +462,7 @@ describe('Config Loader', () => {
   describe('Real-World Scenarios', () => {
     test('loads complex multi-flow setup', () => {
       const complexConfig = {
-        version: 3,
+        version: 4,
         variables: {
           CURRENCY: 'USD',
         },
@@ -467,13 +473,17 @@ describe('Config Loader', () => {
         },
         flows: {
           web_production: {
-            web: {},
-            bundle: {
-              packages: {
-                '@walkeros/collector': { imports: ['startFlow'] },
-                '@walkeros/web-source-browser': { imports: ['sourceBrowser'] },
-                '@walkeros/web-destination-gtag': {
-                  imports: ['destinationGtag'],
+            config: {
+              platform: 'web',
+              bundle: {
+                packages: {
+                  '@walkeros/collector': { imports: ['startFlow'] },
+                  '@walkeros/web-source-browser': {
+                    imports: ['sourceBrowser'],
+                  },
+                  '@walkeros/web-destination-gtag': {
+                    imports: ['destinationGtag'],
+                  },
                 },
               },
             },
@@ -496,7 +506,6 @@ describe('Config Loader', () => {
             },
             collector: {
               run: true,
-              tagging: 1,
             },
           },
         },
@@ -507,7 +516,7 @@ describe('Config Loader', () => {
         flowName: 'web_production',
       });
 
-      expect(result.flowSettings.web).toBeDefined();
+      expect(result.flowSettings.config?.platform).toBe('web');
       expect(result.flowSettings.sources?.browser?.package).toBe(
         '@walkeros/web-source-browser@2.0.0',
       );
@@ -516,16 +525,19 @@ describe('Config Loader', () => {
       expect(result.buildOptions.output).toBe('./dist/walker.js');
     });
 
-    test('extracts windowCollector and windowElb from web config', () => {
+    test('extracts windowCollector and windowElb from config.settings', () => {
       const config = {
-        version: 3,
+        version: 4,
         flows: {
           default: {
-            web: {
-              windowCollector: 'myCollector',
-              windowElb: 'myElb',
+            config: {
+              platform: 'web',
+              settings: {
+                windowCollector: 'myCollector',
+                windowElb: 'myElb',
+              },
+              bundle: { packages: {} },
             },
-            bundle: { packages: {} },
           },
         },
       };
@@ -534,14 +546,12 @@ describe('Config Loader', () => {
         configPath: '/test/config.json',
       });
 
-      // Web config values should be in flowSettings
-      expect(
-        (result.flowSettings.web as { windowCollector?: string })
-          .windowCollector,
-      ).toBe('myCollector');
-      expect(
-        (result.flowSettings.web as { windowElb?: string }).windowElb,
-      ).toBe('myElb');
+      // Web settings live under config.settings in v4
+      const settings = result.flowSettings.config?.settings as
+        | { windowCollector?: string; windowElb?: string }
+        | undefined;
+      expect(settings?.windowCollector).toBe('myCollector');
+      expect(settings?.windowElb).toBe('myElb');
     });
   });
 });

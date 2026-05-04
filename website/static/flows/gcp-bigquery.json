@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "variables": {
     "GCP_PROJECT_ID": "your-project-id",
     "BQ_DATASET": "walkerOS",
@@ -8,7 +8,6 @@
   },
   "flows": {
     "server": {
-      "server": {},
       "packages": {
         "@walkeros/collector": {},
         "@walkeros/server-source-express": {},
@@ -40,6 +39,9 @@
             }
           }
         }
+      },
+      "config": {
+        "platform": "server"
       }
     }
   }

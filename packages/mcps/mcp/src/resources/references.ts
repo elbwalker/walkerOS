@@ -17,7 +17,7 @@ export function registerReferenceResources(server: McpServer) {
     'walkeros://reference/flow-schema',
     {
       description:
-        'JSON Schema for Flow.Config — the complete flow configuration structure',
+        'JSON Schema for Flow.Json — the complete flow configuration structure',
       mimeType: 'application/json',
     },
     async () => ({
@@ -106,7 +106,7 @@ export function registerReferenceResources(server: McpServer) {
     'walkeros://reference/variables',
     {
       description:
-        'walkerOS variable patterns: $var, $env, $def, $contract, $code, $store substitution',
+        'walkerOS variable patterns: $var, $env, $def, $contract, $code, $store, $secret substitution',
       mimeType: 'application/json',
     },
     async () => ({
@@ -115,13 +115,15 @@ export function registerReferenceResources(server: McpServer) {
           uri: 'walkeros://reference/variables',
           text: JSON.stringify(
             {
+              separatorRule:
+                '`.` for names and paths; `:` for literal values or raw-code payloads.',
               patterns: {
                 '$var.name':
                   'Variable substitution — cascade: step settings > flow settings > config variables',
                 '$env.NAME':
                   'Environment variable — $env.GA_ID reads process.env.GA_ID',
                 '$env.NAME:default':
-                  'Environment variable with fallback — $env.GA_ID:G-DEFAULT',
+                  'Environment variable with fallback — $env.GA_ID:G-DEFAULT (the `:` is the literal default separator)',
                 '$def.name':
                   'Definition reference — reusable config blocks from definitions section',
                 '$def.name.path.deep':
@@ -131,9 +133,11 @@ export function registerReferenceResources(server: McpServer) {
                 '$contract.name.path':
                   'Nested contract access — $contract.ecommerce.product',
                 '$code:(expr)':
-                  'Inline JavaScript — $code:(event) => event.data.price * 100',
-                '$store:storeId':
+                  'Inline JavaScript — $code:(event) => event.data.price * 100 (the `:` carries the raw-code payload)',
+                '$store.storeId':
                   'Store injection in env values — wires runtime store access',
+                '$secret.NAME':
+                  'Secret injection — resolved server-side at deploy/runtime',
               },
               cascade: {
                 priority: [

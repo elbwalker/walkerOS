@@ -6,7 +6,7 @@
  * and drains microtasks until quiescent.
  */
 
-interface PendingTimer {
+export interface PendingTimer {
   id: number;
   callback: (...args: unknown[]) => void;
   delay: number;
@@ -22,6 +22,12 @@ export interface TimerControl {
   countPending(): number;
   /** Restore original timer functions */
   restore(): void;
+  /**
+   * The shared pending-timer map. Exposed so an external drain pump
+   * (`async-drain-pump.ts`) can fire timers while `fn` is awaiting.
+   * Mutating this map outside the pump is unsupported.
+   */
+  pending: Map<number, PendingTimer>;
 }
 
 export interface TimerInterceptionOptions {
@@ -30,7 +36,7 @@ export interface TimerInterceptionOptions {
 }
 
 interface SavedTimers {
-  target: Record<string, unknown>;
+  target: typeof globalThis;
   setTimeout: unknown;
   clearTimeout: unknown;
   setInterval: unknown;
@@ -47,53 +53,73 @@ export function installTimerInterception(
   const realSetTimeout = globalThis.setTimeout.bind(globalThis);
   const targets: SavedTimers[] = [];
 
-  function patchTarget(target: Record<string, unknown>): void {
+  // Patches setTimeout/clearTimeout/setInterval/clearInterval on the target.
+  // Uses Reflect to read/write properties dynamically. JSDOM's
+  // `Window & typeof globalThis` is assignable to `typeof globalThis`.
+  function patchTarget(target: typeof globalThis): void {
     targets.push({
       target,
-      setTimeout: target.setTimeout,
-      clearTimeout: target.clearTimeout,
-      setInterval: target.setInterval,
-      clearInterval: target.clearInterval,
+      setTimeout: Reflect.get(target, 'setTimeout'),
+      clearTimeout: Reflect.get(target, 'clearTimeout'),
+      setInterval: Reflect.get(target, 'setInterval'),
+      clearInterval: Reflect.get(target, 'clearInterval'),
     });
 
-    target.setTimeout = (
+    const trackedSetTimeout = (
       callback: (...args: unknown[]) => void,
       delay?: number,
       ...args: unknown[]
     ): number => {
       if (typeof callback !== 'function') return 0;
       const id = nextId++;
-      pending.set(id, { id, callback, delay: delay ?? 0, type: 'timeout', args, cleared: false });
+      pending.set(id, {
+        id,
+        callback,
+        delay: delay ?? 0,
+        type: 'timeout',
+        args,
+        cleared: false,
+      });
       return id;
     };
 
-    target.clearTimeout = (id?: unknown): void => {
+    const trackedClear = (id?: unknown): void => {
       if (id == null) return;
       const numId = typeof id === 'number' ? id : Number(id);
       const entry = pending.get(numId);
       if (entry) entry.cleared = true;
     };
 
-    target.setInterval = (
+    const trackedSetInterval = (
       callback: (...args: unknown[]) => void,
       delay?: number,
       ...args: unknown[]
     ): number => {
       if (typeof callback !== 'function') return 0;
       const id = nextId++;
-      pending.set(id, { id, callback, delay: delay ?? 0, type: 'interval', args, cleared: false });
+      pending.set(id, {
+        id,
+        callback,
+        delay: delay ?? 0,
+        type: 'interval',
+        args,
+        cleared: false,
+      });
       return id;
     };
 
-    target.clearInterval = target.clearTimeout;
+    Reflect.set(target, 'setTimeout', trackedSetTimeout);
+    Reflect.set(target, 'clearTimeout', trackedClear);
+    Reflect.set(target, 'setInterval', trackedSetInterval);
+    Reflect.set(target, 'clearInterval', trackedClear);
   }
 
   // Patch globalThis (bare setTimeout in ESM bundles)
-  patchTarget(globalThis as unknown as Record<string, unknown>);
+  patchTarget(globalThis);
 
   // Patch JSDOM window if provided and distinct
-  if (options.domWindow && (options.domWindow as unknown) !== globalThis) {
-    patchTarget(options.domWindow as unknown as Record<string, unknown>);
+  if (options.domWindow && options.domWindow !== globalThis) {
+    patchTarget(options.domWindow);
   }
 
   // Yield to real event loop — drains ALL pending microtasks
@@ -158,13 +184,13 @@ export function installTimerInterception(
 
   function restore(): void {
     for (const saved of targets) {
-      saved.target.setTimeout = saved.setTimeout;
-      saved.target.clearTimeout = saved.clearTimeout;
-      saved.target.setInterval = saved.setInterval;
-      saved.target.clearInterval = saved.clearInterval;
+      Reflect.set(saved.target, 'setTimeout', saved.setTimeout);
+      Reflect.set(saved.target, 'clearTimeout', saved.clearTimeout);
+      Reflect.set(saved.target, 'setInterval', saved.setInterval);
+      Reflect.set(saved.target, 'clearInterval', saved.clearInterval);
     }
     pending.clear();
   }
 
-  return { flush, countPending, restore };
+  return { flush, countPending, restore, pending };
 }

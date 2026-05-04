@@ -6,10 +6,10 @@ import { validateFlow } from '../../../commands/validate/validators/flow.js';
 describe('validateFlow', () => {
   it('passes valid flow configuration', () => {
     const result = validateFlow({
-      version: 3,
+      version: 4,
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           sources: {
             browser: {
               package: '@walkeros/web-source-browser',
@@ -32,7 +32,7 @@ describe('validateFlow', () => {
     const result = validateFlow({
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
         },
       },
     });
@@ -49,7 +49,7 @@ describe('validateFlow', () => {
 
   it('fails when flows object is empty', () => {
     const result = validateFlow({
-      version: 3,
+      version: 4,
       flows: {},
     });
 
@@ -63,13 +63,13 @@ describe('validateFlow', () => {
 
   it('extracts flow names in details', () => {
     const result = validateFlow({
-      version: 3,
+      version: 4,
       flows: {
         production: {
-          web: {},
+          config: { platform: 'web' },
         },
         staging: {
-          web: {},
+          config: { platform: 'web' },
         },
       },
     });
@@ -81,14 +81,14 @@ describe('validateFlow', () => {
   it('validates specific flow when flow option provided', () => {
     const result = validateFlow(
       {
-        version: 3,
+        version: 4,
         flows: {
           production: {
-            web: {},
+            config: { platform: 'web' },
             sources: { browser: { package: '@walkeros/web-source-browser' } },
           },
           staging: {
-            web: {},
+            config: { platform: 'web' },
           },
         },
       },
@@ -102,10 +102,10 @@ describe('validateFlow', () => {
   it('fails when specified flow does not exist', () => {
     const result = validateFlow(
       {
-        version: 3,
+        version: 4,
         flows: {
           production: {
-            web: {},
+            config: { platform: 'web' },
           },
         },
       },
@@ -124,7 +124,7 @@ describe('validateFlow', () => {
   it('maps core schema errors to CLI ValidationError shape', () => {
     // Missing version triggers core schema errors
     const result = validateFlow({
-      flows: { default: { web: {} } },
+      flows: { default: { config: { platform: 'web' } } },
     });
 
     expect(result.valid).toBe(false);
@@ -139,11 +139,11 @@ describe('validateFlow', () => {
 
   it('warns for dangling $var. references', () => {
     const result = validateFlow({
-      version: 3,
+      version: 4,
       variables: { gaId: 'G-XXX' },
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           destinations: {
             ga4: {
               package: '@walkeros/web-destination-gtag',
@@ -160,13 +160,54 @@ describe('validateFlow', () => {
     ).toBe(true);
   });
 
+  it('warns (not errors) for unresolved $flow.X.url references in soft mode', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        server: { config: { platform: 'server' } }, // no url
+        web: {
+          config: { platform: 'web' },
+          destinations: {
+            api: { config: { settings: { url: '$flow.server.url' } } },
+          },
+        },
+      },
+    });
+
+    // Without --strict the validator stays valid; warnings are surfaced.
+    expect(result.valid).toBe(true);
+    expect(
+      result.warnings.some((w) => /\$flow\.server\.url/.test(w.message)),
+    ).toBe(true);
+  });
+
+  it('errors on cyclic $flow references even in soft mode', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'web', settings: { x: '$flow.b.settings.y' } },
+        },
+        b: {
+          config: {
+            platform: 'server',
+            settings: { y: '$flow.a.settings.x' },
+          },
+        },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.code === 'FLOW_CYCLE')).toBe(true);
+  });
+
   it('does not warn for valid $var. references', () => {
     const result = validateFlow({
-      version: 3,
+      version: 4,
       variables: { gaId: 'G-XXX' },
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           destinations: {
             ga4: {
               config: { settings: { id: '$var.gaId' } },
@@ -183,16 +224,18 @@ describe('validateFlow', () => {
 
   it('validates a realistic production config with context extraction', () => {
     const result = validateFlow({
-      version: 3,
+      version: 4,
       variables: { gaId: 'G-12345', debug: false },
       definitions: { cleanUrl: { condition: true } },
       flows: {
         production: {
-          web: {},
-          bundle: {
-            packages: {
-              '@walkeros/web-source-browser': { version: '1.0.0' },
-              '@walkeros/web-destination-gtag': {},
+          config: {
+            platform: 'web',
+            bundle: {
+              packages: {
+                '@walkeros/web-source-browser': { version: '1.0.0' },
+                '@walkeros/web-destination-gtag': {},
+              },
             },
           },
           sources: {
@@ -233,13 +276,15 @@ describe('validateFlow', () => {
 
   it('warns about packages without version', () => {
     const result = validateFlow({
-      version: 3,
+      version: 4,
       flows: {
         default: {
-          web: {},
-          bundle: {
-            packages: {
-              '@walkeros/collector': {},
+          config: {
+            platform: 'web',
+            bundle: {
+              packages: {
+                '@walkeros/collector': {},
+              },
             },
           },
         },
@@ -248,7 +293,7 @@ describe('validateFlow', () => {
 
     expect(result.warnings).toContainEqual(
       expect.objectContaining({
-        path: 'flows.default.bundle.packages.@walkeros/collector',
+        path: 'flows.default.config.bundle.packages.@walkeros/collector',
         suggestion: expect.stringContaining('version'),
       }),
     );
@@ -258,10 +303,10 @@ describe('validateFlow', () => {
 
   describe('deep validation (cross-step examples)', () => {
     const baseSetup = (overrides: Record<string, unknown> = {}) => ({
-      version: 3,
+      version: 4,
       flows: {
         default: {
-          web: {},
+          config: { platform: 'web' },
           ...overrides,
         },
       },
@@ -452,10 +497,10 @@ describe('validateFlow', () => {
     it('runs deep checks for specific flow when --flow provided', () => {
       const result = validateFlow(
         {
-          version: 3,
+          version: 4,
           flows: {
             web: {
-              web: {},
+              config: { platform: 'web' },
               destinations: {
                 gtag: {
                   package: '@walkeros/web-destination-gtag',
@@ -468,7 +513,7 @@ describe('validateFlow', () => {
                 },
               },
             },
-            server: { server: {} },
+            server: { config: { platform: 'server' } },
           },
         },
         { flow: 'web' },
@@ -479,18 +524,22 @@ describe('validateFlow', () => {
 
     it('warns about contract compliance', () => {
       const result = validateFlow({
-        version: 3,
+        version: 4,
         contract: {
-          page: {
-            view: {
-              type: 'object',
-              properties: { title: { type: 'string' } },
+          default: {
+            events: {
+              page: {
+                view: {
+                  type: 'object',
+                  properties: { title: { type: 'string' } },
+                },
+              },
             },
           },
         },
         flows: {
           default: {
-            web: {},
+            config: { platform: 'web' },
             destinations: {
               gtag: {
                 package: '@walkeros/web-destination-gtag',

@@ -48,18 +48,18 @@ npm install @walkeros/server-destination-customerio
 
 Per-event mapping settings control which Customer.io methods are called:
 
-| Setting        | Effect                                         | Use with `skip: true` |
-| -------------- | ---------------------------------------------- | --------------------- |
-| `identify`     | Calls `identify()` with attributes             | Yes, for login events |
-| `page`         | Calls `trackPageView()` with url               | Yes, for page views   |
-| `destroy`      | Permanently deletes person                     | Yes                   |
-| `suppress`     | Stops messaging (keeps data)                   | Yes                   |
-| `unsuppress`   | Resumes messaging                              | Yes                   |
-| `addDevice`    | Registers push device                          | Yes                   |
-| `deleteDevice` | Removes push device                            | Yes                   |
-| `merge`        | Merges duplicate profiles                      | Yes                   |
-| `sendEmail`    | Sends transactional email (requires appApiKey) | Yes                   |
-| `sendPush`     | Sends transactional push (requires appApiKey)  | Yes                   |
+| Setting        | Effect                                         | Use with `silent: true` |
+| -------------- | ---------------------------------------------- | ----------------------- |
+| `identify`     | Calls `identify()` with attributes             | Yes, for login events   |
+| `page`         | Calls `trackPageView()` with url               | Yes, for page views     |
+| `destroy`      | Permanently deletes person                     | Yes                     |
+| `suppress`     | Stops messaging (keeps data)                   | Yes                     |
+| `unsuppress`   | Resumes messaging                              | Yes                     |
+| `addDevice`    | Registers push device                          | Yes                     |
+| `deleteDevice` | Removes push device                            | Yes                     |
+| `merge`        | Merges duplicate profiles                      | Yes                     |
+| `sendEmail`    | Sends transactional email (requires appApiKey) | Yes                     |
+| `sendPush`     | Sends transactional push (requires appApiKey)  | Yes                     |
 
 ## Identity
 

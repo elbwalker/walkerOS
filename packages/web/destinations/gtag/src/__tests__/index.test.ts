@@ -27,13 +27,15 @@ import { initGTM, pushGTMEvent } from '../gtm';
 describe('Unified Gtag Destination', () => {
   const mockEnv = examples.env.push;
   const mockCollector = {} as Collector.Instance;
+  const contextId = 'gtag';
 
   // Create a mock logger that actually throws
   const createThrowingLogger = () => {
     const logger = createMockLogger();
-    logger.throw = (message: string) => {
-      throw new Error(message);
-    };
+    logger.throw = jest.fn((message: string | Error): never => {
+      const msg = message instanceof Error ? message.message : message;
+      throw new Error(msg);
+    });
     return logger;
   };
   const mockLogger = createThrowingLogger();
@@ -62,6 +64,7 @@ describe('Unified Gtag Destination', () => {
 
       expect(() =>
         destinationGtag.init!({
+          id: contextId,
           config,
           env: mockEnv,
           collector: mockCollector,
@@ -77,6 +80,7 @@ describe('Unified Gtag Destination', () => {
       const config = { settings, loadScript: true };
 
       const result = destinationGtag.init!({
+        id: contextId,
         config,
         env: mockEnv,
         collector: mockCollector,
@@ -101,6 +105,7 @@ describe('Unified Gtag Destination', () => {
       const config = { settings, loadScript: true };
 
       const result = destinationGtag.init!({
+        id: contextId,
         config,
         env: mockEnv,
         collector: mockCollector,
@@ -125,6 +130,7 @@ describe('Unified Gtag Destination', () => {
       const config = { settings, loadScript: true };
 
       const result = destinationGtag.init!({
+        id: contextId,
         config,
         env: mockEnv,
         collector: mockCollector,
@@ -151,6 +157,7 @@ describe('Unified Gtag Destination', () => {
       const config = { settings, loadScript: true };
 
       const result = destinationGtag.init!({
+        id: contextId,
         config,
         env: mockEnv,
         collector: mockCollector,
@@ -185,6 +192,7 @@ describe('Unified Gtag Destination', () => {
       const config = { settings, loadScript: false };
 
       destinationGtag.init!({
+        id: contextId,
         config,
         env: mockEnv,
         collector: mockCollector,
@@ -385,7 +393,7 @@ describe('Unified Gtag Destination', () => {
           mockEvent,
           createMockContext({
             config,
-            mapping: {},
+            rule: {},
             data: mockData,
             env: mockEnv,
             logger: mockLogger,
@@ -445,6 +453,7 @@ describe('Unified Gtag Destination', () => {
         // Call walker consent command
         destination.on?.('consent', {
           collector: mockCollector,
+          id: contextId,
           config: destination.config,
           data: { marketing: true, functional: false },
           env: mockEnvWithGtag,
@@ -483,6 +492,7 @@ describe('Unified Gtag Destination', () => {
 
         // Call walker consent command with denied consent
         destination.on?.('consent', {
+          id: contextId,
           collector: mockCollector,
           config: destination.config,
           data: { marketing: false, functional: false },
@@ -532,6 +542,7 @@ describe('Unified Gtag Destination', () => {
 
         // First consent call (should use 'default' then 'update')
         destination.on?.('consent', {
+          id: contextId,
           collector: mockCollector,
           config: destination.config,
           data: { marketing: false, functional: false },
@@ -558,6 +569,7 @@ describe('Unified Gtag Destination', () => {
 
         // Second consent call (should only use 'update')
         destination.on?.('consent', {
+          id: contextId,
           collector: mockCollector,
           config: destination.config,
           data: { marketing: false, functional: true },
@@ -593,6 +605,7 @@ describe('Unified Gtag Destination', () => {
 
         // Call walker consent command with granted consent
         destination.on?.('consent', {
+          id: contextId,
           collector: mockCollector,
           config: destination.config,
           data: { marketing: true, functional: true },
@@ -648,6 +661,7 @@ describe('Unified Gtag Destination', () => {
 
         // Call walker consent command
         destination.on?.('consent', {
+          id: contextId,
           collector: mockCollector,
           config: destination.config,
           data: { marketing: true, analytics: false },
@@ -680,6 +694,7 @@ describe('Unified Gtag Destination', () => {
 
         // Call walker consent command with only marketing consent
         destination.on?.('consent', {
+          id: contextId,
           collector: mockCollector,
           config: destination.config,
           data: { marketing: true },
@@ -713,6 +728,7 @@ describe('Unified Gtag Destination', () => {
 
         // Call walker consent command with unknown consent group
         destination.on?.('consent', {
+          id: contextId,
           collector: mockCollector,
           config: destination.config,
           data: { unknown_group: true },
@@ -749,6 +765,7 @@ describe('Unified Gtag Destination', () => {
 
         // Call walker consent command
         destination.on?.('consent', {
+          id: contextId,
           collector: mockCollector,
           config: destination.config,
           data: { marketing: true },

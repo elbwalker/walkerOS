@@ -64,9 +64,10 @@ export const tsvBaerschLog: FileStepExample = {
     data: { title: 'Docs' },
     user: { session: 'sess-1' },
     source: {
-      id: 'https://example.com/docs',
-      type: 'server',
-      previous_id: 'https://example.com/',
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/docs',
+      referrer: 'https://example.com/',
     },
   }),
   settings: {
@@ -76,9 +77,9 @@ export const tsvBaerschLog: FileStepExample = {
       'timestamp',
       'user.session',
       'name',
-      'source.id',
+      'source.url',
       'data.title',
-      'source.previous_id',
+      'source.referrer',
     ],
   },
   out: [

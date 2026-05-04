@@ -121,7 +121,7 @@ describe('flow_push tool', () => {
   });
 
   it('passes flow and platform parameters', async () => {
-    mockPush.mockResolvedValue({ success: true });
+    mockPush.mockResolvedValue({ success: true, duration: 0 });
 
     const tool = server.getTool('flow_push');
     await tool.handler({

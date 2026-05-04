@@ -27,11 +27,11 @@ const ANNOTATION_KEYS = new Set([
  */
 export function resolveContracts(
   contracts: Flow.Contract,
-): Record<string, Flow.ContractEntry> {
-  const resolved: Record<string, Flow.ContractEntry> = {};
+): Record<string, Flow.ContractRule> {
+  const resolved: Record<string, Flow.ContractRule> = {};
   const resolving = new Set<string>(); // Circular detection
 
-  function resolve(name: string): Flow.ContractEntry {
+  function resolve(name: string): Flow.ContractRule {
     if (resolved[name]) return resolved[name];
 
     if (resolving.has(name)) {
@@ -47,7 +47,7 @@ export function resolveContracts(
 
     resolving.add(name);
 
-    let result: Flow.ContractEntry = {};
+    let result: Flow.ContractRule = {};
 
     // 1. Resolve parent first (if extends)
     if (entry.extends) {
@@ -97,15 +97,12 @@ export function resolveContracts(
  * Metadata: child wins for scalars.
  */
 function mergeContractEntries(
-  parent: Flow.ContractEntry,
-  child: Flow.ContractEntry,
-): Flow.ContractEntry {
-  const result: Flow.ContractEntry = {};
+  parent: Flow.ContractRule,
+  child: Flow.ContractRule,
+): Flow.ContractRule {
+  const result: Flow.ContractRule = {};
 
   // Merge metadata (child wins)
-  if (parent.tagging !== undefined || child.tagging !== undefined) {
-    result.tagging = child.tagging ?? parent.tagging;
-  }
   if (parent.description !== undefined || child.description !== undefined) {
     result.description = child.description ?? parent.description;
   }

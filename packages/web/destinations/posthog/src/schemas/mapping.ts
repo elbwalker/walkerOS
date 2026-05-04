@@ -16,7 +16,7 @@ export const MappingSchema = z.object({
   reset: z
     .unknown()
     .describe(
-      'Logout trigger. Resolves to a truthy value → posthog.reset() (clears distinctId and regenerates an anonymous one). Typically used with skip: true on a user logout rule.',
+      'Logout trigger. Resolves to a truthy value → posthog.reset() (clears distinctId and regenerates an anonymous one). Typically used with silent: true on a user logout rule.',
     )
     .optional(),
 });

@@ -1,11 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {
-        "windowCollector": "collector",
-        "windowElb": "elb"
-      },
       "sources": {
         "demo": {
           "package": "@walkeros/source-demo",
@@ -58,19 +54,26 @@
           "language": "en"
         }
       },
-      "bundle": {
-        "packages": {
-          "@walkeros/collector": {
-            "imports": ["startFlow"]
-          },
-          "@walkeros/source-demo": {
-            "imports": ["sourceDemo"]
-          },
-          "@walkeros/destination-demo": {
-            "imports": ["destinationDemo"]
-          },
-          "@walkeros/web-destination-api": {
-            "imports": ["destinationAPI"]
+      "config": {
+        "platform": "web",
+        "settings": {
+          "windowCollector": "collector",
+          "windowElb": "elb"
+        },
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {
+              "imports": ["startFlow"]
+            },
+            "@walkeros/source-demo": {
+              "imports": ["sourceDemo"]
+            },
+            "@walkeros/destination-demo": {
+              "imports": ["destinationDemo"]
+            },
+            "@walkeros/web-destination-api": {
+              "imports": ["destinationAPI"]
+            }
           }
         }
       }

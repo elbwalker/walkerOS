@@ -4,8 +4,6 @@ import {
   RequiredNumber,
   Identifier,
   Timestamp,
-  Counter,
-  TaggingVersion,
 } from './primitives';
 
 /**
@@ -178,35 +176,39 @@ export const UserSchema = PropertiesSchema.and(
   .describe('User identification and properties');
 
 /**
- * Version - Walker version information
- * Tracks source implementation and tagging version
- */
-export const VersionSchema = PropertiesSchema.and(
-  z.object({
-    source: RequiredString.describe(
-      'Walker implementation version (e.g., "2.0.0")',
-    ),
-    tagging: TaggingVersion,
-  }),
-)
-  .meta({
-    id: 'WalkerOSVersion',
-    title: 'WalkerOS.Version',
-    description: 'Walker version information (source + tagging).',
-  })
-  .describe('Walker version information');
-
-/**
- * Source - Event source information
- * Identifies where the event originated
+ * Source - Event source information (v4)
+ * Identifies where the event originated. The `type` field is the source kind
+ * (browser, dataLayer, gtag, ...). All other fields are optional since each
+ * source kind augments this differently via `SourceMap`.
  */
 export const SourceSchema = PropertiesSchema.and(
   z.object({
-    type: SourceTypeSchema.describe('Source type identifier'),
-    id: RequiredString.describe('Source identifier (typically URL on web)'),
-    previous_id: RequiredString.describe(
-      'Previous source identifier (typically referrer on web)',
-    ),
+    type: z.string().describe('Source kind (browser, dataLayer, gtag, ...)'),
+    platform: z
+      .string()
+      .optional()
+      .describe(
+        'Runtime platform (web, server, app, ios, android, terminal, ...)',
+      ),
+    version: z
+      .string()
+      .optional()
+      .describe('Deployment version of the source emitter'),
+    schema: z
+      .string()
+      .optional()
+      .describe('Event model spec version (collector defaults to "4")'),
+    count: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional()
+      .describe('Emission sequence per run'),
+    trace: z.string().optional().describe('W3C traceparent full string'),
+    url: z.string().optional(),
+    referrer: z.string().optional(),
+    tool: z.string().optional(),
+    command: z.string().optional(),
   }),
 )
   .meta({
@@ -226,8 +228,13 @@ export const EntitySchema: z.ZodTypeAny = z
     z.object({
       entity: z.string().describe('Entity name'),
       data: PropertiesSchema.describe('Entity-specific properties'),
-      nested: z.array(EntitySchema).describe('Nested child entities'),
-      context: OrderedPropertiesSchema.describe('Entity context data'),
+      nested: z
+        .array(EntitySchema)
+        .optional()
+        .describe('Nested child entities'),
+      context: OrderedPropertiesSchema.optional().describe(
+        'Entity context data',
+      ),
     }),
   )
   .meta({
@@ -305,17 +312,14 @@ export const EventSchema = z
     consent: ConsentSchema.describe('Consent states at event time'),
 
     // System-generated fields
-    id: Identifier.describe('Unique event identifier (timestamp-based)'),
+    id: Identifier.describe('W3C span_id, 16 lowercase hex characters'),
     trigger: RequiredString.describe('Event trigger identifier'),
     entity: RequiredString.describe('Parsed entity from event name'),
     action: RequiredString.describe('Parsed action from event name'),
     timestamp: Timestamp.describe('Unix timestamp in milliseconds since epoch'),
     timing: RequiredNumber.describe('Event processing timing information'),
-    group: RequiredString.describe('Event grouping identifier'),
-    count: Counter.describe('Event count in session'),
 
-    // Version & source tracking
-    version: VersionSchema.describe('Walker version information'),
+    // Source tracking (event-model spec version moved to source.schema)
     source: SourceSchema.describe('Event source information'),
   })
   .meta({

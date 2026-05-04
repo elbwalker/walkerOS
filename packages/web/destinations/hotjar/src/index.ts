@@ -36,7 +36,7 @@ export const destinationHotjar: Destination = {
     return config;
   },
 
-  async push(event, { config, rule, env }) {
+  async push(event, { config, rule, env, collector }) {
     const hotjar = getHotjar(env as Env | undefined);
     const settings = (config.settings || {}) as Partial<Settings>;
     const mappingSettings = (rule?.settings || {}) as Mapping;
@@ -46,7 +46,9 @@ export const destinationHotjar: Destination = {
     //    are associated with the right user.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     if (identifyMapping !== undefined) {
-      const resolved = await getMappingValue(event, identifyMapping);
+      const resolved = await getMappingValue(event, identifyMapping, {
+        collector,
+      });
       if (isObject(resolved)) {
         const { userId, ...attributes } = resolved as Record<string, unknown>;
         if (isString(userId) && userId) {
@@ -71,14 +73,15 @@ export const destinationHotjar: Destination = {
       const resolved = await getMappingValue(
         event,
         mappingSettings.stateChange,
+        { collector },
       );
       if (isString(resolved) && resolved) {
         hotjar.stateChange(resolved);
       }
     }
 
-    // 3. Default event forwarding -- unless rule.skip is set
-    if (rule?.skip !== true) {
+    // 3. Default event forwarding -- unless rule.silent is set
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       hotjar.event(eventName);
     }

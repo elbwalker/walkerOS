@@ -36,7 +36,7 @@ function buildEventType(name: string): EventType {
 
 export const push: PushFn = async function (
   event,
-  { config, data, env, logger },
+  { config, data, env, logger, collector },
 ) {
   const {
     accessToken,
@@ -50,10 +50,10 @@ export const push: PushFn = async function (
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data
-    ? await getMappingValue(event, config.data)
+    ? await getMappingValue(event, config.data, { collector })
     : {};
   const userDataCustom = user_data
-    ? await getMappingValue(event, { map: user_data })
+    ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
 
   // Merge user data from config.data, settings.user_data, and event mapping

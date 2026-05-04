@@ -4,7 +4,7 @@ export const MappingSchema = z.object({
   identify: z
     .unknown()
     .describe(
-      'Per-event identify mapping. Resolves to profile attributes for createOrUpdateProfile(). Use with rule-level skip: true on login/signup events.',
+      'Per-event identify mapping. Resolves to profile attributes for createOrUpdateProfile(). Use with rule-level silent: true on login/signup events.',
     )
     .optional(),
   value: z

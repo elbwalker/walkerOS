@@ -90,7 +90,7 @@ Add to your `flow.json`:
 
 ## Credentials
 
-Use `$env.` references in Flow.Config to avoid hardcoding secrets:
+Use `$env.` references in your flow config to avoid hardcoding secrets:
 
 <CodeSnippet
   code={`"accessKeyId": "$env.S3_ACCESS_KEY",
@@ -124,7 +124,7 @@ The primary use case is serving static files via the file transformer. This is t
     "file": {
       "package": "@walkeros/server-transformer-file",
       "config": { "settings": { "prefix": "/static" } },
-      "env": { "store": "$store:assets" }
+      "env": { "store": "$store.assets" }
     }
   }
 }`}

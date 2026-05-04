@@ -29,9 +29,7 @@ describe('Destination API', () => {
 
     destination = jest.requireActual('.').default;
     event = createEvent();
-    await startFlow({
-      tagging: 2,
-    });
+    await startFlow();
   });
 
   test('push', () => {

@@ -1,5 +1,5 @@
-import type { Hooks, Logger } from '../types';
 import { useHooks } from '../useHooks';
+import { createMockHooks, createMockLogger } from './helpers/mocks';
 
 describe('useHooks', () => {
   let warnSpy: jest.SpyInstance;
@@ -24,9 +24,7 @@ describe('useHooks', () => {
     const preHook = jest.fn(
       ({ fn }: { fn: (x: number) => number }, x: number) => fn(x + 10),
     );
-    const wrapped = useHooks(fn, 'Test', {
-      preTest: preHook,
-    } as unknown as Hooks.Functions);
+    const wrapped = useHooks(fn, 'Test', createMockHooks({ preTest: preHook }));
     expect(wrapped(5)).toBe(30);
     expect(preHook).toHaveBeenCalled();
   });
@@ -39,9 +37,11 @@ describe('useHooks', () => {
         _x: number,
       ) => (result || 0) + 1,
     );
-    const wrapped = useHooks(fn, 'Test', {
-      postTest: postHook,
-    } as unknown as Hooks.Functions);
+    const wrapped = useHooks(
+      fn,
+      'Test',
+      createMockHooks({ postTest: postHook }),
+    );
     expect(wrapped(5)).toBe(11);
     expect(postHook).toHaveBeenCalled();
   });
@@ -51,9 +51,7 @@ describe('useHooks', () => {
     const preHook = jest.fn(() => {
       throw new Error('preHook exploded');
     });
-    const wrapped = useHooks(fn, 'Test', {
-      preTest: preHook,
-    } as unknown as Hooks.Functions);
+    const wrapped = useHooks(fn, 'Test', createMockHooks({ preTest: preHook }));
 
     expect(wrapped(5)).toBe(10);
     expect(fn).toHaveBeenCalledWith(5);
@@ -68,9 +66,11 @@ describe('useHooks', () => {
     const postHook = jest.fn(() => {
       throw new Error('postHook exploded');
     });
-    const wrapped = useHooks(fn, 'Test', {
-      postTest: postHook,
-    } as unknown as Hooks.Functions);
+    const wrapped = useHooks(
+      fn,
+      'Test',
+      createMockHooks({ postTest: postHook }),
+    );
 
     expect(wrapped(5)).toBe(10);
     expect(fn).toHaveBeenCalledWith(5);
@@ -88,10 +88,11 @@ describe('useHooks', () => {
     const postHook = jest.fn(() => {
       throw new Error('post');
     });
-    const wrapped = useHooks(fn, 'Test', {
-      preTest: preHook,
-      postTest: postHook,
-    } as unknown as Hooks.Functions);
+    const wrapped = useHooks(
+      fn,
+      'Test',
+      createMockHooks({ preTest: preHook, postTest: postHook }),
+    );
 
     expect(wrapped(5)).toBe(10);
     expect(warnSpy).toHaveBeenCalledTimes(2);
@@ -102,20 +103,12 @@ describe('useHooks', () => {
     const preHook = jest.fn(() => {
       throw new Error('pre');
     });
-    const mockLogger = {
-      warn: jest.fn(),
-      log: jest.fn(),
-      debug: jest.fn(),
-      error: jest.fn(),
-      throw: jest.fn(),
-      scope: jest.fn(),
-      child: jest.fn(),
-    } as unknown as Logger.Instance;
+    const mockLogger = createMockLogger({ warn: jest.fn() });
 
     const wrapped = useHooks(
       fn,
       'Test',
-      { preTest: preHook } as unknown as Hooks.Functions,
+      createMockHooks({ preTest: preHook }),
       mockLogger,
     );
 

@@ -422,6 +422,21 @@ registered via Monaco's official `addExtraLib` API.
 - Both functions run unconditionally on every Monaco mount from `atoms/code.tsx`
   (`handleBeforeMount`). They are idempotent.
 
+**Recognized reference prefixes (CodeBox IntelliSense):**
+
+- `$var.<name>`: flow/source/destination/transformer variables.
+- `$def.<name>(.<path>)?`: reusable config fragments.
+- `$secret.<NAME>`: secret references; values never enter the editor.
+- `$env.<NAME>(:default)?`: process env vars at bundle time.
+- `$store.<id>`: store instance references.
+- `$contract.<name>(.<path>)?`: contract value references.
+- `$flow.<flowName>(.<path>)?`: cross-flow references; resolves to the named
+  sibling flow's `Flow.Config` block.
+
+The first segment is enumerable from the parsed flow document for `$store`,
+`$contract`, and `$flow`. Right-hand paths after `$flow.<flowName>` rely on the
+JSON-schema-driven hover from `monaco-schema-flow-config.ts`.
+
 **Adding a new runtime global:**
 
 1. Add the declaration inside the `declare global { ... }` block in

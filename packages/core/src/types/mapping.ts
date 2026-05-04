@@ -1,4 +1,4 @@
-import type { Collector, Destination, WalkerOS } from '.';
+import type { Collector, Destination, Logger, WalkerOS } from '.';
 
 /**
  * Shared mapping configuration interface.
@@ -33,7 +33,7 @@ export interface Rule<Settings = unknown> {
   data?: Data; // Mapping of event data
   include?: string[]; // Event sections to flatten into context.data
   ignore?: boolean; // Choose to no process an event when set to true
-  skip?: boolean; // Process settings side effects, but skip destination's default push call
+  silent?: boolean; // Process settings side effects, but suppress the destination's default push call
   name?: string; // Use a custom event name
   policy?: Policy; // Event-level policy applied after config-level policy
 }
@@ -60,26 +60,31 @@ export interface ValueConfig {
   value?: WalkerOS.PropertyType;
 }
 
-export type Condition = (
-  value: WalkerOS.DeepPartialEvent | unknown,
-  mapping?: Value,
-  collector?: Collector.Instance,
-) => WalkerOS.PromiseOrValue<boolean>;
+// Per-event callback context. Distinct from Context.Base (lifecycle-time) because mappings have no config/env of their own.
+export interface Context {
+  event: WalkerOS.DeepPartialEvent;
+  /** The surrounding mapping config: a Value (value-level) or a Rule (rule-level). */
+  mapping: Value | Rule;
+  collector: Collector.Instance;
+  logger: Logger.Instance;
+  consent?: WalkerOS.Consent;
+}
 
 export type Fn = (
-  value: WalkerOS.DeepPartialEvent | unknown,
-  mapping: Value,
-  options: Options,
+  value: unknown,
+  context: Context,
 ) => WalkerOS.PromiseOrValue<WalkerOS.Property | unknown>;
+
+export type Condition = (
+  value: unknown,
+  context: Context,
+) => WalkerOS.PromiseOrValue<boolean>;
+
+export type Validate = (
+  value: unknown,
+  context: Context,
+) => WalkerOS.PromiseOrValue<boolean>;
 
 export type Loop = [Value, Value];
 
 export type Map = { [key: string]: Value };
-
-export interface Options {
-  consent?: WalkerOS.Consent;
-  collector?: Collector.Instance;
-  props?: unknown;
-}
-
-export type Validate = (value?: unknown) => WalkerOS.PromiseOrValue<boolean>;

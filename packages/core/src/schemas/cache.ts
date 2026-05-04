@@ -54,7 +54,7 @@ export const CacheRuleSchema = z
  *
  * Mirrors: types/cache.ts → Cache
  *
- * - store: optional store ID for persistent caching ($store:storeId wiring)
+ * - store: optional store ID for persistent caching ($store.storeId wiring)
  * - rules: at least one CacheRule is required
  */
 export const CacheSchema = z

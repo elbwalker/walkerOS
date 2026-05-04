@@ -1,7 +1,7 @@
 import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv } from '@walkeros/web-core';
 import { getMappingValue, isObject, isString } from '@walkeros/core';
-import type { WalkerOS } from '@walkeros/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import type {
   Destination,
   EventData,
@@ -17,7 +17,7 @@ const PINTEREST_SCRIPT_SRC = 'https://s.pinimg.com/ct/core.js';
 
 /**
  * Install the Pinterest `window.pintrk` queue shim. Mirrors the official
- * snippet — any call made before core.js loads is pushed onto `pintrk.queue`,
+ * snippet - any call made before core.js loads is pushed onto `pintrk.queue`,
  * which the real script processes once it initializes. Idempotent.
  */
 function installPintrkQueue(env?: DestinationWeb.Env): void {
@@ -53,11 +53,13 @@ function addScript(env?: DestinationWeb.Env): void {
 async function resolveIdentify(
   event: WalkerOS.Event,
   mappingValue: unknown,
+  collector: Collector.Instance,
 ): Promise<IdentifyFields | undefined> {
   if (mappingValue === undefined || mappingValue === null) return undefined;
   const resolved = await getMappingValue(
     event,
     mappingValue as Parameters<typeof getMappingValue>[1],
+    { collector },
   );
   if (!isObject(resolved)) return undefined;
   const fields: IdentifyFields = {};
@@ -69,7 +71,7 @@ async function resolveIdentify(
 }
 
 /**
- * Shallow-equal compare two IdentifyFields — used to suppress redundant
+ * Shallow-equal compare two IdentifyFields - used to suppress redundant
  * pintrk('set', ...) calls when the resolved identity has not changed.
  */
 function identifyEqual(a?: IdentifyFields, b?: IdentifyFields): boolean {
@@ -107,26 +109,26 @@ export const destinationPinterest: Destination = {
     return config;
   },
 
-  async push(event, { config, rule, data, env }) {
+  async push(event, { config, rule, data, env, collector }) {
     const settings = (config.settings || {}) as Settings;
     const state = (settings._state ||= { consentGranted: true });
-    if (state.consentGranted === false) return; // Consent revoked — suppress
+    if (state.consentGranted === false) return; // Consent revoked - suppress
 
     const { window } = getEnv(env);
     const pintrk = (window as Window).pintrk as Pintrk;
     if (!pintrk) return;
 
-    // 1. Identity — per-event override falls back to destination-level.
+    // 1. Identity - per-event override falls back to destination-level.
     const identifyMapping =
       (rule?.settings?.identify as unknown) ?? settings.identify;
-    const identify = await resolveIdentify(event, identifyMapping);
+    const identify = await resolveIdentify(event, identifyMapping, collector);
     if (identify && !identifyEqual(identify, state.lastIdentify)) {
       pintrk('set', identify);
       state.lastIdentify = identify;
     }
 
-    // 2. Skip — process identity (above) but suppress the default track.
-    if (rule?.skip === true) return;
+    // 2. Silent - process identity (above) but suppress the default track.
+    if (rule?.silent === true) return;
 
     // 3. Track
     const eventName = isString(rule?.name)
@@ -169,7 +171,7 @@ export const destinationPinterest: Destination = {
         anyDenied = true;
         allGranted = false;
       } else {
-        // undefined / unknown — don't flip
+        // undefined / unknown - don't flip
         allGranted = false;
       }
     }

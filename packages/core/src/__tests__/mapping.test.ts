@@ -1,4 +1,4 @@
-import type { Mapping, WalkerOS, Collector } from '../types';
+import type { Mapping, WalkerOS } from '../types';
 import {
   createEvent,
   getEvent,
@@ -7,6 +7,7 @@ import {
   isObject,
   isString,
 } from '..';
+import { createMockCollector } from './helpers/mocks';
 
 describe('getMappingEvent', () => {
   test('basic', async () => {
@@ -119,30 +120,59 @@ describe('getMappingEvent', () => {
       mappingKey: 'order complete',
     });
   });
+
+  test('rule-level condition receives (event, context)', async () => {
+    const collector = createMockCollector();
+    const mockCondition = jest.fn(() => true);
+    const event = { name: 'order complete' } as WalkerOS.PartialEvent;
+    const mapping: Mapping.Rules = {
+      order: { complete: { condition: mockCondition, name: 'purchase' } },
+    };
+
+    await getMappingEvent(event, mapping, collector);
+
+    expect(mockCondition).toHaveBeenCalledWith(
+      event,
+      expect.objectContaining({
+        event,
+        mapping: expect.objectContaining({ name: 'purchase' }),
+        collector,
+        logger: collector.logger,
+      }),
+    );
+  });
 });
 
 describe('getMappingValue', () => {
   test('string', async () => {
     const event = createEvent();
-    expect(await getMappingValue(event, 'timing')).toBe(event.timing);
-    expect(await getMappingValue(event, 'data')).toBe(event.data);
-    expect(await getMappingValue(event, 'data.string')).toBe(event.data.string);
-    expect(await getMappingValue(event, 'context.dev.0')).toBe(
+    const collector = createMockCollector();
+    expect(await getMappingValue(event, 'timing', { collector })).toBe(
+      event.timing,
+    );
+    expect(await getMappingValue(event, 'data', { collector })).toBe(
+      event.data,
+    );
+    expect(await getMappingValue(event, 'data.string', { collector })).toBe(
+      event.data.string,
+    );
+    expect(await getMappingValue(event, 'context.dev.0', { collector })).toBe(
       event.context.dev![0],
     );
-    expect(await getMappingValue(event, 'globals.lang')).toBe(
+    expect(await getMappingValue(event, 'globals.lang', { collector })).toBe(
       event.globals.lang,
     );
   });
 
   test('nested', async () => {
     const event = createEvent();
-    expect(await getMappingValue(event, 'nested.0.data.is')).toBe(
-      event.nested[0].data.is,
-    );
-    expect(await getMappingValue(event, 'nested.*.data.is')).toStrictEqual([
-      event.nested[0].data.is,
-    ]);
+    const collector = createMockCollector();
+    expect(
+      await getMappingValue(event, 'nested.0.data.is', { collector }),
+    ).toBe(event.nested[0].data.is);
+    expect(
+      await getMappingValue(event, 'nested.*.data.is', { collector }),
+    ).toStrictEqual([event.nested[0].data.is]);
 
     function getNested(data: WalkerOS.Properties) {
       return {
@@ -158,128 +188,194 @@ describe('getMappingValue', () => {
       getNested({ a: 'bar' }),
     ];
     expect(
-      await getMappingValue({ nested } as WalkerOS.Event, {
-        key: 'nested.*.data.a',
-      }),
+      await getMappingValue(
+        { nested } as WalkerOS.Event,
+        {
+          key: 'nested.*.data.a',
+        },
+        { collector },
+      ),
     ).toStrictEqual(['foo', undefined, 'bar']);
   });
 
   test('key default', async () => {
     const event = createEvent();
+    const collector = createMockCollector();
 
     expect(
-      await getMappingValue(event, { key: 'data.string', value: 'static' }),
+      await getMappingValue(
+        event,
+        { key: 'data.string', value: 'static' },
+        { collector },
+      ),
     ).toBe(event.data.string);
 
     expect(
-      await getMappingValue(event, {
-        key: 'does.not.exist',
-        value: 'fallback',
-      }),
+      await getMappingValue(
+        event,
+        {
+          key: 'does.not.exist',
+          value: 'fallback',
+        },
+        { collector },
+      ),
     ).toBe('fallback');
 
-    expect(await getMappingValue(event, { value: 'static' })).toBe('static');
+    expect(
+      await getMappingValue(event, { value: 'static' }, { collector }),
+    ).toBe('static');
   });
 
   test('value', async () => {
-    expect(await getMappingValue({}, { value: 'static' })).toBe('static');
-    expect(await getMappingValue({}, { value: 0 })).toBe(0);
-    expect(await getMappingValue({}, { value: false })).toBe(false);
+    const collector = createMockCollector();
+    expect(await getMappingValue({}, { value: 'static' }, { collector })).toBe(
+      'static',
+    );
+    expect(await getMappingValue({}, { value: 0 }, { collector })).toBe(0);
+    expect(await getMappingValue({}, { value: false }, { collector })).toBe(
+      false,
+    );
   });
 
   test('empty', async () => {
+    const collector = createMockCollector();
     expect(
-      await getMappingValue(createEvent(), {
-        map: {
-          set: { set: [{}] },
-          map: {},
-          loop: [],
+      await getMappingValue(
+        createEvent(),
+        {
+          map: {
+            set: { set: [{}] },
+            map: {},
+            loop: [],
+          },
         },
-      }),
+        { collector },
+      ),
     ).toEqual({ map: undefined, set: [undefined], loop: undefined });
   });
 
   test('false', async () => {
-    expect(await getMappingValue(createEvent(), 'data.array.2')).toBe(false);
+    const collector = createMockCollector();
+    expect(
+      await getMappingValue(createEvent(), 'data.array.2', { collector }),
+    ).toBe(false);
   });
 
   test('fn', async () => {
     const pageView = createEvent({ name: 'page view' });
     const pageClick = createEvent({ name: 'page click' });
+    const collector = createMockCollector();
 
-    const mockFn = jest.fn((event) => {
-      if (event.name === 'page view') return 'foo';
+    const mockFn = jest.fn((value) => {
+      if (isObject(value) && value.name === 'page view') return 'foo';
       return 'bar';
     });
 
-    expect(await getMappingValue(pageView, { fn: mockFn })).toBe('foo');
-    expect(await getMappingValue(pageClick, { fn: mockFn })).toBe('bar');
+    expect(
+      await getMappingValue(
+        pageView,
+        { fn: mockFn },
+        { collector, event: pageView },
+      ),
+    ).toBe('foo');
+    expect(
+      await getMappingValue(
+        pageClick,
+        { fn: mockFn },
+        { collector, event: pageClick },
+      ),
+    ).toBe('bar');
     expect(mockFn).toHaveBeenCalledTimes(2);
 
-    // Props
-    await getMappingValue(pageClick, { fn: mockFn }, { props: 'random' });
-
-    expect(mockFn).toHaveBeenNthCalledWith(
-      3,
-      expect.any(Object),
+    await getMappingValue(
+      pageClick,
       { fn: mockFn },
-      { props: 'random', consent: pageClick.consent },
+      { collector, event: pageClick },
+    );
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        event: pageClick,
+        mapping: { fn: mockFn },
+        collector,
+        logger: collector.logger,
+        consent: pageClick.consent,
+      }),
     );
   });
 
   test('loop', async () => {
     const event = getEvent('order complete');
+    const collector = createMockCollector();
 
     expect(
-      await getMappingValue(event, {
-        loop: [
-          'nested',
-          {
-            condition: (entity) =>
-              isObject(entity) && entity.entity === 'product',
-            key: 'data.name',
-          },
-        ],
-      }),
+      await getMappingValue(
+        event,
+        {
+          loop: [
+            'nested',
+            {
+              condition: (entity) =>
+                isObject(entity) && entity.entity === 'product',
+              key: 'data.name',
+            },
+          ],
+        },
+        { collector },
+      ),
     ).toStrictEqual([event.nested[0].data.name, event.nested[1].data.name]);
 
     expect(
-      await getMappingValue(event, {
-        loop: [
-          'this',
-          {
-            key: 'name',
-          },
-        ],
-      }),
+      await getMappingValue(
+        event,
+        {
+          loop: [
+            'this',
+            {
+              key: 'name',
+            },
+          ],
+        },
+        { collector },
+      ),
     ).toStrictEqual([event.name]);
   });
 
   test('set', async () => {
     const event = getEvent('order complete');
+    const collector = createMockCollector();
 
     expect(
-      await getMappingValue(event, {
-        set: ['name', 'data', { value: 'static' }, { fn: () => 'fn' }],
-      }),
+      await getMappingValue(
+        event,
+        {
+          set: ['name', 'data', { value: 'static' }, { fn: () => 'fn' }],
+        },
+        { collector },
+      ),
     ).toStrictEqual(['order complete', event.data, 'static', 'fn']);
   });
 
   test('map', async () => {
     const event = createEvent();
+    const collector = createMockCollector();
 
     expect(
-      await getMappingValue(event, {
-        map: {
-          foo: 'data.string',
-          bar: { value: 'bar' },
-          data: {
-            map: {
-              recursive: { value: true },
+      await getMappingValue(
+        event,
+        {
+          map: {
+            foo: 'data.string',
+            bar: { value: 'bar' },
+            data: {
+              map: {
+                recursive: { value: true },
+              },
             },
           },
         },
-      }),
+        { collector },
+      ),
     ).toStrictEqual({
       foo: event.data.string,
       bar: 'bar',
@@ -289,35 +385,49 @@ describe('getMappingValue', () => {
 
   test('validate', async () => {
     const event = createEvent();
+    const collector = createMockCollector();
     const mockValidate = jest.fn(isString);
 
     // validation passed
     expect(
-      await getMappingValue(event, {
-        key: 'data.string',
-        validate: mockValidate,
-      }),
+      await getMappingValue(
+        event,
+        {
+          key: 'data.string',
+          validate: mockValidate,
+        },
+        { collector },
+      ),
     ).toBe(event.data.string);
 
     // validation failed
     expect(
-      await getMappingValue(event, {
-        key: 'data.number',
-        validate: mockValidate,
-      }),
+      await getMappingValue(
+        event,
+        {
+          key: 'data.number',
+          validate: mockValidate,
+        },
+        { collector },
+      ),
     ).toBeUndefined();
 
     // Use value as a fallback
     expect(
-      await getMappingValue(event, {
-        key: 'data.number',
-        validate: mockValidate,
-        value: 'fallback',
-      }),
+      await getMappingValue(
+        event,
+        {
+          key: 'data.number',
+          validate: mockValidate,
+          value: 'fallback',
+        },
+        { collector },
+      ),
     ).toBe('fallback');
   });
 
   test('values', async () => {
+    const collector = createMockCollector();
     expect(
       await getMappingValue(
         { arr: [1, 'foo', false] },
@@ -331,16 +441,19 @@ describe('getMappingValue', () => {
             },
           ],
         },
+        { collector },
       ),
     ).toStrictEqual([1, 'foo', false]);
 
-    expect(await getMappingValue('string')).toBeUndefined();
+    expect(
+      await getMappingValue('string', undefined, { collector }),
+    ).toBeUndefined();
   });
 
   test('consent', async () => {
-    const collector = {
+    const collector = createMockCollector({
       consent: { collectorLevel: true },
-    } as unknown as Collector.Instance;
+    });
 
     expect(collector.consent.collectorLevel).toBeTruthy();
 
@@ -352,6 +465,7 @@ describe('getMappingValue', () => {
           key: 'foo',
           consent: { notGranted: true },
         },
+        { collector },
       ),
     ).toBeUndefined();
 
@@ -372,7 +486,7 @@ describe('getMappingValue', () => {
       await getMappingValue(
         { foo: 'bar' },
         { key: 'foo', consent: { optionsLevel: true } },
-        { consent: { optionsLevel: true } },
+        { collector, consent: { optionsLevel: true } },
       ),
     ).toBe('bar');
 
@@ -420,30 +534,40 @@ describe('getMappingValue', () => {
   });
 
   test('condition', async () => {
+    const collector = createMockCollector();
     const mockCondition = jest.fn((event) => {
       return event.name === 'page view';
     });
 
     // Condition met
     expect(
-      await getMappingValue(createEvent({ name: 'page view' }), {
-        key: 'data.string',
-        condition: mockCondition,
-      }),
+      await getMappingValue(
+        createEvent({ name: 'page view' }),
+        {
+          key: 'data.string',
+          condition: mockCondition,
+        },
+        { collector },
+      ),
     ).toEqual(expect.any(String));
 
     // Condition not met
     expect(
-      await getMappingValue(createEvent(), {
-        key: 'data.string',
-        condition: mockCondition,
-        value: 'fallback', // Should not be used
-      }),
+      await getMappingValue(
+        createEvent(),
+        {
+          key: 'data.string',
+          condition: mockCondition,
+          value: 'fallback', // Should not be used
+        },
+        { collector },
+      ),
     ).toBeUndefined();
   });
 
   test('mapping array', async () => {
     const event = createEvent();
+    const collector = createMockCollector();
     const mockFn = jest.fn();
 
     const mappings = [
@@ -456,23 +580,89 @@ describe('getMappingValue', () => {
       { fn: mockFn },
     ];
 
-    expect(await getMappingValue(event, mappings)).toBe(event.data.string);
+    expect(await getMappingValue(event, mappings, { collector })).toBe(
+      event.data.string,
+    );
     expect(mockFn).not.toHaveBeenCalled();
   });
 
+  test('callbacks receive (value, context)', async () => {
+    const event = createEvent({ name: 'page view' });
+    const collector = createMockCollector();
+
+    const mockFn = jest.fn(
+      (value, ctx) => `${String(value)}:${ctx.event.name}`,
+    );
+    await getMappingValue(event, { fn: mockFn }, { collector, event });
+    expect(mockFn).toHaveBeenCalledWith(
+      event,
+      expect.objectContaining({
+        event,
+        mapping: { fn: mockFn },
+        collector,
+        logger: collector.logger,
+      }),
+    );
+
+    const mockCond = jest.fn((value, ctx) => ctx.consent?.functional === true);
+    await getMappingValue(
+      { ...event, consent: { functional: true } },
+      { key: 'data.string', condition: mockCond },
+      { collector, event },
+    );
+    expect(mockCond).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        collector,
+        logger: collector.logger,
+        consent: { functional: true },
+      }),
+    );
+
+    const mockVal = jest.fn((value, ctx) => typeof value === 'string');
+    await getMappingValue(
+      event,
+      { key: 'data.string', validate: mockVal },
+      { collector, event },
+    );
+    expect(mockVal).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        collector,
+        logger: collector.logger,
+        mapping: expect.any(Object),
+      }),
+    );
+  });
+
+  test('throws when context.collector is missing', async () => {
+    await expect(getMappingValue('any', { key: 'data.x' }, {})).rejects.toThrow(
+      'getMappingValue: context.collector is required',
+    );
+  });
+
   test('error functions', async () => {
+    const collector = createMockCollector();
     const mockErrorFn = jest.fn(() => {
       throw new Error('test');
     });
 
     expect(
-      await getMappingValue(createEvent(), { fn: mockErrorFn }),
+      await getMappingValue(createEvent(), { fn: mockErrorFn }, { collector }),
     ).toBeUndefined();
     expect(
-      await getMappingValue(createEvent(), { condition: mockErrorFn }),
+      await getMappingValue(
+        createEvent(),
+        { condition: mockErrorFn },
+        { collector },
+      ),
     ).toBeUndefined();
     expect(
-      await getMappingValue(createEvent(), { validate: mockErrorFn }),
+      await getMappingValue(
+        createEvent(),
+        { validate: mockErrorFn },
+        { collector },
+      ),
     ).toBeUndefined();
   });
 });
@@ -480,9 +670,7 @@ describe('getMappingValue', () => {
 describe('processEventMapping', () => {
   const { processEventMapping } = require('..');
 
-  const mockCollector = {
-    consent: {},
-  } as unknown as Collector.Instance;
+  const mockCollector = createMockCollector({ consent: {} });
 
   test('config-level policy', async () => {
     const event = { name: 'page view', data: { title: 'Home' } };
@@ -751,45 +939,55 @@ describe('processEventMapping', () => {
     expect(result.data).toEqual({ email: 'john@example.com' });
   });
 
-  describe('skip flag', () => {
-    test('returns skip: false when rule has no skip flag', async () => {
+  describe('silent flag', () => {
+    test('returns silent: false when rule has no silent flag', async () => {
       const result = await processEventMapping(
         { name: 'user login', data: {} },
         { mapping: { user: { login: { settings: {} } } } },
         mockCollector,
       );
-      expect(result.skip).toBe(false);
+      expect(result.silent).toBe(false);
       expect(result.ignore).toBe(false);
     });
 
-    test('returns skip: true when rule has skip: true', async () => {
+    test('returns silent: true when rule has silent: true', async () => {
       const result = await processEventMapping(
         { name: 'user login', data: {} },
-        { mapping: { user: { login: { skip: true, settings: {} } } } },
+        { mapping: { user: { login: { silent: true, settings: {} } } } },
         mockCollector,
       );
-      expect(result.skip).toBe(true);
+      expect(result.silent).toBe(true);
       expect(result.ignore).toBe(false);
     });
 
-    test('ignore wins over skip when both set, but skip still reported', async () => {
+    test('ignore wins over silent when both set, but silent still reported', async () => {
       const result = await processEventMapping(
         { name: 'user login', data: {} },
-        { mapping: { user: { login: { ignore: true, skip: true } } } },
+        { mapping: { user: { login: { ignore: true, silent: true } } } },
         mockCollector,
       );
       expect(result.ignore).toBe(true);
-      expect(result.skip).toBe(true);
+      expect(result.silent).toBe(true);
     });
 
-    test('skip: false when no matching rule', async () => {
+    test('silent: false when no matching rule', async () => {
       const result = await processEventMapping(
         { name: 'user login', data: {} },
         { mapping: {} },
         mockCollector,
       );
-      expect(result.skip).toBe(false);
+      expect(result.silent).toBe(false);
       expect(result.ignore).toBe(false);
+    });
+
+    test('exposes silent on processEventMapping result, not skip', async () => {
+      const result = await processEventMapping(
+        { name: 'user login', data: {} },
+        { mapping: { user: { login: { silent: true } } } },
+        mockCollector,
+      );
+      expect('skip' in result).toBe(false);
+      expect(result.silent).toBe(true);
     });
   });
 });

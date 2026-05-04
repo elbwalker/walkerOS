@@ -66,7 +66,7 @@ async function applyPeople(
     );
   }
 
-  // Handle unset — string or string[]
+  // Handle unset - string or string[]
   const unsetVal = resolved.unset;
   if (unsetVal !== undefined) {
     if (isString(unsetVal)) {
@@ -178,7 +178,7 @@ export const push: PushFn = async function (
 
   const mappingSettings = rule?.settings || {};
 
-  // 1. Resolve identity — rule-level override wins over destination-level.
+  // 1. Resolve identity - rule-level override wins over destination-level.
   const identifyMapping = mappingSettings.identify ?? settings.identify;
   let distinctId: string | undefined;
   let alias: string | undefined;
@@ -198,14 +198,14 @@ export const push: PushFn = async function (
     }
   }
 
-  // 2. Alias — fire before people/track (legacy identity merge)
+  // 2. Alias - fire before people/track (legacy identity merge)
   if (distinctId && alias) {
     await wrapCallback((cb) => {
       client.alias(distinctId!, alias!, cb);
     });
   }
 
-  // 3. People operations — require distinct_id
+  // 3. People operations - require distinct_id
   if (distinctId && mappingSettings.people !== undefined) {
     const resolved = await getMappingValue(event, mappingSettings.people, {
       collector,
@@ -219,7 +219,7 @@ export const push: PushFn = async function (
     }
   }
 
-  // 4. Group — attach group keys to event properties
+  // 4. Group - attach group keys to event properties
   let groupProps: Record<string, unknown> = {};
   const groupMapping = mappingSettings.group ?? settings.group;
   if (groupMapping !== undefined) {
@@ -249,8 +249,8 @@ export const push: PushFn = async function (
     }
   }
 
-  // 6. Track/Import — unless the rule opts out via skip
-  if (rule?.skip !== true) {
+  // 6. Track/Import - unless the rule opts out via silent
+  if (rule?.silent !== true) {
     const eventName = isString(rule?.name) ? rule.name : event.name;
     const properties: Record<string, unknown> = {};
 

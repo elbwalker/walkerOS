@@ -13,8 +13,9 @@
     "gclid": "CjwKCAiA_xyz123ABC"
   },
   "source": {
-    "id": "https://example.com/thankyou.html?email=customer@example.com&order=ORD-2024-12345&gclid=CjwKCAiA_xyz123ABC",
-    "type": "web"
+    "type": "browser",
+    "platform": "web",
+    "url": "https://example.com/thankyou.html?email=customer@example.com&order=ORD-2024-12345&gclid=CjwKCAiA_xyz123ABC"
   },
   "nested": [
     {

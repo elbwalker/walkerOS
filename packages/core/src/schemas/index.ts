@@ -74,7 +74,7 @@ export {
   NextRuleSchema,
 } from './matcher';
 
-// Hint schemas (direct export — flat record, no namespace needed)
+// Hint schemas (direct export - flat record, no namespace needed)
 export { CodeSchema, HintSchema, HintsSchema } from './hint';
 export { ClickIdEntrySchema } from './marketing';
 
@@ -97,7 +97,6 @@ export {
   EntitiesSchema,
   ConsentSchema,
   SourceTypeSchema,
-  VersionSchema,
   SourceSchema,
   PropertySchema,
   PropertyTypeSchema,
@@ -137,29 +136,35 @@ export {
 
 // Export commonly used schemas from Flow namespace directly
 export {
+  JsonSchema as FlowJsonSchema,
+  FlowSchema,
   ConfigSchema as FlowConfigSchema,
-  SettingsSchema as FlowSettingsSchema,
   ContractSchema,
   ContractActionsSchema,
   ContractSchemaEntry,
-  SourceReferenceSchema,
-  DestinationReferenceSchema,
-  StoreReferenceSchema,
+  ContractRuleSchema,
+  SourceSchema as FlowSourceSchema,
+  DestinationSchema as FlowDestinationSchema,
+  StoreSchema as FlowStoreSchema,
+  TransformerSchema as FlowTransformerSchema,
+  CodeSchema as FlowCodeSchema,
+  BundleSchema as FlowBundleSchema,
+  BundlePackageSchema as FlowBundlePackageSchema,
   PrimitiveSchema,
   parseConfig,
   safeParseConfig,
-  parseSettings,
-  safeParseSettings,
-  TransformerReferenceSchema,
+  parseFlow,
+  safeParseFlow,
   // JSON Schemas
   configJsonSchema,
-  settingsJsonSchema,
-  sourceReferenceJsonSchema,
-  destinationReferenceJsonSchema,
-  storeReferenceJsonSchema,
-  contractEntryJsonSchema,
+  flowJsonSchema,
+  flowConfigJsonSchema,
+  sourceJsonSchema,
+  destinationJsonSchema,
+  storeJsonSchema,
+  transformerJsonSchema,
+  contractRuleJsonSchema,
   contractJsonSchema,
-  transformerReferenceJsonSchema,
 } from './flow';
 
 // Validation

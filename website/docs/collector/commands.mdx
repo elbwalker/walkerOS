@@ -78,20 +78,40 @@ Add event listeners to the collector. They get called when specific events occur
 like `run` or `consent` changes.
 
 <CodeSnippet
-  code={`elb('walker on', type, options);`}
+  code={`elb('walker on', type, subscription);`}
   language="javascript"
 />
 
-`Options` depend on `type` and can also be an array for multiple listeners at
-once.
+`subscription` depends on `type` and can also be an array for multiple listeners
+at once. Every callback receives `(data, context)` where `context` exposes
+`collector` and `logger`.
+
+### Callback signatures
+
+| Action  | Callback signature                                         |
+| ------- | ---------------------------------------------------------- |
+| consent | `{ [key]: (consent, context) => void \| Promise<void> }`   |
+| ready   | `(_, context) => void \| Promise<void>`                    |
+| run     | `(_, context) => void \| Promise<void>`                    |
+| session | `(session, context) => void \| Promise<void>`              |
+| user    | `(user, context) => void \| Promise<void>`                 |
+| (other) | `(data, context) => void \| Promise<void>`                 |
+
+The `context` object has the same shape for every action:
+
+| Field       | Type                 | Description                              |
+| ----------- | -------------------- | ---------------------------------------- |
+| `collector` | `Collector.Instance` | Active collector, use for `push`/`queue` |
+| `logger`    | `Logger.Instance`    | Use for `info`/`warn`/`error`/`debug`    |
 
 ### run
 
-With each `run`, the on-event will be called with `instance` as a parameter.
+With each `run`, the on-event will be called. Use `context.collector` to access
+the running instance.
 
 <CodeSnippet
-  code={`elb('walker on', 'run', function (instance) {
-console.log('run with', { instance });
+  code={`elb('walker on', 'run', function (_, context) {
+console.log('run with', { instance: context.collector });
 });`}
   language="javascript"
 />
@@ -110,12 +130,13 @@ elb('walker run');
 ### consent
 
 Every time the `consent` changes, the rules-matching function(s) will be called
-with the parameters `instance` and `consent`.
+with `consent` as the first argument and `context` (carrying `collector` and
+`logger`) as the second.
 
 <CodeSnippet
-  code={`function onConsent(instance, consent) {
-console.log('consent with', { instance, consent });
-if (consent.marketing) elb('walker user', readFromStorage());
+  code={`function onConsent(consent, context) {
+console.log('consent with', { consent, instance: context.collector });
+if (consent.marketing) context.collector.push('walker user', readFromStorage());
 }
 
 //   command      type        rule       function

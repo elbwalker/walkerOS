@@ -1,5 +1,6 @@
 import { addScript, initializeGtag, resetLoadedScripts } from '../shared/gtag';
 import { normalizeEventName, getData } from '../shared/mapping';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 // Setup DOM mocks
 const mockScript = { src: '' };

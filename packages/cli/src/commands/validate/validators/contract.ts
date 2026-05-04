@@ -7,7 +7,6 @@ import type {
 const SECTION_KEYS = ['globals', 'context', 'custom', 'user', 'consent'];
 const KNOWN_KEYS = new Set([
   'extends',
-  'tagging',
   'description',
   'events',
   ...SECTION_KEYS,
@@ -58,22 +57,6 @@ export function validateContract(input: unknown): ValidateResult {
           message: `extends references non-existent contract "${obj.extends}"`,
           value: obj.extends,
           code: 'INVALID_EXTENDS',
-        });
-      }
-    }
-
-    // Validate tagging
-    if (obj.tagging !== undefined) {
-      if (
-        typeof obj.tagging !== 'number' ||
-        !Number.isInteger(obj.tagging) ||
-        obj.tagging < 0
-      ) {
-        errors.push({
-          path: `${name}.tagging`,
-          message: 'tagging must be a non-negative integer',
-          value: obj.tagging,
-          code: 'INVALID_TAGGING',
         });
       }
     }

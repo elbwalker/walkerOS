@@ -6,6 +6,20 @@ import { mergeEnvironments } from './destination';
 import { activatePending } from './pending';
 
 /**
+ * Build the unified On.Context passed to every subscription callback.
+ * Mirrors the Mapping.Context posture: collector + scoped logger only.
+ */
+function buildOnContext(
+  collector: Collector.Instance,
+  type: On.Types,
+): On.Context {
+  return {
+    collector,
+    logger: collector.logger.scope('on').scope(String(type)),
+  };
+}
+
+/**
  * Registers a callback for a specific event type.
  *
  * @param collector The walkerOS collector instance.
@@ -15,10 +29,10 @@ import { activatePending } from './pending';
 export async function on(
   collector: Collector.Instance,
   type: On.Types,
-  option: WalkerOS.SingleOrArray<On.Options>,
+  option: WalkerOS.SingleOrArray<On.Subscription>,
 ) {
   const on = collector.on;
-  const onType: Array<On.Options> = on[type] || [];
+  const onType: Array<On.Subscription> = on[type] || [];
   const options = isArray(option) ? option : [option];
 
   options.forEach((option) => {
@@ -73,7 +87,7 @@ export function callDestinationOn(
 function fireCallbacks(
   collector: Collector.Instance,
   type: On.Types,
-  options: Array<On.Options>,
+  options: Array<On.Subscription>,
   config?: unknown,
 ): void {
   // Calculate context data once for all sources and destinations
@@ -111,27 +125,29 @@ function fireCallbacks(
     case Const.Commands.Consent:
       onConsent(
         collector,
-        options as Array<On.ConsentConfig>,
+        options as Array<On.ConsentRule>,
         config as WalkerOS.Consent,
       );
       break;
     case Const.Commands.Ready:
-      onReady(collector, options as Array<On.ReadyConfig>);
+      onReady(collector, options as Array<On.ReadyFn>);
       break;
     case Const.Commands.Run:
-      onRun(collector, options as Array<On.RunConfig>);
+      onRun(collector, options as Array<On.RunFn>);
       break;
     case Const.Commands.Session:
-      onSession(collector, options as Array<On.SessionConfig>);
+      onSession(collector, options as Array<On.SessionFn>);
       break;
-    default:
-      // Generic handler for user, custom, globals, config, and custom events
+    default: {
+      // Generic handler for user, custom, globals, config, and arbitrary events
+      const ctx = buildOnContext(collector, type);
       options.forEach((func) => {
         if (typeof func === 'function') {
-          tryCatch(func as On.GenericFn)(collector, contextData);
+          tryCatch(func as On.GenericFn)(contextData, ctx);
         }
       });
       break;
+    }
   }
 }
 
@@ -146,7 +162,7 @@ function fireCallbacks(
 export async function onApply(
   collector: Collector.Instance,
   type: On.Types,
-  options?: Array<On.Options>,
+  options?: Array<On.Subscription>,
   config?: unknown,
 ): Promise<boolean> {
   // Use the optionally provided options
@@ -223,50 +239,48 @@ export async function onApply(
 
 function onConsent(
   collector: Collector.Instance,
-  onConfig: Array<On.ConsentConfig>,
+  onConfig: Array<On.ConsentRule>,
   currentConsent?: WalkerOS.Consent,
 ): void {
   const consentState = currentConsent || collector.consent;
+  const ctx = buildOnContext(collector, Const.Commands.Consent);
 
-  onConfig.forEach((consentConfig) => {
-    // Collect functions whose consent keys match the rule keys directly
-    // Directly execute functions whose consent keys match the rule keys
-    Object.keys(consentState) // consent keys
-      .filter((consent) => consent in consentConfig) // check for matching rule keys
-      .forEach((consent) => {
-        // Execute the function
-        tryCatch(consentConfig[consent])(collector, consentState);
+  onConfig.forEach((rule) => {
+    // Execute every handler whose consent key is present in the current state.
+    Object.keys(consentState)
+      .filter((key) => key in rule)
+      .forEach((key) => {
+        tryCatch(rule[key])(consentState, ctx);
       });
   });
 }
 
 function onReady(
   collector: Collector.Instance,
-  onConfig: Array<On.ReadyConfig>,
+  onConfig: Array<On.ReadyFn>,
 ): void {
-  if (collector.allowed)
-    onConfig.forEach((func) => {
-      tryCatch(func)(collector);
-    });
+  if (!collector.allowed) return;
+  const ctx = buildOnContext(collector, Const.Commands.Ready);
+  onConfig.forEach((func) => {
+    tryCatch(func)(undefined, ctx);
+  });
 }
 
-function onRun(
-  collector: Collector.Instance,
-  onConfig: Array<On.RunConfig>,
-): void {
-  if (collector.allowed)
-    onConfig.forEach((func) => {
-      tryCatch(func)(collector);
-    });
+function onRun(collector: Collector.Instance, onConfig: Array<On.RunFn>): void {
+  if (!collector.allowed) return;
+  const ctx = buildOnContext(collector, Const.Commands.Run);
+  onConfig.forEach((func) => {
+    tryCatch(func)(undefined, ctx);
+  });
 }
 
 function onSession(
   collector: Collector.Instance,
-  onConfig: Array<On.SessionConfig>,
+  onConfig: Array<On.SessionFn>,
 ): void {
   if (!collector.session) return;
-
+  const ctx = buildOnContext(collector, Const.Commands.Session);
   onConfig.forEach((func) => {
-    tryCatch(func)(collector, collector.session);
+    tryCatch(func)(collector.session, ctx);
   });
 }

@@ -6,14 +6,7 @@ import {
   EventSchema,
 } from './walkeros';
 import { ConfigSchema as MappingConfigSchema } from './mapping';
-import {
-  RequiredBoolean,
-  RequiredNumber,
-  Identifier,
-  Timestamp,
-  Counter,
-  TaggingVersion,
-} from './primitives';
+import { Identifier, Timestamp, Counter } from './primitives';
 import { LoggerConfigSchema } from './logger';
 
 /**
@@ -94,7 +87,6 @@ export const CommandTypeSchema = z
  *
  * Controls collector behavior:
  * - run: Auto-run on initialization
- * - tagging: Version number for event tagging
  * - globalsStatic: Static globals (persist across runs)
  * - sessionStatic: Static session data (persist across runs)
  * - verbose: Enable verbose logging
@@ -107,7 +99,6 @@ export const ConfigSchema = z
       .boolean()
       .describe('Whether to run collector automatically on initialization')
       .optional(),
-    tagging: TaggingVersion,
     globalsStatic: PropertiesSchema.describe(
       'Static global properties that persist across collector runs',
     ),
@@ -127,7 +118,7 @@ export const ConfigSchema = z
     id: 'CollectorConfig',
     title: 'Collector.Config',
     description:
-      'Core collector configuration (tagging, globals/session statics, logger).',
+      'Core collector configuration (globals/session statics, logger).',
   })
   .describe('Core collector configuration');
 
@@ -334,7 +325,6 @@ export const InstanceSchema = z
     allowed: z.boolean().describe('Whether event processing is allowed'),
     config: ConfigSchema.describe('Current collector configuration'),
     consent: ConsentSchema.describe('Current consent state'),
-    count: z.number().describe('Event count (increments with each event)'),
     custom: PropertiesSchema.describe(
       'Custom implementation-specific properties',
     ),
@@ -343,7 +333,6 @@ export const InstanceSchema = z
       'Registered destination instances',
     ),
     globals: PropertiesSchema.describe('Current global properties'),
-    group: z.string().describe('Event grouping identifier'),
     hooks: z.unknown().describe('Lifecycle hook functions'),
     on: z.unknown().describe('Event lifecycle configuration'),
     queue: z.array(EventSchema).describe('Queued events awaiting processing'),
@@ -353,7 +342,6 @@ export const InstanceSchema = z
     session: z.union([SessionDataSchema]).describe('Current session state'),
     timing: z.number().describe('Event processing timing information'),
     user: UserSchema.describe('Current user data'),
-    version: z.string().describe('Walker implementation version'),
   })
   .meta({
     id: 'CollectorInstance',

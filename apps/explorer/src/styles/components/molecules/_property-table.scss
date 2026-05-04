@@ -1,11 +1,12 @@
 // Property Table - Full-width responsive layout
 .elb-property-table__container {
-  margin: 1.5rem 0 0;
   overflow: visible;
   border-radius: var(--radius-box);
   border: 1px solid var(--border-box);
   width: 100%;
   box-sizing: border-box;
+  container-type: inline-size;
+  container-name: elb-property-table;
 }
 
 .elb-property-table__container table {
@@ -113,7 +114,8 @@
 
 .elb-property-table__property-cell {
   width: 20%;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .elb-property-table__type-cell {
@@ -124,7 +126,9 @@
 .elb-property-table__description {
   line-height: 1.4;
   color: var(--color-text);
-  // No width constraint - will fill remaining space
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .elb-property-table__more-button {
@@ -391,5 +395,95 @@
 
   .elb-property-table__modal-body {
     padding: 16px 20px 20px;
+  }
+}
+
+.elb-property-table__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 2rem 1rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+// Card-view fallback for narrow containers (sidebars, helper panels, etc.).
+// Triggered by `container-type: inline-size` on `.elb-property-table__container`.
+// Card-view fallback for narrow containers.
+// Row 1: <name>  <type-chip>
+// Row 2: <description>
+@container elb-property-table (max-width: 420px) {
+  .elb-property-table,
+  .elb-property-table thead,
+  .elb-property-table tbody,
+  .elb-property-table tr {
+    display: block;
+  }
+
+  // Hide the whole thead — no PROPERTY/TYPE/DESCRIPTION/MORE column labels in card view.
+  .elb-property-table thead {
+    display: none;
+  }
+
+  // The "More" (info) button column is redundant in the compact view —
+  // the row already shows name / type / description. Hide it entirely.
+  // Uses higher specificity (td.class) so this `display: none` beats the
+  // generic `.elb-property-table td { display: block }` rule above.
+  .elb-property-table td.elb-property-table__action-cell {
+    display: none;
+  }
+
+  // Each row becomes a 2-column grid with a 2nd row for description.
+  // columns: [name] [type, stretches]
+  .elb-property-table tbody tr {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 8px;
+    row-gap: 4px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-box);
+  }
+
+  .elb-property-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  // Each <td> in card view is a plain block; no grid within the cell and no data-label prefix.
+  .elb-property-table td {
+    display: block;
+    padding: 0;
+    border: none;
+  }
+
+  // No per-cell data-label prefix in the compact layout.
+  .elb-property-table td::before {
+    content: none;
+  }
+
+  // Row-1 cell placement.
+  .elb-property-table__property-cell {
+    grid-row: 1;
+    grid-column: 1;
+    width: auto;
+    align-self: center;
+  }
+
+  .elb-property-table__type-cell {
+    grid-row: 1;
+    grid-column: 2;
+    width: auto;
+    align-self: center;
+    min-width: 0; // allow the type chip to ellipsise if needed
+  }
+
+  // Row-2: description spans both columns.
+  .elb-property-table__description {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+    font-size: calc(var(--font-size-base) - 1px);
   }
 }

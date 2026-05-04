@@ -20,7 +20,7 @@ export const fullEvent: Flow.StepExample = {
   in: getEvent('page view', {
     timestamp: 1700000800,
     data: { title: 'Docs', url: 'https://example.com/docs' },
-    source: { type: 'server', id: '', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     data: 'data',
@@ -45,7 +45,7 @@ export const customHeaders: Flow.StepExample = {
   in: getEvent('form submit', {
     timestamp: 1700000801,
     data: { type: 'contact', email: 'user@example.com' },
-    source: { type: 'server', id: '', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     data: 'data',
@@ -75,7 +75,7 @@ export const customTransform: Flow.StepExample = {
     timestamp: 1700000802,
     data: { id: 'ORD-500', total: 199.99, currency: 'USD' },
     user: { id: 'buyer-42' },
-    source: { type: 'server', id: '', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     data: {

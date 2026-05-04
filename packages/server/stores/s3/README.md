@@ -33,7 +33,7 @@ MinIO, and any S3-compatible provider. Uses
         "file": {
           "package": "@walkeros/server-transformer-file",
           "config": { "settings": { "prefix": "/static" } },
-          "env": { "store": "$store:assets" }
+          "env": { "store": "$store.assets" }
         }
       }
     }

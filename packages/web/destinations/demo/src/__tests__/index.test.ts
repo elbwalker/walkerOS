@@ -34,11 +34,8 @@ describe('Demo Destination', () => {
       user: {},
       nested: [],
       consent: {},
-      group: '123',
-      count: 1,
       timing: 0,
-      source: { type: 'test', id: '1', previous_id: '' },
-      version: { source: 'test', tagging: 1 },
+      source: { type: 'test', platform: 'web' },
     };
 
     destinationDemo.push(
@@ -74,11 +71,8 @@ describe('Demo Destination', () => {
       user: {},
       nested: [],
       consent: {},
-      group: '123',
-      count: 1,
       timing: 0,
-      source: { type: 'test', id: '1', previous_id: '' },
-      version: { source: 'test', tagging: 1 },
+      source: { type: 'test', platform: 'web' },
     };
 
     destinationDemo.push(
@@ -127,11 +121,8 @@ describe('Demo Destination', () => {
       globals: {},
       nested: [],
       consent: {},
-      group: '123',
-      count: 1,
       timing: 0,
-      source: { type: 'test', id: '1', previous_id: '' },
-      version: { source: 'test', tagging: 1 },
+      source: { type: 'test', platform: 'web' },
     };
 
     destinationDemo.push(
@@ -172,11 +163,8 @@ describe('Demo Destination', () => {
       user: {},
       nested: [],
       consent: {},
-      group: '123',
-      count: 1,
       timing: 0,
-      source: { type: 'test', id: '1', previous_id: '' },
-      version: { source: 'test', tagging: 1 },
+      source: { type: 'test', platform: 'web' },
     };
 
     destinationDemo.push(
@@ -210,11 +198,8 @@ describe('Demo Destination', () => {
       user: {},
       nested: [],
       consent: {},
-      group: '123',
-      count: 1,
       timing: 0,
-      source: { type: 'test', id: '1', previous_id: '' },
-      version: { source: 'test', tagging: 1 },
+      source: { type: 'test', platform: 'web' },
     };
 
     destinationDemo.push(

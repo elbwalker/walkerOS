@@ -224,9 +224,11 @@ getId(10); // Returns 10-character string
 
 #### getMappingValue
 
-`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, options?: Mapping.Options): Promise<WalkerOS.Property | undefined>`
+`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, context?: Partial<Mapping.Context>): Promise<WalkerOS.Property | undefined>`
 extracts values from events using
 [mapping configurations](https://www.walkeros.io/docs/destinations/event-mapping).
+The `context` argument requires at least `{ collector }`; `event`, `logger`, and
+`consent` are derived or optional.
 
 ```ts
 // Simple path mapping

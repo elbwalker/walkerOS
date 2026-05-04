@@ -14,7 +14,6 @@ jest.mock('@walkeros/cli/dev', () => ({
 
 jest.mock('@walkeros/cli', () => ({
   bundle: jest.fn(),
-  bundleRemote: jest.fn(),
 }));
 
 jest.mock('@walkeros/core', () => ({
@@ -44,9 +43,8 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import { bundle, bundleRemote } from '@walkeros/cli';
+import { bundle } from '@walkeros/cli';
 const mockBundle = jest.mocked(bundle);
-const mockBundleRemote = jest.mocked(bundleRemote);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -89,7 +87,12 @@ describe('flow_bundle tool', () => {
   });
 
   it('calls CLI bundle with correct options', async () => {
-    const mockResult = { totalSize: 1024, buildTime: 150 };
+    const mockResult = {
+      totalSize: 1024,
+      buildTime: 150,
+      packages: [],
+      treeshakingEffective: false,
+    };
     mockBundle.mockResolvedValue(mockResult);
 
     const tool = server.getTool('flow_bundle');
@@ -111,7 +114,12 @@ describe('flow_bundle tool', () => {
   });
 
   it('defaults stats to true when not provided', async () => {
-    mockBundle.mockResolvedValue({ totalSize: 512 });
+    mockBundle.mockResolvedValue({
+      totalSize: 512,
+      buildTime: 0,
+      packages: [],
+      treeshakingEffective: false,
+    });
 
     const tool = server.getTool('flow_bundle');
     await tool.handler({
@@ -129,7 +137,7 @@ describe('flow_bundle tool', () => {
   });
 
   it('returns warning when bundle returns null', async () => {
-    mockBundle.mockResolvedValue(null);
+    mockBundle.mockResolvedValue(undefined);
 
     const tool = server.getTool('flow_bundle');
     const result = await tool.handler({
@@ -156,28 +164,5 @@ describe('flow_bundle tool', () => {
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBe('Build failed');
-  });
-
-  describe('remote bundling', () => {
-    it('calls bundleRemote when remote is true', async () => {
-      const content = { version: 3, flows: {} };
-      mockBundleRemote.mockResolvedValue({ bundle: 'code', size: 512 });
-
-      const tool = server.getTool('flow_bundle');
-      const result = await tool.handler({ remote: true, content });
-
-      expect(mockBundleRemote).toHaveBeenCalledWith({ content });
-      expect(mockBundle).not.toHaveBeenCalled();
-      expect(result.structuredContent.success).toBe(true);
-      expect(result.structuredContent.bundle).toBe('code');
-    });
-
-    it('returns error when remote is true but content is missing', async () => {
-      const tool = server.getTool('flow_bundle');
-      const result = await tool.handler({ remote: true });
-
-      expect(result.isError).toBe(true);
-      expect(JSON.parse(result.content[0].text).error).toContain('content');
-    });
   });
 });

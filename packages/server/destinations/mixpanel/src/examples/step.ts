@@ -19,8 +19,8 @@ import type { Settings } from '../types';
  * one-time `Mixpanel.init` call (fired during destination init) so only
  * per-event SDK calls are compared.
  *
- * For events marked `skip: true` or `ignore: true`, `track()` does not
- * fire — only the side-effect calls (people/groups/alias) appear.
+ * For events marked `silent: true` or `ignore: true`, `track()` does not
+ * fire - only the side-effect calls (people/groups/alias) appear.
  */
 
 /**
@@ -33,7 +33,7 @@ export type MixpanelStepExample = Flow.StepExample & {
 };
 
 /**
- * Default event forwarding — every walkerOS event becomes
+ * Default event forwarding - every walkerOS event becomes
  * mp.track(event.name, { distinct_id, ...properties }).
  * With default settings.identify resolving user.id.
  */
@@ -53,7 +53,7 @@ export const defaultEventForwarding: MixpanelStepExample = {
 };
 
 /**
- * Track with include — flattens walkerOS `data` section into
+ * Track with include - flattens walkerOS `data` section into
  * prefixed track() properties.
  */
 export const trackWithInclude: MixpanelStepExample = {
@@ -86,7 +86,7 @@ export const trackWithInclude: MixpanelStepExample = {
 };
 
 /**
- * Per-event identify — mapping-level settings.identify overrides
+ * Per-event identify - mapping-level settings.identify overrides
  * destination-level default.
  */
 export const perEventIdentify: MixpanelStepExample = {
@@ -121,7 +121,7 @@ export const perEventIdentify: MixpanelStepExample = {
 };
 
 /**
- * Track with group — group key/id attached as track property.
+ * Track with group - group key/id attached as track property.
  */
 export const trackWithGroup: MixpanelStepExample = {
   title: 'Track with group',
@@ -163,7 +163,7 @@ export const trackWithGroup: MixpanelStepExample = {
 };
 
 /**
- * User login with people operations — skip: true suppresses track,
+ * User login with people operations - silent: true suppresses track,
  * only identity + people side effects fire.
  */
 export const userLoginPeopleSet: MixpanelStepExample = {
@@ -180,7 +180,7 @@ export const userLoginPeopleSet: MixpanelStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -222,7 +222,7 @@ export const userLoginPeopleSet: MixpanelStepExample = {
 };
 
 /**
- * Common people operation vocabulary — exercises set, set_once, increment,
+ * Common people operation vocabulary - exercises set, set_once, increment,
  * append, union, remove, unset. (delete_user is intentionally not covered
  * by this example.)
  */
@@ -241,7 +241,7 @@ export const allPeopleOperations: MixpanelStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -298,7 +298,7 @@ export const allPeopleOperations: MixpanelStepExample = {
 };
 
 /**
- * Group profile operations — settings.groupProfile with set and set_once.
+ * Group profile operations - settings.groupProfile with set and set_once.
  */
 export const companyGroupProfile: MixpanelStepExample = {
   title: 'Group profile',
@@ -315,7 +315,7 @@ export const companyGroupProfile: MixpanelStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       groupProfile: {
         map: {
@@ -349,7 +349,7 @@ export const companyGroupProfile: MixpanelStepExample = {
 };
 
 /**
- * Historical import — useImport: true uses mp.import() instead of mp.track().
+ * Historical import - useImport: true uses mp.import() instead of mp.track().
  */
 export const historicalImport: MixpanelStepExample = {
   title: 'Historical import',
@@ -373,7 +373,7 @@ export const historicalImport: MixpanelStepExample = {
 };
 
 /**
- * Alias — legacy identity merge. Fires mp.alias before track.
+ * Alias - legacy identity merge. Fires mp.alias before track.
  */
 export const aliasBeforeTrack: MixpanelStepExample = {
   title: 'Alias before track',
@@ -403,7 +403,7 @@ export const aliasBeforeTrack: MixpanelStepExample = {
 };
 
 /**
- * Wildcard ignore — the rule matches but does nothing.
+ * Wildcard ignore - the rule matches but does nothing.
  */
 export const wildcardIgnored: MixpanelStepExample = {
   public: false,

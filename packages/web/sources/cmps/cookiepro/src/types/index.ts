@@ -1,5 +1,11 @@
 import type { Source, Elb } from '@walkeros/core';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    cookiepro: { type: 'cookiepro'; platform?: 'web' };
+  }
+}
+
 /**
  * OneTrust global API interface.
  *

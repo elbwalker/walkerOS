@@ -1,4 +1,8 @@
-import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
+import type {
+  Collector,
+  WalkerOS,
+  Mapping as WalkerOSMapping,
+} from '@walkeros/core';
 import { getMappingValue, isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import type {
@@ -21,7 +25,7 @@ import {
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, env, logger },
+  { config, rule, data, env, logger, collector },
 ) {
   const settings = config.settings as Settings;
   const {
@@ -46,20 +50,22 @@ export const push: PushFn = async function (
     event,
     settingsIdentities,
     ruleSettings.userIdentities,
+    collector,
   );
 
   const userAttributes = await resolveUserAttributes(
     event,
     settingsUserAttributes,
     ruleSettings.userAttributes,
+    collector,
   );
 
   const ip = ipSetting
-    ? toStringValue(await getMappingValue(event, ipSetting))
+    ? toStringValue(await getMappingValue(event, ipSetting, { collector }))
     : undefined;
 
   const sourceRequestIdRaw = sourceRequestIdSetting
-    ? await getMappingValue(event, sourceRequestIdSetting)
+    ? await getMappingValue(event, sourceRequestIdSetting, { collector })
     : undefined;
   const sourceRequestId =
     toStringValue(sourceRequestIdRaw) ?? (event.id || undefined);
@@ -79,7 +85,7 @@ export const push: PushFn = async function (
     );
   } else if (eventType === 'commerce_event') {
     const commerceResolved = ruleSettings.commerce
-      ? await getMappingValue(event, ruleSettings.commerce)
+      ? await getMappingValue(event, ruleSettings.commerce, { collector })
       : undefined;
     const commerceData = isObject(commerceResolved)
       ? (commerceResolved as Partial<CommerceEventData>)
@@ -146,6 +152,7 @@ async function resolveIdentities(
   event: WalkerOS.Event,
   settingsIdentities: WalkerOSMapping.Map | undefined,
   ruleIdentities: WalkerOSMapping.Map | undefined,
+  collector: Collector.Instance,
 ): Promise<Record<string, string | number> | undefined> {
   const merged: WalkerOSMapping.Map = {
     ...(isObject(settingsIdentities) ? settingsIdentities : {}),
@@ -156,7 +163,7 @@ async function resolveIdentities(
 
   const out: Record<string, string | number> = {};
   for (const key of keys) {
-    const raw = await getMappingValue(event, merged[key]);
+    const raw = await getMappingValue(event, merged[key], { collector });
     const coerced = toIdentityValue(raw);
     if (coerced !== undefined) out[key] = coerced;
   }
@@ -167,12 +174,13 @@ async function resolveUserAttributes(
   event: WalkerOS.Event,
   settingsAttributes: WalkerOSMapping.Value | undefined,
   ruleAttributes: WalkerOSMapping.Value | undefined,
+  collector: Collector.Instance,
 ): Promise<Record<string, unknown> | undefined> {
   const settingsResolved = settingsAttributes
-    ? await getMappingValue(event, settingsAttributes)
+    ? await getMappingValue(event, settingsAttributes, { collector })
     : undefined;
   const ruleResolved = ruleAttributes
-    ? await getMappingValue(event, ruleAttributes)
+    ? await getMappingValue(event, ruleAttributes, { collector })
     : undefined;
 
   const merged: Record<string, unknown> = {

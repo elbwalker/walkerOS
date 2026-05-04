@@ -74,9 +74,9 @@ describe('DOM Auto-Initialization Logic', () => {
     try {
       // This should work without throwing
       await createWalkerjs({
+        run: false,
+        session: false,
         browser: {
-          run: false,
-          session: false,
           pageview: false,
         },
       });

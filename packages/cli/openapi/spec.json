@@ -4731,57 +4731,6 @@
         }
       }
     },
-    "/api/bundle": {
-      "post": {
-        "tags": ["Bundle"],
-        "summary": "Bundle flow",
-        "description": "Bundle a walkerOS flow into a deployable JavaScript module.",
-        "requestBody": {
-          "description": "Flow content to bundle",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {},
-                "additionalProperties": {}
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Bundled JavaScript module",
-            "content": {
-              "application/javascript": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Payload too large",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/projects/{projectId}/flows/{flowId}/bundle": {
       "post": {
         "tags": ["Bundle"],

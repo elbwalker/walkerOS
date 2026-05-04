@@ -4,8 +4,8 @@ import type { Flow } from '@walkeros/core';
 
 describe('Validation', () => {
   it('should error when both package and code are specified', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
       transformers: {
         invalid: {
           package: '@walkeros/transformer-validator',
@@ -24,8 +24,8 @@ describe('Validation', () => {
   });
 
   it('should error when neither package nor code are specified', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
       transformers: {
         invalid: {
           config: {},
@@ -43,8 +43,8 @@ describe('Validation', () => {
 describe('Inline Code Bundling', () => {
   describe('Transformer with code object', () => {
     it('should generate inline transformer from code object', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
+      const flowSettings: Flow = {
+        config: { platform: 'server' },
         transformers: {
           enrich: {
             code: {
@@ -72,8 +72,8 @@ describe('Inline Code Bundling', () => {
     });
 
     it('should handle inline transformer with init function', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
+      const flowSettings: Flow = {
+        config: { platform: 'server' },
         transformers: {
           validator: {
             code: {
@@ -101,8 +101,8 @@ describe('Inline Code Bundling', () => {
 
   describe('Source with code object', () => {
     it('should generate inline source from code object', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
+      const flowSettings: Flow = {
+        config: { platform: 'server' },
         sources: {
           customSource: {
             code: {
@@ -129,8 +129,8 @@ describe('Inline Code Bundling', () => {
 
   describe('Destination with code object', () => {
     it('should generate inline destination from code object', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
+      const flowSettings: Flow = {
+        config: { platform: 'server' },
         sources: {},
         destinations: {
           customDest: {
@@ -158,13 +158,15 @@ describe('Inline Code Bundling', () => {
 
 describe('Integration', () => {
   it('should bundle mixed package and inline definitions', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      bundle: {
-        packages: {
-          '@walkeros/collector': { imports: ['startFlow'] },
-          '@walkeros/transformer-validator': {
-            imports: ['transformerValidator'],
+    const flowSettings: Flow = {
+      config: {
+        platform: 'server',
+        bundle: {
+          packages: {
+            '@walkeros/collector': { imports: ['startFlow'] },
+            '@walkeros/transformer-validator': {
+              imports: ['transformerValidator'],
+            },
           },
         },
       },

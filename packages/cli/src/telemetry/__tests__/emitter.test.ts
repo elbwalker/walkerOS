@@ -1,0 +1,109 @@
+import { mkdirSync, rmSync, existsSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { createEmitter } from '../emitter.js';
+import { writeConfig, getConfigPath } from '../../lib/config-file.js';
+
+const testDir = join(tmpdir(), `emitter-test-${Date.now()}`);
+
+describe('emitter', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    // Redirect XDG_CONFIG_HOME so getConfigDir() points to our temp dir.
+    // Matches the isolation pattern in install-id.test.ts.
+    process.env = { ...originalEnv, XDG_CONFIG_HOME: testDir };
+    delete process.env.DO_NOT_TRACK;
+    delete process.env.WALKEROS_TELEMETRY_DISABLED;
+    delete process.env.WALKEROS_TELEMETRY_DEBUG;
+    delete process.env.WALKEROS_APP_URL;
+    mkdirSync(join(testDir, 'walkeros'), { recursive: true });
+    // Ensure the config file does not exist between tests.
+    const p = getConfigPath();
+    if (existsSync(p)) rmSync(p, { force: true });
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    rmSync(testDir, { recursive: true, force: true });
+  });
+
+  it('returns a no-op sender when opted out (no config written, no startFlow)', async () => {
+    process.env.DO_NOT_TRACK = '1';
+    const emitter = await createEmitter({
+      source: { type: 'cli', platform: 'terminal' },
+      packageVersion: '3.4.2',
+    });
+    await emitter.send('cmd invoke', {
+      command: 'bundle',
+      outcome: 'success',
+    });
+    expect(existsSync(getConfigPath())).toBe(false);
+  });
+
+  it('prints event shape to stderr in debug mode and skips network', async () => {
+    process.env.WALKEROS_TELEMETRY_DEBUG = '1';
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
+    const errSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+    const emitter = await createEmitter({
+      source: { type: 'cli', platform: 'terminal' },
+      packageVersion: '3.4.2',
+    });
+    await emitter.send('cmd invoke', { command: 'x', outcome: 'success' }, 42);
+    const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
+    expect(out).toContain('"name":"cmd invoke"');
+    expect(out).toContain('"timing":42');
+    expect(out).toContain('"source":{"type":"cli","platform":"terminal"');
+    expect(out).toContain('"version":"3.4.2"');
+    expect(out).not.toContain('"version":{');
+    expect(out).toContain('"consent":{"telemetry":true}');
+    errSpy.mockRestore();
+  });
+
+  it('swallows network errors and never throws', async () => {
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
+    process.env.WALKEROS_APP_URL = 'http://127.0.0.1:1'; // unreachable
+    const emitter = await createEmitter({
+      source: { type: 'cli', platform: 'terminal' },
+      packageVersion: '3.4.2',
+    });
+    await expect(
+      emitter.send('cmd invoke', { command: 'x', outcome: 'success' }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('passes user.session to the collector when provided (MCP case)', async () => {
+    process.env.WALKEROS_TELEMETRY_DEBUG = '1';
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
+    const errSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+    const emitter = await createEmitter({
+      source: { type: 'mcp', platform: 'server' },
+      packageVersion: '3.4.2',
+      session: 'sess-xyz',
+    });
+    await emitter.send('mcp start', { ci: false, client: 'claude-ai' });
+    const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
+    expect(out).toContain('"session":"sess-xyz"');
+    errSpy.mockRestore();
+  });
+
+  it('still prints to stderr in debug mode even with no endpoint', async () => {
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
+    process.env.WALKEROS_TELEMETRY_DEBUG = '1';
+    const errSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+    const emitter = await createEmitter({
+      source: { type: 'cli', platform: 'terminal' },
+      packageVersion: '3.4.2',
+    });
+    await emitter.send('cmd invoke', { command: 'x', outcome: 'success' }, 10);
+    const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
+    expect(out).toContain('"name":"cmd invoke"');
+    errSpy.mockRestore();
+  });
+});

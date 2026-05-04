@@ -34,7 +34,7 @@ function stripNonStandardIds(value: unknown): unknown {
 
 const outDir = resolve(__dirname, '../website/static/schema/flow');
 
-const path = resolve(outDir, 'v3.json');
+const path = resolve(outDir, 'v4.json');
 const cleaned = stripNonStandardIds(schemas.configJsonSchema);
 writeFileSync(path, JSON.stringify(cleaned, null, 2) + '\n');
 console.log(`Wrote ${path}`);

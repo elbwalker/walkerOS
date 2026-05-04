@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS events (
 )
 ```
 
-Nested objects (`data`, `globals`, `consent`) are stored as JSON strings. `page_url` maps from `source.id`; `page_title` from `data.title`; `referrer_url` from `source.previous_id`.
+Nested objects (`data`, `globals`, `consent`) are stored as JSON strings. `page_url` maps from `source.url`; `page_title` from `data.title`; `referrer_url` from `source.referrer`.
 
 Use `mapping.settings.table` to route specific events to a dedicated table (for example orders to `orders`, identities to `identities`).
 

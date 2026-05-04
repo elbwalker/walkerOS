@@ -135,7 +135,7 @@ describe('reference resources', () => {
       expect(parsed.patterns['$var.name']).toBeDefined();
       expect(parsed.patterns['$env.NAME']).toBeDefined();
       expect(parsed.patterns['$code:(expr)']).toBeDefined();
-      expect(parsed.patterns['$store:storeId']).toBeDefined();
+      expect(parsed.patterns['$store.storeId']).toBeDefined();
     });
   });
 
@@ -149,7 +149,7 @@ describe('reference resources', () => {
       const result = await resource.handler();
       const parsed = JSON.parse(result.contents[0].text);
 
-      expect(parsed.version).toBe(3);
+      expect(parsed.version).toBe(4);
       expect(parsed.flows).toBeDefined();
     });
   });

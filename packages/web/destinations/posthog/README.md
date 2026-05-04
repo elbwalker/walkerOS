@@ -11,7 +11,7 @@
 [NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-posthog)
 &bull; [Documentation](https://www.walkeros.io/docs/destinations/web/posthog)
 
-This package forwards walkerOS events to [PostHog](https://posthog.com/) —
+This package forwards walkerOS events to [PostHog](https://posthog.com/) -
 product analytics, session replay, feature flags, surveys, and heatmaps. Built
 on the official [`posthog-js`](https://www.npmjs.com/package/posthog-js) SDK.
 
@@ -19,28 +19,28 @@ walkerOS follows a **source → collector → destination** architecture. This
 PostHog destination receives processed events from the walkerOS collector and
 forwards them as PostHog captures, identifies, group assignments, and consent
 updates. All built-in PostHog features (session replay, feature flags, surveys,
-heatmaps, exception capture) are available through SDK init passthrough — no
+heatmaps, exception capture) are available through SDK init passthrough - no
 destination-specific plugins required.
 
 ## Features
 
-- **Default event forwarding** — every walkerOS event becomes
+- **Default event forwarding** - every walkerOS event becomes
   `posthog.capture(event.name, properties)` with no additional config
-- **Custom event properties** — flatten walkerOS event sections via
+- **Custom event properties** - flatten walkerOS event sections via
   `settings.include` (prefixed as `data_*`, `globals_*`, etc.)
-- **Identity** — destination-level and per-event identity mapping resolving to
+- **Identity** - destination-level and per-event identity mapping resolving to
   `{ distinctId?, $set?, $set_once? }`. With `distinctId`: `posthog.identify()`.
   Without `distinctId`: `posthog.setPersonProperties()` for pure person-property
   updates. Runtime state diffing skips redundant identify calls when the
   resolved values have not changed.
-- **Groups** — B2B-style group analytics via `settings.group`; resolves to
+- **Groups** - B2B-style group analytics via `settings.group`; resolves to
   `{ type, key, properties? }` and calls `posthog.group(...)`
-- **Logout** — `reset: true` triggers `posthog.reset()` to clear the distinct ID
+- **Logout** - `reset: true` triggers `posthog.reset()` to clear the distinct ID
   and regenerate an anonymous one
-- **Consent** — declares required consent keys via `config.consent`; a
+- **Consent** - declares required consent keys via `config.consent`; a
   `walker consent` event with all required keys granted calls
   `posthog.opt_in_capturing()`, otherwise `posthog.opt_out_capturing()`
-- **Built-in PostHog features as config passthrough** — session replay
+- **Built-in PostHog features as config passthrough** - session replay
   (`session_recording`), feature flags (`bootstrap`, `advanced_disable_flags`),
   surveys (`disable_surveys`), heatmaps (`capture_heatmaps`), exception capture
   (`capture_exceptions`), cookieless mode (`cookieless_mode`). All
@@ -89,17 +89,17 @@ All other [`PostHogConfig`](https://posthog.com/docs/libraries/js#config) fields
 (e.g. `session_recording`, `capture_heatmaps`, `bootstrap`, `cookieless_mode`)
 pass through unchanged. walkerOS sets three defaults that differ from PostHog's
 built-ins: `autocapture: false`, `capture_pageview: false`,
-`capture_pageleave: false` — because walkerOS sources handle event capture.
+`capture_pageleave: false` - because walkerOS sources handle event capture.
 Override them explicitly in `settings` if you want PostHog's autocapture on.
 
 ### Mapping (`rule.settings`)
 
-| Name       | Type                       | Description                                                                           |
-| ---------- | -------------------------- | ------------------------------------------------------------------------------------- |
-| `identify` | `Mapping.Value`            | Per-event identity. Resolves to `{ distinctId?, $set?, $set_once? }`                  |
-| `include`  | `string[]`                 | Override destination-level `include` for this rule                                    |
-| `group`    | `Mapping.Value`            | Per-event group assignment. Resolves to `{ type, key, properties? }`                  |
-| `reset`    | `Mapping.Value \| boolean` | Logout trigger. Truthy value → `posthog.reset()`. Typically paired with `skip: true`. |
+| Name       | Type                       | Description                                                                             |
+| ---------- | -------------------------- | --------------------------------------------------------------------------------------- |
+| `identify` | `Mapping.Value`            | Per-event identity. Resolves to `{ distinctId?, $set?, $set_once? }`                    |
+| `include`  | `string[]`                 | Override destination-level `include` for this rule                                      |
+| `group`    | `Mapping.Value`            | Per-event group assignment. Resolves to `{ type, key, properties? }`                    |
+| `reset`    | `Mapping.Value \| boolean` | Logout trigger. Truthy value → `posthog.reset()`. Typically paired with `silent: true`. |
 
 ## Custom Event Properties
 
@@ -126,7 +126,7 @@ mapping: {
 }
 ```
 
-PostHog has no dedicated revenue API — revenue events are regular `capture()`
+PostHog has no dedicated revenue API - revenue events are regular `capture()`
 calls with the revenue properties in the payload. Use `include: ['data']` on an
 `order complete` rule to forward `data_total`, `data_currency` (e.g. `"EUR"`),
 `data_shipping`, etc.
@@ -147,7 +147,7 @@ settings: {
 }
 ```
 
-Per-event identify supports the full PostHog vocabulary — `distinctId`, `$set`
+Per-event identify supports the full PostHog vocabulary - `distinctId`, `$set`
 (person properties), `$set_once` (set-if-unset person properties). The
 destination calls `posthog.identify(distinctId, $set, $set_once)`:
 
@@ -155,7 +155,7 @@ destination calls `posthog.identify(distinctId, $set, $set_once)`:
 mapping: {
   user: {
     login: {
-      skip: true, // side-effect only, no capture() for user login
+      silent: true, // side-effect only, no capture() for user login
       settings: {
         identify: {
           map: {
@@ -179,7 +179,7 @@ mapping: {
 
 **Person properties without identity change.** When the resolved identify object
 has no `distinctId`, the destination calls
-`posthog.setPersonProperties($set, $set_once)` instead — useful for profile
+`posthog.setPersonProperties($set, $set_once)` instead - useful for profile
 updates that should not create a new identity:
 
 ```typescript
@@ -202,13 +202,14 @@ mapping: {
 
 PostHog's group analytics (Scale/Enterprise) aggregates events by company, team,
 or any custom group type. Configure a group mapping at destination or rule level
-— the destination calls `posthog.group(type, key, properties?)`:
+
+- the destination calls `posthog.group(type, key, properties?)`:
 
 ```typescript
 mapping: {
   company: {
     update: {
-      skip: true,
+      silent: true,
       settings: {
         group: {
           map: {
@@ -231,14 +232,14 @@ mapping: {
 ## Logout
 
 `reset: true` (or any truthy mapping value) calls `posthog.reset()`, clearing
-the distinct ID and generating a new anonymous one. Pair with `skip: true` so
+the distinct ID and generating a new anonymous one. Pair with `silent: true` so
 the rule runs as a pure side effect:
 
 ```typescript
 mapping: {
   user: {
     logout: {
-      skip: true,
+      silent: true,
       settings: { reset: true },
     },
   },
@@ -272,19 +273,19 @@ destination in the first place.
 
 ## Built-in Features (Config Passthrough)
 
-All these PostHog features work via standard `posthog-js` init options — no
+All these PostHog features work via standard `posthog-js` init options - no
 destination wiring required:
 
-- **Session replay** —
+- **Session replay** -
   `settings.session_recording: { maskAllInputs: true, ... }`
-- **Feature flags** — `settings.bootstrap: { featureFlags: {...} }` for SSR,
+- **Feature flags** - `settings.bootstrap: { featureFlags: {...} }` for SSR,
   `settings.advanced_disable_flags: true` to disable entirely. Access flags
   directly via the `posthog` singleton.
-- **Surveys** — automatic via the SDK; `settings.disable_surveys: true` opts out
-- **Heatmaps** — `settings.capture_heatmaps: true`
-- **Exception capture** — `settings.capture_exceptions: true`
-- **Cookieless mode** — `settings.cookieless_mode: 'always' | 'on_reject'`
-- **Person profiles** — `settings.person_profiles: 'identified_only'` (PostHog
+- **Surveys** - automatic via the SDK; `settings.disable_surveys: true` opts out
+- **Heatmaps** - `settings.capture_heatmaps: true`
+- **Exception capture** - `settings.capture_exceptions: true`
+- **Cookieless mode** - `settings.cookieless_mode: 'always' | 'on_reject'`
+- **Person profiles** - `settings.person_profiles: 'identified_only'` (PostHog
   default, privacy-friendly) or `'always'`
 
 For programmatic access to flags, surveys, or exception reporting, import the

@@ -12,12 +12,12 @@ export type SlackStepExample = Flow.StepExample & {
 /**
  * Slack server destination operates in two modes:
  *
- * 1. Web API mode — calls the injected `env.slackClient` SDK methods
+ * 1. Web API mode - calls the injected `env.slackClient` SDK methods
  *    (`chat.postMessage`, `chat.postEphemeral`, `conversations.open`).
  *    Captured as `[callable, args]` with dotted callable names such as
  *    `'slackClient.chat.postMessage'`.
  *
- * 2. Webhook mode — calls `env.sendServer(url, JSON.stringify(body))`.
+ * 2. Webhook mode - calls `env.sendServer(url, JSON.stringify(body))`.
  *    Captured as `['sendServer', url, bodyAsString]` where `bodyAsString`
  *    is the already-stringified JSON body. Key insertion order in the
  *    source object matters for string equality.
@@ -214,7 +214,7 @@ export const defaultBlocks: SlackStepExample = {
   in: getEvent('lead submit', {
     timestamp: 1700000600,
     data: { name: 'Acme', email: 'sales@acme.test' },
-    source: { type: 'server', id: 'crm', previous_id: '' },
+    source: { type: 'crm', platform: 'server' },
   }),
   mapping: {
     settings: {

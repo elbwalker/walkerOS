@@ -26,10 +26,10 @@ export const push: PushFn = async function (
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data
-    ? await getMappingValue(event, config.data)
+    ? await getMappingValue(event, config.data, { collector })
     : {};
   const userDataCustom = user_data
-    ? await getMappingValue(event, { map: user_data })
+    ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
 
   // Build user data from multiple sources
@@ -67,7 +67,7 @@ export const push: PushFn = async function (
 
   // Page context from event source
   context.page = {
-    url: event.source.id,
+    url: event.source?.url,
   };
 
   // Build event data

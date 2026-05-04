@@ -49,7 +49,7 @@ export interface PushOverrides {
  */
 export function buildOverrides(
   flags: { simulate?: string[]; mock?: string[] },
-  flowConfig: Flow.Settings,
+  flowConfig: Flow,
 ): PushOverrides {
   const simulateFlags = flags.simulate ?? [];
   const mockFlags = flags.mock ?? [];
@@ -171,7 +171,7 @@ export function buildOverrides(
   return overrides;
 }
 
-interface ParsedStep {
+export interface ParsedStep {
   type: 'source' | 'destination' | 'transformer';
   name: string;
   chainType?: 'before' | 'next';
@@ -183,7 +183,7 @@ interface ParsedStep {
  * Also supports 4-part path notation: `destination.NAME.CHAIN.TRANSFORMER`
  * @throws if format is invalid
  */
-function parseStep(step: string): ParsedStep {
+export function parseStep(step: string): ParsedStep {
   const parts = step.split('.');
 
   if (parts.length < 2) {

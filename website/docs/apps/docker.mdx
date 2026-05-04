@@ -183,11 +183,11 @@ The `include` field in your flow config copies folders into the bundle output di
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "include": ["./public"],
   "flows": {
     "default": {
-      "server": {},
+      "config": { "platform": "server" },
       "stores": {
         "files": {
           "package": "@walkeros/server-store-fs",
@@ -209,7 +209,7 @@ The `include` field in your flow config copies folders into the bundle output di
         "file": {
           "package": "@walkeros/server-transformer-file",
           "config": { "settings": { "prefix": "/static" } },
-          "env": { "store": "$store:files" }
+          "env": { "store": "$store.files" }
         }
       }
     }
@@ -449,46 +449,51 @@ Create `bigquery-collect.json`:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server",
-    "sources": {
-      "http": {
-        "code": "sourceExpress",
-        "config": {
-          "settings": {
-            "path": "/collect",
-            "port": 8080,
-            "cors": true
-          }
-        }
-      }
-    },
-    "destinations": {
-      "bigquery": {
-        "code": "destinationGCP",
-        "config": {
-          "settings": {
-            "projectId": "my-project",
-            "datasetId": "analytics",
-            "tableId": "events"
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": { "version": "latest" },
+            "@walkeros/server-source-express": { "version": "latest" },
+            "@walkeros/server-destination-gcp": { "version": "latest" },
+            "@walkeros/destination-demo": { "version": "latest" }
           }
         }
       },
-      "console": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": { "name": "Logger" }
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080,
+              "cors": true
+            }
+          }
         }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "bundle": {
-    "packages": {
-      "@walkeros/collector": { "version": "latest" },
-      "@walkeros/server-source-express": { "version": "latest" },
-      "@walkeros/server-destination-gcp": { "version": "latest" },
-      "@walkeros/destination-demo": { "version": "latest" }
+      },
+      "destinations": {
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "config": {
+            "settings": {
+              "projectId": "my-project",
+              "datasetId": "analytics",
+              "tableId": "events"
+            }
+          }
+        },
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": { "name": "Logger" }
+          }
+        }
+      },
+      "collector": { "run": true }
     }
   }
 }`}
@@ -600,41 +605,44 @@ Create `web-tracker.json`:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "web",
-    "sources": {
-      "browser": {
-        "code": "sourceBrowser",
-        "config": {
-          "settings": {
-            "pageview": true,
-            "session": true
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "web",
+        "settings": { "windowElb": "track" },
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": { "version": "latest" },
+            "@walkeros/web-source-browser": { "version": "latest" },
+            "@walkeros/web-destination-api": { "version": "latest" }
           }
         }
-      }
-    },
-    "destinations": {
-      "api": {
-        "code": "destinationAPI",
-        "config": {
-          "settings": {
-            "url": "https://analytics-collector-xxxxx-uc.a.run.app/collect",
-            "method": "POST"
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": {
+            "settings": {
+              "pageview": true,
+              "session": true
+            }
           }
         }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "bundle": {
-    "packages": {
-      "@walkeros/collector": { "version": "latest" },
-      "@walkeros/web-source-browser": { "version": "latest" },
-      "@walkeros/web-destination-api": { "version": "latest" }
-    },
-    "output": "./tracker.js",
-    "format": "iife",
-    "windowElb": "track"
+      },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "url": "https://analytics-collector-xxxxx-uc.a.run.app/collect",
+              "method": "POST"
+            }
+          }
+        }
+      },
+      "collector": { "run": true }
+    }
   }
 }`}
   language="json"

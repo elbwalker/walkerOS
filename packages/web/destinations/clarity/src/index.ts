@@ -68,17 +68,19 @@ export const destinationClarity: Destination = {
     return config;
   },
 
-  async push(event, { config, rule, env, data }) {
+  async push(event, { config, rule, env, data, collector }) {
     const clarity = getClarity(env as Env | undefined);
     const settings = (config.settings || {}) as Partial<Settings>;
     const mappingSettings = (rule?.settings || {}) as Mapping;
 
-    // 1. Identify — rule-level override wins over destination-level.
+    // 1. Identify - rule-level override wins over destination-level.
     //    Fires first per Clarity's own guidance so subsequent tag/event
     //    calls are associated with the right user.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     if (identifyMapping !== undefined) {
-      const resolved = await getMappingValue(event, identifyMapping);
+      const resolved = await getMappingValue(event, identifyMapping, {
+        collector,
+      });
       if (isObject(resolved)) {
         const { customId, customSessionId, customPageId, friendlyName } =
           resolved as {
@@ -99,7 +101,7 @@ export const destinationClarity: Destination = {
       }
     }
 
-    // 2. Include tags — pre-flattened by core into context.data
+    // 2. Include tags - pre-flattened by core into context.data
     if (isObject(data)) {
       for (const [key, raw] of Object.entries(
         data as Record<string, unknown>,
@@ -110,7 +112,9 @@ export const destinationClarity: Destination = {
 
     // 3. Explicit tags via mapping.settings.set
     if (mappingSettings.set !== undefined) {
-      const resolved = await getMappingValue(event, mappingSettings.set);
+      const resolved = await getMappingValue(event, mappingSettings.set, {
+        collector,
+      });
       if (isObject(resolved)) {
         for (const [key, raw] of Object.entries(resolved)) {
           emitTag(clarity, key, raw);
@@ -120,14 +124,16 @@ export const destinationClarity: Destination = {
 
     // 4. Session priority upgrade
     if (mappingSettings.upgrade !== undefined) {
-      const reason = await getMappingValue(event, mappingSettings.upgrade);
+      const reason = await getMappingValue(event, mappingSettings.upgrade, {
+        collector,
+      });
       if (isString(reason) && reason) {
         clarity.upgrade(reason);
       }
     }
 
-    // 5. Default event forwarding — unless rule.skip is set
-    if (rule?.skip !== true) {
+    // 5. Default event forwarding - unless rule.silent is set
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       clarity.event(eventName);
     }

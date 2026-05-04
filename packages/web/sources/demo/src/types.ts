@@ -1,5 +1,11 @@
 import type { Source, Elb, WalkerOS } from '@walkeros/core';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    demo: { type: 'demo'; platform?: 'web' };
+  }
+}
+
 export interface Settings {
   events: Array<WalkerOS.PartialEvent & { delay?: number }>;
 }

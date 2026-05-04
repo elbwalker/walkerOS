@@ -57,8 +57,8 @@ export const push: PushFn = async function (
     }
   }
 
-  // 3. Send event (unless skip: true)
-  if (rule?.skip !== true) {
+  // 3. Send event (unless silent: true)
+  if (rule?.silent !== true) {
     const eventName = buildEventName(
       settings.eventNamePrefix,
       mappingSettings.eventName,

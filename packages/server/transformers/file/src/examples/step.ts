@@ -8,15 +8,12 @@ export const serveStaticFile: Flow.StepExample = {
   in: {
     name: 'page view',
     data: { path: '/static/walker.js' },
-    id: '1700000600-gr0up-1',
+    id: 'ev-1700000600',
     trigger: 'load',
     entity: 'page',
     action: 'view',
     timestamp: 1700000600,
-    group: 'gr0up',
-    count: 1,
-    version: { tagging: 1 },
-    source: { type: 'server', id: '', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   },
   out: [
     [

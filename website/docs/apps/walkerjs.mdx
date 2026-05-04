@@ -374,10 +374,10 @@ const { elb } = await startFlow({
 ```json
 // walker.js equivalent in Bundled mode (flow.json)
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {},
+      "config": { "platform": "web" },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",

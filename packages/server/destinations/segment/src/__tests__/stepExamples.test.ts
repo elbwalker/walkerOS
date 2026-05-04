@@ -61,7 +61,7 @@ describe('segment server destination -- step examples', () => {
 
     const { env, collected } = spyEnv();
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const baseSettings: Partial<Settings> & { writeKey: string } = {
       writeKey: 'test-write-key',

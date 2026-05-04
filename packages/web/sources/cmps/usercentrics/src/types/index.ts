@@ -1,5 +1,11 @@
 import type { Source, Elb } from '@walkeros/core';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    usercentrics: { type: 'usercentrics'; platform?: 'web' };
+  }
+}
+
 /**
  * Usercentrics consent event detail structure.
  *
@@ -28,7 +34,7 @@ declare global {
 
 /**
  * Usercentrics V2 service info shape returned by `UC_UI.getServicesBaseInfo()`.
- * Only the fields we use are typed — minimal surface, not a full V2 API mirror.
+ * Only the fields we use are typed - minimal surface, not a full V2 API mirror.
  */
 export interface UsercentricsV2Service {
   /** Category slug: 'essential' | 'functional' | 'marketing' | custom */
@@ -63,7 +69,7 @@ export type UsercentricsV3CategoryState =
   | string;
 
 /**
- * Minimal V3 CategoryData — only fields the adapter reads.
+ * Minimal V3 CategoryData - only fields the adapter reads.
  */
 export interface UsercentricsV3CategoryData {
   state: UsercentricsV3CategoryState;
@@ -71,7 +77,7 @@ export interface UsercentricsV3CategoryData {
 }
 
 /**
- * Minimal V3 ConsentData — only the `type` field is used to distinguish
+ * Minimal V3 ConsentData - only the `type` field is used to distinguish
  * explicit vs implicit consent. Other fields (status, version, etc.) exist on
  * the real SDK but are not read by this adapter.
  */
@@ -80,7 +86,7 @@ export interface UsercentricsV3ConsentData {
 }
 
 /**
- * Minimal V3 ConsentDetails — only the fields the adapter reads.
+ * Minimal V3 ConsentDetails - only the fields the adapter reads.
  * The real SDK also exposes `services`, but the adapter currently operates
  * at category level only.
  */
@@ -92,7 +98,7 @@ export interface UsercentricsV3ConsentDetails {
 /**
  * Usercentrics V3 window API (`window.__ucCmp`).
  *
- * Only the methods this adapter calls are typed — the real SDK surface is
+ * Only the methods this adapter calls are typed - the real SDK surface is
  * much wider but we intentionally keep this narrow.
  */
 export interface UsercentricsV3Api {
@@ -113,13 +119,13 @@ declare global {
   interface Window {
     /**
      * Usercentrics V2 CMP API. Attached once the V2 Browser SDK is
-     * initialized. Optional because the SDK loads asynchronously — guard
+     * initialized. Optional because the SDK loads asynchronously - guard
      * with a truthiness check before access.
      */
     UC_UI?: UsercentricsV2Api;
     /**
      * Usercentrics V3 CMP API. Attached once the V3 Browser SDK is
-     * initialized. Optional because the SDK loads asynchronously — guard
+     * initialized. Optional because the SDK loads asynchronously - guard
      * with a truthiness check before access.
      */
     __ucCmp?: UsercentricsV3Api;
@@ -176,7 +182,7 @@ export interface Settings {
    * V3 window event name to listen for consent changes.
    *
    * Usercentrics V3 hardcodes its built-in event names (`UC_UI_CMP_EVENT`,
-   * `UC_UI_INITIALIZED`, `UC_UI_VIEW_CHANGED`, `UC_CONSENT`) — they cannot be
+   * `UC_UI_INITIALIZED`, `UC_UI_VIEW_CHANGED`, `UC_CONSENT`) - they cannot be
    * renamed. However, the Usercentrics admin dashboard (Implementation >
    * Data Layer & Events) lets admins configure an ADDITIONAL custom window
    * event. Use this setting to point at that custom event name if

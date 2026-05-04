@@ -2,45 +2,32 @@
  * Configuration Type Guards and Validators
  *
  * Type checking utilities for configuration validation.
- * Uses Zod schemas from @walkeros/core for Flow.Config validation.
+ * Uses Zod schemas from @walkeros/core for Flow.Json validation.
  */
 
 import type { Flow } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 
 const { safeParseConfig } = schemas;
 
 /**
- * Type guard: Check if value is a plain object.
- */
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.prototype.toString.call(value) === '[object Object]'
-  );
-}
-
-/**
- * Detect platform from flow config.
+ * Detect platform from a single flow.
  *
- * Platform is determined by the presence of `web` or `server` key.
+ * Platform is determined by `flow.config.platform`.
  */
 export function detectPlatform(
-  flowConfig: Record<string, unknown>,
+  flow: Record<string, unknown>,
 ): 'web' | 'server' | undefined {
-  if ('web' in flowConfig && flowConfig.web !== undefined) {
-    return 'web';
-  }
-  if ('server' in flowConfig && flowConfig.server !== undefined) {
-    return 'server';
-  }
+  const config = flow.config;
+  if (!isObject(config)) return undefined;
+  const platform = config.platform;
+  if (platform === 'web' || platform === 'server') return platform;
   return undefined;
 }
 
 /**
- * Type guard: Check if config is a valid Flow.Config structure.
+ * Type guard: Check if config is a valid Flow.Json structure.
  *
  * @remarks
  * Uses Zod validation from @walkeros/core.
@@ -53,48 +40,52 @@ export function detectPlatform(
  * }
  * ```
  */
-export function isFlowConfig(data: unknown): data is Flow.Config {
+export function isFlowConfig(data: unknown): data is Flow.Json {
   const result = safeParseConfig(data);
   return result.success;
 }
 
 /**
- * Validate Flow.Config and throw descriptive error if invalid.
+ * Validate Flow.Json and throw descriptive error if invalid.
  *
  * @remarks
  * Uses Zod validation from @walkeros/core.
  * Provides detailed error messages from Zod.
  *
  * @param data - Raw configuration data
- * @returns Validated Flow.Config
+ * @returns Validated Flow.Json
  * @throws Error with descriptive message if validation fails
  */
-export function validateFlowConfig(data: unknown): Flow.Config {
+export function validateFlowConfig(data: unknown): Flow.Json {
+  // After successful Zod parse, the data conforms structurally to Flow.Json.
+  // The existing `isFlowConfig` guard re-narrows `unknown` to `Flow.Json` via
+  // the same schema — TS can't see through `safeParseConfig` because it
+  // returns a Zod-inferred type that differs nominally (not structurally)
+  // from the Flow.Json interface.
+  if (isFlowConfig(data)) return data;
+
+  // Not parseable — format Zod errors for CLI display.
   const result = safeParseConfig(data);
-
-  if (!result.success) {
-    // Format Zod errors for CLI display
-    const errors = result.error.issues
-      .map((issue) => {
-        const path =
-          issue.path.length > 0 ? issue.path.map(String).join('.') : 'root';
-        return `  - ${path}: ${issue.message}`;
-      })
-      .join('\n');
-
-    throw new Error(`Invalid configuration:\n${errors}`);
+  if (result.success) {
+    // Defensive: isFlowConfig and safeParseConfig disagreed (cannot happen).
+    throw new Error('Invalid configuration: failed Flow.Json type guard.');
   }
-
-  // Cast to Flow.Config since Zod's inferred type is compatible but not identical
-  return result.data as Flow.Config;
+  const errors = result.error.issues
+    .map((issue) => {
+      const path =
+        issue.path.length > 0 ? issue.path.map(String).join('.') : 'root';
+      return `  - ${path}: ${issue.message}`;
+    })
+    .join('\n');
+  throw new Error(`Invalid configuration:\n${errors}`);
 }
 
 /**
- * Get available flow names from a Flow.Config.
+ * Get available flow names from a Flow.Json.
  *
- * @param config - Flow.Config configuration
+ * @param config - Flow.Json configuration
  * @returns Array of flow names
  */
-export function getAvailableFlows(config: Flow.Config): string[] {
+export function getAvailableFlows(config: Flow.Json): string[] {
   return Object.keys(config.flows);
 }

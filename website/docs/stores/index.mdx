@@ -21,13 +21,13 @@ A common example: serving the walker.js script from your own infrastructure. The
 
 ## When stores are active
 
-Stores are initialized **before** any other component in the flow. Once running, they're available to transformers and destinations via `$store:storeId` wiring. A transformer might cache a processed result; a destination might check a store before making an external API call.
+Stores are initialized **before** any other component in the flow. Once running, they're available to transformers and destinations via `$store.storeId` wiring. A transformer might cache a processed result; a destination might check a store before making an external API call.
 
 ```
 Flow startup order:
   1. Stores        ← initialized first
-  2. Transformers  ← can reference stores via $store:id
-  3. Destinations  ← can reference stores via $store:id
+  2. Transformers  ← can reference stores via $store.id
+  3. Destinations  ← can reference stores via $store.id
   4. Sources       ← start pushing events
 ```
 
@@ -42,7 +42,7 @@ Flow startup order:
 
 ## Wiring stores to components
 
-Components reference stores via `$store:storeId` in their `env` configuration. The collector resolves this at startup and passes the live store instance to the component.
+Components reference stores via `$store.storeId` in their `env` configuration. The collector resolves this at startup and passes the live store instance to the component.
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -70,7 +70,7 @@ await startFlow({
     file: {
       code: transformerFile,
       config: { settings: { prefix: '/static' } },
-      env: { store: '$store:assets' }, // wired to the assets store
+      env: { store: '$store.assets' }, // wired to the assets store
     },
   },
 });`}
@@ -99,7 +99,7 @@ await startFlow({
     "file": {
       "package": "@walkeros/server-transformer-file",
       "config": { "settings": { "prefix": "/static" } },
-      "env": { "store": "$store:assets" }
+      "env": { "store": "$store.assets" }
     }
   }
 }`}

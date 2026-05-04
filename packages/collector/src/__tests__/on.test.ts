@@ -1,4 +1,4 @@
-import type { Collector, Source } from '@walkeros/core';
+import type { On, Source } from '@walkeros/core';
 import { startFlow } from '..';
 
 describe('on() helper — recursion and contract tests', () => {
@@ -34,8 +34,11 @@ describe('on() helper — recursion and contract tests', () => {
     // Late-subscriber catch-up: if consent was already granted, cb must fire now
     expect(cb).toHaveBeenCalledTimes(1);
     expect(cb).toHaveBeenCalledWith(
-      collector,
       expect.objectContaining({ marketing: true }),
+      expect.objectContaining({
+        collector,
+        logger: expect.any(Object),
+      }),
     );
   });
 
@@ -45,13 +48,13 @@ describe('on() helper — recursion and contract tests', () => {
 
     const MAX = 20;
     let calls = 0;
-    const handler = (c: Collector.Instance): void => {
+    const handler: On.ConsentFn = (_data, ctx): void => {
       calls++;
-      if (calls > MAX) return; // bail out — don't throw (would crash jest worker)
-      // Re-register itself — mirrors the sessionStart.ts:40 pattern
+      if (calls > MAX) return; // bail out, don't throw (would crash jest worker)
+      // Re-register itself, mirrors the sessionStart.ts:40 pattern
       // Fire-and-forget: the command is async but we don't await it to
       // avoid deepening the synchronous recursion stack further.
-      void c.command('on', 'consent', { marketing: handler });
+      void ctx.collector.command('on', 'consent', { marketing: handler });
     };
 
     await collector.command('on', 'consent', { marketing: handler });

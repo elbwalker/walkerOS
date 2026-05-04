@@ -9,11 +9,23 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 export interface WalkerOSConfig {
-  token: string;
-  email: string;
-  appUrl: string;
+  token?: string;
+  email?: string;
+  appUrl?: string;
   anonymousFeedback?: boolean;
   defaultProjectId?: string;
+  /**
+   * UUID v4, generated and persisted only when the user explicitly opts in
+   * to telemetry (`walkeros telemetry enable`). Absent in the default state.
+   */
+  installationId?: string;
+  /**
+   * Explicit consent toggle for telemetry. Tri-state:
+   *  - `undefined`: no decision yet, default (nothing is collected).
+   *  - `true`: user opted in via `walkeros telemetry enable`.
+   *  - `false`: user opted out via `walkeros telemetry disable`.
+   */
+  telemetryEnabled?: boolean;
 }
 
 /**
@@ -54,6 +66,21 @@ export function writeConfig(config: WalkerOSConfig): void {
 
   const configPath = getConfigPath();
   writeFileSync(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+}
+
+/**
+ * Persist telemetry-relevant fields without touching unrelated config.
+ * Reads the existing config (if any) and merges in the provided fields.
+ * Used by the `telemetry enable` command to write `installationId` +
+ * `telemetryEnabled: true` atomically, and by the `telemetry disable`
+ * command to write `telemetryEnabled: false` alone.
+ */
+export function writeTelemetryOnlyConfig(partial: {
+  installationId?: string;
+  telemetryEnabled?: boolean;
+}): void {
+  const existing = readConfig() ?? {};
+  writeConfig({ ...existing, ...partial });
 }
 
 /**

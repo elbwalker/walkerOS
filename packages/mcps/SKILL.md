@@ -41,7 +41,7 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 
 | URI                                | Content                                                     |
 | ---------------------------------- | ----------------------------------------------------------- |
-| `walkeros://reference/flow-schema` | Flow.Config structure and connection rules                  |
+| `walkeros://reference/flow-schema` | Flow.Json structure and connection rules                    |
 | `walkeros://reference/event-model` | Event naming, properties, auto-populated fields             |
 | `walkeros://reference/mapping`     | Mapping syntax (data/map/loop/set/condition/consent/policy) |
 | `walkeros://reference/consent`     | Consent model (destination/rule/field level)                |
@@ -59,6 +59,12 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 | `setup-mapping`   | Configure event mapping for a step                          |
 | `manage-contract` | Create/update event contracts (bidirectional with mappings) |
 | `use-definitions` | Extract shared patterns into definitions and variables      |
+
+## Networking
+
+Outbound requests to a configured `WALKEROS_APP_URL` carry an
+`X-Walkeros-Client: walkeros-mcp/{version}` header so the host can attribute
+usage. No PII; the header is the only client identifier.
 
 ## Conventions
 

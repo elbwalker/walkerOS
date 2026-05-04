@@ -95,8 +95,8 @@ CREATE TABLE IF NOT EXISTS events (
 ```
 
 Nested JSON fields (`data`, `globals`, `consent`) are stored as JSON strings.
-`page_url` comes from `source.id`; `page_title` from `data.title`;
-`referrer_url` from `source.previous_id`.
+`page_url` comes from `source.url`; `page_title` from `data.title`;
+`referrer_url` from `source.referrer`.
 
 ## Drivers
 

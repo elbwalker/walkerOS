@@ -7,8 +7,8 @@ describe('containsCodeMarkers', () => {
   it('detects $code: prefix', () => {
     expect(containsCodeMarkers('$code:(v) => v')).toBe(true);
   });
-  it('detects $store: prefix', () => {
-    expect(containsCodeMarkers('$store:memory')).toBe(true);
+  it('detects $store. prefix', () => {
+    expect(containsCodeMarkers('$store.memory')).toBe(true);
   });
   it('detects __WALKEROS_ENV: marker', () => {
     expect(containsCodeMarkers('__WALKEROS_ENV:API_KEY')).toBe(true);
@@ -35,7 +35,7 @@ describe('containsCodeMarkers', () => {
     expect(containsCodeMarkers({ nested: { deep: '$code:fn()' } })).toBe(true);
   });
   it('detects code markers in arrays', () => {
-    expect(containsCodeMarkers(['normal', '$store:x'])).toBe(true);
+    expect(containsCodeMarkers(['normal', '$store.x'])).toBe(true);
   });
   it('returns false for plain objects', () => {
     expect(containsCodeMarkers({ a: 1, b: 'hello' })).toBe(false);
@@ -58,15 +58,15 @@ describe('classifyStepProperties', () => {
     expect(dataProps).toEqual({ config: { settings: { port: 8080 } } });
   });
 
-  it('puts $store: env in code layer', () => {
+  it('puts $store. env in code layer', () => {
     const { codeProps, dataProps } = classifyStepProperties({
       code: 'destGa4',
       config: { settings: { id: 'G-ABC' } },
-      env: { store: '$store:memory' },
+      env: { store: '$store.memory' },
     });
     expect(codeProps).toEqual({
       code: 'destGa4',
-      env: { store: '$store:memory' },
+      env: { store: '$store.memory' },
     });
     expect(dataProps).toEqual({ config: { settings: { id: 'G-ABC' } } });
   });

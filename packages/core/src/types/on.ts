@@ -1,114 +1,107 @@
-import type { Collector, Destination, WalkerOS } from './';
+import type { Collector, Destination, Logger, WalkerOS } from './';
 
-// collector state for the on actions
+/** Collector state mapping for the `on` actions. */
 export type Config = {
-  config?: Array<GenericConfig>;
-  consent?: Array<ConsentConfig>;
-  custom?: Array<GenericConfig>;
-  globals?: Array<GenericConfig>;
-  ready?: Array<ReadyConfig>;
-  run?: Array<RunConfig>;
-  session?: Array<SessionConfig>;
-  user?: Array<UserConfig>;
+  config?: Array<GenericFn>;
+  consent?: Array<ConsentRule>;
+  custom?: Array<GenericFn>;
+  globals?: Array<GenericFn>;
+  ready?: Array<ReadyFn>;
+  run?: Array<RunFn>;
+  session?: Array<SessionFn>;
+  user?: Array<UserFn>;
 };
 
-// On types — allow arbitrary string events via `(string & {})`
+/** Allow arbitrary string events via `(string & {})`. */
 export type Types = keyof Config | (string & {});
 
-// Map each event type to its expected context type
-export interface EventContextMap {
+/** Map each event type to its expected data payload type. */
+export interface EventDataMap {
   config: Partial<Collector.Config>;
   consent: WalkerOS.Consent;
   custom: WalkerOS.Properties;
   globals: WalkerOS.Properties;
-  ready: undefined;
-  run: undefined;
-  session: Collector.SessionData;
+  ready: void;
+  run: void;
+  session: Collector.SessionData | undefined;
   user: WalkerOS.User;
 }
 
-// Extract the context type for a specific event
-export type EventContext<T extends keyof EventContextMap> = EventContextMap[T];
+/** Extract the data type for a specific event. */
+export type EventData<T extends keyof EventDataMap> = EventDataMap[T];
 
-// Union of all possible context types
-export type AnyEventContext = EventContextMap[keyof EventContextMap];
+/** Union of all possible data types. */
+export type AnyEventData = EventDataMap[keyof EventDataMap];
 
-// Legacy context interface (can be removed in future)
+/**
+ * Context provided to every `on` callback.
+ * Same posture as Mapping.Context: collector + logger only;
+ * subscriptions are a collector-level concern, not a stage-level one.
+ */
 export interface Context {
-  consent?: WalkerOS.Consent;
-  session?: unknown;
+  collector: Collector.Instance;
+  logger: Logger.Instance;
 }
 
-// Parameters for the onAction function calls
-export type Options =
-  | ConsentConfig
-  | GenericConfig
-  | ReadyConfig
-  | RunConfig
-  | SessionConfig
-  | UserConfig;
+/** Unified subscription callback shape. */
+export type Fn<TData = unknown> = (
+  data: TData,
+  context: Context,
+) => WalkerOS.PromiseOrValue<void>;
 
-// Consent
-export interface ConsentConfig {
+/** Typed-data variants for readability and IntelliSense. All reduce to Fn<TData>. */
+export type ConsentFn = Fn<WalkerOS.Consent>;
+export type GenericFn = Fn<unknown>;
+export type ReadyFn = Fn<void>;
+export type RunFn = Fn<void>;
+export type SessionFn = Fn<Collector.SessionData | undefined>;
+export type UserFn = Fn<WalkerOS.User>;
+
+/**
+ * Consent rule: a record of `{ [consentKey]: ConsentFn }`.
+ * Only the consent action uses this shape (per-key handler dispatch).
+ */
+export interface ConsentRule {
   [key: string]: ConsentFn;
 }
-export type ConsentFn = (
-  collector: Collector.Instance,
-  consent: WalkerOS.Consent,
-) => void;
 
-// Generic (config, custom, globals)
-export type GenericConfig = GenericFn;
-export type GenericFn = (collector: Collector.Instance, data: unknown) => void;
-
-// Ready
-export type ReadyConfig = ReadyFn;
-export type ReadyFn = (collector: Collector.Instance) => void;
-
-// Run
-export type RunConfig = RunFn;
-export type RunFn = (collector: Collector.Instance) => void;
-
-// Session
-export type SessionConfig = SessionFn;
-export type SessionFn = (
-  collector: Collector.Instance,
-  session?: unknown,
-) => void;
-
-// User
-export type UserConfig = UserFn;
-export type UserFn = (
-  collector: Collector.Instance,
-  user: WalkerOS.User,
-) => void;
+/** Anything registerable via `walker.on(action, X)`: a typed callback or a consent rule record. */
+export type Subscription =
+  | ConsentRule
+  | GenericFn
+  | ReadyFn
+  | RunFn
+  | SessionFn
+  | UserFn;
 
 export interface OnConfig {
-  config?: GenericConfig[];
-  consent?: ConsentConfig[];
-  custom?: GenericConfig[];
-  globals?: GenericConfig[];
-  ready?: ReadyConfig[];
-  run?: RunConfig[];
-  session?: SessionConfig[];
-  user?: UserConfig[];
+  config?: GenericFn[];
+  consent?: ConsentRule[];
+  custom?: GenericFn[];
+  globals?: GenericFn[];
+  ready?: ReadyFn[];
+  run?: RunFn[];
+  session?: SessionFn[];
+  user?: UserFn[];
   [key: string]:
-    | ConsentConfig[]
-    | GenericConfig[]
-    | ReadyConfig[]
-    | RunConfig[]
-    | SessionConfig[]
-    | UserConfig[]
+    | ConsentRule[]
+    | GenericFn[]
+    | ReadyFn[]
+    | RunFn[]
+    | SessionFn[]
+    | UserFn[]
     | undefined;
 }
 
-// Destination on function type with automatic type inference
+/**
+ * Destination `on` handler: receives the action type and a destination context.
+ * Already context-style; kept for compatibility with the destination interface.
+ */
 export type OnFn<T extends Destination.TypesGeneric = Destination.Types> = (
   type: Types,
   context: Destination.Context<T>,
 ) => WalkerOS.PromiseOrValue<void>;
 
-// Runtime-compatible version for internal usage
 export type OnFnRuntime = (
   type: Types,
   context: Destination.Context,

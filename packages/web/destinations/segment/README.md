@@ -11,7 +11,7 @@
 [NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-segment)
 &bull; [Documentation](https://www.walkeros.io/docs/destinations/web/segment)
 
-This package forwards walkerOS events to [Segment](https://segment.com/) — the
+This package forwards walkerOS events to [Segment](https://segment.com/) - the
 customer data platform that routes your event data to 400+ downstream
 destinations. Built on the official
 [`@segment/analytics-next`](https://www.npmjs.com/package/@segment/analytics-next)
@@ -24,26 +24,26 @@ forwards them via the full Segment Spec surface: `track`, `identify`, `group`,
 
 ## Features
 
-- **Default event forwarding** — every walkerOS event becomes
+- **Default event forwarding** - every walkerOS event becomes
   `analytics.track(name, properties)` with no additional config
-- **Custom event properties** — flatten walkerOS sections with
+- **Custom event properties** - flatten walkerOS sections with
   `settings.include` (`data_*`, `globals_*`, etc.) or produce fully-shaped
   Segment Spec properties via `mapping.data`
-- **Identity** — destination-level or per-event `settings.identify` resolving to
+- **Identity** - destination-level or per-event `settings.identify` resolving to
   `{ userId, traits, anonymousId }`, with runtime state diffing so redundant
   `identify()` calls are skipped
-- **Groups** — `settings.group` with Segment-reserved group traits (`name`,
+- **Groups** - `settings.group` with Segment-reserved group traits (`name`,
   `industry`, `employees`, `plan`, ...)
-- **Page views** — first-class `analytics.page(category, name, properties)` via
+- **Page views** - first-class `analytics.page(category, name, properties)` via
   explicit `mapping.settings.page` configuration
-- **Reset on logout** — `settings.reset: true` calls `analytics.reset()` so the
+- **Reset on logout** - `settings.reset: true` calls `analytics.reset()` so the
   current user identity is cleared
-- **Consent context forwarding** — walkerOS consent state is automatically
+- **Consent context forwarding** - walkerOS consent state is automatically
   stamped as `context.consent.categoryPreferences` on every call, with optional
   `settings.consent` key remapping
-- **Deferred-load consent pattern** — when `config.consent` is declared,
+- **Deferred-load consent pattern** - when `config.consent` is declared,
   `AnalyticsBrowser.load()` is held until the first grant
-- **Ecommerce via the Segment Spec** — walkerOS `mapping.name` + `mapping.data`
+- **Ecommerce via the Segment Spec** - walkerOS `mapping.name` + `mapping.data`
   produce PascalCase event names (`Order Completed`) with a `products` array, a
   single `track()` call per order (no loop)
 
@@ -83,12 +83,12 @@ walkerOS-specific fields listed below.
 
 | Name                       | Type                     | Description                                                                                                         | Required |
 | -------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------- | -------- |
-| `apiKey`                   | `string`                 | Your Segment source write key — maps to `writeKey` in `AnalyticsBrowser.load()`                                     | Yes      |
+| `apiKey`                   | `string`                 | Your Segment source write key - maps to `writeKey` in `AnalyticsBrowser.load()`                                     | Yes      |
 | `identify`                 | `Mapping.Value`          | Destination-level identity mapping resolving to `{ userId, traits, anonymousId }`                                   | No       |
 | `group`                    | `Mapping.Value`          | Destination-level group mapping resolving to `{ groupId, traits }`                                                  | No       |
 | `include`                  | `string[]`               | walkerOS event sections to flatten into Segment `properties` (`data`, `globals`, `context`, `user`, `event`, `all`) | No       |
 | `consent`                  | `Record<string, string>` | Mapping from walkerOS consent keys → Segment `categoryPreferences` keys (e.g. `{ marketing: 'Advertising' }`)       | No       |
-| `initialPageview`          | `boolean`                | Default `false` — walkerOS sources handle page tracking, so the SDK's auto pageview is disabled                     | No       |
+| `initialPageview`          | `boolean`                | Default `false` - walkerOS sources handle page tracking, so the SDK's auto pageview is disabled                     | No       |
 | `disableClientPersistence` | `boolean`                | Disable all cookie / localStorage writes                                                                            | No       |
 | `integrations`             | `object`                 | Enable/disable downstream Segment destinations. Example: `{ All: true, Mixpanel: false }`                           | No       |
 
@@ -102,8 +102,8 @@ walkerOS-specific fields listed below.
 | `reset`    | `Mapping.Value \| true` | Logout trigger. Truthy → `analytics.reset()`                                                                |
 | `include`  | `string[]`              | Override destination-level `include` for this rule                                                          |
 
-Use `mapping.skip: true` to suppress the default `analytics.track()` call when a
-rule runs identity / group / page side effects only.
+Use `mapping.silent: true` to suppress the default `analytics.track()` call when
+a rule runs identity / group / page side effects only.
 
 ## Event Properties
 
@@ -153,7 +153,7 @@ mapping: {
 ```
 
 The Segment Ecommerce Spec uses a **single**
-`track('Order Completed', { products: [...] })` call — not a loop of N revenue
+`track('Order Completed', { products: [...] })` call - not a loop of N revenue
 calls. walkerOS `mapping.data` with a nested `loop` over `nested` builds the
 products array inline.
 
@@ -181,14 +181,14 @@ config: {
 }
 ```
 
-Per-event identity uses a mapping rule with `skip: true` so only the identity
+Per-event identity uses a mapping rule with `silent: true` so only the identity
 side effect runs (not a default `track()`):
 
 ```typescript
 mapping: {
   user: {
     login: {
-      skip: true,
+      silent: true,
       settings: {
         identify: {
           map: {
@@ -219,7 +219,7 @@ Use these trait names so downstream destinations recognize them: `email`,
 mapping: {
   company: {
     update: {
-      skip: true,
+      silent: true,
       settings: {
         group: {
           map: {
@@ -245,7 +245,7 @@ Reserved Segment group traits: `name`, `industry`, `employees`, `plan`,
 
 ## Page Views
 
-Segment's `page()` is first-class — walkerOS `page view` events should map to
+Segment's `page()` is first-class - walkerOS `page view` events should map to
 `analytics.page()`, not `analytics.track('page view')`. Configure explicitly via
 `mapping.settings.page`:
 
@@ -253,7 +253,7 @@ Segment's `page()` is first-class — walkerOS `page view` events should map to
 mapping: {
   page: {
     view: {
-      skip: true,
+      silent: true,
       settings: {
         page: {
           map: {
@@ -279,7 +279,7 @@ on the SDK's automatic url/path/referrer/title collection:
 mapping: {
   page: {
     view: {
-      skip: true,
+      silent: true,
       settings: {
         page: true,
       },
@@ -330,7 +330,7 @@ destinations: {
 ```
 
 This is the primary consent mechanism for Segment, since Segment's SDK has no
-`optOut()` method — the only way to enforce consent is to avoid loading the SDK
+`optOut()` method - the only way to enforce consent is to avoid loading the SDK
 in the first place.
 
 ## Reset (Logout)
@@ -339,7 +339,7 @@ in the first place.
 mapping: {
   user: {
     logout: {
-      skip: true,
+      silent: true,
       settings: {
         reset: true,
       },

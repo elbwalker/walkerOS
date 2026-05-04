@@ -4,6 +4,7 @@ import { tmpdir } from 'os';
 import {
   readConfig,
   writeConfig,
+  writeTelemetryOnlyConfig,
   setDefaultProject,
   getDefaultProject,
   setFeedbackPreference,
@@ -117,5 +118,39 @@ describe('config-file defaultProject', () => {
     it('returns null when no config exists', () => {
       expect(getDefaultProject()).toBeNull();
     });
+  });
+});
+
+describe('WalkerOSConfig telemetry fields', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv, XDG_CONFIG_HOME: testDir };
+    mkdirSync(join(testDir, 'walkeros'), { recursive: true });
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    rmSync(testDir, { recursive: true, force: true });
+  });
+
+  it('persists installationId and telemetryEnabled through write/read', () => {
+    writeConfig({
+      token: 't',
+      email: 'e',
+      appUrl: 'u',
+      installationId: 'abc-123',
+      telemetryEnabled: false,
+    });
+    const cfg = readConfig();
+    expect(cfg?.installationId).toBe('abc-123');
+    expect(cfg?.telemetryEnabled).toBe(false);
+  });
+
+  it('allows telemetry-only config without token/email (anonymous install)', () => {
+    writeTelemetryOnlyConfig({ installationId: 'xyz-789' });
+    const cfg = readConfig();
+    expect(cfg?.installationId).toBe('xyz-789');
+    expect(cfg?.token).toBeUndefined();
   });
 });

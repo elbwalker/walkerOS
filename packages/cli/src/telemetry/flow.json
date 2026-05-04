@@ -1,0 +1,110 @@
+{
+  "version": 4,
+  "contract": {
+    "telemetry": {
+      "description": "walkerOS internal usage telemetry from @walkeros/cli and @walkeros/mcp. Anonymous, opt-out, no PII.",
+      "user": {
+        "type": "object",
+        "properties": {
+          "device": {
+            "type": "string",
+            "description": "Installation UUID generated once per machine and persisted in ~/.config/walkeros/config.json. Not linked to any account."
+          },
+          "session": {
+            "type": "string",
+            "description": "Ephemeral per-process UUID. Only present on MCP events; CLI omits because its session is a single event."
+          },
+          "os": {
+            "type": "string"
+          },
+          "osVersion": {
+            "type": "string"
+          },
+          "node": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        }
+      },
+      "consent": {
+        "type": "object",
+        "properties": {
+          "telemetry": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": ["telemetry"]
+      },
+      "events": {
+        "mcp": {
+          "start": {
+            "type": "object",
+            "properties": {
+              "ci": {
+                "type": "boolean"
+              },
+              "ci_name": {
+                "type": "string"
+              },
+              "client": {
+                "type": "string",
+                "description": "Raw clientInfo.name from the MCP initialize handshake (e.g. 'claude-ai', 'claude-code', 'vscode')."
+              }
+            },
+            "required": ["ci", "client"]
+          }
+        },
+        "cmd": {
+          "invoke": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "CLI command, space-joined for subcommands (e.g. 'bundle', 'projects list', 'auth login'). Set on source.command when source.type = 'cli'."
+              },
+              "tool": {
+                "type": "string",
+                "description": "MCP tool name (e.g. 'flow_simulate', 'flow_bundle'). Set on source.tool when source.type = 'mcp'."
+              },
+              "outcome": {
+                "type": "string",
+                "enum": ["success", "error", "cancelled"]
+              }
+            },
+            "required": ["outcome"]
+          }
+        },
+        "error": {
+          "throw": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["uncaught", "unhandledRejection", "startup"]
+              }
+            },
+            "required": ["kind"]
+          }
+        }
+      }
+    }
+  },
+  "flows": {
+    "default": {
+      "destinations": {
+        "api": {
+          "package": "@walkeros/server-destination-api",
+          "config": {
+            "url": "$env.WALKEROS_APP_URL/api/telemetry"
+          }
+        }
+      }
+    }
+  }
+}

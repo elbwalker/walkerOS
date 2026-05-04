@@ -20,7 +20,6 @@ describe('Status', () => {
     overrides: Partial<Collector.Config> = {},
   ): Collector.Config {
     return {
-      tagging: 1,
       globalsStatic: {},
       sessionStatic: {},
       ...overrides,

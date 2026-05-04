@@ -36,7 +36,7 @@ export const init: Flow.StepExample = {
 };
 
 /**
- * Default event forwarding — every walkerOS event becomes
+ * Default event forwarding - every walkerOS event becomes
  * analytics.track(event.name, properties). With no mapping and no
  * destination-level include, properties is `{}`.
  */
@@ -49,7 +49,7 @@ export const defaultEventForwarding: SegmentStepExample = {
 };
 
 /**
- * Wildcard ignore — walkerOS's standard way to drop events. The rule
+ * Wildcard ignore - walkerOS's standard way to drop events. The rule
  * matches but does nothing. The destination fires zero SDK calls.
  */
 export const wildcardIgnored: SegmentStepExample = {
@@ -134,8 +134,8 @@ export const destinationLevelIdentify: SegmentStepExample = {
 };
 
 /**
- * Per-event identify with traits — the canonical "user login" pattern.
- * skip: true suppresses the default analytics.track() call because we're
+ * Per-event identify with traits - the canonical "user login" pattern.
+ * silent: true suppresses the default analytics.track() call because we're
  * running identity side effects only. Matches Segment Spec reserved traits
  * (email, name, plan, company) so downstream destinations recognize them.
  */
@@ -155,7 +155,7 @@ export const userLoginIdentify: SegmentStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -192,7 +192,7 @@ export const userLoginIdentify: SegmentStepExample = {
 };
 
 /**
- * Profile update — omit userId. Segment's SDK uses the currently stored
+ * Profile update - omit userId. Segment's SDK uses the currently stored
  * userId and merges the traits into the existing trait set.
  */
 export const profileUpdateTraitsOnly: SegmentStepExample = {
@@ -208,7 +208,7 @@ export const profileUpdateTraitsOnly: SegmentStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       identify: {
         map: {
@@ -237,9 +237,9 @@ export const profileUpdateTraitsOnly: SegmentStepExample = {
 };
 
 /**
- * User logout — reset: true fires analytics.reset(), which clears userId,
+ * User logout - reset: true fires analytics.reset(), which clears userId,
  * anonymousId, traits, and generates a new anonymous ID.
- * skip: true because we're only running the reset side effect.
+ * silent: true because we're only running the reset side effect.
  */
 export const userLogoutReset: SegmentStepExample = {
   title: 'User logout reset',
@@ -247,7 +247,7 @@ export const userLogoutReset: SegmentStepExample = {
     'A user logout calls analytics.reset to clear userId, anonymousId, and traits then generate a new anonymous id.',
   in: getEvent('user logout', { timestamp: 1700000107 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       reset: true,
     },
@@ -256,7 +256,7 @@ export const userLogoutReset: SegmentStepExample = {
 };
 
 /**
- * Per-event group assignment — company update event attaches the user
+ * Per-event group assignment - company update event attaches the user
  * to a company and sets the company's traits in one call.
  */
 export const companyUpdateGroup: SegmentStepExample = {
@@ -274,7 +274,7 @@ export const companyUpdateGroup: SegmentStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       group: {
         map: {
@@ -306,8 +306,8 @@ export const companyUpdateGroup: SegmentStepExample = {
 };
 
 /**
- * Explicit page() call — the canonical Segment pattern for page views.
- * skip: true suppresses the default track() call; settings.page fires
+ * Explicit page() call - the canonical Segment pattern for page views.
+ * silent: true suppresses the default track() call; settings.page fires
  * analytics.page(category, name, properties) instead.
  */
 export const pageViewAsPage: SegmentStepExample = {
@@ -323,7 +323,7 @@ export const pageViewAsPage: SegmentStepExample = {
     },
   }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       page: {
         map: {
@@ -351,7 +351,7 @@ export const pageViewAsPage: SegmentStepExample = {
 };
 
 /**
- * Minimal page() call — settings.page: true produces an empty
+ * Minimal page() call - settings.page: true produces an empty
  * analytics.page() relying entirely on SDK auto-collection.
  */
 export const pageViewMinimal: SegmentStepExample = {
@@ -360,7 +360,7 @@ export const pageViewMinimal: SegmentStepExample = {
     'A mapping with page: true fires an empty analytics.page call relying on Segments auto-collection.',
   in: getEvent('page view', { timestamp: 1700000110 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       page: true,
     },
@@ -369,7 +369,7 @@ export const pageViewMinimal: SegmentStepExample = {
 };
 
 /**
- * Segment ecommerce spec — Order Completed event. One track() call with
+ * Segment ecommerce spec - Order Completed event. One track() call with
  * a products array. Uses mapping.name to produce the Segment Spec name
  * and mapping.data to build the properties object including the nested
  * products loop. The loop filters via condition to products with prices.
@@ -441,7 +441,7 @@ export const orderCompletedEcommerce: SegmentStepExample = {
 };
 
 /**
- * Consent context forwarding — when the event has consent state,
+ * Consent context forwarding - when the event has consent state,
  * the destination automatically stamps every track/identify/group/page
  * call with context.consent.categoryPreferences. settings.consent
  * remaps walkerOS keys to Segment category names.

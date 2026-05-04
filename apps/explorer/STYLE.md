@@ -593,15 +593,15 @@ active schemas whenever one is added or removed.
 **Usage:**
 
 ```tsx
-// Static schema (e.g., Flow.Setup)
-import { setupV2JsonSchema } from '@walkeros/core/dev';
+// Static schema (e.g., Flow.Json)
+import { schemas } from '@walkeros/core/dev';
 
 <CodeBox
   code={flowJson}
   onChange={setFlowJson}
   language="json"
   showFormat
-  jsonSchema={setupV2JsonSchema as Record<string, unknown>}
+  jsonSchema={schemas.configJsonSchema as Record<string, unknown>}
 />;
 ```
 
@@ -612,11 +612,29 @@ import { setupV2JsonSchema } from '@walkeros/core/dev';
 - `hover` — tooltip descriptions from schema `description` fields
 - Unique model `path` — auto-generated to isolate schema per editor instance
 
-**`intellisenseContext` prop:** Provides `$var.`, `$def.`, `$secret.`
-completions, hover tooltips, and semantic validation markers. Also generates a
-unique model `path` and enables `quickSuggestions` and `hover` independently of
-`jsonSchema`. Both props can be combined for full schema validation +
-context-driven features.
+**`intellisenseContext` prop:** Provides completions, hover tooltips, and
+semantic validation markers for every canonical walkerOS reference form:
+`$var.name`, `$def.name.path`, `$env.NAME:default`, `$contract.name.path`,
+`$store.id`, `$secret.NAME`, and `$code:payload`. The rule is simple: `.` for
+names and paths, `:` for literal values (env defaults) or raw-code payloads.
+
+Regex patterns live in `@walkeros/core` as `REF_VAR`, `REF_DEF`, `REF_ENV`,
+`REF_CONTRACT`, `REF_STORE`, `REF_SECRET`, `REF_CODE_PREFIX` — import these when
+you need to match or validate references; do not hand-roll the regexes.
+
+Chain references (`next` / `before`) are detected via JSON-path awareness
+(`detectChainRefContext`) and cover scalar, inline array, multi-line array, and
+Route[] inner `next` forms. Chain markers use a recursive JSON walk instead of a
+line regex.
+
+Context completions adapt to what the caller passes: when `stores` is provided,
+`$store.` fires completions; when `envNames` is provided, `$env.` gains
+autocompletion and validation (absent inventory, `$env.` still gets a generic
+hover).
+
+Also generates a unique model `path` and enables `quickSuggestions` and `hover`
+independently of `jsonSchema`. Both props can be combined for full schema
+validation + context-driven features.
 
 **Advanced: Direct Registry Access:**
 

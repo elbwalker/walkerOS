@@ -7,7 +7,7 @@ type Captured = [callable: string, ...args: unknown[]];
 
 /**
  * Pinterest Conversions API destination invokes
- * `env.sendServer(url, body, options)` exactly once per push. Stateless —
+ * `env.sendServer(url, body, options)` exactly once per push. Stateless -
  * no init-time calls to filter.
  */
 describe('Step Examples', () => {
@@ -33,7 +33,7 @@ describe('Step Examples', () => {
     testEnv.sendServer = mockSendServer;
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const mappingConfig = mapping
       ? { [event.entity]: { [event.action]: mapping } }

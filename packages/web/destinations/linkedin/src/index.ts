@@ -31,7 +31,7 @@ const LINKEDIN_SCRIPT_SRC =
  * snippet: any call made before the CDN script loads is pushed to a queue
  * the script processes once it initializes.
  *
- * Idempotent — if `lintrk` is already installed (e.g. another tag installed
+ * Idempotent - if `lintrk` is already installed (e.g. another tag installed
  * it), leave the existing function alone.
  */
 function installLintrkQueue(env: Env | undefined): void {
@@ -88,7 +88,7 @@ function buildLintrkData(resolved: unknown): LintrkTrackData | undefined {
   };
 
   // id must be a truthy number (Campaign Manager conversion_id).
-  // Accept numeric strings by coercion — users may supply { value: "12345" }.
+  // Accept numeric strings by coercion - users may supply { value: "12345" }.
   const numericId = isNumber(id)
     ? id
     : isString(id) && id !== '' && !Number.isNaN(Number(id))
@@ -98,7 +98,7 @@ function buildLintrkData(resolved: unknown): LintrkTrackData | undefined {
 
   const data: LintrkTrackData = { conversion_id: numericId };
 
-  // conversion_value — accept number or numeric string; omit if falsy/NaN.
+  // conversion_value - accept number or numeric string; omit if falsy/NaN.
   if (isNumber(value)) {
     data.conversion_value = value;
   } else if (isString(value) && value !== '') {
@@ -106,12 +106,12 @@ function buildLintrkData(resolved: unknown): LintrkTrackData | undefined {
     if (!Number.isNaN(n)) data.conversion_value = n;
   }
 
-  // currency — string only; omit if falsy.
+  // currency - string only; omit if falsy.
   if (isString(currency) && currency !== '') {
     data.currency = currency;
   }
 
-  // event_id — string only; omit if falsy.
+  // event_id - string only; omit if falsy.
   if (isString(eventId) && eventId !== '') {
     data.event_id = eventId;
   }
@@ -133,21 +133,21 @@ export const destinationLinkedIn: Destination = {
 
     // Script injection is opt-in via config.loadScript (same default as
     // plausible / meta). Users who already embed the Insight Tag snippet in
-    // their HTML should leave loadScript false — the destination only
+    // their HTML should leave loadScript false - the destination only
     // installs the queue shim and mutates _linkedin_partner_id.
     if (config.loadScript) addScript(env);
 
     return config;
   },
 
-  async push(event, { rule, env }) {
+  async push(event, { rule, env, collector }) {
     const { window } = getEnv(env);
     const w = window as Env['window'];
     const lintrk = w.lintrk;
     if (!lintrk) return; // init must have run
 
-    // Honor rule-level skip (core flag at packages/core/src/types/mapping.ts:34).
-    if (rule?.skip === true) return;
+    // Honor rule-level silent (core flag at packages/core/src/types/mapping.ts).
+    if (rule?.silent === true) return;
 
     const mappingSettings = (rule?.settings || {}) as Mapping;
     if (mappingSettings.conversion === undefined) return; // opt-in: no config = no call
@@ -155,6 +155,7 @@ export const destinationLinkedIn: Destination = {
     const resolved = await getMappingValue(
       event as WalkerOS.Event,
       mappingSettings.conversion,
+      { collector },
     );
 
     const data = buildLintrkData(resolved);
@@ -176,7 +177,7 @@ export const destinationLinkedIn: Destination = {
     if (!config?.loadScript) return;
     if (consent.marketing !== true) return;
 
-    // Check whether the script tag is already in the DOM — addScript is not
+    // Check whether the script tag is already in the DOM - addScript is not
     // idempotent, and re-injecting would load the tag twice.
     const { document } = getEnv(context.env);
     const doc = document as Document;

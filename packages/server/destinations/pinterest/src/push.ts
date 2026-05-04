@@ -5,7 +5,7 @@ import { hashEvent } from './hash';
 
 export const push: PushFn = async function (
   event,
-  { config, data, env, logger },
+  { config, data, env, logger, collector },
 ) {
   const {
     accessToken,
@@ -20,10 +20,10 @@ export const push: PushFn = async function (
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data
-    ? await getMappingValue(event, config.data)
+    ? await getMappingValue(event, config.data, { collector })
     : {};
   const userDataCustom = user_data
-    ? await getMappingValue(event, { map: user_data })
+    ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
 
   // Merge user_data from config.data, settings.user_data, and event mapping
@@ -60,8 +60,8 @@ export const push: PushFn = async function (
   }
 
   // Set event_source_url for web events
-  if (action_source === 'web') {
-    serverEvent.event_source_url = event.source.id;
+  if (action_source === 'web' && event.source?.url) {
+    serverEvent.event_source_url = event.source.url;
   }
 
   // Add partner_name from settings

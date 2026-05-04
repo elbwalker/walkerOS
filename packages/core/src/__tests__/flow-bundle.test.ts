@@ -1,46 +1,53 @@
 import type { Flow } from '../types';
-import { ConfigSchema } from '../schemas/flow';
+import { JsonSchema } from '../schemas/flow';
 
-describe('Flow.Config bundle section', () => {
+describe('Flow.Json bundle section', () => {
   test('bundle.packages accepts Package records', () => {
-    const config: Flow.Config = {
-      version: 3,
+    const config: Flow.Json = {
+      version: 4,
       flows: {
         default: {
-          web: {},
-          bundle: {
-            packages: {
-              '@walkeros/collector': {},
-              '@walkeros/web-source-browser': { version: '^3.2.0' },
+          config: {
+            platform: 'web',
+            bundle: {
+              packages: {
+                '@walkeros/collector': {},
+                '@walkeros/web-source-browser': { version: '^3.2.0' },
+              },
             },
           },
         },
       },
     };
-    expect(config.flows.default.bundle?.packages).toBeDefined();
+    expect(config.flows.default.config?.bundle?.packages).toBeDefined();
     expect(
-      config.flows.default.bundle?.packages?.['@walkeros/web-source-browser']
-        .version,
+      config.flows.default.config?.bundle?.packages?.[
+        '@walkeros/web-source-browser'
+      ].version,
     ).toBe('^3.2.0');
   });
 
   test('bundle.overrides accepts string records', () => {
-    const config: Flow.Config = {
-      version: 3,
+    const config: Flow.Json = {
+      version: 4,
       flows: {
         default: {
-          web: {},
-          bundle: {
-            overrides: {
-              '@amplitude/analytics-types': '2.11.1',
+          config: {
+            platform: 'web',
+            bundle: {
+              overrides: {
+                '@amplitude/analytics-types': '2.11.1',
+              },
             },
           },
         },
       },
     };
-    expect(config.flows.default.bundle?.overrides).toBeDefined();
+    expect(config.flows.default.config?.bundle?.overrides).toBeDefined();
     expect(
-      config.flows.default.bundle?.overrides?.['@amplitude/analytics-types'],
+      config.flows.default.config?.bundle?.overrides?.[
+        '@amplitude/analytics-types'
+      ],
     ).toBe('2.11.1');
   });
 
@@ -60,13 +67,15 @@ describe('Flow.Config bundle section', () => {
 
 describe('Flow Zod schema — bundle section', () => {
   test('parses bundle.packages', () => {
-    const result = ConfigSchema.safeParse({
-      version: 3,
+    const result = JsonSchema.safeParse({
+      version: 4,
       flows: {
         default: {
-          web: {},
-          bundle: {
-            packages: { '@walkeros/collector': {} },
+          config: {
+            platform: 'web',
+            bundle: {
+              packages: { '@walkeros/collector': {} },
+            },
           },
         },
       },
@@ -75,13 +84,15 @@ describe('Flow Zod schema — bundle section', () => {
   });
 
   test('parses bundle.overrides as Record<string, string>', () => {
-    const result = ConfigSchema.safeParse({
-      version: 3,
+    const result = JsonSchema.safeParse({
+      version: 4,
       flows: {
         default: {
-          web: {},
-          bundle: {
-            overrides: { '@amplitude/analytics-types': '2.11.1' },
+          config: {
+            platform: 'web',
+            bundle: {
+              overrides: { '@amplitude/analytics-types': '2.11.1' },
+            },
           },
         },
       },
@@ -90,14 +101,16 @@ describe('Flow Zod schema — bundle section', () => {
   });
 
   test('parses bundle.packages and bundle.overrides together', () => {
-    const result = ConfigSchema.safeParse({
-      version: 3,
+    const result = JsonSchema.safeParse({
+      version: 4,
       flows: {
         default: {
-          web: {},
-          bundle: {
-            packages: { '@walkeros/collector': {} },
-            overrides: { '@amplitude/analytics-types': '2.11.1' },
+          config: {
+            platform: 'web',
+            bundle: {
+              packages: { '@walkeros/collector': {} },
+              overrides: { '@amplitude/analytics-types': '2.11.1' },
+            },
           },
         },
       },
@@ -105,38 +118,22 @@ describe('Flow Zod schema — bundle section', () => {
     expect(result.success).toBe(true);
   });
 
-  test('rejects top-level packages with migration error', () => {
-    const result = ConfigSchema.safeParse({
-      version: 3,
-      flows: {
-        default: {
-          web: {},
-          packages: { '@walkeros/collector': {} },
-        },
-      },
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const msg = result.error.issues.map((e) => e.message).join(' ');
-      expect(msg).toMatch(/bundle\.packages/);
-      expect(msg).toMatch(/migration|moved/i);
-    }
-  });
-
   test('rejects unknown bundle field', () => {
     const raw: unknown = {
-      version: 3,
+      version: 4,
       flows: {
         default: {
-          web: {},
-          bundle: {
-            packages: { '@walkeros/collector': {} },
-            unknown: 'field',
+          config: {
+            platform: 'web',
+            bundle: {
+              packages: { '@walkeros/collector': {} },
+              unknown: 'field',
+            },
           },
         },
       },
     };
-    const result = ConfigSchema.safeParse(raw);
+    const result = JsonSchema.safeParse(raw);
     expect(result.success).toBe(false);
   });
 });

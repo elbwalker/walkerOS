@@ -1,5 +1,134 @@
 # @walkeros/explorer
 
+## 4.0.0
+
+### Major Changes
+
+- 942a7fe: Flow v4: type redesign and cross-flow references.
+
+  Breaking changes:
+  - Renamed `Flow.Settings` (single-flow shape) to `Flow`. The new
+    `Flow.Settings` is the arbitrary kv-bag inside `Flow.Config` (matches
+    `Destination.Settings` semantics).
+  - Renamed `Flow.Config` (root file shape) to `Flow.Json`.
+  - Removed `Flow.Web` and `Flow.Server`. Replaced by
+    `config.platform: 'web' | 'server'` (a string discriminator).
+  - Renamed `Flow.InlineCode` to `Flow.Code`.
+  - Renamed `Flow.SourceReference` / `DestinationReference` /
+    `TransformerReference` / `StoreReference` to `Flow.Source` / `Destination` /
+    `Transformer` / `Store` (Reference suffix dropped).
+  - Renamed `Flow.ContractEntry` to `Flow.ContractRule`.
+  - Lifted `bundle` and platform fields into the per-flow `config` block.
+  - `flow.json` `version` bumped from 3 to 4. v3 input is rejected (no compat
+    shim).
+
+  New:
+  - `$flow.X.Y` reference resolves to `flows.X.config.Y` in the same file.
+    Useful for linking a web flow's API destination to a server flow's deployed
+    URL without duplicating values.
+  - Per-flow `Flow.Config` block: `{ platform, url, settings, bundle }`.
+  - `walkeros validate` warns on unresolved `$flow.X.Y` (use `--strict` to
+    error). `walkeros bundle` and `walkeros deploy` always error on unresolved
+    refs.
+  - See `docs/migrating/v3-to-v4.mdx` on the website for the manual migration
+    steps. No automated codemod is shipped.
+
+### Minor Changes
+
+- 8e06b1f: IntelliSense improvements for flow.json editors:
+  - Chain references (`next` / `before`) now autocomplete in all forms: scalar,
+    inline array, multi-line array, and Route[] inner `next`. Previously only
+    the scalar form triggered.
+  - `$store.` completions, hover, and validation added. Fed by a new optional
+    `stores` field on `IntelliSenseContext`; the flow extractor collects store
+    IDs from the active flow.
+  - `$env.` completions and hover added. Optional `envNames` inventory on
+    `IntelliSenseContext` enables validation; when absent, `$env.` still gets a
+    generic hover.
+  - `$contract.` completion now only triggers when the cursor starts a new
+    string value, matching runtime semantics (whole-string refs only).
+  - `package` completion detection is JSON-path aware — multi-line `"package":`
+    values now surface completions.
+  - Variables and definitions are collected at config / flow / step levels with
+    correct cascade priority (step > flow > config).
+  - Markers validate chain references in all forms via a JSON walk instead of a
+    scalar-only regex.
+  - Internals now import the shared `REF_*` regex constants from
+    `@walkeros/core` — single source of truth, no inline duplicates.
+
+- 465775c: Add Monaco IntelliSense for `$flow.X` cross-flow references in
+  `Code`/`CodeBox`. Completion offers known sibling flow names from the parsed
+  flow document, hover describes the resolved target, decorations style matches
+  the other reference prefixes, and unknown flow names emit a warning marker.
+  Re-export `REF_FLOW` from `@walkeros/core` so consumers can build inline regex
+  tooling without reaching into the subpath.
+- cfc7469: **Breaking — `@walkeros/core`:** `fetchPackage(name, { baseUrl })`
+  now expects the host app to expose the v2 `/api/packages/[name]` endpoint that
+  returns the merged `WalkerOSPackage` shape directly (single round-trip,
+  `?expand=all`). The previous two-fetch pattern (`?path=package.json` +
+  `?path=dist/walkerOS.json`) is removed. Hosts must serve the v2 shape; the
+  offline jsdelivr fallback is unchanged.
+
+  **Feature — CLI/MCP/explorer:** Outbound walkerOS-aware HTTP clients now
+  identify themselves to the configured app origin via
+  `X-Walkeros-Client: walkeros-{cli|mcp}/{version}`. `@walkeros/explorer`
+  exports `setPackageTypesBaseUrl(url?)` so host apps can proxy `.d.ts` through
+  their own origin (used by the walkerOS Tag Manager app to drop the jsdelivr
+  CDN allowance entirely).
+
+- 8e06b1f: **BREAKING:** Unified reference syntax: `$store:id` and
+  `$secret:NAME` now use the dot separator: `$store.id` and `$secret.NAME`.
+
+  The coherent rule across every walkerOS reference is:
+  - **`.`** key or path (resolver looks up or walks what follows)
+  - **`:`** literal value or raw-code payload (resolver uses what follows
+    verbatim)
+
+  `$var.`, `$def.`, `$env.NAME[:default]`, `$contract.`, and `$code:(…)` are
+  unchanged, they already fit the rule.
+
+  Every shipped example, published `walkerOS.json` metadata, doc page, and skill
+  has been updated. A new canonical reference-syntax guide lives at
+  `/docs/guides/reference-syntax`. Regex constants (`REF_VAR`, `REF_DEF`,
+  `REF_ENV`, `REF_CONTRACT`, `REF_STORE`, `REF_SECRET`, `REF_CODE_PREFIX`) are
+  exported from `@walkeros/core` import these instead of hand-rolling regexes.
+
+  ### Upgrade
+
+  Search-and-replace across your flow configs:
+
+  ```
+  $store:<id>      → $store.<id>
+  $secret:<NAME>   → $secret.<NAME>
+  ```
+
+  Everything else stays the same. Your `$var.*`, `$def.*`, `$env.*`,
+  `$contract.*`, and `$code:*` references need no changes.
+
+### Patch Changes
+
+- 8d3c18e: Add `CodeDiff` atom and `CodeDiffBox` molecule — read-only,
+  theme-aware Monaco `DiffEditor` wrappers for side-by-side / inline code diff
+  viewing. `CodeDiffBox` mirrors `CodeBox`'s API (header, actions, traffic
+  lights, footer) and adds an opt-in summary strip, split/inline toggle, and
+  copy button. Supports any Monaco language; walkerOS `$var:` / `$secret:`
+  decorations are applied to both sides automatically.
+- 8e06b1f: `PropertyTable` — responsive card-view fallback via CSS container
+  queries (triggered below 420px), graceful empty-state rendering with an
+  optional `emptyMessage` prop (default: "No specific properties available."),
+  and improved column-width handling so the Description column no longer forces
+  horizontal overflow in narrow containers.
+- Updated dependencies [93ea9c4]
+- Updated dependencies [465775c]
+- Updated dependencies [942a7fe]
+- Updated dependencies [cfc7469]
+- Updated dependencies [8e06b1f]
+- Updated dependencies [3d50dd6]
+- Updated dependencies [1ef33d9]
+  - @walkeros/core@4.0.0
+  - @walkeros/collector@4.0.0
+  - @walkeros/web-source-browser@4.0.0
+
 ## 3.4.2
 
 ### Patch Changes

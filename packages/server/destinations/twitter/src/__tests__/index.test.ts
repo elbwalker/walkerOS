@@ -45,9 +45,7 @@ describe('Server Destination Twitter', () => {
 
     destination = jest.requireActual('../').default;
 
-    ({ elb } = await startFlow({
-      tagging: 2,
-    }));
+    ({ elb } = await startFlow());
   });
 
   async function initConfig(settings: Partial<Settings> = {}) {
@@ -424,7 +422,7 @@ describe('Server Destination Twitter', () => {
       } as Rules,
     };
 
-    const { elb: flowElb } = await startFlow({ tagging: 2 });
+    const { elb: flowElb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
     await flowElb('walker destination', destinationWithEnv, config);
     await flowElb(event);
@@ -452,7 +450,7 @@ describe('Server Destination Twitter', () => {
       } as Rules,
     };
 
-    const { elb: flowElb } = await startFlow({ tagging: 2 });
+    const { elb: flowElb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
     await flowElb('walker destination', destinationWithEnv, config);
     await flowElb(event);
@@ -479,7 +477,7 @@ describe('Server Destination Twitter', () => {
       } as Rules,
     };
 
-    const { elb: flowElb } = await startFlow({ tagging: 2 });
+    const { elb: flowElb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
     await flowElb('walker destination', destinationWithEnv, config);
     await flowElb(event);

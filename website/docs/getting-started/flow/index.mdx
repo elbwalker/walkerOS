@@ -10,24 +10,26 @@ Flow configuration is walkerOS's **"configuration as code"** approach. A single 
 
 ## Configuration structure
 
-A flow configuration uses the `Flow.Config` format with two required fields:
+A flow configuration uses the `Flow.Json` format with two required fields:
 
-1. **`version`** - Schema version (`3`)
-2. **`flows`** - Named flow configurations (each a `Flow.Settings`)
+1. **`version`** - Schema version (`4`)
+2. **`flows`** - Named flow configurations (each a `Flow`)
 
 ### Basic example
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
-          "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
-        },
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
+            "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+          }
+        }
       },
       "sources": {
         "browser": {
@@ -112,20 +114,20 @@ Both achieve the same result. The difference is whether the CLI bundles the code
 
 See [Operating Modes](/docs/getting-started/modes) for more details on choosing your approach.
 
-## Flow configuration (Flow.Config)
+## Flow configuration (Flow)
 
-Each flow in `flows` is a `Flow.Settings` that defines runtime behavior.
+Each flow in `flows` is a `Flow` that defines runtime behavior. Per-flow build/runtime metadata sits inside `config` (`Flow.Config`).
 
 ### Platform
 
-Platform is determined by the presence of the `web` or `server` key:
+Platform is set explicitly via `config.platform`:
 
 <CodeSnippet
   code={`{
-    "version": 3,
+    "version": 4,
     "flows": {
       "default": {
-        "server": {}  // Server platform (Node.js)
+        "config": { "platform": "server" }
       }
     }
 }`}
@@ -134,10 +136,10 @@ Platform is determined by the presence of the `web` or `server` key:
 
 <CodeSnippet
   code={`{
-    "version": 3,
+    "version": 4,
     "flows": {
       "default": {
-        "web": {}  // Web platform (browser)
+        "config": { "platform": "web" }
       }
     }
 }`}
@@ -145,8 +147,8 @@ Platform is determined by the presence of the `web` or `server` key:
 />
 
 **Platform options:**
-- `"server": {}` - Node.js server environment (HTTP endpoints, cloud functions)
-- `"web": {}` - Browser environment (client-side tracking)
+- `"platform": "server"` - Node.js server environment (HTTP endpoints, cloud functions)
+- `"platform": "web"` - Browser environment (client-side tracking)
 
 The CLI automatically applies platform-specific build defaults:
 - **Web**: IIFE format, ES2020 target
@@ -156,22 +158,25 @@ The bundle is written to stdout by default. Use `-o` to write to a file (e.g., `
 
 ### Bundle
 
-Build-time configuration lives under `flow.<name>.bundle`. The `packages` field specifies npm packages to download and bundle, and `overrides` pins transitive dependency versions (npm `overrides` semantics):
+Build-time configuration lives under `flow.<name>.config.bundle`. The `packages` field specifies npm packages to download and bundle, and `overrides` pins transitive dependency versions (npm `overrides` semantics):
 
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@walkeros/web-source-browser": {
-        "version": "0.4.0",
-        "imports": ["sourceBrowser"]
+  "config": {
+    "platform": "web",
+    "bundle": {
+      "packages": {
+        "@walkeros/web-source-browser": {
+          "version": "0.4.0",
+          "imports": ["sourceBrowser"]
+        },
+        "@walkeros/web-destination-api": {
+          "imports": ["destinationAPI"]
+        }
       },
-      "@walkeros/web-destination-api": {
-        "imports": ["destinationAPI"]
+      "overrides": {
+        "@amplitude/analytics-types": "2.11.1"
       }
-    },
-    "overrides": {
-      "@amplitude/analytics-types": "2.11.1"
     }
   }
 }`}
@@ -189,11 +194,14 @@ For development or custom packages, use `path` to reference a local directory:
 
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@my/custom-destination": {
-        "path": "./my-destination",
-        "imports": ["myDestination"]
+  "config": {
+    "platform": "web",
+    "bundle": {
+      "packages": {
+        "@my/custom-destination": {
+          "path": "./my-destination",
+          "imports": ["myDestination"]
+        }
       }
     }
   }
@@ -625,13 +633,16 @@ See [Collector documentation](/docs/collector/) for complete options.
 
 ### Web-specific options
 
-For browser bundles, you can configure window variable names:
+For browser bundles, you can configure window variable names via `config.settings`:
 
 <CodeSnippet
   code={`{
-  "web": {
-    "windowCollector": "walkerCollector",
-    "windowElb": "elb"
+  "config": {
+    "platform": "web",
+    "settings": {
+      "windowCollector": "walkerCollector",
+      "windowElb": "elb"
+    }
   }
 }`}
   language="json"
@@ -647,17 +658,19 @@ For managing dev/staging/production flows in one file:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "variables": {
     "defaultCurrency": "USD"
   },
   "flows": {
     "development": {
-      "server": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
-        },
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+          }
+        }
       },
       "destinations": {
         "console": {
@@ -670,11 +683,13 @@ For managing dev/staging/production flows in one file:
       "collector": {}
     },
     "production": {
-      "server": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] }
-        },
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] }
+          }
+        }
       },
       "destinations": {
         "bigquery": {
@@ -707,6 +722,58 @@ walkeros bundle config.json --all`}
   language="bash"
 />
 
+### Cross-flow references with `$flow`
+
+Flows in the same file can reference each other's `config` block via `$flow.<name>.<path>`. The most common case is linking a web flow's API destination to a server flow's deployed URL:
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "flows": {
+    "server": {
+      "config": {
+        "platform": "server",
+        "url": "https://collect.example.com",
+        "bundle": {
+          "packages": { "@walkeros/server-source-express": {} }
+        }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": { "settings": { "path": "/collect", "port": 8080 } }
+        }
+      }
+    },
+    "web": {
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@walkeros/web-source-browser": {},
+            "@walkeros/web-destination-api": {}
+          }
+        }
+      },
+      "sources": {
+        "browser": { "package": "@walkeros/web-source-browser" }
+      },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": { "url": "$flow.server.url" }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to `https://collect.example.com` at build time. Validate is lenient (warns on missing values), bundle is strict and fails loudly if the referenced value is empty, so production builds never ship with an unresolved URL.
+
 ## Dynamic patterns
 
 Flow configurations support four dynamic patterns for reusable, environment-aware configs:
@@ -717,14 +784,14 @@ Reference variables defined in `variables` for shared values across your config:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "variables": {
     "currency": "EUR",
     "apiVersion": "v2"
   },
   "flows": {
     "default": {
-      "web": {},
+      "config": { "platform": "web" },
       "destinations": {
         "api": {
           "package": "@walkeros/web-destination-api",
@@ -753,10 +820,10 @@ Reference environment variables with optional defaults:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {},
+      "config": { "platform": "web" },
       "destinations": {
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
@@ -787,7 +854,7 @@ Reference reusable configuration blocks defined in `definitions`:
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "definitions": {
     "commonMapping": {
       "page": {
@@ -800,7 +867,7 @@ Reference reusable configuration blocks defined in `definitions`:
   },
   "flows": {
     "default": {
-      "web": {},
+      "config": { "platform": "web" },
       "destinations": {
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
@@ -889,20 +956,19 @@ walkerOS uses a clear type hierarchy:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Flow.Config (config file)                                      │
-│  ├── version: 3                                                 │
+│  Flow.Json (config file)                                        │
+│  ├── version: 4                                                 │
 │  ├── variables?: { currency: "EUR" }                            │
 │  ├── definitions?: { commonMapping: {...} }                     │
 │  └── flows:                                                     │
-│       └── default: Flow.Settings                                │
+│       └── default: Flow                                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ CLI resolves $var, $env, $def
+                              │ CLI resolves $var, $env, $def, $flow
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Flow.Settings (resolved flow)                                  │
-│  ├── web: {} or server: {}                                      │
-│  ├── packages: { ... }                                          │
+│  Flow (resolved flow)                                           │
+│  ├── config: { platform, url?, settings?, bundle? }             │
 │  ├── sources: { ... }                                           │
 │  ├── transformers: { ... }                                      │
 │  ├── destinations: { ... }                                      │
@@ -918,8 +984,9 @@ walkerOS uses a clear type hierarchy:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **`Flow.Config`** - Root config file format for CLI
-- **`Flow.Settings`** - Single flow configuration
+- **`Flow.Json`** - Root config file format for CLI
+- **`Flow`** - Single flow configuration (with optional `config`, `sources`, `destinations`, etc.)
+- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`)
 - **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
 ## Complete example
@@ -928,16 +995,18 @@ Here's a production-ready flow that accepts HTTP events and sends them to BigQue
 
 <CodeSnippet
   code={`{
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-          "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] },
-          "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
-        },
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+            "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] },
+            "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+          }
+        }
       },
       "sources": {
         "http": {

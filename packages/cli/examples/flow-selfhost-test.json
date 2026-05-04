@@ -1,8 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
       "sources": {
         "http": {
           "package": "@walkeros/server-source-express",
@@ -16,9 +15,12 @@
         }
       },
       "destinations": {},
-      "bundle": {
-        "packages": {
-          "@walkeros/collector": {}
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {}
+          }
         }
       }
     }

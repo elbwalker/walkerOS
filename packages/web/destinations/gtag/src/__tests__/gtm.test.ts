@@ -30,7 +30,9 @@ describe('GTM Implementation', () => {
     it('should use custom dataLayer name', () => {
       const customDataLayer: unknown[] = [];
       const customEnv = clone(examples.env.push);
-      customEnv.window = { customDataLayer };
+      // Custom dataLayer name - implementation indexes window[name].
+      // Augment via Object.assign to avoid replacing the whole window typing.
+      Object.assign(customEnv.window, { customDataLayer });
 
       const settings: GTMSettings = {
         containerId: 'GTM-XXXXXXX',

@@ -3,7 +3,7 @@ name: walkeros-understanding-stores
 description:
   Use when working with walkerOS stores, understanding key-value storage in
   flows, or learning about store injection via env. Covers interface, lifecycle,
-  $store: wiring, and available store packages.
+  $store. wiring, and available store packages.
 ---
 
 # Understanding walkerOS Stores
@@ -12,7 +12,7 @@ description:
 
 Stores provide key-value storage that other components (sources, transformers,
 destinations) consume via environment injection. They are the 4th component type
-in Flow.Config alongside sources, transformers, and destinations.
+in Flow.Json alongside sources, transformers, and destinations.
 
 **Core principle:** Stores are passive infrastructure. They don't process events
 or participate in chains — they provide state that other components read and
@@ -92,11 +92,11 @@ Shutdown: Sources → Destinations → Transformers → Stores
 - **No lazy init:** Unlike destinations, stores don't support `require` or
   deferred activation — they are always eager
 
-## Wiring stores via `$store:`
+## Wiring stores via `$store.`
 
 ### Bundled mode (flow.json)
 
-Use `$store:storeId` in a component's `env` to inject a store instance:
+Use `$store.storeId` in a component's `env` to inject a store instance:
 
 ```json
 {
@@ -109,18 +109,18 @@ Use `$store:storeId` in a component's `env` to inject a store instance:
   "transformers": {
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint",
-      "env": { "store": "$store:data" }
+      "env": { "store": "$store.data" }
     }
   }
 }
 ```
 
-The bundler resolves `$store:data` to a runtime reference. Invalid references
+The bundler resolves `$store.data` to a runtime reference. Invalid references
 are caught at build time.
 
 ### Integrated mode (TypeScript)
 
-Pass store instances directly — no `$store:` prefix needed:
+Pass store instances directly — no `$store.` prefix needed:
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
@@ -144,7 +144,7 @@ const { collector } = await startFlow({
 ```
 
 Note: In integrated mode, you wire the store instance directly in `env` rather
-than using the `$store:` string prefix (that's a bundler feature).
+than using the `$store.` string prefix (that's a bundler feature).
 
 ## Available stores
 
@@ -154,7 +154,7 @@ LRU cache with TTL support. Suitable for caching, session state, deduplication.
 
 ```typescript
 import { storeMemoryInit } from '@walkeros/store-memory';
-// Or for direct programmatic usage (no Flow.Config context):
+// Or for direct programmatic usage (no Flow.Json context):
 import { createMemoryStore } from '@walkeros/store-memory';
 ```
 
@@ -167,7 +167,7 @@ import { createMemoryStore } from '@walkeros/store-memory';
 
 **Two entry points:**
 
-- `storeMemoryInit` — `Store.Init` wrapper for Flow.Config / `startFlow()`
+- `storeMemoryInit` — `Store.Init` wrapper for Flow.Json / `startFlow()`
 - `createMemoryStore()` — Direct factory for programmatic usage without context
 
 ### `@walkeros/server-store-fs` (filesystem)
@@ -227,12 +227,12 @@ GKE) where ADC provides seamless authentication.
 
 | Approach                        | When to use                                                                    |
 | ------------------------------- | ------------------------------------------------------------------------------ |
-| `stores` section in flow config | Shared store consumed by multiple components via `$store:`                     |
+| `stores` section in flow config | Shared store consumed by multiple components via `$store.`                     |
 | Direct `createMemoryStore()`    | Single component, self-contained (e.g., cache transformer's internal fallback) |
 
 If only one transformer uses the store internally and doesn't expose it, the
 transformer can construct it directly. If multiple components need the same
-store instance, declare it in `stores` and wire via `$store:`.
+store instance, declare it in `stores` and wire via `$store.`.
 
 ## Accessing stores at runtime
 
@@ -380,7 +380,7 @@ prerequisites, or troubleshooting patterns.
 ## Related skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) -
-  Architecture and Flow.Settings structure
+  Architecture and Flow structure
 - [walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md) -
   Transformer interface and env pattern
 - [walkeros-using-cli](../walkeros-using-cli/SKILL.md) - Bundling flows with

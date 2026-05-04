@@ -58,15 +58,15 @@ describe('Config utilities', () => {
     });
 
     it('parses inline JSON object strings', async () => {
-      const json = '{"version":3,"flows":{"default":{"web":{}}}}';
+      const json = '{"version":4,"flows":{"default":{}}}';
       const result = await loadJsonConfig(json);
-      expect(result).toEqual({ version: 3, flows: { default: { web: {} } } });
+      expect(result).toEqual({ version: 4, flows: { default: {} } });
     });
 
     it('parses inline JSON with whitespace', async () => {
-      const json = '  { "version": 3 }  ';
+      const json = '  { "version": 4 }  ';
       const result = await loadJsonConfig(json);
-      expect(result).toEqual({ version: 3 });
+      expect(result).toEqual({ version: 4 });
     });
 
     it('throws helpful error for malformed JSON-like strings', async () => {

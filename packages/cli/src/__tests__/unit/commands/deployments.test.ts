@@ -201,20 +201,72 @@ describe('deployments', () => {
   });
 
   describe('deleteDeploymentByFlowId', () => {
-    it('skips list and deletes directly when slug is provided', async () => {
-      mockApiFetch.mockResolvedValue(
-        new Response(JSON.stringify({ success: true }), { status: 200 }),
-      );
+    it('verifies slug belongs to flow before deleting', async () => {
+      mockApiFetch
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              deployments: [
+                {
+                  slug: 'my-deploy',
+                  type: 'web',
+                  status: 'active',
+                  updatedAt: '2026-04-22T00:00:00.000Z',
+                },
+                {
+                  slug: 'other-deploy',
+                  type: 'web',
+                  status: 'active',
+                  updatedAt: '2026-04-21T00:00:00.000Z',
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ success: true }), { status: 200 }),
+        );
       await deleteDeploymentByFlowId({
         projectId: 'proj_123',
         flowId: 'flow_abc',
         slug: 'my-deploy',
       });
-      expect(mockApiFetch).toHaveBeenCalledTimes(1);
-      expect(mockApiFetch).toHaveBeenCalledWith(
+      expect(mockApiFetch).toHaveBeenCalledTimes(2);
+      expect(mockApiFetch).toHaveBeenNthCalledWith(
+        1,
+        '/api/projects/proj_123/deployments?flowId=flow_abc',
+      );
+      expect(mockApiFetch).toHaveBeenNthCalledWith(
+        2,
         '/api/projects/proj_123/deployments/my-deploy',
         { method: 'DELETE' },
       );
+    });
+
+    it('throws when slug does not belong to the flow', async () => {
+      mockApiFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            deployments: [
+              {
+                slug: 'other-deploy',
+                type: 'web',
+                status: 'active',
+                updatedAt: '2026-04-22T00:00:00.000Z',
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+      await expect(
+        deleteDeploymentByFlowId({
+          projectId: 'proj_123',
+          flowId: 'flow_abc',
+          slug: 'wrong-slug',
+        }),
+      ).rejects.toThrow('No deployment with slug wrong-slug in flow flow_abc');
     });
 
     it('lists then deletes the single match when no slug provided', async () => {

@@ -2,7 +2,7 @@ import React from 'react';
 import Link from '@docusaurus/Link';
 import { CodeBox, type CodeBoxProps } from '@walkeros/explorer';
 import { tagger } from '@site/src/components/walkerjs';
-import flowSchema from '@site/static/schema/flow/v3.json';
+import flowSchema from '@site/static/schema/flow/v4.json';
 
 // Monaco's root module type deprecates languages.typescript. The real
 // typescriptDefaults surface is available at runtime but not on the root type,
@@ -73,10 +73,10 @@ const addToCart = {
 };`;
 
 const flowJsonCode = `{
-  "$schema": "https://walkeros.io/schema/flow/v3.json",
+  "$schema": "https://walkeros.io/schema/flow/v4.json",
+  "version": 4,
   "flows": {
     "main": {
-      "web": {},
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",

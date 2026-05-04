@@ -5,6 +5,7 @@ import type { Logger } from '@walkeros/core';
 import type { NetworkCall, PushResult } from './types.js';
 import { getErrorMessage } from '../../core/utils.js';
 import { installTimerInterception, type TimerControl } from './async-drain.js';
+import { startDrainPump } from './async-drain-pump.js';
 
 export interface FlowContextOptions {
   esmPath: string;
@@ -16,6 +17,17 @@ export interface FlowContextOptions {
   networkCalls?: NetworkCall[];
   /** Enable timer interception + async drain after callback completes */
   asyncDrain?: { timeout?: number };
+  /**
+   * Run the async-drain pump alongside `fn` to fire captured timers
+   * immediately. Required for non-simulate web pushes whose destinations
+   * await real timers during init (e.g., amplitude engagement plugin
+   * awaiting a 10s setTimeout for CDN script load).
+   *
+   * Defaults to false to preserve `--simulate` snapshot ordering. The
+   * dispatcher in `run.ts` sets this to true ONLY for the `'none'` route
+   * (real `walkeros push`).
+   */
+  drainPump?: boolean;
 }
 
 /**
@@ -53,6 +65,7 @@ export async function withFlowContext(
     timeout,
     networkCalls,
     asyncDrain,
+    drainPump,
   } = options;
   const startTime = Date.now();
   const g = global as unknown as Record<string, unknown>;
@@ -133,8 +146,17 @@ export async function withFlowContext(
 
     // Execute step-specific logic
     if (timerControl) {
-      // asyncDrain mode: no outer timeout (flush has its own wall-clock safety)
-      const result = await fn(flowModule);
+      // asyncDrain mode: no outer timeout (flush has its own wall-clock safety).
+      // When drainPump is requested, fire captured timers alongside `fn` so
+      // destinations awaiting an intercepted setTimeout during init don't
+      // deadlock (see async-drain-pump.ts for context).
+      const stopPump = drainPump ? startDrainPump(timerControl.pending) : null;
+      let result: PushResult;
+      try {
+        result = await fn(flowModule);
+      } finally {
+        if (stopPump) stopPump();
+      }
       await timerControl.flush(asyncDrain?.timeout ?? 5000);
       return result;
     } else if (timeout) {

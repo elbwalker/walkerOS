@@ -68,7 +68,6 @@ Core event model schemas:
 - `EntitySchema` - Nested entity structures
 - `ConsentSchema` - Consent state mapping
 - `SourceTypeSchema` - Event source types (enum)
-- `VersionSchema` - Walker version info
 - `SourceSchema` - Event source metadata
 
 **JSON Schema Exports**: `eventJsonSchema`, `userJsonSchema`,
@@ -318,11 +317,11 @@ removed.
 Every exported schema must carry `.meta({ id, title, description })` so the
 generated JSON Schema can link back to the canonical TypeScript name:
 
-- **id** — PascalCase, namespace-prefixed to avoid collisions
+- **id** - PascalCase, namespace-prefixed to avoid collisions
   (`DestinationConfig`, `CollectorPushContext`, `LoggerConfig`).
-- **title** — dotted form matching the VS Code TS hover (`Destination.Config`,
+- **title** - dotted form matching the VS Code TS hover (`Destination.Config`,
   `Collector.PushContext`, `Logger.Config`).
-- **description** — 1–2 sentences describing the type.
+- **description** - 1-2 sentences describing the type.
 
 Reference implementation: `ConsentSchema` in `walkeros.ts`. Coverage is enforced
 by `__tests__/meta-coverage.test.ts`.

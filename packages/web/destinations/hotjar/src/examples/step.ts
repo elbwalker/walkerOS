@@ -104,7 +104,7 @@ export const destinationLevelIdentify: HotjarStepExample = {
 
 /**
  * SPA state change -- stateChange mapping resolves to path string.
- * skip=true suppresses the default Hotjar.event() call.
+ * silent=true suppresses the default Hotjar.event() call.
  */
 export const pageViewStateChange: HotjarStepExample = {
   title: 'State change',
@@ -112,7 +112,7 @@ export const pageViewStateChange: HotjarStepExample = {
     'An SPA navigation fires Hotjar.stateChange with the new path instead of a Hotjar custom event.',
   in: getEvent('page view', { timestamp: 1700000105 }),
   mapping: {
-    skip: true,
+    silent: true,
     settings: {
       stateChange: 'data.id',
     },
@@ -142,14 +142,14 @@ export const combinedFeatures: HotjarStepExample = {
 };
 
 /**
- * mapping.skip -- suppresses the default Hotjar.event() call. No other
+ * mapping.silent -- suppresses the default Hotjar.event() call. No other
  * settings active, so the destination produces zero calls.
  */
-export const pageViewSkip: HotjarStepExample = {
+export const pageViewSilent: HotjarStepExample = {
   public: false,
   in: getEvent('page view', { timestamp: 1700000107 }),
   mapping: {
-    skip: true,
+    silent: true,
   },
   out: [],
 };

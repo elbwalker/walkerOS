@@ -1,9 +1,21 @@
 import type { languages, editor, IDisposable, Position } from 'monaco-editor';
+import {
+  REF_VAR,
+  REF_DEF,
+  REF_ENV,
+  REF_CONTRACT,
+  REF_FLOW,
+  REF_STORE,
+  REF_SECRET,
+} from '@walkeros/core';
 import type { IntelliSenseContext } from '../types/intellisense';
 import {
   getVariableCompletions,
   getDefinitionCompletions,
   getSecretCompletions,
+  getStoreCompletions,
+  getFlowCompletions,
+  getEnvCompletions,
   getPackageCompletions,
   getStepNameCompletions,
   getContractCompletions,
@@ -12,6 +24,65 @@ import {
 } from './monaco-walkeros-completions';
 import { getJsonPathAtOffset } from './monaco-json-path';
 import { detectMappingContext } from './mapping-context-detector';
+import {
+  detectChainRefContext,
+  detectKeyContext,
+} from './monaco-chain-ref-detector';
+
+/**
+ * Build an inline global regex from any REF_* source. The shared REF_*
+ * constants in @walkeros/core include `^`/`$` anchors for whole-value
+ * matches (e.g. REF_STORE). For inline scanning (hover on a token within a
+ * line) we need a non-anchored global variant with the same capture groups.
+ *
+ * For REF_CONTRACT the trailing path is `(.+)` which would greedily eat
+ * characters when unanchored, so we bound it to `[\w.]+` for inline scans.
+ */
+function inlineGlobal(pattern: RegExp): RegExp {
+  const src = pattern.source
+    .replace(/^\^/, '')
+    .replace(/\$$/, '')
+    .replace(/\(\.\+\)\?$/, '([\\w.]+)?');
+  return new RegExp(src, 'g');
+}
+
+/**
+ * Extract the partial path typed after the `$contract.` prefix at the end
+ * of the input. The prefix is derived from REF_CONTRACT.source so this
+ * stays in lockstep with the shared reference syntax; the tail uses a
+ * UI-friendly looser class because the user may be mid-typing (trailing
+ * dot allowed).
+ */
+const CONTRACT_PREFIX = REF_CONTRACT.source
+  .replace(/^\^/, '')
+  .split(/\\\./, 1)[0]; // "\$contract"
+const CONTRACT_PATH_AT_END = new RegExp(
+  `${CONTRACT_PREFIX}\\.([a-zA-Z0-9_.]*)?$`,
+);
+
+function getContractPathAtEnd(text: string): RegExpMatchArray | null {
+  return text.match(CONTRACT_PATH_AT_END);
+}
+
+/**
+ * Returns true iff the cursor is inside a JSON string literal whose content
+ * so far matches `^$contract(.path)?`. This guards the `$contract.` completion
+ * branch — runtime only resolves contract refs when the string value starts
+ * with `$contract.` at position 0 (see REF_CONTRACT), so inline cases like
+ * `"prefix $contract.foo"` should NOT offer contract completions.
+ */
+export function isAtContractValueStart(
+  model: editor.ITextModel,
+  position: Position,
+): boolean {
+  const lineContent = model.getLineContent(position.lineNumber);
+  const col = position.column - 1;
+  const textBefore = lineContent.substring(0, col);
+  const lastQuote = textBefore.lastIndexOf('"');
+  if (lastQuote < 0) return false;
+  const between = textBefore.substring(lastQuote + 1);
+  return /^\$contract(\.[a-zA-Z0-9_.]*)?$/.test(between);
+}
 
 // Store context per model path for scoped completions
 const contextRegistry = new Map<string, IntelliSenseContext>();
@@ -59,6 +130,9 @@ export function registerWalkerOSProviders(
 
         const lineContent = model.getLineContent(position.lineNumber);
         const textBeforeCursor = lineContent.substring(0, position.column - 1);
+        const offset = model.getOffsetAt(position);
+        const fullText = model.getValue();
+        const chainKey = detectChainRefContext(fullText, offset);
 
         const entries: CompletionEntry[] = [];
 
@@ -78,12 +152,30 @@ export function registerWalkerOSProviders(
         ) {
           entries.push(...getSecretCompletions(context.secrets));
         } else if (
-          textBeforeCursor.includes('$contract.') ||
-          textBeforeCursor.endsWith('"$contract')
+          textBeforeCursor.includes('$store.') ||
+          textBeforeCursor.endsWith('"$store')
         ) {
-          const match = textBeforeCursor.match(
-            /\$contract\.([a-zA-Z0-9_.]*)?$/,
-          );
+          entries.push(...getStoreCompletions(context.stores));
+        } else if (
+          textBeforeCursor.includes('$flow.') ||
+          textBeforeCursor.endsWith('"$flow')
+        ) {
+          entries.push(...getFlowCompletions(context.flows));
+        } else if (
+          textBeforeCursor.includes('$env.') ||
+          textBeforeCursor.endsWith('"$env')
+        ) {
+          entries.push(...getEnvCompletions(context.envNames));
+        } else if (
+          (textBeforeCursor.includes('$contract.') ||
+            textBeforeCursor.endsWith('"$contract')) &&
+          isAtContractValueStart(model, position)
+        ) {
+          // Extract the partial path typed so far after the "$contract."
+          // prefix. This is a UI extraction helper (looser character class
+          // than REF_CONTRACT because the user may be mid-typing), so it
+          // captures any word-or-dot sequence at end of the cursor line.
+          const match = getContractPathAtEnd(textBeforeCursor);
           const pathStr = match?.[1] || '';
           const segments = pathStr ? pathStr.split('.').filter(Boolean) : [];
           if (pathStr && !pathStr.endsWith('.') && segments.length > 0) {
@@ -92,16 +184,12 @@ export function registerWalkerOSProviders(
           entries.push(
             ...getContractCompletions(context.contractRaw, segments),
           );
-        } else if (isInsideKey(model, position, 'package')) {
+        } else if (detectKeyContext(fullText, offset, 'package')) {
           entries.push(
             ...getPackageCompletions(context.packages, context.platform),
           );
-        } else if (
-          isInsideKey(model, position, 'next') ||
-          isInsideKey(model, position, 'before')
-        ) {
-          const key = isInsideKey(model, position, 'next') ? 'next' : 'before';
-          entries.push(...getStepNameCompletions(context.stepNames, key));
+        } else if (chainKey) {
+          entries.push(...getStepNameCompletions(context.stepNames, chainKey));
         } else if (
           textBeforeCursor.endsWith('"$') ||
           textBeforeCursor.endsWith('"')
@@ -109,13 +197,14 @@ export function registerWalkerOSProviders(
           entries.push(...getVariableCompletions(context.variables));
           entries.push(...getDefinitionCompletions(context.definitions));
           entries.push(...getSecretCompletions(context.secrets));
+          entries.push(...getStoreCompletions(context.stores));
+          entries.push(...getFlowCompletions(context.flows));
+          entries.push(...getEnvCompletions(context.envNames));
           entries.push(...getContractCompletions(context.contractRaw, []));
         }
 
         // Mapping value path completions (data., globals., user., etc.)
         if (entries.length === 0 && context.contractRaw) {
-          const fullText = model.getValue();
-          const offset = model.getOffsetAt(position);
           const jsonPath = getJsonPathAtOffset(fullText, offset);
           const mappingCtx = detectMappingContext(jsonPath);
 
@@ -140,7 +229,7 @@ export function registerWalkerOSProviders(
         // Monaco's getWordUntilPosition doesn't understand $ or . as word chars,
         // so we scan backwards to find the $ that starts the reference.
         const refStartMatch = textBeforeCursor.match(
-          /\$(?:var|def|secret|env|code|contract)[.:]?[\w.]*$/,
+          /\$(?:var|def|secret|env|code|contract|store|flow)[.:]?[\w.]*$/,
         );
         const mappingPathMatch = !refStartMatch
           ? textBeforeCursor.match(/[a-z_][\w.]*$/i)
@@ -195,7 +284,7 @@ export function registerWalkerOSProviders(
         }
 
         // $var.name
-        const varMatch = matchAtCursor(/\$var\.(\w+)/);
+        const varMatch = matchAtCursor(inlineGlobal(REF_VAR));
         if (varMatch && context.variables) {
           const name = varMatch[1];
           if (name in context.variables) {
@@ -224,7 +313,7 @@ export function registerWalkerOSProviders(
         }
 
         // $def.name
-        const defMatch = matchAtCursor(/\$def\.(\w+)/);
+        const defMatch = matchAtCursor(inlineGlobal(REF_DEF));
         if (defMatch && context.definitions) {
           const name = defMatch[1];
           if (name in context.definitions) {
@@ -252,7 +341,7 @@ export function registerWalkerOSProviders(
         }
 
         // $secret.name
-        const secretMatch = matchAtCursor(/\$secret\.(\w+)/);
+        const secretMatch = matchAtCursor(inlineGlobal(REF_SECRET));
         if (secretMatch) {
           const name = secretMatch[1];
           if (context.secrets?.includes(name)) {
@@ -279,8 +368,105 @@ export function registerWalkerOSProviders(
           };
         }
 
+        // $store.name
+        const storeMatch = matchAtCursor(inlineGlobal(REF_STORE));
+        if (storeMatch) {
+          const name = storeMatch[1];
+          if (context.stores?.includes(name)) {
+            return {
+              range: {
+                startLineNumber: position.lineNumber,
+                startColumn: storeMatch.index + 1,
+                endLineNumber: position.lineNumber,
+                endColumn: storeMatch.index + storeMatch[0].length + 1,
+              },
+              contents: [
+                {
+                  value: `**Store:** \`$store.${name}\`\n\n*Resolved to store instance at runtime.*`,
+                },
+              ],
+            };
+          }
+          return {
+            contents: [
+              {
+                value: `**Unknown store** \`$store.${name}\`\n\nAvailable: ${context.stores?.join(', ') || 'none'}`,
+              },
+            ],
+          };
+        }
+
+        // $flow.name(.path)?
+        const flowMatch = matchAtCursor(inlineGlobal(REF_FLOW));
+        if (flowMatch && context.flows) {
+          const flowName = flowMatch[1];
+          const path = flowMatch[2];
+          const known = context.flows.includes(flowName);
+          const headline = known
+            ? `**Flow reference:** \`$flow.${flowName}${path ? `.${path}` : ''}\``
+            : `**Unknown flow** \`$flow.${flowName}\``;
+          const body = known
+            ? path
+              ? `Resolves to \`flows.${flowName}.config.${path}\` at runtime.`
+              : `Resolves to the full \`Flow.Config\` block of "${flowName}" at runtime.`
+            : `Available: ${context.flows.join(', ') || 'none'}`;
+          return {
+            range: {
+              startLineNumber: position.lineNumber,
+              startColumn: flowMatch.index + 1,
+              endLineNumber: position.lineNumber,
+              endColumn: flowMatch.index + flowMatch[0].length + 1,
+            },
+            contents: [{ value: `${headline}\n\n${body}` }],
+          };
+        }
+
+        // $env.NAME
+        const envMatch = matchAtCursor(inlineGlobal(REF_ENV));
+        if (envMatch) {
+          const name = envMatch[1];
+          if (context.envNames && context.envNames.length > 0) {
+            if (context.envNames.includes(name)) {
+              return {
+                range: {
+                  startLineNumber: position.lineNumber,
+                  startColumn: envMatch.index + 1,
+                  endLineNumber: position.lineNumber,
+                  endColumn: envMatch.index + envMatch[0].length + 1,
+                },
+                contents: [
+                  {
+                    value: `**Env var:** \`$env.${name}\`\n\n*Resolved from process.env at runtime. Append \`:default\` for a literal fallback.*`,
+                  },
+                ],
+              };
+            }
+            return {
+              contents: [
+                {
+                  value: `**Unknown env var** \`$env.${name}\`\n\nKnown: ${context.envNames.join(', ') || 'none'}`,
+                },
+              ],
+            };
+          }
+          // No inventory: generic hint
+          return {
+            range: {
+              startLineNumber: position.lineNumber,
+              startColumn: envMatch.index + 1,
+              endLineNumber: position.lineNumber,
+              endColumn: envMatch.index + envMatch[0].length + 1,
+            },
+            contents: [
+              {
+                value: `**Env var:** \`$env.${name}\`\n\n*Resolved from process.env at runtime.*`,
+              },
+            ],
+          };
+        }
+
         // $contract.path
-        const contractMatch = matchAtCursor(/\$contract\.[\w.]+/);
+        const contractMatch = matchAtCursor(inlineGlobal(REF_CONTRACT));
         if (contractMatch && context.contractRaw) {
           const fullRef = contractMatch[0];
           const pathStr = fullRef.replace('$contract.', '');
@@ -337,17 +523,4 @@ function mapCompletionKind(
     default:
       return monaco.languages.CompletionItemKind.Text;
   }
-}
-
-/**
- * Check if cursor is inside the value of a specific JSON key.
- */
-function isInsideKey(
-  model: editor.ITextModel,
-  position: Position,
-  key: string,
-): boolean {
-  const lineContent = model.getLineContent(position.lineNumber);
-  const pattern = new RegExp(`"${key}"\\s*:\\s*"`);
-  return pattern.test(lineContent);
 }

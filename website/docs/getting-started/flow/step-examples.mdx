@@ -124,10 +124,10 @@ Here is a complete flow config with examples on a source, transformer, and desti
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
+      "config": { "platform": "server" },
       "sources": {
         "http": {
           "package": "@walkeros/server-source-express",

@@ -1,13 +1,12 @@
 /**
  * Configuration Module
  *
- * Config format: Flow.Config from @walkeros/core
+ * Config format: Flow.Json from @walkeros/core
  * Build options: Static platform defaults from build-defaults.ts
  */
 
 // Type guards and validators
 export {
-  isObject,
   detectPlatform,
   isFlowConfig,
   validateFlowConfig,

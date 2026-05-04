@@ -11,7 +11,7 @@
 [NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-mixpanel)
 &bull; [Documentation](https://www.walkeros.io/docs/destinations/web/mixpanel)
 
-This package forwards walkerOS events to [Mixpanel](https://mixpanel.com/) —
+This package forwards walkerOS events to [Mixpanel](https://mixpanel.com/) -
 product analytics for tracking user behaviour, funnels, retention, and
 group-level metrics. Built on the official
 [`mixpanel-browser`](https://www.npmjs.com/package/mixpanel-browser) SDK.
@@ -23,20 +23,20 @@ group assignments, and consent changes.
 
 ## Features
 
-- **Default event forwarding** — every walkerOS event becomes
+- **Default event forwarding** - every walkerOS event becomes
   `mixpanel.track(name, properties)` with no extra config
-- **Identity** — destination- or per-event `settings.identify` resolves to
+- **Identity** - destination- or per-event `settings.identify` resolves to
   `{ distinctId }` → `mixpanel.identify(distinctId)`, with runtime state diffing
   so identical distinct IDs don't re-fire
-- **Full people vocabulary** — all eight Mixpanel operations supported: `set`,
+- **Full people vocabulary** - all eight Mixpanel operations supported: `set`,
   `set_once`, `increment`, `append`, `union`, `remove`, `unset`, `delete_user`
-- **Groups** — user→group association via `mixpanel.set_group(key, id)` and
+- **Groups** - user→group association via `mixpanel.set_group(key, id)` and
   group-profile properties via `mixpanel.get_group(key, id).set/set_once/…`
-- **Reset on logout** — `settings.reset: true` calls `mixpanel.reset()` so the
+- **Reset on logout** - `settings.reset: true` calls `mixpanel.reset()` so the
   next session starts with a fresh anonymous distinct ID
-- **Consent** — `on('consent')` handler derives required keys from
+- **Consent** - `on('consent')` handler derives required keys from
   `config.consent` and toggles `opt_in_tracking` / `opt_out_tracking`
-- **Full SDK passthrough** — every `mixpanel-browser` `Config` option
+- **Full SDK passthrough** - every `mixpanel-browser` `Config` option
   (`api_host`, `persistence`, `batch_requests`, `record_sessions_percent`,
   `cross_subdomain_cookie`, etc.) flows through directly
 
@@ -78,7 +78,7 @@ await startFlow({
 | `api_host`                | `string`                     | Ingestion host. Default `https://api-js.mixpanel.com`. Use `https://api-eu.mixpanel.com` for EU. | No       |
 | `persistence`             | `'cookie' \| 'localStorage'` | Client-side persistence backend. Default `cookie`.                                               | No       |
 | `batch_requests`          | `boolean`                    | Use the `/batch` endpoint. Default `true`.                                                       | No       |
-| `record_sessions_percent` | `number`                     | Session replay sampling (0–100). Default `0`.                                                    | No       |
+| `record_sessions_percent` | `number`                     | Session replay sampling (0-100). Default `0`.                                                    | No       |
 | `track_pageview`          | `boolean \| string`          | Mixpanel auto-pageview. walkerOS default `false` (walkerOS sources handle page views).           | No       |
 | `autocapture`             | `boolean \| object`          | Mixpanel autocapture. walkerOS default `false`.                                                  | No       |
 | `include`                 | `string[]`                   | Event sections flattened into `track()` properties (`data`, `globals`, `context`, `user`, …)     | No       |
@@ -86,7 +86,8 @@ await startFlow({
 | `group`                   | `Mapping.Value`              | Destination-level group assignment; resolves to `{ key, id }`                                    | No       |
 
 All other `mixpanel-browser` `Config` options (snake_case) pass through directly
-— the destination's `Settings` type extends `Partial<Config>`.
+
+- the destination's `Settings` type extends `Partial<Config>`.
 
 ### Mapping (`rule.settings`)
 
@@ -120,13 +121,13 @@ mapping: {
 ```
 
 For revenue events the Mixpanel `people.track_charge` API is deprecated
-(v2.78+); pass revenue fields as regular event properties instead — currency
+(v2.78+); pass revenue fields as regular event properties instead - currency
 values in sample events use `"EUR"`.
 
 ## Identity
 
 ```typescript
-// Destination-level — every push with a user.id fires identify
+// Destination-level - every push with a user.id fires identify
 settings: {
   apiKey: 'YOUR_TOKEN',
   identify: { map: { distinctId: 'user.id' } },
@@ -145,7 +146,7 @@ mapping: {
 ```
 
 Runtime state diffing means identical `distinctId` values don't re-fire
-`mixpanel.identify()` — the SDK call only runs when the resolved value changes.
+`mixpanel.identify()` - the SDK call only runs when the resolved value changes.
 
 ## People
 
@@ -167,7 +168,7 @@ key in the resolved object fires a separate `mixpanel.people.*` call:
 mapping: {
   user: {
     login: {
-      skip: true,
+      silent: true,
       settings: {
         identify: { map: { distinctId: 'data.user_id' } },
         people: {
@@ -205,7 +206,7 @@ Group profile properties use `mixpanel.get_group(key, id).set/…`:
 mapping: {
   company: {
     update: {
-      skip: true,
+      silent: true,
       settings: {
         groupProfile: {
           map: {
@@ -229,7 +230,7 @@ mapping: {
 mapping: {
   user: {
     logout: {
-      skip: true,
+      silent: true,
       settings: { reset: true },
     },
   },
@@ -243,7 +244,7 @@ state so the next identify call will fire again.
 ## Consent
 
 Mixpanel consent is wired via the destination's `on('consent')` handler. Declare
-`config.consent` on the destination — the handler requires **all** declared keys
+`config.consent` on the destination - the handler requires **all** declared keys
 to be granted to opt in:
 
 ```typescript

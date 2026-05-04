@@ -578,7 +578,8 @@ Use these templates as your starting point:
 ### Gate: Implementation Compiles
 
 - [ ] `npm run build` passes
-- [ ] `npm run lint` passes
+- [ ] `npm run verify:touched -- <destination-name>` passes (L1: typecheck +
+      lint + test)
 
 ---
 
@@ -613,7 +614,7 @@ Reference canonical implementation:
 
 ### Gate: Tests Pass
 
-- [ ] `npm run test` passes
+- [ ] `npm run verify:touched -- <destination-name>` passes (L1)
 - [ ] Tests iterate via `it.each(Object.entries(examples.step))`
 - [ ] Tests contain no hardcoded payloads, vendor configs, or expected outputs
 - [ ] Every assertion reads from `examples.step[...].out`

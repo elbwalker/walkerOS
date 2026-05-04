@@ -27,10 +27,10 @@ export const push: PushFn = async function (
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data
-    ? await getMappingValue(event, config.data)
+    ? await getMappingValue(event, config.data, { collector })
     : {};
   const userDataCustom = user_data
-    ? await getMappingValue(event, { map: user_data })
+    ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
 
   // Build user_data from three merge sources (priority: later overrides earlier)
@@ -73,8 +73,8 @@ export const push: PushFn = async function (
     custom_data: customData,
   };
 
-  if (action_source === 'WEB' && event.source?.id) {
-    snapchatEvent.event_source_url = event.source.id;
+  if (action_source === 'WEB' && event.source?.url) {
+    snapchatEvent.event_source_url = event.source.url;
   }
 
   const body: RequestBody = { data: [snapchatEvent] };

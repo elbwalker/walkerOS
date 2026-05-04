@@ -21,10 +21,12 @@ describe('Format Schema', () => {
     trigger: 'click',
     timestamp: Date.now(),
     timing: 100,
-    group: 'grp-123',
-    count: 1,
-    version: { source: '1.0.0', tagging: 1 },
-    source: { type: 'web', id: 'src-123', previous_id: '' },
+    source: {
+      type: 'browser',
+      platform: 'web',
+      url: 'https://example.com/',
+      schema: '4',
+    },
   };
 
   it('should validate a correct WalkerOS.Event', () => {
@@ -73,26 +75,10 @@ describe('Format Schema', () => {
     );
   });
 
-  it('should reject event with missing version.source', () => {
-    const invalidEvent = {
-      ...validEvent,
-      version: { tagging: 1 } as WalkerOS.Version,
-    };
-
-    const result = validate(invalidEvent);
-    expect(result).toBe(false);
-    expect(validate.errors).toContainEqual(
-      expect.objectContaining({
-        keyword: 'required',
-        instancePath: '/version',
-      }),
-    );
-  });
-
   it('should reject event with missing source.type', () => {
     const invalidEvent = {
       ...validEvent,
-      source: { id: 'src-123', previous_id: '' } as WalkerOS.Source,
+      source: { platform: 'web' } as WalkerOS.Source,
     };
 
     const result = validate(invalidEvent);

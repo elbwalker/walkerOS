@@ -46,18 +46,17 @@ const EntitySchema: z.ZodTypeAny = z.lazy(() =>
     .passthrough(),
 );
 
-// Version schema
-const VersionSchema = z.object({
-  source: z.string(),
-  tagging: z.number(),
-});
-
-// Source schema
+// Source schema (v4)
 const SourceSchema = z
   .object({
     type: z.string(),
-    id: z.string(),
-    previous_id: z.string(),
+    platform: z.string().optional(),
+    version: z.string().optional(),
+    schema: z.string().optional(),
+    count: z.number().optional(),
+    trace: z.string().optional(),
+    url: z.string().optional(),
+    referrer: z.string().optional(),
   })
   .passthrough();
 
@@ -83,9 +82,6 @@ export const EventSchema = z
     action: z.string().optional(),
     timestamp: z.number().optional(),
     timing: z.number().optional(),
-    group: z.string().optional(),
-    count: z.number().optional(),
-    version: VersionSchema.optional(),
     source: SourceSchema.optional(),
   })
   .passthrough(); // Allow additional fields

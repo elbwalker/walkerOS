@@ -4,6 +4,12 @@ import Ajv from 'ajv';
 import { fetchPackageSchema } from '@walkeros/core';
 import type { ValidateResult, ValidationError } from '../types.js';
 
+// __VERSION__ is replaced at build time by tsup's `define` (see tsup.config.ts).
+// In tests, it's set as a global by the shared jest config (@walkeros/config/jest).
+declare const __VERSION__: string;
+
+const CLIENT_HEADER = 'walkeros-cli/' + __VERSION__;
+
 const SECTIONS = ['destinations', 'sources', 'transformers'] as const;
 
 /**
@@ -109,7 +115,9 @@ export async function validateEntry(
   // Step 3: Fetch schema from CDN
   let schemas: Record<string, unknown>;
   try {
-    const info = await fetchPackageSchema(packageName);
+    const info = await fetchPackageSchema(packageName, {
+      client: CLIENT_HEADER,
+    });
     schemas = info.schemas;
   } catch (error) {
     return {

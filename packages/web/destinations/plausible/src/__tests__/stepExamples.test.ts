@@ -105,7 +105,7 @@ describe('plausible destination — step examples', () => {
     const { env: spiedEnv, collected } = spyEnv();
 
     const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow({ tagging: 2 });
+    const { elb } = await startFlow();
 
     const event = example.in as WalkerOS.Event;
     const mapping = example.mapping as WalkerOSMapping.Rule | undefined;

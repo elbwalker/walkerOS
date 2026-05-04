@@ -486,6 +486,7 @@ const sidebars: SidebarsConfig = {
             'apps/docker',
             'core/web',
             'core/server',
+            'apps/telemetry',
           ],
         },
       ],
@@ -515,6 +516,14 @@ const sidebars: SidebarsConfig = {
         'guides/user-stitching',
         'guides/migration',
       ],
+    },
+
+    // ── Migrating ────────────────────────────────────────────────
+    {
+      type: 'category',
+      label: 'Migrating',
+      collapsed: true,
+      items: ['migrating/v3-to-v4'],
     },
 
     // ── vs. Alternatives ─────────────────────────────────────────

@@ -1,12 +1,11 @@
 import type { Flow } from '../../types';
 
 describe('Contract types', () => {
-  it('should accept a valid named contract at Config level', () => {
-    const setup: Flow.Config = {
-      version: 3,
+  it('should accept a valid named contract at root config level', () => {
+    const setup: Flow.Json = {
+      version: 4,
       contract: {
         default: {
-          tagging: 1,
           description: 'Base contract',
           globals: {
             required: ['country'],
@@ -38,7 +37,7 @@ describe('Contract types', () => {
         },
       },
       flows: {
-        default: { web: {} },
+        default: { config: { platform: 'web' } },
       },
     };
     expect(setup.contract).toBeDefined();
@@ -46,7 +45,7 @@ describe('Contract types', () => {
 
   it('should accept contract with extends chain', () => {
     const contract: Flow.Contract = {
-      default: { tagging: 1 },
+      default: { description: 'base' },
       web: { extends: 'default', events: { product: { view: {} } } },
       web_loggedin: {
         extends: 'web',

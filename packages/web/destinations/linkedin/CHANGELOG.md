@@ -1,5 +1,12 @@
 # @walkeros/web-destination-linkedin
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [93ea9c4]
+  - @walkeros/web-core@4.0.0
+
 ## 3.4.2
 
 ### Patch Changes

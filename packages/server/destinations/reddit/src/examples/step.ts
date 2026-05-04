@@ -19,7 +19,7 @@ import { getEvent, isObject } from '@walkeros/core';
  *   2. event_at_ms
  *   3. event_type ({ tracking_type, custom_event_name? })
  *   4. ...restEventData (mapped event data minus user/event_metadata/click_id)
- *   5. user (hashed — email, external_id, ip_address, user_agent, idfa, aaid)
+ *   5. user (hashed - email, external_id, ip_address, user_agent, idfa, aaid)
  *   6. event_metadata (conversion_id first, then merged metadata)
  *   7. click_id (only when a string is present)
  *
@@ -36,6 +36,7 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order is sent to the Reddit Conversions API as a Purchase event with value, currency, and items.',
   in: getEvent('order complete', {
+    id: 'ev-1700000900',
     timestamp: 1700000900,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
     nested: [
@@ -51,7 +52,7 @@ export const purchase: Flow.StepExample = {
       },
     ],
     user: { id: 'user-123', device: 'device-456' },
-    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     name: 'Purchase',
@@ -99,7 +100,7 @@ export const purchase: Flow.StepExample = {
               event_type: { tracking_type: 'Purchase' },
               user: {},
               event_metadata: {
-                conversion_id: '1700000900-gr0up-1',
+                conversion_id: 'ev-1700000900',
                 value_decimal: 249.99,
                 currency: 'EUR',
                 item_count: 1,
@@ -125,6 +126,7 @@ export const addToCart: Flow.StepExample = {
   description:
     'A product add is sent to Reddit as an AddToCart conversion with value and product details.',
   in: getEvent('product add', {
+    id: 'ev-1700000901',
     timestamp: 1700000901,
     data: {
       id: 'SKU-B2',
@@ -134,11 +136,7 @@ export const addToCart: Flow.StepExample = {
       quantity: 1,
     },
     user: { id: 'user-456' },
-    source: {
-      type: 'server',
-      id: 'https://shop.example.com/products',
-      previous_id: '',
-    },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     name: 'AddToCart',
@@ -178,7 +176,7 @@ export const addToCart: Flow.StepExample = {
               event_type: { tracking_type: 'AddToCart' },
               user: {},
               event_metadata: {
-                conversion_id: '1700000901-gr0up-1',
+                conversion_id: 'ev-1700000901',
                 value_decimal: '42.00',
                 currency: 'EUR',
                 item_count: 1,
@@ -200,13 +198,10 @@ export const pageVisit: Flow.StepExample = {
   description:
     'A page view is sent to Reddit as a PageVisit conversion used for retargeting audiences.',
   in: getEvent('page view', {
+    id: 'ev-1700000902',
     timestamp: 1700000902,
     user: { id: 'user-789' },
-    source: {
-      type: 'server',
-      id: 'https://www.example.com/docs/',
-      previous_id: '',
-    },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     name: 'PageVisit',
@@ -223,7 +218,7 @@ export const pageVisit: Flow.StepExample = {
               event_at_ms: 1700000902,
               event_type: { tracking_type: 'PageVisit' },
               user: {},
-              event_metadata: { conversion_id: '1700000902-gr0up-1' },
+              event_metadata: { conversion_id: 'ev-1700000902' },
             },
           ],
         },
@@ -238,14 +233,11 @@ export const lead: Flow.StepExample = {
   description:
     'A form submission is sent to Reddit as a Lead conversion with the SHA-256 hashed email and external id.',
   in: getEvent('form submit', {
+    id: 'ev-1700000903',
     timestamp: 1700000903,
     data: { form: 'contact' },
     user: { id: 'user-lead-1', email: 'lead@example.com' },
-    source: {
-      type: 'server',
-      id: 'https://www.example.com/contact',
-      previous_id: '',
-    },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     name: 'Lead',
@@ -279,7 +271,7 @@ export const lead: Flow.StepExample = {
                 external_id:
                   'ee818eebb052cf288ffeeb2e09ee35c9946e1a7f53a959cb3ef06d5d4adb78e8',
               },
-              event_metadata: { conversion_id: '1700000903-gr0up-1' },
+              event_metadata: { conversion_id: 'ev-1700000903' },
             },
           ],
         },
@@ -294,14 +286,11 @@ export const signUp: Flow.StepExample = {
   description:
     'A user signup is sent to Reddit as a SignUp conversion with hashed user identifiers.',
   in: getEvent('user signup', {
+    id: 'ev-1700000904',
     timestamp: 1700000904,
     data: { method: 'email' },
     user: { id: 'new-user-1', email: 'new@example.com' },
-    source: {
-      type: 'server',
-      id: 'https://www.example.com/register',
-      previous_id: '',
-    },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     name: 'SignUp',
@@ -335,7 +324,7 @@ export const signUp: Flow.StepExample = {
                 external_id:
                   'b45cf5f6ebc2c6974ea3bd9fab19f8cc3a7cf63054727a9fcd22f1fda97d6dde',
               },
-              event_metadata: { conversion_id: '1700000904-gr0up-1' },
+              event_metadata: { conversion_id: 'ev-1700000904' },
             },
           ],
         },
@@ -350,14 +339,11 @@ export const search: Flow.StepExample = {
   description:
     'A site search is sent to Reddit as a Search conversion with an item count in event_metadata.',
   in: getEvent('site search', {
+    id: 'ev-1700000905',
     timestamp: 1700000905,
     data: { query: 'walkerOS destinations' },
     user: { id: 'user-101' },
-    source: {
-      type: 'server',
-      id: 'https://www.example.com/search',
-      previous_id: '',
-    },
+    source: { type: 'express', platform: 'server' },
   }),
   mapping: {
     name: 'Search',
@@ -384,7 +370,7 @@ export const search: Flow.StepExample = {
               event_type: { tracking_type: 'Search' },
               user: {},
               event_metadata: {
-                conversion_id: '1700000905-gr0up-1',
+                conversion_id: 'ev-1700000905',
                 item_count: 1,
               },
             },

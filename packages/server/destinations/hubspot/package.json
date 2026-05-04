@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-hubspot",
   "description": "HubSpot CRM server destination for walkerOS (@hubspot/api-client, custom events + contact upsert)",
-  "version": "3.4.2",
+  "version": "4.0.0",
   "license": "MIT",
   "exports": {
     ".": {
@@ -35,11 +35,11 @@
   },
   "dependencies": {
     "@hubspot/api-client": "^13.0.0",
-    "@walkeros/core": "3.4.2",
-    "@walkeros/server-core": "3.4.2"
+    "@walkeros/core": "4.0.0",
+    "@walkeros/server-core": "4.0.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "3.4.2"
+    "@walkeros/collector": "4.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

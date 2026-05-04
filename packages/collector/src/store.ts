@@ -60,7 +60,7 @@ export async function initStores(
 /**
  * Resolve store references in component env values.
  *
- * The bundler resolves `$store:gcs` to a direct JS reference to the raw
+ * The bundler resolves `$store.gcs` to a direct JS reference to the raw
  * store definition object (`stores.gcs = { code, config }`). After stores
  * are initialized, this function walks transformer/destination/source env
  * objects and replaces any raw store definition reference with the

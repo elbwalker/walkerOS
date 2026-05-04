@@ -135,7 +135,7 @@ export const destinationHeap: Destination = {
     const settings = (config.settings || {}) as Partial<Settings>;
     const mappingSettings = (rule?.settings || {}) as Mapping;
 
-    // 1. Reset identity first — subsequent identify/userProperties
+    // 1. Reset identity first - subsequent identify/userProperties
     //    operate on the fresh anonymous user.
     if (mappingSettings.reset !== undefined) {
       const resolved =
@@ -145,7 +145,7 @@ export const destinationHeap: Destination = {
       if (resolved) heap.resetIdentity();
     }
 
-    // 2. Identify — rule-level wins over destination-level.
+    // 2. Identify - rule-level wins over destination-level.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     if (identifyMapping !== undefined) {
       const resolved = await getMappingValue(event, identifyMapping, {
@@ -156,7 +156,7 @@ export const destinationHeap: Destination = {
       }
     }
 
-    // 3. User properties — rule-level wins over destination-level.
+    // 3. User properties - rule-level wins over destination-level.
     const userPropsMapping =
       mappingSettings.userProperties ?? settings.userProperties;
     if (userPropsMapping !== undefined) {
@@ -191,8 +191,8 @@ export const destinationHeap: Destination = {
       if (resolved) heap.clearEventProperties();
     }
 
-    // 6. Default track — unless rule.skip is set.
-    if (rule?.skip !== true) {
+    // 6. Default track - unless rule.silent is set.
+    if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       const properties = toHeapProperties(data);
       heap.track(eventName, properties);

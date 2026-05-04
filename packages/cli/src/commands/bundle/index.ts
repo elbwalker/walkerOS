@@ -32,7 +32,6 @@ import type { BundleTarget } from './targets.js';
 import { resolveTarget } from './targets.js';
 import { uploadBundleToUrl, sanitizeUrl } from './upload.js';
 import { displayStats, createStatsSummary } from './stats.js';
-import { createApiClient } from '../../core/api-client.js';
 import { generateDockerfile } from './dockerfile.js';
 
 export interface BundleCommandOptions {
@@ -294,7 +293,7 @@ export async function bundleCommand(
  *
  * Handles configuration loading, parsing, and logger creation internally.
  *
- * @param configOrPath - Bundle configuration (Flow.Config) or path to config file
+ * @param configOrPath - Bundle configuration (Flow.Json) or path to config file
  * @param options - Bundle options
  * @param options.silent - Suppress all output (default: false)
  * @param options.verbose - Enable verbose logging (default: false)
@@ -305,13 +304,15 @@ export async function bundleCommand(
  *
  * @example
  * ```typescript
- * // With Flow.Config config object
+ * // With Flow.Json config object
  * await bundle({
- *   version: 1,
+ *   version: 4,
  *   flows: {
  *     default: {
- *       web: {},
- *       packages: { '@walkeros/collector': { imports: ['startFlow'] } },
+ *       config: {
+ *         platform: 'web',
+ *         bundle: { packages: { '@walkeros/collector': { imports: ['startFlow'] } } },
+ *       },
  *       destinations: { api: { code: 'destinationApi' } },
  *     }
  *   }
@@ -377,7 +378,7 @@ export async function bundle(
     rawConfig = configOrPath;
   }
 
-  // 2. Load and resolve config using Flow.Config format.
+  // 2. Load and resolve config using Flow.Json format.
   // Merge target-derived flags into buildOverrides so loadBundleConfig sees them.
   const mergedOverrides: Partial<BuildOptions> = {
     ...(options.buildOverrides ?? {}),
@@ -405,29 +406,4 @@ export async function bundle(
     logger,
     options.stats ?? false,
   );
-}
-
-/**
- * Bundle a flow remotely using the walkerOS cloud service.
- */
-export async function bundleRemote(options: {
-  content: Record<string, unknown>;
-  flowName?: string;
-}) {
-  const client = createApiClient();
-  const body: Record<string, unknown> = { flow: options.content };
-  if (options.flowName) body.flowName = options.flowName;
-  const { data, error, response } = await client.POST('/api/bundle', {
-    body: body as unknown as Record<string, never>,
-    parseAs: 'text',
-  });
-  if (error)
-    throw new Error(typeof error === 'string' ? error : 'Bundle failed');
-  const js = data as unknown as string;
-  const statsHeader = response.headers.get('X-Bundle-Stats');
-  return {
-    bundle: js,
-    size: js.length,
-    stats: statsHeader ? JSON.parse(statsHeader) : undefined,
-  };
 }

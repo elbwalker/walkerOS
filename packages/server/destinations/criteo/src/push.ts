@@ -58,7 +58,7 @@ function toItems(raw: unknown): CriteoItem[] | undefined {
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, env, logger },
+  { config, rule, data, env, logger, collector },
 ) {
   const {
     partnerId,
@@ -72,7 +72,7 @@ export const push: PushFn = async function (
 
   const eventData = isObject(data) ? data : {};
   const userDataCustom = user_data
-    ? await getMappingValue(event, { map: user_data })
+    ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
   const resolvedUserData = isObject(userDataCustom) ? userDataCustom : {};
 
@@ -115,8 +115,8 @@ export const push: PushFn = async function (
     events: [criteoEvent],
   };
 
-  if (event.source?.id) body.full_url = event.source.id;
-  if (event.source?.previous_id) body.previous_url = event.source.previous_id;
+  if (event.source?.url) body.full_url = event.source.url;
+  if (event.source?.referrer) body.previous_url = event.source.referrer;
 
   const retailerVisitorId = toStringOrUndef(
     resolvedUserData.retailer_visitor_id,

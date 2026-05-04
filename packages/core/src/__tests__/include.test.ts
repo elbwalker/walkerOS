@@ -1,5 +1,6 @@
-import type { Mapping, WalkerOS, Collector } from '../types';
+import type { Mapping, WalkerOS } from '../types';
 import { flattenIncludeSections, getEvent, isObject } from '..';
+import { createMockCollector } from './helpers/mocks';
 
 describe('flattenIncludeSections', () => {
   const event = getEvent('order complete');
@@ -39,8 +40,6 @@ describe('flattenIncludeSections', () => {
     expect(result.event_timing).toBe(event.timing);
     expect(result.event_id).toBe(event.id);
     expect(result.event_timestamp).toBe(event.timestamp);
-    expect(result.event_group).toBe(event.group);
-    expect(result.event_count).toBe(event.count);
   });
 
   test('flattens user section', () => {
@@ -54,15 +53,8 @@ describe('flattenIncludeSections', () => {
 
   test('flattens source section', () => {
     const result = flattenIncludeSections(event, ['source']);
-    expect(result.source_type).toBe('web');
-    expect(result.source_id).toBeDefined();
-    expect(result.source_previous_id).toBeDefined();
-  });
-
-  test('flattens version section', () => {
-    const result = flattenIncludeSections(event, ['version']);
-    expect(result.version_tagging).toBe(1);
-    expect(result.version_source).toBeDefined();
+    expect(result.source_type).toBe('collector');
+    expect(result.source_schema).toBe('4');
   });
 
   test('"all" expands to every section', () => {
@@ -73,8 +65,7 @@ describe('flattenIncludeSections', () => {
     expect(result.context_shopping).toBe('complete');
     expect(result.user_id).toBe('us3r');
     expect(result.event_name).toBe('order complete');
-    expect(result.source_type).toBe('web');
-    expect(result.version_tagging).toBe(1);
+    expect(result.source_type).toBe('collector');
   });
 
   test('multiple sections combined', () => {
@@ -100,7 +91,6 @@ describe('flattenIncludeSections', () => {
   });
 
   test('section with non-object value is skipped', () => {
-    // version.source is a string, not an object — but version itself is an object
     // Test with a section that returns a non-object
     const minimal: WalkerOS.DeepPartialEvent = { name: 'test action' };
     const result = flattenIncludeSections(minimal, ['data']);
@@ -111,9 +101,7 @@ describe('flattenIncludeSections', () => {
 describe('processEventMapping with include', () => {
   const { processEventMapping } = require('..');
 
-  const mockCollector = {
-    consent: {},
-  } as unknown as Collector.Instance;
+  const mockCollector = createMockCollector({ consent: {} });
 
   test('config.include flattens sections into data', async () => {
     const event = getEvent('order complete');
@@ -124,9 +112,10 @@ describe('processEventMapping with include', () => {
     const result = await processEventMapping(event, config, mockCollector);
 
     expect(isObject(result.data)).toBe(true);
-    const data = result.data as Record<string, unknown>;
-    expect(data.data_total).toBe(555);
-    expect(data.data_currency).toBe('EUR');
+    expect(result.data).toMatchObject({
+      data_total: 555,
+      data_currency: 'EUR',
+    });
   });
 
   test('rule.include replaces config.include', async () => {
@@ -144,10 +133,9 @@ describe('processEventMapping with include', () => {
 
     const result = await processEventMapping(event, config, mockCollector);
 
-    const data = result.data as Record<string, unknown>;
-    // Rule-level include wins — only globals, no data
-    expect(data.globals_pagegroup).toBe('shop');
-    expect(data.data_total).toBeUndefined();
+    // Rule-level include wins - only globals, no data
+    expect(result.data).toMatchObject({ globals_pagegroup: 'shop' });
+    expect(isObject(result.data) && 'data_total' in result.data).toBe(false);
   });
 
   test('config.data wins over include on key conflict', async () => {
@@ -163,10 +151,11 @@ describe('processEventMapping with include', () => {
 
     const result = await processEventMapping(event, config, mockCollector);
 
-    const data = result.data as Record<string, unknown>;
-    expect(data.data_total).toBe('overridden');
-    // Other include keys still present
-    expect(data.data_currency).toBe('EUR');
+    expect(result.data).toMatchObject({
+      data_total: 'overridden',
+      // Other include keys still present
+      data_currency: 'EUR',
+    });
   });
 
   test('rule.data wins over include on key conflict', async () => {
@@ -188,8 +177,7 @@ describe('processEventMapping with include', () => {
 
     const result = await processEventMapping(event, config, mockCollector);
 
-    const data = result.data as Record<string, unknown>;
-    expect(data.globals_pagegroup).toBe('custom');
+    expect(result.data).toMatchObject({ globals_pagegroup: 'custom' });
   });
 
   test('no include means no include data', async () => {
@@ -209,8 +197,7 @@ describe('processEventMapping with include', () => {
 
     const result = await processEventMapping(event, config, mockCollector);
 
-    const data = result.data as Record<string, unknown>;
     // context: { shopping: ['complete', 0] } → 'complete'
-    expect(data.context_shopping).toBe('complete');
+    expect(result.data).toMatchObject({ context_shopping: 'complete' });
   });
 });

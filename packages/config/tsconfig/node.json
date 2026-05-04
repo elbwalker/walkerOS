@@ -3,7 +3,7 @@
   "display": "Node",
   "extends": "./base.json",
   "compilerOptions": {
-    "lib": ["es2018"],
-    "target": "es2018"
+    "lib": ["es2022"],
+    "target": "es2022"
   }
 }

@@ -6,6 +6,7 @@ import {
   buildCacheContext,
 } from '../cache';
 import type { Store } from '../types';
+import { createMockCollector } from './helpers/mocks';
 
 function createMockStore(): Store.Instance & { _data: Map<string, unknown> } {
   const data = new Map<string, unknown>();
@@ -197,8 +198,12 @@ describe('applyUpdate', () => {
       { body: 'data', headers: {} },
       { 'headers.X-Cache': { value: 'HIT' } },
       {},
+      createMockCollector(),
     );
-    expect((result as any).headers).toEqual({ 'X-Cache': 'HIT' });
+    expect(result).toEqual({
+      body: 'data',
+      headers: { 'X-Cache': 'HIT' },
+    });
   });
 
   it('resolves dynamic values from context via getMappingValue', async () => {
@@ -206,8 +211,12 @@ describe('applyUpdate', () => {
       { body: 'data', headers: {} },
       { 'headers.X-Cache': { key: 'cache.status' } },
       { cache: { status: 'MISS' } },
+      createMockCollector(),
     );
-    expect((result as any).headers).toEqual({ 'X-Cache': 'MISS' });
+    expect(result).toEqual({
+      body: 'data',
+      headers: { 'X-Cache': 'MISS' },
+    });
   });
 
   it('preserves existing fields', async () => {
@@ -215,15 +224,25 @@ describe('applyUpdate', () => {
       { body: 'data', headers: { 'Content-Type': 'text/plain' } },
       { 'headers.X-Cache': { value: 'HIT' } },
       {},
+      createMockCollector(),
     );
-    expect((result as any).body).toBe('data');
-    expect((result as any).headers['Content-Type']).toBe('text/plain');
-    expect((result as any).headers['X-Cache']).toBe('HIT');
+    expect(result).toEqual({
+      body: 'data',
+      headers: {
+        'Content-Type': 'text/plain',
+        'X-Cache': 'HIT',
+      },
+    });
   });
 
   it('returns value unchanged when no update rules', async () => {
     const original = { body: 'data' };
-    const result = await applyUpdate(original, undefined, {});
+    const result = await applyUpdate(
+      original,
+      undefined,
+      {},
+      createMockCollector(),
+    );
     expect(result).toEqual(original);
   });
 
@@ -235,10 +254,13 @@ describe('applyUpdate', () => {
         'headers.Cache-Control': { value: 'max-age=300' },
       },
       {},
+      createMockCollector(),
     );
-    expect((result as any).headers).toEqual({
-      'X-Cache': 'HIT',
-      'Cache-Control': 'max-age=300',
+    expect(result).toEqual({
+      headers: {
+        'X-Cache': 'HIT',
+        'Cache-Control': 'max-age=300',
+      },
     });
   });
 });

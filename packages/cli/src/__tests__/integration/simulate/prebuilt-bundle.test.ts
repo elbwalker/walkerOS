@@ -27,7 +27,7 @@ const configPath = path.resolve(
 describe('prebuilt-bundle simulation', () => {
   let tmpDir: string;
   let logger: Logger.Instance;
-  let config: Flow.Config;
+  let config: Flow.Json;
   let bundlePath: string;
 
   beforeEach(async () => {
@@ -40,7 +40,7 @@ describe('prebuilt-bundle simulation', () => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
 
     // Load the config once
-    config = (await fs.readJSON(configPath)) as Flow.Config;
+    config = (await fs.readJSON(configPath)) as Flow.Json;
 
     // Step 1: Bundle with skipWrapper to produce a skeleton ESM
     const { flowSettings, buildOptions } = loadBundleConfig(config, {
