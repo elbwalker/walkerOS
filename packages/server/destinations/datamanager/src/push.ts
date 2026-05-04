@@ -28,16 +28,16 @@ export const push: PushFn = async function (
 
   // Extract Settings guided helpers
   const userDataMapped = userData
-    ? await getMappingValue(event, { map: userData })
+    ? await getMappingValue(event, { map: userData }, { collector })
     : {};
   const userIdMapped = userId
-    ? await getMappingValue(event, userId)
+    ? await getMappingValue(event, userId, { collector })
     : undefined;
   const clientIdMapped = clientId
-    ? await getMappingValue(event, clientId)
+    ? await getMappingValue(event, clientId, { collector })
     : undefined;
   const sessionAttributesMapped = sessionAttributes
-    ? await getMappingValue(event, sessionAttributes)
+    ? await getMappingValue(event, sessionAttributes, { collector })
     : undefined;
 
   // Extract consent from Settings
@@ -71,7 +71,7 @@ export const push: PushFn = async function (
 
   // Get mapped data from destination config and event mapping
   const configData = validatedConfig.data
-    ? await getMappingValue(event, validatedConfig.data)
+    ? await getMappingValue(event, validatedConfig.data, { collector })
     : {};
   const eventData = isObject(data) ? data : {};
 

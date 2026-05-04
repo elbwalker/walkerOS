@@ -1,7 +1,7 @@
 import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv } from '@walkeros/web-core';
 import { getMappingValue, isObject, isString } from '@walkeros/core';
-import type { WalkerOS } from '@walkeros/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import type {
   Destination,
   EventData,
@@ -53,11 +53,13 @@ function addScript(env?: DestinationWeb.Env): void {
 async function resolveIdentify(
   event: WalkerOS.Event,
   mappingValue: unknown,
+  collector: Collector.Instance,
 ): Promise<IdentifyFields | undefined> {
   if (mappingValue === undefined || mappingValue === null) return undefined;
   const resolved = await getMappingValue(
     event,
     mappingValue as Parameters<typeof getMappingValue>[1],
+    { collector },
   );
   if (!isObject(resolved)) return undefined;
   const fields: IdentifyFields = {};
@@ -107,7 +109,7 @@ export const destinationPinterest: Destination = {
     return config;
   },
 
-  async push(event, { config, rule, data, env }) {
+  async push(event, { config, rule, data, env, collector }) {
     const settings = (config.settings || {}) as Settings;
     const state = (settings._state ||= { consentGranted: true });
     if (state.consentGranted === false) return; // Consent revoked - suppress
@@ -119,7 +121,7 @@ export const destinationPinterest: Destination = {
     // 1. Identity - per-event override falls back to destination-level.
     const identifyMapping =
       (rule?.settings?.identify as unknown) ?? settings.identify;
-    const identify = await resolveIdentify(event, identifyMapping);
+    const identify = await resolveIdentify(event, identifyMapping, collector);
     if (identify && !identifyEqual(identify, state.lastIdentify)) {
       pintrk('set', identify);
       state.lastIdentify = identify;

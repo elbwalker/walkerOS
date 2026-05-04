@@ -68,7 +68,7 @@ export const destinationClarity: Destination = {
     return config;
   },
 
-  async push(event, { config, rule, env, data }) {
+  async push(event, { config, rule, env, data, collector }) {
     const clarity = getClarity(env as Env | undefined);
     const settings = (config.settings || {}) as Partial<Settings>;
     const mappingSettings = (rule?.settings || {}) as Mapping;
@@ -78,7 +78,9 @@ export const destinationClarity: Destination = {
     //    calls are associated with the right user.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     if (identifyMapping !== undefined) {
-      const resolved = await getMappingValue(event, identifyMapping);
+      const resolved = await getMappingValue(event, identifyMapping, {
+        collector,
+      });
       if (isObject(resolved)) {
         const { customId, customSessionId, customPageId, friendlyName } =
           resolved as {
@@ -110,7 +112,9 @@ export const destinationClarity: Destination = {
 
     // 3. Explicit tags via mapping.settings.set
     if (mappingSettings.set !== undefined) {
-      const resolved = await getMappingValue(event, mappingSettings.set);
+      const resolved = await getMappingValue(event, mappingSettings.set, {
+        collector,
+      });
       if (isObject(resolved)) {
         for (const [key, raw] of Object.entries(resolved)) {
           emitTag(clarity, key, raw);
@@ -120,7 +124,9 @@ export const destinationClarity: Destination = {
 
     // 4. Session priority upgrade
     if (mappingSettings.upgrade !== undefined) {
-      const reason = await getMappingValue(event, mappingSettings.upgrade);
+      const reason = await getMappingValue(event, mappingSettings.upgrade, {
+        collector,
+      });
       if (isString(reason) && reason) {
         clarity.upgrade(reason);
       }

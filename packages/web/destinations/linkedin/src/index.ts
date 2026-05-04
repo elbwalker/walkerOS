@@ -140,7 +140,7 @@ export const destinationLinkedIn: Destination = {
     return config;
   },
 
-  async push(event, { rule, env }) {
+  async push(event, { rule, env, collector }) {
     const { window } = getEnv(env);
     const w = window as Env['window'];
     const lintrk = w.lintrk;
@@ -155,6 +155,7 @@ export const destinationLinkedIn: Destination = {
     const resolved = await getMappingValue(
       event as WalkerOS.Event,
       mappingSettings.conversion,
+      { collector },
     );
 
     const data = buildLintrkData(resolved);

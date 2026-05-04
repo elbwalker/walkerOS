@@ -306,7 +306,7 @@ export const destinationSnowplow: Destination = {
    * @param event - The walkerOS event to process
    * @param context - Push context with config, data, rule, and env
    */
-  async push(event, { config, data = {}, rule = {}, logger }) {
+  async push(event, { config, data = {}, rule = {}, logger, collector }) {
     const eventMapping = rule.settings || {};
     await pushSnowplowEvent(
       event,
@@ -315,6 +315,7 @@ export const destinationSnowplow: Destination = {
       rule.name,
       config,
       logger,
+      collector,
     );
   },
 

@@ -1,4 +1,9 @@
-import type { WalkerOS, Logger, Mapping as MappingTypes } from '@walkeros/core';
+import type {
+  Collector,
+  WalkerOS,
+  Logger,
+  Mapping as MappingTypes,
+} from '@walkeros/core';
 import type {
   SnowplowAdapter,
   SelfDescribingJson,
@@ -46,6 +51,7 @@ export async function pushSnowplowEvent(
   actionName?: string,
   config?: Config,
   logger?: Logger.Instance,
+  collector?: Collector.Instance,
 ): Promise<void> {
   const settings = config?.settings;
   const adapter = settings?._state?.adapter;
@@ -58,7 +64,7 @@ export async function pushSnowplowEvent(
 
   // Set userId once on first event where value is available
   if (settings?.userId && !runtimeState?.userIdSet) {
-    const userId = await getMappingValue(event, settings.userId);
+    const userId = await getMappingValue(event, settings.userId, { collector });
     if (userId && isString(userId)) {
       adapter.setUserId(userId);
       if (runtimeState) runtimeState.userIdSet = true;
@@ -67,7 +73,9 @@ export async function pushSnowplowEvent(
 
   // Set page context when configured (calls setPageType from ecommerce plugin)
   if (settings?.page) {
-    const pageType = await getMappingValue(event, settings.page.type);
+    const pageType = await getMappingValue(event, settings.page.type, {
+      collector,
+    });
     if (pageType && isString(pageType)) {
       const page: { type: string; language?: string; locale?: string } = {
         type: pageType,
@@ -75,7 +83,9 @@ export async function pushSnowplowEvent(
 
       // Add optional language if configured and resolves to string
       if (settings.page.language) {
-        const language = await getMappingValue(event, settings.page.language);
+        const language = await getMappingValue(event, settings.page.language, {
+          collector,
+        });
         if (language && isString(language)) {
           page.language = language;
         }
@@ -83,7 +93,9 @@ export async function pushSnowplowEvent(
 
       // Add optional locale if configured and resolves to string
       if (settings.page.locale) {
-        const locale = await getMappingValue(event, settings.page.locale);
+        const locale = await getMappingValue(event, settings.page.locale, {
+          collector,
+        });
         if (locale && isString(locale)) {
           page.locale = locale;
         }
@@ -100,7 +112,13 @@ export async function pushSnowplowEvent(
 
   // Handle structured events (bypasses self-describing events)
   if (mapping.struct) {
-    await handleStructuredEvent(event, mapping.struct, adapter, logger);
+    await handleStructuredEvent(
+      event,
+      mapping.struct,
+      adapter,
+      logger,
+      collector,
+    );
     return;
   }
 
@@ -117,14 +135,14 @@ export async function pushSnowplowEvent(
       settings?.snowplow?.actionSchema ||
       SCHEMAS.ACTION;
 
-    const context = await buildContext(event, mapping);
+    const context = await buildContext(event, mapping, collector);
 
     // Build event data based on schema type
     let eventData: WalkerOS.AnyObject = {};
 
     if (isObject(mapping.data) && 'map' in mapping.data) {
       // Use mapped data for self-describing events (e.g., percent_progress)
-      const mapped = await getMappingValue(event, mapping.data);
+      const mapped = await getMappingValue(event, mapping.data, { collector });
       if (isObject(mapped)) eventData = mapped as WalkerOS.AnyObject;
     } else if (actionSchema === SCHEMAS.ACTION) {
       // Ecommerce pattern: include type field
@@ -154,6 +172,7 @@ export async function pushSnowplowEvent(
 async function buildContext(
   event: WalkerOS.Event,
   mapping: Mapping,
+  collector?: Collector.Instance,
 ): Promise<SelfDescribingJson<WalkerOS.Properties>[]> {
   const contexts: SelfDescribingJson<WalkerOS.Properties>[] = [];
 
@@ -171,7 +190,9 @@ async function buildContext(
       const [scope, itemMapping] = contextDef.data.loop;
 
       // Get the source array using getMappingValue with the scope
-      const sourceArray = await getMappingValue(event, scope as string);
+      const sourceArray = await getMappingValue(event, scope as string, {
+        collector,
+      });
 
       if (isArray(sourceArray)) {
         // Apply the item mapping to each element and create a context entity for each
@@ -179,6 +200,7 @@ async function buildContext(
           const mappedData = await getMappingValue(
             item,
             itemMapping as MappingTypes.Data,
+            { collector },
           );
 
           if (isObject(mappedData)) {
@@ -191,7 +213,11 @@ async function buildContext(
       }
     } else {
       // Original behavior: single context entity
-      const mappedData = await getMappingValue(event, { map: contextDef.data });
+      const mappedData = await getMappingValue(
+        event,
+        { map: contextDef.data },
+        { collector },
+      );
 
       if (isObject(mappedData)) {
         contexts.push({
@@ -217,10 +243,11 @@ async function handleStructuredEvent(
   struct: StructuredEventMapping,
   adapter: SnowplowAdapter,
   logger?: Logger.Instance,
+  collector?: Collector.Instance,
 ): Promise<void> {
   // Resolve required fields
-  const category = await getMappingValue(event, struct.category);
-  const action = await getMappingValue(event, struct.action);
+  const category = await getMappingValue(event, struct.category, { collector });
+  const action = await getMappingValue(event, struct.action, { collector });
 
   // Category and action are required - skip with warning if not present
   if (!category || !isString(category)) {
@@ -242,13 +269,13 @@ async function handleStructuredEvent(
 
   // Resolve optional fields
   const label = struct.label
-    ? await getMappingValue(event, struct.label)
+    ? await getMappingValue(event, struct.label, { collector })
     : undefined;
   const property = struct.property
-    ? await getMappingValue(event, struct.property)
+    ? await getMappingValue(event, struct.property, { collector })
     : undefined;
   const rawValue = struct.value
-    ? await getMappingValue(event, struct.value)
+    ? await getMappingValue(event, struct.value, { collector })
     : undefined;
 
   // Convert value to number if present

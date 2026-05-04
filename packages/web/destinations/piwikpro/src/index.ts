@@ -40,13 +40,16 @@ export const destinationPiwikPro: Destination = {
     if (settings?.linkTracking !== false) paq(['enableLinkTracking']);
   },
 
-  async push(event, { rule = {}, data, env }) {
+  async push(event, { rule = {}, data, env, collector }) {
     const { window } = getEnv(env);
     const paq = (window as Window)._paq!.push;
 
     // Send pageviews if not disabled
     if (event.name === 'page view' && !rule.settings) {
-      paq(['trackPageView', await getMappingValue(event, 'data.title')]);
+      paq([
+        'trackPageView',
+        await getMappingValue(event, 'data.title', { collector }),
+      ]);
       return;
     }
 
@@ -58,7 +61,7 @@ export const destinationPiwikPro: Destination = {
 
     if (eventMapping.goalId) {
       const goalValue = eventMapping.goalValue
-        ? getMappingValue(event, eventMapping.goalValue)
+        ? getMappingValue(event, eventMapping.goalValue, { collector })
         : undefined;
 
       paq([

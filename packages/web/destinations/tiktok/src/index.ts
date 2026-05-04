@@ -96,7 +96,7 @@ export const destinationTikTok: Destination = {
     return { ...config, settings: { ...settings, _state } };
   },
 
-  async push(event, { config, rule, data, env }) {
+  async push(event, { config, rule, data, env, collector }) {
     const ttq = getTTQ(env);
     const settings = (config.settings || {}) as Settings;
     const mappingSettings = (rule?.settings || {}) as Mapping;
@@ -109,7 +109,9 @@ export const destinationTikTok: Destination = {
     // is set for the conversion event.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
     if (identifyMapping !== undefined) {
-      const resolved = await getMappingValue(event, identifyMapping);
+      const resolved = await getMappingValue(event, identifyMapping, {
+        collector,
+      });
       if (isObject(resolved)) {
         state.lastIdentity = applyIdentify(
           ttq,

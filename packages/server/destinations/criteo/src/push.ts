@@ -58,7 +58,7 @@ function toItems(raw: unknown): CriteoItem[] | undefined {
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, env, logger },
+  { config, rule, data, env, logger, collector },
 ) {
   const {
     partnerId,
@@ -72,7 +72,7 @@ export const push: PushFn = async function (
 
   const eventData = isObject(data) ? data : {};
   const userDataCustom = user_data
-    ? await getMappingValue(event, { map: user_data })
+    ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
   const resolvedUserData = isObject(userDataCustom) ? userDataCustom : {};
 

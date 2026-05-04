@@ -14,7 +14,7 @@ import { getHashServer } from '@walkeros/server-core';
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, env, logger },
+  { config, rule, data, env, logger, collector },
 ) {
   const {
     accessToken,
@@ -27,7 +27,7 @@ export const push: PushFn = async function (
 
   // Resolve user data from settings-level mapping
   const userDataCustom = user_data
-    ? await getMappingValue(event, { map: user_data })
+    ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
 
   // Merge user data sources: config mapping + event mapping data
@@ -96,7 +96,7 @@ export const push: PushFn = async function (
   // Resolve per-event conversion override
   const mappingSettings = (rule?.settings || {}) as Mapping;
   const conversionResolved = mappingSettings.conversion
-    ? await getMappingValue(event, mappingSettings.conversion)
+    ? await getMappingValue(event, mappingSettings.conversion, { collector })
     : undefined;
   const conversionOverride = isObject(conversionResolved)
     ? conversionResolved
