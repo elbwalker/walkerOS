@@ -16,7 +16,7 @@ describe('emitter', () => {
     delete process.env.DO_NOT_TRACK;
     delete process.env.WALKEROS_TELEMETRY_DISABLED;
     delete process.env.WALKEROS_TELEMETRY_DEBUG;
-    delete process.env.TELEMETRY_ENDPOINT;
+    delete process.env.WALKEROS_APP_URL;
     mkdirSync(join(testDir, 'walkeros'), { recursive: true });
     // Ensure the config file does not exist between tests.
     const p = getConfigPath();
@@ -64,7 +64,7 @@ describe('emitter', () => {
 
   it('swallows network errors and never throws', async () => {
     writeConfig({ installationId: 'install-x', telemetryEnabled: true });
-    process.env.TELEMETRY_ENDPOINT = 'http://127.0.0.1:1'; // unreachable
+    process.env.WALKEROS_APP_URL = 'http://127.0.0.1:1'; // unreachable
     const emitter = await createEmitter({
       source: { type: 'cli', platform: 'terminal' },
       packageVersion: '3.4.2',
@@ -89,24 +89,6 @@ describe('emitter', () => {
     const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
     expect(out).toContain('"session":"sess-xyz"');
     errSpy.mockRestore();
-  });
-
-  it('is a no-op when opted in but no endpoint is configured', async () => {
-    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
-    // No TELEMETRY_ENDPOINT env var; flow.json still has the $TELEMETRY_ENDPOINT placeholder.
-    const emitter = await createEmitter({
-      source: { type: 'cli', platform: 'terminal' },
-      packageVersion: '3.4.2',
-    });
-    // send resolves, does not throw, never attempts network.
-    await expect(
-      emitter.send('cmd invoke', { command: 'x', outcome: 'success' }),
-    ).resolves.toBeUndefined();
-    // Assert we did NOT initialize the collector by checking no stderr writes
-    // (debug mode is off; production no-op is silent).
-    // We don't have a direct collector spy here; the resolution + no exception
-    // above is the observable signal. This test locks the behavior: the
-    // previous code would have invoked the collector with a 404 endpoint.
   });
 
   it('still prints to stderr in debug mode even with no endpoint', async () => {

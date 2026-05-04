@@ -6,7 +6,7 @@
  * and drains microtasks until quiescent.
  */
 
-interface PendingTimer {
+export interface PendingTimer {
   id: number;
   callback: (...args: unknown[]) => void;
   delay: number;
@@ -22,6 +22,12 @@ export interface TimerControl {
   countPending(): number;
   /** Restore original timer functions */
   restore(): void;
+  /**
+   * The shared pending-timer map. Exposed so an external drain pump
+   * (`async-drain-pump.ts`) can fire timers while `fn` is awaiting.
+   * Mutating this map outside the pump is unsupported.
+   */
+  pending: Map<number, PendingTimer>;
 }
 
 export interface TimerInterceptionOptions {
@@ -186,5 +192,5 @@ export function installTimerInterception(
     pending.clear();
   }
 
-  return { flush, countPending, restore };
+  return { flush, countPending, restore, pending };
 }

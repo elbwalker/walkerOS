@@ -50,7 +50,7 @@ import type { ToolClient } from './tool-client.js';
  * delegates to the CLI's programmatic API, which in turn talks to the
  * walkerOS app over HTTPS via openapi-fetch. Token resolution and the
  * base URL come from the CLI's config file and environment
- * (WALKEROS_TOKEN, APP_URL), so no constructor args are required.
+ * (WALKEROS_TOKEN, WALKEROS_APP_URL), so no constructor args are required.
  */
 export class HttpToolClient implements ToolClient {
   async listProjects(): Promise<unknown> {

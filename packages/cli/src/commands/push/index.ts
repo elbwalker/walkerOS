@@ -379,6 +379,11 @@ async function executeDestinationPush(
       timeout,
       networkCalls,
       asyncDrain: { timeout: 5000 },
+      // Real push (non-simulate) needs the pump so destinations whose init
+      // awaits a captured setTimeout (e.g., amplitude engagement plugin)
+      // don't deadlock. Simulate routes use their own withFlowContext call
+      // sites without `drainPump`, preserving snapshot ordering.
+      drainPump: true,
     },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);

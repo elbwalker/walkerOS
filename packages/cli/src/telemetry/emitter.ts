@@ -1,6 +1,3 @@
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import type { Collector, Elb, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/server-destination-api';
@@ -9,6 +6,7 @@ import { getEnvironment } from './environment.js';
 import { getInstallationId } from './install-id.js';
 import { isTelemetryEnabled, isDebugMode } from './consent.js';
 import { maybePrintFirstRunNotice } from './first-run-notice.js';
+import { resolveAppUrl } from '../lib/config-file.js';
 
 const SEND_TIMEOUT_MS = 1000;
 
@@ -70,7 +68,7 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
   const device: string = maybeDevice;
 
   const debug = isDebugMode();
-  const endpoint = process.env.TELEMETRY_ENDPOINT || loadFlowJsonEndpoint();
+  const endpoint = resolveTelemetryEndpoint();
   if (!endpoint && !debug) {
     // No ingest URL configured. Consistent with the "ship consent UX
     // without a backend" contract: opted-in users produce no traffic in
@@ -165,29 +163,19 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
 }
 
 /**
- * Load the telemetry endpoint from the sibling `flow.json` file.
+ * Resolve the telemetry ingest endpoint.
  *
- * The contract file lives next to this module (both in `src/` and in the
- * built `dist/`). We intentionally skip the `$VAR` placeholder that ships
- * in the contract: an unresolved placeholder means no real endpoint, so
- * the caller treats that as "unconfigured" and no-ops.
+ * Reuses `resolveAppUrl()` from `lib/config-file` so a single
+ * `walkeros auth login` (which writes `appUrl` to the user config) wires
+ * telemetry alongside auth. Order: env (`WALKEROS_APP_URL`) > user config
+ * (`~/.config/walkeros/config.json:appUrl`) > undefined (telemetry no-ops).
+ *
+ * Hard-cut: `TELEMETRY_ENDPOINT` is no longer recognized.
  */
-function loadFlowJsonEndpoint(): string | undefined {
-  try {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const raw = JSON.parse(readFileSync(join(here, 'flow.json'), 'utf-8')) as {
-      flows?: {
-        default?: {
-          destinations?: { api?: { config?: { url?: string } } };
-        };
-      };
-    };
-    const url = raw.flows?.default?.destinations?.api?.config?.url;
-    if (url && !url.startsWith('$')) return url;
-  } catch {
-    /* fall through: caller treats undefined as unconfigured */
-  }
-  return undefined;
+export function resolveTelemetryEndpoint(): string | undefined {
+  const appUrl = resolveAppUrl();
+  if (!appUrl) return undefined;
+  return `${appUrl.replace(/\/$/, '')}/api/telemetry`;
 }
 
 async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {

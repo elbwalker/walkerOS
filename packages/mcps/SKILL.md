@@ -62,7 +62,7 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 
 ## Networking
 
-Outbound requests to a configured `APP_URL` carry an
+Outbound requests to a configured `WALKEROS_APP_URL` carry an
 `X-Walkeros-Client: walkeros-mcp/{version}` header so the host can attribute
 usage. No PII; the header is the only client identifier.
 

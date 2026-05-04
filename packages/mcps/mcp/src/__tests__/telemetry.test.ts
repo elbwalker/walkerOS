@@ -30,7 +30,7 @@ describe('MCP emitter wrapper', () => {
     delete process.env.DO_NOT_TRACK;
     delete process.env.WALKEROS_TELEMETRY_DISABLED;
     delete process.env.WALKEROS_TELEMETRY_DEBUG;
-    delete process.env.TELEMETRY_ENDPOINT;
+    delete process.env.WALKEROS_APP_URL;
     mkdirSync(join(testDir, 'walkeros'), { recursive: true });
     // Seed opt-in config so emitter is enabled under the new opt-in default.
     writeConfig({ installationId: 'install-x', telemetryEnabled: true });

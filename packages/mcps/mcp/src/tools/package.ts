@@ -6,6 +6,18 @@ import { fetchCatalog, normalizePlatform, CLIENT_HEADER } from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
 
+/**
+ * Resolve the walkerOS app base URL for MCP outbound calls.
+ *
+ * Env-only by design: the MCP runs in an editor with explicit `.mcp.json`
+ * env. No config-file precedence (which is what `@walkeros/cli`'s
+ * `resolveAppUrl()` does for the `walkeros` CLI binary). Hard-cut:
+ * `APP_URL` is no longer recognized.
+ */
+export function getPackageBaseUrl(): string | undefined {
+  return process.env.WALKEROS_APP_URL || undefined;
+}
+
 // ---------- package_search ----------
 
 const SEARCH_TITLE = 'Search Package';
@@ -66,7 +78,7 @@ async function packageSearchHandlerBody(input: unknown) {
     platform?: 'web' | 'server';
     version?: string;
   };
-  const baseUrl = process.env.APP_URL || undefined;
+  const baseUrl = getPackageBaseUrl();
 
   // Browse mode: no package specified → return catalog
   if (!packageName) {
@@ -175,7 +187,7 @@ async function packageGetHandlerBody(input: unknown) {
     version?: string;
     section?: 'hints' | 'examples' | 'all';
   };
-  const baseUrl = process.env.APP_URL || undefined;
+  const baseUrl = getPackageBaseUrl();
 
   try {
     const info = await fetchPackage(packageName, {

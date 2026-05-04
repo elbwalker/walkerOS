@@ -101,7 +101,7 @@
         "api": {
           "package": "@walkeros/server-destination-api",
           "config": {
-            "url": "$TELEMETRY_ENDPOINT"
+            "url": "$env.WALKEROS_APP_URL/api/telemetry"
           }
         }
       }
