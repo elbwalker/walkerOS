@@ -20,19 +20,13 @@ import { createCLILogger } from '../../core/cli-logger.js';
 import {
   getErrorMessage,
   detectInput,
-  isStdinPiped,
-  readStdinToTempFile,
   writeResult,
   type Platform,
 } from '../../core/index.js';
 
 import type { Flow, Logger, WalkerOS } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
-import {
-  loadFlowConfig,
-  loadJsonConfig,
-  loadJsonFromSource,
-} from '../../config/index.js';
+import { loadFlowConfig, loadJsonConfig } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { NetworkCall, PushCommandOptions, PushResult } from './types.js';
@@ -42,6 +36,7 @@ import { applyOverrides } from './apply-overrides.js';
 import { withFlowContext } from './flow-context.js';
 import { prepareFlow } from './prepare.js';
 import { schemas } from '@walkeros/core/dev';
+import { runPushCommand } from './run.js';
 
 /**
  * Resolve a before chain config to an ordered array of transformer IDs.
@@ -157,129 +152,47 @@ async function pushCore(
 }
 
 /**
- * CLI command handler for push command
+ * CLI command handler for push command.
+ *
+ * Thin wrapper around `runPushCommand`: delegates result production to the
+ * pure helper, then formats output and decides the exit code. Tests target
+ * `runPushCommand` directly to avoid `process.exit` killing Jest workers.
  */
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
-  const logger = createCLILogger({ ...options, stderr: true });
-  const startTime = Date.now();
+  const result = await runPushCommand(options);
+  const duration = result.duration;
 
-  try {
-    // Resolve config: stdin > argument > default
-    let config: string;
-    if (isStdinPiped() && !options.config) {
-      config = await readStdinToTempFile('push');
-    } else {
-      config = options.config || 'bundle.config.json';
-    }
-
-    // Resolve string event inputs
-    let resolvedEvent: unknown = options.event;
-    if (typeof options.event === 'string') {
-      resolvedEvent = await loadJsonFromSource(options.event, {
-        name: 'event',
-      });
-    }
-
-    // Route to typed function based on --simulate flag
-    const simulateFlag = options.simulate?.[0];
-    let result: PushResult;
-
-    if (simulateFlag?.startsWith('source.')) {
-      result = await simulateSource(config, resolvedEvent, {
-        sourceId: simulateFlag.replace('source.', ''),
-        flow: options.flow,
-        silent: options.silent,
-        verbose: options.verbose,
-        snapshot: options.snapshot,
-      });
-    } else if (simulateFlag?.startsWith('transformer.')) {
-      result = await simulateTransformer(
-        config,
-        resolvedEvent as WalkerOS.DeepPartialEvent,
-        {
-          transformerId: simulateFlag.replace('transformer.', ''),
-          flow: options.flow,
-          mock: options.mock,
-          silent: options.silent,
-          verbose: options.verbose,
-          snapshot: options.snapshot,
-        },
-      );
-    } else if (simulateFlag?.startsWith('destination.')) {
-      result = await simulateDestination(
-        config,
-        resolvedEvent as WalkerOS.DeepPartialEvent,
-        {
-          destinationId: simulateFlag.replace('destination.', ''),
-          flow: options.flow,
-          mock: options.mock,
-          silent: options.silent,
-          verbose: options.verbose,
-          snapshot: options.snapshot,
-        },
-      );
-    } else {
-      result = await push(config, resolvedEvent, {
-        flow: options.flow,
-        json: options.json,
-        verbose: options.verbose,
-        silent: options.silent,
-        platform: options.platform as Platform | undefined,
-        mock: options.mock,
-        snapshot: options.snapshot,
-      });
-    }
-
-    const duration = Date.now() - startTime;
-
-    // Format result
-    let output: string;
-    if (options.json) {
-      output = JSON.stringify({ ...result, duration }, null, 2);
-    } else {
-      const lines: string[] = [];
-      if (result.success) {
-        lines.push('Event pushed successfully');
-        if (result.elbResult && typeof result.elbResult === 'object') {
-          const pushResult = result.elbResult as unknown as Record<
-            string,
-            unknown
-          >;
-          if ('id' in pushResult && pushResult.id)
-            lines.push(`  Event ID: ${pushResult.id}`);
-          if ('entity' in pushResult && pushResult.entity)
-            lines.push(`  Entity: ${pushResult.entity}`);
-          if ('action' in pushResult && pushResult.action)
-            lines.push(`  Action: ${pushResult.action}`);
-        }
-        lines.push(`  Duration: ${duration}ms`);
-      } else {
-        lines.push(`Error: ${result.error}`);
+  // Format result
+  let output: string;
+  if (options.json) {
+    output = JSON.stringify({ ...result, duration }, null, 2);
+  } else {
+    const lines: string[] = [];
+    if (result.success) {
+      lines.push('Event pushed successfully');
+      if (result.elbResult && typeof result.elbResult === 'object') {
+        const pushResult = result.elbResult as unknown as Record<
+          string,
+          unknown
+        >;
+        if ('id' in pushResult && pushResult.id)
+          lines.push(`  Event ID: ${pushResult.id}`);
+        if ('entity' in pushResult && pushResult.entity)
+          lines.push(`  Entity: ${pushResult.entity}`);
+        if ('action' in pushResult && pushResult.action)
+          lines.push(`  Action: ${pushResult.action}`);
       }
-      output = lines.join('\n');
-    }
-
-    // Write to file or stdout
-    await writeResult(output + '\n', { output: options.output });
-
-    process.exit(result.success ? 0 : 1);
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    const errorMessage = getErrorMessage(error);
-
-    if (options.json) {
-      const errorOutput = JSON.stringify(
-        { success: false, error: errorMessage, duration },
-        null,
-        2,
-      );
-      await writeResult(errorOutput + '\n', { output: options.output });
+      lines.push(`  Duration: ${duration}ms`);
     } else {
-      logger.error(`Error: ${errorMessage}`);
+      lines.push(`Error: ${result.error}`);
     }
-
-    process.exit(1);
+    output = lines.join('\n');
   }
+
+  // Write to file or stdout
+  await writeResult(output + '\n', { output: options.output });
+
+  process.exit(result.success ? 0 : 1);
 }
 
 /**

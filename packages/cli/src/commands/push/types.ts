@@ -38,6 +38,11 @@ export interface PushResult {
   usage?: Record<string, Array<{ fn: string; args: unknown[]; ts: number }>>;
   /** Network calls captured during web simulation (fetch + sendBeacon) */
   networkCalls?: NetworkCall[];
+  /**
+   * Per-destination simulation results when --simulate destination.* is
+   * called with multiple ids. Undefined for single-target or non-simulate runs.
+   */
+  perDestination?: Record<string, PushResult>;
   duration: number;
   error?: string;
 }
