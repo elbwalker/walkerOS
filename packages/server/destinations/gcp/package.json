@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-gcp",
   "description": "Google Cloud Platform server destination for walkerOS (BigQuery)",
-  "version": "3.4.2",
+  "version": "4.0.0",
   "license": "MIT",
   "exports": {
     ".": {
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.1",
-    "@walkeros/server-core": "3.4.2"
+    "@walkeros/server-core": "4.0.0"
   },
   "devDependencies": {},
   "repository": {

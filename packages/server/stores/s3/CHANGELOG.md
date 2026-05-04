@@ -1,5 +1,18 @@
 # @walkeros/server-store-s3
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [93ea9c4]
+- Updated dependencies [465775c]
+- Updated dependencies [942a7fe]
+- Updated dependencies [cfc7469]
+- Updated dependencies [8e06b1f]
+- Updated dependencies [3d50dd6]
+- Updated dependencies [1ef33d9]
+  - @walkeros/core@4.0.0
+
 ## 3.4.2
 
 ### Patch Changes

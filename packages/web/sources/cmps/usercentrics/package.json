@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-cmp-usercentrics",
   "description": "Usercentrics consent management source for walkerOS",
-  "version": "3.4.2",
+  "version": "4.0.0",
   "license": "MIT",
   "walkerOS": {
     "type": "source",
@@ -45,8 +45,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/collector": "3.4.2",
-    "@walkeros/core": "3.4.2"
+    "@walkeros/collector": "4.0.0",
+    "@walkeros/core": "4.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

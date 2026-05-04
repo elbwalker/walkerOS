@@ -1,6 +1,6 @@
 {
   "name": "walkeros-demo-react",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,12 +16,12 @@
   },
   "dependencies": {
     "@remix-run/router": "^1.23.0",
-    "@walkeros/collector": "3.4.2",
-    "@walkeros/core": "3.4.2",
-    "@walkeros/web-core": "3.4.2",
-    "@walkeros/web-destination-api": "3.4.2",
-    "@walkeros/web-destination-gtag": "3.4.2",
-    "@walkeros/web-source-browser": "3.4.2",
+    "@walkeros/collector": "4.0.0",
+    "@walkeros/core": "4.0.0",
+    "@walkeros/web-core": "4.0.0",
+    "@walkeros/web-destination-api": "4.0.0",
+    "@walkeros/web-destination-gtag": "4.0.0",
+    "@walkeros/web-source-browser": "4.0.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-router-dom": "^7.10.1"
@@ -34,7 +34,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
-    "@walkeros/config": "3.4.2",
+    "@walkeros/config": "4.0.0",
     "autoprefixer": "^10.4.23",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.25",
