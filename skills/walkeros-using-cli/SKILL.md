@@ -245,7 +245,7 @@ Options:
   -e, --event <json|file|url>   Event to process (required)
   --flow <name>                  Flow to use
   -p, --platform <web|server>   Platform override
-  --simulate <step>              Simulate a step (repeatable). destination.NAME or source.NAME
+  --simulate <step>              Simulate a step (repeatable for destination.*). Format: source.NAME | destination.NAME | transformer.NAME
   --mock <step=value>            Mock a step with a specific return value (repeatable)
   --snapshot <source>            JS file to eval before execution (sets global state)
 ```

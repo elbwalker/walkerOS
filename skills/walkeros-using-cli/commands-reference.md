@@ -64,16 +64,16 @@ walkeros push <config|bundle> [options]
 
 ### Options
 
-| Option                  | Description                                                           |
-| ----------------------- | --------------------------------------------------------------------- |
-| `-e, --event <source>`  | Event (required) - JSON string, file, or URL                          |
-| `--flow <name>`         | Flow to use                                                           |
-| `-p, --platform <type>` | Platform override                                                     |
-| `--simulate <step>`     | Simulate a step (repeatable). Use `destination.NAME` or `source.NAME` |
-| `--mock <step=value>`   | Mock a step with a specific return value (repeatable)                 |
-| `--snapshot <source>`   | JS file to eval before execution (sets global state)                  |
-| `--json`                | JSON output                                                           |
-| `-v, --verbose`         | Verbose logging                                                       |
+| Option                  | Description                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `-e, --event <source>`  | Event (required) - JSON string, file, or URL                                                                                           |
+| `--flow <name>`         | Flow to use                                                                                                                            |
+| `-p, --platform <type>` | Platform override                                                                                                                      |
+| `--simulate <step>`     | Simulate a step (repeatable for `destination.*`). Format: `source.NAME` \| `destination.NAME` \| `transformer.NAME`. Bare names error. |
+| `--mock <step=value>`   | Mock a step with a specific return value (repeatable)                                                                                  |
+| `--snapshot <source>`   | JS file to eval before execution (sets global state)                                                                                   |
+| `--json`                | JSON output                                                                                                                            |
+| `-v, --verbose`         | Verbose logging                                                                                                                        |
 
 **Without `--simulate`:** Makes real API calls. Test with `--simulate` first.
 
@@ -97,7 +97,21 @@ walkeros push flow.json -e event.json --mock destination.ga4='{"status":"ok"}'
 
 # Combine simulation flags
 walkeros push flow.json -e event.json --simulate destination.ga4 --mock destination.piwik='null'
+
+# Multi-target destination simulate (one flag per destination)
+walkeros push flow.json -e event.json --simulate destination.ga4 --simulate destination.meta
 ```
+
+### `--simulate` rules
+
+- Format is `<type>.<name>`. Bare names (`--simulate ga4`) error with
+  `Invalid step format` and never bundle.
+- `--simulate destination.*` is repeatable; every named destination is mocked,
+  all others disabled.
+- `--simulate source.*` and `--simulate transformer.*` are single-target.
+  Multiple flags of those types error.
+- All flags in one invocation must target the same type (no mixing
+  destination/source/transformer).
 
 ---
 

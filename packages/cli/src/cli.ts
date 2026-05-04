@@ -134,7 +134,7 @@ program
   .option('-s, --silent', 'suppress output')
   .option(
     '--simulate <step>',
-    'simulate a destination step (repeatable)',
+    'simulate a step (repeatable for destination.*; format: source.NAME | destination.NAME | transformer.NAME)',
     (val: string, arr: string[]) => {
       arr.push(val);
       return arr;
