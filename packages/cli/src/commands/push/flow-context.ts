@@ -126,7 +126,9 @@ export async function withFlowContext(
       }
     }
 
-    // Import ESM bundle with cache bust
+    // Import ESM bundle with cache bust. Node runtime import() accepts
+    // file:// URLs; for paths embedded into source for esbuild bundling
+    // use core/import-specifier.ts instead (esbuild rejects file://).
     const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
     const module = await import(`${fileUrl}?t=${Date.now()}`);
     const { wireConfig, startFlow } = module;
