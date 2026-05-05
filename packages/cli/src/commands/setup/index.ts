@@ -1,6 +1,7 @@
-/* eslint-disable no-console */
+import type { Logger } from '@walkeros/core';
 import { loadFlowConfig } from '../../config/loader.js';
 import { createCLILogger } from '../../core/cli-logger.js';
+import { createSuccessOutput, writeResult } from '../../core/output.js';
 import { resolveComponent } from './resolve.js';
 
 export interface SetupCommandOptions {
@@ -10,6 +11,11 @@ export interface SetupCommandOptions {
   verbose?: boolean;
   silent?: boolean;
   json?: boolean;
+  /**
+   * Inject a logger for tests. Defaults to a CLI logger derived from
+   * verbose/silent/json. Production callers should not pass this.
+   */
+  logger?: Logger.Instance;
 }
 
 /**
@@ -55,15 +61,27 @@ function isSetupFn(
 }
 
 export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
+  const startTime = Date.now();
+
+  // Build the framework logger up-front so every narration line, including
+  // the skip paths, honors --silent / --json. The package's own logger
+  // output appears between the "starting" and "ok" lines.
+  const baseLogger =
+    opts.logger ??
+    createCLILogger({
+      verbose: opts.verbose,
+      silent: opts.silent,
+      json: opts.json,
+    });
+
   const { flowSettings } = await loadFlowConfig(opts.config ?? './flow.json', {
     flowName: opts.flow,
   });
 
   const component = resolveComponent(flowSettings, opts.target);
+  const scoped = baseLogger.scope(component.kind).scope(component.id);
 
-  // Framework-level narration so operators know what's happening.
-  // The package's own logger output appears between these two lines.
-  console.log(`setup: starting ${component.kind}.${component.id}`);
+  scoped.info(`setup: starting ${component.kind}.${component.id}`);
 
   const mod = await import(component.packageName);
   const code: unknown = mod.default;
@@ -79,7 +97,7 @@ export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
 
   if (!isSetupFn(setupFn)) {
     // No setup defined on the package, narrate explicitly, exit ok.
-    console.log(
+    scoped.info(
       `setup: skipped ${component.kind}.${component.id} (no setup function)`,
     );
     return;
@@ -90,32 +108,31 @@ export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
   const setupConfig = readSetupField(component.config);
   if (setupConfig === false || setupConfig === undefined) {
     const reason = setupConfig === false ? 'false' : 'unset';
-    console.log(
+    scoped.info(
       `setup: skipped ${component.kind}.${component.id} (config.setup is ${reason})`,
     );
     return;
   }
 
-  const logger = createCLILogger({
-    verbose: opts.verbose,
-    silent: opts.silent,
-    json: opts.json,
-  })
-    .scope(component.kind)
-    .scope(component.id);
-
   const result = await setupFn({
     id: component.id,
     config: component.config,
     env: component.env,
-    logger,
+    logger: scoped,
   });
 
-  // If the package returned structured data, write it as JSON to stdout
-  // so operators can pipe through jq for scripting.
-  if (result !== undefined && result !== null) {
-    console.log(JSON.stringify(result));
+  // In --json mode, emit the standard envelope so this command matches the
+  // rest of the CLI (createSuccessOutput → writeResult). In human mode we
+  // skip the raw JSON dump entirely; sibling commands narrate, they don't
+  // splice JSON between lines.
+  if (opts.json) {
+    const envelope = createSuccessOutput(
+      { result: result ?? null },
+      Date.now() - startTime,
+    );
+    await writeResult(JSON.stringify(envelope, null, 2) + '\n', {});
+    return;
   }
 
-  console.log(`setup: ok ${component.kind}.${component.id}`);
+  scoped.info(`setup: ok ${component.kind}.${component.id}`);
 }

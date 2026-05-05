@@ -172,6 +172,9 @@ program
   });
 
 // Setup command
+// Note: positional arg is `<target>` (component selector like
+// `destination.NAME`), not `[file]`. The flow config path comes from
+// `-c/--config`, mirroring how `deploy start <flowId>` selects an entity.
 program
   .command('setup <target>')
   .description(
@@ -184,20 +187,14 @@ program
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
   .action(async (target, options) => {
-    try {
-      await setupCommand({
-        target,
-        config: options.config,
-        flow: options.flow,
-        json: options.json,
-        verbose: options.verbose,
-        silent: options.silent,
-      });
-      process.exit(0);
-    } catch (err) {
-      console.error(err instanceof Error ? err.message : err);
-      process.exit(1);
-    }
+    await setupCommand({
+      target,
+      config: options.config,
+      flow: options.flow,
+      json: options.json,
+      verbose: options.verbose,
+      silent: options.silent,
+    });
   });
 
 // Validate command

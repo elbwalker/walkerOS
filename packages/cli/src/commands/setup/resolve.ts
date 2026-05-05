@@ -1,4 +1,5 @@
 import type { Flow } from '@walkeros/core';
+import { parseComponentRef } from '../../core/parse-component-ref.js';
 
 export type ComponentKind = 'source' | 'destination' | 'store';
 
@@ -10,7 +11,7 @@ export interface ResolvedComponent {
   env: unknown;
 }
 
-const VALID_KINDS: readonly string[] = ['source', 'destination', 'store'];
+const VALID_KINDS = ['source', 'destination', 'store'] as const;
 
 /**
  * Lookup definition for a single bucket of components on the resolved Flow.
@@ -53,10 +54,6 @@ function pluralLabel(kind: ComponentKind): string {
   }
 }
 
-function isComponentKind(value: string): value is ComponentKind {
-  return VALID_KINDS.includes(value);
-}
-
 /**
  * Parse `<kind>.<name>` syntax matching `walker push --simulate`.
  * Throws on invalid kind, missing component, or unparseable input.
@@ -65,21 +62,10 @@ export function resolveComponent(
   flow: Flow,
   target: string,
 ): ResolvedComponent {
-  const dot = target.indexOf('.');
-  if (dot < 1 || dot === target.length - 1) {
-    throw new Error(
-      `Invalid target "${target}". Expected <kind>.<name> ` +
-        `where kind is source | destination | store.`,
-    );
-  }
-  const rawKind = target.slice(0, dot);
-  const id = target.slice(dot + 1);
-  if (!isComponentKind(rawKind)) {
-    throw new Error(
-      `Invalid kind "${rawKind}". Expected source | destination | store.`,
-    );
-  }
-  const kind: ComponentKind = rawKind;
+  const { prefix, name: id } = parseComponentRef(target, {
+    allowed: VALID_KINDS,
+  });
+  const kind: ComponentKind = prefix;
 
   const bucket = getBucket(flow, kind);
   const def = bucket?.[id];

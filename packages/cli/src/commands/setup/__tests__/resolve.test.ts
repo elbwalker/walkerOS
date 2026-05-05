@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { resolveComponent } from '../resolve';
+import { resolveComponent, type ComponentKind } from '../resolve';
 
 const flow: Flow = {
   config: { platform: 'server' },
@@ -18,36 +18,47 @@ const flow: Flow = {
 };
 
 describe('resolveComponent', () => {
-  test('finds destination by <kind>.<name>', () => {
-    const r = resolveComponent(flow, 'destination.bigquery');
-    expect(r.kind).toBe('destination');
-    expect(r.id).toBe('bigquery');
-    expect(r.packageName).toBe('@walkeros/server-destination-gcp/bigquery');
+  test.each<{ target: string; kind: ComponentKind; id: string; pkg: string }>([
+    {
+      target: 'destination.bigquery',
+      kind: 'destination',
+      id: 'bigquery',
+      pkg: '@walkeros/server-destination-gcp/bigquery',
+    },
+    {
+      target: 'source.http-in',
+      kind: 'source',
+      id: 'http-in',
+      pkg: '@walkeros/server-source-express',
+    },
+    {
+      target: 'store.cache',
+      kind: 'store',
+      id: 'cache',
+      pkg: '@walkeros/store-memory',
+    },
+  ])('finds $kind by <kind>.<name>', ({ target, kind, id, pkg }) => {
+    const r = resolveComponent(flow, target);
+    expect(r).toMatchObject({ kind, id, packageName: pkg });
   });
 
-  test('finds source', () => {
-    const r = resolveComponent(flow, 'source.http-in');
-    expect(r.kind).toBe('source');
-  });
-
-  test('finds store', () => {
-    const r = resolveComponent(flow, 'store.cache');
-    expect(r.kind).toBe('store');
-  });
-
-  test('throws on invalid kind', () => {
-    expect(() => resolveComponent(flow, 'transformer.foo')).toThrow(
-      /Invalid kind/,
-    );
-  });
-
-  test('throws on unknown id with available list', () => {
-    expect(() => resolveComponent(flow, 'destination.unknown')).toThrow(
-      /not found.*bigquery/,
-    );
-  });
-
-  test('throws on bad syntax', () => {
-    expect(() => resolveComponent(flow, 'bigquery')).toThrow(/Invalid target/);
+  test.each([
+    {
+      name: 'invalid kind',
+      target: 'transformer.foo',
+      pattern: /Invalid kind/,
+    },
+    {
+      name: 'unknown id with available list',
+      target: 'destination.unknown',
+      pattern: /not found.*bigquery/,
+    },
+    {
+      name: 'bad syntax (no dot)',
+      target: 'bigquery',
+      pattern: /Invalid target/,
+    },
+  ])('throws on $name', ({ target, pattern }) => {
+    expect(() => resolveComponent(flow, target)).toThrow(pattern);
   });
 });
