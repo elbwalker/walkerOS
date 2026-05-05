@@ -340,6 +340,12 @@ describe('Event API Source', () => {
   language="typescript"
 />
 
+## Setup lifecycle (optional)
+
+Sources may implement an optional `setup()` lifecycle for one-time, operator-time provisioning, for example registering a webhook callback or creating a Pub/Sub subscription. Setup runs only when an operator explicitly invokes `walkeros setup source.<name>`; the runtime never auto-invokes it. Opt in via `config.setup` in the flow config (`true` or an object).
+
+See [Setup lifecycle](/docs/destinations/create-your-own#setup-lifecycle-optional) on the destinations page for the full concept, and [walkeros setup CLI command](/docs/apps/cli#setup-command) for the operator-facing command.
+
 ## Conditional activation with `require`
 
 Sources can declare dependencies on collector events. A source with `require` won't initialize until all specified events have fired:

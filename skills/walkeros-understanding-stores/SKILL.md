@@ -377,6 +377,28 @@ export { hints } from './hints';
 Most stores don't need hints — only add them for non-obvious behaviors,
 prerequisites, or troubleshooting patterns.
 
+## Setup (optional)
+
+Stores can implement an optional `setup()` lifecycle to provision external
+resources, for example creating a SQLite table, initializing an S3 bucket, or
+running a one-off schema migration. Setup is **never** invoked by the runtime,
+push, init, or deploy. It runs only when an operator explicitly types
+`walker setup store.<name>`.
+
+The signature is
+`(ctx: LifecycleContext<Config<T>, Env<T>>) => Promise<unknown>`, where
+`LifecycleContext` carries `{ id, config, env, logger }`. Idempotency is the
+package's responsibility: the framework adds no opinion. Use
+`resolveSetup(ctx.config.setup, DEFAULTS)` from `@walkeros/core` to normalize
+the `boolean | object` shape into a concrete options object.
+
+See [walkeros-create-destination](../walkeros-create-destination/SKILL.md),
+[walkeros-create-source](../walkeros-create-source/SKILL.md),
+[walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md),
+[walkeros-understanding-sources](../walkeros-understanding-sources/SKILL.md),
+and the `walker setup` CLI documentation for the authoring template and operator
+workflow.
+
 ## Related skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) -

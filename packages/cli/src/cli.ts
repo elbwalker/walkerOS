@@ -7,6 +7,7 @@ import { createEmitter } from './telemetry/index.js';
 import { bundleCommand } from './commands/bundle/index.js';
 import { pushCommand } from './commands/push/index.js';
 import { runCommand } from './commands/run/index.js';
+import { setupCommand } from './commands/setup/index.js';
 import { validateCommand } from './commands/validate/index.js';
 import { registerCacheCommand } from './commands/cache.js';
 import { loginCommand } from './commands/login/index.js';
@@ -168,6 +169,35 @@ program
       mock: options.mock,
       snapshot: options.snapshot,
     });
+  });
+
+// Setup command
+program
+  .command('setup <target>')
+  .description(
+    'Run the setup function for one component. ' +
+      'Target format: source.NAME | destination.NAME | store.NAME.',
+  )
+  .option('-c, --config <path>', 'flow config file', './flow.json')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .action(async (target, options) => {
+    try {
+      await setupCommand({
+        target,
+        config: options.config,
+        flow: options.flow,
+        json: options.json,
+        verbose: options.verbose,
+        silent: options.silent,
+      });
+      process.exit(0);
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : err);
+      process.exit(1);
+    }
   });
 
 // Validate command

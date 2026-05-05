@@ -284,7 +284,14 @@ export const SourceSchema = z
         'Either a named export string (e.g., "sourceExpress") or an inline code object with push function',
       ),
     config: z
-      .unknown()
+      .looseObject({
+        setup: z
+          .union([z.boolean(), z.record(z.string(), z.unknown())])
+          .optional()
+          .describe(
+            'One-time setup options applied during source registration (boolean enables defaults, object configures specifics)',
+          ),
+      })
       .meta({
         id: 'FlowSourceConfig',
         title: 'Source.Config',
@@ -417,7 +424,14 @@ export const DestinationSchema = z
         'Either a named export string (e.g., "destinationAnalytics") or an inline code object with push function',
       ),
     config: z
-      .unknown()
+      .looseObject({
+        setup: z
+          .union([z.boolean(), z.record(z.string(), z.unknown())])
+          .optional()
+          .describe(
+            'One-time setup options applied during destination registration (boolean enables defaults, object configures specifics)',
+          ),
+      })
       .meta({
         id: 'FlowDestinationConfig',
         title: 'Destination.Config',
@@ -480,7 +494,14 @@ export const StoreSchema = z
       .optional()
       .describe('Named export string or inline code definition'),
     config: z
-      .unknown()
+      .looseObject({
+        setup: z
+          .union([z.boolean(), z.record(z.string(), z.unknown())])
+          .optional()
+          .describe(
+            'One-time setup options applied during store registration (boolean enables defaults, object configures specifics)',
+          ),
+      })
       .meta({
         id: 'FlowStoreConfig',
         title: 'Store.Config',

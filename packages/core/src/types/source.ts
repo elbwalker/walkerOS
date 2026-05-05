@@ -7,7 +7,7 @@ import type {
   Collector,
   Context as BaseContext,
 } from './index';
-import type { DestroyFn } from './lifecycle';
+import type { DestroyFn, SetupFn } from './lifecycle';
 import type { Next } from './transformer';
 
 /**
@@ -27,13 +27,14 @@ export interface BaseEnv {
 
 /**
  * Type bundle for source generics.
- * Groups Settings, Mapping, Push, Env, and InitSettings into a single type parameter.
+ * Groups Settings, Mapping, Push, Env, InitSettings, and Setup into a single type parameter.
  *
  * @template S - Settings configuration type
  * @template M - Mapping configuration type
  * @template P - Push function signature (flexible to support HTTP handlers, etc.)
  * @template E - Environment dependencies type
  * @template I - InitSettings configuration type (user input)
+ * @template U - Setup options type (provisioning options for `walker setup`)
  */
 export interface Types<
   S = unknown,
@@ -41,12 +42,14 @@ export interface Types<
   P = Elb.Fn,
   E = BaseEnv,
   I = S,
+  U = unknown,
 > {
   settings: S;
   initSettings: I;
   mapping: M;
   push: P;
   env: E;
+  setup: U;
 }
 
 /**
@@ -58,6 +61,7 @@ export type TypesGeneric = {
   mapping: any;
   push: any;
   env: any;
+  setup: any;
 };
 
 /**
@@ -68,6 +72,7 @@ export type InitSettings<T extends TypesGeneric = Types> = T['initSettings'];
 export type Mapping<T extends TypesGeneric = Types> = T['mapping'];
 export type Push<T extends TypesGeneric = Types> = T['push'];
 export type Env<T extends TypesGeneric = Types> = T['env'];
+export type SetupOptions<T extends TypesGeneric = Types> = T['setup'];
 
 /**
  * Inference helper: Extract Types from Instance
@@ -89,6 +94,11 @@ export interface Config<
   primary?: boolean;
   /** Defer source initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
+  /**
+   * Provisioning options for `walker setup`. `boolean | object`.
+   * Triggered only by explicit CLI invocation; never automatic.
+   */
+  setup?: boolean | SetupOptions<T>;
   /**
    * Ingest metadata extraction mapping.
    * Extracts values from raw request objects (Express req, Lambda event, etc.)
@@ -118,6 +128,7 @@ export type PartialConfig<T extends TypesGeneric = Types> = Config<
 export interface Instance<T extends TypesGeneric = Types> {
   type: string;
   config: Config<T>;
+  setup?: SetupFn<Config<T>, Env<T>>;
   push: Push<T>;
   destroy?: DestroyFn<Config<T>, Env<T>>;
   on?(

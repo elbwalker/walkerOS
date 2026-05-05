@@ -140,6 +140,12 @@ export const ConfigSchema = MappingConfigSchema.extend({
   logger: LoggerConfigSchema.optional().describe(
     'Logger configuration (level, handler) to override the collector defaults',
   ),
+  setup: z
+    .union([z.boolean(), z.record(z.string(), z.unknown())])
+    .optional()
+    .describe(
+      'One-time setup options applied during source registration (boolean enables defaults, object configures specifics)',
+    ),
   ingest: z
     .union([ValueSchema, ValuesSchema])
     .optional()

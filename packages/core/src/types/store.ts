@@ -1,26 +1,29 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Logger, WalkerOS, Context as BaseContext } from '.';
-import type { DestroyFn } from './lifecycle';
+import type { DestroyFn, SetupFn } from './lifecycle';
 
 export interface BaseEnv {
   [key: string]: unknown;
 }
 
-export interface Types<S = unknown, E = BaseEnv, I = S> {
+export interface Types<S = unknown, E = BaseEnv, I = S, U = unknown> {
   settings: S;
   initSettings: I;
   env: E;
+  setup: U;
 }
 
 export type TypesGeneric = {
   settings: any;
   initSettings: any;
   env: any;
+  setup: any;
 };
 
 export type Settings<T extends TypesGeneric = Types> = T['settings'];
 export type InitSettings<T extends TypesGeneric = Types> = T['initSettings'];
 export type Env<T extends TypesGeneric = Types> = T['env'];
+export type SetupOptions<T extends TypesGeneric = Types> = T['setup'];
 
 export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
@@ -29,6 +32,11 @@ export interface Config<T extends TypesGeneric = Types> {
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
+  /**
+   * Provisioning options for `walker setup`. `boolean | object`.
+   * Triggered only by explicit CLI invocation; never automatic.
+   */
+  setup?: boolean | SetupOptions<T>;
 }
 
 export interface Context<
@@ -55,6 +63,7 @@ export interface Instance<T extends TypesGeneric = Types> {
   get: GetFn;
   set: SetFn;
   delete: DeleteFn;
+  setup?: SetupFn<Config<T>, Env<T>>;
   destroy?: DestroyFn<Config<T>, Env<T>>;
 }
 

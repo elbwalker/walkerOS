@@ -50,6 +50,12 @@ export const ConfigSchema = z
     logger: LoggerConfigSchema.optional().describe(
       'Logger configuration (level, handler) to override the collector defaults',
     ),
+    setup: z
+      .union([z.boolean(), z.record(z.string(), z.unknown())])
+      .optional()
+      .describe(
+        'One-time setup options applied during store registration (boolean enables defaults, object configures specifics)',
+      ),
   })
   .meta({
     id: 'StoreConfig',

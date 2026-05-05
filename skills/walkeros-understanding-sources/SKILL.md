@@ -229,6 +229,27 @@ events via spy destinations. See
 [using-step-examples](../walkeros-using-step-examples/SKILL.md) for testing
 patterns.
 
+## Setup (optional)
+
+Sources can implement an optional `setup()` lifecycle to provision external
+resources, for example registering a webhook with a third-party provider,
+creating a Pub/Sub subscription, or pre-allocating queue resources. Setup is
+**never** invoked by the runtime, push, init, or deploy. It runs only when an
+operator explicitly types `walker setup source.<name>`.
+
+The signature is
+`(ctx: LifecycleContext<Config<T>, Env<T>>) => Promise<unknown>`, where
+`LifecycleContext` carries `{ id, config, env, logger }`. Idempotency is the
+package's responsibility: the framework adds no opinion. Use
+`resolveSetup(ctx.config.setup, DEFAULTS)` from `@walkeros/core` to normalize
+the `boolean | object` shape into a concrete options object.
+
+See [walkeros-create-source](../walkeros-create-source/SKILL.md),
+[walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md),
+[walkeros-understanding-stores](../walkeros-understanding-stores/SKILL.md), and
+the `walker setup` CLI documentation for the authoring template and operator
+workflow.
+
 ## Related Skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - How

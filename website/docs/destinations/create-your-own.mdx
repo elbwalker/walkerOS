@@ -137,6 +137,81 @@ console.log('Event:', event);
   language="typescript"
 />
 
+## Setup lifecycle (optional)
+
+Components may implement an optional `setup()` lifecycle to provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook registrations) before the runtime ever processes events. Setup is **operator-time**: it runs only when an operator explicitly invokes `walkeros setup <kind>.<name>`. The runtime never auto-invokes it.
+
+This separation isolates one-shot infrastructure provisioning from the high-volume event hot path. Production flows can ship with restricted runtime credentials (write-only) while operators run setup with elevated credentials (create) once per environment.
+
+The same lifecycle applies to sources, destinations, and stores. Transformers are pure functions and have no setup.
+
+### Behavior
+
+- Triggered only by `walkeros setup <kind>.<name>` (per-component, explicit). Never by `push`, `simulate`, `deploy`, or the runtime.
+- Setup is opt-in via `config.setup` in the flow config. The CLI invocation requires it to be `true` or an object; `false` or omitted means the operator's setup invocation is a narrated skip.
+- Idempotency is the package's responsibility. Re-running setup against a fully provisioned environment is a safe no-op.
+- The CLI emits a structured JSON line on stdout when the package's `setup()` returns a non-undefined value (useful for `jq` piping in CI).
+
+### Example: a destination with setup
+
+<CodeSnippet
+  code={`import type { Destination } from '@walkeros/core';
+
+interface BigQuerySettings {
+  projectId: string;
+  datasetId: string;
+  tableId: string;
+}
+
+export const destinationBigquery: Destination<BigQuerySettings> = {
+  type: 'bigquery',
+  config: {},
+
+  async setup({ config }) {
+    const { settings } = config;
+    if (!settings) return;
+    // Create dataset and table if missing. Idempotent: re-running is a no-op.
+    // Return any structured result the operator may want to inspect.
+    return { datasetCreated: settings.datasetId, tableCreated: settings.tableId };
+  },
+
+  push(event, { config }) {
+    // Hot path: only writes rows, never creates resources.
+  },
+};`}
+  language="typescript"
+/>
+
+The corresponding flow config opts in via `config.setup`:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "bigquery": {
+      "package": "@walkeros/server-destination-bigquery",
+      "config": {
+        "setup": true,
+        "settings": { "projectId": "my-proj", "datasetId": "events", "tableId": "raw" }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Then the operator runs:
+
+<CodeSnippet
+  code={`walkeros setup destination.bigquery`}
+  language="bash"
+/>
+
+### See also
+
+- [walkeros setup CLI command](/docs/apps/cli#setup-command) for the operator-facing command, options, and exit codes.
+- [Create your own source](/docs/sources/create-your-own) for source setup.
+- [Stores](/docs/getting-started/stores) for store setup and lifecycle ordering.
+
 ## Conditional activation with `require`
 
 Destinations can use `require` to delay registration until specific events fire. This prevents SDK loading and network requests before conditions are met:

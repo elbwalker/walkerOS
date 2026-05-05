@@ -5,6 +5,7 @@ import {
   ConfigSchema,
   SourceSchema,
   DestinationSchema,
+  StoreSchema,
   PrimitiveSchema,
   parseConfig,
   safeParseConfig,
@@ -2896,5 +2897,43 @@ describe('$flow references', () => {
         onWarning: () => {},
       }),
     ).toThrow(/Cyclic \$flow reference/);
+  });
+});
+
+describe('flow component schemas accept setup', () => {
+  test.each([
+    ['DestinationSchema', DestinationSchema],
+    ['SourceSchema', SourceSchema],
+    ['StoreSchema', StoreSchema],
+  ] as const)('%s accepts setup: true', (_, schema) => {
+    const result = schema.safeParse({
+      package: '@walkeros/x',
+      config: { setup: true },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test.each([
+    ['DestinationSchema', DestinationSchema],
+    ['SourceSchema', SourceSchema],
+    ['StoreSchema', StoreSchema],
+  ] as const)('%s accepts setup: object', (_, schema) => {
+    const result = schema.safeParse({
+      package: '@walkeros/x',
+      config: { setup: { foo: 1 } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test.each([
+    ['DestinationSchema', DestinationSchema],
+    ['SourceSchema', SourceSchema],
+    ['StoreSchema', StoreSchema],
+  ] as const)('%s rejects setup: <number>', (_, schema) => {
+    const result = schema.safeParse({
+      package: '@walkeros/x',
+      config: { setup: 42 },
+    });
+    expect(result.success).toBe(false);
   });
 });

@@ -660,6 +660,131 @@ Guidelines:
 
 ---
 
+## Adding setup (optional)
+
+A source package can implement an optional `setup()` function to provision
+external resources idempotently: Pub/Sub subscriptions, webhook registrations on
+upstream platforms, queue declarations, SQS queues, polling cursors, inbound API
+keys. Setup runs only when an operator explicitly types
+`walker setup source.<name>`. The runtime never auto-invokes it from `init()`,
+push, or `destroy()`.
+
+The framework provides the slot, the CLI command, and a `resolveSetup` helper.
+The package owns: what setup means, idempotency, error handling, return value.
+
+For background on how setup fits the source lifecycle, see
+[understanding-sources](../walkeros-understanding-sources/SKILL.md#setup-optional).
+
+### Types
+
+```typescript
+// types/index.ts
+import type { CoreSource } from '@walkeros/core';
+
+export interface Settings {
+  /* runtime push settings */
+}
+export interface InitSettings {
+  /* one-time init settings */
+}
+export interface Mapping {
+  /* event extraction mapping */
+}
+export interface Env {
+  /* injected platform deps (SDK clients, request handlers, etc.) */
+}
+
+// The package's own setup options interface.
+// Becomes the U slot of Types; surfaces as `config.setup: boolean | Setup` for users.
+export interface Setup {
+  // package-specific provisioning options
+  // e.g. for Pub/Sub source: subscriptionName, ackDeadlineSeconds, filter
+  subscriptionName?: string;
+  ackDeadlineSeconds?: number;
+}
+
+export type Types = CoreSource.Types<
+  Settings,
+  Mapping,
+  Env,
+  InitSettings,
+  Setup
+>;
+```
+
+### Implementation
+
+```typescript
+// setup.ts
+import type { CoreSource, SetupFn } from '@walkeros/core';
+import { resolveSetup } from '@walkeros/core';
+import type { Setup, Types } from './types';
+
+const DEFAULT_SETUP: Setup = {
+  ackDeadlineSeconds: 60,
+};
+
+export const setup: SetupFn<
+  CoreSource.Config<Types>,
+  CoreSource.Env<Types>
+> = async ({ config, env, logger }) => {
+  const options = resolveSetup(config.setup, DEFAULT_SETUP);
+  if (!options) return; // config.setup is false or unset
+
+  // Package-specific provisioning, idempotent.
+  // Returning a structured object (e.g. { subscriptionCreated: true })
+  // makes that data available to operators via `walker setup ... | jq`.
+};
+```
+
+Wire it in your default export:
+
+```typescript
+// index.ts
+import { setup } from './setup';
+
+export default {
+  type: 'my-source',
+  init: /* ... */,
+  setup,
+};
+```
+
+### When to implement
+
+Implement `setup()` when your source needs first-time provisioning of upstream
+resources before events can be received: Pub/Sub subscriptions bound to a topic,
+webhook registrations on upstream SaaS platforms (Stripe, GitHub, Shopify), SQS
+queue declarations, message broker bindings, polling cursors. Skip it when your
+source only listens on an HTTP port the runtime already owns or intercepts data
+already present (DOM events, dataLayer pushes).
+
+### Contract
+
+- Triggered only by `walker setup <kind>.<name>`. Never by runtime push, init,
+  or destroy.
+- **Idempotency is your responsibility.** Re-running setup against a fully
+  provisioned environment must be a safe no-op. Use try-create-catch-409 on REST
+  APIs, `IF NOT EXISTS` on SQL, native idempotent operations where available.
+  The framework does not retry, track state, or detect drift.
+- Return structured data from `setup()` when useful for operator scripting. The
+  CLI emits non-undefined return values as JSON to stdout.
+- For packages where `setup: true` (boolean form) is meaningless because
+  mandatory fields have no safe defaults (e.g., GitHub webhook `webhookUrl`,
+  Pub/Sub source `topicName`), reject the boolean form with a clear runtime
+  error listing required fields:
+
+```typescript
+if (config.setup === true) {
+  throw new Error(
+    'github-webhook source setup requires explicit options: ' +
+      '{ webhookUrl, repo, events }. There is no safe default.',
+  );
+}
+```
+
+---
+
 ## Phase 8: Test Against Examples
 
 > Tests verify implementation against the examples from Phase 3. If examples are

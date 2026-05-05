@@ -296,6 +296,25 @@
       "description": "Inline code block for custom sources / transformers / destinations / stores."
     },
     "FlowSourceConfig": {
+      "type": "object",
+      "properties": {
+        "setup": {
+          "description": "One-time setup options applied during source registration (boolean enables defaults, object configures specifics)",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          ]
+        }
+      },
+      "additionalProperties": {},
       "title": "Source.Config",
       "description": "Source-specific configuration object (Source.Config)."
     },
@@ -811,6 +830,25 @@
       "description": "Source package reference with configuration, env, chains, and examples."
     },
     "FlowDestinationConfig": {
+      "type": "object",
+      "properties": {
+        "setup": {
+          "description": "One-time setup options applied during destination registration (boolean enables defaults, object configures specifics)",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          ]
+        }
+      },
+      "additionalProperties": {},
       "title": "Destination.Config",
       "description": "Destination-specific configuration object."
     },
@@ -1013,6 +1051,25 @@
       "description": "Transformer package reference with configuration, env, chains, and cache."
     },
     "FlowStoreConfig": {
+      "type": "object",
+      "properties": {
+        "setup": {
+          "description": "One-time setup options applied during store registration (boolean enables defaults, object configures specifics)",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          ]
+        }
+      },
+      "additionalProperties": {},
       "title": "Store.Config",
       "description": "Store-specific configuration object."
     },

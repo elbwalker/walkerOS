@@ -8,7 +8,7 @@ import type {
   WalkerOS,
   Context as BaseContext,
 } from '.';
-import type { DestroyFn } from './lifecycle';
+import type { DestroyFn, SetupFn } from './lifecycle';
 import type { Ingest } from './ingest';
 
 /**
@@ -28,13 +28,20 @@ export interface BaseEnv {
 
 /**
  * Type bundle for destination generics.
- * Groups Settings, InitSettings, Mapping, and Env into a single type parameter.
+ * Groups Settings, InitSettings, Mapping, Env, and Setup into a single type parameter.
  */
-export interface Types<S = unknown, M = unknown, E = BaseEnv, I = S> {
+export interface Types<
+  S = unknown,
+  M = unknown,
+  E = BaseEnv,
+  I = S,
+  U = unknown,
+> {
   settings: S;
   initSettings: I;
   mapping: M;
   env: E;
+  setup: U;
 }
 
 /**
@@ -45,6 +52,7 @@ export type TypesGeneric = {
   initSettings: any;
   mapping: any;
   env: any;
+  setup: any;
 };
 
 /**
@@ -54,6 +62,7 @@ export type Settings<T extends TypesGeneric = Types> = T['settings'];
 export type InitSettings<T extends TypesGeneric = Types> = T['initSettings'];
 export type Mapping<T extends TypesGeneric = Types> = T['mapping'];
 export type Env<T extends TypesGeneric = Types> = T['env'];
+export type SetupOptions<T extends TypesGeneric = Types> = T['setup'];
 
 /**
  * Inference helper: Extract Types from Instance
@@ -68,6 +77,7 @@ export interface Instance<T extends TypesGeneric = Types> {
   batches?: BatchRegistry<Mapping<T>>;
   type?: string;
   env?: Env<T>;
+  setup?: SetupFn<Config<T>, Env<T>>;
   init?: InitFn<T>;
   push: PushFn<T>;
   pushBatch?: PushBatchFn<T>;
@@ -102,6 +112,11 @@ export interface Config<T extends TypesGeneric = Types> {
   queue?: boolean;
   /** Defer destination initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
+  /**
+   * Provisioning options for `walker setup`. `boolean | object`.
+   * Triggered only by explicit CLI invocation; never automatic.
+   */
+  setup?: boolean | SetupOptions<T>;
   /** Transformer chain to run after collector processing but before this destination. */
   before?: Transformer.Next;
   /** Transformer chain to run after destination push completes. Push response available at ingest._response. */

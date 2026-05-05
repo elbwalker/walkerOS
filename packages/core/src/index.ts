@@ -25,6 +25,7 @@ export * from './mockLogger';
 export * from './property';
 export * from './request';
 export * from './send';
+export * from './setup';
 export * from './throwError';
 export * from './trim';
 export * from './tryCatch';
