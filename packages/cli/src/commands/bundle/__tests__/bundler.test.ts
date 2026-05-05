@@ -3,6 +3,10 @@ import {
   validateComponentNames,
   collectAllStepPackages,
   buildSplitConfigObject,
+  generateServerEntry,
+  generateWebEntry,
+  generateWrapEntry,
+  generateWrapEntryServer,
 } from '../bundler';
 import type { Flow } from '@walkeros/core';
 
@@ -337,4 +341,28 @@ describe('path-based package: normalization', () => {
     const result = collectAllStepPackages(flowSettings);
     expect(result.has('./packages/server/sources/express')).toBe(true);
   });
+});
+
+describe('stage 2 entry path normalization (issue #636)', () => {
+  const winPath = ['C:', 'tmp', 'cache', 'code', 'abc.mjs'].join(
+    String.fromCharCode(92),
+  );
+  const cases = [
+    {
+      name: 'generateServerEntry',
+      emit: () => generateServerEntry(winPath, '{}'),
+    },
+    { name: 'generateWebEntry', emit: () => generateWebEntry(winPath, '{}') },
+    { name: 'generateWrapEntry', emit: () => generateWrapEntry(winPath) },
+    {
+      name: 'generateWrapEntryServer',
+      emit: () => generateWrapEntryServer(winPath),
+    },
+  ];
+
+  for (const { name, emit } of cases) {
+    it(`${name} emits no backslashes in the import specifier`, () => {
+      expect(emit()).toContain("from 'C:/tmp/cache/code/abc.mjs'");
+    });
+  }
 });

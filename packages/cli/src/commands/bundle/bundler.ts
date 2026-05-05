@@ -150,6 +150,7 @@ import type { BuildOptions } from '../../types/bundle.js';
 import { downloadPackages } from './package-manager.js';
 import type { Logger } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
+import { toFileImportSpecifier } from '../../core/import-specifier.js';
 import {
   isBuildCached,
   getCachedBuild,
@@ -1417,7 +1418,8 @@ export function generateServerEntry(
   stage1Path: string,
   dataPayload: string,
 ): string {
-  return `import { startFlow, wireConfig } from '${stage1Path}';
+  const stage1Specifier = toFileImportSpecifier(stage1Path);
+  return `import { startFlow, wireConfig } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
@@ -1487,7 +1489,8 @@ export function generateWebEntry(
   }`
       : '';
 
-  return `import { startFlow, wireConfig } from '${stage1Path}';
+  const stage1Specifier = toFileImportSpecifier(stage1Path);
+  return `import { startFlow, wireConfig } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
@@ -1604,7 +1607,8 @@ export function generateWrapEntry(
   }`
       : '';
 
-  return `import { startFlow, wireConfig, __configData } from '${stage1Path}';
+  const stage1Specifier = toFileImportSpecifier(stage1Path);
+  return `import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
 
 (async () => {${preflightBlock}
   const config = wireConfig(__configData);${envBlock}
@@ -1622,7 +1626,8 @@ export function generateWrapEntry(
  * `{ collector, elb, httpHandler? }`.
  */
 export function generateWrapEntryServer(stage1Path: string): string {
-  return `import { startFlow, wireConfig, __configData } from '${stage1Path}';
+  const stage1Specifier = toFileImportSpecifier(stage1Path);
+  return `import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
 
 export default async function(context = {}) {
   const config = wireConfig(__configData);

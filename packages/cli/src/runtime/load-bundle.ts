@@ -44,6 +44,9 @@ export async function loadBundle(
   logger?: Logger.Instance,
 ): Promise<BundleResult> {
   const absolutePath = resolve(file);
+  // Node's runtime import() accepts file:// URLs per ESM spec. This is
+  // distinct from paths emitted into source for esbuild bundling — for
+  // that, use core/import-specifier.ts (esbuild does not resolve file://).
   const fileUrl = pathToFileURL(absolutePath).href;
 
   // Bust Node.js module cache by appending a query param
