@@ -156,6 +156,12 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .boolean()
     .describe('Completely skip this source (no init, no event capture)')
     .optional(),
+  init: z
+    .boolean()
+    .optional()
+    .describe(
+      'Init lifecycle flag set by collector to true after Instance.init() runs',
+    ),
 })
   .meta({
     id: 'SourceConfig',

@@ -4,6 +4,7 @@ import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
 import { mergeEnvironments } from './destination';
 import { activatePending } from './pending';
+import { flushSourceQueueOn, isSourceStarted } from './source';
 
 /**
  * Build the unified On.Context passed to every subscription callback.
@@ -203,10 +204,24 @@ export async function onApply(
   }
 
   let vetoed = false;
+  // Per-source require decrement + gated on() delivery.
+  // Sources are not "started" until config.init === true AND config.require is empty.
+  // Unstarted sources have their on() events queued in instance.queueOn
+  // and replayed once they start.
   for (const source of Object.values(collector.sources)) {
-    if (source.on) {
+    if (source.config.require?.length) {
+      const idx = source.config.require.indexOf(type);
+      if (idx !== -1) source.config.require.splice(idx, 1);
+    }
+
+    if (!source.on) continue;
+
+    if (isSourceStarted(source)) {
       const result = await tryCatchAsync(source.on)(type, contextData);
       if (result === false) vetoed = true;
+    } else {
+      source.queueOn = source.queueOn || [];
+      source.queueOn.push({ type, data: contextData });
     }
   }
 
@@ -218,17 +233,23 @@ export async function onApply(
         destination.queueOn.push({ type, data: contextData });
         return;
       }
-
-      // Call immediately using shared helper
       callDestinationOn(collector, destination, destId, type, contextData);
     }
   });
 
-  // Activate pending sources/destinations whose require conditions are met
-  if (
-    Object.keys(collector.pending.sources).length > 0 ||
-    Object.keys(collector.pending.destinations).length > 0
-  ) {
+  // Sources whose require was just emptied AND init has run: flush their
+  // queueOn now (the require-completing event was queued in the gated
+  // branch above, so flushing here delivers it without losing ordering).
+  for (const source of Object.values(collector.sources)) {
+    if (isSourceStarted(source) && source.queueOn?.length) {
+      await flushSourceQueueOn(collector, source);
+    }
+  }
+
+  // Activate pending destinations whose require conditions are met.
+  // (Pending sources are gone — their require is tracked in source.config.require
+  // and gated via queueOn above.)
+  if (Object.keys(collector.pending.destinations).length > 0) {
     await activatePending(collector, type);
   }
 

@@ -54,11 +54,7 @@
     },
     "bundle": {
       "external": [
-        "@google-cloud/bigquery-storage",
-        "@grpc/grpc-js",
-        "@grpc/proto-loader",
-        "protobufjs",
-        "google-gax"
+        "@google-cloud/bigquery-storage"
       ]
     }
   },

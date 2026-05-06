@@ -9,7 +9,7 @@ import type {
 import { isString } from '@walkeros/core';
 import { initTriggers, processLoadTriggers, ready } from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
-import { initElbLayer } from './elbLayer';
+import { initElbLayer, drainNonWalkerEvents } from './elbLayer';
 import { translateToCoreCollector } from './translation';
 import { getPageViewData } from './walker';
 import { getConfig } from './config';
@@ -35,11 +35,15 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
 /**
  * Browser source implementation using environment injection.
  *
- * This source captures DOM events, handles pageviews,
- * and processes the elbLayer for browser environments.
+ * The factory body is side-effect-free: it constructs the Instance and
+ * captures closure state. All eager setup (elbLayer drain, DOM listeners,
+ * `window.elb` assignment) lives in the `init` lifecycle method, which
+ * the collector calls after every source factory has registered. The
+ * collector strictly gates `on()` delivery: lifecycle events are queued
+ * in `instance.queueOn` until the source is started.
  */
 export const sourceBrowser: Source.Init<Types> = async (context) => {
-  const { config, env } = context;
+  const { config, env, logger } = context;
   const { elb, command, window, document } = env;
 
   const userSettings = config?.settings || {};
@@ -67,32 +71,34 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   };
 
   // Helper to send pageview event if enabled
-  const sendPageview = (settings: Source.Settings<Types>) => {
-    if (settings.pageview) {
-      const [data, contextData] = getPageViewData(
-        settings.prefix || 'data-elb',
-        settings.scope as Scope,
-      );
-      translateToCoreCollector(
-        translationContext,
-        'page view',
-        data,
-        'load',
-        contextData,
-      );
-    }
+  const sendPageview = (s: Source.Settings<Types>) => {
+    if (!s.pageview) return;
+    const [data, contextData] = getPageViewData(
+      s.prefix || 'data-elb',
+      s.scope as Scope,
+    );
+    translateToCoreCollector(
+      translationContext,
+      'page view',
+      data,
+      'load',
+      contextData,
+    );
   };
 
-  // Initialize features if environment is available
-  // Skip all DOM-related functionality when not in browser environment
+  // Lifecycle method — eager. The collector calls this AFTER all source
+  // factories have registered. Side effects allowed: drains walker
+  // commands from window.elbLayer, sets up DOM listeners, overrides
+  // elbLayer.push for live captures.
+  const init = async () => {
+    if (!actualWindow || !actualDocument) return;
 
-  if (actualWindow && actualDocument) {
-    // Initialize ELB Layer for async command handling
     if (settings.elbLayer !== false && elb) {
       initElbLayer(elb, {
         name: isString(settings.elbLayer) ? settings.elbLayer : 'elbLayer',
         prefix: settings.prefix,
         window: actualWindow as Window,
+        logger,
       });
     }
 
@@ -116,20 +122,17 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
         );
       };
     }
-  }
+  };
 
-  // Handle events pushed from collector (ready, run)
+  // Lifecycle handler — fired by the collector only when this source is
+  // started (config.init=true AND config.require empty). Pre-start events
+  // are buffered in instance.queueOn by the collector and replayed on start.
   const handleEvent = async (event: On.Types) => {
     switch (event) {
-      case 'ready':
-        // React to collector ready state
-        // Browser source initialization already handles this
-        break;
-
       case 'run':
-        // React to collector run events - re-process load triggers
         if (actualDocument && actualWindow) {
           processLoadTriggers(translationContext, settings);
+          drainNonWalkerEvents(elb, settings, actualWindow as Window, logger);
           sendPageview(settings);
         }
         break;
@@ -157,6 +160,8 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     type: 'browser',
     config: fullConfig,
     push,
+    on: handleEvent,
+    init,
     destroy: async () => {
       // Cleanup visibility tracking and other resources
       if (actualDocument) {
@@ -165,7 +170,6 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
         );
       }
     },
-    on: handleEvent,
   };
 };
 

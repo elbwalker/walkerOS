@@ -24,7 +24,7 @@ describe('Step Examples', () => {
       allowed: true,
     } as unknown as Collector.Instance;
 
-    await sourceDataLayer({
+    const source = await sourceDataLayer({
       collector: collectorStub,
       config: { settings: {} },
       env: {
@@ -39,6 +39,8 @@ describe('Step Examples', () => {
       setIngest: async () => {},
       setRespond: jest.fn(),
     });
+    // Mirror collector pass-2 init — installs the dataLayer.push interceptor.
+    await source.init?.();
 
     // Trigger source by pushing the example input to window.dataLayer
     const win = window as Window & { dataLayer?: unknown[] };

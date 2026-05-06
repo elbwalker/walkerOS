@@ -1,7 +1,34 @@
 import { startFlow } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
-import { initElbLayer } from '../elbLayer';
-import type { WalkerOS, Collector, On } from '@walkeros/core';
+import { initElbLayer, drainNonWalkerEvents } from '../elbLayer';
+import type { WalkerOS, Collector, On, Elb } from '@walkeros/core';
+
+/**
+ * Drives the full elbLayer drain lifecycle for unit tests.
+ *
+ * Under the new lifecycle, `initElbLayer` only drains `walker *` commands;
+ * non-walker events stay in the queue and are drained later from the
+ * source's `on('run')` handler via `drainNonWalkerEvents`. Tests that
+ * exercise the queue's behaviour as a whole (legacy `initElbLayer`
+ * contract) need to invoke both phases.
+ */
+const runFullElbLayerDrain = (
+  elb: Elb.Fn,
+  config: Parameters<typeof initElbLayer>[1] = {},
+): void => {
+  initElbLayer(elb, config);
+  const win = config?.window;
+  if (!win) return;
+  drainNonWalkerEvents(
+    elb,
+    {
+      prefix: config.prefix ?? 'data-elb',
+      elbLayer: typeof config.name === 'string' ? config.name : undefined,
+    },
+    win,
+    config.logger,
+  );
+};
 
 // Helper to access window.elbLayer safely
 const getWindowElbLayer = (): unknown[] | undefined =>
@@ -95,7 +122,7 @@ describe('Elb Layer', () => {
     test('preserves existing elbLayer if present', () => {
       setWindowElbLayer([['existing', 'commands'] as unknown[]]);
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       expect(getWindowElbLayer()).toBeDefined();
       expect(Array.isArray(getWindowElbLayer())).toBe(true);
@@ -112,7 +139,7 @@ describe('Elb Layer', () => {
         ['product click', { id: 'test' }] as unknown[],
       ]);
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       expect(mockPush).toHaveBeenCalledTimes(2);
       expect(getWindowElbLayer()).toHaveLength(0); // Commands cleared after processing
@@ -126,7 +153,7 @@ describe('Elb Layer', () => {
         ['walker user', { id: 'user123' }] as unknown[], // Walker command
       ]);
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       // All commands should be processed, including walker run
       expect(mockPush).toHaveBeenCalledTimes(4);
@@ -139,7 +166,9 @@ describe('Elb Layer', () => {
         id: 'user123',
       });
 
-      // Then regular events
+      // Then regular events. `initElbLayer` removes walker commands
+      // from the live array, so `drainNonWalkerEvents` finds anchor=-1
+      // and replays both `product click` and `page view`.
       expect(mockPush).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({ name: 'product click' }),
@@ -155,7 +184,7 @@ describe('Elb Layer', () => {
         ['test event', { key: 'value' }, 'load'] as unknown[],
       ]);
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(
@@ -176,7 +205,7 @@ describe('Elb Layer', () => {
 
       setWindowElbLayer([eventObject as unknown]);
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(eventObject);
@@ -189,7 +218,7 @@ describe('Elb Layer', () => {
         {} as unknown, // Empty object
       ]);
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       // Should not throw and should not call push for invalid commands
       expect(mockPush).not.toHaveBeenCalled();
@@ -234,7 +263,15 @@ describe('Elb Layer', () => {
         ['page view', { title: 'test' }] as unknown[],
       ]);
 
-      await createBrowserSource(collector, { pageview: false });
+      // `runOnInit: true` drives the run lifecycle which drains non-walker
+      // events anchored at the last `walker run`.
+      await createBrowserSource(
+        collector,
+        { pageview: false },
+        {
+          runOnInit: true,
+        },
+      );
 
       // Should process all commands (no walker on registration anymore)
       expect(mockPush).toHaveBeenCalledTimes(2);
@@ -255,7 +292,7 @@ describe('Elb Layer', () => {
         ['entity name', { prop: 'value' }, 'trigger_type'] as unknown[],
       ]);
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -296,7 +333,7 @@ describe('Elb Layer', () => {
 
       // Should not throw
       expect(() => {
-        initElbLayer(mockElb, { window });
+        runFullElbLayerDrain(mockElb, { window });
       }).not.toThrow();
 
       // Commands should still be cleared
@@ -323,7 +360,7 @@ describe('Elb Layer', () => {
 
       testElb('test event', { key: 'value' }, 'load');
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -366,7 +403,7 @@ describe('Elb Layer', () => {
 
       setWindowElbLayer([['product', element] as unknown[]]);
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -384,7 +421,7 @@ describe('Elb Layer', () => {
 
       setWindowElbLayer([['page view'] as unknown[]]);
 
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -434,7 +471,7 @@ describe('Elb Layer', () => {
       setWindowElbLayer(commands as unknown[]);
 
       const startTime = performance.now();
-      initElbLayer(mockElb, { window });
+      runFullElbLayerDrain(mockElb, { window });
       const endTime = performance.now();
 
       expect(endTime - startTime).toBeLessThan(100); // Should process in under 100ms

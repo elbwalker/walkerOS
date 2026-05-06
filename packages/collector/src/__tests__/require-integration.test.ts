@@ -10,19 +10,27 @@ describe('require integration', () => {
       push: ctx.env.elb,
     });
 
-    const mockSession = async (ctx: any) => {
-      initOrder.push('session');
-      await ctx.env.command('user', {
-        session: 'sess-1',
-        device: 'dev-1',
-      });
-      return { type: 'session', config: {}, push: jest.fn() };
-    };
+    const mockSession = async (ctx: any) => ({
+      type: 'session',
+      config: {},
+      push: ctx.env.elb,
+      init: async () => {
+        initOrder.push('session');
+        await ctx.env.command('user', {
+          session: 'sess-1',
+          device: 'dev-1',
+        });
+      },
+    });
 
-    const mockDataLayer = async () => {
-      initOrder.push('dataLayer');
-      return { type: 'dataLayer', config: {}, push: jest.fn() };
-    };
+    const mockDataLayer = async (ctx: any) => ({
+      type: 'dataLayer',
+      config: {},
+      push: ctx.env.elb,
+      init: async () => {
+        initOrder.push('dataLayer');
+      },
+    });
 
     const { collector, elb } = await startFlow({
       sources: {
@@ -32,25 +40,35 @@ describe('require integration', () => {
       },
     });
 
+    // All sources are registered eagerly. Their init methods ran in pass 2.
     expect(collector.sources['cmp']).toBeDefined();
-    expect(collector.sources['session']).toBeUndefined();
-    expect(collector.sources['dataLayer']).toBeUndefined();
+    expect(collector.sources['session']).toBeDefined();
+    expect(collector.sources['dataLayer']).toBeDefined();
+    // session has not yet been "started" (require['consent'] still pending).
+    expect(collector.sources['session'].config.require).toContain('consent');
+    // initOrder reflects pass-2 init invocation order.
+    expect(initOrder).toEqual(['session', 'dataLayer']);
 
     await elb('walker consent', { marketing: true });
 
-    expect(initOrder).toEqual(['session', 'dataLayer']);
-    expect(collector.sources['session']).toBeDefined();
-    expect(collector.sources['dataLayer']).toBeDefined();
+    // Cascade resolved: session started (consent), dataLayer started (user
+    // fired by session.init at startup decrementing dataLayer.require['user']).
+    expect(collector.sources['session'].config.require?.length || 0).toBe(0);
+    expect(collector.sources['dataLayer'].config.require?.length || 0).toBe(0);
     expect(collector.user).toEqual(
       expect.objectContaining({ session: 'sess-1', device: 'dev-1' }),
     );
   });
 
   test('source and destination require in same flow', async () => {
-    const mockSession = jest.fn().mockImplementation(async (ctx: any) => {
-      await ctx.env.command('user', { session: 'sess-1' });
-      return { type: 'session', config: {}, push: jest.fn() };
-    });
+    const mockSession = jest.fn().mockImplementation(async (ctx: any) => ({
+      type: 'session',
+      config: {},
+      push: ctx.env.elb,
+      init: async () => {
+        await ctx.env.command('user', { session: 'sess-1' });
+      },
+    }));
 
     const mockPush = jest.fn();
 
@@ -66,33 +84,45 @@ describe('require integration', () => {
       },
     });
 
-    expect(collector.sources['session']).toBeUndefined();
-    expect(collector.destinations['ga4']).toBeUndefined();
+    // Source is registered (factory + init both ran) but not yet started:
+    // require['consent'] still pending.
+    expect(collector.sources['session']).toBeDefined();
+    expect(collector.sources['session'].config.require).toContain('consent');
+    // session.init fired the user command at startup, which already activated
+    // GA4 (its require: ['user'] was satisfied during init).
+    expect(collector.destinations['ga4']).toBeDefined();
 
     await elb('walker consent', { marketing: true });
 
-    // Session source activated by consent, fires user, which activates GA4
-    expect(collector.sources['session']).toBeDefined();
+    // Session is now started; GA4 was already active.
+    expect(collector.sources['session'].config.require?.length || 0).toBe(0);
     expect(collector.destinations['ga4']).toBeDefined();
   });
 
   test('source.on is called after deferred source activates', async () => {
     const onMock = jest.fn();
-    const mockInit = jest.fn().mockResolvedValue({
+    const factory = jest.fn().mockImplementation(async (ctx: any) => ({
       type: 'reactive',
       config: {},
-      push: jest.fn(),
+      push: ctx.env.elb,
       on: onMock,
-    });
+    }));
 
     const { elb } = await startFlow({
       sources: {
-        reactive: { code: mockInit, config: { require: ['consent'] } },
+        reactive: { code: factory, config: { require: ['consent'] } },
       },
     });
 
+    // Factory was called once at registration (regardless of require).
+    expect(factory).toHaveBeenCalledTimes(1);
+    // on() not yet called: source is not started (require still has 'consent').
+    expect(onMock).not.toHaveBeenCalled();
+
     await elb('walker consent', { marketing: true });
-    expect(mockInit).toHaveBeenCalledTimes(1);
+    // The 'consent' event was queued in queueOn pre-start, then flushed once
+    // require emptied; we expect at least one on() invocation now.
+    expect(onMock).toHaveBeenCalled();
 
     onMock.mockClear();
     await elb('walker user', { id: 'u1' });

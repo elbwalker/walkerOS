@@ -128,8 +128,15 @@ describe('Browser Source Integration Tests', () => {
         ['product click', { id: '123' }, 'click', { position: 1 }],
       ];
 
-      // Initialize source - should process existing commands
-      await createBrowserSource(collector, { pageview: false });
+      // Initialize source - should process existing commands.
+      // `runOnInit: true` drives on('run') so non-walker queue items drain.
+      await createBrowserSource(
+        collector,
+        { pageview: false },
+        {
+          runOnInit: true,
+        },
+      );
 
       // Should process the 2 events (walker command goes to collector.command)
       expect(mockPush).toHaveBeenCalledTimes(2);
@@ -170,8 +177,15 @@ describe('Browser Source Integration Tests', () => {
       // Clear mockPush to verify clean separation
       mockPush.mockClear();
 
-      // Initialize source
-      await createBrowserSource(collector, { pageview: false });
+      // Initialize source. `runOnInit: true` drives on('run') so
+      // non-walker queue items drain.
+      await createBrowserSource(
+        collector,
+        { pageview: false },
+        {
+          runOnInit: true,
+        },
+      );
 
       // Walker commands should go to collector.command (2 commands)
       expect(mockCommand).toHaveBeenCalledTimes(2);

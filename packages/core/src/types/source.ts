@@ -114,6 +114,13 @@ export interface Config<
   ingest?: WalkerOSMapping.Data;
   /** Completely skip this source — no init, no event capture. */
   disabled?: boolean;
+  /**
+   * Init lifecycle flag. Set by the collector to `true` after `Instance.init()`
+   * has been called. Used together with `require` to gate `on()` delivery:
+   * lifecycle events are queued in `Instance.queueOn` until both
+   * `config.init === true` and `config.require` is empty/absent, then replayed.
+   */
+  init?: boolean;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -137,6 +144,20 @@ export interface Instance<T extends TypesGeneric = Types> {
     event: On.Types,
     context?: unknown,
   ): void | boolean | Promise<void | boolean>;
+  /**
+   * Optional setup hook. Called by the collector eagerly after all source
+   * factories have run, regardless of `config.require`. Use for prep work
+   * such as draining a pre-init window queue or attaching DOM listeners.
+   * The collector still gates `on()` delivery, and `Collector.push`
+   * enforces `allowed`/consent at the destination layer.
+   */
+  init?: () => void | Promise<void>;
+  /**
+   * Lifecycle event queue. Populated by `onApply` when the source is not
+   * yet started (`config.init !== true` or `config.require` non-empty).
+   * Flushed by the collector when the source becomes started.
+   */
+  queueOn?: Array<{ type: On.Types; data: unknown }>;
 }
 
 /**

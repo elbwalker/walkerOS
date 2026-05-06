@@ -55,12 +55,22 @@ export function getDataLayer(name = 'dataLayer'): unknown[] {
   return (window as Record<string, unknown>)[name] as unknown[];
 }
 
-// Helper function to create and initialize a dataLayer source with proper environment
+// Helper function to create and initialize a dataLayer source with proper environment.
+//
+// Mirrors the collector's two-pass init: factory body is side-effect-free,
+// and `init` performs the dataLayer interceptor install + pendingReplayCount
+// snapshot. After init, `on('run')` is fired to replay any pre-existing
+// dataLayer entries via `processExistingEvents`.
+//
+// Pass `{ runOnInit: false }` for tests that need to drive `walker run`
+// themselves (e.g. historical replay tests that verify run-gated semantics).
 export async function createDataLayerSource(
   collector: Collector.Instance,
   config?: Partial<Source.Config<Types>>,
+  options: { runOnInit?: boolean } = {},
 ): Promise<Source.Instance<Types>> {
-  return await sourceDataLayer({
+  const { runOnInit = true } = options;
+  const source = await sourceDataLayer({
     collector,
     config: config || {},
     env: {
@@ -75,4 +85,13 @@ export async function createDataLayerSource(
     setIngest: async () => {},
     setRespond: jest.fn(),
   });
+  // Pass 2: lifecycle init — installs the dataLayer.push interceptor and
+  // snapshots pendingReplayCount.
+  await source.init?.();
+  if (runOnInit) {
+    // Drive the run lifecycle so processExistingEvents replays any items
+    // queued before init.
+    await source.on?.('run', collector);
+  }
+  return source;
 }

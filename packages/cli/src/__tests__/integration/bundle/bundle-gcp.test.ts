@@ -87,13 +87,10 @@ const mockDownloadWithResolution =
     typeof downloadPackagesWithResolution
   >;
 
-const GCP_EXPECTED_EXTERNALS = [
-  '@google-cloud/bigquery-storage',
-  '@grpc/grpc-js',
-  '@grpc/proto-loader',
-  'protobufjs',
-  'google-gax',
-];
+// Minimum-viable external list. The bundler's closure walker pulls in
+// @grpc/grpc-js, @grpc/proto-loader, protobufjs, google-gax transitively
+// from bigquery-storage's own dependencies/peerDependencies.
+const GCP_EXPECTED_EXTERNALS = ['@google-cloud/bigquery-storage'];
 
 const GCP_PKG_JSON = path.resolve(
   __dirname,
@@ -101,7 +98,7 @@ const GCP_PKG_JSON = path.resolve(
 );
 
 describe('e2e: GCP destination — walkerOS.bundle.external contract', () => {
-  it('the real GCP package.json declares the expected 5 externals', async () => {
+  it('the real GCP package.json declares the minimum external (bigquery-storage only)', async () => {
     expect(await fs.pathExists(GCP_PKG_JSON)).toBe(true);
     const gcpPkg = await fs.readJson(GCP_PKG_JSON);
     expect(gcpPkg.name).toBe('@walkeros/server-destination-gcp');

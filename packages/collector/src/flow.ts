@@ -15,11 +15,7 @@ export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
   instance.sources.elb = elbSource;
 
   // Now initialize other sources with ELB source available
-  const additionalSources = await initSources(
-    instance,
-    initConfig.sources || {},
-  );
-  Object.assign(instance.sources, additionalSources);
+  await initSources(instance, initConfig.sources || {});
 
   const { consent, user, globals, custom } = initConfig;
 

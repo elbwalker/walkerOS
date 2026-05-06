@@ -28,27 +28,26 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
     settings,
   };
 
+  // Captured at init time — see init below.
   let pendingReplayCount = 0;
 
-  if (envWindow) {
-    // Snapshot how many items exist before interception
+  // Lifecycle setup. Called by the collector eagerly after registration,
+  // regardless of `require`. The factory body above is side-effect-free.
+  const init = () => {
+    if (!envWindow) return;
     const dataLayerName = settings.name || 'dataLayer';
     const dl = (envWindow as Record<string, unknown>)[dataLayerName];
     pendingReplayCount = Array.isArray(dl) ? dl.length : 0;
 
     const win = envWindow as unknown as Record<string, unknown>;
-
-    // Set up interceptor immediately so no new events are missed
     interceptDataLayer(elb, fullConfig, win);
+  };
 
-    if (context.collector.allowed && pendingReplayCount > 0) {
-      // Collector already ran — process existing events immediately
-      processExistingEvents(elb, fullConfig, pendingReplayCount, win);
-      pendingReplayCount = 0;
-    }
-  }
-
-  // Handle on-run to replay existing events (when source inits before run)
+  // Replay pre-existing entries when the run signal lands. The collector
+  // strictly gates on() delivery: this fires only when the source is
+  // started (`config.init === true` AND `config.require` empty). If a
+  // require gate is unmet, the run event is queued in `queueOn` by
+  // onApply and replayed when the source becomes started.
   const handleEvent = async (event: On.Types) => {
     if (event === 'run' && envWindow && pendingReplayCount > 0) {
       const win = envWindow as unknown as Record<string, unknown>;
@@ -62,6 +61,7 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
     config: fullConfig,
     push: elb,
     on: handleEvent,
+    init,
     destroy: async () => {
       // Cleanup: restore original dataLayer.push if possible
       const dataLayerName = settings.name || 'dataLayer';
