@@ -6,8 +6,8 @@
  *
  * The Flow system enables "one config to rule them all" - a single
  * walkeros.config.json file that manages multiple flows
- * (web_prod, web_stage, server_prod, etc.) with shared configuration,
- * variables, and reusable definitions.
+ * (web_prod, web_stage, server_prod, etc.) with shared configuration
+ * and reusable variables.
  *
  * Single declaration merge: `Flow` is both the interface for one flow
  * and the namespace holding all related types.
@@ -45,7 +45,7 @@ import type { Collector } from '.';
  * Represents one deployment target (e.g., web_prod, server_stage).
  * Platform is determined by `config.platform` ('web' | 'server').
  *
- * Variables/definitions cascade: source/destination > flow > root config.
+ * Variables cascade: source/destination > flow > root config.
  */
 export interface Flow {
   /** Per-flow configuration: platform, url, settings, bundle. */
@@ -115,12 +115,6 @@ export interface Flow {
    * Override root variables; overridden by source/destination variables.
    */
   variables?: Flow.Variables;
-
-  /**
-   * Flow-level definitions.
-   * Extend root definitions; overridden by source/destination definitions.
-   */
-  definitions?: Flow.Definitions;
 }
 
 export namespace Flow {
@@ -169,12 +163,6 @@ export namespace Flow {
      * Syntax: $var.name
      */
     variables?: Variables;
-
-    /**
-     * Reusable configuration definitions.
-     * Syntax: $def.name
-     */
-    definitions?: Definitions;
 
     /**
      * Data contract definition.
@@ -226,20 +214,11 @@ export namespace Flow {
     bundle?: Bundle;
   }
 
-  /** Primitive value types for variables. */
-  export type Primitive = string | number | boolean;
-
   /**
-   * Variables record type for interpolation.
-   * Used at root, flow, source, destination, transformer, and store levels.
+   * Reusable values referenced via `$var.name` (with optional deep paths).
+   * Whole-string references preserve native type; inline interpolation requires scalars.
    */
-  export type Variables = Record<string, Primitive>;
-
-  /**
-   * Definitions record type for reusable configurations.
-   * Used at root, flow, source, destination, transformer, and store levels.
-   */
-  export type Definitions = Record<string, unknown>;
+  export type Variables = Record<string, unknown>;
 
   /**
    * Free-form settings bag inside `Flow.Config.settings`.
@@ -381,12 +360,6 @@ export namespace Flow {
     variables?: Variables;
 
     /**
-     * Source-level definitions (highest priority in cascade).
-     * Overrides flow and root definitions.
-     */
-    definitions?: Definitions;
-
-    /**
      * Named examples for testing and documentation.
      * Stripped during flow resolution (not included in bundles).
      */
@@ -442,9 +415,6 @@ export namespace Flow {
     /** Destination-level variables (highest priority in cascade). */
     variables?: Variables;
 
-    /** Destination-level definitions (highest priority in cascade). */
-    definitions?: Definitions;
-
     /**
      * Named examples for testing and documentation.
      * Stripped during flow resolution.
@@ -498,9 +468,6 @@ export namespace Flow {
     /** Transformer-level variables (highest priority in cascade). */
     variables?: Variables;
 
-    /** Transformer-level definitions (highest priority in cascade). */
-    definitions?: Definitions;
-
     /**
      * Named examples for testing and documentation.
      * Stripped during flow resolution.
@@ -530,9 +497,6 @@ export namespace Flow {
 
     /** Store-level variables (highest priority in cascade). */
     variables?: Variables;
-
-    /** Store-level definitions (highest priority in cascade). */
-    definitions?: Definitions;
 
     /**
      * Named examples for testing and documentation.

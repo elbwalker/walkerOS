@@ -22,59 +22,23 @@ import { RoutableNextSchema } from './matcher';
 import { CacheSchema } from './cache';
 
 // ========================================
-// Primitive Type Schemas
-// ========================================
-
-/**
- * Primitive value schema for variables.
- *
- * @remarks
- * Variables can be strings, numbers, or booleans.
- * Used at root, flow, source, destination, transformer, and store levels.
- */
-export const PrimitiveSchema = z
-  .union([z.string(), z.number(), z.boolean()])
-  .meta({
-    id: 'FlowPrimitive',
-    title: 'Flow.Primitive',
-    description: 'Primitive value: string, number, or boolean.',
-  })
-  .describe('Primitive value: string, number, or boolean');
-
-// ========================================
 // Shared Type Schemas
 // ========================================
 
 /**
- * Variables schema for interpolation.
+ * Variables schema for unified $var. interpolation.
+ *
+ * @remarks
+ * Variables can hold any value (scalars, objects, arrays). Whole-string $var
+ * references preserve native type; inline interpolation requires scalars.
+ * Deep paths via `$var.name.deep.path` are supported.
  */
-export const VariablesSchema = z
-  .record(z.string(), PrimitiveSchema)
-  .meta({
-    id: 'FlowVariables',
-    title: 'Flow.Variables',
-    description: 'Variables for interpolation (string/number/boolean values).',
-  })
-  .describe('Variables for interpolation');
-
-/**
- * Definitions schema for reusable configurations.
- */
-export const DefinitionsSchema = z
-  .record(
-    z.string(),
-    z.unknown().meta({
-      id: 'FlowDefinition',
-      title: 'Flow.Definition',
-      description: 'Single named definition value (arbitrary shape).',
-    }),
-  )
-  .meta({
-    id: 'FlowDefinitions',
-    title: 'Flow.Definitions',
-    description: 'Reusable configuration definitions referenced via $def.name.',
-  })
-  .describe('Reusable configuration definitions');
+export const VariablesSchema = z.record(z.string(), z.unknown()).meta({
+  id: 'FlowVariables',
+  title: 'Flow.Variables',
+  description:
+    'Reusable values referenced via $var.name (with optional deep paths). Whole-string refs preserve native type; inline interpolation requires scalars.',
+});
 
 /**
  * Settings schema - free-form key-value bag inside Flow.Config.settings.
@@ -318,9 +282,6 @@ export const SourceSchema = z
     variables: VariablesSchema.optional().describe(
       'Source-level variables (highest priority in cascade)',
     ),
-    definitions: DefinitionsSchema.optional().describe(
-      'Source-level definitions (highest priority in cascade)',
-    ),
     next: RoutableNextSchema.optional().describe(
       'Pre-collector transformer chain. String, string[], or NextRule[] for conditional routing based on ingest data.',
     ),
@@ -387,9 +348,6 @@ export const TransformerSchema = z
     variables: VariablesSchema.optional().describe(
       'Transformer-level variables (highest priority in cascade)',
     ),
-    definitions: DefinitionsSchema.optional().describe(
-      'Transformer-level definitions (highest priority in cascade)',
-    ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
@@ -450,9 +408,6 @@ export const DestinationSchema = z
       .describe('Destination environment configuration'),
     variables: VariablesSchema.optional().describe(
       'Destination-level variables (highest priority in cascade)',
-    ),
-    definitions: DefinitionsSchema.optional().describe(
-      'Destination-level definitions (highest priority in cascade)',
     ),
     before: RoutableNextSchema.optional().describe(
       'Post-collector transformer chain. String, string[], or NextRule[] for conditional routing.',
@@ -520,9 +475,6 @@ export const StoreSchema = z
       .describe('Store environment configuration'),
     variables: VariablesSchema.optional().describe(
       'Store-level variables (highest priority in cascade)',
-    ),
-    definitions: DefinitionsSchema.optional().describe(
-      'Store-level definitions (highest priority in cascade)',
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
@@ -722,9 +674,6 @@ export const FlowSchema = z
     variables: VariablesSchema.optional().describe(
       'Flow-level variables (override root variables, overridden by source/destination variables)',
     ),
-    definitions: DefinitionsSchema.optional().describe(
-      'Flow-level definitions (extend root definitions, overridden by source/destination definitions)',
-    ),
   })
   .meta({
     id: 'Flow',
@@ -743,7 +692,7 @@ export const FlowSchema = z
  *
  * @remarks
  * This is the complete schema for walkeros.config.json files.
- * Contains multiple named flows with shared variables, definitions, and contracts.
+ * Contains multiple named flows with shared variables and contracts.
  */
 export const JsonSchema = z
   .object({
@@ -762,10 +711,7 @@ export const JsonSchema = z
       .optional()
       .describe('Folders to include in the bundle output'),
     variables: VariablesSchema.optional().describe(
-      'Shared variables for interpolation across all flows (use $var.name syntax)',
-    ),
-    definitions: DefinitionsSchema.optional().describe(
-      'Reusable configuration definitions (use $def.name syntax)',
+      'Shared variables for interpolation across all flows (use $var.name syntax, deep paths supported)',
     ),
     contract: ContractSchema.optional().describe(
       'Named contracts with extends inheritance and dot-path references',
@@ -783,7 +729,7 @@ export const JsonSchema = z
     id: 'FlowJson',
     title: 'Flow.Json',
     description:
-      'walkerOS root configuration (walkeros.config.json) v4: version, variables, definitions, contract, named flows.',
+      'walkerOS root configuration (walkeros.config.json) v4: version, variables, contract, named flows.',
   })
   .describe('walkerOS root configuration (walkeros.config.json)');
 

@@ -150,7 +150,6 @@ export {
   CodeSchema as FlowCodeSchema,
   BundleSchema as FlowBundleSchema,
   BundlePackageSchema as FlowBundlePackageSchema,
-  PrimitiveSchema,
   parseConfig,
   safeParseConfig,
   parseFlow,

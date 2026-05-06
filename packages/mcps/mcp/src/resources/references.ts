@@ -106,7 +106,7 @@ export function registerReferenceResources(server: McpServer) {
     'walkeros://reference/variables',
     {
       description:
-        'walkerOS variable patterns: $var, $env, $def, $contract, $code, $store, $secret substitution',
+        'walkerOS variable patterns: $var, $env, $contract, $code, $store, $secret substitution',
       mimeType: 'application/json',
     },
     async () => ({
@@ -119,40 +119,43 @@ export function registerReferenceResources(server: McpServer) {
                 '`.` for names and paths; `:` for literal values or raw-code payloads.',
               patterns: {
                 '$var.name':
-                  'Variable substitution — cascade: step settings > flow settings > config variables',
+                  'Variable reference. Whole-string preserves native type (object, array, scalar). Inline interpolation requires a scalar. Reusable fragments (mapping templates, matcher lists, consent objects) live in the variables block and are referenced by name.',
+                '$var.name.deep.path':
+                  'Deep-path access into a structured variable. Walks nested keys/indices. Whole-string preserves type at the leaf; inline still requires a scalar leaf.',
                 '$env.NAME':
-                  'Environment variable — $env.GA_ID reads process.env.GA_ID',
+                  'Environment variable. $env.GA_ID reads process.env.GA_ID.',
                 '$env.NAME:default':
-                  'Environment variable with fallback — $env.GA_ID:G-DEFAULT (the `:` is the literal default separator)',
-                '$def.name':
-                  'Definition reference — reusable config blocks from definitions section',
-                '$def.name.path.deep':
-                  'Nested definition access — $def.ga4Events.purchase',
+                  'Environment variable with fallback. $env.GA_ID:G-DEFAULT (the `:` is the literal default separator).',
                 '$contract.name':
-                  'Contract reference — links to named contract for validation',
+                  'Contract reference. Links to a named contract for validation.',
                 '$contract.name.path':
-                  'Nested contract access — $contract.ecommerce.product',
+                  'Nested contract access. $contract.ecommerce.product.',
                 '$code:(expr)':
-                  'Inline JavaScript — $code:(event) => event.data.price * 100 (the `:` carries the raw-code payload)',
+                  'Inline JavaScript. $code:(event) => event.data.price * 100 (the `:` carries the raw-code payload).',
                 '$store.storeId':
-                  'Store injection in env values — wires runtime store access',
+                  'Store injection in env values. Wires runtime store access.',
                 '$secret.NAME':
-                  'Secret injection — resolved server-side at deploy/runtime',
+                  'Secret injection. Resolved server-side at deploy/runtime.',
               },
               cascade: {
                 priority: [
-                  '1. Step-level settings (highest)',
-                  '2. Flow-level settings',
+                  '1. Step-level variables (highest)',
+                  '2. Flow-level variables',
                   '3. Config-level variables (lowest)',
                 ],
                 example: {
-                  variables: { apiKey: 'default-key' },
+                  variables: {
+                    apiUrl: 'https://x.io',
+                    mapping: { id: 'data.id' },
+                  },
                   flows: {
                     production: {
                       destinations: {
                         api: {
-                          config: { key: '$var.apiKey' },
-                          settings: { apiKey: 'prod-key' },
+                          config: {
+                            url: '$var.apiUrl',
+                            idPath: '$var.mapping.id',
+                          },
                         },
                       },
                     },

@@ -226,7 +226,6 @@ describe('validateFlow', () => {
     const result = validateFlow({
       version: 4,
       variables: { gaId: 'G-12345', debug: false },
-      definitions: { cleanUrl: { condition: true } },
       flows: {
         production: {
           config: {

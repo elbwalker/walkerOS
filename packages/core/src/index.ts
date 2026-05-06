@@ -41,8 +41,8 @@ export * from './route';
 export * from './cache';
 export * from './examples/formatOut';
 export {
-  REF_VAR,
-  REF_DEF,
+  REF_VAR_FULL,
+  REF_VAR_INLINE,
   REF_ENV,
   REF_CONTRACT,
   REF_FLOW,

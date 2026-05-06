@@ -44,28 +44,20 @@ export function enrichFlowConfigSchema(baseSchema: AnySchema): AnySchema {
   // Enrich variables
   if (props.variables) {
     props.variables.markdownDescription =
-      'Shared variables for `$var.name` interpolation across all flows.\n\n' +
-      '```json\n"variables": {\n  "measurementId": "G-XXXXXXXXXX",\n  "debug": false\n}\n```\n\n' +
-      'Reference in any config value: `"$var.measurementId"`';
+      'Reusable values referenced via `$var.name` (with optional deep paths).\n\n' +
+      'Whole-string references preserve native type (objects/arrays/scalars).\n' +
+      'Inline interpolation requires scalars.\n\n' +
+      '```json\n"variables": {\n  "apiKey": "G-XXXXXXXXXX",\n  "debug": false,\n  "mapping": {\n    "map": { "id": "data.id" }\n  }\n}\n```\n\n' +
+      'Reference scalars or structures: `"$var.apiKey"`, `"$var.mapping"`, `"$var.mapping.map.id"`.';
     props.variables.defaultSnippets = [
       {
-        label: 'Add variable',
-        description: 'New key-value variable',
+        label: 'Add scalar variable',
+        description: 'String/number/boolean variable',
         body: { '${1:name}': '${2:value}' },
       },
-    ];
-  }
-
-  // Enrich definitions
-  if (props.definitions) {
-    props.definitions.markdownDescription =
-      'Reusable configuration fragments for `$def.name` references.\n\n' +
-      '```json\n"definitions": {\n  "gaConfig": {\n    "measurementId": "$var.trackingId"\n  }\n}\n```\n\n' +
-      'Reference in any config: `"$def.gaConfig"`';
-    props.definitions.defaultSnippets = [
       {
-        label: 'Add definition',
-        description: 'New reusable config fragment',
+        label: 'Add structural variable',
+        description: 'Reusable mapping or object fragment',
         body: { '${1:name}': { '${2:key}': '${3:value}' } },
       },
     ];

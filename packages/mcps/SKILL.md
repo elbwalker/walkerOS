@@ -8,7 +8,7 @@ The MCP is the **orchestrator and consultant** for walkerOS. Four layers:
 
 ```
 Resources   →  teach concepts    (flow-schema, mapping, consent, variables, contracts)
-Prompts     →  guide workflows   (add-step, setup-mapping, manage-contract, use-definitions)
+Prompts     →  guide workflows   (add-step, setup-mapping, manage-contract)
 Tools       →  execute operations (flow_validate, flow_simulate, flow_bundle, flow_push)
 Packages    →  provide specifics  (hints, schemas, examples per step)
 ```
@@ -45,7 +45,7 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 | `walkeros://reference/event-model` | Event naming, properties, auto-populated fields             |
 | `walkeros://reference/mapping`     | Mapping syntax (data/map/loop/set/condition/consent/policy) |
 | `walkeros://reference/consent`     | Consent model (destination/rule/field level)                |
-| `walkeros://reference/variables`   | Variable patterns ($var/$env/$def/$code/$store)             |
+| `walkeros://reference/variables`   | Variable patterns ($var/$env/$code/$store)                  |
 | `walkeros://reference/contract`    | Event schemas, wildcards, inheritance                       |
 | `walkeros://reference/openapi`     | OpenAPI 3.1 specification                                   |
 | `walkeros://reference/packages`    | Full package catalog                                        |
@@ -58,7 +58,6 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 | `add-step`        | Add a source/destination/transformer/store to a flow        |
 | `setup-mapping`   | Configure event mapping for a step                          |
 | `manage-contract` | Create/update event contracts (bidirectional with mappings) |
-| `use-definitions` | Extract shared patterns into definitions and variables      |
 
 ## Networking
 

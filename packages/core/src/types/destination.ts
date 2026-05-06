@@ -133,7 +133,9 @@ export type PartialConfig<T extends TypesGeneric = Types> = Config<
   Types<
     Partial<Settings<T>> | Settings<T>,
     Partial<Mapping<T>> | Mapping<T>,
-    Env<T>
+    Env<T>,
+    InitSettings<T>,
+    SetupOptions<T>
   >
 >;
 

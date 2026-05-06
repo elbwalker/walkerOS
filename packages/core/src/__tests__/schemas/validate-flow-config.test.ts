@@ -125,16 +125,16 @@ describe('validateFlowConfig', () => {
     ).toHaveLength(0);
   });
 
-  it('warns for dangling $def. reference', () => {
+  it('warns for dangling $var. reference with sibling defined', () => {
     const json = JSON.stringify(
       {
         version: 4,
-        definitions: { clean: {} },
+        variables: { clean: {} },
         flows: {
           default: {
             config: { platform: 'web' },
             destinations: {
-              ga4: { config: { transform: '$def.missing' } },
+              ga4: { config: { transform: '$var.missing' } },
             },
           },
         },
@@ -144,7 +144,7 @@ describe('validateFlowConfig', () => {
     );
     const result = validateFlowConfig(json);
     expect(
-      result.warnings.some((w) => w.message.includes('$def.missing')),
+      result.warnings.some((w) => w.message.includes('$var.missing')),
     ).toBe(true);
   });
 

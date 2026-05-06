@@ -17,11 +17,19 @@ describe('validateWalkerOSReferences', () => {
     expect(issues).toHaveLength(0);
   });
 
-  it('flags dangling $def. references', () => {
-    const json = '{"config": "$def.missing"}';
-    const context = { definitions: { existing: {} } };
+  it('does not flag valid $var. deep-path references', () => {
+    const json = '{"config": "$var.api.v2.url"}';
+    const context = { variables: { api: { v2: { url: 'https://x' } } } };
+    const issues = validateWalkerOSReferences(json, context);
+    expect(issues).toHaveLength(0);
+  });
+
+  it('flags dangling $var. deep-path references on missing root', () => {
+    const json = '{"config": "$var.missing.nested.path"}';
+    const context = { variables: { existing: 'value' } };
     const issues = validateWalkerOSReferences(json, context);
     expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain('missing');
   });
 
   it('flags invalid next/before targets', () => {

@@ -2,7 +2,6 @@ import type { editor } from 'monaco-editor';
 
 export type ReferenceType =
   | 'variable'
-  | 'definition'
   | 'secret'
   | 'env'
   | 'store'
@@ -27,11 +26,10 @@ export const REFERENCE_PATTERNS: Array<{
   regex: RegExp;
   className: string;
 }> = [
-  { type: 'variable', regex: /\$var\.(\w*)/g, className: 'elb-ref-variable' },
   {
-    type: 'definition',
-    regex: /\$def\.(\w*(?:\.[\w.]*)?)/g,
-    className: 'elb-ref-definition',
+    type: 'variable',
+    regex: /\$var\.(\w*(?:\.[\w.]*)?)/g,
+    className: 'elb-ref-variable',
   },
   { type: 'secret', regex: /\$secret\.(\w*)/g, className: 'elb-ref-secret' },
   {
@@ -134,7 +132,6 @@ export function registerWalkerOSDecorationStyles(): void {
   style.id = 'walkeros-ref-styles';
   style.textContent = `
     .monaco-editor .elb-ref-variable { color: #89ddff !important; font-style: italic; }
-    .monaco-editor .elb-ref-definition { color: #c3e88d !important; font-style: italic; }
     .monaco-editor .elb-ref-secret { color: #ffcb6b !important; font-style: italic; }
     .monaco-editor .elb-ref-env { color: #ffcb6b !important; font-style: italic; }
     .monaco-editor .elb-ref-contract { color: #c3e88d !important; font-style: italic; }

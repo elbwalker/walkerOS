@@ -1,6 +1,5 @@
 import {
   getVariableCompletions,
-  getDefinitionCompletions,
   getSecretCompletions,
   getStoreCompletions,
   getFlowCompletions,
@@ -23,15 +22,6 @@ describe('getVariableCompletions', () => {
   it('returns empty array when no variables', () => {
     expect(getVariableCompletions(undefined)).toEqual([]);
     expect(getVariableCompletions({})).toEqual([]);
-  });
-});
-
-describe('getDefinitionCompletions', () => {
-  it('returns completions for defined definitions', () => {
-    const definitions = { gaConfig: { settings: {} }, metaConfig: {} };
-    const items = getDefinitionCompletions(definitions);
-    expect(items).toHaveLength(2);
-    expect(items[0].label).toBe('$def.gaConfig');
   });
 });
 

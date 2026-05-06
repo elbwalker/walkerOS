@@ -1865,7 +1865,7 @@ export interface paths {
     };
     /**
      * Download settings JSON
-     * @description Download the named flow settings as a self-contained Config JSON file. Includes parent variables and definitions.
+     * @description Download the named flow settings as a self-contained Config JSON file. Includes parent variables.
      */
     get: {
       parameters: {
@@ -3283,13 +3283,10 @@ export interface components {
     };
     FlowConfig: {
       /** @enum {number} */
-      version: 3;
+      version: 4;
       $schema?: string;
       include?: string[];
       variables?: {
-        [key: string]: string | number | boolean;
-      };
-      definitions?: {
         [key: string]: unknown;
       };
       flows?: {

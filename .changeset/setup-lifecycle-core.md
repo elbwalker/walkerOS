@@ -1,6 +1,6 @@
 ---
-'@walkeros/core': minor
-'@walkeros/cli': minor
+'@walkeros/core': patch
+'@walkeros/cli': patch
 ---
 
 Add an optional `setup` lifecycle to destinations, sources, and stores.

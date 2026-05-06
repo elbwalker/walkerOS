@@ -7,8 +7,7 @@ export interface PackageInfo {
 }
 
 export interface IntelliSenseContext {
-  variables?: Record<string, string | number | boolean>;
-  definitions?: Record<string, unknown>;
+  variables?: Record<string, unknown>;
   secrets?: string[];
   stepNames?: {
     sources?: string[];

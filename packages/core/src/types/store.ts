@@ -39,6 +39,15 @@ export interface Config<T extends TypesGeneric = Types> {
   setup?: boolean | SetupOptions<T>;
 }
 
+export type PartialConfig<T extends TypesGeneric = Types> = Config<
+  Types<
+    Partial<Settings<T>> | Settings<T>,
+    Env<T>,
+    InitSettings<T>,
+    SetupOptions<T>
+  >
+>;
+
 export interface Context<
   T extends TypesGeneric = Types,
 > extends BaseContext.Base<Config<T>, Env<T>> {

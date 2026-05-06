@@ -614,13 +614,14 @@ import { schemas } from '@walkeros/core/dev';
 
 **`intellisenseContext` prop:** Provides completions, hover tooltips, and
 semantic validation markers for every canonical walkerOS reference form:
-`$var.name`, `$def.name.path`, `$env.NAME:default`, `$contract.name.path`,
-`$store.id`, `$secret.NAME`, and `$code:payload`. The rule is simple: `.` for
-names and paths, `:` for literal values (env defaults) or raw-code payloads.
+`$var.name(.path)?`, `$env.NAME:default`, `$contract.name.path`, `$store.id`,
+`$secret.NAME`, and `$code:payload`. The rule is simple: `.` for names and
+paths, `:` for literal values (env defaults) or raw-code payloads.
 
-Regex patterns live in `@walkeros/core` as `REF_VAR`, `REF_DEF`, `REF_ENV`,
-`REF_CONTRACT`, `REF_STORE`, `REF_SECRET`, `REF_CODE_PREFIX` — import these when
-you need to match or validate references; do not hand-roll the regexes.
+Regex patterns live in `@walkeros/core` as `REF_VAR_FULL`, `REF_VAR_INLINE`,
+`REF_ENV`, `REF_CONTRACT`, `REF_STORE`, `REF_SECRET`, `REF_CODE_PREFIX` — import
+these when you need to match or validate references; do not hand-roll the
+regexes.
 
 Chain references (`next` / `before`) are detected via JSON-path awareness
 (`detectChainRefContext`) and cover scalar, inline array, multi-line array, and

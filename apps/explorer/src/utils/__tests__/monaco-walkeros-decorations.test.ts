@@ -12,12 +12,11 @@ describe('findWalkerOSReferences', () => {
     expect(matches[0].name).toBe('measurementId');
   });
 
-  it('finds $def. references', () => {
-    const text = '"$def.gaConfig"';
+  it('finds $var. deep-path references', () => {
+    const text = '"$var.api.v2.url"';
     const matches = findWalkerOSReferences(text);
     expect(matches).toHaveLength(1);
-    expect(matches[0].type).toBe('definition');
-    expect(matches[0].name).toBe('gaConfig');
+    expect(matches[0].type).toBe('variable');
   });
 
   it('finds $secret. and $env. references', () => {
@@ -51,12 +50,6 @@ describe('findWalkerOSReferences', () => {
     expect(refs).toHaveLength(1);
     expect(refs[0].type).toBe('variable');
     expect(refs[0].name).toBe('');
-  });
-
-  it('finds $def. prefix only', () => {
-    const refs = findWalkerOSReferences('"$def."');
-    expect(refs).toHaveLength(1);
-    expect(refs[0].type).toBe('definition');
   });
 
   it('finds $secret. prefix only', () => {
