@@ -33,6 +33,9 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
         calls.push(['client.runInsert', args as unknown[]]);
       };
     },
+    async query() {
+      return [];
+    },
     async close() {
       // no-op
     },
@@ -63,6 +66,9 @@ describe('sqlite server destination -- step examples', () => {
     const baseSettings: Settings = {
       sqlite: {
         url: ':memory:',
+        // Legacy-compat: drive the auto-create path so init() does not require
+        // pre-existing table state in step-example simulations.
+        schema: 'auto',
         ...(exampleSqlite ?? {}),
       },
     };

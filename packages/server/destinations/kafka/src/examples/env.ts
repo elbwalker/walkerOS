@@ -1,5 +1,6 @@
 import type {
   Env,
+  KafkaAdminMock,
   KafkaClientConstructor,
   KafkaClientMock,
   KafkaProducerMock,
@@ -29,10 +30,35 @@ function createMockProducer(): KafkaProducerMock {
 
 const mockProducerFactory: KafkaProducerFactory = () => createMockProducer();
 
+function createMockAdmin(): KafkaAdminMock {
+  return {
+    connect: () => Promise.resolve(),
+    disconnect: () => Promise.resolve(),
+    createTopics: () => Promise.resolve(true),
+    fetchTopicMetadata: ({ topics }) =>
+      Promise.resolve({
+        topics: (topics ?? []).map((name) => ({
+          name,
+          partitions: [{ partitionId: 0, leader: 0, replicas: [0], isr: [0] }],
+        })),
+      }),
+    describeConfigs: ({ resources }) =>
+      Promise.resolve({
+        resources: resources.map((r) => ({
+          resourceName: r.name,
+          configEntries: [],
+        })),
+      }),
+  };
+}
+
 class MockKafkaClient implements KafkaClientMock {
   constructor(_config: KafkaClientConfig) {}
   producer(config?: ProducerConfig): KafkaProducerMock {
     return mockProducerFactory(config);
+  }
+  admin(): KafkaAdminMock {
+    return createMockAdmin();
   }
 }
 

@@ -1,5 +1,5 @@
 ---
-'@walkeros/server-destination-gcp': minor
+'@walkeros/server-destination-gcp': patch
 ---
 
 BigQuery destination: migrate from legacy tabledata.insertAll to the BigQuery

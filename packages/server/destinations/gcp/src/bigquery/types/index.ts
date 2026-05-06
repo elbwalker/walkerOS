@@ -93,13 +93,7 @@ export type PushFn = DestinationServer.PushFn<Types>;
 export type PushBatchFn = CoreDestination.PushBatchFn<Types>;
 export type SetupFn = CoreSetupFn<Config, Env>;
 
-// Local override of PartialConfig to forward the Setup (`U`) type arg.
-// CoreDestination.PartialConfig only forwards Settings/Mapping/Env, leaving
-// `setup` typed as `unknown`, which is not assignable back into Config.
-export type PartialConfig = Omit<Config, 'settings' | 'setup'> & {
-  settings?: Partial<Settings> | Settings;
-  setup?: boolean | Setup;
-};
+export type PartialConfig = DestinationServer.PartialConfig<Types>;
 
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 

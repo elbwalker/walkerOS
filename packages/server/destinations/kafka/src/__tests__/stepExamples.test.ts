@@ -17,6 +17,7 @@ import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type {
   Env,
+  KafkaAdminMock,
   KafkaClientMock,
   KafkaProducerMock,
   ProducerRecord,
@@ -50,10 +51,23 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
     },
   };
 
+  // Step examples never invoke admin(); this is a typecheck-only stub so
+  // RecordingKafka satisfies the KafkaClientMock interface.
+  const adminStub: KafkaAdminMock = {
+    connect: () => Promise.resolve(),
+    disconnect: () => Promise.resolve(),
+    createTopics: () => Promise.resolve(true),
+    fetchTopicMetadata: () => Promise.resolve({ topics: [] }),
+    describeConfigs: () => Promise.resolve({ resources: [] }),
+  };
+
   class RecordingKafka implements KafkaClientMock {
     constructor(_config: unknown) {}
     producer(): KafkaProducerMock {
       return producer;
+    }
+    admin(): KafkaAdminMock {
+      return adminStub;
     }
   }
 

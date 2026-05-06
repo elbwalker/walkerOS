@@ -19,8 +19,7 @@ export const destinationBigQuery: Destination = {
     const config = getConfig(partialConfig, env, logger);
 
     // Open the long-lived JSONWriter on the _default stream.
-    // Per Resolved Decision #1: hard-fail with an actionable message
-    // when the dataset/table is missing so operators know to run setup.
+    // Hard-fail when the dataset/table is missing.
     try {
       const { writer, writeClient } = await openWriter(
         {
