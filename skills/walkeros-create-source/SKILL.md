@@ -666,7 +666,7 @@ A source package can implement an optional `setup()` function to provision
 external resources idempotently: Pub/Sub subscriptions, webhook registrations on
 upstream platforms, queue declarations, SQS queues, polling cursors, inbound API
 keys. Setup runs only when an operator explicitly types
-`walker setup source.<name>`. The runtime never auto-invokes it from `init()`,
+`walkeros setup source.<name>`. The runtime never auto-invokes it from `init()`,
 push, or `destroy()`.
 
 The framework provides the slot, the CLI command, and a `resolveSetup` helper.
@@ -733,7 +733,7 @@ export const setup: SetupFn<
 
   // Package-specific provisioning, idempotent.
   // Returning a structured object (e.g. { subscriptionCreated: true })
-  // makes that data available to operators via `walker setup ... | jq`.
+  // makes that data available to operators via `walkeros setup ... | jq`.
 };
 ```
 
@@ -761,7 +761,7 @@ already present (DOM events, dataLayer pushes).
 
 ### Contract
 
-- Triggered only by `walker setup <kind>.<name>`. Never by runtime push, init,
+- Triggered only by `walkeros setup <kind>.<name>`. Never by runtime push, init,
   or destroy.
 - **Idempotency is your responsibility.** Re-running setup against a fully
   provisioned environment must be a safe no-op. Use try-create-catch-409 on REST

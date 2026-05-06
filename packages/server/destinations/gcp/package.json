@@ -53,6 +53,15 @@
       "destinationBigQuery": "BigQuery event storage"
     }
   },
+  "walkerosBundle": {
+    "external": [
+      "@google-cloud/bigquery-storage",
+      "@grpc/grpc-js",
+      "@grpc/proto-loader",
+      "protobufjs",
+      "google-gax"
+    ]
+  },
   "keywords": [
     "walkerOS",
     "walkerOS-destination",

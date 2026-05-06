@@ -17,6 +17,7 @@ describe('findWalkerOSReferences', () => {
     const matches = findWalkerOSReferences(text);
     expect(matches).toHaveLength(1);
     expect(matches[0].type).toBe('variable');
+    expect(matches[0].name).toBe('api.v2.url');
   });
 
   it('finds $secret. and $env. references', () => {

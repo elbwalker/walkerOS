@@ -109,6 +109,7 @@ function __resetSetupHarness(): void {
   harness.datasetCreateError = null;
   harness.tableCreateError = null;
   harness.getMetadataError = null;
+  mockFn.mockClear();
 }
 
 function __getSetupCalls(): jest.Mock {

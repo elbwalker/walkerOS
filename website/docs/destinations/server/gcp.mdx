@@ -100,15 +100,18 @@ Provision the dataset and table once per environment with the CLI:
   language="bash"
 />
 
-Output: `setup: ok destination.bigquery` plus a JSON line reporting
-`{ datasetCreated, tableCreated }`. The command is idempotent, safe to re-run.
+Output: a narrated `setup: ok destination.bigquery` line. Add `--json` to also
+emit a structured envelope reporting `{ datasetCreated, tableCreated }` for `jq`
+piping. The command is idempotent, safe to re-run.
 
-`config.setup`:
+`config.setup` controls provisioning:
 
-- `false` (default): no provisioning. Operator must run setup explicitly.
+- omitted or `false`: narrated skip, no provisioning. Operator runs setup
+  explicitly to provision.
 - `true`: provision with the defaults below.
-- `{ ...overrides }`: object form to override any default. See the `Setup`
-  interface in the package.
+- object matching the `Setup` interface: provision with the declared overrides.
+
+See the `Setup` interface in the package for the full shape.
 
 ### Defaults
 

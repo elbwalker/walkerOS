@@ -224,7 +224,7 @@ async function detectDrift(
     }
   }
 
-  // Schema drift (column names and types only; descriptions ignored)
+  // Schema drift (column name, type, and mode; descriptions ignored)
   if (isSchemaMeta(metadata.schema)) {
     const actualFields = metadata.schema.fields ?? [];
     const declaredFields = options.schema;
@@ -232,13 +232,23 @@ async function detectDrift(
       actualFields.length !== declaredFields.length ||
       declaredFields.some((d, i) => {
         const a = actualFields[i];
-        return !a || a.name !== d.name || a.type !== d.type;
+        return (
+          !a || a.name !== d.name || a.type !== d.type || a.mode !== d.mode
+        );
       });
     if (driftDetected) {
       logger.warn('setup.drift', {
         field: 'schema',
-        declared: declaredFields.map((f) => ({ name: f.name, type: f.type })),
-        actual: actualFields.map((f) => ({ name: f.name, type: f.type })),
+        declared: declaredFields.map((f) => ({
+          name: f.name,
+          type: f.type,
+          mode: f.mode,
+        })),
+        actual: actualFields.map((f) => ({
+          name: f.name,
+          type: f.type,
+          mode: f.mode,
+        })),
       });
     }
   }

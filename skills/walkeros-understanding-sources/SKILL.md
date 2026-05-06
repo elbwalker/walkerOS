@@ -235,7 +235,7 @@ Sources can implement an optional `setup()` lifecycle to provision external
 resources, for example registering a webhook with a third-party provider,
 creating a Pub/Sub subscription, or pre-allocating queue resources. Setup is
 **never** invoked by the runtime, push, init, or deploy. It runs only when an
-operator explicitly types `walker setup source.<name>`.
+operator explicitly types `walkeros setup source.<name>`.
 
 The signature is
 `(ctx: LifecycleContext<Config<T>, Env<T>>) => Promise<unknown>`, where
@@ -247,7 +247,7 @@ the `boolean | object` shape into a concrete options object.
 See [walkeros-create-source](../walkeros-create-source/SKILL.md),
 [walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md),
 [walkeros-understanding-stores](../walkeros-understanding-stores/SKILL.md), and
-the `walker setup` CLI documentation for the authoring template and operator
+the `walkeros setup` CLI documentation for the authoring template and operator
 workflow.
 
 ## Related Skills

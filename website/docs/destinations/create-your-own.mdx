@@ -150,7 +150,7 @@ The same lifecycle applies to sources, destinations, and stores. Transformers ar
 - Triggered only by `walkeros setup <kind>.<name>` (per-component, explicit). Never by `push`, `simulate`, `deploy`, or the runtime.
 - Setup is opt-in via `config.setup` in the flow config. The CLI invocation requires it to be `true` or an object; `false` or omitted means the operator's setup invocation is a narrated skip.
 - Idempotency is the package's responsibility. Re-running setup against a fully provisioned environment is a safe no-op.
-- The CLI emits a structured JSON line on stdout when the package's `setup()` returns a non-undefined value (useful for `jq` piping in CI).
+- Structured JSON output is opt-in via `--json` (e.g. `walkeros setup <kind>.<name> --json`). In normal mode the CLI narrates the action and never splices a JSON envelope into the output, even if `setup()` returns a value. The opt-in setup behavior and idempotency are independent of `--json`.
 
 ### Example: a destination with setup
 

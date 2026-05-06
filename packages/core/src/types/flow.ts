@@ -45,7 +45,8 @@ import type { Collector } from '.';
  * Represents one deployment target (e.g., web_prod, server_stage).
  * Platform is determined by `config.platform` ('web' | 'server').
  *
- * Variables cascade: source/destination > flow > root config.
+ * Variables cascade (resolveFlowSettings): step > flow > root config.
+ * "step" applies uniformly to source, destination, transformer, and store.
  */
 export interface Flow {
   /** Per-flow configuration: platform, url, settings, bundle. */

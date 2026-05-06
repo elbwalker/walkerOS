@@ -580,7 +580,7 @@ Use these templates as your starting point:
 `config.setup` is reserved for the setup lifecycle (see
 [Adding setup (optional)](#adding-setup-optional)). Do not use the key `setup`
 for unrelated package metadata or hint keys. The framework wires this field to
-`SetupFn` via `resolveSetup`, and `walker setup destination.<name>` reads it.
+`SetupFn` via `resolveSetup`, and `walkeros setup destination.<name>` reads it.
 Repurposing the name will collide with that wiring.
 
 ### Gate: Implementation Compiles
@@ -597,7 +597,7 @@ A destination package can implement an optional `setup()` function to provision
 external resources idempotently: BigQuery datasets and tables, Pub/Sub topics,
 SQLite tables, warehouse schemas, S3 buckets, webhook registrations on
 downstream platforms. Setup runs only when an operator explicitly types
-`walker setup destination.<name>`. The runtime never auto-invokes it from
+`walkeros setup destination.<name>`. The runtime never auto-invokes it from
 `init()`, `push()`, or `destroy()`.
 
 The framework provides the slot, the CLI command, and a `resolveSetup` helper.
@@ -664,7 +664,7 @@ export const setup: SetupFn<
 
   // Package-specific provisioning, idempotent.
   // Returning a structured object (e.g. { datasetCreated: true })
-  // makes that data available to operators via `walker setup ... | jq`.
+  // makes that data available to operators via `walkeros setup ... | jq`.
 };
 ```
 
@@ -691,7 +691,7 @@ endpoints the user already provisioned.
 
 ### Contract
 
-- Triggered only by `walker setup <kind>.<name>`. Never by runtime push, init,
+- Triggered only by `walkeros setup <kind>.<name>`. Never by runtime push, init,
   or destroy.
 - **Idempotency is your responsibility.** Re-running setup against a fully
   provisioned environment must be a safe no-op. Use try-create-catch-409 on REST

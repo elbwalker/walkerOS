@@ -383,7 +383,7 @@ Stores can implement an optional `setup()` lifecycle to provision external
 resources, for example creating a SQLite table, initializing an S3 bucket, or
 running a one-off schema migration. Setup is **never** invoked by the runtime,
 push, init, or deploy. It runs only when an operator explicitly types
-`walker setup store.<name>`.
+`walkeros setup store.<name>`.
 
 The signature is
 `(ctx: LifecycleContext<Config<T>, Env<T>>) => Promise<unknown>`, where
@@ -396,8 +396,8 @@ See [walkeros-create-destination](../walkeros-create-destination/SKILL.md),
 [walkeros-create-source](../walkeros-create-source/SKILL.md),
 [walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md),
 [walkeros-understanding-sources](../walkeros-understanding-sources/SKILL.md),
-and the `walker setup` CLI documentation for the authoring template and operator
-workflow.
+and the `walkeros setup` CLI documentation for the authoring template and
+operator workflow.
 
 ## Related skills
 

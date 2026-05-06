@@ -30,7 +30,7 @@ describe('reference regex constants', () => {
     expect(m?.[0]).toBe('$var.api.v2');
   });
   it('REF_VAR_INLINE captures the dotted path group', () => {
-    const re = /\$var\.([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)/g;
+    const re = new RegExp(REF_VAR_INLINE.source, REF_VAR_INLINE.flags);
     const m = re.exec('prefix $var.api.version suffix');
     expect(m?.[1]).toBe('api.version');
   });
@@ -39,12 +39,10 @@ describe('reference regex constants', () => {
     expect('$var.foo-bar'.match(REF_VAR_FULL)).toBeNull();
   });
   it('REF_VAR_INLINE rejects names starting with digits or containing -', () => {
-    // Reset lastIndex by creating a fresh regex per check
-    const reDigit =
-      /\$var\.([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)/g;
+    // Build a fresh regex from the exported constant so changes to it are caught.
+    const reDigit = new RegExp(REF_VAR_INLINE.source, REF_VAR_INLINE.flags);
     expect(reDigit.exec('$var.1foo')).toBeNull();
-    const reDash =
-      /\$var\.([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)/g;
+    const reDash = new RegExp(REF_VAR_INLINE.source, REF_VAR_INLINE.flags);
     // The dash will simply terminate the match at "foo"
     const m = reDash.exec('$var.foo-bar');
     expect(m?.[1]).toBe('foo');

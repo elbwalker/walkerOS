@@ -35,27 +35,37 @@ export async function openWriter(
   });
 
   const writeClient = new managedwriter.WriterClient({ projectId });
-  const connection = await writeClient.createStreamConnection({
-    destinationTable,
-    streamType: managedwriter.DefaultStream,
-  });
-  const streamId = connection.getStreamId();
-  const writeStream = await writeClient.getWriteStream({
-    streamId,
-    view: protos.google.cloud.bigquery.storage.v1.WriteStreamView.FULL,
-  });
-  if (!writeStream.tableSchema) {
-    throw new Error(
-      `BigQuery write stream ${streamId} returned no tableSchema; cannot build proto descriptor`,
+  try {
+    const connection = await writeClient.createStreamConnection({
+      destinationTable,
+      streamType: managedwriter.DefaultStream,
+    });
+    const streamId = connection.getStreamId();
+    const writeStream = await writeClient.getWriteStream({
+      streamId,
+      view: protos.google.cloud.bigquery.storage.v1.WriteStreamView.FULL,
+    });
+    if (!writeStream.tableSchema) {
+      throw new Error(
+        `BigQuery write stream ${streamId} returned no tableSchema; cannot build proto descriptor`,
+      );
+    }
+    const protoDescriptor = adapt.convertStorageSchemaToProto2Descriptor(
+      writeStream.tableSchema,
+      'root',
     );
-  }
-  const protoDescriptor = adapt.convertStorageSchemaToProto2Descriptor(
-    writeStream.tableSchema,
-    'root',
-  );
-  const writer = new managedwriter.JSONWriter({ connection, protoDescriptor });
+    const writer = new managedwriter.JSONWriter({
+      connection,
+      protoDescriptor,
+    });
 
-  return { writeClient, writer };
+    return { writeClient, writer };
+  } catch (err) {
+    // Release any resources already opened by the partial init so we don't
+    // leak gRPC handles. closeWriter swallows close errors and only logs.
+    closeWriter({ writeClient }, logger);
+    throw err;
+  }
 }
 
 /** Close handles in safe order. Errors are logged, never thrown (called from destroy). */

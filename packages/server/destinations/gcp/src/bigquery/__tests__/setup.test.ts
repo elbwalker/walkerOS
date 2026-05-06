@@ -210,8 +210,13 @@ describe('setup', () => {
           declared: DECLARED_SCHEMA.map((f) => ({
             name: f.name,
             type: f.type,
+            mode: f.mode,
           })),
-          actual: driftedFields.map((f) => ({ name: f.name, type: f.type })),
+          actual: driftedFields.map((f) => ({
+            name: f.name,
+            type: f.type,
+            mode: f.mode,
+          })),
         }),
       );
     });

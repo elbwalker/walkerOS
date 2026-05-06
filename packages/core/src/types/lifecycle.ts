@@ -13,13 +13,13 @@ export interface LifecycleContext<C = unknown, E = unknown> {
 }
 
 /**
- * Setup function signature. Called once via `walker setup <kind>.<name>`.
+ * Setup function signature. Called once via `walkeros setup <kind>.<name>`.
  * Packages own idempotency and error semantics. Return value (if any) is
  * JSON-stringified to stdout by the CLI for scripting use.
  */
 export type SetupFn<C = unknown, E = unknown> = (
   context: LifecycleContext<C, E>,
-) => Promise<unknown>;
+) => WalkerOS.PromiseOrValue<unknown>;
 
 /**
  * Destroy function signature for step lifecycle cleanup.

@@ -104,7 +104,8 @@ a deep path that walks the value:
   variable's native type. Object, array, number, and boolean values are
   preserved.
 - An inline reference (`"Bearer $var.token"`) substitutes a scalar mid-string.
-  Object or array values throw, scalars only.
+  If the referenced variable resolves to an object or array, resolution throws;
+  only scalars (string, number, boolean) may be substituted inline.
 - Variables may reference other variables. Resolution is recursive with cycle
   detection, mirroring the `$flow` reference resolver.
 

@@ -224,7 +224,7 @@ Destinations can implement an optional `setup()` lifecycle to provision external
 resources, for example a BigQuery dataset and table, a Pub/Sub topic, or a
 warehouse schema. Setup is **never** invoked by the runtime, push, init, or
 deploy. It runs only when an operator explicitly types
-`walker setup destination.<name>`.
+`walkeros setup destination.<name>`.
 
 The signature is
 `(ctx: LifecycleContext<Config<T>, Env<T>>) => Promise<unknown>`, where
@@ -236,7 +236,7 @@ the `boolean | object` shape into a concrete options object.
 See [walkeros-create-destination](../walkeros-create-destination/SKILL.md),
 [walkeros-understanding-sources](../walkeros-understanding-sources/SKILL.md),
 [walkeros-understanding-stores](../walkeros-understanding-stores/SKILL.md), and
-the `walker setup` CLI documentation for the authoring template and operator
+the `walkeros setup` CLI documentation for the authoring template and operator
 workflow.
 
 ## Related Skills
