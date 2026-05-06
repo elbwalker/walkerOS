@@ -165,6 +165,7 @@ describe('Source Start Flow Integration', () => {
     expect(collector.sources.mockSource).toEqual({
       type: 'mock',
       config: {
+        init: true,
         settings: { test: 'value' },
       },
       push: expect.any(Function),

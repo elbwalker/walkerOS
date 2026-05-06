@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "build": "tsup --silent",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "clean": "rm -rf .turbo && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.ts*\"",
@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.1",
+    "@google-cloud/bigquery-storage": "^5.1.0",
     "@walkeros/server-core": "4.0.0"
   },
   "devDependencies": {},
@@ -50,6 +51,11 @@
     "docs": "https://www.walkeros.io/docs/destinations/server/gcp",
     "exports": {
       "destinationBigQuery": "BigQuery event storage"
+    },
+    "bundle": {
+      "external": [
+        "@google-cloud/bigquery-storage"
+      ]
     }
   },
   "keywords": [

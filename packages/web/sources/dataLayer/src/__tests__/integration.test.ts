@@ -155,8 +155,11 @@ describe('DataLayer Source - Integration', () => {
     const freshEvents: WalkerOS.Event[] = [];
     freshCollector.push = createMockPush(freshEvents);
 
-    // Init source (should NOT process existing events yet)
-    const source = await createDataLayerSource(freshCollector);
+    // Init source (should NOT process existing events yet — the test
+    // verifies run-gated replay, so don't auto-fire on('run'))
+    const source = await createDataLayerSource(freshCollector, undefined, {
+      runOnInit: false,
+    });
 
     // Register source on collector so on-run handler fires
     freshCollector.sources['dataLayer'] = source as Source.Instance;
@@ -164,8 +167,11 @@ describe('DataLayer Source - Integration', () => {
     // No events should have been collected yet (allowed=false)
     expect(freshEvents).toHaveLength(0);
 
-    // Now run the collector
+    // Now run the collector. The source was registered manually after
+    // startFlow's pass-2 init, so the collector won't reach it via the
+    // normal `walker run` path — drive the lifecycle directly.
     await elb('walker run');
+    await source.on?.('run', freshCollector);
 
     // Historical events should now be processed
     expect(freshEvents.length).toBeGreaterThanOrEqual(2);

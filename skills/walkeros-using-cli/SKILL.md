@@ -295,6 +295,89 @@ Options:
 
 ---
 
+## Bundle externals (per-package walkerOS.bundle.external)
+
+A step package can declare runtime-only npm dependencies that **must not** be
+inlined by the bundler. Typical reasons:
+
+- Uses `__dirname` or `require.resolve('.proto')` at runtime.
+- Ships a native `.node` add-on (e.g. precompiled gRPC).
+- Multi-MB and not worth inlining.
+
+Declare in your step package's `package.json`:
+
+```json
+"walkerOS": {
+  "type": "destination",
+  "platform": ["server"],
+  "bundle": {
+    "external": [
+      "@google-cloud/bigquery-storage",
+      "@grpc/grpc-js"
+    ]
+  }
+}
+```
+
+The CLI bundler:
+
+1. Externalizes each listed dep from the ESM bundle.
+2. Extracts each dep + its full transitive tree into `<outputDir>/node_modules/`
+   via pacote (no `npm install` shell-out, no postinstall scripts run).
+3. Emits a sidecar `<outputDir>/package.json` and
+   `<outputDir>/package-lock.json` listing those deps with their resolved
+   versions.
+
+**When to declare:** runtime filesystem path resolution, native add-on, multi-MB
+dep. **When NOT to declare:** for normal pure-JS deps, let esbuild inline them.
+
+**Disambiguation:** `walkerOS.bundle.external` (per-package, this section) is
+NOT the same as `flow.<name>.bundle.packages` (which packages to install for a
+flow, set in flow.json). The first is metadata declared by step authors; the
+second is configured by flow authors.
+
+**Output shape:**
+
+- Empty externals (the common case): `dist/bundle.mjs` only.
+- Non-empty:
+  `dist/{bundle.mjs, package.json, package-lock.json, node_modules/}`. All four
+  are required at runtime for the bundle to work.
+
+**Errors you may see:**
+
+- "Package X declares Y in walkerOS.bundle.external but does not list it in
+  dependencies or peerDependencies": add Y to your package's deps.
+- "version conflict — resolved version does not satisfy all consumers": two step
+  packages declare the same external with incompatible ranges. Bump one.
+- "Package X declares a postinstall script which pacote.extract does not run":
+  this dep can't be auto-installed by walkerOS bundle. Use a Dockerfile that
+  runs `npm install` separately as a downstream step.
+
+**Warning: bundle contains \_\_dirname references.** Means an inlined dep used
+`__dirname` and the bundle will throw at runtime. Add the dep to
+`walkerOS.bundle.external` (if it's third-party and can't be ESM-bundled).
+Suppress legitimate uses per-line with `// walkeros: dirname-ok`.
+
+**Cache (CI):** the bundler caches downloads under `process.env.NPM_CACHE_DIR`
+(default `<tmpDir>/cache/npm`). On CI, persist that path with `actions/cache` to
+avoid re-downloading on every run:
+
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: .walkeros-cache/npm
+    key: walkeros-${{ hashFiles('**/flow.json') }}
+- run:
+    WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o
+    dist/bundle.mjs
+```
+
+**CI smoke check:**
+`cd dist && node -e "import('./bundle.mjs').then(()=>console.log('ok'))"` plus
+`du -sh node_modules` (typical: 30-50MB, 10k+ files; use `.dockerignore`).
+
+---
+
 ## Troubleshooting
 
 ### Bundle Fails

@@ -7,6 +7,7 @@ describe('Store types', () => {
         settings: undefined,
         initSettings: undefined,
         env: {},
+        setup: undefined,
       };
       expect(types).toBeDefined();
     });
@@ -28,6 +29,7 @@ describe('Store types', () => {
         settings: { host: 'localhost', port: 6379 },
         initSettings: { host: 'localhost' },
         env: { redis: {} },
+        setup: undefined,
       };
       expect(types.settings.host).toBe('localhost');
     });

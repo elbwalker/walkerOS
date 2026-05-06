@@ -20,7 +20,7 @@ export const SqliteSettingsSchema = z.object({
   schema: z
     .enum(['auto', 'manual'])
     .describe(
-      '"auto" creates the canonical events table with CREATE TABLE IF NOT EXISTS on init. "manual" skips table creation. The user brings their own schema and mapping.',
+      '[DEPRECATED] Use config.setup instead. "auto" maps to "setup: true" (run `walkeros setup destination.<id>`); "manual" maps to "setup: false". Removed in the next major.',
     )
     .optional(),
 });

@@ -9,6 +9,7 @@ import type { SqliteClient } from '../types';
  */
 interface BetterSqliteStatement {
   run: (...args: unknown[]) => unknown;
+  all: (...args: unknown[]) => ReadonlyArray<Record<string, unknown>>;
 }
 
 interface BetterSqliteDatabase {
@@ -52,6 +53,9 @@ export async function createBetterSqliteClient(
       return async (args) => {
         stmt.run(...(args as unknown[]));
       };
+    },
+    async query(sql, args = []) {
+      return db.prepare(sql).all(...(args as unknown[]));
     },
     async close() {
       db.close();

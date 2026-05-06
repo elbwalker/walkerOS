@@ -1,7 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import {
-  REF_VAR,
-  REF_DEF,
+  REF_VAR_FULL,
+  REF_VAR_INLINE,
   REF_ENV,
   REF_CONTRACT,
   REF_FLOW,
@@ -12,13 +12,40 @@ import {
 import * as core from '@walkeros/core';
 
 describe('reference regex constants', () => {
-  it('REF_VAR matches $var.name inline', () => {
-    expect('prefix $var.ga4Id suffix'.match(REF_VAR)?.[0]).toBe('$var.ga4Id');
+  it('REF_VAR_FULL matches whole-string $var.name', () => {
+    expect('$var.ga4Id'.match(REF_VAR_FULL)?.[1]).toBe('ga4Id');
   });
-  it('REF_DEF requires whole string', () => {
-    expect('$def.foo.bar'.match(REF_DEF)?.[1]).toBe('foo');
-    expect('$def.foo.bar'.match(REF_DEF)?.[2]).toBe('bar');
-    expect('prefix $def.foo'.match(REF_DEF)).toBeNull();
+  it('REF_VAR_FULL matches whole-string $var.name.path', () => {
+    expect('$var.api.url'.match(REF_VAR_FULL)?.[1]).toBe('api.url');
+  });
+  it('REF_VAR_FULL matches whole-string $var.name.deep.path', () => {
+    expect('$var.api.v2.url'.match(REF_VAR_FULL)?.[1]).toBe('api.v2.url');
+  });
+  it('REF_VAR_FULL does not match mid-string', () => {
+    expect('prefix-$var.name'.match(REF_VAR_FULL)).toBeNull();
+    expect('$var.name suffix'.match(REF_VAR_FULL)).toBeNull();
+  });
+  it('REF_VAR_INLINE matches inside strings, captures full dotted path', () => {
+    const m = 'https://$var.api.v2/x'.match(REF_VAR_INLINE);
+    expect(m?.[0]).toBe('$var.api.v2');
+  });
+  it('REF_VAR_INLINE captures the dotted path group', () => {
+    const re = new RegExp(REF_VAR_INLINE.source, REF_VAR_INLINE.flags);
+    const m = re.exec('prefix $var.api.version suffix');
+    expect(m?.[1]).toBe('api.version');
+  });
+  it('REF_VAR_FULL rejects names starting with digits or containing -', () => {
+    expect('$var.1foo'.match(REF_VAR_FULL)).toBeNull();
+    expect('$var.foo-bar'.match(REF_VAR_FULL)).toBeNull();
+  });
+  it('REF_VAR_INLINE rejects names starting with digits or containing -', () => {
+    // Build a fresh regex from the exported constant so changes to it are caught.
+    const reDigit = new RegExp(REF_VAR_INLINE.source, REF_VAR_INLINE.flags);
+    expect(reDigit.exec('$var.1foo')).toBeNull();
+    const reDash = new RegExp(REF_VAR_INLINE.source, REF_VAR_INLINE.flags);
+    // The dash will simply terminate the match at "foo"
+    const m = reDash.exec('$var.foo-bar');
+    expect(m?.[1]).toBe('foo');
   });
   it('REF_ENV matches name and optional default', () => {
     const m = REF_ENV.exec('$env.API_URL:http://x.test');
@@ -74,8 +101,8 @@ describe('core barrel re-exports', () => {
   // @walkeros/explorer rely on this surface; missing one (as REF_FLOW
   // historically was) is a silent breakage.
   it.each([
-    ['REF_VAR'],
-    ['REF_DEF'],
+    ['REF_VAR_FULL'],
+    ['REF_VAR_INLINE'],
     ['REF_ENV'],
     ['REF_CONTRACT'],
     ['REF_FLOW'],

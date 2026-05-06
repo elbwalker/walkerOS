@@ -5,7 +5,7 @@ import {
   ConfigSchema,
   SourceSchema,
   DestinationSchema,
-  PrimitiveSchema,
+  StoreSchema,
   parseConfig,
   safeParseConfig,
   parseFlow,
@@ -52,37 +52,6 @@ describe('Flow Schemas', () => {
         flows: { x: { config: { platform: 'edge' } } },
       };
       expect(JsonSchema.safeParse(bad).success).toBe(false);
-    });
-  });
-
-  // ========================================
-  // PrimitiveSchema Tests
-  // ========================================
-
-  describe('PrimitiveSchema', () => {
-    test('accepts string values', () => {
-      expect(PrimitiveSchema.parse('test')).toBe('test');
-      expect(PrimitiveSchema.parse('')).toBe('');
-      expect(PrimitiveSchema.parse('USD')).toBe('USD');
-    });
-
-    test('accepts number values', () => {
-      expect(PrimitiveSchema.parse(42)).toBe(42);
-      expect(PrimitiveSchema.parse(0)).toBe(0);
-      expect(PrimitiveSchema.parse(-1)).toBe(-1);
-      expect(PrimitiveSchema.parse(3.14)).toBe(3.14);
-    });
-
-    test('accepts boolean values', () => {
-      expect(PrimitiveSchema.parse(true)).toBe(true);
-      expect(PrimitiveSchema.parse(false)).toBe(false);
-    });
-
-    test('rejects other types', () => {
-      expect(() => PrimitiveSchema.parse(null)).toThrow();
-      expect(() => PrimitiveSchema.parse(undefined)).toThrow();
-      expect(() => PrimitiveSchema.parse({})).toThrow();
-      expect(() => PrimitiveSchema.parse([])).toThrow();
     });
   });
 
@@ -309,7 +278,6 @@ describe('Flow Schemas', () => {
           },
         },
         variables: { GA_ID: 'G-123' },
-        definitions: { mapping: {} },
       };
       expect(() => FlowSchema.parse(validFlow)).not.toThrow();
     });
@@ -338,21 +306,6 @@ describe('Flow Schemas', () => {
         STRING: 'value',
         NUMBER: 42,
         BOOLEAN: true,
-      });
-    });
-
-    test('accepts definitions at flow level', () => {
-      const flow = {
-        config: { platform: 'web' },
-        definitions: {
-          mapping1: { page: { view: { name: 'page_view' } } },
-          mapping2: ['array', 'values'],
-        },
-      };
-      const parsed = FlowSchema.parse(flow);
-      expect(parsed.definitions).toEqual({
-        mapping1: { page: { view: { name: 'page_view' } } },
-        mapping2: ['array', 'values'],
       });
     });
 
@@ -400,13 +353,6 @@ describe('Flow Schemas', () => {
         variables: {
           CURRENCY: 'USD',
           GA4_ID: 'G-XXXXXXXXXX',
-        },
-        definitions: {
-          gtag_base_mapping: {
-            page: {
-              view: { name: 'page_view' },
-            },
-          },
         },
         flows: {
           web_prod: {
@@ -509,21 +455,6 @@ describe('Flow Schemas', () => {
         NUMBER: 42,
         BOOLEAN: true,
       });
-    });
-
-    test('allows unknown definitions structure', () => {
-      const validSetup = {
-        version: 4 as const,
-        definitions: {
-          mapping1: { complex: { nested: { structure: true } } },
-          mapping2: ['array', 'values'],
-          mapping3: 'simple string',
-        },
-        flows: {
-          prod: { config: { platform: 'web' } },
-        },
-      };
-      expect(() => JsonSchema.parse(validSetup)).not.toThrow();
     });
 
     test('validates multiple flows with different platforms', () => {
@@ -719,18 +650,6 @@ describe('Flow Schemas', () => {
           CURRENCY: 'USD',
           REGION: 'us-east-1',
         },
-        definitions: {
-          base_collector: {},
-          gtag_mapping: {
-            page: {
-              view: { name: 'page_view' },
-            },
-            product: {
-              view: { name: 'view_item' },
-              add: { name: 'add_to_cart' },
-            },
-          },
-        },
         flows: {
           web_production: {
             config: { platform: 'web' },
@@ -854,13 +773,11 @@ describe('Flow Schemas', () => {
       expect(() => parseConfig(setupWithVars)).not.toThrow();
     });
 
-    test('setup with definition reference structure', () => {
+    test('setup with variable reference structure', () => {
       const setupWithRefs = {
         version: 4,
-        definitions: {
-          common_mapping: {
-            page: { view: { name: 'page_view' } },
-          },
+        variables: {
+          measurementId: 'G-PROD123',
         },
         flows: {
           prod: {
@@ -869,7 +786,7 @@ describe('Flow Schemas', () => {
               gtag: {
                 package: '@walkeros/web-destination-gtag',
                 config: {
-                  mapping: '$def.common_mapping',
+                  measurementId: '$var.measurementId',
                 },
               },
             },
@@ -997,76 +914,6 @@ describe('Flow Schemas', () => {
                 variables: {
                   OVERRIDE_TEST: 'destination',
                   DEST_VAR: 'dest-level',
-                },
-              },
-            },
-          },
-        },
-      };
-      expect(() => JsonSchema.parse(setup)).not.toThrow();
-    });
-  });
-
-  describe('Definitions at Source/Destination Level', () => {
-    test('accepts definitions at source level', () => {
-      const flow = {
-        config: { platform: 'web' },
-        sources: {
-          browser: {
-            package: '@walkeros/web-source-browser',
-            definitions: {
-              sourceMapping: {
-                page: { view: { name: 'source_page_view' } },
-              },
-            },
-          },
-        },
-      };
-      const parsed = FlowSchema.parse(flow);
-      expect(parsed.sources?.browser.definitions).toBeDefined();
-    });
-
-    test('accepts definitions at destination level', () => {
-      const flow = {
-        config: { platform: 'web' },
-        destinations: {
-          gtag: {
-            package: '@walkeros/web-destination-gtag',
-            definitions: {
-              destMapping: {
-                product: { view: { name: 'view_item' } },
-              },
-            },
-          },
-        },
-      };
-      const parsed = FlowSchema.parse(flow);
-      expect(parsed.destinations?.gtag.definitions).toBeDefined();
-    });
-
-    test('validates definitions cascade structure', () => {
-      const setup = {
-        version: 4,
-        definitions: {
-          commonMapping: {
-            page: { view: { name: 'page_view' } },
-          },
-        },
-        flows: {
-          prod: {
-            config: { platform: 'web' },
-            definitions: {
-              envMapping: {
-                product: { view: { name: 'view_item' } },
-              },
-            },
-            destinations: {
-              gtag: {
-                package: '@walkeros/web-destination-gtag',
-                definitions: {
-                  destMapping: {
-                    order: { complete: { name: 'purchase' } },
-                  },
                 },
               },
             },
@@ -1375,121 +1222,10 @@ describe('getFlowSettings', () => {
 });
 
 // ========================================
-// Pattern Resolution Tests ($def, $var, $env)
+// Pattern Resolution Tests ($var, $env)
 // ========================================
 
 describe('Pattern Resolution', () => {
-  describe('$def.name - Definition References', () => {
-    test('resolves $def.name to definition content', () => {
-      const setup: Flow.Json = {
-        version: 4,
-        definitions: {
-          commonMapping: {
-            page: { view: { name: 'page_view' } },
-          },
-        },
-        flows: {
-          default: {
-            config: { platform: 'web' },
-            destinations: {
-              gtag: {
-                package: '@walkeros/web-destination-gtag',
-                config: {
-                  mapping: '$def.commonMapping',
-                },
-              },
-            },
-          },
-        },
-      };
-      const config = getFlowSettings(setup);
-      expect(config.destinations?.gtag.config).toEqual({
-        mapping: { page: { view: { name: 'page_view' } } },
-      });
-    });
-
-    test('resolves nested $def references', () => {
-      const setup: Flow.Json = {
-        version: 4,
-        definitions: {
-          inner: { key: 'value' },
-          outer: { nested: '$def.inner' },
-        },
-        flows: {
-          default: {
-            config: { platform: 'web' },
-            destinations: {
-              test: {
-                package: '@walkeros/test',
-                config: {
-                  data: '$def.outer',
-                },
-              },
-            },
-          },
-        },
-      };
-      const config = getFlowSettings(setup);
-      expect(config.destinations?.test.config).toEqual({
-        data: { nested: { key: 'value' } },
-      });
-    });
-
-    test('throws for missing definition', () => {
-      const setup: Flow.Json = {
-        version: 4,
-        flows: {
-          default: {
-            config: { platform: 'web' },
-            destinations: {
-              test: {
-                package: '@walkeros/test',
-                config: {
-                  data: '$def.nonExistent',
-                },
-              },
-            },
-          },
-        },
-      };
-      expect(() => getFlowSettings(setup)).toThrow(
-        'Definition "nonExistent" not found',
-      );
-    });
-
-    test('definition cascade: destination level overrides setup level', () => {
-      const setup: Flow.Json = {
-        version: 4,
-        definitions: {
-          mapping: { setup: true },
-        },
-        flows: {
-          default: {
-            config: { platform: 'web' },
-            definitions: {
-              mapping: { config: true },
-            },
-            destinations: {
-              test: {
-                package: '@walkeros/test',
-                definitions: {
-                  mapping: { destination: true },
-                },
-                config: {
-                  data: '$def.mapping',
-                },
-              },
-            },
-          },
-        },
-      };
-      const config = getFlowSettings(setup);
-      expect(config.destinations?.test.config).toEqual({
-        data: { destination: true },
-      });
-    });
-  });
-
   describe('$var.name - Variable References', () => {
     test('resolves $var.name to variable value', () => {
       const setup: Flow.Json = {
@@ -1743,109 +1479,6 @@ describe('Pattern Resolution', () => {
       process.env = originalEnv;
     });
 
-    test('resolves $var inside $def content', () => {
-      const setup: Flow.Json = {
-        version: 4,
-        variables: {
-          currency: 'USD',
-        },
-        definitions: {
-          mapping: {
-            currency: '$var.currency',
-          },
-        },
-        flows: {
-          default: {
-            config: { platform: 'web' },
-            destinations: {
-              test: {
-                package: '@walkeros/test',
-                config: {
-                  data: '$def.mapping',
-                },
-              },
-            },
-          },
-        },
-      };
-      const config = getFlowSettings(setup);
-      expect(config.destinations?.test.config).toEqual({
-        data: { currency: 'USD' },
-      });
-    });
-
-    test('resolves $env inside $def content', () => {
-      process.env.API_KEY = 'secret-key';
-      const setup: Flow.Json = {
-        version: 4,
-        definitions: {
-          apiConfig: {
-            key: '$env.API_KEY',
-          },
-        },
-        flows: {
-          default: {
-            config: { platform: 'web' },
-            destinations: {
-              test: {
-                package: '@walkeros/test',
-                config: {
-                  api: '$def.apiConfig',
-                },
-              },
-            },
-          },
-        },
-      };
-      const config = getFlowSettings(setup);
-      expect(config.destinations?.test.config).toEqual({
-        api: { key: 'secret-key' },
-      });
-    });
-
-    test('handles complex nested structure with all pattern types', () => {
-      process.env.ENV_VALUE = 'from-env';
-      const setup: Flow.Json = {
-        version: 4,
-        variables: {
-          varValue: 'from-var',
-        },
-        definitions: {
-          inner: {
-            env: '$env.ENV_VALUE',
-            var: '$var.varValue',
-          },
-          outer: {
-            nested: '$def.inner',
-            static: 'unchanged',
-          },
-        },
-        flows: {
-          default: {
-            config: { platform: 'web' },
-            destinations: {
-              test: {
-                package: '@walkeros/test',
-                config: {
-                  data: '$def.outer',
-                },
-              },
-            },
-          },
-        },
-      };
-      const config = getFlowSettings(setup);
-      expect(config.destinations?.test.config).toEqual({
-        data: {
-          nested: {
-            env: 'from-env',
-            var: 'from-var',
-          },
-          static: 'unchanged',
-        },
-      });
-    });
-
     test('uses $var as default value for $env when env not set', () => {
       delete process.env.GA4_ID;
       const setup: Flow.Json = {
@@ -1926,10 +1559,10 @@ describe('Pattern Resolution', () => {
       });
     });
 
-    test('resolves $def in transformer config', () => {
+    test('resolves $var with object value in transformer config', () => {
       const setup: Flow.Json = {
         version: 4,
-        definitions: {
+        variables: {
           fpRule: {
             match: { key: 'method', operator: 'eq', value: 'GET' },
             ttl: 300,
@@ -1942,7 +1575,7 @@ describe('Pattern Resolution', () => {
               fp: {
                 package: '@walkeros/server-transformer-fingerprint',
                 config: {
-                  settings: { rules: ['$def.fpRule'] },
+                  settings: { rules: ['$var.fpRule'] },
                 },
               },
             },
@@ -2326,7 +1959,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
 });
 
 describe('$contract edge cases', () => {
-  test('$def aliasing works with $contract', () => {
+  test('$var aliasing works with $contract', () => {
     const setup: Flow.Json = {
       version: 4,
       contract: {
@@ -2338,7 +1971,7 @@ describe('$contract edge cases', () => {
           },
         },
       },
-      definitions: {
+      variables: {
         c: '$contract.web',
       },
       flows: {
@@ -2347,8 +1980,8 @@ describe('$contract edge cases', () => {
           sources: {
             test: {
               config: {
-                globals: '$def.c.globals',
-                consent: '$def.c.consent',
+                globals: '$var.c.globals',
+                consent: '$var.c.consent',
               },
             },
           },
@@ -2412,113 +2045,6 @@ describe('$contract edge cases', () => {
         product: { view: { properties: { data: { required: ['id'] } } } },
       },
     });
-  });
-});
-
-describe('Deep dot-path resolution for $def', () => {
-  test('resolves $def.name.nested.path', () => {
-    const setup: Flow.Json = {
-      version: 4,
-      definitions: {
-        apiConfig: {
-          host: 'api.example.com',
-          version: 'v2',
-          nested: { deep: 'value' },
-        },
-      },
-      flows: {
-        default: {
-          config: { platform: 'web' },
-          sources: {
-            test: {
-              config: {
-                host: '$def.apiConfig.host',
-                deep: '$def.apiConfig.nested.deep',
-              },
-            },
-          },
-        },
-      },
-    };
-    const config = getFlowSettings(setup);
-    expect(config.sources?.test?.config).toEqual({
-      host: 'api.example.com',
-      deep: 'value',
-    });
-  });
-
-  test('resolves $def.name (single level) still works', () => {
-    const setup: Flow.Json = {
-      version: 4,
-      definitions: {
-        endpoint: { url: 'https://example.com' },
-      },
-      flows: {
-        default: {
-          config: { platform: 'web' },
-          sources: {
-            test: { config: { endpoint: '$def.endpoint' } },
-          },
-        },
-      },
-    };
-    const config = getFlowSettings(setup);
-    expect(config.sources?.test?.config).toEqual({
-      endpoint: { url: 'https://example.com' },
-    });
-  });
-
-  test('throws for missing intermediate path segment', () => {
-    const setup: Flow.Json = {
-      version: 4,
-      definitions: {
-        config: { host: 'example.com' },
-      },
-      flows: {
-        default: {
-          config: { platform: 'web' },
-          sources: {
-            test: { config: { val: '$def.config.missing.path' } },
-          },
-        },
-      },
-    };
-    expect(() => getFlowSettings(setup)).toThrow(/missing.*not found/i);
-  });
-
-  test('throws for missing top-level definition', () => {
-    const setup: Flow.Json = {
-      version: 4,
-      definitions: {},
-      flows: {
-        default: {
-          config: { platform: 'web' },
-          sources: {
-            test: { config: { val: '$def.nonExistent.path' } },
-          },
-        },
-      },
-    };
-    expect(() => getFlowSettings(setup)).toThrow(/nonExistent/);
-  });
-
-  test('resolves $def with array leaf', () => {
-    const setup: Flow.Json = {
-      version: 4,
-      definitions: {
-        schema: { required: ['id', 'name'] },
-      },
-      flows: {
-        default: {
-          config: { platform: 'web' },
-          sources: {
-            test: { config: { req: '$def.schema.required' } },
-          },
-        },
-      },
-    };
-    const config = getFlowSettings(setup);
-    expect(config.sources?.test?.config).toEqual({ req: ['id', 'name'] });
   });
 });
 
@@ -2658,17 +2184,17 @@ describe('$contract reference resolution', () => {
     });
   });
 
-  test('supports $def inside contracts', () => {
+  test('supports $var inside contracts', () => {
     const setup: Flow.Json = {
       version: 4,
-      definitions: {
+      variables: {
         idSchema: { required: ['id'], properties: { id: { type: 'string' } } },
       },
       contract: {
         web: {
           events: {
             product: {
-              '*': { properties: { data: '$def.idSchema' } },
+              '*': { properties: { data: '$var.idSchema' } },
             },
           },
         },
@@ -2896,5 +2422,257 @@ describe('$flow references', () => {
         onWarning: () => {},
       }),
     ).toThrow(/Cyclic \$flow reference/);
+  });
+});
+
+describe('flow component schemas accept setup', () => {
+  test.each([
+    ['DestinationSchema', DestinationSchema],
+    ['SourceSchema', SourceSchema],
+    ['StoreSchema', StoreSchema],
+  ] as const)('%s accepts setup: true', (_, schema) => {
+    const result = schema.safeParse({
+      package: '@walkeros/x',
+      config: { setup: true },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test.each([
+    ['DestinationSchema', DestinationSchema],
+    ['SourceSchema', SourceSchema],
+    ['StoreSchema', StoreSchema],
+  ] as const)('%s accepts setup: object', (_, schema) => {
+    const result = schema.safeParse({
+      package: '@walkeros/x',
+      config: { setup: { foo: 1 } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test.each([
+    ['DestinationSchema', DestinationSchema],
+    ['SourceSchema', SourceSchema],
+    ['StoreSchema', StoreSchema],
+  ] as const)('%s rejects setup: <number>', (_, schema) => {
+    const result = schema.safeParse({
+      package: '@walkeros/x',
+      config: { setup: 42 },
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('$var unified resolver', () => {
+  it('whole-string $var returns native scalar type', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { id: 'G-1', port: 8080, enabled: true },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { a: '$var.id', b: '$var.port', c: '$var.enabled' },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.config?.settings).toEqual({ a: 'G-1', b: 8080, c: true });
+  });
+
+  it('whole-string $var returns native object/array type', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { mapping: { map: { id: 'data.id' } }, list: [1, 2, 3] },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { m: '$var.mapping', l: '$var.list' },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.config?.settings).toEqual({
+      m: { map: { id: 'data.id' } },
+      l: [1, 2, 3],
+    });
+  });
+
+  it('whole-string $var with deep path walks nested object', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { api: { v2: { url: 'https://x' } } },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { url: '$var.api.v2.url' },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.config?.settings?.url).toBe('https://x');
+  });
+
+  it('inline $var substitutes scalar mid-string', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { host: 'a.io', version: 'v2' },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { url: 'https://$var.host/$var.version/c' },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.config?.settings?.url).toBe('https://a.io/v2/c');
+  });
+
+  it('inline $var supports deep paths', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { api: { version: 'v3' } },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { url: 'https://x/$var.api.version/y' },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.config?.settings?.url).toBe('https://x/v3/y');
+  });
+
+  it('inline $var throws on non-scalar', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { obj: { a: 1 } },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { x: 'prefix-$var.obj' },
+          },
+        },
+      },
+    };
+    expect(() => getFlowSettings(config)).toThrow(
+      /Variable "obj" resolves to non-scalar \(object\)/,
+    );
+  });
+
+  it('missing $var throws with clean message', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: {},
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { x: '$var.nope' },
+          },
+        },
+      },
+    };
+    expect(() => getFlowSettings(config)).toThrow(/Variable "nope" not found/);
+  });
+
+  it('deep-path miss reuses walkPath error', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { api: { v2: {} } },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { x: '$var.api.v2.missing' },
+          },
+        },
+      },
+    };
+    expect(() => getFlowSettings(config)).toThrow(
+      /Path "v2\.missing" not found in "\$var\.api"/,
+    );
+  });
+
+  it('variable referencing another variable resolves recursively', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { base: 'https://x', url: '$var.base/api' },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { u: '$var.url' },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.config?.settings?.u).toBe('https://x/api');
+  });
+
+  it('cycle in variables throws', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { a: '$var.b', b: '$var.a' },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { x: '$var.a' },
+          },
+        },
+      },
+    };
+    expect(() => getFlowSettings(config)).toThrow(/Cyclic \$var reference/);
+  });
+
+  it('variable containing $env resolves at use', () => {
+    process.env.TEST_VAR = 'envvalue';
+    const config: Flow.Json = {
+      version: 4,
+      variables: { token: '$env.TEST_VAR' },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { t: '$var.token' },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.config?.settings?.t).toBe('envvalue');
+    delete process.env.TEST_VAR;
+  });
+
+  it('step-level object variable shadows root-level scalar', () => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { x: 'root' },
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            d: {
+              variables: { x: { nested: true } },
+              config: { v: '$var.x' },
+            },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.destinations?.d.config).toEqual({ v: { nested: true } });
   });
 });

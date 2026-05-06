@@ -5,9 +5,7 @@
     "currency": "EUR",
     "flowVersion": "1.0.0",
     "ga4MeasurementId": "$env.GA4_MEASUREMENT_ID:G-DEMO123456",
-    "apiUrl": "$env.API_URL:http://localhost:8080/collect"
-  },
-  "definitions": {
+    "apiUrl": "$env.API_URL:http://localhost:8080/collect",
     "ga4ItemsLoop": {
       "loop": [
         "nested",
@@ -394,7 +392,7 @@
                       },
                       "tax": "data.tax",
                       "shipping": "data.shipping",
-                      "items": "$def.ga4ItemsLoop"
+                      "items": "$var.ga4ItemsLoop"
                     }
                   }
                 }
@@ -534,7 +532,7 @@
                           "marketing": true
                         }
                       },
-                      "items": "$def.ga4ItemsLoop"
+                      "items": "$var.ga4ItemsLoop"
                     }
                   }
                 }
@@ -849,7 +847,7 @@
                         "value": "$var.currency"
                       },
                       "order_id": "data.id",
-                      "contents": "$def.metaContentsLoop"
+                      "contents": "$var.metaContentsLoop"
                     }
                   }
                 }

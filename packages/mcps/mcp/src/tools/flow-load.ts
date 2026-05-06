@@ -65,7 +65,7 @@ const inputSchema = {
 
 const outputSchema = {
   version: z.number().describe('Flow config version'),
-  flows: z.record(z.string(), z.unknown()).describe('Flow definitions'),
+  flows: z.record(z.string(), z.unknown()).describe('Flow entries'),
 };
 
 const annotations = {

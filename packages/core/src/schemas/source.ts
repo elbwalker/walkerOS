@@ -140,6 +140,12 @@ export const ConfigSchema = MappingConfigSchema.extend({
   logger: LoggerConfigSchema.optional().describe(
     'Logger configuration (level, handler) to override the collector defaults',
   ),
+  setup: z
+    .union([z.boolean(), z.record(z.string(), z.unknown())])
+    .optional()
+    .describe(
+      'One-time setup options applied during source registration (boolean enables defaults, object configures specifics)',
+    ),
   ingest: z
     .union([ValueSchema, ValuesSchema])
     .optional()
@@ -150,6 +156,12 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .boolean()
     .describe('Completely skip this source (no init, no event capture)')
     .optional(),
+  init: z
+    .boolean()
+    .optional()
+    .describe(
+      'Init lifecycle flag set by collector to true after Instance.init() runs',
+    ),
 })
   .meta({
     id: 'SourceConfig',

@@ -193,7 +193,10 @@ describe('sourceExpress', () => {
 
       // Verify env.express was used to create app and middleware
       expect(mockExpress).toHaveBeenCalled();
-      expect(mockExpress.json).toHaveBeenCalledWith({ limit: '1mb' });
+      expect(mockExpress.json).toHaveBeenCalledWith({
+        limit: '1mb',
+        type: ['application/json', 'text/plain'],
+      });
       expect(mockApp.use).toHaveBeenCalledWith(mockJsonMiddleware);
 
       // Verify env.cors was used for CORS middleware
@@ -278,10 +281,13 @@ describe('sourceExpress', () => {
     });
 
     describe('raw body support', () => {
-      it('should push empty event for text/plain POST body', async () => {
+      it('parses JSON from text/plain POST (sendBeacon) via middleware', async () => {
+        // Integration test: exercises the actual express middleware chain by
+        // hitting a live server. Verifies the bug fix where navigator.sendBeacon
+        // forces Content-Type to text/plain even with JSON payloads.
         const source = await sourceExpress(
           createSourceContext(
-            {},
+            { settings: { port: 0, paths: ['/collect'] } },
             {
               push: mockPush as never,
               command: mockCommand as never,
@@ -291,18 +297,29 @@ describe('sourceExpress', () => {
           ),
         );
 
-        // Simulates a sendBeacon POST with a Base64 text body
-        const req = createMockRequest({
-          method: 'POST',
-          body: 'SGVsbG8gV29ybGQ=', // Base64 string
-          headers: { 'content-type': 'text/plain' },
-        });
-        const res = createMockResponse();
+        try {
+          const address = source.server?.address();
+          if (!address || typeof address === 'string') {
+            throw new Error('Server did not bind');
+          }
+          const event = { name: 'page view', data: { title: 'beacon' } };
 
-        await source.push(req, res);
+          const response = await fetch(
+            `http://127.0.0.1:${address.port}/collect`,
+            {
+              method: 'POST',
+              headers: { 'content-type': 'text/plain' },
+              body: JSON.stringify(event),
+            },
+          );
 
-        expect(mockPush).toHaveBeenCalledWith({});
-        expect(res.statusCode).toBe(200);
+          expect(response.status).toBe(200);
+          expect(mockPush).toHaveBeenCalledWith(event);
+        } finally {
+          await new Promise<void>((resolve) => {
+            source.server?.close(() => resolve());
+          });
+        }
       });
 
       it('should push empty event for undefined POST body', async () => {

@@ -46,9 +46,9 @@ devcontainer.
 **Purpose**: Complete reference demonstrating ALL JSON-compatible walkerOS
 features
 
-**Features**: 51 features including variables, definitions, mapping (key, map,
-loop, set), transformers (validator, fingerprint), consent gating, wildcards,
-ingest metadata, and more.
+**Features**: 51 features including variables, mapping (key, map, loop, set),
+transformers (validator, fingerprint), consent gating, wildcards, ingest
+metadata, and more.
 
 **Architecture**: Two named flows (`web` and `server`) showing full event
 pipeline from browser to server-side forwarding.

@@ -2,29 +2,33 @@
 import type { Logger, WalkerOS } from '.';
 
 /**
- * Context provided to the destroy() lifecycle method.
- *
- * A subset of the init context — config, env, logger, and id.
- * Does NOT include collector or event data. Destroy should only
- * clean up resources, not interact with the event pipeline.
+ * Shared context for one-shot lifecycle hooks (setup, destroy).
+ * No event pipeline machinery — just config, env, logger, and id.
  */
-export interface DestroyContext<C = unknown, E = unknown> {
-  /** Step instance ID. */
+export interface LifecycleContext<C = unknown, E = unknown> {
   id: string;
-  /** Step configuration (contains settings with SDK clients, etc.). */
   config: C;
-  /** Runtime environment/dependencies (DB clients, auth clients, etc.). */
   env: E;
-  /** Scoped logger for this step instance. */
   logger: Logger.Instance;
 }
 
 /**
+ * Setup function signature. Called once via `walkeros setup <kind>.<name>`.
+ * Packages own idempotency and error semantics. Return value (if any) is
+ * JSON-stringified to stdout by the CLI for scripting use.
+ */
+export type SetupFn<C = unknown, E = unknown> = (
+  context: LifecycleContext<C, E>,
+) => WalkerOS.PromiseOrValue<unknown>;
+
+/**
  * Destroy function signature for step lifecycle cleanup.
- *
- * Implementations should be idempotent — calling destroy() twice must not throw.
- * Used for closing connections, clearing timers, releasing SDK clients.
  */
 export type DestroyFn<C = unknown, E = unknown> = (
-  context: DestroyContext<C, E>,
+  context: LifecycleContext<C, E>,
 ) => WalkerOS.PromiseOrValue<void>;
+
+/**
+ * @deprecated Use `LifecycleContext` instead. Kept as alias for one minor cycle.
+ */
+export type DestroyContext<C = unknown, E = unknown> = LifecycleContext<C, E>;

@@ -218,6 +218,27 @@ destinations that need to signal success/failure back to the HTTP caller. First
 call wins (idempotent). The respond function is optional — only present when the
 source provides one.
 
+## Setup (optional)
+
+Destinations can implement an optional `setup()` lifecycle to provision external
+resources, for example a BigQuery dataset and table, a Pub/Sub topic, or a
+warehouse schema. Setup is **never** invoked by the runtime, push, init, or
+deploy. It runs only when an operator explicitly types
+`walkeros setup destination.<name>`.
+
+The signature is
+`(ctx: LifecycleContext<Config<T>, Env<T>>) => Promise<unknown>`, where
+`LifecycleContext` carries `{ id, config, env, logger }`. Idempotency is the
+package's responsibility: the framework adds no opinion. Use
+`resolveSetup(ctx.config.setup, DEFAULTS)` from `@walkeros/core` to normalize
+the `boolean | object` shape into a concrete options object.
+
+See [walkeros-create-destination](../walkeros-create-destination/SKILL.md),
+[walkeros-understanding-sources](../walkeros-understanding-sources/SKILL.md),
+[walkeros-understanding-stores](../walkeros-understanding-stores/SKILL.md), and
+the `walkeros setup` CLI documentation for the authoring template and operator
+workflow.
+
 ## Related Skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - How

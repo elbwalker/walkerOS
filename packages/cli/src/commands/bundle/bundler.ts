@@ -3,6 +3,7 @@ import esbuild from 'esbuild';
 import { builtinModules } from 'module';
 import path from 'path';
 import fs from 'fs-extra';
+import semver from 'semver';
 import type { Flow } from '@walkeros/core';
 import { packageNameToVariable, ENV_MARKER_PREFIX } from '@walkeros/core';
 import {
@@ -147,8 +148,18 @@ function generateInlineCode(
     }`;
 }
 import type { BuildOptions } from '../../types/bundle.js';
-import { downloadPackages } from './package-manager.js';
+import {
+  downloadPackagesWithResolution,
+  loadNpmConfigForPacote,
+  type NpmConfig,
+  type ResolutionResult,
+} from './package-manager.js';
+import {
+  installExternalsViaPacote,
+  type InstalledExternal,
+} from './install-externals.js';
 import type { Logger } from '@walkeros/core';
+import { getHashServer } from '@walkeros/server-core';
 import { getTmpPath } from '../../core/tmp.js';
 import { toFileImportSpecifier } from '../../core/import-specifier.js';
 import {
@@ -159,6 +170,7 @@ import {
   cacheCode,
   ensureCodeOnDisk,
 } from '../../core/build-cache.js';
+import type { CodeCacheKeyInputs } from '../../core/build-cache.js';
 
 export interface BundleStats {
   totalSize: number;
@@ -207,10 +219,15 @@ export async function copyIncludes(
 /**
  * Generate cache key content from flow config and build options.
  * Excludes non-deterministic fields (tempDir, output) from cache key.
+ *
+ * Includes the resolved `walkerOS.bundle.external` set so a step-package
+ * upgrade that adds/removes/changes externals invalidates the cache —
+ * otherwise we'd silently serve a stale build with the wrong sidecar.
  */
 function generateCacheKeyContent(
   flowSettings: Flow,
   buildOptions: BuildOptions,
+  packageExternals: Set<string>,
 ): string {
   const configForCache = {
     flow: flowSettings,
@@ -220,6 +237,7 @@ function generateCacheKeyContent(
       tempDir: undefined,
       output: undefined,
     },
+    externals: [...packageExternals].sort(),
   };
   return JSON.stringify(configForCache);
 }
@@ -238,50 +256,28 @@ export async function bundleCore(
     buildOptions.tempDir || getTmpPath(undefined, `walkeros-build-${buildId}`);
   const CACHE_DIR = buildOptions.tempDir || getTmpPath();
 
-  // Check build cache if caching is enabled
-  if (buildOptions.cache !== false) {
-    const configContent = generateCacheKeyContent(flowSettings, buildOptions);
+  // Resolve npm config (registry + scope overrides + auth tokens) from .npmrc
+  // once per build. Threaded into every pacote call so private registries and
+  // scoped tokens (e.g. @elbwalker:registry=...) work the same as `npm install`.
+  const npmConfig = await loadNpmConfigForPacote(
+    buildOptions.configDir ?? process.cwd(),
+  );
 
-    const cached = await isBuildCached(configContent, CACHE_DIR);
-    if (cached) {
-      const cachedBuild = await getCachedBuild(configContent, CACHE_DIR);
-      if (cachedBuild) {
-        logger.debug('Using cached build');
+  // Resolve the deploy artifact directory once so stale-artifact cleanup,
+  // sidecar emission, and the install pipeline all agree on which folder
+  // hosts `bundle.mjs` + `node_modules/` + `package.json` + `package-lock.json`.
+  const outputPath = path.resolve(buildOptions.output);
+  const outputDirAbs = path.dirname(outputPath);
 
-        // Write cached build to output
-        const outputPath = path.resolve(buildOptions.output);
-        await fs.ensureDir(path.dirname(outputPath));
-        await fs.writeFile(outputPath, cachedBuild);
-
-        const stats = await fs.stat(outputPath);
-        const sizeKB = (stats.size / 1024).toFixed(1);
-        logger.info(`Output: ${outputPath} (${sizeKB} KB, cached)`);
-
-        // Return stats if requested
-        if (showStats) {
-          const stats = await fs.stat(outputPath);
-          // Generate basic package stats from buildOptions
-          const packageStats = Object.entries(buildOptions.packages).map(
-            ([name, pkg]) => ({
-              name: `${name}@${pkg.version || 'latest'}`,
-              size: 0, // Size estimation not available for cached builds
-            }),
-          );
-          // Check user code for wildcard imports (same logic as collectBundleStats)
-          const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(
-            buildOptions.code || '',
-          );
-          return {
-            totalSize: stats.size,
-            packages: packageStats,
-            buildTime: Date.now() - bundleStartTime,
-            treeshakingEffective: !hasWildcardImports,
-          };
-        }
-        return;
-      }
-    }
-  }
+  // Stale cleanup: a previous build with externals can leave behind
+  // node_modules/, package.json, and package-lock.json that no longer match
+  // the current flow. We unconditionally purge them at the top so a flow
+  // that USED to declare externals but no longer does cannot ship stale
+  // install artifacts. Runs before any cache check so it applies on cache
+  // hits too.
+  await fs.remove(path.join(outputDirAbs, 'node_modules'));
+  await fs.remove(path.join(outputDirAbs, 'package.json'));
+  await fs.remove(path.join(outputDirAbs, 'package-lock.json'));
 
   try {
     // Step 1: Ensure temporary directory exists
@@ -343,16 +339,21 @@ export async function bundleCore(
         path: packageConfig.path, // Pass local path if defined
       }),
     );
-    // downloadPackages adds 'node_modules' subdirectory automatically
-    const packagePaths = await downloadPackages(
-      packagesArray,
-      TEMP_DIR,
-      logger,
-      buildOptions.cache,
-      buildOptions.configDir, // For resolving relative local paths
-      CACHE_DIR,
-      buildOptions.overrides,
-    );
+    // downloadPackagesWithResolution adds 'node_modules' subdirectory
+    // automatically and returns the underlying ResolutionResult so the
+    // install pipeline can pin extracted versions to the same graph the
+    // bundler resolved (no second resolve, no version drift).
+    const { packagePaths, resolution: resolutionResult } =
+      await downloadPackagesWithResolution(
+        packagesArray,
+        TEMP_DIR,
+        logger,
+        buildOptions.cache,
+        buildOptions.configDir, // For resolving relative local paths
+        CACHE_DIR,
+        buildOptions.overrides,
+        npmConfig,
+      );
 
     // Fix @walkeros packages to have proper ESM exports
     // This ensures Node resolves to .mjs files instead of .js (CJS)
@@ -374,6 +375,115 @@ export async function bundleCore(
       }
     }
 
+    // Read step-package-declared bundle externals.
+    // Cache check must happen AFTER this so externals participate in the
+    // cache key — a step-package upgrade that adds/removes externals must
+    // invalidate stale builds.
+    const {
+      union: packageExternals,
+      declarations,
+      warnings,
+    } = await readBundleExternals(packagePaths);
+    for (const w of warnings) logger.warn(w);
+
+    // Cross-consumer version conflict detection — runs BEFORE install so a
+    // conflict short-circuits the build cleanly. Compare each external's
+    // resolved version (from the resolver, not the declared range) against
+    // every consumer's declared range. `version === 'local'` entries are
+    // skipped — local packages don't have npm-resolvable versions.
+    const resolvedVersions = new Map<string, string>();
+    for (const [name, pkg] of resolutionResult.topLevel) {
+      if (pkg.version !== 'local') resolvedVersions.set(name, pkg.version);
+    }
+    detectExternalConflicts(declarations, resolvedVersions);
+
+    if (packageExternals.size > 0) {
+      logger.debug(
+        `Externalizing declared runtime deps: ${[...packageExternals].sort().join(', ')}`,
+      );
+    }
+
+    // Check build cache (Level 1 fast path) — moved after package resolution
+    // so the cache key includes resolved externals.
+    if (buildOptions.cache !== false) {
+      const configContent = generateCacheKeyContent(
+        flowSettings,
+        buildOptions,
+        packageExternals,
+      );
+
+      const cached = await isBuildCached(configContent, CACHE_DIR);
+      if (cached) {
+        const cachedBuild = await getCachedBuild(configContent, CACHE_DIR);
+        if (cachedBuild) {
+          logger.debug('Using cached build');
+
+          await fs.ensureDir(path.dirname(outputPath));
+          await fs.writeFile(outputPath, cachedBuild);
+
+          // Sidecar emission also runs on cache hits so the deploy artifact
+          // is complete even when the bundle itself comes from cache.
+          await writeSidecarPackageJson(
+            outputPath,
+            packageExternals,
+            logger,
+            resolutionResult,
+          );
+
+          // Install pipeline runs on cache hits too. Without this, a cached
+          // build would ship `bundle.mjs` next to a missing `node_modules/` —
+          // deploy-time `npm ci` would have nothing to read.
+          const cachedInstallPlan = await installExternalsViaPacote({
+            externals: packageExternals,
+            packagePaths,
+            resolution: resolutionResult,
+            outputDir: outputDirAbs,
+            logger,
+            tmpDir: CACHE_DIR,
+            npmConfig,
+            tempNodeModules: path.join(TEMP_DIR, 'node_modules'),
+          });
+          if (cachedInstallPlan.installed.length > 0) {
+            await writeBundleLockfile(
+              outputDirAbs,
+              cachedInstallPlan.installed,
+              npmConfig,
+              logger,
+            );
+          }
+
+          await warnOnSuspectGlobals(
+            outputPath,
+            path.join(TEMP_DIR, 'node_modules'),
+            logger,
+          );
+
+          const stats = await fs.stat(outputPath);
+          const sizeKB = (stats.size / 1024).toFixed(1);
+          logger.info(`Output: ${outputPath} (${sizeKB} KB, cached)`);
+
+          if (showStats) {
+            const packageStats = Object.entries(buildOptions.packages).map(
+              ([name, pkg]) => ({
+                name: `${name}@${pkg.version || 'latest'}`,
+                size: 0, // Size estimation not available for cached builds
+              }),
+            );
+            const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(
+              buildOptions.code || '',
+            );
+            return {
+              totalSize: stats.size,
+              packages: packageStats,
+              buildTime: Date.now() - bundleStartTime,
+              treeshakingEffective: !hasWildcardImports,
+            };
+          }
+          return;
+        }
+      }
+    }
+
     // Step 3: Create package.json to enable ESM in temp directory
     // This ensures Node treats all .js files as ESM and resolves @walkeros packages correctly
     const packageJsonPath = path.join(TEMP_DIR, 'package.json');
@@ -390,16 +500,40 @@ export async function bundleCore(
       packagePaths,
     );
 
-    const outputPath = path.resolve(buildOptions.output);
-
-    // Ensure output directory exists
+    // outputPath was resolved at the top of bundleCore (alongside the stale
+    // cleanup paths). Just ensure its directory exists.
     await fs.ensureDir(path.dirname(outputPath));
 
     // === LEVEL 2: Two-phase build (code cache) ===
+    // Build the L2 cache key inputs once. This must include every input that
+    // affects stage-1 output, otherwise different builds with identical entry
+    // code (but e.g. different externals or platform) would alias to the same
+    // cache slot and stage-2 would receive stale stage-1 bytes.
+    //
+    // Hash the resolved package graph (every top-level name@version, sorted)
+    // so a transitive version bump (e.g. a peerDep that re-resolves) busts
+    // the L2 slot even when the generated entry code is byte-identical.
+    const sortedVersions = [...resolutionResult.topLevel.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, p]) => `${name}@${p.version}`);
+    const versionsHash = await getHashServer(sortedVersions.join('\n'), 12);
+    const codeKeyInputs: CodeCacheKeyInputs = {
+      externals: packageExternals,
+      platform: buildOptions.platform === 'node' ? 'node' : 'browser',
+      target: resolveTarget(buildOptions),
+      nodeMajor: parseInt(process.versions.node.split('.')[0], 10),
+      format: buildOptions.format,
+      minify: buildOptions.minify,
+      minifyOptions: buildOptions.minifyOptions,
+      windowCollector: buildOptions.windowCollector,
+      windowElb: buildOptions.windowElb,
+      versionsHash,
+    };
+
     // Check if we have a cached compilation of this exact code entry
     let compiledCode: string | null = null;
     if (buildOptions.cache !== false) {
-      compiledCode = await getCachedCode(codeEntry, CACHE_DIR);
+      compiledCode = await getCachedCode(codeEntry, CACHE_DIR, codeKeyInputs);
     }
 
     if (compiledCode) {
@@ -423,6 +557,7 @@ export async function bundleCore(
         TEMP_DIR,
         packagePaths,
         logger,
+        packageExternals,
       );
 
       try {
@@ -442,7 +577,7 @@ export async function bundleCore(
 
       // Cache the compiled code for future builds
       if (buildOptions.cache !== false) {
-        await cacheCode(codeEntry, compiledCode, CACHE_DIR);
+        await cacheCode(codeEntry, compiledCode, CACHE_DIR, codeKeyInputs);
       }
     }
 
@@ -451,6 +586,7 @@ export async function bundleCore(
       codeEntry,
       compiledCode,
       CACHE_DIR,
+      codeKeyInputs,
     );
 
     if (buildOptions.skipWrapper || !hasFlow) {
@@ -502,13 +638,13 @@ export async function bundleCore(
           'process.env.NODE_ENV': '"production"',
           global: 'globalThis',
         };
-        stage2Options.target = buildOptions.target || 'es2018';
+        stage2Options.target = resolveTarget(buildOptions);
       } else {
-        stage2Options.external = getNodeExternals();
+        stage2Options.external = [...getNodeExternals(), ...packageExternals];
         stage2Options.banner = {
           js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
         };
-        stage2Options.target = buildOptions.target || 'node18';
+        stage2Options.target = resolveTarget(buildOptions);
       }
 
       try {
@@ -526,11 +662,54 @@ export async function bundleCore(
 
     // Cache the full build result if caching is enabled (Level 1 fast path)
     if (buildOptions.cache !== false) {
-      const configContent = generateCacheKeyContent(flowSettings, buildOptions);
+      const configContent = generateCacheKeyContent(
+        flowSettings,
+        buildOptions,
+        packageExternals,
+      );
       const buildOutput = await fs.readFile(outputPath, 'utf-8');
       await cacheBuild(configContent, buildOutput, CACHE_DIR);
       logger.debug('Build cached for future use');
     }
+
+    // Emit sidecar package.json next to the bundle for any externals declared
+    // by step packages. No-op when no externals are declared.
+    await writeSidecarPackageJson(
+      outputPath,
+      packageExternals,
+      logger,
+      resolutionResult,
+    );
+
+    // Install externals into <outputDir>/node_modules/ via pacote and write
+    // a lockfile so the deploy artifact is self-contained: `bundle.mjs` +
+    // `package.json` + `package-lock.json` + `node_modules/`. No-op for the
+    // common no-externals case (installPlan.installed is empty, lockfile
+    // emission is gated on length>0 to avoid an empty-deps lockfile).
+    const installPlan = await installExternalsViaPacote({
+      externals: packageExternals,
+      packagePaths,
+      resolution: resolutionResult,
+      outputDir: outputDirAbs,
+      logger,
+      tmpDir: CACHE_DIR,
+      npmConfig,
+      tempNodeModules: path.join(TEMP_DIR, 'node_modules'),
+    });
+    if (installPlan.installed.length > 0) {
+      await writeBundleLockfile(
+        outputDirAbs,
+        installPlan.installed,
+        npmConfig,
+        logger,
+      );
+    }
+
+    await warnOnSuspectGlobals(
+      outputPath,
+      path.join(TEMP_DIR, 'node_modules'),
+      logger,
+    );
 
     // Collect stats if requested
     let stats: BundleStats | undefined;
@@ -563,6 +742,111 @@ export async function bundleCore(
       fs.remove(TEMP_DIR).catch(() => {});
     }
   }
+}
+
+/**
+ * Post-build sanity check: scan the bundle for residual `__dirname`/`__filename`
+ * references. These throw at runtime in ESM mode (`Error: __dirname is not
+ * defined in ES module scope`) and indicate a step package has a runtime dep
+ * that wasn't declared in `walkerOS.bundle.external`.
+ *
+ * Walks `tempNodeModules` to attribute the references to specific packages,
+ * names the top 3 hit-counts in the warning. Suppress per-line in user code
+ * with a `// walkeros: dirname-ok` comment on the same line.
+ */
+export async function warnOnSuspectGlobals(
+  bundlePath: string,
+  tempNodeModules: string,
+  logger: Logger.Instance,
+): Promise<void> {
+  let content: string;
+  try {
+    content = await fs.readFile(bundlePath, 'utf-8');
+  } catch {
+    return;
+  }
+
+  const filtered = content
+    .split('\n')
+    .filter((line) => !line.includes('walkeros: dirname-ok'))
+    .join('\n');
+  const matches = filtered.match(/\b__(dirname|filename)\b/g);
+  if (!matches || matches.length === 0) return;
+
+  const candidates = await attributeDirnameUse(tempNodeModules);
+  const top = candidates.slice(0, 3);
+  const attribution =
+    top.length > 0
+      ? `Likely source(s): ${top
+          .map((c) => `${c.pkg} (${c.hits} ref${c.hits === 1 ? '' : 's'})`)
+          .join(', ')}.`
+      : 'Source attribution unavailable.';
+
+  logger.warn(
+    `Bundle contains ${matches.length} unresolved __dirname/__filename reference(s). ` +
+      `These will throw at runtime in ESM mode. ${attribution} ` +
+      `Declare the offending dep in its step package's "walkerOS.bundle.external" array. ` +
+      `Example: "walkerOS": { "bundle": { "external": ["@google-cloud/bigquery-storage"] } }. ` +
+      `(Suppress per-line with "// walkeros: dirname-ok".)`,
+  );
+}
+
+interface DirnameCandidate {
+  pkg: string;
+  hits: number;
+}
+
+async function attributeDirnameUse(
+  tempNodeModules: string,
+): Promise<DirnameCandidate[]> {
+  if (!(await fs.pathExists(tempNodeModules))) return [];
+  const out: DirnameCandidate[] = [];
+  const entries = await fs.readdir(tempNodeModules, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const pkgRoot = path.join(tempNodeModules, entry.name);
+    if (entry.name.startsWith('@')) {
+      const scoped = await fs.readdir(pkgRoot, { withFileTypes: true });
+      for (const sub of scoped) {
+        if (!sub.isDirectory()) continue;
+        const hits = await countDirnameHits(path.join(pkgRoot, sub.name));
+        if (hits > 0) out.push({ pkg: `${entry.name}/${sub.name}`, hits });
+      }
+    } else {
+      const hits = await countDirnameHits(pkgRoot);
+      if (hits > 0) out.push({ pkg: entry.name, hits });
+    }
+  }
+  return out.sort((a, b) => b.hits - a.hits);
+}
+
+async function countDirnameHits(pkgRoot: string): Promise<number> {
+  let total = 0;
+  const stack = [pkgRoot];
+  while (stack.length > 0) {
+    const dir = stack.pop()!;
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name !== 'node_modules' && e.name !== '.bin') stack.push(full);
+      } else if (/\.(js|mjs|cjs)$/.test(e.name)) {
+        try {
+          const c = await fs.readFile(full, 'utf-8');
+          const m = c.match(/\b__(dirname|filename)\b/g);
+          if (m) total += m.length;
+        } catch {
+          /* unreadable */
+        }
+      }
+    }
+  }
+  return total;
 }
 
 async function collectBundleStats(
@@ -609,6 +893,19 @@ async function collectBundleStats(
   };
 }
 
+/**
+ * Resolve the effective esbuild `target` for a build. Single source of truth
+ * shared between `createEsbuildOptions` (where esbuild actually compiles) and
+ * the L2 cache-key construction in `bundle()`. Drift between these two would
+ * silently alias different builds onto the same cache slot.
+ */
+function resolveTarget(buildOptions: BuildOptions): string {
+  return (
+    buildOptions.target ??
+    (buildOptions.platform === 'node' ? 'node18' : 'es2018')
+  );
+}
+
 function createEsbuildOptions(
   buildOptions: BuildOptions,
   entryPath: string,
@@ -616,6 +913,7 @@ function createEsbuildOptions(
   tempDir: string,
   packagePaths: Map<string, string>,
   logger: Logger.Instance,
+  packageExternals: Set<string> = new Set(),
 ): esbuild.BuildOptions {
   // Don't use aliases - they cause esbuild to bundle even external packages
   // Instead, use absWorkingDir to point to temp directory where node_modules is
@@ -656,25 +954,24 @@ function createEsbuildOptions(
     // For browser bundles, let users handle Node.js built-ins as needed
     baseOptions.external = buildOptions.external || [];
   } else if (buildOptions.platform === 'node') {
-    // Only Node.js built-ins are external — everything else gets bundled.
-    // This makes server bundles self-contained (no node_modules needed at runtime).
+    // Node builtins are always external. Step packages may also declare
+    // runtime-only deps (e.g. ones that load .proto files via __dirname)
+    // via `walkerOS.bundle.external` in their package.json — those stay
+    // external too and are resolved at deploy time via the sidecar
+    // package.json + sibling `node_modules/`.
     const nodeExternals = getNodeExternals();
+    const declaredExternals = [...packageExternals];
     baseOptions.external = buildOptions.external
-      ? [...nodeExternals, ...buildOptions.external]
-      : nodeExternals;
+      ? [...nodeExternals, ...declaredExternals, ...buildOptions.external]
+      : [...nodeExternals, ...declaredExternals];
 
     // createRequire shim is added in stage 2, not here.
     // Stage 1 produces importable ESM; stage 2 wraps it with the banner.
   }
 
-  // Set target if specified
-  if (buildOptions.target) {
-    baseOptions.target = buildOptions.target;
-  } else if (buildOptions.platform === 'node') {
-    baseOptions.target = 'node18';
-  } else {
-    baseOptions.target = 'es2018';
-  }
+  // Set target via shared resolver so the L2 cache key cannot drift from the
+  // value esbuild actually compiles against.
+  baseOptions.target = resolveTarget(buildOptions);
 
   return baseOptions;
 }
@@ -719,6 +1016,268 @@ export function getNodeExternals(): string[] {
     externals.push(mod, `node:${mod}`, `${mod}/*`, `node:${mod}/*`);
   }
   return externals;
+}
+
+/**
+ * Per-consumer record of a `walkerOS.bundle.external` declaration, paired
+ * with the consumer's `dependencies`/`peerDependencies` spec for the same
+ * external. The conflict detector keys on these to compare resolved
+ * versions against every consumer's stated range.
+ */
+export interface ExternalDeclaration {
+  external: string;
+  consumer: string;
+  spec: string;
+}
+
+/**
+ * Result of scanning step packages for `walkerOS.bundle.external`. `union`
+ * is the legacy flat set used by the bundler to mark esbuild externals;
+ * `declarations` is the per-consumer breakdown used by the cross-consumer
+ * conflict detector; `warnings` carries soft schema notes (e.g. typos under
+ * `walkerOS.bundle`) so the caller can log them without failing the build.
+ */
+export interface ExternalsScan {
+  union: Set<string>;
+  declarations: ExternalDeclaration[];
+  warnings: string[];
+}
+
+/**
+ * Read `walkerOS.bundle.external` arrays from each installed step package's
+ * package.json and return the union plus per-consumer declarations. Used by
+ * the node-platform bundler to mark runtime-only deps (e.g. ones that load
+ * `.proto` files via `__dirname`) as esbuild externals so they remain
+ * resolvable via a sibling `node_modules/` at deploy time.
+ *
+ * Per-package, malformed values are silently skipped — no package-level
+ * metadata error should fail an entire build. Unknown keys under
+ * `walkerOS.bundle` produce non-fatal warnings (likely typos).
+ *
+ * For each declared external, the spec is read from the consumer's
+ * `peerDependencies` first (the intended contract for runtime-only deps),
+ * falling back to `dependencies`. Externals declared without a matching
+ * entry in either map hard-error with an actionable message — the bundler
+ * cannot resolve a deterministic version without a declared spec.
+ */
+export async function readBundleExternals(
+  packagePaths: Map<string, string>,
+): Promise<ExternalsScan> {
+  const union = new Set<string>();
+  const declarations: ExternalDeclaration[] = [];
+  const warnings: string[] = [];
+
+  for (const [consumerName, pkgDir] of packagePaths) {
+    const pkgJsonPath = path.join(pkgDir, 'package.json');
+    let pkgJson: {
+      name?: string;
+      walkerOS?: { bundle?: Record<string, unknown> };
+      dependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+    };
+    try {
+      pkgJson = await fs.readJson(pkgJsonPath);
+    } catch {
+      continue;
+    }
+    const bundle = pkgJson.walkerOS?.bundle;
+    if (!bundle || typeof bundle !== 'object') continue;
+
+    // Schema warning: unknown keys under walkerOS.bundle (likely typos).
+    for (const key of Object.keys(bundle)) {
+      if (key !== 'external') {
+        warnings.push(
+          `Unknown walkerOS.bundle.${key} in ${pkgJson.name ?? consumerName} — did you mean walkerOS.bundle.external?`,
+        );
+      }
+    }
+
+    const declared = bundle.external;
+    if (!Array.isArray(declared)) continue;
+    for (const entry of declared) {
+      if (typeof entry !== 'string' || entry.length === 0) continue;
+      union.add(entry);
+      // peerDeps precedence over deps (peerDeps are the intended contract for
+      // runtime-only deps).
+      const peerSpec = pkgJson.peerDependencies?.[entry];
+      const depSpec = pkgJson.dependencies?.[entry];
+      const spec = peerSpec ?? depSpec;
+      if (!spec) {
+        throw new Error(
+          `Package ${pkgJson.name ?? consumerName} declares "${entry}" in walkerOS.bundle.external ` +
+            'but does not list it in dependencies or peerDependencies. ' +
+            'Add the dep with a pinned version range so the bundler can resolve a deterministic version.',
+        );
+      }
+      declarations.push({
+        external: entry,
+        consumer: pkgJson.name ?? consumerName,
+        spec,
+      });
+    }
+  }
+
+  return { union, declarations, warnings };
+}
+
+/**
+ * Detect cross-consumer version conflicts on `walkerOS.bundle.external`
+ * declarations. Two step packages may both declare the same external, and
+ * even when their declared ranges intersect (`semver.intersects`) the
+ * resolver may pick a single top-level version that doesn't satisfy one
+ * of them. This checker compares the RESOLVED version (from npm/pacote)
+ * against every consumer's declared range and hard-errors with a single
+ * grouped block per external listing every consumer — no pairwise spam.
+ *
+ * Wildcard (`*`) and tag specs (`latest`, etc.) are filtered out via
+ * `semver.validRange` since they're not actionable conflicts.
+ */
+export function detectExternalConflicts(
+  decls: ExternalDeclaration[],
+  resolvedVersions: Map<string, string>,
+): void {
+  const byExternal = new Map<string, ExternalDeclaration[]>();
+  for (const d of decls) {
+    if (!byExternal.has(d.external)) byExternal.set(d.external, []);
+    byExternal.get(d.external)!.push(d);
+  }
+
+  const blocks: string[] = [];
+  for (const [name, list] of byExternal) {
+    const resolved = resolvedVersions.get(name);
+    if (!resolved || !semver.valid(resolved)) continue;
+    const offenders = list.filter(
+      (d) =>
+        d.spec !== '*' &&
+        semver.validRange(d.spec) &&
+        !semver.satisfies(resolved, d.spec, { includePrerelease: true }),
+    );
+    if (offenders.length === 0) continue;
+
+    const lines = list
+      .map(
+        (d) =>
+          `    ${d.consumer}: ${d.spec}${
+            offenders.includes(d) ? '  <-- not satisfied by ' + resolved : ''
+          }`,
+      )
+      .join('\n');
+    blocks.push(
+      `  external "${name}" resolved to ${resolved}, but the following consumer(s) require an incompatible range:\n${lines}`,
+    );
+  }
+
+  if (blocks.length === 0) return;
+
+  throw new Error(
+    `walkerOS.bundle.external version conflict — resolved version does not satisfy all consumers:\n\n${blocks.join('\n\n')}\n\n` +
+      "Bump one consumer's `dependencies.foo` to a version range that overlaps the other, or remove one consumer from the flow. " +
+      'See https://walkeros.io/docs/apps/cli#bundle-externals for diagnosis.',
+  );
+}
+
+/**
+ * Write a minimal npm v3 lockfile next to the deploy artifact. Captures
+ * exact versions and registry URLs for every successfully installed external
+ * so deploy-time `npm ci --omit=dev` can reproduce the install graph without
+ * touching the network for resolution. Private to bundler.ts — callers go
+ * through `bundleCore`.
+ *
+ * Tarball URLs follow npm registry layout: `<registry>/<scope+name>/-/<basename>-<version>.tgz`,
+ * where the basename strips any leading scope. This matches what `npm install`
+ * writes and what `npm ci` expects.
+ */
+async function writeBundleLockfile(
+  outputDir: string,
+  installed: InstalledExternal[],
+  npmConfig: NpmConfig,
+  logger: Logger.Instance,
+): Promise<void> {
+  const sorted = [...installed].sort((a, b) => a.name.localeCompare(b.name));
+  const packages: Record<
+    string,
+    {
+      version?: string;
+      resolved?: string;
+      dependencies?: Record<string, string>;
+    }
+  > = {
+    '': {
+      dependencies: Object.fromEntries(sorted.map((p) => [p.name, p.version])),
+    },
+  };
+  for (const p of sorted) {
+    const basename = p.name.replace(/^@[^/]+\//, '');
+    packages[`node_modules/${p.name}`] = {
+      version: p.version,
+      resolved: `${npmConfig.registry}${p.name}/-/${basename}-${p.version}.tgz`,
+    };
+  }
+  const lock = {
+    name: 'walkeros-bundle',
+    version: '0.0.0',
+    lockfileVersion: 3,
+    requires: true,
+    packages,
+  };
+  const lockPath = path.join(outputDir, 'package-lock.json');
+  await fs.writeJson(lockPath, lock, { spaces: 2 });
+  logger.debug(`Wrote ${lockPath}`);
+}
+
+/**
+ * Write a sidecar package.json next to the bundle output listing externalized
+ * runtime deps. Versions come from the resolution graph (top-level first,
+ * then nested) so the sidecar reflects the same versions the install pipeline
+ * picked, with no disk lookup. Externals missing from the graph are warned
+ * and omitted. No-op when externals is empty or when none of them resolved.
+ */
+export async function writeSidecarPackageJson(
+  outputPath: string,
+  externals: Set<string>,
+  logger: Logger.Instance,
+  resolution: ResolutionResult,
+): Promise<void> {
+  if (externals.size === 0) return;
+
+  const dependencies: Record<string, string> = {};
+  for (const name of externals) {
+    const top = resolution.topLevel.get(name);
+    if (top?.version && top.version !== 'local') {
+      dependencies[name] = top.version;
+      continue;
+    }
+    const nested = resolution.nested.find((n) => n.name === name);
+    if (nested?.version) {
+      dependencies[name] = nested.version;
+      continue;
+    }
+    logger.warn(
+      `Sidecar: ${name} declared as external but no version resolved — skipping`,
+    );
+  }
+
+  if (Object.keys(dependencies).length === 0) return;
+
+  const sortedDeps: Record<string, string> = {};
+  for (const k of Object.keys(dependencies).sort()) {
+    sortedDeps[k] = dependencies[k];
+  }
+
+  const sidecarPath = path.join(path.dirname(outputPath), 'package.json');
+  await fs.writeJson(
+    sidecarPath,
+    {
+      name: 'walkeros-bundle',
+      private: true,
+      type: 'module',
+      dependencies: sortedDeps,
+    },
+    { spaces: 2 },
+  );
+  logger.info(
+    `Sidecar: ${sidecarPath} (${Object.keys(sortedDeps).length} deps)`,
+  );
 }
 
 /**

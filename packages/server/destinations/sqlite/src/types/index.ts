@@ -1,9 +1,15 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  SetupFn as CoreSetupFn,
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
 
+/**
+ * @deprecated Use `config.setup` instead. Kept for one minor cycle.
+ * `'auto'` maps to `setup: true`, `'manual'` maps to `setup: false`.
+ * Removed in the next major.
+ */
 export type SchemaMode = 'auto' | 'manual';
 
 /**
@@ -18,6 +24,11 @@ export interface SqliteClient {
    * Prepare a statement for repeated execution. Returned function binds args and runs.
    */
   prepare: (sql: string) => (args: ReadonlyArray<unknown>) => Promise<void>;
+  /** Run a query that returns rows. Used by setup() for sqlite_master and PRAGMA table_info. */
+  query: (
+    sql: string,
+    args?: ReadonlyArray<unknown>,
+  ) => Promise<ReadonlyArray<Record<string, unknown>>>;
   /** Close the connection. */
   close: () => Promise<void>;
 }
@@ -43,16 +54,28 @@ export interface SqliteSettings {
   /** Target table name. Defaults to `events`. */
   table?: string;
   /**
-   * `auto` runs `CREATE TABLE IF NOT EXISTS` with the canonical schema on init.
-   * `manual` skips CREATE TABLE. The user brings their own schema and mapping.
-   * Defaults to `auto`.
+   * @deprecated Use `config.setup` instead. Kept for one minor cycle.
+   * `'auto'` maps to `setup: true` (init runs CREATE TABLE for the legacy schema).
+   * `'manual'` maps to `setup: false`. Removed in the next major.
    */
   schema?: SchemaMode;
 
-  // Runtime -- set during init, not user-facing.
+  // Runtime, set during init/setup, not user-facing.
   _client?: SqliteClient;
   _runInsert?: (args: ReadonlyArray<unknown>) => Promise<void>;
   _ownedClient?: boolean;
+  /**
+   * Internal flag set by the migration shim. When true, init() runs the legacy
+   * 13-column CREATE TABLE path for backward compatibility. Otherwise init()
+   * assumes the table already exists (created via `walkeros setup destination.<id>`).
+   */
+  _legacyAutoCreate?: boolean;
+  /**
+   * Internal flag set by the migration shim. When true (legacy `schema: 'manual'`),
+   * init() skips the modern table-existence probe so the user can bring their own
+   * table and column shape without hitting the new "table not found" hard-fail.
+   */
+  _legacySkipProbe?: boolean;
 }
 
 export interface Settings {
@@ -67,7 +90,38 @@ export interface Mapping {
 }
 
 /**
- * Env -- optional driver override. Production leaves this undefined and the
+ * Provisioning options for `walkeros setup destination.<name>`.
+ * Triggered only by the explicit CLI command. Idempotent, never auto-run.
+ *
+ * Connection URL and target table are read from `settings.sqlite.url` and
+ * `settings.sqlite.table` (single source of truth, not duplicated here).
+ */
+export interface Setup {
+  /** Pragmas to apply at setup time. Defaults: journal_mode=WAL, synchronous=NORMAL, foreign_keys=ON, temp_store=MEMORY. */
+  pragmas?: Record<string, string | number>;
+  /** Schema columns. Default: 15-column walkerOS Event v4 canonical (only `name` REQUIRED). */
+  schema?: SetupColumn[];
+  /** Indexes to create after the table. Optional. */
+  indexes?: SetupIndex[];
+}
+
+/** Single column in the SQLite schema. */
+export interface SetupColumn {
+  name: string;
+  type: 'TEXT' | 'INTEGER' | 'REAL' | 'BLOB' | 'NUMERIC';
+  notNull?: boolean;
+  primaryKey?: boolean;
+}
+
+/** SQLite index definition. */
+export interface SetupIndex {
+  name: string;
+  columns: string[];
+  unique?: boolean;
+}
+
+/**
+ * Env, optional driver override. Production leaves this undefined and the
  * destination loads better-sqlite3 or @libsql/client dynamically. Tests
  * provide a factory via `SqliteDriver` or a pre-built client via `client`.
  */
@@ -76,7 +130,13 @@ export interface Env extends DestinationServer.Env {
   client?: SqliteClient;
 }
 
-export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
+export type Types = CoreDestination.Types<
+  Settings,
+  Mapping,
+  Env,
+  InitSettings,
+  Setup
+>;
 
 export interface Destination extends DestinationServer.Destination<Types> {
   init: DestinationServer.InitFn<Types>;
@@ -88,6 +148,7 @@ export type Config = {
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;
+export type SetupFn = CoreSetupFn<Config, Env>;
 export type PartialConfig = DestinationServer.PartialConfig<Types>;
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 

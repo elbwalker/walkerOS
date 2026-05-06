@@ -26,13 +26,14 @@ Platforms. Each source listens for CMP events and automatically calls
 
 ## Conditional activation with `require`
 
-Some sources and destinations shouldn't initialize right away. They may depend
-on consent status being resolved first, or need information provided by other
-sources (like session IDs). The `require` option solves this by deferring
-initialization until specific collector events have fired.
+Some sources and destinations shouldn't act on lifecycle events right away.
+They may depend on consent status being resolved first, or need information
+provided by other sources (like session IDs). The `require` option solves this
+by gating `on()` delivery (for sources) or initialization (for destinations)
+until specific collector events have fired.
 
-Add `require` to any source or destination `config` to hold it as **pending**
-until the listed events occur:
+Add `require` to any source or destination `config` to gate it on the listed
+events:
 
 <CodeSnippet
   code={`{
@@ -69,23 +70,31 @@ destination, all at once.
 
 ### How `require` works
 
-1. Sources and destinations with `require` are held as **pending** during
-   initialization
-2. Each time a collector event fires (e.g., `consent`, `session`, `user`), the
-   collector checks all pending items
-3. When all listed conditions are met, the source or destination initializes
-4. Destinations receive all previously queued events on activation, so no data is
-   lost
+1. Sources are registered immediately and their `Instance.init()` runs eagerly
+   after registration. `require` does not block init — it gates `on()`
+   delivery. Lifecycle events targeted at a source with unmet `require` are
+   buffered in `Instance.queueOn`.
+2. Destinations with `require` are held as **pending** during initialization
+   until their listed events fire.
+3. Each time a collector event fires (e.g., `consent`, `session`, `user`), the
+   collector decrements the matching entry from every source's and
+   destination's `require` list, then activates anything whose list is empty.
+4. Sources whose `require` just emptied have their queued lifecycle events
+   replayed via `source.on(type, data)`. Destinations whose `require` just
+   emptied initialize and receive all previously queued events, so no data is
+   lost.
 
 ### Key points
 
-- **CMP sources must not have `require`**: they need to initialize immediately
-  to detect consent
+- **CMP sources must not have `require`**: they need to fire consent
+  immediately, so the collector should be able to call `on('consent', …)` on
+  them right away
 - **Accepted values**: any collector event type, such as `"consent"`, `"session"`,
   `"user"`, `"run"`, `"config"`, `"globals"`, etc.
 - **AND logic**: `require: ["consent", "session"]` waits for **both** events
-- **Cascading**: a CMP source fires `consent` → session source activates and
-  fires `session` → a dataLayer source waiting for `["session"]` activates next
+- **Cascading**: a CMP source fires `consent` → session source's require
+  clears, its queued `on('consent', …)` replays, it fires `session` → a
+  dataLayer source waiting for `["session"]` clears next
 
 ## How CMP sources work
 

@@ -5,15 +5,21 @@ type ExecuteFn = (sql: string, args?: ReadonlyArray<unknown>) => Promise<void>;
 type PrepareFn = (
   sql: string,
 ) => (args: ReadonlyArray<unknown>) => Promise<void>;
+type QueryFn = (
+  sql: string,
+  args?: ReadonlyArray<unknown>,
+) => Promise<ReadonlyArray<Record<string, unknown>>>;
 type CloseFn = () => Promise<void>;
 
 const asyncExecute: ExecuteFn = () => Promise.resolve();
 const asyncClose: CloseFn = () => Promise.resolve();
 const asyncPrepare: PrepareFn = () => () => Promise.resolve();
+const asyncQuery: QueryFn = () => Promise.resolve([]);
 
 const mockClient: SqliteClient = {
   execute: asyncExecute,
   prepare: asyncPrepare,
+  query: asyncQuery,
   close: asyncClose,
 };
 

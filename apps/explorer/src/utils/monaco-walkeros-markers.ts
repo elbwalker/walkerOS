@@ -1,11 +1,4 @@
-import {
-  REF_VAR,
-  REF_DEF,
-  REF_ENV,
-  REF_FLOW,
-  REF_STORE,
-  REF_SECRET,
-} from '@walkeros/core';
+import { REF_ENV, REF_FLOW, REF_STORE, REF_SECRET } from '@walkeros/core';
 import type { IntelliSenseContext } from '../types/intellisense';
 
 export interface ValidationIssue {
@@ -41,30 +34,16 @@ export function validateWalkerOSReferences(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  // Check $var. references
+  // Check $var. references (supports deep paths: $var.name.deep.path)
   if (context.variables) {
-    const varRegex = inlineGlobal(REF_VAR);
+    const varRegex =
+      /\$var\.([a-zA-Z_][a-zA-Z0-9_]*)(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*/g;
     let match: RegExpExecArray | null;
     while ((match = varRegex.exec(text)) !== null) {
-      if (!(match[1] in context.variables)) {
+      const name = match[1];
+      if (!(name in context.variables)) {
         issues.push({
-          message: `Unknown variable "$var.${match[1]}". Defined variables: ${Object.keys(context.variables).join(', ') || 'none'}`,
-          severity: 'warning',
-          startIndex: match.index,
-          endIndex: match.index + match[0].length,
-        });
-      }
-    }
-  }
-
-  // Check $def. references
-  if (context.definitions) {
-    const defRegex = inlineGlobal(REF_DEF);
-    let match: RegExpExecArray | null;
-    while ((match = defRegex.exec(text)) !== null) {
-      if (!(match[1] in context.definitions)) {
-        issues.push({
-          message: `Unknown definition "$def.${match[1]}". Defined: ${Object.keys(context.definitions).join(', ') || 'none'}`,
+          message: `Unknown variable "$var.${name}". Defined variables: ${Object.keys(context.variables).join(', ') || 'none'}`,
           severity: 'warning',
           startIndex: match.index,
           endIndex: match.index + match[0].length,

@@ -14,6 +14,14 @@ export * as Source from './source';
 export * as Store from './store';
 export * as Trigger from './trigger';
 export * as Lifecycle from './lifecycle';
+// Direct re-exports so consumers can write `import { SetupFn } from '@walkeros/core'`
+// instead of `import { Lifecycle } from '@walkeros/core'; type X = Lifecycle.SetupFn`.
+export type {
+  LifecycleContext,
+  SetupFn,
+  DestroyFn,
+  DestroyContext,
+} from './lifecycle';
 export * as WalkerOS from './walkeros';
 export * as Simulation from './simulation';
 export * as Matcher from './matcher';

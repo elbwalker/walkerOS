@@ -52,11 +52,64 @@ export const sourceMySource: Source.Init<Types> = async (context) => {
 | ------------- | ----------------------------------- |
 | `push(input)` | Receive external input, emit events |
 
+### Init Method
+
+`init?: () => void | Promise<void>` — Optional eager-startup hook on the
+returned `Source.Instance`. The factory must be **side-effect-free**: build the
+instance and return it. The collector calls `init()` on every source eagerly
+after all factories register, regardless of `config.require`. Use `init` for
+work that previously sat in the factory body: draining a pre-init window queue
+(e.g., `window.elbLayer`), attaching DOM listeners, opening sockets,
+intercepting `window.dataLayer`. After `init` runs the collector flips
+`Source.Config.init` to `true`.
+
+### queueOn Buffer
+
+`queueOn?: Array<{ type: On.Types; data: unknown }>` — Optional buffer on the
+`Source.Instance` for lifecycle events delivered before the source is
+**started** (started ≡ `config.init === true && !config.require?.length`). The
+collector pushes `{ type, data }` here when it would otherwise call
+`source.on(type, data)`. Once the source becomes started, the collector replays
+each entry via `source.on(...)` and clears the queue.
+
 ### Destroy Method
 
 `destroy?: DestroyFn` — Optional cleanup method. Called during
 `command('shutdown')`. Use to close HTTP servers, timers, or connections.
 Receives `{ id, config, env, logger }`.
+
+## Source Lifecycle
+
+The collector and every source agree on three lifecycle markers, all on
+`Source.Config`:
+
+| Field                | Purpose                                                                                                                                 |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `init?: boolean`     | Set by the collector to `true` after `Instance.init()` resolves. Authors do not write to it. Reflects "init has run", not "is started". |
+| `require?: string[]` | Author-supplied. Lists collector events that must fire before this source receives `on()` calls. Decremented in place as events fire.   |
+| `disabled?: boolean` | Hard skip — no factory invocation, no init, no event capture.                                                                           |
+
+The flow is:
+
+1. **Register** — collector invokes the factory. Factory returns a fresh
+   `Source.Instance` with no side effects.
+2. **Init pass** — collector calls `Instance.init()` on every registered source,
+   then sets `config.init = true`.
+3. **Lifecycle delivery** — for each collector event (`consent`, `user`,
+   `session`, `run`, …) the collector decrements every source's `require` in
+   place. If a source is started, it calls `source.on(type, data)` directly.
+   Otherwise it pushes `{ type, data }` into `Instance.queueOn`.
+4. **Replay** — when a source becomes started (require empties), the collector
+   replays its `queueOn` via `source.on(...)` and clears the queue.
+
+`require` therefore gates **`on()` delivery**, not code execution.
+`Instance.init()` always runs eagerly. There is no `collector.pending.sources`
+map — per-source state lives entirely on `Source.Instance` and `Source.Config`.
+
+This mirrors the destination model: `Destination.Instance.init` handles one-time
+bootstrap, `Destination.Config.init` is the collector-managed "init has run"
+flag, and `Destination.Config.require` gates event delivery the same way. See
+[walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md).
 
 ## Push Signatures by Type
 
@@ -228,6 +281,27 @@ The trigger lazily calls `startFlow(config)` on first invocation. Tests capture
 events via spy destinations. See
 [using-step-examples](../walkeros-using-step-examples/SKILL.md) for testing
 patterns.
+
+## Setup (optional)
+
+Sources can implement an optional `setup()` lifecycle to provision external
+resources, for example registering a webhook with a third-party provider,
+creating a Pub/Sub subscription, or pre-allocating queue resources. Setup is
+**never** invoked by the runtime, push, init, or deploy. It runs only when an
+operator explicitly types `walkeros setup source.<name>`.
+
+The signature is
+`(ctx: LifecycleContext<Config<T>, Env<T>>) => Promise<unknown>`, where
+`LifecycleContext` carries `{ id, config, env, logger }`. Idempotency is the
+package's responsibility: the framework adds no opinion. Use
+`resolveSetup(ctx.config.setup, DEFAULTS)` from `@walkeros/core` to normalize
+the `boolean | object` shape into a concrete options object.
+
+See [walkeros-create-source](../walkeros-create-source/SKILL.md),
+[walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md),
+[walkeros-understanding-stores](../walkeros-understanding-stores/SKILL.md), and
+the `walkeros setup` CLI documentation for the authoring template and operator
+workflow.
 
 ## Related Skills
 

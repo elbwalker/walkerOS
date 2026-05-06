@@ -4,8 +4,8 @@ import type { IntelliSenseContext, PackageInfo } from '../types/intellisense';
  * Extract IntelliSense context from a Flow.Json JSON string.
  *
  * Parses the JSON, walks root → flow → steps, and collects
- * all discoverable variables, definitions, step names, packages,
- * platform, and contract entities.
+ * all discoverable variables, step names, packages, platform, and
+ * contract entities.
  *
  * Returns `{}` for invalid JSON or non-Flow structures.
  * Pure function, no side effects, no state.
@@ -22,8 +22,7 @@ export function extractFlowIntelliSenseContext(
 
   if (!isFlowConfig(parsed)) return {};
 
-  const variables: Record<string, string | number | boolean> = {};
-  const definitions: Record<string, unknown> = {};
+  const variables: Record<string, unknown> = {};
   const sources: string[] = [];
   const destinations: string[] = [];
   const transformers: string[] = [];
@@ -35,7 +34,6 @@ export function extractFlowIntelliSenseContext(
 
   // Config-level
   mergeVars(variables, parsed.variables);
-  mergeDefs(definitions, parsed.definitions);
   extractContract(contractEntities, parsed.contract);
   if (isObject(parsed.contract)) Object.assign(contractRaw, parsed.contract);
 
@@ -49,9 +47,8 @@ export function extractFlowIntelliSenseContext(
       if (p === 'web' || p === 'server') platform = p;
     }
 
-    // Settings-level variables/definitions/contract
+    // Settings-level variables/contract
     mergeVars(variables, settings.variables);
-    mergeDefs(definitions, settings.definitions);
     extractContract(contractEntities, settings.contract);
     if (isObject(settings.contract))
       Object.assign(contractRaw, settings.contract);
@@ -62,7 +59,6 @@ export function extractFlowIntelliSenseContext(
         sources.push(name);
         if (isObject(ref)) {
           mergeVars(variables, ref.variables);
-          mergeDefs(definitions, ref.definitions);
           if (typeof ref.package === 'string') {
             packages.push({
               package: ref.package,
@@ -81,7 +77,6 @@ export function extractFlowIntelliSenseContext(
         destinations.push(name);
         if (isObject(ref)) {
           mergeVars(variables, ref.variables);
-          mergeDefs(definitions, ref.definitions);
           if (typeof ref.package === 'string') {
             packages.push({
               package: ref.package,
@@ -100,7 +95,6 @@ export function extractFlowIntelliSenseContext(
         transformers.push(name);
         if (isObject(ref)) {
           mergeVars(variables, ref.variables);
-          mergeDefs(definitions, ref.definitions);
           if (typeof ref.package === 'string') {
             packages.push({
               package: ref.package,
@@ -113,13 +107,12 @@ export function extractFlowIntelliSenseContext(
       }
     }
 
-    // Stores — collect IDs and cascade their variables/definitions
+    // Stores — collect IDs and cascade their variables
     if (isObject(settings.stores)) {
       for (const [name, ref] of Object.entries(settings.stores)) {
         stores.push(name);
         if (isObject(ref)) {
           mergeVars(variables, ref.variables);
-          mergeDefs(definitions, ref.definitions);
         }
       }
     }
@@ -127,7 +120,6 @@ export function extractFlowIntelliSenseContext(
 
   const result: Partial<IntelliSenseContext> = {
     variables,
-    definitions,
     stepNames: { sources, destinations, transformers },
   };
 
@@ -154,23 +146,7 @@ function isFlowConfig(v: unknown): v is {
   return isObject(v) && 'version' in v && 'flows' in v && isObject(v.flows);
 }
 
-function isPrimitive(v: unknown): v is string | number | boolean {
-  return (
-    typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
-  );
-}
-
-function mergeVars(
-  target: Record<string, string | number | boolean>,
-  source: unknown,
-): void {
-  if (!isObject(source)) return;
-  for (const [k, v] of Object.entries(source)) {
-    if (isPrimitive(v)) target[k] = v;
-  }
-}
-
-function mergeDefs(target: Record<string, unknown>, source: unknown): void {
+function mergeVars(target: Record<string, unknown>, source: unknown): void {
   if (!isObject(source)) return;
   for (const [k, v] of Object.entries(source)) {
     target[k] = v;

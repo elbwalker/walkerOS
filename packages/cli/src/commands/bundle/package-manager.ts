@@ -1,20 +1,81 @@
 import pacote from 'pacote';
 import path from 'path';
 import fs from 'fs-extra';
+import { readFile } from 'fs/promises';
+import os from 'os';
 import semver from 'semver';
 import { resolveLocalPackage, copyLocalPackage } from '../../core/index.js';
 import type { Logger } from '@walkeros/core';
 import { getPackageCacheKey } from '../../core/cache-utils.js';
 import { getTmpPath } from '../../core/tmp.js';
 
-const PACKAGE_DOWNLOAD_TIMEOUT_MS = 60000;
-const PACOTE_OPTS = {
-  registry: 'https://registry.npmjs.org',
+export const PACKAGE_DOWNLOAD_TIMEOUT_MS = 60000;
+
+export interface NpmConfig {
+  registry: string;
+  [key: string]: unknown;
+}
+
+export const PACOTE_OPTS: NpmConfig = {
+  registry: 'https://registry.npmjs.org/',
   preferOnline: true,
   where: undefined,
 };
 
-async function withTimeout<T>(
+/**
+ * Walks user + project .npmrc files and merges into a flat config object
+ * pacote consumes. Project-level overrides user-level. Tiny INI parser
+ * (no sections, surrounding quotes stripped, ${VAR} expansion preserves
+ * literal on miss so silent auth failures become loud).
+ */
+export async function loadNpmConfigForPacote(
+  projectDir = process.cwd(),
+  homeDir = os.homedir(),
+): Promise<NpmConfig> {
+  const merged: Record<string, string> = {};
+  const sources = [
+    path.join(homeDir, '.npmrc'),
+    path.join(projectDir, '.npmrc'),
+  ];
+  for (const file of sources) {
+    let content: string;
+    try {
+      content = await readFile(file, 'utf-8');
+    } catch {
+      continue;
+    }
+    for (const rawLine of content.split('\n')) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#') || line.startsWith(';')) continue;
+      const eq = line.indexOf('=');
+      if (eq < 0) continue;
+      const key = line.slice(0, eq).trim();
+      let value = line.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      value = value.replace(
+        /\$\{([^}]+)\}/g,
+        (match, v) => process.env[v] ?? match,
+      );
+      merged[key] = value;
+    }
+  }
+  let registry = merged['registry'] ?? 'https://registry.npmjs.org/';
+  if (!registry.endsWith('/')) registry = `${registry}/`;
+  for (const key of Object.keys(merged)) {
+    if (key.endsWith(':registry') && key.startsWith('@')) {
+      const v = merged[key];
+      if (!v.endsWith('/')) merged[key] = `${v}/`;
+    }
+  }
+  return { ...merged, registry, preferOnline: true };
+}
+
+export async function withTimeout<T>(
   promise: Promise<T>,
   ms: number,
   errorMessage: string,
@@ -88,6 +149,7 @@ export async function collectAllSpecs(
   logger: Logger.Instance,
   configDir?: string,
   overrides: Record<string, string> = {},
+  npmConfig: NpmConfig = PACOTE_OPTS,
 ): Promise<Map<string, VersionSpec[]>> {
   const allSpecs = new Map<string, VersionSpec[]>();
   const visited = new Set<string>();
@@ -227,7 +289,7 @@ export async function collectAllSpecs(
     let manifest: ManifestWithMeta;
     try {
       manifest = await withTimeout(
-        pacote.manifest(`${item.name}@${item.spec}`, PACOTE_OPTS),
+        pacote.manifest(`${item.name}@${item.spec}`, npmConfig),
         PACKAGE_DOWNLOAD_TIMEOUT_MS,
         `Manifest fetch timed out: ${item.name}@${item.spec}`,
       );
@@ -424,6 +486,11 @@ export function resolveVersionConflicts(
 // Phase 3: Install resolved packages
 // ============================================================
 
+export interface DownloadResult {
+  packagePaths: Map<string, string>;
+  resolution: ResolutionResult;
+}
+
 export async function downloadPackages(
   packages: Package[],
   targetDir: string,
@@ -432,7 +499,94 @@ export async function downloadPackages(
   configDir?: string,
   tmpDir?: string,
   overrides: Record<string, string> = {},
+  npmConfig: NpmConfig = PACOTE_OPTS,
 ): Promise<Map<string, string>> {
+  const result = await downloadPackagesImpl(
+    packages,
+    targetDir,
+    logger,
+    useCache,
+    configDir,
+    tmpDir,
+    overrides,
+    npmConfig,
+  );
+  return result.packagePaths;
+}
+
+/**
+ * Same as `downloadPackages`, but also returns the ResolutionResult.
+ * Used by Task 4's installExternalsViaPacote which needs the resolution
+ * graph to compute the install closure. Existing `downloadPackages` is
+ * unchanged for backward compat (CLI bumps MINOR, not MAJOR).
+ */
+export async function downloadPackagesWithResolution(
+  packages: Package[],
+  targetDir: string,
+  logger: Logger.Instance,
+  useCache = true,
+  configDir?: string,
+  tmpDir?: string,
+  overrides: Record<string, string> = {},
+  npmConfig: NpmConfig = PACOTE_OPTS,
+): Promise<DownloadResult> {
+  return downloadPackagesImpl(
+    packages,
+    targetDir,
+    logger,
+    useCache,
+    configDir,
+    tmpDir,
+    overrides,
+    npmConfig,
+  );
+}
+
+/**
+ * Hard-error when any manifest in the install closure declares a lifecycle
+ * script that pacote.extract does NOT run. Pacote.extract is data-only;
+ * postinstall scripts mean the package would arrive half-built (e.g. bcrypt,
+ * sharp, legacy @grpc/grpc-js precompiled binaries). Listing all offenders
+ * in one message per FL-3 review.
+ */
+export function assertNoPostinstallScripts(
+  manifests: Map<string, { scripts?: Record<string, string> }>,
+): void {
+  const LIFECYCLE = ['preinstall', 'install', 'postinstall'] as const;
+  const offenders: { name: string; scripts: string[] }[] = [];
+  for (const [name, manifest] of manifests) {
+    const scripts = manifest.scripts ?? {};
+    const present = LIFECYCLE.filter((s) => typeof scripts[s] === 'string');
+    if (present.length > 0) offenders.push({ name, scripts: present });
+  }
+  if (offenders.length === 0) return;
+  const list = offenders
+    .map((o) => `  - ${o.name} (${o.scripts.join(', ')})`)
+    .join('\n');
+  throw new Error(
+    `walkerOS bundle cannot auto-install the following package(s) because they declare lifecycle scripts that pacote.extract does NOT run:\n${list}\n\n` +
+      'These packages would arrive in node_modules/ in a half-built state. ' +
+      'Either: (a) ask the package author to file an issue requesting walkerOS support, or ' +
+      '(b) build your bundle in a Dockerfile that runs `npm install` separately as a downstream step.',
+  );
+}
+
+/**
+ * Shared body for `downloadPackages` and `downloadPackagesWithResolution`.
+ * Returns both the installed package paths and the underlying ResolutionResult
+ * so Task 4 can walk the closure for pacote-based install. Public `downloadPackages`
+ * discards the resolution and returns just the Map<name, path> for backward compat.
+ */
+async function downloadPackagesImpl(
+  packages: Package[],
+  targetDir: string,
+  logger: Logger.Instance,
+  useCache: boolean,
+  configDir: string | undefined,
+  tmpDir: string | undefined,
+  overrides: Record<string, string>,
+  npmConfig: NpmConfig,
+): Promise<DownloadResult> {
   const packagePaths = new Map<string, string>();
 
   // Track user-specified packages (only these are logged)
@@ -448,10 +602,12 @@ export async function downloadPackages(
     logger,
     configDir,
     overrides,
+    npmConfig,
   );
 
   // Phase 2: Resolve conflicts
-  const { topLevel, nested } = resolveVersionConflicts(allSpecs, logger);
+  const resolution = resolveVersionConflicts(allSpecs, logger);
+  const { topLevel, nested } = resolution;
 
   // Phase 3: Install each resolved package exactly once
   await fs.ensureDir(targetDir);
@@ -507,7 +663,7 @@ export async function downloadPackages(
         process.env.NPM_CACHE_DIR || getTmpPath(tmpDir, 'cache', 'npm');
       await withTimeout(
         pacote.extract(packageSpec, packageDir, {
-          ...PACOTE_OPTS,
+          ...npmConfig,
           cache: cacheDir,
         }),
         PACKAGE_DOWNLOAD_TIMEOUT_MS,
@@ -541,7 +697,7 @@ export async function downloadPackages(
     if (!semver.valid(nestedPkg.version)) {
       try {
         const manifest = await withTimeout(
-          pacote.manifest(resolvedSpec, PACOTE_OPTS),
+          pacote.manifest(resolvedSpec, npmConfig),
           PACKAGE_DOWNLOAD_TIMEOUT_MS,
           `Manifest fetch timed out: ${resolvedSpec}`,
         );
@@ -565,7 +721,7 @@ export async function downloadPackages(
           process.env.NPM_CACHE_DIR || getTmpPath(tmpDir, 'cache', 'npm');
         await withTimeout(
           pacote.extract(resolvedSpec, nestedDir, {
-            ...PACOTE_OPTS,
+            ...npmConfig,
             cache: cacheDir,
           }),
           PACKAGE_DOWNLOAD_TIMEOUT_MS,
@@ -580,7 +736,7 @@ export async function downloadPackages(
     }
   }
 
-  return packagePaths;
+  return { packagePaths, resolution };
 }
 
 // ============================================================

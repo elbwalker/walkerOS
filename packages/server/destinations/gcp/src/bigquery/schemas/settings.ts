@@ -14,7 +14,7 @@ export const SettingsSchema = z.object({
   datasetId: z
     .string()
     .min(1)
-    .default('walkeros')
+    .default('walkerOS')
     .describe(
       'BigQuery dataset ID where events will be stored (like walker_events)',
     ),

@@ -23,8 +23,7 @@ describe('destination modes (disabled/mock)', () => {
       user: {},
       consent: {},
       queue: [],
-      pending: { destinations: {}, sources: {}, transformers: {}, stores: {} },
-      pendingSources: [],
+      pending: { destinations: {}, transformers: {}, stores: {} },
       transformers: {},
       sources: {},
       status: {

@@ -7,51 +7,14 @@
     }
   ],
   "definitions": {
-    "FlowPrimitive": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "boolean"
-        }
-      ],
-      "title": "Flow.Primitive",
-      "description": "Primitive value: string, number, or boolean."
-    },
     "FlowVariables": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
-      "additionalProperties": {
-        "description": "Primitive value: string, number, or boolean",
-        "allOf": [
-          {
-            "$ref": "#/definitions/FlowPrimitive"
-          }
-        ]
-      },
+      "additionalProperties": {},
       "title": "Flow.Variables",
-      "description": "Variables for interpolation (string/number/boolean values)."
-    },
-    "FlowDefinition": {
-      "title": "Flow.Definition",
-      "description": "Single named definition value (arbitrary shape)."
-    },
-    "FlowDefinitions": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "$ref": "#/definitions/FlowDefinition"
-      },
-      "title": "Flow.Definitions",
-      "description": "Reusable configuration definitions referenced via $def.name."
+      "description": "Reusable values referenced via $var.name (with optional deep paths). Whole-string refs preserve native type; inline interpolation requires scalars."
     },
     "FlowContractSchemaEntry": {
       "type": "object",
@@ -296,6 +259,25 @@
       "description": "Inline code block for custom sources / transformers / destinations / stores."
     },
     "FlowSourceConfig": {
+      "type": "object",
+      "properties": {
+        "setup": {
+          "description": "One-time setup options applied during source registration (boolean enables defaults, object configures specifics)",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          ]
+        }
+      },
+      "additionalProperties": {},
       "title": "Source.Config",
       "description": "Source-specific configuration object (Source.Config)."
     },
@@ -765,14 +747,6 @@
             }
           ]
         },
-        "definitions": {
-          "description": "Source-level definitions (highest priority in cascade)",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowDefinitions"
-            }
-          ]
-        },
         "next": {
           "description": "Pre-collector transformer chain. String, string[], or NextRule[] for conditional routing based on ingest data.",
           "allOf": [
@@ -811,6 +785,25 @@
       "description": "Source package reference with configuration, env, chains, and examples."
     },
     "FlowDestinationConfig": {
+      "type": "object",
+      "properties": {
+        "setup": {
+          "description": "One-time setup options applied during destination registration (boolean enables defaults, object configures specifics)",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          ]
+        }
+      },
+      "additionalProperties": {},
       "title": "Destination.Config",
       "description": "Destination-specific configuration object."
     },
@@ -863,14 +856,6 @@
           "allOf": [
             {
               "$ref": "#/definitions/FlowVariables"
-            }
-          ]
-        },
-        "definitions": {
-          "description": "Destination-level definitions (highest priority in cascade)",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowDefinitions"
             }
           ]
         },
@@ -983,14 +968,6 @@
             }
           ]
         },
-        "definitions": {
-          "description": "Transformer-level definitions (highest priority in cascade)",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowDefinitions"
-            }
-          ]
-        },
         "examples": {
           "description": "Named step examples for testing and documentation (stripped during bundling)",
           "allOf": [
@@ -1013,6 +990,25 @@
       "description": "Transformer package reference with configuration, env, chains, and cache."
     },
     "FlowStoreConfig": {
+      "type": "object",
+      "properties": {
+        "setup": {
+          "description": "One-time setup options applied during store registration (boolean enables defaults, object configures specifics)",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          ]
+        }
+      },
+      "additionalProperties": {},
       "title": "Store.Config",
       "description": "Store-specific configuration object."
     },
@@ -1065,14 +1061,6 @@
           "allOf": [
             {
               "$ref": "#/definitions/FlowVariables"
-            }
-          ]
-        },
-        "definitions": {
-          "description": "Store-level definitions (highest priority in cascade)",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowDefinitions"
             }
           ]
         },
@@ -1179,14 +1167,6 @@
               "$ref": "#/definitions/FlowVariables"
             }
           ]
-        },
-        "definitions": {
-          "description": "Flow-level definitions (extend root definitions, overridden by source/destination definitions)",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowDefinitions"
-            }
-          ]
         }
       },
       "additionalProperties": false,
@@ -1214,18 +1194,10 @@
           }
         },
         "variables": {
-          "description": "Shared variables for interpolation across all flows (use $var.name syntax)",
+          "description": "Shared variables for interpolation across all flows (use $var.name syntax, deep paths supported)",
           "allOf": [
             {
               "$ref": "#/definitions/FlowVariables"
-            }
-          ]
-        },
-        "definitions": {
-          "description": "Reusable configuration definitions (use $def.name syntax)",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowDefinitions"
             }
           ]
         },
@@ -1256,7 +1228,7 @@
       "required": ["version", "flows"],
       "additionalProperties": false,
       "title": "Flow.Json",
-      "description": "walkerOS root configuration (walkeros.config.json) v4: version, variables, definitions, contract, named flows."
+      "description": "walkerOS root configuration (walkeros.config.json) v4: version, variables, contract, named flows."
     }
   }
 }

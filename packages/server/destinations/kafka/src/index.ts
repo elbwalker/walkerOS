@@ -9,6 +9,7 @@ import type {
 } from './types';
 import { getConfig, isKafkaEnv } from './config';
 import { push } from './push';
+import { setup } from './setup';
 
 // Types re-export
 export * as DestinationKafka from './types';
@@ -17,6 +18,8 @@ export const destinationKafka: Destination = {
   type: 'kafka',
 
   config: {},
+
+  setup,
 
   async init({ config: partialConfig, logger, env }) {
     const config = getConfig(partialConfig, logger);

@@ -244,8 +244,15 @@ describe('Translation Layer', () => {
         ['page', { title: 'Test' }, 'load'],
       ];
 
-      // Initialize source - should process existing commands
-      await createBrowserSource(collector, { pageview: false });
+      // Initialize source - should process existing commands.
+      // `runOnInit: true` drives on('run') so non-walker events drain.
+      await createBrowserSource(
+        collector,
+        { pageview: false },
+        {
+          runOnInit: true,
+        },
+      );
 
       // Should have processed both events with source info
       expect(mockPush).toHaveBeenCalledWith(

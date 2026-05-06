@@ -319,11 +319,11 @@ export const VariablesEditor: Story = {
 };
 
 /**
- * Visual coloring of `$var.`, `$def.`, `$secret.`, `$env.`, `$code:` references
+ * Visual coloring of `$var.`, `$secret.`, `$env.`, `$code:` references
  *
  * Decorations are applied automatically for JSON content. Each reference type
- * is colored differently: variables=cyan italic, definitions=green italic,
- * secrets/env=amber italic, code=purple.
+ * is colored differently: variables=cyan italic, secrets/env=amber italic,
+ * code=purple.
  *
  * **How to verify:** Each reference value should be colored differently
  * in the editor.
@@ -336,7 +336,7 @@ export const ReferenceDecorations: Story = {
           measurementId: '$var.gaId',
           apiKey: '$secret.apiKey',
           endpoint: '$env.API_URL',
-          transform: '$def.cleanEvent',
+          mapping: '$var.cleanEvent',
           code: '$code:myFunction',
         },
         null,
@@ -359,8 +359,8 @@ export const ReferenceDecorations: Story = {
 /**
  * Dynamic Flow Context — self-referencing IntelliSense
  *
- * Edit the flow JSON and variables/definitions you define become immediately
- * available as `$var.` and `$def.` completions in the same editor.
+ * Edit the flow JSON and the variables you define become immediately
+ * available as `$var.` completions in the same editor (scalars and structures).
  *
  * **How to verify:**
  * - Add a variable in the `"variables"` section (e.g., `"myVar": "hello"`)
@@ -375,8 +375,11 @@ export const DynamicFlowContext: Story = {
       JSON.stringify(
         {
           version: 4,
-          variables: { gaId: 'G-XXXXXXXXXX', debug: false },
-          definitions: { cleanEvent: { filter: true } },
+          variables: {
+            gaId: 'G-XXXXXXXXXX',
+            debug: false,
+            cleanEvent: { filter: true },
+          },
           flows: {
             default: {
               config: { platform: 'web' },

@@ -220,8 +220,8 @@ describe('Source', () => {
     });
   });
 
-  describe('source require deferral', () => {
-    test('source with require is deferred, not initialized', async () => {
+  describe('source require gating', () => {
+    test('source with require is registered but not started', async () => {
       const mockInit = jest.fn().mockResolvedValue({
         type: 'deferred',
         config: {},
@@ -237,12 +237,16 @@ describe('Source', () => {
         },
       });
 
-      expect(mockInit).not.toHaveBeenCalled();
-      expect(collector.sources['deferred']).toBeUndefined();
-      expect(collector.pending.sources['deferred']).toBeDefined();
+      // Factory runs eagerly at registration (regardless of require).
+      expect(mockInit).toHaveBeenCalledTimes(1);
+      // Source is registered in collector.sources from the start.
+      expect(collector.sources['deferred']).toBeDefined();
+      // Not yet "started": require still has the pending entry.
+      expect(collector.sources['deferred'].config.require).toContain('consent');
+      expect(collector.sources['deferred'].config.init).toBe(true);
     });
 
-    test('source without require inits immediately (backward compat)', async () => {
+    test('source without require is started immediately', async () => {
       const mockInit = jest.fn().mockResolvedValue({
         type: 'immediate',
         config: {},
@@ -257,7 +261,11 @@ describe('Source', () => {
 
       expect(mockInit).toHaveBeenCalledTimes(1);
       expect(collector.sources['immediate']).toBeDefined();
-      expect(Object.keys(collector.pending.sources)).toHaveLength(0);
+      // Started: init flag flipped, no require gating.
+      expect(collector.sources['immediate'].config.init).toBe(true);
+      expect(collector.sources['immediate'].config.require?.length || 0).toBe(
+        0,
+      );
     });
   });
 

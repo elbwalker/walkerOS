@@ -33,6 +33,9 @@ function makeClientSpy(): {
         calls.push({ kind: 'run', sql, args });
       };
     },
+    async query() {
+      return [];
+    },
     async close() {
       calls.push({ kind: 'close' });
     },
@@ -52,7 +55,7 @@ describe('init', () => {
     ).rejects.toThrow('sqlite.url');
   });
 
-  it('throws when schema=manual without mapping', async () => {
+  it('throws when schema=manual without mapping (legacy path) and emits deprecation WARN', async () => {
     const logger = makeLogger();
     await expect(
       destinationSQLite.init({
@@ -63,14 +66,17 @@ describe('init', () => {
         id: 'test',
       } as never),
     ).rejects.toThrow('manual');
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('config.settings.sqlite.schema is deprecated'),
+    );
   });
 
-  it('uses env.client when provided and does not mark it owned', async () => {
+  it('uses env.client when provided (legacy schema=auto) and does not mark it owned', async () => {
     const logger = makeLogger();
     const { client, calls } = makeClientSpy();
 
     const result = await destinationSQLite.init({
-      config: { settings: { sqlite: { url: ':memory:' } } },
+      config: { settings: { sqlite: { url: ':memory:', schema: 'auto' } } },
       env: { client },
       logger,
       id: 'test',
@@ -82,9 +88,12 @@ describe('init', () => {
     expect(calls[0].kind).toBe('execute');
     expect(calls[0].sql).toMatch(/^CREATE TABLE IF NOT EXISTS events/);
     expect(calls.some((c) => c.kind === 'prepare')).toBe(true);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('config.settings.sqlite.schema is deprecated'),
+    );
   });
 
-  it('uses env.SqliteDriver factory when provided', async () => {
+  it('uses env.SqliteDriver factory when provided (legacy schema=auto)', async () => {
     const logger = makeLogger();
     const { client } = makeClientSpy();
     const factory: SqliteClientFactory = jest.fn(() => Promise.resolve(client));
@@ -92,7 +101,11 @@ describe('init', () => {
     const result = await destinationSQLite.init({
       config: {
         settings: {
-          sqlite: { url: 'libsql://example.turso.io', authToken: 'tk' },
+          sqlite: {
+            url: 'libsql://example.turso.io',
+            authToken: 'tk',
+            schema: 'auto',
+          },
         },
       },
       env: { SqliteDriver: factory },
@@ -106,7 +119,7 @@ describe('init', () => {
     expect(settings.sqlite._ownedClient).toBe(true);
   });
 
-  it('skips CREATE TABLE when schema=manual', async () => {
+  it('skips CREATE TABLE when schema=manual (legacy path) and emits deprecation WARN', async () => {
     const logger = makeLogger();
     const { client, calls } = makeClientSpy();
 
@@ -120,7 +133,61 @@ describe('init', () => {
       id: 'test',
     } as never);
 
-    expect(calls.find((c) => c.kind === 'execute')).toBeUndefined();
+    // Init never issues CREATE TABLE under schema=manual. The probe runs once
+    // (table presence check) but no execute is called for table creation.
+    const tableCreate = calls.find(
+      (c) => c.kind === 'execute' && (c.sql ?? '').startsWith('CREATE TABLE'),
+    );
+    expect(tableCreate).toBeUndefined();
+    expect(calls.some((c) => c.kind === 'prepare')).toBe(true);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('config.settings.sqlite.schema is deprecated'),
+    );
+  });
+
+  it('does NOT auto-create when setup is unset and table missing; hard-fails with setup hint', async () => {
+    const logger = makeLogger();
+    const { client } = makeClientSpy();
+    // Default makeClientSpy.query returns [], so tableExists -> false.
+
+    await expect(
+      destinationSQLite.init({
+        config: { settings: { sqlite: { url: ':memory:' } } },
+        env: { client },
+        logger,
+        id: 'sqlite',
+      } as never),
+    ).rejects.toThrow(
+      /SQLite table "events" not found.*walkeros setup destination\.sqlite/,
+    );
+  });
+
+  it('does NOT auto-create when setup: true is configured (table created by setup, not init)', async () => {
+    const logger = makeLogger();
+    const { client, calls } = makeClientSpy();
+
+    // Stub query to report the table exists so init() does not hard-fail.
+    client.query = async (sql: string) => {
+      if (sql.includes('sqlite_master')) {
+        return [{ name: 'events' }];
+      }
+      return [];
+    };
+
+    await destinationSQLite.init({
+      config: {
+        settings: { sqlite: { url: ':memory:' } },
+        setup: true,
+      },
+      env: { client },
+      logger,
+      id: 'sqlite',
+    } as never);
+
+    const tableCreate = calls.find(
+      (c) => c.kind === 'execute' && (c.sql ?? '').startsWith('CREATE TABLE'),
+    );
+    expect(tableCreate).toBeUndefined();
     expect(calls.some((c) => c.kind === 'prepare')).toBe(true);
   });
 
@@ -151,6 +218,7 @@ describe('destroy', () => {
         _client: {
           execute: () => Promise.resolve(),
           prepare: () => () => Promise.resolve(),
+          query: () => Promise.resolve([]),
           close,
         },
         _ownedClient: true,
@@ -171,6 +239,7 @@ describe('destroy', () => {
         _client: {
           execute: () => Promise.resolve(),
           prepare: () => () => Promise.resolve(),
+          query: () => Promise.resolve([]),
           close,
         },
         _ownedClient: false,
@@ -188,11 +257,16 @@ describe('push error handling', () => {
     const failingClient: SqliteClient = {
       execute: () => Promise.resolve(),
       prepare: () => () => Promise.reject(new Error('disk I/O error')),
+      // Report the table exists so init() succeeds and we can exercise push().
+      query: () => Promise.resolve([{ name: 'events' }]),
       close: () => Promise.resolve(),
     };
 
     const initResult = await destinationSQLite.init({
-      config: { settings: { sqlite: { url: ':memory:' } } },
+      config: {
+        settings: { sqlite: { url: ':memory:' } },
+        setup: true,
+      },
       env: { client: failingClient },
       logger,
       id: 'test',

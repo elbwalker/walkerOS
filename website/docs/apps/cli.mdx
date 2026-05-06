@@ -41,6 +41,7 @@ npx walkeros --version`}
 |---------|---------|----------|
 | `bundle` | Build production-ready bundle from flow config | Create deployable JavaScript from configuration |
 | `push` | Execute event with real API calls (or `--simulate` for mocked) | Testing and production validation |
+| `setup` | Run the optional `setup()` lifecycle on one component | Provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook registrations) |
 | `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
 | `run` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
@@ -81,6 +82,43 @@ Build-time concerns for the bundler live under `flow.<name>.bundle`. Two fields 
 }`}
   language="json"
 />
+
+### Bundle externals (per-package)
+
+`flow.<name>.bundle.packages` (above) declares which npm packages the bundler
+installs for the flow. `<package>.walkerOS.bundle.external` (this section)
+is a different thing: metadata declared by step-package authors marking
+specific runtime deps that the bundler must NOT inline (typically because
+they use `__dirname` or ship native binaries).
+
+<CodeSnippet
+  code={`{
+  "walkerOS": {
+    "type": "destination",
+    "platform": ["server"],
+    "bundle": {
+      "external": [
+        "@google-cloud/bigquery-storage",
+        "@grpc/grpc-js"
+      ]
+    }
+  }
+}`}
+  language="json"
+/>
+
+When a flow uses any step package with non-empty `walkerOS.bundle.external`,
+the bundler:
+- Externalizes those names from the ESM bundle.
+- Extracts each external + its full transitive tree into
+  `<outputDir>/node_modules/` via pacote (no shell-out).
+- Emits sibling `<outputDir>/package.json` and `<outputDir>/package-lock.json`.
+
+The output shape changes accordingly:
+- Empty externals: `dist/bundle.mjs` (single file, default).
+- Non-empty: `dist/{bundle.mjs, package.json, package-lock.json, node_modules/}`.
+
+See the create-* skills (`walkeros-create-{source,destination,transformer}`) for authoring guidance.
 
 ## Package imports
 
@@ -405,6 +443,8 @@ The bundle is now ready to deploy!
 
 When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads via HTTP PUT. This is used by the walkerOS cloud service for remote builds.
 
+When the bundle's resolved externals are non-empty, sibling files (`package.json`, `package-lock.json`, `node_modules/`) are written next to the `-o` path.
+
 ### Multi-Flow Example
 
 <CodeSnippet
@@ -634,6 +674,111 @@ walkeros push flow.json --event event.json --flow staging
 
 # Push to production
 walkeros push flow.json --event event.json --flow production`}
+  language="bash"
+/>
+
+## Setup command
+
+The `setup` command runs the optional `setup()` lifecycle on a single component to provision external resources before traffic flows. Use it for one-time provisioning steps like creating a BigQuery dataset and table, declaring a Pub/Sub topic and subscription, creating SQLite tables, or registering a webhook with a third-party API.
+
+For the conceptual overview of the lifecycle (when to implement `setup()` in a component, how it relates to the runtime hot path, and the operator separation rationale), see [Setup lifecycle](/docs/destinations/create-your-own#setup-lifecycle-optional).
+
+### Use case
+
+Setup is for the operator-time, "do this once before traffic" step that sits between writing config and accepting events:
+
+- A BigQuery destination needs its dataset and table to exist with the right schema before rows can be streamed in.
+- A Pub/Sub source needs a subscription against a topic before it can pull messages.
+- A SQLite store needs its tables created before reads and writes work.
+- A webhook integration needs to register its callback URL with the upstream service.
+
+Setup is **explicit only**. It is never triggered by `push`, `simulate`, `deploy`, or the long-running runtime. You run it once when provisioning, then again only when external resources need to be re-provisioned (for example, after changing the table schema in config). The runtime never tries to "fix" missing resources on its own.
+
+### Basic usage
+
+<CodeSnippet
+  code={`# Provision the BigQuery dataset and table for the destination named "bigquery"
+walkeros setup destination.bigquery`}
+  language="bash"
+/>
+
+### Target syntax
+
+The target uses the same `<kind>.<name>` syntax as `walkeros push --simulate`. Valid kinds are `source`, `destination`, and `store`. Transformers are pure functions and have no setup.
+
+| Target | Resolves to |
+|--------|-------------|
+| `destination.bigquery` | The destination named `bigquery` in the resolved flow |
+| `source.events-in` | The source named `events-in` |
+| `store.session` | The store named `session` |
+
+### Options
+
+<CodeSnippet
+  code={`walkeros setup <target> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config <path>` | Flow config file (default: `./flow.json`) |
+| `-f, --flow <name>` | Flow name for multi-flow configs |
+| `--json` | Output as JSON (passed to the package's setup logger) |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
+
+### What "skip" means
+
+The framework narrates one of three reasons when nothing runs and exits successfully:
+
+| Reason | Trigger |
+|--------|---------|
+| `no setup function` | The package does not export a `setup` function on its default export |
+| `config.setup is false` | The flow config explicitly opts out with `"setup": false` |
+| `config.setup is unset` | The flow config does not declare `setup` at all |
+
+In all three cases the exit code is `0`. Setup is a single-purpose command, not a tiered status check.
+
+### Result output
+
+When the package's `setup()` returns a non-undefined value, the CLI emits it as JSON on stdout for `jq`-style scripting. This lets you script around what was provisioned:
+
+<CodeSnippet
+  code={`walkeros setup destination.bigquery --json | jq .datasetCreated`}
+  language="bash"
+/>
+
+If the package returns nothing, no JSON is emitted; you only see the framework narration.
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success or skip (any of the three skip reasons above) |
+| non-zero | Failure (resolution error, missing default export, package threw) |
+
+### IAM note
+
+Setup typically needs higher permissions than runtime push: "create dataset" or "create subscription" vs "write rows" or "pull messages". Operators commonly run setup with a separate service account, or different credentials, than the runtime uses. Plan your IAM accordingly: grant the runtime only what it needs to push, and grant setup the broader provisioning scope.
+
+### Examples
+
+<CodeSnippet
+  code={`# Provision the BigQuery dataset and table for the destination named "bigquery"
+# in the default flow file.
+walkeros setup destination.bigquery
+
+# Same but pointing to a specific flow in a multi-flow config.
+walkeros setup destination.bigquery --flow analytics
+
+# Custom config path.
+walkeros setup destination.bigquery --config ./flows/prod.json
+
+# Pipe the structured result to jq.
+walkeros setup destination.bigquery --json | jq .datasetCreated
+
+# Provision a Pub/Sub source's subscription.
+walkeros setup source.events-in`}
   language="bash"
 />
 
@@ -1951,6 +2096,39 @@ walkeros auth login
 export WALKEROS_TOKEN=sk-walkeros-xxx`}
   language="bash"
 />
+
+### Warning: bundle contains __dirname references
+
+Means an inlined dep references `__dirname`/`__filename` which throw in
+ESM module scope at runtime. The bundler attributes the most likely
+source packages in the warning text.
+
+**Fix:** declare the offending dep under that step package's
+`walkerOS.bundle.external`. If you don't own the step package, file an
+issue. For legitimate uses (a `$code:` snippet using `__dirname` in a
+string literal), suppress per-line with `// walkeros: dirname-ok`.
+
+### Caching pacote downloads in CI
+
+The bundler caches downloads under `process.env.NPM_CACHE_DIR` (default
+`<tmpDir>/cache/npm`). On CI, persist that path with `actions/cache`:
+
+<CodeSnippet
+  code={`- uses: actions/cache@v4
+  with:
+    path: .walkeros-cache/npm
+    key: walkeros-\${{ hashFiles('**/flow.json') }}
+- run: WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="yaml"
+/>
+
+### Bundle output is large
+
+When externals are present, `dist/node_modules/` typically holds 30-50MB
+across 10k+ files (grpc, protobufjs, etc.). Recommendations:
+- Use `.dockerignore` to exclude irrelevant build output from non-bundle contexts.
+- Prefer `COPY dist/ /app/` over file-by-file in your Dockerfile.
+- Expect ~30s artifact upload time on slow CI.
 
 ## Next steps
 

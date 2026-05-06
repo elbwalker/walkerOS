@@ -21,7 +21,6 @@ import { registerReferenceResources } from './resources/references.js';
 import { registerAddStepPrompt } from './prompts/add-step.js';
 import { registerSetupMappingPrompt } from './prompts/setup-mapping.js';
 import { registerManageContractPrompt } from './prompts/manage-contract.js';
-import { registerUseDefinitionsPrompt } from './prompts/use-definitions.js';
 import { SERVER_INSTRUCTIONS } from './instructions.js';
 import { createMcpEmitter, type McpEmitter } from './telemetry.js';
 
@@ -139,7 +138,6 @@ export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   registerAddStepPrompt(server);
   registerSetupMappingPrompt(server);
   registerManageContractPrompt(server);
-  registerUseDefinitionsPrompt(server);
 
   wrapRegisteredToolsWithTelemetry(server);
 

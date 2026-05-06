@@ -202,7 +202,6 @@ export interface Instance {
   timing: number;
   user: WalkerOS.User;
   pending: {
-    sources: Source.InitSources;
     destinations: Destination.InitDestinations;
   };
 }

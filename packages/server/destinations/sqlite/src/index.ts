@@ -3,6 +3,7 @@ import { getConfig, isSqliteEnv } from './config';
 import { createClientFromSettings } from './drivers';
 import { buildCreateTableSql, buildInsertSql } from './serialize';
 import { push } from './push';
+import { setup, tableExists } from './setup';
 
 // Types re-export
 export * as DestinationSQLite from './types';
@@ -21,12 +22,17 @@ export {
 // Driver URL detection (exported for tests and advanced consumers)
 export { isLibsqlUrl } from './drivers';
 
+// Setup helpers (exported for tests and advanced consumers)
+export { setup, DEFAULT_SCHEMA, DEFAULT_PRAGMAS, DEFAULT_SETUP } from './setup';
+
 export const destinationSQLite: Destination = {
   type: 'sqlite',
 
   config: {},
 
-  async init({ config: partialConfig, logger, env }) {
+  setup,
+
+  async init({ config: partialConfig, logger, env, id }) {
     const config = getConfig(partialConfig, logger);
     const settings = config.settings as Settings;
     const sqlite = settings.sqlite;
@@ -58,13 +64,35 @@ export const destinationSQLite: Destination = {
       }
     }
 
-    // Create the canonical events table unless the user opted out.
-    if (sqlite.schema === 'auto') {
+    // Legacy auto-create path. Only runs when the user opted in via the
+    // deprecated `settings.sqlite.schema: 'auto'` field. New users run
+    // `walkeros setup destination.<id>` (see setup.ts) or set `config.setup`.
+    if (sqlite._legacyAutoCreate) {
       try {
         await client.execute(buildCreateTableSql(sqlite.table ?? 'events'));
       } catch (err) {
         logger.throw(
           `@walkeros/server-destination-sqlite: CREATE TABLE failed: ${String(err)}`,
+        );
+        return config;
+      }
+    } else if (!sqlite._legacySkipProbe) {
+      // Modern path: assume the table exists. Probe once and hard-fail with
+      // an actionable message if it does not. Legacy `schema: 'manual'` skips
+      // this probe (user supplies their own table shape).
+      let exists = false;
+      try {
+        exists = await tableExists(client, sqlite.table ?? 'events');
+      } catch (err) {
+        logger.throw(
+          `@walkeros/server-destination-sqlite: table probe failed: ${String(err)}`,
+        );
+        return config;
+      }
+      if (!exists) {
+        logger.throw(
+          `SQLite table "${sqlite.table ?? 'events'}" not found in ${sqlite.url}. ` +
+            `Run "walkeros setup destination.${id}" to create it.`,
         );
         return config;
       }

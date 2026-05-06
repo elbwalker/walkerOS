@@ -203,7 +203,7 @@ describe('sourceCloudFunction', () => {
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
-    it('should push empty event when body is a string', async () => {
+    it('should push empty event when body is a non-JSON string', async () => {
       const source = await sourceCloudFunction(
         createSourceContext(
           {},
@@ -222,6 +222,48 @@ describe('sourceCloudFunction', () => {
 
       expect(mockPush).toHaveBeenCalledWith({});
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    describe('raw body support', () => {
+      it('parses JSON from text/plain POST (sendBeacon)', async () => {
+        // Functions Framework parses text/plain bodies as raw strings, so the
+        // handler must JSON.parse before checking for an event request.
+        // Verifies the bug fix where navigator.sendBeacon forces Content-Type
+        // to text/plain even with JSON payloads.
+        const source = await sourceCloudFunction(
+          createSourceContext(
+            {},
+            {
+              push: mockPush as never,
+              command: mockCommand as never,
+              elb: jest.fn() as never,
+              logger: mockLogger,
+            },
+          ),
+        );
+        const req = createMockRequest(
+          'POST',
+          JSON.stringify({ event: 'page view', data: { title: 'beacon' } }),
+          { 'content-type': 'text/plain' },
+        );
+        const res = createMockResponse();
+
+        await source.push(req, res);
+
+        expect(mockPush).toHaveBeenCalledWith({
+          name: 'page view',
+          data: { title: 'beacon' },
+          context: undefined,
+          user: undefined,
+          globals: undefined,
+          consent: undefined,
+        });
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({
+          success: true,
+          id: 'test-id',
+        });
+      });
     });
   });
 

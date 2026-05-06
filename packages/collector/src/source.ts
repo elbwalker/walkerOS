@@ -21,6 +21,32 @@ import {
 import { getCacheStore } from './cache';
 
 /**
+ * Flush a source's queueOn buffer. Called when the source becomes "started"
+ * (config.init === true AND config.require is empty/absent). Idempotent:
+ * the buffer is cleared before iteration, so re-entry from within an `on`
+ * handler does not re-fire the same items.
+ */
+export async function flushSourceQueueOn(
+  collector: Collector.Instance,
+  source: Source.Instance,
+): Promise<void> {
+  if (!source.on || !source.queueOn?.length) return;
+  const queue = source.queueOn;
+  source.queueOn = [];
+  for (const { type, data } of queue) {
+    await tryCatchAsync(source.on)(type, data);
+  }
+}
+
+/**
+ * A source is "started" — eligible to receive on() events directly — when
+ * its init has run and any require gate is satisfied.
+ */
+export function isSourceStarted(source: Source.Instance): boolean {
+  return Boolean(source.config.init) && !source.config.require?.length;
+}
+
+/**
  * Initialize a single source. Extracted from the initSources loop body
  * so it can be reused by the pending-source activator.
  */
@@ -300,21 +326,41 @@ export async function initSources(
 ): Promise<Collector.Sources> {
   const result: Collector.Sources = {};
 
+  // Pass 1: register every source via its factory.
   for (const [sourceId, sourceDefinition] of Object.entries(sources)) {
-    const { config = {} } = sourceDefinition;
-
-    if (config.require && config.require.length > 0) {
-      collector.pending.sources[sourceId] = sourceDefinition;
-      continue;
-    }
-
     const sourceInstance = await initSource(
       collector,
       sourceId,
       sourceDefinition,
     );
-    if (sourceInstance) {
-      result[sourceId] = sourceInstance;
+    if (!sourceInstance) continue;
+    // Propagate orchestration fields from the user's source definition into
+    // the registered instance config. The factory does not know about
+    // `require` — it's an InitSource-level concern that the collector owns.
+    // Clone the array so per-source decrement (in onApply) doesn't mutate
+    // the caller's config.
+    const userRequire = sourceDefinition.config?.require;
+    sourceInstance.config = {
+      ...sourceInstance.config,
+      init: false,
+      ...(userRequire ? { require: [...userRequire] } : {}),
+    };
+    result[sourceId] = sourceInstance;
+  }
+
+  // Merge into collector.sources BEFORE pass 2 so that any onApply
+  // broadcast triggered during init can find every source.
+  Object.assign(collector.sources, result);
+
+  // Pass 2: init each source. Side effects allowed here.
+  for (const sourceId of Object.keys(result)) {
+    const instance = collector.sources[sourceId];
+    if (instance.init) {
+      await tryCatchAsync(instance.init.bind(instance))();
+    }
+    instance.config.init = true;
+    if (isSourceStarted(instance)) {
+      await flushSourceQueueOn(collector, instance);
     }
   }
 

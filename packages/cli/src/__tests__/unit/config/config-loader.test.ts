@@ -465,8 +465,6 @@ describe('Config Loader', () => {
         version: 4,
         variables: {
           CURRENCY: 'USD',
-        },
-        definitions: {
           base_mapping: {
             page: { view: { name: 'page_view' } },
           },

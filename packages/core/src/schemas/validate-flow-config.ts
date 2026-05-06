@@ -6,12 +6,12 @@ import type { IntelliSenseContext, PackageInfo } from './intellisense';
  * Validate a Flow.Config JSON string.
  *
  * Performs three levels of validation:
- * 1. JSON syntax — parse error with line/column
- * 2. Schema — Zod ConfigSchema validation with mapped positions
- * 3. References — checks $var., $def., $secret. against extracted context
+ * 1. JSON syntax (parse error with line/column)
+ * 2. Schema (Zod ConfigSchema validation with mapped positions)
+ * 3. References (checks $var., $secret. against extracted context)
  *
  * Returns errors, warnings, and extracted IntelliSenseContext as a byproduct.
- * Pure function — works in Node.js (CLI/MCP) and browser (CodeBox).
+ * Pure function: works in Node.js (CLI/MCP) and browser (CodeBox).
  */
 export function validateFlowConfig(json: string): ValidationResult {
   // 1. JSON parse
@@ -81,8 +81,7 @@ function extractContext(
     return undefined;
   }
 
-  const variables: Record<string, string | number | boolean> = {};
-  const definitions: Record<string, unknown> = {};
+  const variables: Record<string, unknown> = {};
   const sources: string[] = [];
   const destinations: string[] = [];
   const transformers: string[] = [];
@@ -92,7 +91,6 @@ function extractContext(
 
   // Setup-level
   mergeVars(variables, parsed.variables);
-  mergeDefs(definitions, parsed.definitions);
   extractContractEntities(contractEntities, parsed.contract);
 
   // Walk each flow config
@@ -110,7 +108,6 @@ function extractContext(
     }
 
     mergeVars(variables, flow.variables);
-    mergeDefs(definitions, flow.definitions);
 
     for (const type of ['sources', 'destinations', 'transformers'] as const) {
       const stepType =
@@ -133,7 +130,6 @@ function extractContext(
           list.push(name);
           if (isObject(ref)) {
             mergeVars(variables, ref.variables);
-            mergeDefs(definitions, ref.definitions);
             if (typeof ref.package === 'string') {
               packages.push({
                 package: ref.package,
@@ -150,7 +146,6 @@ function extractContext(
 
   const ctx: Partial<IntelliSenseContext> = {
     variables,
-    definitions,
     stepNames: { sources, destinations, transformers },
   };
 
@@ -179,22 +174,6 @@ function checkReferences(
           message: `Unknown variable "$var.${match[1]}". Defined: ${Object.keys(context.variables).join(', ') || 'none'}`,
           severity: 'warning',
           path: `$var.${match[1]}`,
-          ...pos,
-        });
-      }
-    }
-  }
-
-  if (context.definitions) {
-    const regex = /\$def\.(\w+)/g;
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(text)) !== null) {
-      if (!(match[1] in context.definitions)) {
-        const pos = offsetToPosition(text, match.index, match[0].length);
-        issues.push({
-          message: `Unknown definition "$def.${match[1]}". Defined: ${Object.keys(context.definitions).join(', ') || 'none'}`,
-          severity: 'warning',
-          path: `$def.${match[1]}`,
           ...pos,
         });
       }
@@ -283,23 +262,7 @@ function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-function isPrimitive(v: unknown): v is string | number | boolean {
-  return (
-    typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
-  );
-}
-
-function mergeVars(
-  target: Record<string, string | number | boolean>,
-  source: unknown,
-): void {
-  if (!isObject(source)) return;
-  for (const [k, v] of Object.entries(source)) {
-    if (isPrimitive(v)) target[k] = v;
-  }
-}
-
-function mergeDefs(target: Record<string, unknown>, source: unknown): void {
+function mergeVars(target: Record<string, unknown>, source: unknown): void {
   if (!isObject(source)) return;
   for (const [k, v] of Object.entries(source)) {
     target[k] = v;

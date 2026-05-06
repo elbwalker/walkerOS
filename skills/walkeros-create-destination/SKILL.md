@@ -538,6 +538,14 @@ Guidelines:
 - [ ] Build generates `dist/walkerOS.json`
 - [ ] Keywords include `walkerOS` and `walkerOS-destination`
 
+### Runtime-only npm dependencies
+
+If your package wraps a third-party npm dep that **cannot be ESM-bundled** (uses
+`__dirname`, ships a `.node` binary, etc.), declare it under
+`walkerOS.bundle.external` in your `package.json`. See
+[walkeros-using-cli → Bundle externals](../walkeros-using-cli/SKILL.md#bundle-externals-per-package-walkerosbundleexternal)
+for the complete contract.
+
 ---
 
 ## Phase 7: Implement
@@ -575,11 +583,143 @@ Use these templates as your starting point:
    - For step-example tests, use `command: 'consent'` on `Flow.StepExample` to
      invoke the `on('consent')` handler. Do not push consent data as an event.
 
+### Reserved fields
+
+`config.setup` is reserved for the setup lifecycle (see
+[Adding setup (optional)](#adding-setup-optional)). Do not use the key `setup`
+for unrelated package metadata or hint keys. The framework wires this field to
+`SetupFn` via `resolveSetup`, and `walkeros setup destination.<name>` reads it.
+Repurposing the name will collide with that wiring.
+
 ### Gate: Implementation Compiles
 
 - [ ] `npm run build` passes
 - [ ] `npm run verify:touched -- <destination-name>` passes (L1: typecheck +
       lint + test)
+
+---
+
+## Adding setup (optional)
+
+A destination package can implement an optional `setup()` function to provision
+external resources idempotently: BigQuery datasets and tables, Pub/Sub topics,
+SQLite tables, warehouse schemas, S3 buckets, webhook registrations on
+downstream platforms. Setup runs only when an operator explicitly types
+`walkeros setup destination.<name>`. The runtime never auto-invokes it from
+`init()`, `push()`, or `destroy()`.
+
+The framework provides the slot, the CLI command, and a `resolveSetup` helper.
+The package owns: what setup means, idempotency, error handling, return value.
+
+For background on how setup fits the destination lifecycle, see
+[understanding-destinations](../walkeros-understanding-destinations/SKILL.md#setup-optional).
+
+### Types
+
+```typescript
+// types/index.ts
+import type { CoreDestination } from '@walkeros/core';
+
+export interface Settings {
+  /* runtime push settings */
+}
+export interface InitSettings {
+  /* one-time init settings */
+}
+export interface Mapping {
+  /* per-event mapping config */
+}
+export interface Env {
+  /* injected platform deps (SDK clients, etc.) */
+}
+
+// The package's own setup options interface.
+// Becomes the U slot of Types; surfaces as `config.setup: boolean | Setup` for users.
+export interface Setup {
+  // package-specific provisioning options
+  // e.g. for BigQuery: location, partitioning, clustering, schema
+  location?: string;
+  partitioning?: { field: string; type: 'DAY' | 'HOUR' };
+}
+
+export type Types = CoreDestination.Types<
+  Settings,
+  Mapping,
+  Env,
+  InitSettings,
+  Setup
+>;
+```
+
+### Implementation
+
+```typescript
+// setup.ts
+import type { CoreDestination, SetupFn } from '@walkeros/core';
+import { resolveSetup } from '@walkeros/core';
+import type { Setup, Types } from './types';
+
+const DEFAULT_SETUP: Setup = {
+  location: 'EU',
+};
+
+export const setup: SetupFn<
+  CoreDestination.Config<Types>,
+  CoreDestination.Env<Types>
+> = async ({ config, env, logger }) => {
+  const options = resolveSetup(config.setup, DEFAULT_SETUP);
+  if (!options) return; // config.setup is false or unset
+
+  // Package-specific provisioning, idempotent.
+  // Returning a structured object (e.g. { datasetCreated: true })
+  // makes that data available to operators via `walkeros setup ... | jq`.
+};
+```
+
+Wire it in your default export:
+
+```typescript
+// index.ts
+import { setup } from './setup';
+
+export default {
+  type: 'my-destination',
+  push: /* ... */,
+  setup,
+};
+```
+
+### When to implement
+
+Implement `setup()` when your destination needs first-time provisioning of
+external resources before events can flow: warehouse tables, Pub/Sub topics, S3
+buckets, schema bindings, IAM roles, webhook registrations on downstream
+platforms. Skip it when your destination only consumes credentials or HTTP
+endpoints the user already provisioned.
+
+### Contract
+
+- Triggered only by `walkeros setup <kind>.<name>`. Never by runtime push, init,
+  or destroy.
+- **Idempotency is your responsibility.** Re-running setup against a fully
+  provisioned environment must be a safe no-op. Use try-create-catch-409 on REST
+  APIs, `IF NOT EXISTS` on SQL, native idempotent operations where available.
+  The framework does not retry, track state, or detect drift.
+- Return structured data from `setup()` when useful for operator scripting. The
+  CLI emits non-undefined return values as JSON to stdout.
+- For packages where `setup: true` (boolean form) is meaningless because
+  mandatory fields have no safe defaults (e.g., Kafka `numPartitions`, GitHub
+  webhook `webhookUrl`), reject the boolean form with a clear runtime error
+  listing required fields:
+
+```typescript
+if (config.setup === true) {
+  throw new Error(
+    'kafka destination setup requires explicit options: ' +
+      '{ topic, numPartitions, replicationFactor }. There is no safe default.',
+  );
+}
+```
 
 ---
 

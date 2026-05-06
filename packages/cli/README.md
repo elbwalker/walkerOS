@@ -170,14 +170,76 @@ walkeros push dist/bundle.js --platform server --event '{"name":"order complete"
 
 **Push modes:**
 
-| Mode | Flag | API Calls | Use Case |
-| ---- | ---- | --------- | -------- |
-| Real | (none) | Real HTTP requests | Integration testing |
-| Simulate | `--simulate` | Mocked (captured) | Safe local testing |
-| Mock | `--mock` | Returns mock value | Controlled testing |
+| Mode     | Flag         | API Calls          | Use Case            |
+| -------- | ------------ | ------------------ | ------------------- |
+| Real     | (none)       | Real HTTP requests | Integration testing |
+| Simulate | `--simulate` | Mocked (captured)  | Safe local testing  |
+| Mock     | `--mock`     | Returns mock value | Controlled testing  |
 
 Use `--simulate` first to validate safely, then push without flags for real
 integrations.
+
+### setup
+
+Run the optional `setup()` lifecycle on a single component to provision external
+resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook
+registrations).
+
+```bash
+walkeros setup <target> [options]
+```
+
+**Target format:** `<kind>.<name>` matching `walkeros push --simulate`. Valid
+kinds: `source`, `destination`, `store`. Transformers are pure functions and
+have no setup.
+
+**Options:**
+
+- `-c, --config <path>` - Flow config file (default: `./flow.json`)
+- `-f, --flow <name>` - Flow name for multi-flow configs
+- `--json` - Output as JSON
+- `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output
+
+**Behavior:**
+
+- Loads the flow config, resolves the named component, imports its package, and
+  calls `setup({ id, config, env, logger })`. No collector boot, no event
+  pipeline, no destinations are pushed to.
+- Skips with an explanatory message in three cases: the package has no `setup`
+  function, `config.setup === false`, or `config.setup` is unset.
+- When `setup()` returns a non-undefined value, the CLI emits it as JSON on
+  stdout for `jq`-style scripting.
+- Exit code `0` on success or skip, non-zero on failure.
+
+**Operator-time, never automatic.** Setup is explicit only. It is never
+triggered by `push`, `simulate`, `deploy`, or the long-running runtime.
+Operators run it once when provisioning, and again only when external resources
+need to be re-provisioned.
+
+**IAM note:** Setup typically needs higher permissions than runtime push (for
+example, "create dataset" vs "write rows"). Operators commonly run setup with a
+separate service account or different credentials than the runtime uses.
+
+**Examples:**
+
+```bash
+# Provision the BigQuery dataset and table for the destination named "bigquery"
+# in the default flow file.
+walkeros setup destination.bigquery
+
+# Same but pointing to a specific flow in a multi-flow config.
+walkeros setup destination.bigquery --flow analytics
+
+# Custom config path.
+walkeros setup destination.bigquery --config ./flows/prod.json
+
+# Pipe the structured result to jq.
+walkeros setup destination.bigquery --json | jq .datasetCreated
+
+# Provision a Pub/Sub source's subscription.
+walkeros setup source.events-in
+```
 
 ### run
 
@@ -509,10 +571,7 @@ const result = await push(
 // result.usage = API call tracking data
 
 // Push for real
-await push(
-  './flow.json',
-  { name: 'page view', data: { title: 'Test' } },
-);
+await push('./flow.json', { name: 'page view', data: { title: 'Test' } });
 
 // Run
 await runCommand({
