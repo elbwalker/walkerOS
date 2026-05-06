@@ -91,6 +91,48 @@ Add to your `flow.json` destinations:
 - [Google Cloud account](https://cloud.google.com/) with billing enabled
 - [gcloud CLI](https://cloud.google.com/sdk/docs/install) installed and authenticated (includes `bq` command)
 
+## Setup lifecycle
+
+Provision the dataset and table once per environment with the CLI:
+
+<CodeSnippet
+  code={`walkeros setup destination.bigquery`}
+  language="bash"
+/>
+
+Output: `setup: ok destination.bigquery` plus a JSON line reporting
+`{ datasetCreated, tableCreated }`. The command is idempotent, safe to re-run.
+
+`config.setup`:
+
+- `false` (default): no provisioning. Operator must run setup explicitly.
+- `true`: provision with the defaults below.
+- `{ ...overrides }`: object form to override any default. See the `Setup`
+  interface in the package.
+
+### Defaults
+
+| Field                 | Value                                        |
+|-----------------------|----------------------------------------------|
+| `datasetId`           | `walkerOS` (note capital O, S)               |
+| `tableId`             | `events`                                     |
+| `location`            | `EU`                                         |
+| `storageBillingModel` | `PHYSICAL` (cheaper for compressible JSON)   |
+| Partitioning          | Day partitioning on `timestamp`              |
+| Clustering            | `(name, entity, action)`                     |
+
+:::tip Cost optimization
+Physical storage billing charges based on compressed size. Day partitioning and
+the `(name, entity, action)` clustering reduce scan costs for typical analytics
+queries. Always include a `timestamp` filter.
+:::
+
+### Drift handling
+
+If the existing table's partitioning, clustering, or schema differs from the
+declared configuration, setup logs `WARN setup.drift {...}` and continues. There
+is no auto-mutation. Migrations are an operator decision.
+
 ## GCP setup
 
 ### Enable BigQuery API
@@ -100,35 +142,31 @@ Add to your `flow.json` destinations:
   language="bash"
 />
 
-### Create BigQuery dataset
+### Create service accounts
+
+The provisioning step (setup) and the runtime push path need different
+permissions. We recommend separating them.
+
+**Operator (setup) service account**, used by `walkeros setup`:
+
+- `bigquery.datasets.create`
+- `bigquery.tables.create`
+- `bigquery.datasets.get` (for drift detection)
+- `bigquery.tables.get`
+
+**Runtime service account**, used by the running flow:
+
+- `bigquery.tables.updateData` (Storage Write API append)
 
 <CodeSnippet
-  code={`gcloud config set project YOUR_PROJECT_ID
-
-bq mk --location=EU --storage_billing_model=PHYSICAL walkerOS`}
-  language="bash"
-/>
-
-:::tip Cost optimization
-Physical storage billing charges based on compressed size. This is set at dataset creation and applies to all tables.
-:::
-
-### Create service account
-
-<CodeSnippet
-  code={`# Create service account
+  code={`# Runtime service account
 gcloud iam service-accounts create walkeros-flow \\
-  --display-name="walkerOS Flow"
+  --display-name="walkerOS Flow Runtime"
 
-# Grant BigQuery write access
+# Grant Storage Write API append access
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \\
   --member="serviceAccount:walkeros-flow@YOUR_PROJECT_ID.iam.gserviceaccount.com" \\
-  --role="roles/bigquery.dataEditor"
-
-# Grant job creation permission (required for inserts)
-gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \\
-  --member="serviceAccount:walkeros-flow@YOUR_PROJECT_ID.iam.gserviceaccount.com" \\
-  --role="roles/bigquery.jobUser"`}
+  --role="roles/bigquery.dataEditor"`}
   language="bash"
 />
 
@@ -184,65 +222,54 @@ See [Workload Identity documentation](https://cloud.google.com/iam/docs/workload
 | `BQ_LOCATION` | BigQuery dataset location | `EU` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key | Required (unless using Workload Identity) |
 
+## Storage Write API (data plane)
+
+The destination uses BigQuery's
+[Storage Write API](https://cloud.google.com/bigquery/docs/write-api) for data
+ingestion. This replaces the legacy `tabledata.insertAll` path.
+
+- **Cost**: $25/TB after the 2 TiB/month free tier (vs ~$50/TB for the legacy
+  path). Most low-volume deployments fit entirely in the free tier.
+- **Batching**: `pushBatch` is implemented. Set the collector's `batch: <ms>`
+  mapping setting to flush all events in a window as a single `appendRows`
+  call.
+
+:::caution EXPERIMENTAL SDK
+The upstream `@google-cloud/bigquery-storage` package self-marks as
+`EXPERIMENTAL` (subject to change). Pinned at `^5.1.0`.
+:::
+
 ## Default table schema
 
-By default, the destination sends the full walkerOS event to BigQuery. All object
-and array fields are JSON stringified before insertion.
+The default 15-column schema follows the
+[walkerOS Event v4](/docs/getting-started/event-model) canonical order. Object
+fields use the native `JSON` BigQuery type. Only `name` is `REQUIRED`; all
+other columns are `NULLABLE` for resilience against partial events.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `name` | STRING | Full event name ("entity action") |
-| `id` | STRING | Unique event ID |
-| `entity` | STRING | Entity name |
-| `action` | STRING | Action name |
-| `data` | STRING | JSON stringified data object |
-| `context` | STRING | JSON stringified context |
-| `globals` | STRING | JSON stringified globals |
-| `custom` | STRING | JSON stringified custom data |
-| `user` | STRING | JSON stringified user object |
-| `nested` | STRING | JSON stringified nested entities |
-| `consent` | STRING | JSON stringified consent |
-| `trigger` | STRING | Event trigger |
-| `timestamp` | TIMESTAMP | Event timestamp |
-| `timing` | FLOAT64 | Event timing |
-| `group` | STRING | Event group |
-| `count` | INT64 | Event count |
-| `version` | STRING | JSON stringified version |
-| `source` | STRING | JSON stringified source |
-| `createdAt` | TIMESTAMP | Row insertion time (BigQuery metadata) |
+| Column | Type | Mode |
+|--------|------|------|
+| `name` | STRING | REQUIRED |
+| `data` | JSON | NULLABLE |
+| `context` | JSON | NULLABLE |
+| `globals` | JSON | NULLABLE |
+| `custom` | JSON | NULLABLE |
+| `user` | JSON | NULLABLE |
+| `nested` | JSON | NULLABLE |
+| `consent` | JSON | NULLABLE |
+| `id` | STRING | NULLABLE |
+| `trigger` | STRING | NULLABLE |
+| `entity` | STRING | NULLABLE |
+| `action` | STRING | NULLABLE |
+| `timestamp` | TIMESTAMP | NULLABLE |
+| `timing` | INT64 | NULLABLE |
+| `source` | JSON | NULLABLE |
 
-### Create table query
-
-Use this SQL query to create the default table schema in BigQuery:
-
-<CodeSnippet
-  code={`CREATE TABLE IF NOT EXISTS \`YOUR_PROJECT.walkeros.events\` (
-  name      STRING,
-  id        STRING,
-  entity    STRING,
-  action    STRING,
-  data      STRING,
-  context   STRING,
-  globals   STRING,
-  custom    STRING,
-  user      STRING,
-  nested    STRING,
-  consent   STRING,
-  trigger   STRING,
-  timestamp TIMESTAMP,
-  timing    FLOAT64,
-  \`group\` STRING,
-  count     INT64,
-  version   STRING,
-  source    STRING,
-  createdAt TIMESTAMP
-)
-PARTITION BY DATE(timestamp);`}
-  language="sql"
-/>
+There is no `createdAt` column. Use `timestamp` (event time) for partition
+filters.
 
 :::tip Query optimization
-Partitioning by day reduces query costs since BigQuery only scans relevant partitions. Always include a timestamp filter in your queries.
+Partitioning by day on `timestamp` and clustering on `(name, entity, action)` reduces
+scan costs for typical analytics queries. Always include a `timestamp` filter.
 :::
 
 ## Custom schema mapping

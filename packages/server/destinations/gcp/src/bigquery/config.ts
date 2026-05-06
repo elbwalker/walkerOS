@@ -15,7 +15,7 @@ export function getConfig(
   if (!projectId) logger.throw('Config settings projectId missing');
 
   location = location || 'EU';
-  datasetId = datasetId || 'walkeros';
+  datasetId = datasetId || 'walkerOS';
   tableId = tableId || 'events';
 
   const options: BigQueryOptions = bigquery || {};

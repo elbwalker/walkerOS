@@ -1,7 +1,14 @@
 import type { Collector, WalkerOS } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import { clone, createMockContext, createMockLogger } from '@walkeros/core';
+import {
+  __getMockCalls,
+  __resetMockCalls,
+} from '@google-cloud/bigquery-storage';
 import * as examples from '../examples';
+
+jest.mock('@google-cloud/bigquery');
+jest.mock('@google-cloud/bigquery-storage');
 
 const { env } = examples;
 
@@ -9,8 +16,6 @@ type CallRecord = [string, ...unknown[]];
 
 describe('Step Examples', () => {
   beforeAll(() => {
-    // Lock Date so push.ts createdAt = new Date() is deterministic and
-    // matches examples/step.ts FIXED_NOW.
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2024-01-01T00:00:00.000Z'));
   });
@@ -19,37 +24,15 @@ describe('Step Examples', () => {
     jest.useRealTimers();
   });
 
-  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
-    const calls: CallRecord[] = [];
+  beforeEach(() => {
+    __resetMockCalls();
+  });
 
+  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
     const destination: Destination = jest.requireActual('../').default;
     destination.config = {};
 
     const testEnv = clone(env.push);
-    testEnv.BigQuery = class MockBigQuery {
-      options: unknown;
-      private datasetId?: string;
-      private tableId?: string;
-      constructor(options?: unknown) {
-        this.options = options;
-      }
-      dataset(datasetId: string) {
-        this.datasetId = datasetId;
-        return this;
-      }
-      table(tableId: string) {
-        this.tableId = tableId;
-        return this;
-      }
-      async insert(rows: unknown[]) {
-        calls.push([
-          'dataset.table.insert',
-          this.datasetId as unknown,
-          this.tableId as unknown,
-          rows,
-        ]);
-      }
-    } as unknown as typeof testEnv.BigQuery;
 
     const config = (await destination.init({
       config: {
@@ -73,6 +56,14 @@ describe('Step Examples', () => {
         id: 'test-bq',
       }),
     );
+
+    // Filter to only the appendRows calls produced by push().
+    const calls: CallRecord[] = __getMockCalls()
+      .filter((c) => c.method === 'appendRows')
+      .map((c) => ['appendRows', ...c.args] as CallRecord)
+      // appendRows in the mock takes (rows, offsetValue?). Drop trailing
+      // undefined so the recorded shape matches the step examples.
+      .map((rec) => rec.filter((v) => v !== undefined) as CallRecord);
 
     expect(calls).toEqual(example.out);
   });

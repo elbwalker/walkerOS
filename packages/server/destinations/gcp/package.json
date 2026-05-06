@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.1",
+    "@google-cloud/bigquery-storage": "^5.1.0",
     "@walkeros/server-core": "4.0.0"
   },
   "devDependencies": {},
