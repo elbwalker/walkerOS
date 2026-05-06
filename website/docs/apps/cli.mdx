@@ -83,6 +83,43 @@ Build-time concerns for the bundler live under `flow.<name>.bundle`. Two fields 
   language="json"
 />
 
+### Bundle externals (per-package)
+
+`flow.<name>.bundle.packages` (above) declares which npm packages the bundler
+installs for the flow. `<package>.walkerOS.bundle.external` (this section)
+is a different thing: metadata declared by step-package authors marking
+specific runtime deps that the bundler must NOT inline (typically because
+they use `__dirname` or ship native binaries).
+
+<CodeSnippet
+  code={`{
+  "walkerOS": {
+    "type": "destination",
+    "platform": ["server"],
+    "bundle": {
+      "external": [
+        "@google-cloud/bigquery-storage",
+        "@grpc/grpc-js"
+      ]
+    }
+  }
+}`}
+  language="json"
+/>
+
+When a flow uses any step package with non-empty `walkerOS.bundle.external`,
+the bundler:
+- Externalizes those names from the ESM bundle.
+- Extracts each external + its full transitive tree into
+  `<outputDir>/node_modules/` via pacote (no shell-out).
+- Emits sibling `<outputDir>/package.json` and `<outputDir>/package-lock.json`.
+
+The output shape changes accordingly:
+- Empty externals: `dist/bundle.mjs` (single file, default).
+- Non-empty: `dist/{bundle.mjs, package.json, package-lock.json, node_modules/}`.
+
+See the create-* skills (`walkeros-create-{source,destination,transformer}`) for authoring guidance.
+
 ## Package imports
 
 ### Implicit collector
@@ -405,6 +442,8 @@ The bundle is now ready to deploy!
 | `-v, --verbose` | Detailed logging |
 
 When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads via HTTP PUT. This is used by the walkerOS cloud service for remote builds.
+
+When the bundle's resolved externals are non-empty, sibling files (`package.json`, `package-lock.json`, `node_modules/`) are written next to the `-o` path.
 
 ### Multi-Flow Example
 
@@ -2057,6 +2096,39 @@ walkeros auth login
 export WALKEROS_TOKEN=sk-walkeros-xxx`}
   language="bash"
 />
+
+### Warning: bundle contains __dirname references
+
+Means an inlined dep references `__dirname`/`__filename` which throw in
+ESM module scope at runtime. The bundler attributes the most likely
+source packages in the warning text.
+
+**Fix:** declare the offending dep under that step package's
+`walkerOS.bundle.external`. If you don't own the step package, file an
+issue. For legitimate uses (a `$code:` snippet using `__dirname` in a
+string literal), suppress per-line with `// walkeros: dirname-ok`.
+
+### Caching pacote downloads in CI
+
+The bundler caches downloads under `process.env.NPM_CACHE_DIR` (default
+`<tmpDir>/cache/npm`). On CI, persist that path with `actions/cache`:
+
+<CodeSnippet
+  code={`- uses: actions/cache@v4
+  with:
+    path: .walkeros-cache/npm
+    key: walkeros-\${{ hashFiles('**/flow.json') }}
+- run: WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="yaml"
+/>
+
+### Bundle output is large
+
+When externals are present, `dist/node_modules/` typically holds 30-50MB
+across 10k+ files (grpc, protobufjs, etc.). Recommendations:
+- Use `.dockerignore` to exclude irrelevant build output from non-bundle contexts.
+- Prefer `COPY dist/ /app/` over file-by-file in your Dockerfile.
+- Expect ~30s artifact upload time on slow CI.
 
 ## Next steps
 

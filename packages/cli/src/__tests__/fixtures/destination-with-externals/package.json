@@ -1,0 +1,20 @@
+{
+  "name": "@walkeros-test/destination-with-externals",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./index.mjs",
+  "dependencies": {
+    "is-number": "7.0.0"
+  },
+  "walkerOS": {
+    "type": "destination",
+    "platform": [
+      "server"
+    ],
+    "bundle": {
+      "external": [
+        "is-number"
+      ]
+    }
+  }
+}

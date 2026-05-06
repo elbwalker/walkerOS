@@ -95,11 +95,26 @@ export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
 
   const setupFn = code.setup;
 
+  const emitSkipEnvelope = async (reason: string): Promise<void> => {
+    if (!opts.json) return;
+    const envelope = createSuccessOutput(
+      {
+        kind: component.kind,
+        id: component.id,
+        status: 'skipped',
+        reason,
+      },
+      Date.now() - startTime,
+    );
+    await writeResult(JSON.stringify(envelope, null, 2) + '\n', {});
+  };
+
   if (!isSetupFn(setupFn)) {
     // No setup defined on the package, narrate explicitly, exit ok.
     scoped.info(
       `setup: skipped ${component.kind}.${component.id} (no setup function)`,
     );
+    await emitSkipEnvelope('no setup function');
     return;
   }
 
@@ -111,6 +126,7 @@ export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
     scoped.info(
       `setup: skipped ${component.kind}.${component.id} (config.setup is ${reason})`,
     );
+    await emitSkipEnvelope(`config.setup is ${reason}`);
     return;
   }
 
