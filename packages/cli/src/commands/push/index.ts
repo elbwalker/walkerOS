@@ -39,6 +39,15 @@ import { schemas } from '@walkeros/core/dev';
 import { runPushCommand } from './run.js';
 
 /**
+ * Narrow runtime check used by the CLI output formatter to read fields off
+ * an opaque `elbResult`. Avoids spreading `as Record<string, unknown>`
+ * everywhere a few fields are pulled.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
+/**
  * Resolve a before chain config to an ordered array of transformer IDs.
  * Handles both static (string/string[]) and conditional (Route[]) chains,
  * matching the pattern used by source.ts in the collector.
@@ -168,24 +177,25 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     output = JSON.stringify({ ...result, duration }, null, 2);
   } else {
     const lines: string[] = [];
+    // Reflect the actual outcome. `success: true` only when no destination
+    // recorded a failure during init/push/destroy (see executeDestinationPush).
+    lines.push(`success: ${result.success}`);
     if (result.success) {
-      lines.push('Event pushed successfully');
-      if (result.elbResult && typeof result.elbResult === 'object') {
-        const pushResult = result.elbResult as unknown as Record<
-          string,
-          unknown
-        >;
-        if ('id' in pushResult && pushResult.id)
-          lines.push(`  Event ID: ${pushResult.id}`);
-        if ('entity' in pushResult && pushResult.entity)
-          lines.push(`  Entity: ${pushResult.entity}`);
-        if ('action' in pushResult && pushResult.action)
-          lines.push(`  Action: ${pushResult.action}`);
+      const elbResult = isRecord(result.elbResult)
+        ? result.elbResult
+        : undefined;
+      if (elbResult) {
+        if (typeof elbResult.id === 'string')
+          lines.push(`  Event ID: ${elbResult.id}`);
+        if (typeof elbResult.entity === 'string')
+          lines.push(`  Entity: ${elbResult.entity}`);
+        if (typeof elbResult.action === 'string')
+          lines.push(`  Action: ${elbResult.action}`);
       }
-      lines.push(`  Duration: ${duration}ms`);
-    } else {
-      lines.push(`Error: ${result.error}`);
+    } else if (result.error) {
+      lines.push(`  Error: ${result.error}`);
     }
+    lines.push(`  Duration: ${duration}ms`);
     output = lines.join('\n');
   }
 
@@ -357,6 +367,17 @@ async function executeBundlePush(
 /**
  * Execute non-simulated destination push (full pipeline).
  * Uses withFlowContext for environment setup and cleanup.
+ *
+ * Server platform deliberately disables timer interception and the drain
+ * pump. Real `walkeros push` against destinations that use gRPC SDKs
+ * (Pub/Sub, BigQuery, Kafka, AWS SDK v3, etc.) needs native Node timers:
+ * those clients drive batch flush via `setTimeout` and keepalive via
+ * `setInterval`, and intercepted timers break the gRPC client's state
+ * machine, causing `topic.publishMessage()` to never resolve. Web platform
+ * keeps interception + pump for backwards compatibility with destinations
+ * whose init awaits a long captured timer (e.g. amplitude engagement
+ * plugin) inside JSDOM. Simulate routes have their own call sites and
+ * keep interception for deterministic snapshots.
  */
 async function executeDestinationPush(
   esmPath: string,
@@ -369,6 +390,7 @@ async function executeDestinationPush(
 ): Promise<PushResult> {
   const startTime = Date.now();
   const networkCalls: NetworkCall[] = [];
+  const isServer = platform === 'server';
 
   return withFlowContext(
     {
@@ -377,13 +399,17 @@ async function executeDestinationPush(
       logger,
       snapshotCode,
       timeout,
-      networkCalls,
-      asyncDrain: { timeout: 5000 },
-      // Real push (non-simulate) needs the pump so destinations whose init
-      // awaits a captured setTimeout (e.g., amplitude engagement plugin)
-      // don't deadlock. Simulate routes use their own withFlowContext call
-      // sites without `drainPump`, preserving snapshot ordering.
-      drainPump: true,
+      // Network polyfills are JSDOM-only; on server real push we want real
+      // network so omit the capture array.
+      ...(isServer ? {} : { networkCalls }),
+      // Server real push: native Node primitives, no interception.
+      // Web real push: keep interception + pump (see fn-level docstring).
+      ...(isServer
+        ? {}
+        : {
+            asyncDrain: { timeout: 5000 },
+            drainPump: true,
+          }),
     },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
@@ -400,14 +426,75 @@ async function executeDestinationPush(
 
       await collector.command('shutdown');
 
+      // Any-fail policy: if any wired destination's init/push/destroy
+      // logged a failure, surface it on the PushResult. The collector
+      // tallies failures at `status.destinations[id].failed` (incremented
+      // in collector/src/destination.ts both for init throws and for push
+      // throws), and increments `status.failed` per occurrence.
+      const failedIds = collectFailedDestinations(collector);
+      const success = failedIds.length === 0;
+      const error = success
+        ? undefined
+        : buildFailureSummary(failedIds, collector);
+
       return {
-        success: true,
+        success,
+        ...(error !== undefined ? { error } : {}),
         elbResult: elbResult as PushResult['elbResult'],
         ...(networkCalls.length > 0 ? { networkCalls } : {}),
         duration: Date.now() - startTime,
       };
     },
   );
+}
+
+/**
+ * Minimal view of the collector status surface we read here. We only need
+ * the per-destination failure counter the collector already tracks; the
+ * full Collector.Instance type is not exported through the dynamically
+ * imported bundle, so we narrow it locally without `any`.
+ */
+interface CollectorStatusView {
+  status?: {
+    destinations?: Record<string, { failed?: number; count?: number }>;
+  };
+  destinations?: Record<string, { type?: string }>;
+}
+
+/**
+ * Read the failed-destination ids from the collector after shutdown.
+ * Returns ids whose `status.destinations[id].failed` is > 0.
+ */
+function collectFailedDestinations(collector: unknown): string[] {
+  if (collector === null || typeof collector !== 'object') return [];
+  const view = collector as CollectorStatusView;
+  const destStatus = view.status?.destinations;
+  if (!destStatus) return [];
+  const failed: string[] = [];
+  for (const [id, s] of Object.entries(destStatus)) {
+    if (s && typeof s.failed === 'number' && s.failed > 0) failed.push(id);
+  }
+  return failed;
+}
+
+/**
+ * Build a single-line, public-safe failure summary. We intentionally do
+ * NOT include inner error messages or stack traces here: a server
+ * endpoint that returns `PushResult` to a client must not leak
+ * destination-internal errors. Detailed error context already flows
+ * through the destination's scoped logger.
+ */
+function buildFailureSummary(failedIds: string[], collector: unknown): string {
+  const view = (
+    collector !== null && typeof collector === 'object' ? collector : {}
+  ) as CollectorStatusView;
+  const dests = view.destinations ?? {};
+  const labels = failedIds.map((id) => {
+    const type = dests[id]?.type;
+    return type ? `${id} (${type})` : id;
+  });
+  const noun = failedIds.length === 1 ? 'destination' : 'destinations';
+  return `Push failed for ${noun}: ${labels.join(', ')}`;
 }
 
 export interface SimulateSourceOptions {

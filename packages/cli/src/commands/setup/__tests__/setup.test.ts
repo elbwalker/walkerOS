@@ -50,6 +50,44 @@ jest.mock(
   { virtual: true },
 );
 
+// Multi-export package fixture used to exercise the export-name resolver.
+// Default export simulates the package's "primary" component (componentA);
+// componentB is only reachable via the explicit `code` field or via
+// bundle.packages.imports[0].
+const multiExportSetupCalls: { name: string; ctx: unknown }[] = [];
+
+jest.mock(
+  '@walkeros/__test-multi-export',
+  () => ({
+    __esModule: true,
+    componentA: {
+      type: 'a',
+      push: () => {},
+      setup: async (ctx: unknown) => {
+        multiExportSetupCalls.push({ name: 'componentA', ctx });
+        return { ran: 'A' };
+      },
+    },
+    componentB: {
+      type: 'b',
+      push: () => {},
+      setup: async (ctx: unknown) => {
+        multiExportSetupCalls.push({ name: 'componentB', ctx });
+        return { ran: 'B' };
+      },
+    },
+    default: {
+      type: 'a',
+      push: () => {},
+      setup: async (ctx: unknown) => {
+        multiExportSetupCalls.push({ name: 'default', ctx });
+        return { ran: 'default' };
+      },
+    },
+  }),
+  { virtual: true },
+);
+
 const baseFlowSettings: Flow = {
   config: { platform: 'server' },
   destinations: {
@@ -192,6 +230,217 @@ describe('setupCommand', () => {
     expect(parsed).toMatchObject({
       success: true,
       data: { result: { datasetCreated: true, tableCreated: false } },
+    });
+  });
+
+  describe('multi-export packages (Bug F)', () => {
+    beforeEach(() => {
+      multiExportSetupCalls.length = 0;
+    });
+
+    test('routes to componentA when destinations.X.code = "componentA"', async () => {
+      mockedLoadFlowConfig.mockResolvedValue({
+        flowSettings: {
+          config: { platform: 'server' },
+          destinations: {
+            x: {
+              package: '@walkeros/__test-multi-export',
+              code: 'componentA',
+              config: { setup: true },
+            },
+          },
+        },
+        buildOptions: {
+          format: 'esm',
+          target: 'node18',
+          platform: 'node',
+          output: './dist',
+          packages: {},
+          minify: false,
+          sourcemap: false,
+        },
+        flowName: 'default',
+        isMultiFlow: false,
+        availableFlows: ['default'],
+      });
+
+      await setupCommand({ target: 'destination.x', logger });
+
+      expect(multiExportSetupCalls).toHaveLength(1);
+      expect(multiExportSetupCalls[0].name).toBe('componentA');
+    });
+
+    test('routes to componentB via explicit code field', async () => {
+      mockedLoadFlowConfig.mockResolvedValue({
+        flowSettings: {
+          config: { platform: 'server' },
+          destinations: {
+            x: {
+              package: '@walkeros/__test-multi-export',
+              code: 'componentB',
+              config: { setup: true },
+            },
+          },
+        },
+        buildOptions: {
+          format: 'esm',
+          target: 'node18',
+          platform: 'node',
+          output: './dist',
+          packages: {},
+          minify: false,
+          sourcemap: false,
+        },
+        flowName: 'default',
+        isMultiFlow: false,
+        availableFlows: ['default'],
+      });
+
+      await setupCommand({ target: 'destination.x', logger });
+
+      expect(multiExportSetupCalls).toHaveLength(1);
+      expect(multiExportSetupCalls[0].name).toBe('componentB');
+    });
+
+    test('routes to componentB via bundle.packages.imports[0] when code is unset', async () => {
+      mockedLoadFlowConfig.mockResolvedValue({
+        flowSettings: {
+          config: {
+            platform: 'server',
+            bundle: {
+              packages: {
+                '@walkeros/__test-multi-export': {
+                  imports: ['componentB'],
+                },
+              },
+            },
+          },
+          destinations: {
+            x: {
+              package: '@walkeros/__test-multi-export',
+              config: { setup: true },
+            },
+          },
+        },
+        buildOptions: {
+          format: 'esm',
+          target: 'node18',
+          platform: 'node',
+          output: './dist',
+          packages: {},
+          minify: false,
+          sourcemap: false,
+        },
+        flowName: 'default',
+        isMultiFlow: false,
+        availableFlows: ['default'],
+      });
+
+      await setupCommand({ target: 'destination.x', logger });
+
+      expect(multiExportSetupCalls).toHaveLength(1);
+      expect(multiExportSetupCalls[0].name).toBe('componentB');
+    });
+
+    test('falls back to default export when neither code nor imports set (back-compat)', async () => {
+      mockedLoadFlowConfig.mockResolvedValue({
+        flowSettings: {
+          config: { platform: 'server' },
+          destinations: {
+            x: {
+              package: '@walkeros/__test-multi-export',
+              config: { setup: true },
+            },
+          },
+        },
+        buildOptions: {
+          format: 'esm',
+          target: 'node18',
+          platform: 'node',
+          output: './dist',
+          packages: {},
+          minify: false,
+          sourcemap: false,
+        },
+        flowName: 'default',
+        isMultiFlow: false,
+        availableFlows: ['default'],
+      });
+
+      await setupCommand({ target: 'destination.x', logger });
+
+      expect(multiExportSetupCalls).toHaveLength(1);
+      expect(multiExportSetupCalls[0].name).toBe('default');
+    });
+
+    test('throws actionable error when explicit code names a missing export', async () => {
+      mockedLoadFlowConfig.mockResolvedValue({
+        flowSettings: {
+          config: { platform: 'server' },
+          destinations: {
+            x: {
+              package: '@walkeros/__test-multi-export',
+              code: 'componentZ',
+              config: { setup: true },
+            },
+          },
+        },
+        buildOptions: {
+          format: 'esm',
+          target: 'node18',
+          platform: 'node',
+          output: './dist',
+          packages: {},
+          minify: false,
+          sourcemap: false,
+        },
+        flowName: 'default',
+        isMultiFlow: false,
+        availableFlows: ['default'],
+      });
+
+      await expect(
+        setupCommand({ target: 'destination.x', logger }),
+      ).rejects.toThrow(/no export "componentZ"/);
+    });
+
+    test('throws actionable error when imports[0] names a missing export', async () => {
+      mockedLoadFlowConfig.mockResolvedValue({
+        flowSettings: {
+          config: {
+            platform: 'server',
+            bundle: {
+              packages: {
+                '@walkeros/__test-multi-export': {
+                  imports: ['componentZ'],
+                },
+              },
+            },
+          },
+          destinations: {
+            x: {
+              package: '@walkeros/__test-multi-export',
+              config: { setup: true },
+            },
+          },
+        },
+        buildOptions: {
+          format: 'esm',
+          target: 'node18',
+          platform: 'node',
+          output: './dist',
+          packages: {},
+          minify: false,
+          sourcemap: false,
+        },
+        flowName: 'default',
+        isMultiFlow: false,
+        availableFlows: ['default'],
+      });
+
+      await expect(
+        setupCommand({ target: 'destination.x', logger }),
+      ).rejects.toThrow(/no export "componentZ".*imports\[0\]/s);
     });
   });
 });
