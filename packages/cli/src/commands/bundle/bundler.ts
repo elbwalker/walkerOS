@@ -152,6 +152,7 @@ import {
   loadNpmConfigForPacote,
 } from './package-manager.js';
 import { traceAndCopy, assertDepsTraced } from './nft-trace.js';
+import { assertConsumerDepsSatisfied } from './assert-consumer-deps.js';
 import type { Logger } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 import { getTmpPath } from '../../core/tmp.js';
@@ -403,6 +404,14 @@ export async function bundleCore(
           await fs.writeJSON(pkgJsonPath, pkgJson, { spaces: 2 });
         }
       }
+    }
+
+    // Defense-in-depth: walk every installed package and assert that each
+    // declared dependency resolves (Node-style nearest-ancestor lookup) to a
+    // satisfying version. Catches resolver bugs, future regressions, and
+    // unforeseen hoisting issues before esbuild/nft pick up wrong code.
+    if (process.env.BUNDLER_STRICT_RANGES !== '0') {
+      await assertConsumerDepsSatisfied(TEMP_DIR, logger);
     }
 
     // Hash pacote's resolved top-level set once per build. Used in both the

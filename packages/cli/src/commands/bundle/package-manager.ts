@@ -207,19 +207,27 @@ export async function collectAllSpecs(
 
   while (queue.length > 0) {
     const item = queue.shift()!;
+
+    // Record this spec for EVERY queue item — the same name@spec can arrive
+    // from multiple consumers (e.g., common AND pubsub both declare arrify@^2.0.0),
+    // and the resolver needs to know all of them to nest correctly under each.
+    // De-dup only exact (name@spec, from) tuples defensively.
+    if (!allSpecs.has(item.name)) allSpecs.set(item.name, []);
+    const existing = allSpecs.get(item.name)!;
+    if (!existing.some((s) => s.spec === item.spec && s.from === item.from)) {
+      existing.push({
+        spec: item.spec,
+        source: item.source,
+        from: item.from,
+        optional: item.optional,
+        localPath: item.localPath,
+      });
+    }
+
+    // Walk transitive deps only once per name@spec (prevents cycles).
     const visitKey = `${item.name}@${item.spec}`;
     if (visited.has(visitKey)) continue;
     visited.add(visitKey);
-
-    // Record this spec
-    if (!allSpecs.has(item.name)) allSpecs.set(item.name, []);
-    allSpecs.get(item.name)!.push({
-      spec: item.spec,
-      source: item.source,
-      from: item.from,
-      optional: item.optional,
-      localPath: item.localPath,
-    });
 
     // Resolve transitive deps for local packages by reading package.json
     if (item.localPath) {
@@ -343,10 +351,11 @@ const SOURCE_PRIORITY: Record<VersionSpec['source'], number> = {
   peerDependency: 3,
 };
 
-export function resolveVersionConflicts(
+export async function resolveVersionConflicts(
   allSpecs: Map<string, VersionSpec[]>,
   logger: Logger.Instance,
-): ResolutionResult {
+  npmConfig: pacote.Options = {},
+): Promise<ResolutionResult> {
   const topLevel = new Map<string, ResolvedPackage>();
   const nested: NestedPackage[] = [];
 
@@ -392,6 +401,28 @@ export function resolveVersionConflicts(
     let chosenVersion: string;
     const alreadyNested = new Set<string>();
 
+    function nestLoser(spec: VersionSpec, alreadyNested: Set<string>): void {
+      if (spec.localPath) return;
+      if (alreadyNested.has(spec.spec)) return;
+      // Skip non-semver loser specs (git URLs, file:, tags) — pacote can resolve them but
+      // we cannot statically verify satisfaction. Log and let pacote handle it.
+      if (
+        semver.valid(spec.spec) === null &&
+        semver.validRange(spec.spec) === null
+      ) {
+        logger.debug(
+          `Skipping non-semver loser spec for ${name}: ${spec.spec} from ${spec.from}`,
+        );
+        return;
+      }
+      // Gather all consumers sharing this exact spec string (mirror line 414-417 pattern)
+      const consumers = activeSpecs
+        .filter((s) => s.spec === spec.spec)
+        .map((s) => s.from);
+      nested.push({ name, version: spec.spec, consumers });
+      alreadyNested.add(spec.spec);
+    }
+
     if (directExact) {
       // Direct exact version always wins
       chosenVersion = directExact.spec;
@@ -425,40 +456,56 @@ export function resolveVersionConflicts(
       }
     }
 
-    // Validate against ALL specs (including peerDeps)
+    // Resolve chosenVersion to a concrete version we can validate against.
+    // If chosen is already exact, use it directly. If it's a range/tag, ask pacote
+    // what concrete version it would actually install.
+    let concreteVersion: string;
     if (semver.valid(chosenVersion)) {
-      for (const spec of specs) {
-        if (spec.localPath) continue;
-        if (semver.valid(spec.spec)) {
-          // Both exact — must match
-          if (spec.spec !== chosenVersion) {
-            if (spec.source === 'peerDependency') {
-              logger.warn(
-                `${name}@${chosenVersion} differs from peer constraint ${spec.spec} (from ${spec.from})`,
-              );
-            } else if (!alreadyNested.has(spec.spec)) {
-              // Site C: transitive exact differs from chosen — nest it
-              nested.push({ name, version: spec.spec, consumers: [spec.from] });
-              alreadyNested.add(spec.spec);
-            }
-          }
-        } else {
-          // Chosen is exact, spec is range — check satisfaction
-          if (
-            !semver.satisfies(chosenVersion, spec.spec, {
+      concreteVersion = chosenVersion;
+    } else {
+      try {
+        const manifest = await pacote.manifest(
+          `${name}@${chosenVersion}`,
+          npmConfig,
+        );
+        concreteVersion = manifest.version;
+      } catch (err) {
+        if (process.env.BUNDLER_STRICT_RANGES === '0') {
+          logger.warn(
+            `Could not resolve ${name}@${chosenVersion} for strict validation: ${err instanceof Error ? err.message : String(err)}. Skipping range validation (BUNDLER_STRICT_RANGES=0).`,
+          );
+          topLevel.set(name, { name, version: chosenVersion });
+          continue;
+        }
+        throw new Error(
+          `Failed to resolve ${name}@${chosenVersion} for range conflict validation. ` +
+            `Set BUNDLER_STRICT_RANGES=0 to bypass with a warning. ` +
+            `Original error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    // Validate every spec against the concrete version. Non-satisfying specs get nested.
+    for (const spec of specs) {
+      if (spec.localPath) continue;
+      if (spec.spec === chosenVersion) continue; // identical strings can't conflict
+
+      const satisfied = semver.valid(spec.spec)
+        ? spec.spec === concreteVersion
+        : semver.validRange(spec.spec)
+          ? semver.satisfies(concreteVersion, spec.spec, {
               includePrerelease: true,
             })
-          ) {
-            if (spec.source === 'peerDependency') {
-              logger.warn(
-                `${name}@${chosenVersion} may not satisfy peer constraint ${spec.spec} (from ${spec.from})`,
-              );
-            } else {
-              // Site B: range not satisfied — nest the range
-              nested.push({ name, version: spec.spec, consumers: [spec.from] });
-            }
-          }
-        }
+          : true; // non-semver (git, file:, tag) — let pacote handle, don't nest blindly
+
+      if (satisfied) continue;
+
+      if (spec.source === 'peerDependency') {
+        logger.warn(
+          `${name}@${concreteVersion} does not satisfy peer constraint ${spec.spec} (from ${spec.from})`,
+        );
+      } else {
+        nestLoser(spec, alreadyNested);
       }
     }
 
@@ -546,7 +593,7 @@ async function downloadPackagesImpl(
   );
 
   // Phase 2: Resolve conflicts
-  const resolution = resolveVersionConflicts(allSpecs, logger);
+  const resolution = await resolveVersionConflicts(allSpecs, logger, npmConfig);
   const { topLevel, nested } = resolution;
 
   // Phase 3: Install each resolved package exactly once
