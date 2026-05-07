@@ -79,8 +79,14 @@ export function loadBundleConfig(
   rawConfig: unknown,
   options: LoadConfigOptions,
 ): LoadConfigResult {
+  // Pre-validation scan: detect the legacy `flow.config.bundle.external`
+  // field and strip it before schema validation. The strict Bundle schema
+  // rejects unknown keys, so without this step the config would fail to
+  // load with a confusing error. Emit a deprecation warning instead.
+  const sanitized = stripLegacyBundleExternal(rawConfig, options.logger);
+
   // Validate as Flow.Json
-  const config = validateFlowConfig(rawConfig);
+  const config = validateFlowConfig(sanitized);
   const availableFlows = getFlowNames(config);
 
   // Determine which flow to use
@@ -103,9 +109,16 @@ export function loadBundleConfig(
   // Get static build defaults based on platform
   const buildDefaults = getBuildDefaults(platform);
 
-  // Extract packages + overrides from flowSettings.config.bundle (if present)
-  const packages = flowSettings.config?.bundle?.packages || {};
-  const overrides = flowSettings.config?.bundle?.overrides || {};
+  // Extract packages + overrides + traceInclude from the canonical
+  // `flow.<name>.config.bundle.{packages, overrides, traceInclude}` location.
+  //
+  // The `config.bundle.external` sub-field is no longer supported (replaced
+  // by nft tracing); it is warned about and stripped pre-validation in
+  // `stripLegacyBundleExternal` so it does not surface here.
+  const bundle = flowSettings.config?.bundle;
+  const packages: Record<string, Flow.BundlePackage> = bundle?.packages ?? {};
+  const overrides: Record<string, string> = bundle?.overrides ?? {};
+  const traceInclude = bundle?.traceInclude;
 
   // Output path: use --output if provided, otherwise default
   // Always relative to cwd, no dynamic resolution
@@ -131,6 +144,7 @@ export function loadBundleConfig(
     ...buildDefaults,
     packages,
     overrides,
+    traceInclude,
     output,
     include: includes,
     configDir,
@@ -260,4 +274,57 @@ export async function loadFlowConfig(
 ): Promise<LoadConfigResult> {
   const rawConfig = await loadJsonConfig(configPath);
   return loadBundleConfig(rawConfig, { configPath, ...options });
+}
+
+/**
+ * Pre-validation pass: detect and strip the legacy
+ * `flow.config.bundle.external` field. The strict Bundle schema rejects
+ * unknown keys, so without this step a config containing the legacy
+ * field would fail validation with a confusing error. Emit a one-time
+ * deprecation warning per offending flow and return a sanitized clone.
+ *
+ * The clone is shallow at the levels we mutate (root, `flows`, each flow,
+ * `config`, `bundle`); deeper structures are aliased into the clone, which
+ * is fine because we only delete a top-level key on the bundle object.
+ */
+function stripLegacyBundleExternal(
+  rawConfig: unknown,
+  logger: LoadConfigOptions['logger'],
+): unknown {
+  if (!isPlainObject(rawConfig)) return rawConfig;
+  const flows = rawConfig.flows;
+  if (!isPlainObject(flows)) return rawConfig;
+
+  let mutated: Record<string, unknown> | null = null;
+
+  for (const [flowName, flowValue] of Object.entries(flows)) {
+    if (!isPlainObject(flowValue)) continue;
+    const flowConfig = flowValue.config;
+    if (!isPlainObject(flowConfig)) continue;
+    const bundle = flowConfig.bundle;
+    if (!isPlainObject(bundle)) continue;
+    if (!('external' in bundle)) continue;
+
+    logger?.warn(
+      `flow.config.bundle.external is no longer supported; @walkeros/cli@4.x traces server bundles automatically. Remove it from flows.${flowName}.config.bundle.`,
+    );
+
+    if (!mutated) {
+      mutated = {
+        ...rawConfig,
+        flows: { ...flows },
+      };
+    }
+    const mutatedFlows = mutated.flows as Record<string, unknown>;
+    const newBundle = { ...bundle };
+    delete newBundle.external;
+    const newConfig = { ...flowConfig, bundle: newBundle };
+    mutatedFlows[flowName] = { ...flowValue, config: newConfig };
+  }
+
+  return mutated ?? rawConfig;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -64,61 +64,64 @@ The CLI uses types from `@walkeros/core`:
 
 The CLI transforms `Flow.Json` → `Flow` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
 
-## The `bundle` section
+## Packages and overrides
 
-Build-time concerns for the bundler live under `flow.<name>.bundle`. Two fields are supported:
+Build-time concerns live under each flow's `config.bundle` block. Three fields are supported:
 
-- **`packages`**: the list of npm packages (or local paths) the bundler should install for this flow.
+- **`packages`**: the list of npm packages (or local paths) the bundler should install for this flow. Pacote downloads them based on this list. You do **not** need to run `npm install` yourself for step packages; the CLI handles it transparently.
 - **`overrides`**: pin transitive dependency versions, matching npm's `overrides` semantics. Useful when an upstream package declares an overly narrow version range that conflicts with a newer transitive version in the same tree.
+- **`traceInclude`** (server flows only): an escape hatch for the file tracer. See below.
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@walkeros/collector": {}
-  },
-  "overrides": {
-    "@amplitude/analytics-types": "2.11.1"
-  }
-}`}
-  language="json"
-/>
-
-### Bundle externals (per-package)
-
-`flow.<name>.bundle.packages` (above) declares which npm packages the bundler
-installs for the flow. `<package>.walkerOS.bundle.external` (this section)
-is a different thing: metadata declared by step-package authors marking
-specific runtime deps that the bundler must NOT inline (typically because
-they use `__dirname` or ship native binaries).
-
-<CodeSnippet
-  code={`{
-  "walkerOS": {
-    "type": "destination",
-    "platform": ["server"],
-    "bundle": {
-      "external": [
-        "@google-cloud/bigquery-storage",
-        "@grpc/grpc-js"
-      ]
+  code={`"flows": {
+  "default": {
+    "config": {
+      "platform": "server",
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {}
+        },
+        "overrides": {
+          "@amplitude/analytics-types": "2.11.1"
+        }
+      }
     }
   }
 }`}
   language="json"
 />
 
-When a flow uses any step package with non-empty `walkerOS.bundle.external`,
-the bundler:
-- Externalizes those names from the ESM bundle.
-- Extracts each external + its full transitive tree into
-  `<outputDir>/node_modules/` via pacote (no shell-out).
-- Emits sibling `<outputDir>/package.json` and `<outputDir>/package-lock.json`.
+### Server bundles use nft tracing
 
-The output shape changes accordingly:
-- Empty externals: `dist/bundle.mjs` (single file, default).
-- Non-empty: `dist/{bundle.mjs, package.json, package-lock.json, node_modules/}`.
+Server flows (`platform: "server"`) are traced automatically with [`@vercel/nft`](https://github.com/vercel/nft). The bundler externalizes every step package, then nft walks the entry to figure out which files are actually reachable at runtime, and copies only those files into `dist/node_modules/`. Native add-ons, `.proto` files, and `__dirname`-loaded assets are picked up.
 
-See the create-* skills (`walkeros-create-{source,destination,transformer}`) for authoring guidance.
+There is no `walkerOS.bundle.external` annotation: nft figures out the externalization automatically.
+
+### Escape hatch: `traceInclude`
+
+If nft cannot statically reach a file (rare: dynamic `require(somePath)` constructed from a runtime variable, dynamically loaded data files), declare it explicitly with `flow.<name>.config.bundle.traceInclude`. Paths and globs are both supported (matched via picomatch). Paths resolve against the install root, not your project directory.
+
+<CodeSnippet
+  code={`"flows": {
+  "default": {
+    "config": {
+      "platform": "server",
+      "bundle": {
+        "packages": { "@walkeros/server-destination-gcp": {} },
+        "traceInclude": [
+          "node_modules/some-pkg/data/*.json",
+          "node_modules/another-pkg/lib/runtime-loaded.js"
+        ]
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### Schema version
+
+The flow.json schema stays at `version: 4`. Build-time fields live under `flow.<name>.config.bundle.{packages, overrides, traceInclude}`. The `flow.<name>.config.bundle.external` sub-field is no longer supported in @walkeros/cli@4.x.
 
 ## Package imports
 
@@ -127,12 +130,10 @@ See the create-* skills (`walkeros-create-{source,destination,transformer}`) for
 The collector is added automatically. To pin a specific version (recommended for production), add the collector explicitly:
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@walkeros/collector": { "version": "1.0.0" },
-    "@walkeros/web-source-browser": {},
-    "@walkeros/destination-demo": {}
-  }
+  code={`"packages": {
+  "@walkeros/collector": { "version": "1.0.0" },
+  "@walkeros/web-source-browser": {},
+  "@walkeros/destination-demo": {}
 }`}
   language="json"
 />
@@ -142,11 +143,9 @@ The collector is added automatically. To pin a specific version (recommended for
 Sources and destinations automatically use their **default export** - no `imports` needed:
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@walkeros/web-source-browser": {},        // Uses default export
-    "@walkeros/destination-demo": {}           // Uses default export
-  }
+  code={`"packages": {
+  "@walkeros/web-source-browser": {},        // Uses default export
+  "@walkeros/destination-demo": {}           // Uses default export
 }`}
   language="json"
 />
@@ -156,12 +155,10 @@ Sources and destinations automatically use their **default export** - no `import
 Use `imports` when you need specific utility functions from a package:
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@walkeros/core": { "imports": ["getId", "clone"] },     // Optional utilities
-    "@walkeros/web-source-browser": {
-      "imports": ["createTagger"]                            // Additional utility
-    }
+  code={`"packages": {
+  "@walkeros/core": { "imports": ["getId", "clone"] },     // Optional utilities
+  "@walkeros/web-source-browser": {
+    "imports": ["createTagger"]                            // Additional utility
   }
 }`}
   language="json"
@@ -172,10 +169,8 @@ Use `imports` when you need specific utility functions from a package:
 For packages without a default export, specify both `imports` and `code`:
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@my/custom-package": { "imports": ["namedExport"] }
-  }
+  code={`"packages": {
+  "@my/custom-package": { "imports": ["namedExport"] }
 },
 "sources": {
   "custom": {
@@ -196,11 +191,9 @@ Add a `path` property to any package to use a local directory instead of npm:
 
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@my/custom-destination": {
-        "path": "./my-custom-destination"
-      }
+  "packages": {
+    "@my/custom-destination": {
+      "path": "./my-custom-destination"
     }
   }
 }`}
@@ -220,14 +213,12 @@ When a local package has dependencies on other packages that are also specified 
 
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@walkeros/core": {
-        "path": "../packages/core"
-      },
-      "@walkeros/collector": {
-        "path": "../packages/collector"
-      }
+  "packages": {
+    "@walkeros/core": {
+      "path": "../packages/core"
+    },
+    "@walkeros/collector": {
+      "path": "../packages/collector"
     }
   }
 }`}
@@ -241,11 +232,9 @@ In this example, even though `@walkeros/collector` depends on `@walkeros/core`, 
 **Development of custom packages:**
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@my-org/destination-custom": {
-        "path": "../my-destination"
-      }
+  "packages": {
+    "@my-org/destination-custom": {
+      "path": "../my-destination"
     }
   }
 }`}
@@ -255,11 +244,9 @@ In this example, even though `@walkeros/collector` depends on `@walkeros/core`, 
 **Testing local changes to walkerOS packages:**
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@walkeros/collector": {
-        "path": "../../packages/collector"
-      }
+  "packages": {
+    "@walkeros/collector": {
+      "path": "../../packages/collector"
     }
   }
 }`}
@@ -335,7 +322,7 @@ The bundle command handles all of this.
   language="bash"
 />
 
-This writes the optimized bundle to stdout. Use `-o` to write to a file (e.g., `-o ./dist/walker.js` for web, `-o ./dist/bundle.mjs` for server).
+This writes the optimized bundle to stdout (web flows only). Use `-o` to write to a file or directory (e.g., `-o ./dist/walker.js` for web, `-o ./dist/` for server, which produces `dist/{flow.mjs, package.json, node_modules/}`).
 
 ### Step-by-Step Guide
 
@@ -402,7 +389,7 @@ Output:
 ✓ @walkeros/destination-demo@latest
 
 🔨 Bundling...
-✓ Bundle created: ./dist/bundle.mjs
+✓ Bundle created: ./dist/flow.mjs
 
 📊 Bundle Statistics:
    Size: 45.2 KB (minified)
@@ -414,10 +401,12 @@ Output:
 
 <CodeSnippet
   code={`ls -lh dist/
-# -rw-r--r--  1 user  staff   45K  bundle.mjs
+# -rw-r--r--  1 user  staff   45K  flow.mjs
+# -rw-r--r--  1 user  staff  152B  package.json
+# drwxr-xr-x 12 user  staff  384B  node_modules
 
-file dist/bundle.mjs
-# dist/bundle.mjs: JavaScript source, UTF-8 Unicode text`}
+file dist/flow.mjs
+# dist/flow.mjs: JavaScript source, UTF-8 Unicode text`}
   language="bash"
 />
 
@@ -435,7 +424,6 @@ The bundle is now ready to deploy!
 | `-o, --output <path>` | Write bundle to file, directory, or presigned URL |
 | `-f, --flow <name>` | Build specific flow (for multi-flow configs) |
 | `--all` | Build all flows |
-| `--dockerfile` | Generate Dockerfile alongside bundle |
 | `-s, --stats` | Show bundle statistics |
 | `--json` | Output statistics as JSON (for CI/CD) |
 | `--no-cache` | Skip package cache, download fresh |
@@ -443,7 +431,7 @@ The bundle is now ready to deploy!
 
 When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads via HTTP PUT. This is used by the walkerOS cloud service for remote builds.
 
-When the bundle's resolved externals are non-empty, sibling files (`package.json`, `package-lock.json`, `node_modules/`) are written next to the `-o` path.
+For server flows, `-o` resolves to a directory: `dist/{flow.mjs, package.json, node_modules/}`. For multi-flow `--all`, each flow gets its own subdirectory: `dist/<flowName>/...`.
 
 ### Multi-Flow Example
 
@@ -482,7 +470,7 @@ Push handles both safe local testing (with `--simulate`) and real integration te
 walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'
 
 # With pre-built bundle
-walkeros push dist/bundle.mjs --event '{"name":"page view"}'`}
+walkeros push dist/flow.mjs --event '{"name":"page view"}'`}
   language="bash"
 />
 
@@ -1702,7 +1690,7 @@ You can also run pre-built bundles directly:
 walkeros bundle collect.json
 
 # Then run the bundle
-walkeros run dist/bundle.mjs --port 8080`}
+walkeros run dist/flow.mjs --port 8080`}
   language="bash"
 />
 
@@ -2027,16 +2015,20 @@ jobs:
 
 ### Docker Build
 
-<CodeSnippet
-  code={`FROM node:18-alpine AS builder
-WORKDIR /build
-RUN npm install -g @walkeros/cli
-COPY flow.json .
-RUN walkeros bundle flow.json
+The canonical multi-stage Dockerfile installs the CLI in the build stage, bundles the flow into a `dist/` directory, then copies the directory into the runtime image. You do not need to declare step packages in `package.json`; pacote installs them transparently from `flow.json`.
 
-FROM walkeros/flow:latest
-COPY --from=builder /build/dist/bundle.mjs /app/flow.mjs
-ENV BUNDLE=/app/flow.mjs`}
+<CodeSnippet
+  code={`FROM node:22-alpine AS builder
+WORKDIR /build
+RUN npm init -y && npm install --save-dev @walkeros/cli
+COPY flow.json ./
+RUN npx walkeros bundle flow.json -o dist/
+
+FROM walkeros/flow:4
+WORKDIR /app/flow
+COPY --from=builder /build/dist/ ./
+ENV PORT=8080
+EXPOSE 8080`}
   language="dockerfile"
 />
 
@@ -2097,16 +2089,26 @@ export WALKEROS_TOKEN=sk-walkeros-xxx`}
   language="bash"
 />
 
-### Warning: bundle contains __dirname references
+### nft cannot trace a runtime asset
 
-Means an inlined dep references `__dirname`/`__filename` which throw in
-ESM module scope at runtime. The bundler attributes the most likely
-source packages in the warning text.
+If a runtime asset is missing in `dist/node_modules/` (typically because the dep loads it via a dynamically constructed path), declare it explicitly under the flow's `config.bundle.traceInclude`. Paths and globs both work, resolved against the install root:
 
-**Fix:** declare the offending dep under that step package's
-`walkerOS.bundle.external`. If you don't own the step package, file an
-issue. For legitimate uses (a `$code:` snippet using `__dirname` in a
-string literal), suppress per-line with `// walkeros: dirname-ok`.
+<CodeSnippet
+  code={`"flows": {
+  "default": {
+    "config": {
+      "platform": "server",
+      "bundle": {
+        "packages": { "@walkeros/server-destination-gcp": {} },
+        "traceInclude": [
+          "node_modules/some-pkg/data/*.json"
+        ]
+      }
+    }
+  }
+}`}
+  language="json"
+/>
 
 ### Caching pacote downloads in CI
 
@@ -2118,16 +2120,15 @@ The bundler caches downloads under `process.env.NPM_CACHE_DIR` (default
   with:
     path: .walkeros-cache/npm
     key: walkeros-\${{ hashFiles('**/flow.json') }}
-- run: WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o dist/bundle.mjs`}
+- run: WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o dist/`}
   language="yaml"
 />
 
 ### Bundle output is large
 
-When externals are present, `dist/node_modules/` typically holds 30-50MB
-across 10k+ files (grpc, protobufjs, etc.). Recommendations:
+`dist/node_modules/` for a server flow with the GCP destination typically holds 30-50MB across 10k+ files (grpc, protobufjs, etc.). Recommendations:
 - Use `.dockerignore` to exclude irrelevant build output from non-bundle contexts.
-- Prefer `COPY dist/ /app/` over file-by-file in your Dockerfile.
+- Prefer `COPY --from=builder /build/dist/ /app/flow/` over file-by-file in your Dockerfile.
 - Expect ~30s artifact upload time on slow CI.
 
 ## Next steps

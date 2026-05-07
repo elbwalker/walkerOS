@@ -209,7 +209,8 @@ export namespace Flow {
     settings?: Settings;
 
     /**
-     * Bundle configuration: NPM packages to include, transitive dependency overrides.
+     * Bundle configuration: NPM packages to include, transitive dependency
+     * overrides, and extra trace includes for server bundles.
      * Consumed by the CLI bundler at build time.
      */
     bundle?: Bundle;
@@ -230,8 +231,12 @@ export namespace Flow {
   /**
    * Bundle configuration for a flow.
    *
-   * Groups all build-time bundling concerns: NPM packages to include and
-   * transitive dependency overrides. Consumed by the CLI bundler.
+   * Groups all build-time bundling concerns: NPM packages to include,
+   * transitive dependency overrides, and extra trace includes (server only).
+   * Consumed by the CLI bundler.
+   *
+   * The `flow.config.bundle.external` sub-field is no longer supported
+   * (replaced by nft tracing in @walkeros/cli@4.x).
    */
   export interface Bundle {
     /** NPM packages to bundle, keyed by package name. */
@@ -240,7 +245,7 @@ export namespace Flow {
     /**
      * Transitive dependency version pins.
      *
-     * Maps package name → version spec. Applied during bundle package install
+     * Maps package name to version spec. Applied during bundle package install
      * to force transitive dependencies to a specific version. Useful for
      * resolving conflicts between packages that depend on incompatible
      * versions of a shared dependency.
@@ -253,6 +258,18 @@ export namespace Flow {
      * ```
      */
     overrides?: Record<string, string>;
+
+    /**
+     * Extra paths the bundler must include in the trace output.
+     *
+     * Each entry is either a literal path or a glob (matched via picomatch),
+     * resolved against the bundler's install root. Use as an escape hatch
+     * when the file tracer cannot statically discover an asset (e.g.,
+     * dynamic require, runtime configuration files).
+     *
+     * Server flows only.
+     */
+    traceInclude?: string[];
   }
 
   /**

@@ -195,11 +195,18 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "traceInclude": {
+          "description": "Extra paths or globs the bundler must include in the trace output (server flows only)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false,
       "title": "Flow.Bundle",
-      "description": "Bundle configuration (packages + overrides)."
+      "description": "Bundle configuration (packages + overrides + traceInclude)."
     },
     "FlowConfig": {
       "type": "object",

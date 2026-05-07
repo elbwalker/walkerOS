@@ -93,14 +93,20 @@ export const BundleSchema = z
       )
       .optional()
       .describe('Transitive dependency version pins'),
+    traceInclude: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Extra paths or globs the bundler must include in the trace output (server flows only)',
+      ),
   })
   .strict()
   .meta({
     id: 'FlowBundle',
     title: 'Flow.Bundle',
-    description: 'Bundle configuration (packages + overrides).',
+    description: 'Bundle configuration (packages + overrides + traceInclude).',
   })
-  .describe('Bundle configuration (packages + overrides)');
+  .describe('Bundle configuration (packages + overrides + traceInclude)');
 
 // ========================================
 // Inline Code Schema

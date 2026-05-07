@@ -19,7 +19,7 @@ export function writeCache(
   version: string,
 ): void {
   mkdirSync(cacheDir, { recursive: true });
-  copyFileSync(bundlePath, join(cacheDir, 'bundle.mjs'));
+  copyFileSync(bundlePath, join(cacheDir, 'flow.mjs'));
   writeFileSync(join(cacheDir, 'config.json'), configContent, 'utf-8');
   const meta: CacheMeta = { version, timestamp: Date.now() };
   writeFileSync(join(cacheDir, 'meta.json'), JSON.stringify(meta), 'utf-8');
@@ -30,7 +30,7 @@ export function readCache(
 ): { bundlePath: string; version: string } | null {
   try {
     const metaPath = join(cacheDir, 'meta.json');
-    const bundlePath = join(cacheDir, 'bundle.mjs');
+    const bundlePath = join(cacheDir, 'flow.mjs');
     if (!existsSync(metaPath) || !existsSync(bundlePath)) return null;
     const meta: CacheMeta = JSON.parse(readFileSync(metaPath, 'utf-8'));
     return { bundlePath, version: meta.version };

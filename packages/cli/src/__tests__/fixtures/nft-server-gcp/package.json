@@ -1,0 +1,12 @@
+{
+  "name": "@walkeros-test/nft-server-gcp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@walkeros/server-source-express": "*",
+    "@walkeros/server-destination-console": "*",
+    "@walkeros/server-destination-gcp": "*",
+    "@google-cloud/bigquery-storage": "^5.1.0"
+  }
+}

@@ -156,7 +156,7 @@ describe('Programmatic Bundle API', () => {
 
   it('should use convention-based output paths', () => {
     expect(getDefaultOutput('web')).toBe('./dist/walker.js');
-    expect(getDefaultOutput('server')).toBe('./dist/bundle.mjs');
+    expect(getDefaultOutput('server')).toBe('./dist/flow.mjs');
   });
 
   it('should error on unresolved $flow.X.url (strict by default for bundle)', async () => {

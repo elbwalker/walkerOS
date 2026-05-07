@@ -36,7 +36,7 @@ export async function prepareBundleForRun(
   await fs.ensureDir(tempDir);
 
   // Generate output path in temp directory
-  const tempPath = path.join(tempDir, 'bundle.mjs');
+  const tempPath = path.join(tempDir, 'flow.mjs');
 
   // Bundle with proper output override
   await bundle(configPath, {

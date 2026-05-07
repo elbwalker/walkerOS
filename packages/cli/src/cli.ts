@@ -91,7 +91,9 @@ program
 // Bundle command
 program
   .command('bundle [file]')
-  .description('Bundle NPM packages with custom code')
+  .description(
+    'Bundle a flow.json. Server flows produce dist/{flow.mjs,package.json,node_modules/} via @vercel/nft tracing; web flows produce a single walker.js.',
+  )
   .option('-o, --output <path>', 'write bundle to file or directory')
   .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('--all', 'build all flows for multi-flow configs')
@@ -100,10 +102,6 @@ program
   .option('--no-cache', 'disable package caching')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
-  .option(
-    '--dockerfile [file]',
-    'generate Dockerfile (or copy custom file) to dist/',
-  )
   .action(async (file, options) => {
     await bundleCommand({
       config: file,
@@ -115,7 +113,6 @@ program
       cache: options.cache,
       verbose: options.verbose,
       silent: options.silent,
-      dockerfile: options.dockerfile,
     });
   });
 

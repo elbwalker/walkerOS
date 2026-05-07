@@ -16,7 +16,8 @@ Complete reference for Flow.Json JSON configuration format.
         "settings": {},
         "bundle": {
           "packages": {},
-          "overrides": {}
+          "overrides": {},
+          "traceInclude": []
         }
       },
       "sources": {},
@@ -68,13 +69,16 @@ runtime options or web bootstrap behavior).
 
 ## Packages
 
-Bundle-time packages are configured under `config.bundle.packages`.
+Bundle-time packages live under `flow.<name>.config.bundle.packages`. Pacote
+installs them transparently. **You do NOT run `npm install` for step packages;
+flow.json is the single source of truth.**
 
 ### NPM Packages
 
 ```json
 {
   "config": {
+    "platform": "web",
     "bundle": {
       "packages": {
         "@walkeros/web-destination-gtag": {},
@@ -90,6 +94,7 @@ Bundle-time packages are configured under `config.bundle.packages`.
 ```json
 {
   "config": {
+    "platform": "web",
     "bundle": {
       "packages": {
         "@walkeros/collector": {
@@ -106,6 +111,7 @@ Bundle-time packages are configured under `config.bundle.packages`.
 ```json
 {
   "config": {
+    "platform": "web",
     "bundle": {
       "packages": {
         "my-custom-destination": {
@@ -122,16 +128,41 @@ Bundle-time packages are configured under `config.bundle.packages`.
 
 ### Overrides
 
-`config.bundle.overrides` pins transitive dependency versions (npm-style):
+`flow.<name>.config.bundle.overrides` pins transitive dependency versions
+(npm-style):
 
 ```json
 {
   "config": {
+    "platform": "web",
     "bundle": {
       "packages": { "@walkeros/web-destination-amplitude": {} },
       "overrides": {
         "@amplitude/analytics-types": "2.11.1"
       }
+    }
+  }
+}
+```
+
+### traceInclude (server flows only)
+
+Server flows are bundled with `@vercel/nft`. nft statically discovers files
+reachable from the entry. For the rare case it cannot reach a runtime asset
+(typically `require()` of a path constructed from a runtime variable), declare
+the file explicitly under `flow.<name>.config.bundle.traceInclude`. Paths and
+globs both work, resolved against the install root (where pacote put files):
+
+```json
+{
+  "config": {
+    "platform": "server",
+    "bundle": {
+      "packages": { "@walkeros/server-destination-gcp": {} },
+      "traceInclude": [
+        "node_modules/some-pkg/data/*.json",
+        "node_modules/another-pkg/lib/runtime-loaded.js"
+      ]
     }
   }
 }
@@ -294,7 +325,9 @@ Embed JavaScript in JSON for mappings:
     "analytics": {
       "config": {
         "platform": "web",
-        "bundle": { "packages": { "@walkeros/web-destination-gtag": {} } }
+        "bundle": {
+          "packages": { "@walkeros/web-destination-gtag": {} }
+        }
       },
       "destinations": {
         /* ... */
@@ -303,7 +336,9 @@ Embed JavaScript in JSON for mappings:
     "marketing": {
       "config": {
         "platform": "web",
-        "bundle": { "packages": { "@walkeros/web-destination-meta": {} } }
+        "bundle": {
+          "packages": { "@walkeros/web-destination-meta": {} }
+        }
       },
       "destinations": {
         /* ... */
@@ -312,7 +347,9 @@ Embed JavaScript in JSON for mappings:
     "server": {
       "config": {
         "platform": "server",
-        "bundle": { "packages": { "@walkeros/destination-api": {} } }
+        "bundle": {
+          "packages": { "@walkeros/destination-api": {} }
+        }
       },
       "destinations": {
         /* ... */

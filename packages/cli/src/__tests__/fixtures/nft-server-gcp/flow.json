@@ -1,0 +1,36 @@
+{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "server"
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "port": 8080
+            }
+          }
+        }
+      },
+      "destinations": {
+        "console": {
+          "package": "@walkeros/server-destination-console"
+        },
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "config": {
+            "settings": {
+              "projectId": "elbwalker-test",
+              "datasetId": "events",
+              "tableId": "stream",
+              "location": "EU"
+            }
+          }
+        }
+      }
+    }
+  }
+}

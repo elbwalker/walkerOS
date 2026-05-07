@@ -30,7 +30,7 @@ export interface CLIBuildOptions extends Pick<
 > {
   /**
    * Output file path (CLI argument, not in config).
-   * @default "./dist/walker.js" (web) or "./dist/bundle.mjs" (server)
+   * @default "./dist/walker.js" (web) or "./dist/flow.mjs" (server)
    */
   output?: string;
 
@@ -76,6 +76,14 @@ export interface BuildOptions extends CLIBuildOptions {
    * Only substitutes transitive specs; direct package specs always win.
    */
   overrides?: Record<string, string>;
+
+  /**
+   * Extra paths or globs the bundler must include in the trace output.
+   * Sourced from `flow.<name>.config.bundle.traceInclude`. Resolved against
+   * the bundler install root before being passed to the file tracer. Globs
+   * (entries containing `*`, `?`, `[`, or `{`) are expanded via picomatch.
+   */
+  traceInclude?: string[];
 
   /**
    * Output format.

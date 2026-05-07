@@ -286,7 +286,7 @@ async function executeConfigPush(
   );
   setTempDir(tempDir);
   await fs.ensureDir(tempDir);
-  const tempPath = path.join(tempDir, 'bundle.mjs');
+  const tempPath = path.join(tempDir, 'flow.mjs');
 
   const pushBuildOptions = {
     ...buildOptions,
@@ -334,7 +334,7 @@ async function executeBundlePush(
   );
   setTempDir(tempDir);
   await fs.ensureDir(tempDir);
-  const tempPath = path.join(tempDir, 'bundle.mjs');
+  const tempPath = path.join(tempDir, 'flow.mjs');
   await fs.writeFile(tempPath, bundleContent, 'utf8');
 
   logger.debug(`Bundle written to: ${tempPath}`);

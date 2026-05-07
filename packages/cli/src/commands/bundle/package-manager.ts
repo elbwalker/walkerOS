@@ -491,35 +491,6 @@ export interface DownloadResult {
   resolution: ResolutionResult;
 }
 
-export async function downloadPackages(
-  packages: Package[],
-  targetDir: string,
-  logger: Logger.Instance,
-  useCache = true,
-  configDir?: string,
-  tmpDir?: string,
-  overrides: Record<string, string> = {},
-  npmConfig: NpmConfig = PACOTE_OPTS,
-): Promise<Map<string, string>> {
-  const result = await downloadPackagesImpl(
-    packages,
-    targetDir,
-    logger,
-    useCache,
-    configDir,
-    tmpDir,
-    overrides,
-    npmConfig,
-  );
-  return result.packagePaths;
-}
-
-/**
- * Same as `downloadPackages`, but also returns the ResolutionResult.
- * Used by Task 4's installExternalsViaPacote which needs the resolution
- * graph to compute the install closure. Existing `downloadPackages` is
- * unchanged for backward compat (CLI bumps MINOR, not MAJOR).
- */
 export async function downloadPackagesWithResolution(
   packages: Package[],
   targetDir: string,
@@ -543,39 +514,8 @@ export async function downloadPackagesWithResolution(
 }
 
 /**
- * Hard-error when any manifest in the install closure declares a lifecycle
- * script that pacote.extract does NOT run. Pacote.extract is data-only;
- * postinstall scripts mean the package would arrive half-built (e.g. bcrypt,
- * sharp, legacy @grpc/grpc-js precompiled binaries). Listing all offenders
- * in one message per FL-3 review.
- */
-export function assertNoPostinstallScripts(
-  manifests: Map<string, { scripts?: Record<string, string> }>,
-): void {
-  const LIFECYCLE = ['preinstall', 'install', 'postinstall'] as const;
-  const offenders: { name: string; scripts: string[] }[] = [];
-  for (const [name, manifest] of manifests) {
-    const scripts = manifest.scripts ?? {};
-    const present = LIFECYCLE.filter((s) => typeof scripts[s] === 'string');
-    if (present.length > 0) offenders.push({ name, scripts: present });
-  }
-  if (offenders.length === 0) return;
-  const list = offenders
-    .map((o) => `  - ${o.name} (${o.scripts.join(', ')})`)
-    .join('\n');
-  throw new Error(
-    `walkerOS bundle cannot auto-install the following package(s) because they declare lifecycle scripts that pacote.extract does NOT run:\n${list}\n\n` +
-      'These packages would arrive in node_modules/ in a half-built state. ' +
-      'Either: (a) ask the package author to file an issue requesting walkerOS support, or ' +
-      '(b) build your bundle in a Dockerfile that runs `npm install` separately as a downstream step.',
-  );
-}
-
-/**
- * Shared body for `downloadPackages` and `downloadPackagesWithResolution`.
- * Returns both the installed package paths and the underlying ResolutionResult
- * so Task 4 can walk the closure for pacote-based install. Public `downloadPackages`
- * discards the resolution and returns just the Map<name, path> for backward compat.
+ * Shared body for `downloadPackagesWithResolution`. Returns both the
+ * installed package paths and the underlying ResolutionResult.
  */
 async function downloadPackagesImpl(
   packages: Package[],

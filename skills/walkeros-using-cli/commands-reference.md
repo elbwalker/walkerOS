@@ -23,31 +23,31 @@ walkeros bundle <config> [options]
 | `--stats`       | Show bundle size statistics               |
 | `--json`        | Output results as JSON                    |
 | `--no-cache`    | Skip build cache                          |
-| `--dockerfile`  | Generate Dockerfile for deployment        |
 | `-v, --verbose` | Verbose logging                           |
 | `-s, --silent`  | Silent mode (errors only)                 |
 
 ### Output
 
-By default, the bundle is written to stdout. Use `-o` to write to a file:
+By default, web bundles are written to stdout. Use `-o`:
 
-- **Web flows**: `-o ./dist/walker.js`
-- **Server flows**: `-o ./dist/bundle.mjs`
+- **Web flows**: `-o ./dist/walker.js` (single self-contained IIFE)
+- **Server flows**: `-o ./dist/` (a directory: `flow.mjs`, `package.json`,
+  `node_modules/` -- nft-traced)
 
 ### Examples
 
 ```bash
-# Bundle default flow
+# Bundle default flow (web → stdout, server → write -o)
 walkeros bundle flow.json
+
+# Bundle a server flow into dist/
+walkeros bundle flow.json -o dist/
 
 # Bundle specific flow
 walkeros bundle flow.json --flow analytics
 
-# Bundle all flows with stats
-walkeros bundle flow.json --all --stats
-
-# Generate Docker deployment
-walkeros bundle flow.json --dockerfile
+# Bundle all flows with stats (writes dist/<flowName>/...)
+walkeros bundle flow.json --all --stats -o dist/
 ```
 
 ---
@@ -135,8 +135,8 @@ Options:
 # Start collection server
 walkeros run flow.json --port 3000
 
-# Use pre-built bundle
-walkeros run dist/bundle.mjs
+# Use pre-built server bundle (the entry inside dist/)
+walkeros run dist/flow.mjs
 ```
 
 ---

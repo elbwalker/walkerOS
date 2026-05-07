@@ -52,7 +52,7 @@ walkeros push flow.json --event '{"name":"product view"}' --simulate destination
 walkeros push flow.json --event '{"name":"product view"}'
 
 # Run a collection server locally
-walkeros run dist/bundle.mjs --port 3000
+walkeros run dist/flow.mjs --port 3000
 ```
 
 ## Commands
@@ -79,7 +79,6 @@ walkeros bundle https://example.com/config.json                  # Remote URL
 - `--stats` - Show bundle statistics
 - `--json` - Output as JSON (implies --stats)
 - `--no-cache` - Disable package caching
-- `--dockerfile [file]` - Generate Dockerfile (or copy custom file) to dist/
 - `-v, --verbose` - Verbose output
 - `-s, --silent` - Suppress output
 
@@ -89,15 +88,31 @@ walkeros bundle https://example.com/config.json                  # Remote URL
 # Bundle with stats
 walkeros bundle examples/server-collect.json --stats
 
-# Bundle with auto-generated Dockerfile
-walkeros bundle flow.json --dockerfile
-
-# Bundle with custom Dockerfile
-walkeros bundle flow.json --dockerfile Dockerfile.custom
+# Bundle to a custom output directory
+walkeros bundle flow.json -o ./build/
 ```
 
-The output path uses convention-based defaults: `./dist/bundle.mjs` for server,
-`./dist/walker.js` for web.
+### Server bundles use nft tracing
+
+Server flows (`platform: "server"`) are bundled with `@vercel/nft`. The CLI
+externalizes every step package, traces the entry to discover which files are
+actually reachable at runtime, and copies only those files into
+`dist/node_modules/`. Step packages are installed via pacote, driven by the
+`config.bundle.packages` field in `flow.json`. **You do not need to run
+`npm install` for step packages**: only `@walkeros/cli` belongs in your
+`package.json` devDependencies.
+
+The output is always a directory:
+
+```
+dist/
+├── flow.mjs        # ESM entry point
+├── package.json     # informational sidecar
+└── node_modules/    # only the files nft traced
+```
+
+For web flows the output stays a single self-contained file (default
+`dist/walker.js`).
 
 ### push
 
@@ -162,10 +177,10 @@ walkeros push flow.json -e event.json --mock destination.ga4='{"status":"ok"}'
 
 ```bash
 # Push with pre-built bundle
-walkeros push dist/bundle.mjs --event '{"name":"order complete"}'
+walkeros push dist/flow.mjs --event '{"name":"order complete"}'
 
 # Override platform detection
-walkeros push dist/bundle.js --platform server --event '{"name":"order complete"}'
+walkeros push dist/walker.js --platform web --event '{"name":"order complete"}'
 ```
 
 **Push modes:**
@@ -263,8 +278,8 @@ walkeros run <config-file> [options]
 # Run collection server (auto-bundles JSON)
 walkeros run examples/server-collect.json --port 3000
 
-# Run with pre-built bundle
-walkeros run examples/server-collect.mjs --port 3000
+# Run with a pre-built server bundle
+walkeros run dist/flow.mjs --port 3000
 ```
 
 **How it works:**
@@ -390,18 +405,22 @@ walkeros bundle flow.json --no-cache
 
 ## Flow Configuration
 
-Flow configs use the `Flow.Config` format with `version` and `flows`:
+Flow configs use the `Flow.Json` format with `version` and `flows`:
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "server": {},
-      "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {}
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": { "imports": ["startFlow"] },
+            "@walkeros/server-source-express": {},
+            "@walkeros/destination-demo": {}
+          }
+        }
       },
       "sources": {
         "http": {
@@ -425,7 +444,9 @@ Flow configs use the `Flow.Config` format with `version` and `flows`:
 }
 ```
 
-Platform is determined by the `web: {}` or `server: {}` key presence.
+Platform is set via `config.platform` (`"web"` or `"server"`). The
+`config.bundle.packages` field declares what pacote should install.
+`config.bundle.overrides` pins transitive dependency versions when needed.
 
 ### Package Configuration Patterns
 
@@ -625,7 +646,7 @@ walkeros push \
 walkeros bundle my-flow.json --stats
 
 # 4. Run locally
-walkeros run dist/bundle.mjs --port 3000
+walkeros run dist/flow.mjs --port 3000
 
 # 5. In another terminal, test it
 curl -X POST http://localhost:3000/collect \
@@ -636,13 +657,16 @@ curl -X POST http://localhost:3000/collect \
 ## Architecture
 
 ```
-CLI (downloads packages + bundles with esbuild)
- ├─ Bundle → optimized .mjs file
- ├─ Push → execute bundle (with optional --simulate for testing)
- └─ Run → execute bundle with built-in runtime
+CLI
+ ├─ Pacote installs flow.json packages (no user-side npm install)
+ ├─ esbuild externalizes step packages, emits ESM entry
+ ├─ @vercel/nft traces entry, copies only used files
+ └─ Output: dist/{flow.mjs, package.json, node_modules/}  (server)
+            dist/walker.js                                  (web)
 ```
 
-**Key principle**: CLI handles both build-time and runtime operations.
+**Key principle**: CLI handles both build-time install/trace/bundle and runtime
+execution.
 
 ## Runner (Docker)
 
@@ -684,7 +708,7 @@ Run the bundle directly with the CLI:
 walkeros bundle flow.json
 
 # Run in production
-walkeros run dist/bundle.mjs --port 8080
+walkeros run dist/flow.mjs --port 8080
 ```
 
 This runs the flow in the current Node.js process, suitable for deployment on

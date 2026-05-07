@@ -1,0 +1,10 @@
+{
+  "name": "@walkeros-test/nft-server-simple",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@walkeros/server-source-express": "*",
+    "@walkeros/server-destination-console": "*"
+  }
+}

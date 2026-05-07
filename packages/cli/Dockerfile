@@ -27,7 +27,7 @@ USER walker
 # Default environment variables
 ENV NODE_ENV=production
 ENV PORT=8080
-ENV BUNDLE=/app/flow/bundle.mjs
+ENV BUNDLE=/app/flow/flow.mjs
 
 # Expose default port
 EXPOSE 8080
@@ -39,5 +39,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # Ensure walkeros binary is on PATH
 ENV PATH="/app/node_modules/.bin:${PATH}"
 
-ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["walkeros", "run"]
+# Preflight wrapper: verifies the bundle exists, then execs tini + walkeros run
+COPY scripts/walkeros-entry /usr/local/bin/walkeros-entry
+RUN chmod +x /usr/local/bin/walkeros-entry
+
+ENTRYPOINT ["walkeros-entry"]

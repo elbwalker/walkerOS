@@ -45,7 +45,7 @@ export const SERVER_BUILD_DEFAULTS: Omit<BuildOptions, 'output' | 'packages'> =
  */
 export const DEFAULT_OUTPUT_PATHS = {
   web: './dist/walker.js',
-  server: './dist/bundle.mjs',
+  server: './dist/flow.mjs',
 } as const;
 
 /**
