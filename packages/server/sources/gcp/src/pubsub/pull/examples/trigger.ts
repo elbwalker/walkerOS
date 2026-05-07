@@ -1,19 +1,14 @@
 import type { Collector, Trigger } from '@walkeros/core';
-import type { MessageLike } from '../../shared/types';
 import { startFlow } from '@walkeros/collector';
-import {
-  __getMockCalls,
-  __resetMockState,
-  __triggerError,
-  __triggerMessage,
-} from './env';
+import type { SyntheticMessage, SyntheticPushResult } from '../types';
 
 /**
  * Content shape for the pull-source trigger.
  *
- * The trigger synthesizes a MessageLike from this partial input. `dataString`
- * is the user-friendly way to provide the message body; the trigger encodes
- * it to a Buffer.
+ * The trigger synthesizes a message from this partial input and dispatches
+ * it through the source's `push()` (the same pipeline the SDK subscriber
+ * callback uses). `dataString` is the user-friendly way to provide the
+ * message body; the trigger encodes it to a Buffer.
  */
 export interface Content {
   id: string;
@@ -25,42 +20,45 @@ export interface Content {
 /**
  * Result shape for the pull-source trigger.
  *
- * Returns the recorded mock calls so step examples can assert on the
- * sequence of subscriber actions (subscription/topic creation, ack/nack).
+ * Returns the recorded ack/nack as `[method, id]` entries, mirroring the
+ * destination's `[method, ...args]` recording shape used elsewhere.
  */
 export type Result = Array<[string, ...unknown[]]>;
 
-interface MessageState {
-  acked: boolean;
-  nacked: boolean;
+interface PubSubPullSourceLike {
+  type: string;
+  push: (content?: SyntheticMessage) => Promise<SyntheticPushResult | void>;
 }
 
-function buildMessage(content: Content, state: MessageState): MessageLike {
-  return {
-    id: content.id,
-    data: Buffer.from(content.dataString, 'utf8'),
-    attributes: content.attributes ?? {},
-    orderingKey: content.orderingKey,
-    publishTime: new Date(0),
-    ack: () => {
-      state.acked = true;
-    },
-    nack: () => {
-      state.nacked = true;
-    },
-    modAck: () => {
-      /* no-op for tests */
-    },
-  };
+function isPubSubPullSource(value: unknown): value is PubSubPullSourceLike {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate: { type?: unknown; push?: unknown } = value;
+  return (
+    candidate.type === 'pubsub-pull' && typeof candidate.push === 'function'
+  );
+}
+
+function findSource(
+  collector: Collector.Instance,
+): PubSubPullSourceLike | undefined {
+  for (const source of Object.values(collector.sources ?? {})) {
+    if (isPubSubPullSource(source)) return source;
+  }
+  return undefined;
 }
 
 /**
  * Pub/Sub pull source createTrigger.
  *
- * Boots the collector via startFlow, then synthesizes a MessageLike from
- * the trigger Content and invokes the registered subscriber handler.
- * Returns the recorded mock calls plus the message ack/nack outcome,
- * collapsed into a single recorded entry (`message.ack` or `message.nack`).
+ * Boots the collector via startFlow, finds the registered pubsub-pull source,
+ * and invokes its `push()` with a synthesized message. The source dispatches
+ * the synthetic message through the same handler the SDK subscriber callback
+ * uses, exercising the full decode / forward / ack-nack pipeline without
+ * touching real Pub/Sub.
+ *
+ * Matches the convention used by other source triggers (express, lambda,
+ * cloudfunction): find the source by type from the collector and call its
+ * public `push()` interface.
  */
 export const createTrigger: Trigger.CreateFn<Content, Result> = async (
   config: Collector.InitConfig,
@@ -70,23 +68,30 @@ export const createTrigger: Trigger.CreateFn<Content, Result> = async (
   const trigger: Trigger.Fn<Content, Result> =
     () =>
     async (content: Content): Promise<Result> => {
-      __resetMockState();
-
       if (!flow) {
         const result = await startFlow(config);
         flow = { collector: result.collector, elb: result.elb };
       }
 
-      const state: MessageState = { acked: false, nacked: false };
-      const message = buildMessage(content, state);
+      const source = findSource(flow.collector);
+      if (!source)
+        throw new Error(
+          'pubsub-pull source not registered in collector — ensure it is configured in sources',
+        );
 
-      const handlerResult = __triggerMessage(message);
-      if (handlerResult instanceof Promise) await handlerResult;
+      const synthetic: SyntheticMessage = {
+        id: content.id,
+        data: Buffer.from(content.dataString, 'utf8'),
+        attributes: content.attributes,
+        orderingKey: content.orderingKey,
+      };
 
-      const calls = __getMockCalls();
-      const recorded: Result = calls.map((c) => [c.method, ...c.args]);
-      if (state.acked) recorded.push(['message.ack', message.id]);
-      if (state.nacked) recorded.push(['message.nack', message.id]);
+      const result = await source.push(synthetic);
+      const recorded: Result = [];
+      if (result && typeof result === 'object') {
+        if (result.acked) recorded.push(['message.ack', content.id]);
+        if (result.nacked) recorded.push(['message.nack', content.id]);
+      }
       return recorded;
     };
 
@@ -97,11 +102,3 @@ export const createTrigger: Trigger.CreateFn<Content, Result> = async (
     trigger,
   };
 };
-
-/**
- * Convenience helper to fire a stream-level error against the registered
- * error handler. Used by tests covering PERMISSION_DENIED / NOT_FOUND.
- */
-export function fireStreamError(err: Error): void {
-  __triggerError(err);
-}

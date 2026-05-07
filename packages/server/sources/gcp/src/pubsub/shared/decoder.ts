@@ -1,4 +1,17 @@
-import type { Decoder, MessageLike } from './types';
+import type { Decoder } from './types';
+
+/**
+ * Minimal message shape consumed by `decodeMessage`. The real Pub/Sub
+ * `Message` class satisfies this implicitly; the push handler synthesizes
+ * an object literal that satisfies it too.
+ *
+ * Keeping this internal interface avoids forcing the push code path to
+ * fabricate a full `Message` instance (which has private fields).
+ */
+export interface DecodableMessage {
+  id: string;
+  data: Buffer;
+}
 
 export class DecoderError extends Error {
   constructor(message: string) {
@@ -16,7 +29,10 @@ export class DecoderError extends Error {
  *
  * Returning null/undefined is allowed (caller may ack-and-drop).
  */
-export function decodeMessage(message: MessageLike, decoder: Decoder): unknown {
+export function decodeMessage(
+  message: DecodableMessage,
+  decoder: Decoder,
+): unknown {
   if (decoder === 'raw') return message.data;
   const text = message.data.toString('utf8');
   if (decoder === 'text') return text;

@@ -2,14 +2,8 @@ import type {
   Source as CoreSource,
   SetupFn as CoreSetupFn,
 } from '@walkeros/core';
-import type {
-  Decoder,
-  PubSubConstructor,
-  PubSubLike,
-  ServiceAccountCredentials,
-  SubscriberOptions,
-  SubscriptionLike,
-} from '../shared/types';
+import type { PubSub, Subscription } from '@google-cloud/pubsub';
+import type { Decoder, ServiceAccountCredentials } from '../shared/types';
 
 declare module '@walkeros/core' {
   interface SourceMap {
@@ -18,8 +12,8 @@ declare module '@walkeros/core' {
 }
 
 export interface Settings {
-  // User-supplied OR populated by init(); single field for both. Mirrors the destination.
-  client: PubSubLike;
+  // User-supplied OR populated by getConfig(); single field for both. Mirrors the destination.
+  client: PubSub;
   // Top-level always wins over credentials.project_id.
   projectId: string;
   // Subscription short name. Required.
@@ -42,15 +36,15 @@ export interface Settings {
   shutdownTimeoutMs?: number;
   // Behavior on push errors: 'nack' (redeliver) or 'ack' (drop). Default: 'nack'.
   onPushError?: 'nack' | 'ack';
-  // Runtime-only handles populated by init(); not user-facing.
-  subscriptionHandle?: SubscriptionLike;
+  // Runtime-only handle populated by init(); not user-facing.
+  subscriptionHandle?: Subscription;
 }
 
 export interface InitSettings {
   projectId: string;
   subscription: string;
   topic?: string;
-  client?: PubSubLike;
+  client?: PubSub;
   credentials?: string | ServiceAccountCredentials;
   apiEndpoint?: string;
   decoder?: Decoder;
@@ -64,11 +58,33 @@ export interface Mapping {
   // Reserved for future use.
 }
 
-// Pull source has no external invocation; push is a no-op stub.
-export type Push = () => Promise<void>;
+/**
+ * Synthetic message input. Used by tests / triggers to dispatch a message
+ * through the same handler the SDK subscriber callback uses, without
+ * involving real Pub/Sub infrastructure.
+ *
+ * In production, `push()` is invoked without arguments and is a no-op:
+ * Pub/Sub is event-driven, the SDK's subscription emitter is the canonical
+ * delivery path. Tests pass a synthetic input to dispatch directly.
+ */
+export interface SyntheticMessage {
+  id: string;
+  data: Buffer;
+  attributes?: Record<string, string>;
+  orderingKey?: string;
+}
+
+export interface SyntheticPushResult {
+  acked: boolean;
+  nacked: boolean;
+}
+
+export type Push = (
+  content?: SyntheticMessage,
+) => Promise<SyntheticPushResult | void>;
 
 export interface Env extends CoreSource.Env {
-  PubSub?: PubSubConstructor;
+  PubSub?: typeof PubSub;
 }
 
 /**
@@ -119,12 +135,8 @@ export type Config = CoreSource.Config<Types>;
 export type PartialConfig = CoreSource.PartialConfig<Types>;
 export type SetupFn = CoreSetupFn<Config, Env>;
 
-// Re-export shared types for consumer convenience.
-export type {
-  Decoder,
-  PubSubConstructor,
-  PubSubLike,
-  ServiceAccountCredentials,
-  SubscriberOptions,
-  SubscriptionLike,
-} from '../shared/types';
+// Re-export shared domain types for consumer convenience.
+export type { Decoder, ServiceAccountCredentials } from '../shared/types';
+
+// Re-export SDK types used in this package's public surface.
+export type { PubSub, Subscription };

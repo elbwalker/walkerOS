@@ -1,5 +1,6 @@
 import type { Logger } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
+import { PubSub, type ClientConfig } from '@google-cloud/pubsub';
 import type {
   Config,
   Env,
@@ -7,10 +8,7 @@ import type {
   PartialConfig,
   Settings,
 } from './types';
-import type {
-  PubSubConstructor,
-  ServiceAccountCredentials,
-} from '../shared/types';
+import type { ServiceAccountCredentials } from '../shared/types';
 
 /**
  * Runtime config with the narrow Settings shape (all defaults applied).
@@ -19,12 +17,6 @@ import type {
  * resolved.
  */
 export type RuntimeConfig = Omit<Config, 'settings'> & { settings: Settings };
-
-interface ResolvedClientConfig {
-  projectId: string;
-  credentials?: ServiceAccountCredentials;
-  apiEndpoint?: string;
-}
 
 const DEFAULT_DECODER = 'json' as const;
 const DEFAULT_FLOW_CONTROL_MAX_MESSAGES = 100;
@@ -41,27 +33,33 @@ const DEFAULT_ON_PUSH_ERROR = 'nack' as const;
  * This keeps the runtime subscription target unambiguous.
  *
  * The client is built once: prefer pre-supplied `settings.client`, then env-
- * injected constructor (tests/DI), then dynamic require of the real SDK.
- * `Settings.client` is always populated before init/destroy run.
+ * injected constructor (tests/DI), then the static SDK import. `Settings.client`
+ * is always populated before init/destroy run.
  */
 export function getConfig(
   partialConfig: PartialConfig = {},
   env: Env | undefined,
   logger: Logger.Instance,
 ): RuntimeConfig {
-  const settings = (partialConfig.settings ?? {}) as Partial<InitSettings>;
-  const { projectId, subscription } = settings;
+  const empty: Partial<InitSettings> = {};
+  const settings: Partial<InitSettings> = partialConfig.settings ?? empty;
+  const projectId =
+    typeof settings.projectId === 'string' ? settings.projectId : '';
+  const subscription =
+    typeof settings.subscription === 'string' ? settings.subscription : '';
 
   if (!projectId) logger.throw('Config settings projectId missing');
   if (!subscription) logger.throw('Config settings subscription missing');
 
   const credentials = parseCredentials(settings.credentials, logger);
 
+  // Build the client once: prefer pre-supplied settings.client, then env-
+  // injected constructor (tests/DI), then the real SDK.
   let client = settings.client;
   if (!client) {
-    const Constructor = resolvePubSubConstructor(env);
+    const Constructor = env?.PubSub ?? PubSub;
     const clientOptions = buildClientOptions({
-      projectId: projectId as string,
+      projectId,
       credentials,
       apiEndpoint: settings.apiEndpoint,
     });
@@ -77,8 +75,8 @@ export function getConfig(
   const settingsConfig: Settings = {
     ...settings,
     client,
-    projectId: projectId as string,
-    subscription: subscription as string,
+    projectId,
+    subscription,
     credentials,
     decoder: settings.decoder ?? DEFAULT_DECODER,
     flowControl: resolvedFlowControl,
@@ -123,31 +121,14 @@ function isServiceAccountCredentials(
   );
 }
 
-/**
- * Resolve the constructor options for `new PubSub(...)`.
- *
- * Returns undefined when a pre-built `settings.client` is set; the caller
- * uses that client directly without invoking the SDK constructor.
- */
-export function resolveClientConfig(
-  settings: Settings,
-): ResolvedClientConfig | undefined {
-  if (settings.client) return undefined;
-  return buildClientOptions({
-    projectId: settings.projectId,
-    credentials: settings.credentials,
-    apiEndpoint: settings.apiEndpoint,
-  });
-}
-
 interface ClientOptionsInput {
   projectId: string;
   credentials?: Settings['credentials'];
   apiEndpoint?: string;
 }
 
-function buildClientOptions(input: ClientOptionsInput): ResolvedClientConfig {
-  const result: ResolvedClientConfig = { projectId: input.projectId };
+function buildClientOptions(input: ClientOptionsInput): ClientConfig {
+  const result: ClientConfig = { projectId: input.projectId };
   if (
     input.credentials !== undefined &&
     typeof input.credentials !== 'string'
@@ -158,24 +139,27 @@ function buildClientOptions(input: ClientOptionsInput): ResolvedClientConfig {
   return result;
 }
 
+/**
+ * Resolve the constructor options for `new PubSub(...)`.
+ *
+ * Returns undefined when a pre-built `settings.client` is set; the caller
+ * uses that client directly without invoking the SDK constructor.
+ */
+export function resolveClientConfig(
+  settings: Settings,
+): ClientConfig | undefined {
+  if (settings.client) return undefined;
+  return buildClientOptions({
+    projectId: settings.projectId,
+    credentials: settings.credentials,
+    apiEndpoint: settings.apiEndpoint,
+  });
+}
+
 export function isPubSubEnv(env: unknown): env is Env {
   if (!isObject(env)) return false;
   const candidate: { PubSub?: unknown } = env;
   return (
     candidate.PubSub === undefined || typeof candidate.PubSub === 'function'
   );
-}
-
-/**
- * Resolve the constructor used to build a PubSub client.
- *
- * Prefers env-injected constructor (tests/DI). Falls back to dynamic
- * require of the real SDK so the SDK is only loaded when actually needed
- * and tests can mock the module via `jest.mock('@google-cloud/pubsub')`.
- */
-function resolvePubSubConstructor(env: Env | undefined): PubSubConstructor {
-  if (env?.PubSub) return env.PubSub;
-  // Dynamic require so tests can replace the module at load time.
-  const sdk: { PubSub: PubSubConstructor } = require('@google-cloud/pubsub');
-  return sdk.PubSub;
 }

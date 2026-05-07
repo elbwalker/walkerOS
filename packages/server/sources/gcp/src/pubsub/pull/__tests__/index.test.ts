@@ -1,20 +1,18 @@
+jest.mock('@google-cloud/pubsub');
+
+import { PubSub } from '@google-cloud/pubsub';
+import {
+  __getMockCalls,
+  __resetMockCalls,
+  __setSubscriptionHarness,
+  __triggerError,
+} from '@google-cloud/pubsub';
 import { sourcePubSubPull } from '../index';
 import * as examples from '../examples';
 import { createMockContext } from '@walkeros/core';
 import type { Source } from '@walkeros/core';
-import type { Types, Settings } from '../types';
-import type { MessageLike } from '../../shared/types';
-
-// `Settings` import retained for buildContext's partial type below.
-import {
-  __getMockCalls,
-  __resetMockState,
-  __setNextCloseHangs,
-  __triggerError,
-  __triggerMessage,
-  MockPubSubConstructor,
-  push as pushEnv,
-} from '../examples/env';
+import type { Settings, SyntheticMessage, Types } from '../types';
+import { push as pushEnv } from '../examples/env';
 import { createTrigger } from '../examples/trigger';
 
 interface StepShape {
@@ -56,7 +54,7 @@ function buildContext(
 
 describe('Pub/Sub pull source', () => {
   beforeEach(() => {
-    __resetMockState();
+    __resetMockCalls();
   });
 
   it('throws when projectId missing', async () => {
@@ -95,19 +93,19 @@ describe('Pub/Sub pull source', () => {
     const ctx = buildContext({});
     const instance = await sourcePubSubPull(ctx);
     expect(instance.type).toBe('pubsub-pull');
-    const calls = __getMockCalls();
-    expect(calls.some((c) => c.method === 'PubSub.ctor')).toBe(true);
-    expect(calls.some((c) => c.method === 'subscription')).toBe(true);
+    const methods = __getMockCalls().map((c) => c.method);
+    expect(methods).toContain('PubSub.ctor');
+    expect(methods).toContain('subscription');
   });
 
   it('uses pre-supplied settings.client without invoking constructor', async () => {
-    const supplied = new MockPubSubConstructor({ projectId: 'pre' });
-    __resetMockState();
+    const supplied = new PubSub({ projectId: 'pre' });
+    __resetMockCalls();
     const ctx = buildContext({ client: supplied });
     await sourcePubSubPull(ctx);
-    const calls = __getMockCalls();
-    expect(calls.some((c) => c.method === 'PubSub.ctor')).toBe(false);
-    expect(calls.some((c) => c.method === 'subscription')).toBe(true);
+    const methods = __getMockCalls().map((c) => c.method);
+    expect(methods).not.toContain('PubSub.ctor');
+    expect(methods).toContain('subscription');
   });
 
   it('destroy closes subscription and client', async () => {
@@ -120,13 +118,13 @@ describe('Pub/Sub pull source', () => {
       env: pushEnv,
       logger: ctx.logger,
     });
-    const calls = __getMockCalls();
-    expect(calls.some((c) => c.method === 'subscription.close')).toBe(true);
-    expect(calls.some((c) => c.method === 'PubSub.close')).toBe(true);
+    const methods = __getMockCalls().map((c) => c.method);
+    expect(methods).toContain('subscription.close');
+    expect(methods).toContain('PubSub.close');
   });
 
   it('destroy honors shutdownTimeoutMs when close hangs', async () => {
-    __setNextCloseHangs(true);
+    __setSubscriptionHarness({ closeHangs: true });
     const ctx = buildContext({ shutdownTimeoutMs: 50 });
     const instance = await sourcePubSubPull(ctx);
     if (!instance.destroy) throw new Error('destroy not defined');
@@ -154,22 +152,27 @@ describe('Pub/Sub pull source', () => {
     expect(String(firstCall?.[0])).toContain('walkeros setup source.pubsub');
   });
 
-  it('decodeReturnsNull acks-and-drops via direct trigger', async () => {
+  it('decodeReturnsNull acks-and-drops via synthetic push', async () => {
     const ctx = buildContext({});
-    await sourcePubSubPull(ctx);
-    const message: MessageLike = {
+    const instance = await sourcePubSubPull(ctx);
+    const synthetic: SyntheticMessage = {
       id: 'null-msg',
       data: Buffer.from('null', 'utf8'),
-      attributes: {},
-      publishTime: new Date(0),
-      ack: jest.fn(),
-      nack: jest.fn(),
-      modAck: jest.fn(),
     };
-    const result = __triggerMessage(message);
-    if (result instanceof Promise) await result;
-    expect(message.ack).toHaveBeenCalledTimes(1);
-    expect(message.nack).not.toHaveBeenCalled();
+    const result = await instance.push(synthetic);
+    expect(result).toBeDefined();
+    if (!result || typeof result !== 'object') {
+      throw new Error('expected SyntheticPushResult');
+    }
+    expect(result.acked).toBe(true);
+    expect(result.nacked).toBe(false);
+  });
+
+  it('synthetic push without content is a no-op', async () => {
+    const ctx = buildContext({});
+    const instance = await sourcePubSubPull(ctx);
+    const result = await instance.push();
+    expect(result).toBeUndefined();
   });
 
   describe('step examples via createTrigger', () => {

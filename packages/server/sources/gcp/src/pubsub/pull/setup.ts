@@ -1,20 +1,33 @@
 import type { Logger } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
-import type { Config, Env, Setup, SetupFn } from './types';
 import type {
-  PubSubLike,
-  SubscriptionCreateOptions,
-  SubscriptionMetadataLike,
-  TopicCreateOptions,
-  TopicLike,
-} from '../shared/types';
+  CreateSubscriptionOptions,
+  PubSub,
+  TopicMetadata,
+  protos,
+} from '@google-cloud/pubsub';
+import type { Config, Setup, SetupFn } from './types';
+
+/**
+ * Server-side subscription proto returned by `subscription.getMetadata()`.
+ * Aliased here so `detectDrift` types stay close to the SDK shape without
+ * re-declaring nullable variants.
+ */
+type ISubscription = protos.google.pubsub.v1.ISubscription;
 
 const ALREADY_EXISTS_GRPC = 6;
 const ALREADY_EXISTS_HTTP = 409;
 const NOT_FOUND_GRPC = 5;
 const NOT_FOUND_HTTP = 404;
 
-const DEFAULT_PERSISTENCE_REGIONS = ['eu-west1', 'eu-west3', 'eu-west4'];
+// GCP region names accepted by Pub/Sub's messageStoragePolicy.allowedPersistenceRegions.
+// These are the canonical full names (e.g. 'europe-west1'), NOT the colloquial
+// abbreviations 'eu-west1' that the API rejects with INVALID_ARGUMENT.
+const DEFAULT_PERSISTENCE_REGIONS = [
+  'europe-west1',
+  'europe-west3',
+  'europe-west4',
+];
 
 interface ErrorWithCode {
   code: number;
@@ -49,16 +62,25 @@ export interface SetupResult {
 
 export const DEFAULT_SETUP: Setup = {};
 
-interface ResolveTopicArgs {
-  client: PubSubLike;
+interface EnsureTopicArgs {
+  client: PubSub;
+  projectId: string;
   name: string;
   storageRegions: string[];
   logger: Logger.Instance;
 }
 
-async function ensureTopicExists(args: ResolveTopicArgs): Promise<boolean> {
-  const { client, name, storageRegions, logger } = args;
-  const topicHandle: TopicLike = client.topic(name);
+/**
+ * Ensure the topic exists, creating it via the admin endpoint
+ * `client.createTopic({ name, messageStoragePolicy })` when missing.
+ *
+ * Note: `topic.create(opts)` accepts only `CallOptions` and silently drops
+ * topic metadata. The admin path is the only one that actually applies
+ * `messageStoragePolicy` at creation time.
+ */
+async function ensureTopicExists(args: EnsureTopicArgs): Promise<boolean> {
+  const { client, projectId, name, storageRegions, logger } = args;
+  const topicHandle = client.topic(name);
   let exists = false;
   try {
     const [resolved] = await topicHandle.exists();
@@ -68,11 +90,12 @@ async function ensureTopicExists(args: ResolveTopicArgs): Promise<boolean> {
   }
   if (exists) return false;
 
-  const createOptions: TopicCreateOptions = {
+  const metadata: TopicMetadata = {
+    name: `projects/${projectId}/topics/${name}`,
     messageStoragePolicy: { allowedPersistenceRegions: storageRegions },
   };
   try {
-    await topicHandle.create(createOptions);
+    await client.createTopic(metadata);
     logger.info(`Pub/Sub topic "${name}" created.`);
     return true;
   } catch (err) {
@@ -87,14 +110,12 @@ interface DriftField {
   actual: unknown;
 }
 
-function detectDrift(
-  declared: Setup,
-  actual: SubscriptionMetadataLike,
-): DriftField[] {
+function detectDrift(declared: Setup, actual: ISubscription): DriftField[] {
   const drifts: DriftField[] = [];
   if (
     declared.ackDeadlineSeconds !== undefined &&
     actual.ackDeadlineSeconds !== undefined &&
+    actual.ackDeadlineSeconds !== null &&
     declared.ackDeadlineSeconds !== actual.ackDeadlineSeconds
   ) {
     drifts.push({
@@ -106,6 +127,7 @@ function detectDrift(
   if (
     declared.filter !== undefined &&
     actual.filter !== undefined &&
+    actual.filter !== null &&
     declared.filter !== actual.filter
   ) {
     drifts.push({
@@ -117,6 +139,7 @@ function detectDrift(
   if (
     declared.enableMessageOrdering !== undefined &&
     actual.enableMessageOrdering !== undefined &&
+    actual.enableMessageOrdering !== null &&
     declared.enableMessageOrdering !== actual.enableMessageOrdering
   ) {
     drifts.push({
@@ -139,6 +162,7 @@ function detectDrift(
     if (
       declared.deadLetterPolicy.maxDeliveryAttempts !== undefined &&
       actual.deadLetterPolicy.maxDeliveryAttempts !== undefined &&
+      actual.deadLetterPolicy.maxDeliveryAttempts !== null &&
       declared.deadLetterPolicy.maxDeliveryAttempts !==
         actual.deadLetterPolicy.maxDeliveryAttempts
     ) {
@@ -150,8 +174,17 @@ function detectDrift(
     }
   }
   if (declared.messageRetentionDuration && actual.messageRetentionDuration) {
-    const actualSeconds = actual.messageRetentionDuration.seconds;
+    const actualRaw = actual.messageRetentionDuration;
     const declaredSeconds = declared.messageRetentionDuration.seconds;
+    let actualSeconds: number | string | undefined;
+    if (typeof actualRaw === 'number') {
+      actualSeconds = actualRaw;
+    } else if (typeof actualRaw === 'object' && actualRaw !== null) {
+      const seconds: unknown = (actualRaw as { seconds?: unknown }).seconds;
+      if (typeof seconds === 'number' || typeof seconds === 'string') {
+        actualSeconds = seconds;
+      }
+    }
     if (
       typeof actualSeconds === 'number' &&
       declaredSeconds !== actualSeconds
@@ -177,8 +210,8 @@ function detectDrift(
 
 function buildSubscriptionCreateOptions(
   setup: Setup,
-): SubscriptionCreateOptions {
-  const opts: SubscriptionCreateOptions = {};
+): CreateSubscriptionOptions {
+  const opts: CreateSubscriptionOptions = {};
   if (setup.ackDeadlineSeconds !== undefined)
     opts.ackDeadlineSeconds = setup.ackDeadlineSeconds;
   if (setup.messageRetentionDuration)
@@ -229,6 +262,7 @@ export const setup: SetupFn = async (context) => {
       );
     topicCreated = await ensureTopicExists({
       client,
+      projectId,
       name: topic,
       storageRegions: DEFAULT_PERSISTENCE_REGIONS,
       logger,
@@ -238,14 +272,11 @@ export const setup: SetupFn = async (context) => {
   if (resolved.deadLetterPolicy?.createDeadLetterTopic) {
     deadLetterTopicCreated = await ensureTopicExists({
       client,
+      projectId,
       name: resolved.deadLetterPolicy.deadLetterTopic,
       storageRegions: DEFAULT_PERSISTENCE_REGIONS,
       logger,
     });
-  }
-
-  if (!topic && resolved.createTopic) {
-    return logger.throw('setup requires settings.topic to bind subscription');
   }
 
   const subscriptionOptions = buildSubscriptionCreateOptions(resolved);
@@ -274,7 +305,7 @@ export const setup: SetupFn = async (context) => {
   try {
     const sub = client.subscription(subscription);
     const [metadata] = await sub.getMetadata();
-    const drifts = detectDrift(resolved, metadata);
+    const drifts = detectDrift(resolved, metadata ?? {});
     for (const drift of drifts) {
       logger.warn('setup.drift', drift);
     }

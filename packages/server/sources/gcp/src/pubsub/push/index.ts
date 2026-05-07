@@ -1,7 +1,7 @@
 import type { Source } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
-import type { MessageLike } from '../shared/types';
 import { decodeMessage, DecoderError } from '../shared/decoder';
+import type { DecodableMessage } from '../shared/decoder';
 import { getConfig } from './config';
 import type { Env, PushEnvelope, Request, Response, Types } from './types';
 
@@ -21,6 +21,17 @@ function extractBearerToken(req: Request): string | undefined {
   return value.slice('Bearer '.length).trim();
 }
 
+interface OAuth2ClientLike {
+  verifyIdToken(opts: {
+    idToken: string;
+    audience: string;
+  }): Promise<{ getPayload(): unknown }>;
+}
+
+interface OAuth2ClientCtor {
+  new (): OAuth2ClientLike;
+}
+
 async function maybeVerifyOidc(
   req: Request,
   env: Env,
@@ -29,17 +40,13 @@ async function maybeVerifyOidc(
   const token = extractBearerToken(req);
   if (!token) return false;
   if (!env.verifyOidcToken) {
-    // Real SDK path: dynamically require google-auth-library so tests
-    // without it loaded do not pay the cost.
+    // Real SDK path: dynamically require google-auth-library so consumers
+    // who never use OIDC do not pay the cost of pulling it into the bundle.
+    // Static import would force every push-source bundle to include it.
     const lib: {
-      OAuth2Client: new () => {
-        verifyIdToken(opts: {
-          idToken: string;
-          audience: string;
-        }): Promise<{ getPayload(): unknown }>;
-      };
+      OAuth2Client: OAuth2ClientCtor;
     } = require('google-auth-library');
-    const client = new lib.OAuth2Client();
+    const client: OAuth2ClientLike = new lib.OAuth2Client();
     const ticket = await client.verifyIdToken({ idToken: token, audience });
     const payload = ticket.getPayload();
     return Boolean(payload);
@@ -130,17 +137,9 @@ export const sourcePubSubPush: Source.Init<Types> = async (context) => {
         : Buffer.alloc(0);
 
       const decoder = settings.decoder ?? 'json';
-      const message: MessageLike = {
+      const message: DecodableMessage = {
         id: body.message.messageId,
         data: dataBuffer,
-        attributes: body.message.attributes ?? {},
-        orderingKey: body.message.orderingKey,
-        publishTime: body.message.publishTime
-          ? new Date(body.message.publishTime)
-          : new Date(0),
-        ack: () => undefined,
-        nack: () => undefined,
-        modAck: () => undefined,
       };
 
       let decoded: unknown;
