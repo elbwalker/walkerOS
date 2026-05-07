@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/server-source-gcp",
-  "description": "Google Cloud Platform server sources for walkerOS (Cloud Functions)",
+  "description": "Google Cloud Platform server sources for walkerOS (Cloud Functions, Pub/Sub)",
   "version": "4.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -19,6 +19,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
+    "@google-cloud/pubsub": "^5.3.0",
     "@walkeros/collector": "4.0.0",
     "@walkeros/core": "4.0.0"
   },
@@ -42,7 +43,14 @@
     ],
     "docs": "https://www.walkeros.io/docs/sources/server/gcp",
     "exports": {
-      "sourceCloudFunction": "GCP Cloud Function event source"
+      "sourceCloudFunction": "GCP Cloud Function event source",
+      "sourcePubSubPull": "Pub/Sub pull subscriber (long-running)",
+      "sourcePubSubPush": "Pub/Sub push webhook handler (HTTP POST)"
+    },
+    "bundle": {
+      "external": [
+        "@google-cloud/pubsub"
+      ]
     }
   },
   "keywords": [
@@ -52,6 +60,9 @@
     "server",
     "gcp",
     "cloud functions",
+    "pubsub",
+    "pub-sub",
+    "messaging",
     "analytics"
   ],
   "funding": [

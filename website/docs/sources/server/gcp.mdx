@@ -1,6 +1,6 @@
 ---
-title: GCP Cloud Functions
-description: Google Cloud Functions HTTP handler for event collection
+title: GCP, Cloud Functions and Pub/Sub
+description: Google Cloud Functions HTTP handler and Pub/Sub source for walkerOS
 sidebar_position: 4
 package: '@walkeros/server-source-gcp'
 ---
@@ -145,3 +145,109 @@ Extract request metadata and forward it through the pipeline.
 | `headers.*` | HTTP headers (user-agent, origin, etc.) |
 | `method` | HTTP method |
 | `hostname` | Request hostname |
+
+## Pub/Sub source
+
+Subscribes to a Google Cloud Pub/Sub topic and forwards each message to the
+walkerOS collector. Ships in two delivery models:
+
+- `sourcePubSubPull`: long-running streaming pull subscriber. Use in
+  containers, VMs, or any process that stays alive.
+- `sourcePubSubPush`: HTTP push webhook handler. Use in serverless deployments
+  where there is no long-running process.
+
+### Pull subscriber
+
+<CodeSnippet
+  code={`import { sourcePubSubPull } from '@walkeros/server-source-gcp';
+import { startFlow } from '@walkeros/collector';
+
+await startFlow({
+  sources: {
+    pubsub: {
+      code: sourcePubSubPull,
+      config: {
+        settings: {
+          projectId: 'my-gcp-project',
+          subscription: 'events-sub',
+        },
+      },
+    },
+  },
+  destinations: {
+    // Your destinations
+  },
+});`}
+  language="typescript"
+/>
+
+The pull source is event-driven: `init()` opens the streaming subscription and
+forwards each delivered message to the collector via `env.push`. The source's
+`push` is a deliberate no-op stub. `destroy()` closes the subscriber gracefully,
+honoring `shutdownTimeoutMs` (default 30000).
+
+### Push webhook
+
+<CodeSnippet
+  code={`import express from 'express';
+import { sourcePubSubPush } from '@walkeros/server-source-gcp';
+import { startFlow } from '@walkeros/collector';
+
+const { sources } = await startFlow({
+  sources: {
+    pubsub: {
+      code: sourcePubSubPush,
+      config: { settings: { decoder: 'json' } },
+    },
+  },
+});
+
+const app = express();
+app.use(express.json());
+app.post('/pubsub-push', sources.pubsub.push);
+app.listen(8080);`}
+  language="typescript"
+/>
+
+Pub/Sub POSTs each message envelope to the configured endpoint. The source
+decodes the envelope, base64-decodes the data field, runs the configured
+decoder, and forwards to the collector. Returns 200 on success, 400 on
+malformed envelope, 401 on OIDC verification failure, 500 on push failure.
+
+### Setup
+
+`walkeros setup source.<id>` provisions the subscription idempotently. Auto-
+created topics use the EU multi-region storage policy. See the
+[GCP destination doc](/docs/destinations/server/gcp) for topic provisioning;
+subscription provisioning lives here.
+
+### Decoders
+
+| Decoder | Behavior |
+|---|---|
+| `json` (default) | `JSON.parse(data.toString('utf8'))`. |
+| `text` | `data.toString('utf8')`. |
+| `raw` | The raw `Buffer` is forwarded as-is. |
+
+### OIDC verification
+
+Off by default for the push source. Enable when your endpoint is publicly
+reachable:
+
+<CodeSnippet
+  code={`config: {
+  settings: {
+    verifyOidc: true,
+    audience: 'https://my-service.example/pubsub-push',
+  },
+}`}
+  language="typescript"
+/>
+
+The source verifies the bearer token against GCP public keys via
+`google-auth-library`. The audience must match your endpoint URL exactly.
+
+### Emulator
+
+Both pull and push honor `PUBSUB_EMULATOR_HOST`. For explicit configuration,
+set `settings.apiEndpoint` (like `localhost:8085`).

@@ -1,6 +1,6 @@
 ---
-title: GCP BigQuery
-description: "Stream events to Google BigQuery for data analytics and machine learning"
+title: GCP (BigQuery, Pub/Sub)
+description: "Stream events to Google BigQuery and publish to Pub/Sub topics"
 path: /docs/destinations/server/gcp
 sidebar_position: 2
 package: '@walkeros/server-destination-gcp'
@@ -10,13 +10,19 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
-# GCP BigQuery
+# GCP (BigQuery, Pub/Sub)
 
 <PackageLink env="server" github="packages/server/destinations/gcp" npm="@walkeros/server-destination-gcp" />
 
-The GCP destination package provides server-side integration for streaming
-events from walkerOS to Google BigQuery for data warehousing, analytics, and
-machine learning workloads.
+The GCP destination package provides server-side integration with Google
+Cloud. It ships two sub-destinations from one npm install:
+
+- **BigQuery**, for streaming events into a managed data warehouse for
+  analytics and machine learning workloads.
+- **Pub/Sub**, for publishing events to a topic for fan-out, async
+  processing, or cross-region delivery.
+
+This page documents BigQuery first, Pub/Sub follows below.
 
 <WhereThisFits
   pre={<>GCP BigQuery is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -369,3 +375,143 @@ To remove BigQuery resources:
 - Remove service account IAM bindings from the dataset
 - Delete the service account
 - Remove any downloaded key files
+
+## Pub/Sub
+
+Publishes walkerOS events to a Google Cloud Pub/Sub topic. Supports per-key
+ordering and dynamic attributes.
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationPubSub } from '@walkeros/server-destination-gcp';
+
+await startFlow({
+  destinations: {
+    pubsub: {
+      code: destinationPubSub,
+      config: {
+        settings: {
+          projectId: 'YOUR_PROJECT_ID',
+          topic: 'events',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+<CodeSnippet
+  code={`"destinations": {
+  "pubsub": {
+    "package": "@walkeros/server-destination-gcp",
+    "code": "destinationPubSub",
+    "config": {
+      "settings": {
+        "projectId": "YOUR_PROJECT_ID",
+        "topic": "events"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+### Authentication
+
+Three modes (the same chain BigQuery uses):
+
+1. **Application Default Credentials (ADC)**: nothing to configure beyond
+   `projectId`. Works on GCP-native runtimes (Cloud Run, GKE) and locally
+   with `gcloud auth application-default login`.
+2. **Service account JSON**: pass credentials (object or JSON string) via
+   `settings.credentials`.
+3. **Pre-configured client**: pass an existing `PubSub` SDK instance as
+   `settings.client`.
+
+When `settings.projectId` and `credentials.project_id` both resolve, the
+top-level `settings.projectId` wins.
+
+### Mapping
+
+Per-rule overrides under `mapping.<entity>.<action>.settings`:
+
+| Field         | Type            | Description                                  |
+| ------------- | --------------- | -------------------------------------------- |
+| `topic`       | `string`        | Override the default topic for this rule     |
+| `orderingKey` | `Mapping.Value` | Per-rule ordering-key path                   |
+| `attributes`  | `Mapping.Map`   | Per-rule attributes merged onto the defaults |
+
+### Ordering
+
+`orderingKey` is a `Mapping.Value` resolved per event (for example
+`'user.id'`). Truthy values enable per-key ordering, the topic handle is
+constructed with `messageOrdering: true`, and the resolved key flows on the
+publish.
+
+If a publish fails for an ordered key, Pub/Sub permanently halts subsequent
+publishes for that key until `topic.resumePublishing(key)` is called. The
+destination handles this automatically: on publish failure for an ordered
+key it calls `resumePublishing` immediately and re-throws.
+
+### Setup (one-time provisioning)
+
+<CodeSnippet
+  code={`walkeros setup destination.<id>`}
+  language="bash"
+/>
+
+Provisions the topic if it does not already exist. Idempotent, safe to
+re-run. Defaults:
+
+| Field                                              | Value                                       |
+| -------------------------------------------------- | ------------------------------------------- |
+| `messageStoragePolicy.allowedPersistenceRegions`   | `['eu-west1', 'eu-west3', 'eu-west4']` (EU) |
+| `messageRetentionDuration`                         | unset, project default                      |
+| `kmsKeyName`                                       | unset                                       |
+| `labels`                                           | unset                                       |
+
+If your project has an org policy restricting regions, override
+`messageStoragePolicy.allowedPersistenceRegions` accordingly.
+
+The provisioning step needs `pubsub.topics.create` and `pubsub.topics.get`
+on the project. The runtime service account needs `roles/pubsub.publisher`
+on the topic itself.
+
+If the existing topic's storage policy, retention, KMS key, or labels differ
+from the declared configuration, setup logs `WARN setup.drift {...}` and
+continues. There is no auto-mutation. Migrations are an operator decision.
+
+Subscription provisioning is owned by the Pub/Sub source, not the
+destination.
+
+### Emulator
+
+The official Pub/Sub emulator runs locally for development:
+
+<CodeSnippet
+  code={`gcloud beta emulators pubsub start --host-port=localhost:8085
+export PUBSUB_EMULATOR_HOST=localhost:8085`}
+  language="bash"
+/>
+
+The SDK automatically picks up `PUBSUB_EMULATOR_HOST`. To override
+explicitly, set `settings.apiEndpoint`.
+
+### Troubleshooting
+
+- **NOT_FOUND on publish**: the topic does not exist. Run setup once.
+- **PERMISSION_DENIED / UNAUTHENTICATED**: the runtime service account lacks
+  `roles/pubsub.publisher` on the topic, or ADC is not configured.
+- **Ordering stuck**: a previous publish for an ordering key failed. The
+  destination calls `resumePublishing` automatically; if stalls persist,
+  check publish-side error logs.

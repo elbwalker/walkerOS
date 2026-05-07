@@ -4,16 +4,21 @@
   </a>
 </p>
 
-# GCP (BigQuery) Destination for walkerOS
+# GCP (BigQuery, Pub/Sub) Destination for walkerOS
 
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/destinations/gcp)
 &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-gcp)
 
 walkerOS follows a **source → collector → destination** architecture. This GCP
-destination receives processed events from the walkerOS collector and streams
-them to Google BigQuery, enabling real-time data warehousing and analytics with
-Google Cloud's powerful data processing and machine learning capabilities.
+destination package ships two server-side sub-destinations:
+
+- **BigQuery**, for streaming events into a managed data warehouse for analytics
+  and machine learning workloads.
+- **Pub/Sub**, for publishing events to a topic for downstream fan-out, async
+  processing, or cross-region delivery.
+
+One npm install covers both. Pick the export that matches your use case.
 
 ## Installation
 
@@ -165,6 +170,166 @@ The default 15-column schema (walkerOS Event v4 canonical order):
 For custom schemas, override `config.setup.schema`. See the
 [full documentation](https://www.walkeros.io/docs/destinations/server/gcp) for
 custom mapping examples.
+
+## Pub/Sub
+
+Publishes walkerOS events to a Google Cloud Pub/Sub topic. Supports per-key
+ordering and dynamic attributes.
+
+### Quick Start
+
+```json
+{
+  "version": 4,
+  "flows": {
+    "default": {
+      "server": {},
+      "destinations": {
+        "pubsub": {
+          "package": "@walkeros/server-destination-gcp",
+          "code": "destinationPubSub",
+          "config": {
+            "settings": {
+              "projectId": "YOUR_PROJECT_ID",
+              "topic": "events"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Or programmatically:
+
+```typescript
+import { startFlow } from '@walkeros/collector';
+import { destinationPubSub } from '@walkeros/server-destination-gcp';
+
+const { elb } = await startFlow({
+  destinations: [
+    {
+      destination: destinationPubSub,
+      config: {
+        settings: {
+          projectId: 'YOUR_PROJECT_ID',
+          topic: 'events',
+        },
+      },
+    },
+  ],
+});
+```
+
+### Authentication
+
+Three modes (same chain as BigQuery):
+
+1. **Application Default Credentials (ADC)**: nothing to configure beyond
+   `projectId`. Works on GCP-native runtimes (Cloud Run, GKE) and locally with
+   `gcloud auth application-default login`.
+2. **Service account JSON**: pass the credentials object (or a JSON string) via
+   `settings.credentials`. The destination JSON-parses strings and forwards
+   `client_email` + `private_key` to the SDK.
+3. **Pre-configured client**: pass an existing `PubSub` instance as
+   `settings.client`. Useful for shared connections across destinations.
+
+When `settings.projectId` and `credentials.project_id` both resolve, the
+top-level `settings.projectId` wins.
+
+### Settings reference
+
+| Name          | Type                            | Description                                             | Required |
+| ------------- | ------------------------------- | ------------------------------------------------------- | -------- |
+| `projectId`   | `string`                        | Google Cloud Project ID                                 | Yes      |
+| `topic`       | `string`                        | Topic short name. SDK builds the full resource path.    | Yes      |
+| `credentials` | `string \| ServiceAccountCreds` | Service account credentials, JSON string or object      | No       |
+| `apiEndpoint` | `string`                        | Override Pub/Sub endpoint (use for the local emulator)  | No       |
+| `orderingKey` | `Mapping.Value`                 | Default ordering-key mapping. Truthy enables ordering.  | No       |
+| `attributes`  | `Mapping.Map`                   | Default per-event attributes merged into every publish  | No       |
+| `client`      | `PubSub`                        | Pre-configured SDK instance, bypasses constructor build | No       |
+
+### Mapping reference
+
+Per-rule overrides under `mapping.<entity>.<action>.settings`:
+
+| Name          | Type            | Description                                          |
+| ------------- | --------------- | ---------------------------------------------------- |
+| `topic`       | `string`        | Override the destination default topic for this rule |
+| `orderingKey` | `Mapping.Value` | Per-rule ordering-key path, overrides settings       |
+| `attributes`  | `Mapping.Map`   | Per-rule attributes merged on top of settings        |
+
+### Ordering
+
+`orderingKey` is a `Mapping.Value` resolved per event (for example `'user.id'`).
+When the resolved key is truthy, the topic handle is built with
+`messageOrdering: true` and the publish carries the resolved key. Pub/Sub
+guarantees per-key ordering for messages published to the same region.
+
+If a publish fails for an ordered key, Pub/Sub permanently halts subsequent
+publishes on that key until `topic.resumePublishing(key)` is called. The
+destination handles this automatically: on publish failure for an ordered key,
+it calls `resumePublishing` immediately and re-throws so the operator sees the
+error.
+
+### Setup (one-time provisioning)
+
+```bash
+walkeros setup destination.<id>
+```
+
+Provisions the topic if it does not already exist. Idempotent, safe to re-run.
+Defaults:
+
+| Field                                            | Value                                       |
+| ------------------------------------------------ | ------------------------------------------- |
+| `messageStoragePolicy.allowedPersistenceRegions` | `['eu-west1', 'eu-west3', 'eu-west4']` (EU) |
+| `messageRetentionDuration`                       | (unset, project default)                    |
+| `kmsKeyName`                                     | (unset)                                     |
+| `labels`                                         | (unset)                                     |
+
+If your project has an org policy restricting regions, override
+`messageStoragePolicy.allowedPersistenceRegions` accordingly.
+
+IAM the operator service account needs:
+
+- `pubsub.topics.create`
+- `pubsub.topics.get` (for drift detection)
+- `pubsub.topics.update` (only if you choose to mutate; the destination only
+  warns on drift, never auto-mutates)
+
+The runtime service account that publishes events needs `roles/pubsub.publisher`
+on the topic.
+
+If the existing topic's storage policy, retention, KMS key, or labels differ
+from the declared configuration, setup logs `WARN setup.drift {...}` and
+continues. Migrations are an operator decision.
+
+Subscription provisioning is owned by the Pub/Sub source, not the destination.
+
+### Emulator
+
+The official Pub/Sub emulator runs locally for development:
+
+```bash
+gcloud beta emulators pubsub start --host-port=localhost:8085
+export PUBSUB_EMULATOR_HOST=localhost:8085
+```
+
+The SDK automatically picks up `PUBSUB_EMULATOR_HOST`. To override explicitly,
+set `settings.apiEndpoint`.
+
+### Troubleshooting
+
+- **NOT_FOUND on publish**: the topic does not exist. The destination logs
+  `Pub/Sub topic "<topic>" not found in project "<projectId>". Run "walkeros setup destination.<id>" to create it.`
+  Run setup once.
+- **PERMISSION_DENIED / UNAUTHENTICATED**: the runtime service account lacks
+  `roles/pubsub.publisher` on the topic, or ADC is not configured.
+- **Ordering stuck**: a previous publish for an ordering key failed. The
+  destination calls `resumePublishing` automatically on failure; if you observe
+  sustained stalls, check publish-side error logs.
 
 ## Type Definitions
 
