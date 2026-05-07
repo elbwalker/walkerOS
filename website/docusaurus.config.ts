@@ -1,6 +1,7 @@
 import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config, Plugin } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import { version as coreVersion } from '../packages/core/package.json';
 
 const vars = {
   github: 'https://github.com/elbwalker/walkerOS/',
@@ -40,6 +41,10 @@ const config: Config = {
   projectName: 'walkerOS', // Usually your repo name.
 
   onBrokenLinks: 'throw',
+
+  customFields: {
+    coreVersion,
+  },
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you

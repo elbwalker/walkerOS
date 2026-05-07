@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/20/solid';
 import Link from '@docusaurus/Link';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import { ArchitectureFlow, Icon } from '@walkeros/explorer';
 import type { FlowColumn } from '@walkeros/explorer';
 import { Check } from '@site/src/components/atoms/icons';
@@ -147,6 +148,13 @@ export default function Hero({
   elbTitle,
   badges,
 }: HeroProps) {
+  const { siteConfig } = useDocusaurusContext();
+  const coreVersion = siteConfig.customFields?.coreVersion;
+  const shippedVersion =
+    typeof coreVersion === 'string'
+      ? `v${coreVersion.split('.').slice(0, 2).join('.')}`
+      : '';
+
   return (
     <main
       className="bg-white"
@@ -174,7 +182,7 @@ export default function Hero({
                       className="inline-flex items-center space-x-2 text-sm/6 font-medium"
                       style={{ color: 'var(--color-base-content)' }}
                     >
-                      <span>Just shipped v3.4</span>
+                      <span>Just shipped {shippedVersion}</span>
                       <ChevronRightIcon
                         aria-hidden="true"
                         className="size-5"
