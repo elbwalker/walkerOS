@@ -11,6 +11,7 @@ import {
   __getMockCalls,
   __resetMockCalls,
   __setNextAppendRowErrors,
+  __setNextOpenWriterError,
 } from '@google-cloud/bigquery-storage';
 import {
   clone,
@@ -18,6 +19,7 @@ import {
   createMockContext,
   createMockLogger,
 } from '@walkeros/core';
+import type { MockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 import { openWriter } from '../writer';
 
@@ -37,13 +39,13 @@ describe('Server Destination BigQuery', () => {
   const mockCollector = {} as Collector.Instance;
   let testEnv: Env;
 
-  async function callInit(initSettings: InitSettings) {
+  async function callInit(initSettings: InitSettings, logger?: MockLogger) {
     if (!destination.init) throw new Error('destination.init undefined');
     return destination.init({
       config: { settings: initSettings },
       collector: mockCollector,
       env: testEnv,
-      logger: createMockLogger(),
+      logger: logger ?? createMockLogger(),
       id: 'test-bq',
     });
   }
@@ -91,6 +93,48 @@ describe('Server Destination BigQuery', () => {
     await expect(callInit({ projectId: '' })).rejects.toThrow(
       'Config settings projectId missing',
     );
+  });
+
+  test('init logs error and rethrows on non-NotFound openWriter failure', async () => {
+    // Simulate the INVALID_ARGUMENT case (e.g., TYPE_UNSPECIFIED). Code 3 is
+    // gRPC INVALID_ARGUMENT, which is NOT in the isNotFound (5/404) set.
+    const underlyingError: Error & { code?: number } = Object.assign(
+      new Error('TYPE_UNSPECIFIED: bad write stream type'),
+      { code: 3 },
+    );
+    __setNextOpenWriterError(underlyingError);
+
+    const logger = createMockLogger();
+
+    await expect(
+      callInit({ projectId, datasetId, tableId }, logger),
+    ).rejects.toThrow('TYPE_UNSPECIFIED: bad write stream type');
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('BigQuery init failed'),
+      expect.objectContaining({
+        error: 'TYPE_UNSPECIFIED: bad write stream type',
+      }),
+    );
+    const errorCall = logger.error.mock.calls.find(
+      (call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('BigQuery init failed'),
+    );
+    expect(errorCall).toBeDefined();
+    if (!errorCall) return;
+    const errorContext = errorCall[1];
+    expect(
+      typeof errorContext === 'object' &&
+        errorContext !== null &&
+        'error' in errorContext,
+    ).toBe(true);
+    if (
+      typeof errorContext !== 'object' ||
+      errorContext === null ||
+      !('error' in errorContext)
+    )
+      return;
+    expect(errorContext.error).toBe('TYPE_UNSPECIFIED: bad write stream type');
   });
 
   test('push appends one row through JSONWriter', async () => {

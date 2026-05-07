@@ -36,9 +36,13 @@ export async function openWriter(
 
   const writeClient = new managedwriter.WriterClient({ projectId });
   try {
+    // Use streamId (not streamType) so the SDK resolves to the table's
+    // implicit `_default` stream without calling CreateWriteStream. Passing
+    // managedwriter.DefaultStream as streamType triggers a CreateWriteStream
+    // call with type='DEFAULT', which BQ rejects as TYPE_UNSPECIFIED.
     const connection = await writeClient.createStreamConnection({
       destinationTable,
-      streamType: managedwriter.DefaultStream,
+      streamId: managedwriter.DefaultStream,
     });
     const streamId = connection.getStreamId();
     const writeStream = await writeClient.getWriteStream({

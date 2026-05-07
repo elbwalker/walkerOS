@@ -185,13 +185,22 @@ export async function pushToDestinations(
         return { id, destination, skipped: true };
       }
 
-      // If only on events queued (no push events), still init to flush queueOn
+      // If only on events queued (no push events), still init to flush queueOn.
+      // Direct try/catch + logger.error here is intentional. Previously this
+      // used tryCatchAsync(destinationInit) without an onError callback, which
+      // silently returned undefined when init threw, hiding real failures on
+      // the queueOn-only path. Mirrors the same pattern used below at the main
+      // init call site so failures are never silent on either branch.
       if (!currentQueue.length && destination.queueOn?.length) {
-        const isInitialized = await tryCatchAsync(destinationInit)(
-          collector,
-          destination,
-          id,
-        );
+        let isInitialized = false;
+        try {
+          isInitialized = await destinationInit(collector, destination, id);
+        } catch (err) {
+          const destType = destination.type || 'unknown';
+          collector.logger.scope(destType).error('Destination init threw', {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
         return { id, destination, skipped: !isInitialized };
       }
 
@@ -221,12 +230,21 @@ export async function pushToDestinations(
         return { id, destination, queue: currentQueue }; // Don't push if not allowed
       }
 
-      // Initialize the destination if needed
-      const isInitialized = await tryCatchAsync(destinationInit)(
-        collector,
-        destination,
-        id,
-      );
+      // Initialize the destination if needed.
+      // Direct try/catch + logger.error here is intentional. Previously this
+      // used tryCatchAsync(destinationInit) without an onError callback, which
+      // silently returned undefined when init threw, hiding real failures. The
+      // destination itself may also log a more specific error before throwing;
+      // this is the boundary safety net so failures are never silent.
+      let isInitialized = false;
+      try {
+        isInitialized = await destinationInit(collector, destination, id);
+      } catch (err) {
+        const destType = destination.type || 'unknown';
+        collector.logger.scope(destType).error('Destination init threw', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
 
       if (!isInitialized) return { id, destination, queue: currentQueue };
 

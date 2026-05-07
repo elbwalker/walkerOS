@@ -41,9 +41,17 @@ export const destinationBigQuery: Destination = {
           {
             project,
             target,
-            originalError: err instanceof Error ? err.message : String(err),
+            error: err instanceof Error ? err.message : String(err),
           },
         );
+      } else {
+        // Catch-all so init failures are never silent. The destination is the
+        // layer with the most context about what was attempted (open writer,
+        // resolve stream, build proto descriptor), so it logs here before
+        // re-throwing.
+        logger.error('BigQuery init failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
       throw err;
     }

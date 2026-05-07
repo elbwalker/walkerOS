@@ -48,11 +48,15 @@ describe('eventToRow', () => {
     expect(typeof row.timing).toBe('number');
   });
 
-  test('emits timestamp as ISO 8601 string', () => {
+  test('emits timestamp as INT64 microseconds since epoch', () => {
+    // BQ Storage Write API encodes TIMESTAMP as INT64 microseconds. The SDK
+    // calls Long.fromString on the value; ISO strings would fail with
+    // "interior hyphen" because the date hyphens are non-numeric.
     const event = createEvent();
+    event.timestamp = 1700000000000; // ms
     const row = eventToRow(event);
-    expect(typeof row.timestamp).toBe('string');
-    expect(row.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(typeof row.timestamp).toBe('number');
+    expect(row.timestamp).toBe(1700000000000 * 1000);
   });
 
   test('emits null for empty objects in JSON columns', () => {

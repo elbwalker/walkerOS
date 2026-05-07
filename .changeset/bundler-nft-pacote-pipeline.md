@@ -1,5 +1,5 @@
 ---
-'@walkeros/cli': minor
+'@walkeros/cli': patch
 '@walkeros/server-destination-gcp': patch
 ---
 

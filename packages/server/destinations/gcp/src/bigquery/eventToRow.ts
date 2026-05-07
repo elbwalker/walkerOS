@@ -15,7 +15,7 @@ export interface BigQueryRow {
   trigger: string;
   entity: string;
   action: string;
-  timestamp: string;
+  timestamp: number;
   timing: number;
   source: string | null;
 }
@@ -30,7 +30,13 @@ function jsonOrNull(value: unknown): string | null {
   return JSON.stringify(value);
 }
 
-/** Convert a walkerOS Event v4 into a 15-column BigQuery row in canonical order. */
+/** Convert a walkerOS Event v4 into a 15-column BigQuery row in canonical order.
+ *
+ * Note: BQ Storage Write API encodes TIMESTAMP fields as INT64 microseconds
+ * since epoch (the SDK calls Long.fromString on the value). ISO strings fail
+ * with "interior hyphen" because Long.fromString sees the date hyphens as
+ * non-numeric. Pass microseconds directly.
+ */
 export function eventToRow(event: WalkerOS.Event): BigQueryRow {
   return {
     name: event.name,
@@ -45,7 +51,7 @@ export function eventToRow(event: WalkerOS.Event): BigQueryRow {
     trigger: event.trigger,
     entity: event.entity,
     action: event.action,
-    timestamp: new Date(event.timestamp).toISOString(),
+    timestamp: new Date(event.timestamp).getTime() * 1000, // microseconds since epoch
     timing: event.timing,
     source: jsonOrNull(event.source),
   };

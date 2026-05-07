@@ -7,6 +7,7 @@ interface MockRowError {
 }
 
 let nextAppendRowErrors: MockRowError[] | null = null;
+let nextCreateStreamConnectionError: unknown = null;
 
 class MockJSONWriter {
   constructor(_args: { connection: unknown; protoDescriptor: unknown }) {
@@ -35,9 +36,22 @@ class MockWriterClient {
   }
   async createStreamConnection(args: {
     destinationTable: string;
-    streamType: string;
+    streamId: string;
   }) {
+    // Match the real SDK: callers must pass streamId=DefaultStream (not streamType)
+    // for default-stream use. Passing streamType triggers a CreateWriteStream
+    // call with type='DEFAULT', which BQ rejects as TYPE_UNSPECIFIED.
+    if (args.streamId !== 'DEFAULT') {
+      throw new Error(
+        `mock createStreamConnection: expected streamId='DEFAULT', got ${JSON.stringify(args)}`,
+      );
+    }
     calls.push({ method: 'createStreamConnection', args: [args] });
+    const queuedError = nextCreateStreamConnectionError;
+    if (queuedError !== null) {
+      nextCreateStreamConnectionError = null;
+      throw queuedError;
+    }
     return {
       getStreamId: () => `${args.destinationTable}/streams/_default`,
     };
@@ -96,6 +110,7 @@ function __getMockCalls() {
 function __resetMockCalls() {
   calls.length = 0;
   nextAppendRowErrors = null;
+  nextCreateStreamConnectionError = null;
 }
 
 /**
@@ -106,6 +121,15 @@ function __setNextAppendRowErrors(errors: MockRowError[]): void {
   nextAppendRowErrors = errors;
 }
 
+/**
+ * Test-only: queue an error for the next createStreamConnection() call so
+ * tests can simulate openWriter failures (NotFound, INVALID_ARGUMENT, etc.).
+ * Auto-resets after one use.
+ */
+function __setNextOpenWriterError(err: unknown): void {
+  nextCreateStreamConnectionError = err;
+}
+
 export {
   managedwriter,
   adapt,
@@ -113,4 +137,5 @@ export {
   __getMockCalls,
   __resetMockCalls,
   __setNextAppendRowErrors,
+  __setNextOpenWriterError,
 };
