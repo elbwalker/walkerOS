@@ -223,6 +223,35 @@ import { storeGcsInit } from '@walkeros/server-store-gcs';
 **Primary use case:** Serving static files on GCP infrastructure (Cloud Run,
 GKE) where ADC provides seamless authentication.
 
+### `@walkeros/server-store-sheets` (Google Sheets)
+
+Zero-dependency Google Sheets store using raw `fetch` + Sheets v4 REST API. One
+row per key, one cell per value (JSON-serialized). Built-in auth shared with the
+GCS store. Server-only.
+
+```typescript
+import { storeSheetsInit } from '@walkeros/server-store-sheets';
+```
+
+**Settings:**
+
+| Setting       | Type               | Required | Default    | Purpose                          |
+| ------------- | ------------------ | -------- | ---------- | -------------------------------- |
+| `id`          | `string`           | Yes      | —          | Spreadsheet ID (segment in URL)  |
+| `sheet`       | `string`           | No       | `'Sheet1'` | Sheet (tab) name                 |
+| `key`         | `string`           | No       | `'A'`      | Column letter for keys           |
+| `value`       | `string`           | No       | `'B'`      | Column letter for JSON values    |
+| `headerRows`  | `number`           | No       | `1`        | Header rows to skip when reading |
+| `credentials` | `string \| object` | No       | ADC        | SA JSON for non-GCP envs         |
+
+**Primary use case:** Demos and small prototypes where the spreadsheet is the
+operator-facing UI for tweaking lookup data. Quota: 60 reads/min and 60
+writes/min per project. Wire a fast cache (e.g., `@walkeros/store-memory`) in
+front via the core `Cache` config on the consuming transformer or destination,
+otherwise quota burns in seconds. **Not a production CRM substitute.** See
+[Website: Sheets Store](../../website/docs/stores/server/sheets.mdx) for the
+cache-wiring example.
+
 ## Stores vs direct construction
 
 | Approach                        | When to use                                                                    |
@@ -422,6 +451,8 @@ operator workflow.
   store package
 - [packages/server/stores/gcs/src/](../../packages/server/stores/gcs/src/) - GCS
   store package
+- [packages/server/stores/sheets/src/](../../packages/server/stores/sheets/src/) -
+  Google Sheets store package
 
 **Documentation:**
 
@@ -436,3 +467,5 @@ operator workflow.
   documentation
 - [Website: GCS Store](../../website/docs/stores/server/gcs.mdx) - GCS store
   documentation
+- [Website: Sheets Store](../../website/docs/stores/server/sheets.mdx) - Google
+  Sheets store documentation
