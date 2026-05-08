@@ -21,6 +21,7 @@ export const push: PushFn = async function (
     userData,
     userId,
     clientId,
+    appInstanceId,
     sessionAttributes,
     consentAdUserData,
     consentAdPersonalization,
@@ -35,6 +36,9 @@ export const push: PushFn = async function (
     : undefined;
   const clientIdMapped = clientId
     ? await getMappingValue(event, clientId, { collector })
+    : undefined;
+  const appInstanceIdMapped = appInstanceId
+    ? await getMappingValue(event, appInstanceId, { collector })
     : undefined;
   const sessionAttributesMapped = sessionAttributes
     ? await getMappingValue(event, sessionAttributes, { collector })
@@ -62,6 +66,8 @@ export const push: PushFn = async function (
   }
   if (userIdMapped !== undefined) settingsHelpers.userId = userIdMapped;
   if (clientIdMapped !== undefined) settingsHelpers.clientId = clientIdMapped;
+  if (appInstanceIdMapped !== undefined)
+    settingsHelpers.appInstanceId = appInstanceIdMapped;
   if (sessionAttributesMapped !== undefined)
     settingsHelpers.sessionAttributes = sessionAttributesMapped;
   if (consentAdUserDataValue !== undefined)
@@ -109,10 +115,13 @@ export const push: PushFn = async function (
     logger.throw('eventName is required for GA4 destinations');
   }
 
-  // Build API request
+  // Build API request. Encoding is pinned to HEX because all hashing in this
+  // destination (email/phone/name) emits lowercase hex SHA-256 digests; mixing
+  // BASE64 here would silently produce mismatched identifiers.
   const requestBody: IngestEventsRequest = {
     events: [dataManagerEvent],
     destinations,
+    encoding: 'HEX',
   };
 
   // Add optional parameters

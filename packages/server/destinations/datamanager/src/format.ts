@@ -209,6 +209,16 @@ export async function formatEvent(
     dataManagerEvent.eventName = data.eventName.substring(0, 40);
   }
 
+  // App instance ID (GA4 app stream)
+  if (isString(data.appInstanceId) && data.appInstanceId) {
+    dataManagerEvent.appInstanceId = data.appInstanceId;
+  }
+
+  // Store ID (Google Ads store sales / IN_STORE events)
+  if (isString(data.storeId) && data.storeId) {
+    dataManagerEvent.eventLocation = { storeId: data.storeId };
+  }
+
   // Event source
   if (isString(data.eventSource) && data.eventSource) {
     dataManagerEvent.eventSource = data.eventSource as Event['eventSource'];
