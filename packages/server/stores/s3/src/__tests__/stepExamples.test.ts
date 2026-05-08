@@ -5,6 +5,8 @@ import { examples } from '../dev';
 const mockGetObjectArrayBuffer = jest.fn();
 const mockPutObject = jest.fn();
 const mockDeleteObject = jest.fn();
+const mockBucketExists = jest.fn();
+const mockCreateBucket = jest.fn();
 
 jest.mock('s3mini', () => {
   return {
@@ -12,6 +14,8 @@ jest.mock('s3mini', () => {
       getObjectArrayBuffer: mockGetObjectArrayBuffer,
       putObject: mockPutObject,
       deleteObject: mockDeleteObject,
+      bucketExists: mockBucketExists,
+      createBucket: mockCreateBucket,
     })),
   };
 });
@@ -50,10 +54,15 @@ async function createStore(settings: Record<string, unknown> = {}) {
 
 describe('Step Examples', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     mockGetObjectArrayBuffer.mockReset();
     mockPutObject.mockReset();
     mockDeleteObject.mockReset();
-    jest.clearAllMocks();
+    mockBucketExists.mockReset();
+    mockCreateBucket.mockReset();
+    // Default to bucket existing so step examples are unaffected by the
+    // new init-time bucket-exists guard.
+    mockBucketExists.mockResolvedValue(true);
   });
 
   it('readAwsS3 — read object from S3 bucket', async () => {

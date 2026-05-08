@@ -5,6 +5,8 @@ import { storeS3Init } from '../store';
 const mockGetObjectArrayBuffer = jest.fn();
 const mockPutObject = jest.fn();
 const mockDeleteObject = jest.fn();
+const mockBucketExists = jest.fn();
+const mockCreateBucket = jest.fn();
 
 jest.mock('s3mini', () => {
   return {
@@ -12,6 +14,8 @@ jest.mock('s3mini', () => {
       getObjectArrayBuffer: mockGetObjectArrayBuffer,
       putObject: mockPutObject,
       deleteObject: mockDeleteObject,
+      bucketExists: mockBucketExists,
+      createBucket: mockCreateBucket,
     })),
   };
 });
@@ -50,10 +54,15 @@ async function createStore(settings: Record<string, unknown> = {}) {
 
 describe('storeS3Init', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     mockGetObjectArrayBuffer.mockReset();
     mockPutObject.mockReset();
     mockDeleteObject.mockReset();
-    jest.clearAllMocks();
+    mockBucketExists.mockReset();
+    mockCreateBucket.mockReset();
+    // Default to bucket existing so existing tests are unaffected by the
+    // new init-time bucket-exists guard.
+    mockBucketExists.mockResolvedValue(true);
   });
 
   it('should return a store instance with type "s3"', async () => {
@@ -62,6 +71,13 @@ describe('storeS3Init', () => {
     expect(store.get).toBeDefined();
     expect(store.set).toBeDefined();
     expect(store.delete).toBeDefined();
+  });
+
+  it('should throw an actionable error when the bucket does not exist', async () => {
+    mockBucketExists.mockResolvedValue(false);
+    await expect(createStore()).rejects.toThrow(
+      /S3 bucket not found: my-bucket.*walkeros setup store\.test-s3/,
+    );
   });
 
   describe('get', () => {

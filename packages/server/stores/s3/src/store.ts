@@ -1,6 +1,6 @@
 import { S3mini } from 's3mini';
 import type { Store } from '@walkeros/core';
-import type { S3StoreSettings } from './types';
+import type { S3StoreSettings, Types } from './types';
 
 function isValidKey(key: string): boolean {
   if (!key || key.startsWith('/') || key.startsWith('\\')) return false;
@@ -18,10 +18,44 @@ function buildEndpoint(endpoint: string, bucket: string): string {
   return `${base}/${bucket}`;
 }
 
-export const storeS3Init: Store.Init<Store.Types<S3StoreSettings>> = (
-  context,
-) => {
-  const settings = context.config.settings as S3StoreSettings;
+function assertSettings(
+  settings: Partial<S3StoreSettings> | undefined,
+): asserts settings is S3StoreSettings {
+  if (
+    !settings ||
+    typeof settings.bucket !== 'string' ||
+    settings.bucket.length === 0
+  ) {
+    throw new Error(
+      'storeS3Init: settings.bucket is required (non-empty string)',
+    );
+  }
+  if (typeof settings.endpoint !== 'string' || settings.endpoint.length === 0) {
+    throw new Error(
+      'storeS3Init: settings.endpoint is required (non-empty string)',
+    );
+  }
+  if (
+    typeof settings.accessKeyId !== 'string' ||
+    settings.accessKeyId.length === 0
+  ) {
+    throw new Error(
+      'storeS3Init: settings.accessKeyId is required (non-empty string)',
+    );
+  }
+  if (
+    typeof settings.secretAccessKey !== 'string' ||
+    settings.secretAccessKey.length === 0
+  ) {
+    throw new Error(
+      'storeS3Init: settings.secretAccessKey is required (non-empty string)',
+    );
+  }
+}
+
+export const storeS3Init: Store.Init<Types> = async (context) => {
+  assertSettings(context.config.settings);
+  const settings = context.config.settings;
   const prefix = normalizePrefix(settings.prefix);
 
   const client = new S3mini({
@@ -39,9 +73,29 @@ export const storeS3Init: Store.Init<Store.Types<S3StoreSettings>> = (
     return prefix + key;
   }
 
+  // Hard-fail with an actionable message if the bucket is missing.
+  // Mirrors the BigQuery init-time hard-fail pattern.
+  const exists = await client.bucketExists();
+  if (!exists) {
+    const setupId = context.id ?? 's3';
+    const errorMsg =
+      `S3 bucket not found: ${settings.bucket} at ${settings.endpoint}. ` +
+      `Run "walkeros setup store.${setupId}" to create it.`;
+    context.logger.error(errorMsg, {
+      bucket: settings.bucket,
+      endpoint: settings.endpoint,
+    });
+    throw new Error(errorMsg);
+  }
+
   return {
     type: 's3',
-    config: context.config as Store.Config<Store.Types<S3StoreSettings>>,
+    config: {
+      settings,
+      env: context.config.env,
+      id: context.config.id,
+      logger: context.config.logger,
+    },
 
     async get(key: string): Promise<Buffer | undefined> {
       const s3Key = resolveKey(key);
@@ -60,7 +114,12 @@ export const storeS3Init: Store.Init<Store.Types<S3StoreSettings>> = (
       const s3Key = resolveKey(key);
       if (!s3Key) return;
 
-      await client.putObject(s3Key, value as Buffer);
+      if (!Buffer.isBuffer(value)) {
+        throw new Error(
+          'storeS3Init.set: value must be a Buffer; got ' + typeof value,
+        );
+      }
+      await client.putObject(s3Key, value);
     },
 
     async delete(key: string): Promise<void> {
