@@ -101,6 +101,12 @@ export const SettingsSchema = z.object({
       "Guided helper: GA4 client ID for all events (like 'user.device')",
     )
     .optional(),
+  appInstanceId: z
+    .any()
+    .describe(
+      "Guided helper: GA4 app instance ID (Firebase) for all events (like 'user.appInstanceId')",
+    )
+    .optional(),
   sessionAttributes: z
     .any()
     .describe(

@@ -327,6 +327,111 @@ describe('buildSplitConfigObject string code references', () => {
 
     expect(() => buildSplitConfigObject(flowSettings, new Map())).not.toThrow();
   });
+
+  it('emits before chain for inline transformers', () => {
+    const flow = {
+      sources: {
+        input: { package: '@walkeros/server-source-express', config: {} },
+      },
+      destinations: {
+        out: {
+          package: '@walkeros/destination-demo',
+          config: { before: ['orchestrator'] },
+        },
+      },
+      transformers: {
+        noop: {
+          code: { type: 'noop', push: '$code:(event) => event' },
+          // Inline transformers may have a `before` chain just like file-based ones.
+          before: ['stepA', 'stepB'],
+        },
+      },
+      stores: {},
+    } as unknown as Flow;
+
+    const { codeConfigObject } = buildSplitConfigObject(flow, new Map());
+
+    // The emitted transformer entry must contain a `before:` clause naming the chain.
+    expect(codeConfigObject).toMatch(
+      /noop:\s*\{.*?before:\s*\[\s*"stepA"\s*,\s*"stepB"\s*\]/s,
+    );
+  });
+
+  it('resolves $store.X in inline transformer env', () => {
+    const flow = {
+      sources: {
+        input: { package: '@walkeros/server-source-express', config: {} },
+      },
+      destinations: {
+        out: { package: '@walkeros/destination-demo', config: {} },
+      },
+      transformers: {
+        stash: {
+          code: {
+            type: 'stash',
+            push: '$code:async (event, context) => { /* writes via context.env.store */ }',
+          },
+          env: { store: '$store.cache' },
+        },
+      },
+      stores: {
+        cache: { package: '@walkeros/store-memory' },
+      },
+    } as unknown as Flow;
+
+    const { codeConfigObject } = buildSplitConfigObject(flow, new Map());
+
+    // Marker must resolve to a JS reference, not a literal string.
+    expect(codeConfigObject).toMatch(
+      /stash:\s*\{[\s\S]*?env:\s*\{\s*"store":\s*stores\.cache\s*\}/,
+    );
+    expect(codeConfigObject).not.toContain('"$store.cache"');
+  });
+
+  it('inline transformer with env markers and before chain emits both correctly', () => {
+    const flow = {
+      sources: {
+        input: { package: '@walkeros/server-source-express', config: {} },
+      },
+      destinations: {
+        out: {
+          package: '@walkeros/destination-demo',
+          config: { before: ['orchestrate'] },
+        },
+      },
+      transformers: {
+        orchestrate: {
+          code: { type: 'orchestrate', push: '$code:(event) => event' },
+          before: ['filterDup'],
+        },
+        filterDup: {
+          code: {
+            type: 'filter-dup',
+            push: '$code:async (event, context) => { if (await context.env.store.get(event.id)) return false; await context.env.store.set(event.id, 1); }',
+          },
+          env: { store: '$store.cache' },
+        },
+      },
+      stores: {
+        cache: { package: '@walkeros/store-memory' },
+      },
+    } as unknown as Flow;
+
+    const { codeConfigObject } = buildSplitConfigObject(flow, new Map());
+
+    // Bug 2 fix: orchestrate's before chain is emitted.
+    expect(codeConfigObject).toMatch(
+      /orchestrate:\s*\{[\s\S]*?before:\s*\[\s*"filterDup"\s*\]/s,
+    );
+
+    // Bug 1 fix: filterDup's env marker resolves to a stores.* JS reference.
+    expect(codeConfigObject).toMatch(
+      /filterDup:\s*\{[\s\S]*?env:\s*\{[\s\S]*?"store":\s*stores\.cache/s,
+    );
+
+    // No literal $store.cache string anywhere in the emission.
+    expect(codeConfigObject).not.toContain('"$store.cache"');
+  });
 });
 
 describe('collectAllStepPackages auto-add merge logic', () => {

@@ -90,42 +90,44 @@ function validateReference(
  * @param inline - InlineCode object with push, optional init, optional type
  * @param config - Component configuration
  * @param env - Optional environment configuration
- * @param chain - Optional chain value (next for sources/transformers, before for destinations)
- * @param chainPropertyName - Name of chain property in output ('next' | 'before')
+ * @param chains - Optional chain values: `before` (post-collector for destinations,
+ *   pre-push for transformers, pre-source for sources) and `next`
+ *   (pre-collector for sources/transformers, post-push for destinations).
  * @param isDestination - Whether this is a destination (uses different code structure)
  */
 function generateInlineCode(
   inline: Flow.Code,
   config: object,
   env?: object,
-  chain?: string | string[],
-  chainPropertyName?: 'next' | 'before',
+  chains?: { before?: string | string[]; next?: string | string[] },
   isDestination?: boolean,
 ): string {
   const pushFn = inline.push.replace('$code:', '');
   const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
   const typeLine = inline.type ? `type: '${inline.type}',` : '';
-  const chainLine =
-    chain && chainPropertyName
-      ? `${chainPropertyName}: ${JSON.stringify(chain)},`
-      : '';
+
+  const chainLines: string[] = [];
+  if (chains?.before !== undefined) {
+    chainLines.push(`before: ${JSON.stringify(chains.before)}`);
+  }
+  if (chains?.next !== undefined) {
+    chainLines.push(`next: ${JSON.stringify(chains.next)}`);
+  }
+  const chainBlock = chainLines.length
+    ? `,\n      ${chainLines.join(',\n      ')}`
+    : '';
 
   // Destinations have a different structure - code is the instance directly
   if (isDestination) {
     return `{
       code: {
         ${typeLine}
-        config: ${JSON.stringify(config || {})},
+        config: ${processConfigValue(config || {})},
         ${initFn ? `init: ${initFn},` : ''}
         push: ${pushFn}
       },
-      config: ${JSON.stringify(config || {})},
-      env: ${JSON.stringify(env || {})}${
-        chain
-          ? `,
-      ${chainLine.slice(0, -1)}`
-          : ''
-      }
+      config: ${processConfigValue(config || {})},
+      env: ${processConfigValue(env || {})}${chainBlock}
     }`;
   }
 
@@ -137,13 +139,8 @@ function generateInlineCode(
         ${initFn ? `init: ${initFn},` : ''}
         push: ${pushFn}
       }),
-      config: ${JSON.stringify(config || {})},
-      env: ${JSON.stringify(env || {})}${
-        chain
-          ? `,
-      ${chainLine.slice(0, -1)}`
-          : ''
-      }
+      config: ${processConfigValue(config || {})},
+      env: ${processConfigValue(env || {})}${chainBlock}
     }`;
 }
 import type { BuildOptions } from '../../types/bundle.js';
@@ -1563,7 +1560,7 @@ export function buildSplitConfigObject(
     .filter(([, source]) => source.package || hasCodeReference(source.code))
     .map(([key, source]) => {
       if (isInlineCode(source.code)) {
-        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next as string | string[] | undefined, 'next')}`;
+        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, { next: source.next as string | string[] | undefined })}`;
       }
       return buildSplitStepEntry('sources', key, source);
     });
@@ -1573,7 +1570,7 @@ export function buildSplitConfigObject(
     .filter(([, dest]) => dest.package || hasCodeReference(dest.code))
     .map(([key, dest]) => {
       if (isInlineCode(dest.code)) {
-        return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, dest.before, 'before', true)}`;
+        return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, { before: dest.before, next: dest.next as string | string[] | undefined }, true)}`;
       }
       return buildSplitStepEntry('destinations', key, dest);
     });
@@ -1586,7 +1583,7 @@ export function buildSplitConfigObject(
     )
     .map(([key, transformer]) => {
       if (isInlineCode(transformer.code)) {
-        return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, transformer.next, 'next')}`;
+        return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, { before: transformer.before, next: transformer.next })}`;
       }
       return buildSplitStepEntry('transformers', key, transformer);
     });

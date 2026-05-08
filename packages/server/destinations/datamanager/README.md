@@ -323,7 +323,8 @@ mapping:
       lastName: 'data.lastName',
     },
     userId: 'user.id',
-    clientId: 'user.device',
+    clientId: 'user.device',                  // GA4 web stream
+    appInstanceId: 'user.appInstanceId',      // GA4 app stream (Firebase)
     sessionAttributes: 'context.sessionAttributes',
 
     // Consent mapping (string = field name, boolean = static value)
@@ -544,6 +545,61 @@ await elb('order complete', { total: 99.99 }, {
 }
 ```
 
+### Store Sales (Google Ads, IN_STORE)
+
+For physical store conversions, set `eventSource: 'IN_STORE'` and map a
+`storeId`. The destination wraps it into the API's required
+`eventLocation.storeId` shape.
+
+```typescript
+{
+  settings: {
+    eventSource: 'IN_STORE',
+    destinations: [{
+      operatingAccount: { accountId: '123-456-7890', accountType: 'GOOGLE_ADS' },
+      productDestinationId: 'AW-CONVERSION-123',
+    }],
+  },
+  mapping: {
+    order: {
+      complete: {
+        name: 'purchase',
+        data: {
+          map: {
+            transactionId: 'data.id',
+            conversionValue: 'data.total',
+            currency: 'data.currency',
+            storeId: 'data.storeId',
+            // Optional: hashed PII still applies for in-store matching
+            email: 'user.email',
+            phone: 'data.phone',
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+### App Conversions (GA4 app stream)
+
+For GA4 app event ingestion, set `eventSource: 'APP'` and provide an
+`appInstanceId` (Firebase install ID). It can be set per-event via mapping or as
+a Settings guided helper.
+
+```typescript
+{
+  settings: {
+    eventSource: 'APP',
+    appInstanceId: 'user.appInstanceId',     // Settings helper
+    destinations: [{
+      operatingAccount: { accountId: '123456789', accountType: 'GOOGLE_ANALYTICS_PROPERTY' },
+      productDestinationId: 'G-XXXXXXXXXX',
+    }],
+  },
+}
+```
+
 ## Account Types
 
 ### Google Ads
@@ -616,6 +672,14 @@ Output: <SHA-256 hash of "+18005550100">
 - **Names**: Lowercase, remove titles/suffixes, SHA-256 hash
 - **Region Code**: ISO-3166-1 alpha-2, NOT hashed (e.g., "US")
 - **Postal Code**: NOT hashed
+
+### Hash encoding
+
+Every request is sent with `encoding: 'HEX'`, which Google requires whenever the
+payload contains hashed `userData`. The value is pinned because all hashing in
+this destination produces lowercase hex SHA-256 digests; exposing encoding as a
+setting would risk silently mismatched identifiers between the hashed value and
+the declared encoding.
 
 ## Consent Management (DMA)
 
@@ -756,40 +820,44 @@ be rejected.
 
 ### Settings
 
-| Property                   | Type           | Required | Description                                  |
-| -------------------------- | -------------- | -------- | -------------------------------------------- |
-| `credentials`              | object         | \*       | Service account (client_email + private_key) |
-| `keyFilename`              | string         | \*       | Path to service account JSON file            |
-| `scopes`                   | string[]       |          | OAuth scopes (default: datamanager scope)    |
-| `destinations`             | Destination[]  | ✓        | Array of destination accounts (max 10)       |
-| `eventSource`              | EventSource    |          | Default event source (WEB, APP, etc.)        |
-| `batchSize`                | number         |          | Max events per batch (max 2000)              |
-| `batchInterval`            | number         |          | Batch flush interval in ms                   |
-| `validateOnly`             | boolean        |          | Validate without ingestion                   |
-| `url`                      | string         |          | Override API endpoint                        |
-| `consent`                  | Consent        |          | Request-level consent                        |
-| `testEventCode`            | string         |          | Test event code for debugging                |
-| `userData`                 | object         |          | Guided helper: User data mapping             |
-| `userId`                   | string         |          | Guided helper: First-party user ID           |
-| `clientId`                 | string         |          | Guided helper: GA4 client ID                 |
-| `sessionAttributes`        | string         |          | Guided helper: Privacy-safe attribution      |
-| `consentAdUserData`        | string/boolean |          | Consent mapping: Field name or static value  |
-| `consentAdPersonalization` | string/boolean |          | Consent mapping: Field name or static value  |
+| Property                   | Type           | Required | Description                                   |
+| -------------------------- | -------------- | -------- | --------------------------------------------- |
+| `credentials`              | object         | \*       | Service account (client_email + private_key)  |
+| `keyFilename`              | string         | \*       | Path to service account JSON file             |
+| `scopes`                   | string[]       |          | OAuth scopes (default: datamanager scope)     |
+| `destinations`             | Destination[]  | ✓        | Array of destination accounts (max 10)        |
+| `eventSource`              | EventSource    |          | Default event source (WEB, APP, etc.)         |
+| `batchSize`                | number         |          | Max events per batch (max 2000)               |
+| `batchInterval`            | number         |          | Batch flush interval in ms                    |
+| `validateOnly`             | boolean        |          | Validate without ingestion                    |
+| `url`                      | string         |          | Override API endpoint                         |
+| `consent`                  | Consent        |          | Request-level consent                         |
+| `testEventCode`            | string         |          | Test event code for debugging                 |
+| `userData`                 | object         |          | Guided helper: User data mapping              |
+| `userId`                   | string         |          | Guided helper: First-party user ID            |
+| `clientId`                 | string         |          | Guided helper: GA4 client ID (web stream)     |
+| `appInstanceId`            | string         |          | Guided helper: GA4 app instance ID (Firebase) |
+| `sessionAttributes`        | string         |          | Guided helper: Privacy-safe attribution       |
+| `consentAdUserData`        | string/boolean |          | Consent mapping: Field name or static value   |
+| `consentAdPersonalization` | string/boolean |          | Consent mapping: Field name or static value   |
 
 **\* One of `credentials`, `keyFilename`, or ADC (automatic) required for
 authentication**
 
 ### Event Fields
 
-| Field             | Type   | Max Length | Description                      |
-| ----------------- | ------ | ---------- | -------------------------------- |
-| `transactionId`   | string | 512        | Transaction ID for deduplication |
-| `clientId`        | string | 255        | GA client ID                     |
-| `userId`          | string | 256        | First-party user ID              |
-| `conversionValue` | number |            | Conversion value                 |
-| `currency`        | string | 3          | ISO 4217 currency code           |
-| `eventName`       | string | 40         | Event name (required for GA4)    |
-| `eventSource`     | string |            | WEB, APP, IN_STORE, PHONE, OTHER |
+| Field                   | Type   | Max Length | Description                                      |
+| ----------------------- | ------ | ---------- | ------------------------------------------------ |
+| `transactionId`         | string | 512        | Transaction ID for deduplication                 |
+| `clientId`              | string | 255        | GA client ID (web stream)                        |
+| `appInstanceId`         | string |            | Firebase app instance ID (GA4 app stream)        |
+| `userId`                | string | 256        | First-party user ID                              |
+| `conversionValue`       | number |            | Conversion value                                 |
+| `currency`              | string | 3          | ISO 4217 currency code                           |
+| `eventName`             | string | 40         | Event name (required for GA4)                    |
+| `eventSource`           | string |            | WEB, APP, IN_STORE, PHONE, OTHER                 |
+| `eventLocation.storeId` | string |            | Physical store ID (required for IN_STORE events) |
+| `thirdPartyUserData`    | object |            | User identifiers from a data partner (typed)     |
 
 ## Type Definitions
 
