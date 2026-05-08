@@ -35,6 +35,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-firehose": "^3.952.0",
+    "@aws-sdk/client-sns": "^3.952.0",
+    "@aws-sdk/client-sts": "^3.952.0",
     "@walkeros/server-core": "4.0.0"
   },
   "devDependencies": {},
@@ -54,7 +56,8 @@
     ],
     "docs": "https://www.walkeros.io/docs/destinations/server/aws",
     "exports": {
-      "destinationFirehose": "Firehose event streaming"
+      "destinationFirehose": "Firehose event streaming",
+      "destinationSNS": "SNS topic publish (with setup lifecycle)"
     }
   },
   "keywords": [
@@ -64,6 +67,7 @@
     "server",
     "aws",
     "firehose",
+    "sns",
     "analytics"
   ],
   "funding": [

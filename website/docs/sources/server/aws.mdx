@@ -14,7 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # AWS Lambda
 
-AWS Lambda source for walkerOS. Works across API Gateway REST (v1), API Gateway HTTP (v2), Lambda Function URLs, and direct invocation. Auto-detects the API Gateway version, supports optional pixel tracking with a 1x1 GIF response, and exposes a built-in health check endpoint.
+AWS Lambda source for walkerOS. Works across API Gateway REST (v1), API Gateway HTTP (v2), Lambda Function URLs, and direct invocation. Auto-detects the API Gateway version, supports optional pixel tracking with a 1x1 GIF response, and exposes a built-in health check endpoint. The `@walkeros/server-source-aws` package also ships [`sourceSqs`](/docs/sources/server/sqs) for ingesting from SQS queues; this page covers the Lambda handler only.
 
 <WhereThisFits
   pre={<>The AWS Lambda source is a <strong>server source</strong> in the walkerOS flow:</>}

@@ -9,7 +9,7 @@ import {
   REF_SECRET,
   REF_CODE_PREFIX,
 } from '../references';
-import * as core from '@walkeros/core';
+import * as core from '../index';
 
 describe('reference regex constants', () => {
   it('REF_VAR_FULL matches whole-string $var.name', () => {

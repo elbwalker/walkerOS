@@ -119,6 +119,10 @@ If nft cannot statically reach a file (rare: dynamic `require(somePath)` constru
   language="json"
 />
 
+### Range conflict resolution
+
+When two transitive consumers declare incompatible ranges for the same dependency (e.g., `arrify@^3.0.0` from one package, `arrify@^2.0.0` from another), the bundler now resolves the chosen range to a concrete version via the npm registry and nests any non-satisfying spec under its consumer's `node_modules/`. This kills classes of upstream chaos (like `arrify is not a function` from `@google-cloud/common`) before they can reach runtime. After install, a defense-in-depth check warns when any installed package's declared deps don't match what's reachable on its resolution path; if you see those warnings, add an `overrides` entry to your flow's `config.bundle.overrides` to pin the offending dep. If the npm registry is unreachable during validation, set `BUNDLER_STRICT_RANGES=0` to bypass strict validation with a warning instead of failing the build.
+
 ### Schema version
 
 The flow.json schema stays at `version: 4`. Build-time fields live under `flow.<name>.config.bundle.{packages, overrides, traceInclude}`. The `flow.<name>.config.bundle.external` sub-field is no longer supported in @walkeros/cli@4.x.

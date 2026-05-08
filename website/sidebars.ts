@@ -104,6 +104,7 @@ const sidebars: SidebarsConfig = {
             'sources/server/express',
             'sources/server/fetch',
             'sources/server/aws',
+            'sources/server/sqs',
             'sources/server/gcp',
             'sources/server/pubsub',
             'sources/create-your-own',
@@ -446,6 +447,11 @@ const sidebars: SidebarsConfig = {
                 {
                   type: 'doc',
                   id: 'destinations/server/aws',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/sns',
                   className: 'sidebar-badge-server',
                 },
                 {

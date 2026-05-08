@@ -1,7 +1,7 @@
 # @walkeros/server-source-aws
 
-AWS server sources for walkerOS - lightweight, single-purpose runtime adapters
-for AWS services.
+AWS server sources for walkerOS, Lambda and SQS. Lightweight, single-purpose
+runtime adapters for AWS services.
 
 ## Installation
 
@@ -353,6 +353,122 @@ See [examples directory](./examples/) for:
 - Serverless Framework deployment
 - CDK deployment
 - Local testing with SAM CLI
+
+---
+
+## SQS source
+
+Long-running listener that polls an AWS SQS queue and forwards each message to
+the walkerOS collector. Idempotent queue provisioning via
+`walkeros setup source.<id>`, optional sibling DLQ, optional SNS topic
+subscription with auto-applied queue policy.
+
+### Quickstart
+
+```typescript
+import { sourceSqs } from '@walkeros/server-source-aws';
+import { startFlow } from '@walkeros/collector';
+
+await startFlow({
+  sources: {
+    sqs: {
+      code: sourceSqs,
+      config: {
+        settings: {
+          queueName: 'walkeros-events',
+          region: 'eu-central-1',
+        },
+        setup: {
+          visibilityTimeoutSeconds: 30,
+          messageRetentionSeconds: 345600,
+          tags: { env: 'prod', team: 'data' },
+        },
+      },
+    },
+  },
+  destinations: {
+    // your destinations
+  },
+});
+```
+
+The SQS source is event-driven. `init()` validates the queue exists and starts
+the long-poll loop as a background task. The source's `push()` is a deliberate
+no-op stub in production. `destroy()` stops the loop, drains in-flight messages,
+and force-closes after `shutdownTimeoutMs` (default 30000).
+
+### Setup
+
+Run `walkeros setup source.<id>` to provision the queue idempotently with
+declared attributes. Optionally creates a sibling dead-letter queue, and
+optionally subscribes the queue to an SNS topic, including the matching queue
+policy. AWS treats identical CreateQueue inputs as success; setup never calls
+SetQueueAttributes.
+
+### Authoritative-apply
+
+Setup writes declared state to declared resources unconditionally. Non-declared
+tags or non-declared SNS subscriptions are left untouched, not detected, not
+logged. On attribute conflict (`QueueNameExists`), setup hard-fails and asks the
+operator to delete or rename, since AWS does not allow `CreateQueue` to
+overwrite attributes.
+
+### IAM
+
+Separate setup vs runtime roles.
+
+| Phase   | Permissions                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| Setup   | `sqs:CreateQueue`, `sqs:GetQueueAttributes`, `sqs:TagQueue`, optionally `sns:Subscribe` |
+| Runtime | `sqs:ReceiveMessage`, `sqs:DeleteMessage`, `sqs:GetQueueUrl`, `sqs:GetQueueAttributes`  |
+
+### DLQ defaults
+
+When `setup.deadLetterQueue.create: true`, walkerOS provisions a sibling DLQ
+named `<queueName>-dlq` (or `<queueName>-dlq.fifo` for FIFO). The DLQ inherits
+the parent's `region` and `tags`, plus `walkerOS: 'dlq'`. Retention is extended
+to 14 days (AWS max). Visibility timeout, max message size, and KMS default to
+AWS defaults rather than inheriting. No nested DLQ-of-DLQ.
+
+### SNS subscription
+
+When `setup.subscribeToSnsTopic` is set, walkerOS calls `sns.SubscribeCommand`
+with the queue ARN as endpoint and writes a queue policy with deterministic Sid
+`walkerOSAllowSNSPublish-<sourceId>` so re-runs upsert in place. Operators who
+manage policies externally should leave `subscribeToSnsTopic` unset and add the
+subscription via Terraform or console.
+
+### Decoders
+
+| Decoder | Behavior                                                                  |
+| ------- | ------------------------------------------------------------------------- |
+| `json`  | Default. `JSON.parse(body)`. Throws on parse failure.                     |
+| `text`  | Forwards body string under `data.payload`.                                |
+| `raw`   | Forwards `Buffer.from(body, 'utf8')` base64-encoded under `data.payload`. |
+
+### Flow control
+
+| Setting             | Default     | Description                             |
+| ------------------- | ----------- | --------------------------------------- |
+| `maxMessages`       | 10 (cap 10) | Receive batch size.                     |
+| `waitTimeSeconds`   | 20 (cap 20) | Long-poll duration. SQS hard cap is 20. |
+| `visibilityTimeout` | queue value | Per-receive override.                   |
+
+### Error handling
+
+| `onPushError` | Behavior                                                                         |
+| ------------- | -------------------------------------------------------------------------------- |
+| `nack`        | Default. Skip `DeleteMessage` so SQS redelivers when visibility timeout expires. |
+| `ack`         | Call `DeleteMessage` even on push failure. Drops the message.                    |
+
+SQS has no explicit nack RPC; redelivery is automatic when visibility timeout
+expires without a `DeleteMessage`.
+
+### See also
+
+- [AWS Lambda source](#lambda-source) (this package's other source).
+- [AWS SNS destination](https://www.walkeros.io/docs/destinations/server/sns)
+  for the standard SNS-to-SQS fan-out pattern.
 
 ## License
 

@@ -21,6 +21,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.952.0",
+    "@aws-sdk/client-sns": "^3.952.0",
     "@walkeros/core": "4.0.0"
   },
   "peerDependencies": {
@@ -46,7 +48,8 @@
     ],
     "docs": "https://www.walkeros.io/docs/sources/server/aws",
     "exports": {
-      "sourceLambda": "AWS Lambda event source"
+      "sourceLambda": "AWS Lambda event source",
+      "sourceSqs": "AWS SQS event source (long-running poll-and-forward, with setup lifecycle)"
     }
   },
   "keywords": [
@@ -70,6 +73,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./sqs": {
+      "types": "./dist/sqs/index.d.ts",
+      "import": "./dist/sqs/index.mjs",
+      "require": "./dist/sqs/index.js"
     },
     "./dev": {
       "types": "./dist/dev.d.ts",

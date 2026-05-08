@@ -306,6 +306,13 @@ Options:
 - **Component names:** Source, transformer, destination, and store names must be
   valid JavaScript identifiers (camelCase). Hyphens like `gtag-wrapper` cause
   syntax errors — use `gtagWrapper` instead.
+- **Range conflicts:** When two transitive consumers declare incompatible ranges
+  for the same dep (e.g., `arrify@^3.0.0` vs `arrify@^2.0.0`), the bundler
+  resolves the chosen range to a concrete version and nests non-satisfying specs
+  under their consumer. If a post-install warning surfaces declared-vs-installed
+  mismatches, pin the dep in `config.bundle.overrides`. Set
+  `BUNDLER_STRICT_RANGES=0` to bypass strict range validation when the npm
+  registry is unreachable.
 
 ---
 
