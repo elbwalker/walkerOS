@@ -13,7 +13,9 @@ export interface IntelliSenseContext {
     sources?: string[];
     destinations?: string[];
     transformers?: string[];
+    stores?: string[];
   };
+  flowNames?: string[];
   contract?: Array<{
     entity: string;
     actions: string[];

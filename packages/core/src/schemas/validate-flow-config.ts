@@ -85,9 +85,12 @@ function extractContext(
   const sources: string[] = [];
   const destinations: string[] = [];
   const transformers: string[] = [];
+  const stores: string[] = [];
   const packages: PackageInfo[] = [];
   const contractEntities: Array<{ entity: string; actions: string[] }> = [];
   let platform: 'web' | 'server' | undefined;
+
+  const flowNames = Object.keys(parsed.flows);
 
   // Setup-level
   mergeVars(variables, parsed.variables);
@@ -142,11 +145,23 @@ function extractContext(
         }
       }
     }
+
+    // Stores are not part of the source/destination/transformer step taxonomy
+    // used by IntelliSense step pickers, so they are not added to packages[].
+    if (isObject(flow.stores)) {
+      for (const [name, ref] of Object.entries(flow.stores)) {
+        stores.push(name);
+        if (isObject(ref)) {
+          mergeVars(variables, ref.variables);
+        }
+      }
+    }
   }
 
   const ctx: Partial<IntelliSenseContext> = {
     variables,
-    stepNames: { sources, destinations, transformers },
+    stepNames: { sources, destinations, transformers, stores },
+    flowNames,
   };
 
   if (platform) ctx.platform = platform;
@@ -158,29 +173,165 @@ function extractContext(
 
 // --- Reference Checking ---
 
+// Inline (global) variant of REF_STORE for scanning anywhere in JSON text.
+// Source-of-truth REF_STORE in references.ts is anchored (^...$).
+const STORE_INLINE_REGEX = /\$store\.([a-zA-Z_][a-zA-Z0-9_]*)/g;
+
+// Permissive: $env. up to a JSON delimiter, with optional =default suffix.
+// REF_ENV in references.ts only models the good shape ($env.NAME[:default]),
+// so we use a looser pattern here to detect malformed cases too.
+const ENV_LOOSE_REGEX = /\$env\.([A-Za-z_]\w*)(=[^"}\s]*)?/g;
+
+// Inline variant of REF_FLOW. Captures $flow.NAME(.path)? anywhere in text.
+// Path portion stops at JSON delimiters (quote, brace, whitespace).
+const FLOW_INLINE_REGEX =
+  /\$flow\.([a-zA-Z_][a-zA-Z0-9_]*)(?:\.([a-zA-Z0-9_.]+))?/g;
+
+// Scans for $<prefix>:<name> where <prefix> is a reference type that uses a dot.
+// Excludes $code: (legitimate code-payload prefix) and $env.NAME:default
+// (which has the dot before the colon, so it doesn't match this pattern).
+const COLON_TYPO_REGEX = /\$(var|store|flow|secret):([a-zA-Z_][a-zA-Z0-9_]*)/g;
+
 function checkReferences(
   text: string,
   context: Partial<IntelliSenseContext>,
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  if (context.variables) {
-    const regex = /\$var\.(\w+)/g;
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(text)) !== null) {
-      if (!(match[1] in context.variables)) {
-        const pos = offsetToPosition(text, match.index, match[0].length);
-        issues.push({
-          message: `Unknown variable "$var.${match[1]}". Defined: ${Object.keys(context.variables).join(', ') || 'none'}`,
-          severity: 'warning',
-          path: `$var.${match[1]}`,
-          ...pos,
-        });
-      }
-    }
-  }
+  // Each check is independent. Order is irrelevant, issues are aggregated.
+  // Run colon-typo scan first so the user sees the targeted suggestion
+  // before any cascading "unknown" warnings from the per-type checks.
+  checkColonTypos(text, context, issues);
+  checkVarReferences(text, context, issues);
+  checkStoreReferences(text, context, issues);
+  checkEnvReferences(text, context, issues);
+  checkFlowReferences(text, context, issues);
 
   return issues;
+}
+
+function checkColonTypos(
+  text: string,
+  _context: Partial<IntelliSenseContext>,
+  issues: ValidationIssue[],
+): void {
+  COLON_TYPO_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = COLON_TYPO_REGEX.exec(text)) !== null) {
+    const full = match[0];
+    const prefix = match[1];
+    const name = match[2];
+    const pos = offsetToPosition(text, match.index, full.length);
+    issues.push({
+      message: `Malformed reference "${full}", use a dot, not a colon: "$${prefix}.${name}".`,
+      severity: 'warning',
+      path: full,
+      ...pos,
+    });
+  }
+}
+
+function checkStoreReferences(
+  text: string,
+  context: Partial<IntelliSenseContext>,
+  issues: ValidationIssue[],
+): void {
+  const stores = context.stepNames?.stores ?? [];
+  STORE_INLINE_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = STORE_INLINE_REGEX.exec(text)) !== null) {
+    if (!stores.includes(match[1])) {
+      const pos = offsetToPosition(text, match.index, match[0].length);
+      issues.push({
+        message: `Unknown store "$store.${match[1]}". Defined: ${stores.join(', ') || 'none'}`,
+        severity: 'warning',
+        path: `$store.${match[1]}`,
+        ...pos,
+      });
+    }
+  }
+}
+
+function checkFlowReferences(
+  text: string,
+  context: Partial<IntelliSenseContext>,
+  issues: ValidationIssue[],
+): void {
+  const flowNames = context.flowNames ?? [];
+  if (flowNames.length === 0) return;
+
+  FLOW_INLINE_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = FLOW_INLINE_REGEX.exec(text)) !== null) {
+    const full = match[0];
+    const name = match[1];
+    if (!flowNames.includes(name)) {
+      const pos = offsetToPosition(text, match.index, full.length);
+      issues.push({
+        message: `Unknown flow "$flow.${name}". Defined: ${flowNames.join(', ')}`,
+        severity: 'warning',
+        path: full,
+        ...pos,
+      });
+    }
+  }
+}
+
+function checkEnvReferences(
+  text: string,
+  _context: Partial<IntelliSenseContext>,
+  issues: ValidationIssue[],
+): void {
+  ENV_LOOSE_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = ENV_LOOSE_REGEX.exec(text)) !== null) {
+    const full = match[0];
+    const name = match[1];
+    const eqDefault = match[2];
+    const pos = offsetToPosition(text, match.index, full.length);
+
+    // Case A: $env.NAME=default (= instead of :)
+    if (eqDefault) {
+      issues.push({
+        message: `Malformed $env reference "${full}". Use ":" for default values, not "=" (e.g., "$env.${name}:fallback").`,
+        severity: 'warning',
+        path: full,
+        ...pos,
+      });
+      continue;
+    }
+
+    // Case B: lowercase / mixed-case name (convention warning).
+    if (!/^[A-Z][A-Z0-9_]*$/.test(name)) {
+      issues.push({
+        message: `$env.${name} should use UPPER_SNAKE_CASE by convention (e.g., $env.${name.toUpperCase()}).`,
+        severity: 'warning',
+        path: full,
+        ...pos,
+      });
+    }
+  }
+}
+
+function checkVarReferences(
+  text: string,
+  context: Partial<IntelliSenseContext>,
+  issues: ValidationIssue[],
+): void {
+  if (!context.variables) return;
+  const regex = /\$var\.(\w+)/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    if (!(match[1] in context.variables)) {
+      const pos = offsetToPosition(text, match.index, match[0].length);
+      issues.push({
+        message: `Unknown variable "$var.${match[1]}". Defined: ${Object.keys(context.variables).join(', ') || 'none'}`,
+        severity: 'warning',
+        path: `$var.${match[1]}`,
+        ...pos,
+      });
+    }
+  }
 }
 
 // --- Position Utilities ---

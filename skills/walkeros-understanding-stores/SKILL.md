@@ -116,7 +116,9 @@ Use `$store.storeId` in a component's `env` to inject a store instance:
 ```
 
 The bundler resolves `$store.data` to a runtime reference. Invalid references
-are caught at build time.
+are caught at build time. `walkeros validate` also catches typos at validation
+time, including unknown store names and the colon-instead-of-dot mistake (e.g.
+`$store:data` is flagged with the suggested form `$store.data`).
 
 ### Integrated mode (TypeScript)
 
