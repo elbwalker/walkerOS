@@ -36,7 +36,7 @@
     "dev": "jest --watchAll --colors",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.ts*\"",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage",
+    "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage",
     "preview": "npm run build && npx serve -l 3333 examples"
   },
   "dependencies": {

@@ -15,7 +15,7 @@
     "build": "tsup",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
+    "clean": "rm -rf .turbo && rm -rf dist"
   },
   "dependencies": {
     "@walkeros/cli": "4.0.0"

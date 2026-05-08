@@ -12,7 +12,7 @@
     "start": "vite --host",
     "lint": "eslint \"**/*.ts*\"",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist && rm -rf node_modules && rm -rf .turbo"
+    "clean": "rm -rf dist && rm -rf .turbo"
   },
   "dependencies": {
     "@remix-run/router": "^1.23.0",
