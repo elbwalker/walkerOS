@@ -1,7 +1,7 @@
 import {
   MatchExpressionSchema,
-  NextRuleSchema,
-  RoutableNextSchema,
+  RouteSchema,
+  RouteSpecSchema,
 } from '../../schemas/matcher';
 import { safeParseConfig } from '../../schemas/flow';
 
@@ -27,7 +27,7 @@ describe('MatchExpressionSchema', () => {
   });
 
   it('validates wildcard string', () => {
-    const result = NextRuleSchema.safeParse({ match: '*', next: 'default' });
+    const result = RouteSchema.safeParse({ match: '*', next: 'default' });
     expect(result.success).toBe(true);
   });
 
@@ -42,18 +42,18 @@ describe('MatchExpressionSchema', () => {
   });
 });
 
-describe('RoutableNextSchema', () => {
+describe('RouteSpecSchema', () => {
   it('validates a string', () => {
-    expect(RoutableNextSchema.safeParse('enricher').success).toBe(true);
+    expect(RouteSpecSchema.safeParse('enricher').success).toBe(true);
   });
 
   it('validates a string array', () => {
-    expect(RoutableNextSchema.safeParse(['a', 'b']).success).toBe(true);
+    expect(RouteSpecSchema.safeParse(['a', 'b']).success).toBe(true);
   });
 
-  it('validates a NextRule array', () => {
+  it('validates a Route array', () => {
     expect(
-      RoutableNextSchema.safeParse([
+      RouteSpecSchema.safeParse([
         {
           match: { key: 'path', operator: 'prefix', value: '/api' },
           next: 'handler',
@@ -65,7 +65,7 @@ describe('RoutableNextSchema', () => {
 
   it('validates nested routes', () => {
     expect(
-      RoutableNextSchema.safeParse([
+      RouteSpecSchema.safeParse([
         {
           match: { key: 'path', operator: 'prefix', value: '/api' },
           next: [
@@ -81,8 +81,8 @@ describe('RoutableNextSchema', () => {
   });
 });
 
-describe('Flow config with NextRule[] in source.next', () => {
-  it('validates source.next with NextRule array', () => {
+describe('Flow config with Route[] in source.next', () => {
+  it('validates source.next with Route array', () => {
     const config = {
       version: 4,
       flows: {

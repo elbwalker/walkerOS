@@ -118,9 +118,9 @@ export interface Config<T extends TypesGeneric = Types> {
    */
   setup?: boolean | SetupOptions<T>;
   /** Transformer chain to run after collector processing but before this destination. */
-  before?: Transformer.Next;
+  before?: Transformer.RouteSpec;
   /** Transformer chain to run after destination push completes. Push response available at ingest._response. */
-  next?: Transformer.Next;
+  next?: Transformer.RouteSpec;
   /** Cache configuration for deduplication (step-level: skip push on HIT). */
   cache?: import('./cache').Cache;
   /** Completely skip this destination — no init, no push, no queuing. */
@@ -149,8 +149,8 @@ export type Init<T extends TypesGeneric = Types> = {
   code: Code<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
-  before?: Transformer.Next;
-  next?: Transformer.Next;
+  before?: Transformer.RouteSpec;
+  next?: Transformer.RouteSpec;
   cache?: import('./cache').Cache;
 };
 

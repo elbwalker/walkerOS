@@ -3,12 +3,31 @@ import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn } from './lifecycle';
 import type { Ingest } from './ingest';
 
-export interface NextRule {
+/**
+ * A single conditional routing rule. Pairs a `match` expression (or `'*'`
+ * wildcard) against ingest metadata with a `next` step to follow when the
+ * match fires. Used inside `Route[]` arrays on `Flow.Source.next`,
+ * `Flow.Source.before`, `Flow.Transformer.next/before`, and
+ * `Flow.Destination.next/before`. Routes are evaluated in order, first match
+ * wins, no match falls through unchanged. The `next` field of a Route
+ * mirrors the outer-position `next` semantics: it points to whatever comes
+ * downstream when this rule fires.
+ */
+export interface Route {
   match: import('./matcher').MatchExpression | '*';
-  next: Next;
+  next: RouteSpec;
 }
 
-export type Next = string | string[] | NextRule[];
+/**
+ * The union accepted at every chain-routing boundary. A plain `string`
+ * targets one step by ID; `string[]` declares an explicit sequence ignoring
+ * per-step `next`; `Route[]` enables conditional routing on ingest metadata.
+ * At runtime, `compileNext()` collapses any RouteSpec into a `CompiledNext`
+ * (static, chain, or routes form) for hot-path evaluation. Surfaces via
+ * `Flow.Source.before/next`, `Flow.Transformer.before/next`,
+ * `Flow.Destination.before/next`.
+ */
+export type RouteSpec = string | string[] | Route[];
 
 /**
  * Base environment interface for walkerOS transformers.
@@ -64,8 +83,8 @@ export interface Config<T extends TypesGeneric = Types> {
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
-  before?: Next; // Pre-transformer chain (runs before push)
-  next?: Next; // Graph wiring to next transformer
+  before?: RouteSpec; // Pre-transformer chain (runs before push)
+  next?: RouteSpec; // Graph wiring to next transformer
   cache?: import('./cache').Cache; // Step-level cache config
   init?: boolean; // Track init state (like Destination)
   disabled?: boolean; // Completely skip this transformer in chains
@@ -97,7 +116,7 @@ export interface Context<
 export interface Result<E = WalkerOS.DeepPartialEvent> {
   event?: E;
   respond?: import('../respond').RespondFn;
-  next?: Next;
+  next?: RouteSpec;
 }
 
 /**
@@ -171,8 +190,8 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   code: Init<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
-  before?: Next;
-  next?: Next;
+  before?: RouteSpec;
+  next?: RouteSpec;
   cache?: import('./cache').Cache;
 };
 

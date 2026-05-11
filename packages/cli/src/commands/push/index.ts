@@ -60,7 +60,7 @@ function resolveBeforeChain(
 ): string[] {
   if (!before) return [];
 
-  const next = before as import('@walkeros/core').Transformer.Next;
+  const next = before as import('@walkeros/core').Transformer.RouteSpec;
 
   if (isRouteArray(next)) {
     const compiled = compileNext(next);
@@ -69,10 +69,7 @@ function resolveBeforeChain(
     return walkChain(resolved, extractTransformerNextMap(transformers));
   }
 
-  return walkChain(
-    next as string | string[],
-    extractTransformerNextMap(transformers),
-  );
+  return walkChain(next, extractTransformerNextMap(transformers));
 }
 
 /**

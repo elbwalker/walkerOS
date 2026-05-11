@@ -39,11 +39,11 @@ import { getCacheStore } from './cache';
 
 /**
  * Resolves transformer chain for a destination.
- * For conditional routing (NextRule[]), compiledBefore must be provided (compiled at init).
+ * For conditional routing (Route[]), compiledBefore must be provided (compiled at init).
  * For static routing (string | string[]), resolution is direct.
  */
 function resolveDestinationChain(
-  before: Transformer.Next | undefined,
+  before: Transformer.RouteSpec | undefined,
   compiledBefore: CompiledNext | undefined,
   transformers: Transformer.Transformers,
   ingest?: Ingest,
@@ -56,10 +56,9 @@ function resolveDestinationChain(
     return walkChain(resolved, extractTransformerNextMap(transformers));
   }
 
-  return walkChain(
-    before as string | string[],
-    extractTransformerNextMap(transformers),
-  );
+  // Without compiledBefore, before is static (string | string[]); skip Route[] case.
+  if (isRouteArray(before)) return [];
+  return walkChain(before, extractTransformerNextMap(transformers));
 }
 
 /**

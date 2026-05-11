@@ -64,7 +64,7 @@ export function extractTransformerNextMap(
   for (const [id, transformer] of Object.entries(transformers)) {
     const next = transformer.config?.next;
     if (next && !isRouteArray(next)) {
-      result[id] = { next: next as string | string[] };
+      result[id] = { next };
     } else {
       result[id] = {};
     }
@@ -530,14 +530,15 @@ export async function runTransformerChain(
 
           if (forkResult.next) {
             // Fork has explicit routing
-            let resolvedNext: string | string[] | undefined =
-              forkResult.next as string | string[];
+            let resolvedNext: string | string[] | undefined;
             if (isRouteArray(forkResult.next)) {
               const compiled = compileNext(forkResult.next);
               resolvedNext = resolveNext(
                 compiled,
                 buildCacheContext(forkIngest, forkEvent),
               );
+            } else {
+              resolvedNext = forkResult.next;
             }
             if (resolvedNext) {
               const branchedChain = walkChain(
@@ -608,10 +609,8 @@ export async function runTransformerChain(
 
       // Handle chain branching
       if (next) {
-        // Resolve NextRule[] if present
-        let resolvedNext: string | string[] | undefined = next as
-          | string
-          | string[];
+        // Resolve Route[] if present
+        let resolvedNext: string | string[] | undefined;
         if (isRouteArray(next)) {
           const compiled = compileNext(next);
           resolvedNext = resolveNext(
@@ -623,6 +622,8 @@ export async function runTransformerChain(
             if (resultEvent) processedEvent = resultEvent;
             continue;
           }
+        } else {
+          resolvedNext = next;
         }
 
         const branchedChain = walkChain(
@@ -661,7 +662,7 @@ export async function runTransformerChain(
       storeCache(tCacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
     }
 
-    // If transformer didn't return { next } but has NextRule[] config.next, resolve it
+    // If transformer didn't return { next } but has Route[] config.next, resolve it
     if (
       (!result || (typeof result === 'object' && !result.next)) &&
       transformer.config.next &&

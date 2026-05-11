@@ -1,4 +1,4 @@
-import type { Next, NextRule } from './types/transformer';
+import type { Route, RouteSpec } from './types/transformer';
 import type { CompiledMatcher } from './types/matcher';
 import { compileMatcher } from './matcher';
 
@@ -12,7 +12,7 @@ export type CompiledNext =
   | { type: 'chain'; value: string[] }
   | { type: 'routes'; routes: CompiledRoute[] };
 
-export function isRouteArray(next: Next): next is NextRule[] {
+export function isRouteArray(next: RouteSpec): next is Route[] {
   return (
     Array.isArray(next) &&
     next.length > 0 &&
@@ -22,7 +22,9 @@ export function isRouteArray(next: Next): next is NextRule[] {
   );
 }
 
-export function compileNext(next: Next | undefined): CompiledNext | undefined {
+export function compileNext(
+  next: RouteSpec | undefined,
+): CompiledNext | undefined {
   if (next === undefined || next === null) return undefined;
   if (typeof next === 'string') return { type: 'static', value: next };
 

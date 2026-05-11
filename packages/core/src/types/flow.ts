@@ -356,7 +356,7 @@ export namespace Flow {
      * (decode, validate, authenticate, normalize raw input).
      * Raw request data is available in context.ingest.
      */
-    before?: string | string[];
+    before?: import('./transformer').RouteSpec;
 
     /**
      * First transformer in pre-collector chain.
@@ -366,7 +366,7 @@ export namespace Flow {
      * If omitted, events route directly to the collector.
      * Can be an array for explicit chain control (bypasses transformer.next resolution).
      */
-    next?: string | string[];
+    next?: import('./transformer').RouteSpec;
 
     /** Cache configuration for this source. */
     cache?: import('./cache').Cache;
@@ -416,7 +416,7 @@ export namespace Flow {
      * If omitted, events are sent directly from the collector.
      * Can be an array for explicit chain control.
      */
-    before?: string | string[];
+    before?: import('./transformer').RouteSpec;
 
     /**
      * First transformer in post-push chain.
@@ -425,7 +425,7 @@ export namespace Flow {
      * at context.ingest._response. Consent is inherited from the destination
      * gate - no separate consent check needed.
      */
-    next?: string | string[];
+    next?: import('./transformer').RouteSpec;
 
     /** Cache configuration for this destination. */
     cache?: import('./cache').Cache;
@@ -466,7 +466,7 @@ export namespace Flow {
      * Enables pre-processing or context loading before the main transform.
      * Uses the same chain resolution as source.next and destination.before.
      */
-    before?: string | string[];
+    before?: import('./transformer').RouteSpec;
 
     /**
      * Next transformer in chain.
@@ -478,7 +478,7 @@ export namespace Flow {
      * Array values define an explicit chain (no walking). Circular references
      * are safely detected at runtime by `walkChain()`.
      */
-    next?: string | string[];
+    next?: import('./transformer').RouteSpec;
 
     /** Cache configuration for this transformer. */
     cache?: import('./cache').Cache;

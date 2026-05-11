@@ -464,8 +464,9 @@ for the implementation.
 
 ### Conditional routing (Route[])
 
-The `next` and `before` properties support conditional routing via `Route[]` -
-an array of `{ match, next }` objects evaluated against ingest data:
+The `next` and `before` properties accept a `RouteSpec`
+(`string | string[] | Route[]`). A `Route` is one `{ match, next }` rule, and
+`Route[]` enables conditional routing evaluated against ingest data:
 
 ```json
 "next": [

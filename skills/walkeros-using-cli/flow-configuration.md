@@ -192,13 +192,13 @@ globs both work, resolved against the install root (where pacote put files):
 
 ### Destination Properties
 
-| Property  | Type                 | Description                               |
-| --------- | -------------------- | ----------------------------------------- |
-| `package` | `string`             | NPM package or local package name         |
-| `config`  | `object`             | Destination-specific configuration        |
-| `mapping` | `object`             | Event transformation rules                |
-| `consent` | `object`             | Required consent levels                   |
-| `before`  | `string \| string[]` | First transformer in post-collector chain |
+| Property  | Type                            | Description                                                           |
+| --------- | ------------------------------- | --------------------------------------------------------------------- |
+| `package` | `string`                        | NPM package or local package name                                     |
+| `config`  | `object`                        | Destination-specific configuration                                    |
+| `mapping` | `object`                        | Event transformation rules                                            |
+| `consent` | `object`                        | Required consent levels                                               |
+| `before`  | `string \| string[] \| Route[]` | First transformer in post-collector chain (conditional via `Route[]`) |
 
 For mapping syntax, see
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
@@ -223,11 +223,11 @@ For mapping syntax, see
 
 ### Source Properties
 
-| Property  | Type                 | Description                              |
-| --------- | -------------------- | ---------------------------------------- |
-| `package` | `string`             | Source package name                      |
-| `config`  | `object`             | Source-specific configuration            |
-| `next`    | `string \| string[]` | First transformer in pre-collector chain |
+| Property  | Type                            | Description                                                          |
+| --------- | ------------------------------- | -------------------------------------------------------------------- |
+| `package` | `string`                        | Source package name                                                  |
+| `config`  | `object`                        | Source-specific configuration                                        |
+| `next`    | `string \| string[] \| Route[]` | First transformer in pre-collector chain (conditional via `Route[]`) |
 
 ---
 
@@ -251,12 +251,12 @@ For mapping syntax, see
 
 ### Transformer Properties
 
-| Property  | Type                 | Description                                |
-| --------- | -------------------- | ------------------------------------------ |
-| `package` | `string`             | Transformer package name                   |
-| `config`  | `object`             | Transformer-specific configuration         |
-| `code`    | `object`             | Inline code (`push`, `init`) with `$code:` |
-| `next`    | `string \| string[]` | Next transformer in the chain              |
+| Property  | Type                            | Description                                               |
+| --------- | ------------------------------- | --------------------------------------------------------- |
+| `package` | `string`                        | Transformer package name                                  |
+| `config`  | `object`                        | Transformer-specific configuration                        |
+| `code`    | `object`                        | Inline code (`push`, `init`) with `$code:`                |
+| `next`    | `string \| string[] \| Route[]` | Next transformer in the chain (conditional via `Route[]`) |
 
 ### Transformer Chaining
 

@@ -18,7 +18,7 @@
  */
 
 import { z, toJsonSchema } from './validation';
-import { RoutableNextSchema } from './matcher';
+import { RouteSpecSchema } from './matcher';
 import { CacheSchema } from './cache';
 
 // ========================================
@@ -288,10 +288,10 @@ export const SourceSchema = z
     variables: VariablesSchema.optional().describe(
       'Source-level variables (highest priority in cascade)',
     ),
-    next: RoutableNextSchema.optional().describe(
-      'Pre-collector transformer chain. String, string[], or NextRule[] for conditional routing based on ingest data.',
+    next: RouteSpecSchema.optional().describe(
+      'Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.',
     ),
-    before: RoutableNextSchema.optional().describe(
+    before: RouteSpecSchema.optional().describe(
       'Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.',
     ),
     examples: StepExamplesSchema.optional().describe(
@@ -345,11 +345,11 @@ export const TransformerSchema = z
       })
       .optional()
       .describe('Transformer environment configuration'),
-    before: RoutableNextSchema.optional().describe(
+    before: RouteSpecSchema.optional().describe(
       'Pre-transformer chain. Runs before this transformer push function.',
     ),
-    next: RoutableNextSchema.optional().describe(
-      'Next transformer in chain. String, string[], or NextRule[] for conditional routing.',
+    next: RouteSpecSchema.optional().describe(
+      'Next transformer in chain. String, string[], or Route[] for conditional routing.',
     ),
     variables: VariablesSchema.optional().describe(
       'Transformer-level variables (highest priority in cascade)',
@@ -415,10 +415,10 @@ export const DestinationSchema = z
     variables: VariablesSchema.optional().describe(
       'Destination-level variables (highest priority in cascade)',
     ),
-    before: RoutableNextSchema.optional().describe(
-      'Post-collector transformer chain. String, string[], or NextRule[] for conditional routing.',
+    before: RouteSpecSchema.optional().describe(
+      'Post-collector transformer chain. String, string[], or Route[] for conditional routing.',
     ),
-    next: RoutableNextSchema.optional().describe(
+    next: RouteSpecSchema.optional().describe(
       'Post-push transformer chain. Push response available at context.ingest._response.',
     ),
     examples: StepExamplesSchema.optional().describe(
