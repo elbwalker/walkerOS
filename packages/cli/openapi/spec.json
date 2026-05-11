@@ -115,7 +115,7 @@
         "properties": {
           "version": {
             "type": "number",
-            "enum": [3]
+            "enum": [4]
           },
           "$schema": {
             "type": "string"
@@ -127,22 +127,6 @@
             }
           },
           "variables": {
-            "type": "object",
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                }
-              ]
-            }
-          },
-          "definitions": {
             "type": "object",
             "additionalProperties": {}
           },
@@ -3928,7 +3912,7 @@
       "get": {
         "tags": ["Settings"],
         "summary": "Download settings JSON",
-        "description": "Download the named flow settings as a self-contained Config JSON file. Includes parent variables and definitions.",
+        "description": "Download the named flow settings as a self-contained Config JSON file. Includes parent variables.",
         "parameters": [
           {
             "schema": {

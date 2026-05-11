@@ -159,7 +159,7 @@ export function CodeDiff({
       editorRef.current = diffEditor;
 
       // Apply walkerOS decoration to all canonical references:
-      // $var./$def./$env./$contract./$store./$secret./$code:
+      // $var./$env./$contract./$store./$secret./$code:
       // applyWalkerOSDecorations expects a single IStandaloneCodeEditor.
       decoCleanupRef.current.push(
         applyWalkerOSDecorations(diffEditor.getOriginalEditor()),

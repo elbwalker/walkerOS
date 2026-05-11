@@ -1,6 +1,6 @@
 {
   "name": "walkeros",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
@@ -15,10 +15,10 @@
     "build": "tsup",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
+    "clean": "rm -rf .turbo && rm -rf dist"
   },
   "dependencies": {
-    "@walkeros/cli": "4.0.0"
+    "@walkeros/cli": "4.0.1"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

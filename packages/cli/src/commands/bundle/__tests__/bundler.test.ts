@@ -1,3 +1,6 @@
+import os from 'os';
+import path from 'path';
+import fs from 'fs-extra';
 import {
   serializeWithCode,
   validateComponentNames,
@@ -7,8 +10,57 @@ import {
   generateWebEntry,
   generateWrapEntry,
   generateWrapEntryServer,
+  bundleCore,
 } from '../bundler';
+import { cacheBuild } from '../../../core/build-cache.js';
+import { createCLILogger } from '../../../core/cli-logger.js';
+import type { BuildOptions } from '../../../types/bundle.js';
 import type { Flow } from '@walkeros/core';
+import { getHashServer } from '@walkeros/server-core';
+
+// Partial mocks: keep real implementations as default delegates so other
+// suites in this file (which don't import these mocked symbols) are
+// unaffected. The server-nft suite below overrides via mockImplementation.
+jest.mock('../nft-trace', () => {
+  const actual = jest.requireActual('../nft-trace');
+  return {
+    ...actual,
+    traceAndCopy: jest.fn(actual.traceAndCopy),
+  };
+});
+jest.mock('../package-manager.js', () => {
+  const actual = jest.requireActual('../package-manager.js');
+  return {
+    ...actual,
+    downloadPackagesWithResolution: jest.fn(
+      actual.downloadPackagesWithResolution,
+    ),
+  };
+});
+jest.mock('../../../core/build-cache.js', () => {
+  const actual = jest.requireActual('../../../core/build-cache.js');
+  return {
+    ...actual,
+    cacheBuild: jest.fn(actual.cacheBuild),
+    getCachedBuild: jest.fn(actual.getCachedBuild),
+  };
+});
+
+import { traceAndCopy } from '../nft-trace';
+import { downloadPackagesWithResolution } from '../package-manager.js';
+import { getCachedBuild } from '../../../core/build-cache.js';
+
+const mockTraceAndCopy = traceAndCopy as jest.MockedFunction<
+  typeof traceAndCopy
+>;
+const mockDownloadWithResolution =
+  downloadPackagesWithResolution as jest.MockedFunction<
+    typeof downloadPackagesWithResolution
+  >;
+const mockCacheBuild = cacheBuild as jest.MockedFunction<typeof cacheBuild>;
+const mockGetCachedBuild = getCachedBuild as jest.MockedFunction<
+  typeof getCachedBuild
+>;
 
 describe('serializeWithCode __WALKEROS_ENV marker', () => {
   it('emits process.env expression for marker-only string', () => {
@@ -275,6 +327,111 @@ describe('buildSplitConfigObject string code references', () => {
 
     expect(() => buildSplitConfigObject(flowSettings, new Map())).not.toThrow();
   });
+
+  it('emits before chain for inline transformers', () => {
+    const flow = {
+      sources: {
+        input: { package: '@walkeros/server-source-express', config: {} },
+      },
+      destinations: {
+        out: {
+          package: '@walkeros/destination-demo',
+          config: { before: ['orchestrator'] },
+        },
+      },
+      transformers: {
+        noop: {
+          code: { type: 'noop', push: '$code:(event) => event' },
+          // Inline transformers may have a `before` chain just like file-based ones.
+          before: ['stepA', 'stepB'],
+        },
+      },
+      stores: {},
+    } as unknown as Flow;
+
+    const { codeConfigObject } = buildSplitConfigObject(flow, new Map());
+
+    // The emitted transformer entry must contain a `before:` clause naming the chain.
+    expect(codeConfigObject).toMatch(
+      /noop:\s*\{.*?before:\s*\[\s*"stepA"\s*,\s*"stepB"\s*\]/s,
+    );
+  });
+
+  it('resolves $store.X in inline transformer env', () => {
+    const flow = {
+      sources: {
+        input: { package: '@walkeros/server-source-express', config: {} },
+      },
+      destinations: {
+        out: { package: '@walkeros/destination-demo', config: {} },
+      },
+      transformers: {
+        stash: {
+          code: {
+            type: 'stash',
+            push: '$code:async (event, context) => { /* writes via context.env.store */ }',
+          },
+          env: { store: '$store.cache' },
+        },
+      },
+      stores: {
+        cache: { package: '@walkeros/store-memory' },
+      },
+    } as unknown as Flow;
+
+    const { codeConfigObject } = buildSplitConfigObject(flow, new Map());
+
+    // Marker must resolve to a JS reference, not a literal string.
+    expect(codeConfigObject).toMatch(
+      /stash:\s*\{[\s\S]*?env:\s*\{\s*"store":\s*stores\.cache\s*\}/,
+    );
+    expect(codeConfigObject).not.toContain('"$store.cache"');
+  });
+
+  it('inline transformer with env markers and before chain emits both correctly', () => {
+    const flow = {
+      sources: {
+        input: { package: '@walkeros/server-source-express', config: {} },
+      },
+      destinations: {
+        out: {
+          package: '@walkeros/destination-demo',
+          config: { before: ['orchestrate'] },
+        },
+      },
+      transformers: {
+        orchestrate: {
+          code: { type: 'orchestrate', push: '$code:(event) => event' },
+          before: ['filterDup'],
+        },
+        filterDup: {
+          code: {
+            type: 'filter-dup',
+            push: '$code:async (event, context) => { if (await context.env.store.get(event.id)) return false; await context.env.store.set(event.id, 1); }',
+          },
+          env: { store: '$store.cache' },
+        },
+      },
+      stores: {
+        cache: { package: '@walkeros/store-memory' },
+      },
+    } as unknown as Flow;
+
+    const { codeConfigObject } = buildSplitConfigObject(flow, new Map());
+
+    // Bug 2 fix: orchestrate's before chain is emitted.
+    expect(codeConfigObject).toMatch(
+      /orchestrate:\s*\{[\s\S]*?before:\s*\[\s*"filterDup"\s*\]/s,
+    );
+
+    // Bug 1 fix: filterDup's env marker resolves to a stores.* JS reference.
+    expect(codeConfigObject).toMatch(
+      /filterDup:\s*\{[\s\S]*?env:\s*\{[\s\S]*?"store":\s*stores\.cache/s,
+    );
+
+    // No literal $store.cache string anywhere in the emission.
+    expect(codeConfigObject).not.toContain('"$store.cache"');
+  });
 });
 
 describe('collectAllStepPackages auto-add merge logic', () => {
@@ -365,4 +522,537 @@ describe('stage 2 entry path normalization (issue #636)', () => {
       expect(emit()).toContain("from 'C:/tmp/cache/code/abc.mjs'");
     });
   }
+});
+
+/**
+ * Phase 2 nft wiring: when the resolved platform is `node` (server flows),
+ * bundleCore must run the new nft path after esbuild instead of the legacy
+ * `installExternalsViaPacote` + `writeBundleLockfile` pipeline. The legacy
+ * path stays alive for non-server platforms until Phase 3 deletes it.
+ *
+ * These suites pre-seed the L1 build cache so the bundler takes the
+ * cache-hit fast path. That keeps the test off real esbuild + real nft and
+ * lets us assert exactly which post-build pipeline ran.
+ */
+describe('bundleCore server nft wiring (Phase 2)', () => {
+  let tmp: string;
+  const logger = createCLILogger({ silent: true });
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'bundler-nft-'));
+
+    // Default: download/trace mocks return empty/successful results.
+    // Specific tests override as needed.
+    mockDownloadWithResolution.mockResolvedValue({
+      packagePaths: new Map(),
+      resolution: { topLevel: new Map(), nested: [] },
+    });
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: [],
+      copied: 0,
+      reasons: new Map(),
+    });
+  });
+
+  afterEach(async () => {
+    await fs.remove(tmp);
+  });
+
+  /**
+   * Pre-seeds the L1 cache with bundle text for a fixed (flow, options) pair.
+   * Mirrors `generateCacheKeyContent` (private to bundler.ts): the bundler
+   * hashes pacote's resolved top-level package set as `versionsHash`. Tests
+   * mock `downloadPackagesWithResolution` to return an empty topLevel, so
+   * the runtime versionsHash is the sha256 of the empty string truncated
+   * to 12 chars.
+   *
+   * The bundler auto-mutates `buildOptions.packages` early in `bundleCore`
+   * (adds `@walkeros/collector` and step packages from the flow). Mirror that
+   * mutation here so the seeded cache key matches the runtime cache key.
+   */
+  async function seedCachedServerBuild(opts: {
+    outputPath: string;
+    cacheDir: string;
+    flowSettings: Flow;
+    bundleText?: string;
+    versionsHash?: string;
+  }): Promise<BuildOptions> {
+    const packages: Record<string, Flow.BundlePackage> = {};
+    const hasSourcesOrDests =
+      Object.keys(opts.flowSettings.sources ?? {}).length > 0 ||
+      Object.keys(opts.flowSettings.destinations ?? {}).length > 0;
+    if (hasSourcesOrDests) {
+      packages['@walkeros/collector'] = {};
+    }
+    for (const pkg of collectAllStepPackages(opts.flowSettings)) {
+      if (!pkg.startsWith('.') && !pkg.startsWith('/')) {
+        packages[pkg] = {};
+      }
+    }
+
+    const buildOptions: BuildOptions = {
+      output: opts.outputPath,
+      tempDir: opts.cacheDir,
+      cache: true,
+      packages,
+      format: 'esm',
+      platform: 'node',
+      configDir: tmp,
+    };
+    const versionsHash = opts.versionsHash ?? (await getHashServer('', 12));
+    const configForCache = {
+      flow: opts.flowSettings,
+      build: { ...buildOptions, tempDir: undefined, output: undefined },
+      versionsHash,
+    };
+    await cacheBuild(
+      JSON.stringify(configForCache),
+      opts.bundleText ?? '// cached server bundle\n',
+      opts.cacheDir,
+    );
+    return buildOptions;
+  }
+
+  it('server platform routes the post-build step to traceAndCopy', async () => {
+    const cacheDir = path.join(tmp, 'cache');
+    const outputDir = path.join(tmp, 'out');
+    const outputPath = path.join(outputDir, 'flow.mjs');
+
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+      sources: {
+        http: { package: '@walkeros/server-source-express' },
+      },
+      destinations: {
+        console: { package: '@walkeros/server-destination-console' },
+      },
+    };
+
+    const buildOptions = await seedCachedServerBuild({
+      outputPath,
+      cacheDir,
+      flowSettings,
+    });
+
+    // The cross-check asserts every declared step package was traced. The
+    // bundler auto-adds @walkeros/collector when sources/destinations exist,
+    // so include all three in the mocked fileList.
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: [
+        'node_modules/@walkeros/collector/package.json',
+        'node_modules/@walkeros/server-source-express/package.json',
+        'node_modules/@walkeros/server-destination-console/package.json',
+      ],
+      copied: 3,
+      reasons: new Map(),
+    });
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    expect(mockTraceAndCopy).toHaveBeenCalledTimes(1);
+
+    // Informational sidecar package.json is written next to the bundle. It
+    // lists the step packages from the flow with `*` versions; the
+    // user-facing `npm install` is the source of truth for actual versions.
+    const sidecarPath = path.join(outputDir, 'package.json');
+    expect(await fs.pathExists(sidecarPath)).toBe(true);
+    const sidecar = await fs.readJson(sidecarPath);
+    expect(sidecar.name).toBe('walkeros-bundle');
+    expect(sidecar.private).toBe(true);
+    expect(sidecar.type).toBe('module');
+    expect(sidecar.dependencies).toEqual({
+      '@walkeros/server-destination-console': '*',
+      '@walkeros/server-source-express': '*',
+    });
+
+    // The legacy lockfile must NOT be written by the new path.
+    expect(await fs.pathExists(path.join(outputDir, 'package-lock.json'))).toBe(
+      false,
+    );
+  });
+
+  it('server nft path passes the pacote install root (tempDir) as base to traceAndCopy', async () => {
+    const cacheDir = path.join(tmp, 'cache');
+    const outputDir = path.join(tmp, 'out');
+    const outputPath = path.join(outputDir, 'flow.mjs');
+
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+    };
+
+    const buildOptions = await seedCachedServerBuild({
+      outputPath,
+      cacheDir,
+      flowSettings,
+    });
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    // The bundler resolves TEMP_DIR from `buildOptions.tempDir` when set
+    // (the tests set it to `cacheDir`). nft must trace from there so it
+    // sees the same node_modules tree esbuild stage 1 used as
+    // `absWorkingDir`. The entry passed to nft is a staged copy of the
+    // bundle inside tempDir (path-escape guard rejects entries outside
+    // base).
+    expect(mockTraceAndCopy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entry: path.join(cacheDir, '__nft-flow.mjs'),
+        base: cacheDir,
+        outDir: outputDir,
+      }),
+    );
+  });
+
+  it('server nft path enforces assertDepsTraced against declared step packages', async () => {
+    const cacheDir = path.join(tmp, 'cache');
+    const outputDir = path.join(tmp, 'out');
+    const outputPath = path.join(outputDir, 'flow.mjs');
+
+    // The cross-check compares the trace fileList against the packages the
+    // user declared in the flow (auto-added @walkeros/collector + step
+    // packages). When trace returns an empty fileList, every declared
+    // package is missing and the bundler throws.
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+      sources: {
+        http: { package: '@walkeros/server-source-express' },
+      },
+    };
+
+    const buildOptions = await seedCachedServerBuild({
+      outputPath,
+      cacheDir,
+      flowSettings,
+    });
+
+    // traceAndCopy returns an empty fileList; the cross-check fires.
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: [],
+      copied: 0,
+      reasons: new Map(),
+    });
+
+    await expect(
+      bundleCore(flowSettings, buildOptions, logger),
+    ).rejects.toThrow(/@walkeros\/server-source-express/);
+  });
+
+  it('browser (web) platform skips the nft trace step entirely', async () => {
+    const cacheDir = path.join(tmp, 'cache');
+    const outputDir = path.join(tmp, 'out');
+    const outputPath = path.join(outputDir, 'walker.js');
+
+    const flowSettings: Flow = {
+      config: { platform: 'web' },
+    };
+
+    const buildOptions: BuildOptions = {
+      output: outputPath,
+      tempDir: cacheDir,
+      cache: true,
+      packages: {},
+      format: 'iife',
+      platform: 'browser',
+      configDir: tmp,
+    };
+    const versionsHash = await getHashServer('', 12);
+    const configForCache = {
+      flow: flowSettings,
+      build: { ...buildOptions, tempDir: undefined, output: undefined },
+      versionsHash,
+    };
+    await cacheBuild(
+      JSON.stringify(configForCache),
+      '// cached web bundle\n',
+      cacheDir,
+    );
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    expect(mockTraceAndCopy).not.toHaveBeenCalled();
+    // No sidecar package.json for web bundles — esbuild emits a self-
+    // contained IIFE.
+    expect(await fs.pathExists(path.join(outputDir, 'package.json'))).toBe(
+      false,
+    );
+  });
+});
+
+/**
+ * Cache-key invalidation signal: `generateCacheKeyContent` includes
+ * `versionsHash`, computed from pacote's resolved top-level set. When
+ * the resolved versions change (e.g. a `flow.<name>.config.bundle.packages` version
+ * bump or any pacote re-resolution), the cache key shifts and the build
+ * is re-run. This is the right signal because pacote (not the user's
+ * package-lock.json) is the install layer in the zero-setup design.
+ *
+ * We prove this by spying on `cacheBuild` / `getCachedBuild`. On a cache
+ * hit, only the first build calls `cacheBuild` (the second short-circuits
+ * via `getCachedBuild` returning a non-null entry). On a cache miss, both
+ * builds call `cacheBuild` (the second cannot find the first's slot
+ * because versionsHash shifted).
+ *
+ * If versionsHash were silently dropped from the cache key, the miss
+ * test would observe `cacheBuild` called only once (because the second
+ * build would hit the same key as the first). This pair of assertions
+ * is what gives the test its bite.
+ */
+describe('cache key hashes pacote-resolved versionsHash', () => {
+  let tmp: string;
+  const logger = createCLILogger({ silent: true });
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'bundler-versionhash-'));
+
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: [],
+      copied: 0,
+      reasons: new Map(),
+    });
+  });
+
+  afterEach(async () => {
+    await fs.remove(tmp);
+  });
+
+  it('cache hit when resolved versions are unchanged: only first build writes cache, second reads it', async () => {
+    const cacheDir = path.join(tmp, 'cache');
+    const outputDir = path.join(tmp, 'out');
+    const outputPath = path.join(outputDir, 'flow.mjs');
+
+    // Stable resolution across both builds → identical versionsHash.
+    mockDownloadWithResolution.mockResolvedValue({
+      packagePaths: new Map(),
+      resolution: {
+        topLevel: new Map([['foo', { name: 'foo', version: '1.0.0' }]]),
+        nested: [],
+      },
+    });
+    // Trace must include the resolved package so assertDepsTraced passes.
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: ['node_modules/foo/package.json'],
+      copied: 1,
+      reasons: new Map(),
+    });
+
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+    };
+    const buildOptions: BuildOptions = {
+      output: outputPath,
+      tempDir: cacheDir,
+      cache: true,
+      packages: {},
+      format: 'esm',
+      platform: 'node',
+      configDir: tmp,
+    };
+
+    // First build: cache miss, populates the slot.
+    await bundleCore(flowSettings, buildOptions, logger);
+    expect(await fs.pathExists(outputPath)).toBe(true);
+    expect(mockCacheBuild).toHaveBeenCalledTimes(1);
+
+    // Second build with the SAME resolution. Remove output to force the
+    // bundler to actually restore from cache (proves it isn't a no-op).
+    await fs.remove(outputPath);
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    expect(await fs.pathExists(outputPath)).toBe(true);
+    // Critical assertion: cacheBuild was NOT called a second time. The
+    // second build hit the cache and skipped the esbuild + cache-write
+    // path entirely.
+    expect(mockCacheBuild).toHaveBeenCalledTimes(1);
+    // And getCachedBuild returned a non-null entry on the second call
+    // (proves the hit path actually ran).
+    const cachedReturns = await Promise.all(
+      mockGetCachedBuild.mock.results.map((r) => r.value),
+    );
+    expect(cachedReturns.some((v) => typeof v === 'string')).toBe(true);
+  });
+
+  it('cache miss when resolved versions change: both builds write cache under different keys', async () => {
+    const cacheDir = path.join(tmp, 'cache');
+    const outputDir = path.join(tmp, 'out');
+    const outputPath = path.join(outputDir, 'flow.mjs');
+
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+    };
+    const buildOptions: BuildOptions = {
+      output: outputPath,
+      tempDir: cacheDir,
+      cache: true,
+      packages: {},
+      format: 'esm',
+      platform: 'node',
+      configDir: tmp,
+    };
+
+    // Trace must include the resolved package so assertDepsTraced passes.
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: ['node_modules/foo/package.json'],
+      copied: 1,
+      reasons: new Map(),
+    });
+
+    // First build with version 1.0.0.
+    mockDownloadWithResolution.mockResolvedValueOnce({
+      packagePaths: new Map(),
+      resolution: {
+        topLevel: new Map([['foo', { name: 'foo', version: '1.0.0' }]]),
+        nested: [],
+      },
+    });
+    await bundleCore(flowSettings, buildOptions, logger);
+    expect(mockCacheBuild).toHaveBeenCalledTimes(1);
+    const firstKey = mockCacheBuild.mock.calls[0][0];
+
+    // Bump the version (simulate a `flow.<name>.config.bundle.packages` version bump
+    // or any pacote re-resolution that produces a different top-level set).
+    mockDownloadWithResolution.mockResolvedValueOnce({
+      packagePaths: new Map(),
+      resolution: {
+        topLevel: new Map([['foo', { name: 'foo', version: '1.0.1' }]]),
+        nested: [],
+      },
+    });
+    await fs.remove(outputPath);
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    // Critical assertion: cacheBuild was called a SECOND time. The
+    // changed resolution produced a different versionsHash, so the second
+    // build couldn't find the first build's slot and had to re-run
+    // esbuild + cache the result under the new key.
+    expect(mockCacheBuild).toHaveBeenCalledTimes(2);
+    const secondKey = mockCacheBuild.mock.calls[1][0];
+    expect(secondKey).not.toBe(firstKey);
+  });
+});
+
+describe('legacy walkerOS.bundle annotation warning', () => {
+  let tmp: string;
+  let warnLogs: string[];
+  const logger = createCLILogger({ silent: true });
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'bundler-walkerosbundle-'));
+    warnLogs = [];
+    jest.spyOn(logger, 'warn').mockImplementation((message: string | Error) => {
+      warnLogs.push(typeof message === 'string' ? message : message.message);
+    });
+
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: ['node_modules/legacy-pkg/package.json'],
+      copied: 1,
+      reasons: new Map(),
+    });
+  });
+
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    await fs.remove(tmp);
+  });
+
+  it('warns once per package whose manifest still declares walkerOS.bundle', async () => {
+    const cacheDir = path.join(tmp, 'cache');
+    const outputDir = path.join(tmp, 'out');
+    const outputPath = path.join(outputDir, 'flow.mjs');
+
+    const fakePkgDir = path.join(tmp, 'fake-legacy');
+    await fs.ensureDir(fakePkgDir);
+    await fs.writeJson(path.join(fakePkgDir, 'package.json'), {
+      name: 'legacy-pkg',
+      version: '1.0.0',
+      walkerOS: {
+        type: 'destination',
+        bundle: { external: ['some-runtime-dep'] },
+      },
+    });
+
+    mockDownloadWithResolution.mockResolvedValue({
+      packagePaths: new Map([['legacy-pkg', fakePkgDir]]),
+      resolution: {
+        topLevel: new Map([
+          ['legacy-pkg', { name: 'legacy-pkg', version: '1.0.0' }],
+        ]),
+        nested: [],
+      },
+    });
+
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+    };
+    const buildOptions: BuildOptions = {
+      output: outputPath,
+      tempDir: cacheDir,
+      cache: false,
+      packages: { 'legacy-pkg': { version: '1.0.0' } },
+      format: 'esm',
+      platform: 'node',
+      configDir: tmp,
+    };
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    const matching = warnLogs.filter(
+      (m) =>
+        m.includes('legacy-pkg') &&
+        m.includes('walkerOS.bundle') &&
+        m.includes('@walkeros/cli@4.x'),
+    );
+    expect(matching.length).toBe(1);
+    expect(matching[0]).toContain('external');
+  });
+
+  it('does not warn for packages without walkerOS.bundle field', async () => {
+    const cacheDir = path.join(tmp, 'cache');
+    const outputDir = path.join(tmp, 'out');
+    const outputPath = path.join(outputDir, 'flow.mjs');
+
+    const fakePkgDir = path.join(tmp, 'fake-clean');
+    await fs.ensureDir(fakePkgDir);
+    await fs.writeJson(path.join(fakePkgDir, 'package.json'), {
+      name: 'clean-pkg',
+      version: '1.0.0',
+      walkerOS: { type: 'destination', platform: ['server'] },
+    });
+
+    mockDownloadWithResolution.mockResolvedValue({
+      packagePaths: new Map([['clean-pkg', fakePkgDir]]),
+      resolution: {
+        topLevel: new Map([
+          ['clean-pkg', { name: 'clean-pkg', version: '1.0.0' }],
+        ]),
+        nested: [],
+      },
+    });
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: ['node_modules/clean-pkg/package.json'],
+      copied: 1,
+      reasons: new Map(),
+    });
+
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+    };
+    const buildOptions: BuildOptions = {
+      output: outputPath,
+      tempDir: cacheDir,
+      cache: false,
+      packages: { 'clean-pkg': { version: '1.0.0' } },
+      format: 'esm',
+      platform: 'node',
+      configDir: tmp,
+    };
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    const bundleWarns = warnLogs.filter((m) => m.includes('walkerOS.bundle'));
+    expect(bundleWarns).toEqual([]);
+  });
 });

@@ -121,7 +121,7 @@ export async function wrapSkeleton(
   // Write the entry to its own temp dir so the caller's outputPath isn't
   // polluted with intermediate files.
   const entryDir = await fs.mkdtemp(path.join(os.tmpdir(), 'walkeros-wrap-'));
-  const entryPath = path.join(entryDir, 'entry.mjs');
+  const entryPath = path.join(entryDir, 'flow.mjs');
 
   try {
     await fs.writeFile(entryPath, entryText);

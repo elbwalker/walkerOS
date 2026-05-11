@@ -1,6 +1,6 @@
 ---
 title: Reference Syntax
-description: Dynamic references inside flow.json — variables, definitions, env vars, contracts, stores, secrets, inline code.
+description: Dynamic references inside flow.json, variables, env vars, contracts, stores, secrets, inline code.
 path: /docs/guides/reference-syntax
 sidebar_position: 20
 ---
@@ -8,9 +8,9 @@ sidebar_position: 20
 # Reference Syntax
 
 walkerOS flow configs (flow.json) support dynamic references inside string
-values. They let you pull in variables, definitions, environment values,
-contract fragments, store instances, secrets, and inline JavaScript — without
-duplicating configuration.
+values. They let you pull in variables, environment values, contract fragments,
+store instances, secrets, and inline JavaScript without duplicating
+configuration.
 
 ## The one rule
 
@@ -19,16 +19,15 @@ walkerOS uses **two separator characters**, each with a clear meaning:
 | Separator | Meaning |
 |---|---|
 | **`.`** | A key or path. The resolver looks up what follows in a map or walks it as a dotted path. |
-| **`:`** | A literal value or raw-code payload. The resolver uses what follows verbatim — it is not a name. |
+| **`:`** | A literal value or raw-code payload. The resolver uses what follows verbatim, it is not a name. |
 
 Every reference follows that rule. There are no exceptions.
 
 ## All references
 
 ```
-$var.name              look up variables[name]
-$def.name              inject definitions[name] as a whole fragment
-$def.name.deep.path    inject a path inside the definition
+$var.name              look up variables[name] (whole-string returns native type)
+$var.name.deep.path    walk a dotted path inside the variable
 $env.NAME              read process.env[NAME]
 $env.NAME:default      read process.env[NAME] with a literal fallback
 $contract.name         inject a whole named contract entry
@@ -43,9 +42,19 @@ $code:(event) => ...   inline JavaScript (resolved at bundle time)
 Look up a value in the `variables` map at config, flow, or step level. Step
 overrides flow overrides config.
 
+Variables hold any JSON value, scalars (string, number, boolean), objects,
+arrays, or whole mapping templates. The reference may include a deep path that
+walks the value.
+
 ```json
 {
-  "variables": { "measurementId": "G-XXXXXX" },
+  "variables": {
+    "measurementId": "G-XXXXXX",
+    "ga4Items": {
+      "loop": ["nested", { "map": { "item_id": "data.id" } }]
+    },
+    "api": { "version": "v2", "url": "https://api.example.com" }
+  },
   "flows": {
     "web": {
       "destinations": {
@@ -53,43 +62,23 @@ overrides flow overrides config.
           "config": {
             "settings": {
               "ga4": { "measurementId": "$var.measurementId" }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-Variables are primitives (string, number, boolean). Values can be inlined
-inside strings: `"Bearer $var.token"`.
-
-## `$def.` — definitions
-
-Inject a reusable fragment from `definitions`. The reference either replaces
-the entire string value or walks a dotted path inside the fragment.
-
-```json
-{
-  "definitions": {
-    "ga4Items": {
-      "loop": ["nested", { "map": { "item_id": "data.id" } }]
-    }
-  },
-  "flows": {
-    "web": {
-      "destinations": {
-        "gtag": {
-          "config": {
+            },
             "mapping": {
               "order": {
                 "complete": {
-                  "data": { "map": { "items": "$def.ga4Items" } }
+                  "data": { "map": { "items": "$var.ga4Items" } }
                 }
               }
             }
           }
+        },
+        "api": {
+          "config": {
+            "settings": {
+              "endpoint": "$var.api.url",
+              "version": "$var.api.version"
+            }
+          }
         }
       }
     }
@@ -97,7 +86,21 @@ the entire string value or walks a dotted path inside the fragment.
 }
 ```
 
-`$def.` must be the entire string value (not inlined in prose).
+**Resolution rules:**
+
+- A whole-string reference (`"$var.api.url"`) replaces the value with the
+  variable's native type. Object, array, number, and boolean values are
+  preserved.
+- An inline reference (`"Bearer $var.token"`) substitutes a scalar mid-string.
+  Object or array values throw, scalars only.
+- Variables may reference other variables. Resolution is recursive with cycle
+  detection.
+
+**Naming convention:** when variables hold structures (mapping templates,
+matchers, consent objects), pick a name that signals the shape, for example
+`ga4ItemMapping`, `ga4ItemsLoop`, `consentMarketing`, `getMastertagJs`. Keep
+the convention consistent within a single config; we don't enforce a global
+prefix or suffix rule.
 
 ## `$env.` — environment variables
 
@@ -118,8 +121,8 @@ token after `:` is used verbatim.
 
 ## `$contract.` — contract references
 
-Inject a fragment of a named contract entry. Same "whole string, optional deep
-path" rules as `$def.`.
+Inject a fragment of a named contract entry. Same whole-string and deep-path
+rules as `$var.`.
 
 ```json
 {
@@ -163,7 +166,7 @@ Inject a store instance declared under `stores`. Wired through a component's
 ```
 
 Store IDs are plain identifiers (camelCase). The `.` is the separator, not a
-path walker — store IDs do not contain dots.
+path walker, store IDs do not contain dots.
 
 ## `$secret.` — secrets
 
@@ -188,7 +191,7 @@ and never written into customer databases alongside the flow.
 }
 ```
 
-Secret names are uppercase: `[A-Z0-9_]+`. The `.` is the separator — secrets
+Secret names are uppercase: `[A-Z0-9_]+`. The `.` is the separator, secrets
 have no internal structure.
 
 ## `$code:` — inline code
@@ -198,7 +201,7 @@ real JS at build time. Everything after `$code:` is the raw function body.
 
 ```json
 {
-  "definitions": {
+  "variables": {
     "onlyProducts": {
       "condition": "$code:(entity) => entity.entity === 'product'"
     }
@@ -206,25 +209,25 @@ real JS at build time. Everything after `$code:` is the raw function body.
 }
 ```
 
-The `:` here marks the **payload**. Nothing after the colon is looked up — it
+The `:` here marks the **payload**. Nothing after the colon is looked up, it
 is compiled as-is.
 
 ## Cascade and resolution order
 
-`variables` and `definitions` can live at three levels. Priority (highest wins):
+`variables` can live at three levels. Priority (highest wins):
 
 1. Step level (`sources.*`, `transformers.*`, `destinations.*`, `stores.*`)
-2. Flow level (`flows.<name>.variables`, `flows.<name>.definitions`)
-3. Config root (`variables`, `definitions`)
+2. Flow level (`flows.<name>.variables`)
+3. Config root (`variables`)
 
-Resolution runs at `getFlowSettings()` in `@walkeros/core` — the runtime
+Resolution runs at `getFlowSettings()` in `@walkeros/core`, the runtime
 replaces every reference before the bundler or collector sees the config.
 
 ## What else to read
 
-- [`@walkeros/core` reference exports](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/references.ts) —
-  `REF_VAR`, `REF_DEF`, `REF_ENV`, `REF_CONTRACT`, `REF_STORE`, `REF_SECRET`,
-  `REF_CODE_PREFIX`. The single source of truth for the regex patterns.
-- [Stores guide](../stores/index.mdx) — wiring stores via `$store.`.
-- [Mapping guide](../mapping/index.mdx) — `$code:`, `$def.`, and mapping-value
-  shortcuts.
+- [`@walkeros/core` reference exports](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/references.ts):
+  `REF_VAR_FULL`, `REF_VAR_INLINE`, `REF_ENV`, `REF_CONTRACT`, `REF_STORE`,
+  `REF_SECRET`, `REF_CODE_PREFIX`. The single source of truth for the regex
+  patterns.
+- [Stores guide](../stores/index.mdx): wiring stores via `$store.`.
+- [Mapping guide](../mapping/index.mdx): `$code:` and mapping-value shortcuts.

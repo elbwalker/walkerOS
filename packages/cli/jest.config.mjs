@@ -4,9 +4,10 @@ const config = {
   maxWorkers: 1,
   forceExit: true,    // Required: stdin PIPEWRAP handle from process.stdin access keeps Jest alive
   testTimeout: 30000,
-  // Transform ESM packages: jsdom 27+ and its dependencies are pure ESM
+  // Transform ESM packages: jsdom 27+ and its dependencies are pure ESM,
+  // p-limit 4+ is also pure-ESM and pulls in yocto-queue.
   transformIgnorePatterns: [
-    'node_modules/(?!(@walkeros|chalk|jsdom|parse5|nwsapi|entities|msw|until-async|@bundled-es-modules|@mswjs|@open-draft)/)',
+    'node_modules/(?!(@walkeros|chalk|jsdom|parse5|nwsapi|entities|msw|until-async|@bundled-es-modules|@mswjs|@open-draft|p-limit|yocto-queue)/)',
   ],
   testPathIgnorePatterns: [
     ...(baseConfig.testPathIgnorePatterns || []),

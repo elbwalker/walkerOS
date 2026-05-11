@@ -51,45 +51,24 @@ import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';
 
 ## Flow Configuration Syntax
 
-Flow configurations support three dynamic patterns for reusable,
-environment-aware configs:
-
-### `$def.name` - Definition References
-
-Reference reusable configuration blocks defined in `definitions`:
-
-```json
-{
-  "definitions": {
-    "itemsLoop": {
-      "loop": ["nested", { "map": { "item_id": "data.id" } }]
-    }
-  },
-  "destinations": {
-    "ga4": {
-      "config": {
-        "mapping": {
-          "order": {
-            "complete": {
-              "data": { "map": { "items": "$def.itemsLoop" } }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
+Flow configurations support two dynamic patterns for reusable, environment-aware
+configs:
 
 ### `$var.name` - Variable References
 
-Reference variables defined in `variables` for config-level values:
+Reference values defined in `variables`. Values can be scalars (string, number,
+boolean), objects, arrays, or whole mapping templates. The reference may include
+a deep path that walks the value:
 
 ```json
 {
   "variables": {
     "currency": "EUR",
-    "apiVersion": "v2"
+    "apiVersion": "v2",
+    "itemsLoop": {
+      "loop": ["nested", { "map": { "item_id": "data.id" } }]
+    },
+    "api": { "version": "v2", "url": "https://api.example.com" }
   },
   "destinations": {
     "api": {
@@ -97,10 +76,38 @@ Reference variables defined in `variables` for config-level values:
         "endpoint": "https://api.example.com/$var.apiVersion/collect",
         "defaultCurrency": "$var.currency"
       }
+    },
+    "ga4": {
+      "config": {
+        "mapping": {
+          "order": {
+            "complete": {
+              "data": { "map": { "items": "$var.itemsLoop" } }
+            }
+          }
+        }
+      }
+    },
+    "split": {
+      "config": {
+        "endpoint": "$var.api.url",
+        "version": "$var.api.version"
+      }
     }
   }
 }
 ```
+
+**Resolution rules:**
+
+- A whole-string reference (`"$var.itemsLoop"`) replaces the value with the
+  variable's native type. Object, array, number, and boolean values are
+  preserved.
+- An inline reference (`"Bearer $var.token"`) substitutes a scalar mid-string.
+  If the referenced variable resolves to an object or array, resolution throws;
+  only scalars (string, number, boolean) may be substituted inline.
+- Variables may reference other variables. Resolution is recursive with cycle
+  detection, mirroring the `$flow` reference resolver.
 
 Variables can be defined at setup, flow, or source/destination level (higher
 specificity wins).

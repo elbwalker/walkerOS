@@ -1,5 +1,51 @@
 # @walkeros/collector
 
+## 4.0.1
+
+### Patch Changes
+
+- cb265eb: Surface destination init errors in logs at ERROR level. Previously,
+  two layers swallowed errors silently: the gcp destination's init catch only
+  logged for `isNotFound` errors and re-threw everything else without logging;
+  the collector wrapped `destinationInit` with `tryCatchAsync` (no `onError`),
+  which silently returned `undefined` on a thrown error and treated the
+  destination as not-initialized. Combined effect: a real init failure (e.g.,
+  the recent `streamType` regression in BigQuery Storage Write API call) showed
+  only `[gcp-bigquery] init` in DEBUG logs and nothing else, regardless of log
+  level.
+
+  Now: gcp's init catch logs every error at ERROR before re-throwing (with
+  consistent `error:` context key), AND the collector logs at ERROR via
+  `logger.scope(destType).error('Destination init threw', { error })` if init
+  throws or rejects. Failures are never silent. Mocks updated to enforce the new
+  shapes; tests cover both sync-throw and async-rejection variants.
+
+- 1524275: Source lifecycle redesign: factory + eager `init` + collector-gated
+  `on()`
+
+  Source factories must now be side-effect-free. The collector calls
+  `Instance.init()` on each source eagerly after all factories register.
+  `require` no longer gates code execution. It gates `on(type)` delivery (events
+  queue in `Instance.queueOn` until the source is started, then replay).
+  `collector.pending.sources` has been removed; per-source state lives on
+  `Source.Instance` (`queueOn`) and `Source.Config` (`init`, `require`).
+
+  Migration: any source factory with side effects (queue draining, walker
+  command emission, listener attachment) should move those into the returned
+  Instance's optional `init` method. Tests asserting on
+  `collector.pending.sources` should read `collector.sources[id]` and inspect
+  `config.init` / `config.require` instead.
+
+  Fixes the elbLayer queue replay clobbering fresh consent/user state,
+  late-activated sources missing `walker run`, and inter-source require chains
+  racing when a non-required source's init fired a state-mutating walker command
+  before later require-gated sources had been registered.
+
+- Updated dependencies [381dfe7]
+- Updated dependencies [1524275]
+- Updated dependencies [03d7055]
+  - @walkeros/core@4.0.1
+
 ## 4.0.0
 
 ### Major Changes

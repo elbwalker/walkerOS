@@ -1,5 +1,72 @@
 # @walkeros/server-destination-gcp
 
+## 4.0.1
+
+### Patch Changes
+
+- 87ffcd7: BigQuery destination: migrate from legacy tabledata.insertAll to the
+  BigQuery Storage Write API (~2x cheaper at volume, 2 TiB/month free tier), add
+  the `setup()` lifecycle for one-shot dataset and table provisioning via
+  `walkeros setup destination.bigquery`, and implement `pushBatch` so the
+  collector's `batch: <ms>` mapping setting actually batches into a single
+  appendRows call.
+
+  Breaking changes:
+  - The 15-column table schema is now using walkerOS event v4 schema.
+
+  Run `walkeros setup destination.bigquery` to provision the dataset and table
+  with day partitioning on `timestamp` and clustering on
+  `(name, entity, action)`.
+
+- abfb0bb: @walkeros/cli: Server bundles now use @vercel/nft to trace
+  dependencies and copy only files actually used into dist/node_modules/. Pacote
+  remains the install layer (driven by flow.json's config.bundle.packages field;
+  users do not run npm install for step packages). The walkerOS.bundle.external
+  annotation field on package manifests is no longer recognized (deprecation
+  warning if seen). The flow.<name>.config.bundle.external sub-field on flow
+  configs is also no longer supported (warned and stripped during load). The
+  flow.<name>.config.bundle.traceInclude field is the escape hatch for cases nft
+  cannot statically trace. Server output is always a directory: dist/{flow.mjs,
+  package.json, node_modules/}. Default output filename changed from bundle.mjs
+  to flow.mjs. The runtime image expects /app/flow/flow.mjs. flow.json schema is
+  unchanged (still v4); only @walkeros/cli bumps. Migration: see
+  https://walkeros.io/docs/migrate/cli-4x.
+
+  @walkeros/server-destination-gcp: removed obsolete walkerOS.bundle.external
+  annotation from package manifest. nft handles externalization automatically.
+  No behavior change for consumers.
+
+- cb265eb: Surface destination init errors in logs at ERROR level. Previously,
+  two layers swallowed errors silently: the gcp destination's init catch only
+  logged for `isNotFound` errors and re-threw everything else without logging;
+  the collector wrapped `destinationInit` with `tryCatchAsync` (no `onError`),
+  which silently returned `undefined` on a thrown error and treated the
+  destination as not-initialized. Combined effect: a real init failure (e.g.,
+  the recent `streamType` regression in BigQuery Storage Write API call) showed
+  only `[gcp-bigquery] init` in DEBUG logs and nothing else, regardless of log
+  level.
+
+  Now: gcp's init catch logs every error at ERROR before re-throwing (with
+  consistent `error:` context key), AND the collector logs at ERROR via
+  `logger.scope(destType).error('Destination init threw', { error })` if init
+  throws or rejects. Failures are never silent. Mocks updated to enforce the new
+  shapes; tests cover both sync-throw and async-rejection variants.
+
+- ed304b4: Declare `@google-cloud/bigquery-storage` as a bundle external via
+  `walkerOS.bundle.external`. Fixes
+  `__dirname is not defined in ES module scope` when bundling a flow that uses
+  BigQuery Storage Write API. The bundler's closure walker pulls in the
+  transitive gRPC stack (`@grpc/grpc-js`, `@grpc/proto-loader`, `protobufjs`,
+  `google-gax`) automatically via `bigquery-storage`'s own dependencies and
+  peerDependencies, so only the one entry needs to be declared. Requires
+  `@walkeros/cli` >= the version shipping the bundler-externals feature.
+- 1a5915d: Add Pub/Sub sub-destination to the GCP server package. Publishes
+  walkerOS events to a Pub/Sub topic with optional per-key ordering and dynamic
+  attributes, plus idempotent topic provisioning via
+  `walkeros setup destination.<id>`. EU region default for at-rest storage.
+  Three auth modes: ADC, service account JSON, pre-configured client.
+  - @walkeros/server-core@4.0.1
+
 ## 4.0.0
 
 ### Major Changes

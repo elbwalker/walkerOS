@@ -33,7 +33,7 @@ export function registerSetupMappingPrompt(server: McpServer) {
               '',
               'Mapping uses nested entity → action keys. Event "product add" maps to `{ "product": { "add": Rule } }`. Wildcards: `{ "*": { "view": Rule } }`.',
               '',
-              'Use $def references for shared mapping patterns across destinations.',
+              'Extract shared mapping shapes into variables, reference via $var.name (deep paths supported).',
               '',
               'Policy and consent in mapping:',
               '- config.policy runs BEFORE mapping rules — use it to inject or redact fields on the event.',

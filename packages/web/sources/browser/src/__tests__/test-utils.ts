@@ -10,7 +10,9 @@ import type { Types } from '../types';
 export async function createBrowserSource(
   collector: Collector.Instance,
   settings: Partial<Source.Settings<Types>> = {},
+  options: { runOnInit?: boolean } = {},
 ): Promise<Source.Instance<Types> & { elb: Function }> {
+  const { runOnInit = false } = options;
   const config: Partial<Source.Config<Types>> = {
     settings: {
       prefix: 'data-elb',
@@ -42,6 +44,15 @@ export async function createBrowserSource(
     setIngest: async () => {},
     setRespond: jest.fn(),
   });
+
+  // Mirror collector pass-2 init — the factory body is side-effect-free; init
+  // performs elbLayer drain, DOM trigger setup, and window.elb assignment.
+  await source.init?.();
+
+  if (runOnInit) {
+    // Drive the run lifecycle so non-walker queue items + pageview replay.
+    await source.on?.('run', collector);
+  }
 
   // Use the source's own push method which includes proper translation
   return { ...source, elb: source.push };

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-gcp",
-  "description": "Google Cloud Platform server destination for walkerOS (BigQuery)",
-  "version": "4.0.0",
+  "description": "Google Cloud Platform server destinations for walkerOS (BigQuery, Pub/Sub)",
+  "version": "4.0.1",
   "license": "MIT",
   "exports": {
     ".": {
@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "build": "tsup --silent",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "clean": "rm -rf .turbo && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.ts*\"",
@@ -30,7 +30,9 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.1",
-    "@walkeros/server-core": "4.0.0"
+    "@google-cloud/bigquery-storage": "^5.1.0",
+    "@google-cloud/pubsub": "^5.3.0",
+    "@walkeros/server-core": "4.0.1"
   },
   "devDependencies": {},
   "repository": {
@@ -49,7 +51,8 @@
     ],
     "docs": "https://www.walkeros.io/docs/destinations/server/gcp",
     "exports": {
-      "destinationBigQuery": "BigQuery event storage"
+      "destinationBigQuery": "BigQuery event storage",
+      "destinationPubSub": "Pub/Sub event publishing"
     }
   },
   "keywords": [
@@ -59,6 +62,9 @@
     "server",
     "gcp",
     "bigquery",
+    "pubsub",
+    "pub-sub",
+    "messaging",
     "analytics"
   ],
   "funding": [

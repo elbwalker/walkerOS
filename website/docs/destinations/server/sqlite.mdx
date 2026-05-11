@@ -53,6 +53,7 @@ await startFlow({
             url: './events.db',
           },
         },
+        setup: true,
       },
     },
   },
@@ -74,7 +75,8 @@ Add to your `flow.json` destinations:
         "sqlite": {
           "url": "./events.db"
         }
-      }
+      },
+      "setup": true
     }
   }
 }`}
@@ -88,41 +90,80 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
-The destination opens the connection during `init()`, runs `CREATE TABLE IF NOT EXISTS` with the canonical schema (unless `schema: 'manual'`), and prepares the INSERT statement once. On `destroy()` the connection is closed cleanly. User-provided clients (wired via `env.client` or `settings.sqlite._client`) are left untouched.
+The destination opens the connection during `init()` and prepares the INSERT statement once. Schema creation lives in the `setup` lifecycle (see below), not in `init()`. On `destroy()` the connection is closed cleanly. User-provided clients (wired via `env.client` or `settings.sqlite._client`) are left untouched.
 
-## Auto schema
+## Setup
 
-With the default `schema: 'auto'`, the first `init()` creates an events table mirroring the canonical walkerOS event shape:
+Create the events table and apply pragmas with one command:
+
+<CodeSnippet code={`walkeros setup destination.sqlite`} language="bash" />
+
+This runs `CREATE TABLE IF NOT EXISTS` with the canonical 15-column walkerOS Event v4 schema and applies four pragmas:
+
+- `journal_mode = WAL` (better concurrent reads)
+- `synchronous = NORMAL` (good durability vs. perf balance)
+- `foreign_keys = ON`
+- `temp_store = MEMORY`
+
+Setup is idempotent. Re-running against a populated database is a safe no-op. Drift between the declared schema and the actual table is logged as `WARN setup.drift {field, declared, actual}`. Setup never auto-mutates an existing table, no `ALTER TABLE`, no destructive recreates.
+
+The default 15-column schema mirrors the canonical walkerOS Event v4 layout. Only `name` is `NOT NULL`. See [Event Model](/docs/getting-started/event-model) for the full field reference.
 
 ```sql
 CREATE TABLE IF NOT EXISTS events (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  timestamp    INTEGER,
-  event_id     TEXT,
-  name         TEXT,
-  entity       TEXT,
-  action       TEXT,
-  session_id   TEXT,
-  user_id      TEXT,
-  page_url     TEXT,
-  page_title   TEXT,
-  referrer_url TEXT,
-  data         TEXT,
-  globals      TEXT,
-  consent      TEXT
+  name      TEXT NOT NULL,
+  data      TEXT,
+  context   TEXT,
+  globals   TEXT,
+  custom    TEXT,
+  user      TEXT,
+  nested    TEXT,
+  consent   TEXT,
+  id        TEXT,
+  trigger   TEXT,
+  entity    TEXT,
+  action    TEXT,
+  timestamp TEXT,
+  timing    INTEGER,
+  source    TEXT
 )
 ```
 
-Nested objects (`data`, `globals`, `consent`) are stored as JSON strings. `page_url` maps from `source.url`; `page_title` from `data.title`; `referrer_url` from `source.referrer`.
+Nested objects (`data`, `context`, `globals`, `custom`, `user`, `nested`, `consent`, `source`) are stored as JSON strings.
+
+Override defaults in `config.setup`:
+
+<CodeSnippet
+  code={`"setup": {
+  "pragmas": { "journal_mode": "DELETE" },
+  "indexes": [{ "name": "idx_events_name", "columns": ["name"] }]
+}`}
+  language="json"
+/>
+
+`setup: true` accepts all defaults. `setup: false` (or omitted) means `walkeros setup destination.sqlite` is a no-op for this destination.
 
 Use `mapping.settings.table` to route specific events to a dedicated table (for example orders to `orders`, identities to `identities`).
+
+### Migration from `schema`
+
+:::warning Deprecated
+The package-local `settings.sqlite.schema` setting is deprecated. The framework now owns the setup lifecycle through `config.setup`. The deprecated form still works and emits a one-time WARN through the destination logger.
+:::
+
+| Old (`settings.sqlite.schema`) | New (`config.setup`) | Effect                                              |
+| ------------------------------ | -------------------- | --------------------------------------------------- |
+| `'auto'`                       | `true`               | `walkeros setup destination.sqlite` creates table.  |
+| `'manual'`                     | `false`              | Setup is a no-op. Bring your own schema + mapping.  |
+| omitted                        | omitted              | No-op until `setup` is set explicitly.              |
+
+Remove the `schema` field from `settings.sqlite` and add `setup: true` (or `false`) at the `config` level.
 
 ## Drivers
 
 ### Local, `better-sqlite3`
 
-Sync native driver, fastest option for single-host deployments. The URL is treated as a filesystem path; `:memory:` works too.
+Sync native driver, fastest option for single-host deployments. The URL is treated as a filesystem path; `:memory:` works too. All four default pragmas are honored.
 
 <CodeSnippet
   code={`{
@@ -135,7 +176,7 @@ Sync native driver, fastest option for single-host deployments. The URL is treat
 
 ### Remote, `@libsql/client`
 
-Async HTTP/WSS driver for [Turso](https://turso.tech/), self-hosted [sqld](https://github.com/tursodatabase/libsql), or any libSQL-compatible endpoint. Auth via `authToken`.
+Async HTTP/WSS driver for [Turso](https://turso.tech/), self-hosted [sqld](https://github.com/tursodatabase/libsql), or any libSQL-compatible endpoint. Auth via `authToken`. The remote server controls journaling, so a client-side `journal_mode` pragma is silently ignored. The other pragmas (`synchronous`, `foreign_keys`, `temp_store`) still apply.
 
 <CodeSnippet
   code={`{
@@ -149,23 +190,7 @@ Async HTTP/WSS driver for [Turso](https://turso.tech/), self-hosted [sqld](https
 
 URL prefixes `libsql://`, `http://`, `https://`, `ws://`, `wss://` route to the libSQL driver. Anything else (bare paths, `:memory:`) routes to `better-sqlite3`.
 
-## Manual schema
-
-Set `schema: 'manual'` to skip the auto `CREATE TABLE`. The user brings their own table and mapping. Useful when migrating from an existing schema (for example an older PHP-era events table) and you want the destination to insert into the same columns.
-
-<CodeSnippet
-  code={`{
-  "sqlite": {
-    "url": "./legacy.db",
-    "table": "siteEvents",
-    "schema": "manual"
-  }
-}`}
-  language="json"
-/>
-
 ## Limitations
 
 - v1 issues one `INSERT` per event. A `pushBatch` path is planned for v2.
 - Connection death is not auto-retried; a fatal driver error logs and drops events until the flow restarts.
-- `schema: 'manual'` skips `CREATE TABLE` but still uses the canonical column layout for the prepared INSERT. If your custom table has a different shape, also provide a mapping that produces matching args.

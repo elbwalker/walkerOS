@@ -424,8 +424,9 @@ registered via Monaco's official `addExtraLib` API.
 
 **Recognized reference prefixes (CodeBox IntelliSense):**
 
-- `$var.<name>`: flow/source/destination/transformer variables.
-- `$def.<name>(.<path>)?`: reusable config fragments.
+- `$var.<name>(.<path>)?`: flow/source/destination/transformer variables.
+  Whole-string references preserve native type (objects, arrays, scalars);
+  inline interpolation requires scalars; deep paths walk into structural values.
 - `$secret.<NAME>`: secret references; values never enter the editor.
 - `$env.<NAME>(:default)?`: process env vars at bundle time.
 - `$store.<id>`: store instance references.

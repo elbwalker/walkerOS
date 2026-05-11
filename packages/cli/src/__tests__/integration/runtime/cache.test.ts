@@ -27,7 +27,7 @@ describe('writeCache', () => {
   it('copies bundle and writes meta.json + config.json', () => {
     writeCache(TEST_CACHE_DIR, TEST_BUNDLE_PATH, '{"version":1}', 'v1');
 
-    expect(existsSync(join(TEST_CACHE_DIR, 'bundle.mjs'))).toBe(true);
+    expect(existsSync(join(TEST_CACHE_DIR, 'flow.mjs'))).toBe(true);
     expect(existsSync(join(TEST_CACHE_DIR, 'meta.json'))).toBe(true);
     expect(existsSync(join(TEST_CACHE_DIR, 'config.json'))).toBe(true);
   });
@@ -35,7 +35,7 @@ describe('writeCache', () => {
   it('creates cache directory if it does not exist', () => {
     const nested = join(TEST_CACHE_DIR, 'nested', 'dir');
     writeCache(nested, TEST_BUNDLE_PATH, '{"version":1}', 'v1');
-    expect(existsSync(join(nested, 'bundle.mjs'))).toBe(true);
+    expect(existsSync(join(nested, 'flow.mjs'))).toBe(true);
   });
 });
 
@@ -44,7 +44,7 @@ describe('readCache', () => {
     writeCache(TEST_CACHE_DIR, TEST_BUNDLE_PATH, '{"version":1}', 'v1');
     const result = readCache(TEST_CACHE_DIR);
     expect(result).not.toBeNull();
-    expect(result!.bundlePath).toBe(join(TEST_CACHE_DIR, 'bundle.mjs'));
+    expect(result!.bundlePath).toBe(join(TEST_CACHE_DIR, 'flow.mjs'));
     expect(result!.version).toBe('v1');
   });
 
@@ -55,7 +55,7 @@ describe('readCache', () => {
 
   it('returns null if meta.json is corrupt', () => {
     mkdirSync(TEST_CACHE_DIR, { recursive: true });
-    writeFileSync(join(TEST_CACHE_DIR, 'bundle.mjs'), 'content', 'utf-8');
+    writeFileSync(join(TEST_CACHE_DIR, 'flow.mjs'), 'content', 'utf-8');
     writeFileSync(join(TEST_CACHE_DIR, 'meta.json'), 'not-json', 'utf-8');
     const result = readCache(TEST_CACHE_DIR);
     expect(result).toBeNull();

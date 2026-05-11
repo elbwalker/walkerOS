@@ -133,6 +133,70 @@ The primary use case is serving static files via the file transformer. This is t
 
 A request to `/static/walker.js` looks up `public/walker.js` in the `my-assets` bucket.
 
+## Provisioning
+
+The package ships an idempotent `setup()` lifecycle, invoked only by the explicit operator command:
+
+<CodeSnippet
+  code={`walkeros setup store.<id>`}
+  language="bash"
+/>
+
+It never runs automatically. It checks whether the bucket exists and creates it if not. Re-running setup is a no-op when the bucket already exists in your account.
+
+### Setup options
+
+| Option   | Type     | Default        | Notes                                                                                            |
+| -------- | -------- | -------------- | ------------------------------------------------------------------------------------------------ |
+| `region` | `string` | `eu-central-1` | Region the bucket is created in (LocationConstraint). Falls back to `settings.region` when concrete (not `auto`). |
+
+`bucket` is taken from `settings.bucket` and is NOT duplicated under `setup`.
+
+### Enable provisioning
+
+Set `setup: true` in the component config to enable provisioning with defaults, or pass an object to override:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "assets": {
+      "package": "@walkeros/server-store-s3",
+      "config": {
+        "settings": {
+          "bucket": "my-assets",
+          "endpoint": "https://s3.eu-central-1.amazonaws.com",
+          "accessKeyId": "$env.S3_ACCESS_KEY",
+          "secretAccessKey": "$env.S3_SECRET_KEY",
+          "region": "eu-central-1"
+        },
+        "setup": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### What setup does NOT apply
+
+`s3mini` is a minimal S3 client that exposes `createBucket` and `bucketExists` only. It does NOT expose `PutBucketEncryption`, `PutPublicAccessBlock`, `PutBucketVersioning`, `PutBucketLifecycleConfiguration`, or `PutBucketTagging`. Configure those once via the AWS Console or `aws s3api`.
+
+### Behavior
+
+- **Idempotent create:** `BucketAlreadyOwnedByYou` (concurrent caller, your account) is treated as success and returns `{ bucketCreated: false }`. `BucketAlreadyExists` (different AWS account owns the global name) fails loud with an actionable message so you pick a different name.
+- **Region resolution:** explicit `setup.region` wins; otherwise `settings.region` is used when concrete (not `auto`); otherwise the EU default `eu-central-1`.
+
+### Runtime hard-fail
+
+`storeS3Init` probes `bucketExists()` once when the collector wires the store. On a missing bucket it throws with an actionable message:
+
+<CodeSnippet
+  code={`S3 bucket not found: my-assets at https://s3.eu-central-1.amazonaws.com. Run "walkeros setup store.assets" to create it.`}
+  language="text"
+/>
+
+Run `walkeros setup store.<id>` once to provision the bucket, then redeploy.
+
 ## Security
 
 - **Key validation**: Path traversal attempts (`..`, absolute paths) are rejected

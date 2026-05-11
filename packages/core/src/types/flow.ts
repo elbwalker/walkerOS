@@ -6,8 +6,8 @@
  *
  * The Flow system enables "one config to rule them all" - a single
  * walkeros.config.json file that manages multiple flows
- * (web_prod, web_stage, server_prod, etc.) with shared configuration,
- * variables, and reusable definitions.
+ * (web_prod, web_stage, server_prod, etc.) with shared configuration
+ * and reusable variables.
  *
  * Single declaration merge: `Flow` is both the interface for one flow
  * and the namespace holding all related types.
@@ -45,7 +45,8 @@ import type { Collector } from '.';
  * Represents one deployment target (e.g., web_prod, server_stage).
  * Platform is determined by `config.platform` ('web' | 'server').
  *
- * Variables/definitions cascade: source/destination > flow > root config.
+ * Variables cascade (resolveFlowSettings): step > flow > root config.
+ * "step" applies uniformly to source, destination, transformer, and store.
  */
 export interface Flow {
   /** Per-flow configuration: platform, url, settings, bundle. */
@@ -115,12 +116,6 @@ export interface Flow {
    * Override root variables; overridden by source/destination variables.
    */
   variables?: Flow.Variables;
-
-  /**
-   * Flow-level definitions.
-   * Extend root definitions; overridden by source/destination definitions.
-   */
-  definitions?: Flow.Definitions;
 }
 
 export namespace Flow {
@@ -171,12 +166,6 @@ export namespace Flow {
     variables?: Variables;
 
     /**
-     * Reusable configuration definitions.
-     * Syntax: $def.name
-     */
-    definitions?: Definitions;
-
-    /**
      * Data contract definition.
      * Entity → action keyed JSON Schema with additive inheritance.
      */
@@ -220,26 +209,18 @@ export namespace Flow {
     settings?: Settings;
 
     /**
-     * Bundle configuration: NPM packages to include, transitive dependency overrides.
+     * Bundle configuration: NPM packages to include, transitive dependency
+     * overrides, and extra trace includes for server bundles.
      * Consumed by the CLI bundler at build time.
      */
     bundle?: Bundle;
   }
 
-  /** Primitive value types for variables. */
-  export type Primitive = string | number | boolean;
-
   /**
-   * Variables record type for interpolation.
-   * Used at root, flow, source, destination, transformer, and store levels.
+   * Reusable values referenced via `$var.name` (with optional deep paths).
+   * Whole-string references preserve native type; inline interpolation requires scalars.
    */
-  export type Variables = Record<string, Primitive>;
-
-  /**
-   * Definitions record type for reusable configurations.
-   * Used at root, flow, source, destination, transformer, and store levels.
-   */
-  export type Definitions = Record<string, unknown>;
+  export type Variables = Record<string, unknown>;
 
   /**
    * Free-form settings bag inside `Flow.Config.settings`.
@@ -250,8 +231,12 @@ export namespace Flow {
   /**
    * Bundle configuration for a flow.
    *
-   * Groups all build-time bundling concerns: NPM packages to include and
-   * transitive dependency overrides. Consumed by the CLI bundler.
+   * Groups all build-time bundling concerns: NPM packages to include,
+   * transitive dependency overrides, and extra trace includes (server only).
+   * Consumed by the CLI bundler.
+   *
+   * The `flow.config.bundle.external` sub-field is no longer supported
+   * (replaced by nft tracing in @walkeros/cli@4.x).
    */
   export interface Bundle {
     /** NPM packages to bundle, keyed by package name. */
@@ -260,7 +245,7 @@ export namespace Flow {
     /**
      * Transitive dependency version pins.
      *
-     * Maps package name → version spec. Applied during bundle package install
+     * Maps package name to version spec. Applied during bundle package install
      * to force transitive dependencies to a specific version. Useful for
      * resolving conflicts between packages that depend on incompatible
      * versions of a shared dependency.
@@ -273,6 +258,18 @@ export namespace Flow {
      * ```
      */
     overrides?: Record<string, string>;
+
+    /**
+     * Extra paths the bundler must include in the trace output.
+     *
+     * Each entry is either a literal path or a glob (matched via picomatch),
+     * resolved against the bundler's install root. Use as an escape hatch
+     * when the file tracer cannot statically discover an asset (e.g.,
+     * dynamic require, runtime configuration files).
+     *
+     * Server flows only.
+     */
+    traceInclude?: string[];
   }
 
   /**
@@ -381,12 +378,6 @@ export namespace Flow {
     variables?: Variables;
 
     /**
-     * Source-level definitions (highest priority in cascade).
-     * Overrides flow and root definitions.
-     */
-    definitions?: Definitions;
-
-    /**
      * Named examples for testing and documentation.
      * Stripped during flow resolution (not included in bundles).
      */
@@ -442,9 +433,6 @@ export namespace Flow {
     /** Destination-level variables (highest priority in cascade). */
     variables?: Variables;
 
-    /** Destination-level definitions (highest priority in cascade). */
-    definitions?: Definitions;
-
     /**
      * Named examples for testing and documentation.
      * Stripped during flow resolution.
@@ -498,9 +486,6 @@ export namespace Flow {
     /** Transformer-level variables (highest priority in cascade). */
     variables?: Variables;
 
-    /** Transformer-level definitions (highest priority in cascade). */
-    definitions?: Definitions;
-
     /**
      * Named examples for testing and documentation.
      * Stripped during flow resolution.
@@ -530,9 +515,6 @@ export namespace Flow {
 
     /** Store-level variables (highest priority in cascade). */
     variables?: Variables;
-
-    /** Store-level definitions (highest priority in cascade). */
-    definitions?: Definitions;
 
     /**
      * Named examples for testing and documentation.

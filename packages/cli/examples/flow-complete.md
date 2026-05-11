@@ -109,7 +109,7 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 | Wildcard action (\*) | GA4 test, Meta      | `"test": { "*": { "ignore": true } }`                       |
 | Wildcard entity (\*) | Meta click handler  | `"*": { "click": { "name": "CustomEvent" } }`               |
 
-#### Definitions & Variables
+#### Variables
 
 | Feature              | Location           | Example                                        |
 | -------------------- | ------------------ | ---------------------------------------------- |
@@ -118,8 +118,6 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 | Environment variable | Variables          | `"$env.GA4_MEASUREMENT_ID:G-DEMO123456"`       |
 | Env with default     | Variables          | `"$env.API_URL:http://localhost:8080/collect"` |
 | $var reference       | GA4 settings       | `"$var.ga4MeasurementId"`                      |
-| Definition (complex) | Root definitions   | `"ga4ItemsLoop": { "loop": [...] }`            |
-| $def reference       | GA4 purchase items | `"$def.ga4ItemsLoop"`                          |
 | $contract reference  | serverValidator    | `"$contract.default.events"`                   |
 | $store reference     | filter transformer | `"env": { "store": "$store.cache" }`           |
 
@@ -205,13 +203,13 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 These features are now fully supported in JSON via `$code:` prefix (and ARE used
 in this example):
 
-| Feature                     | Status                              |
-| --------------------------- | ----------------------------------- |
-| `fn:` function              | ✅ Used via `$code:` in GA4 value   |
-| `condition:`                | ✅ Used via `$code:` in definitions |
-| Conditional mapping (array) | ✅ Used in serverValidator          |
-| Custom transformer code     | ✅ Used in enricher, filter         |
-| Custom destination code     | ✅ Used in debug logger             |
+| Feature                     | Status                            |
+| --------------------------- | --------------------------------- |
+| `fn:` function              | ✅ Used via `$code:` in GA4 value |
+| `condition:`                | ✅ Used via `$code:` in variables |
+| Conditional mapping (array) | ✅ Used in serverValidator        |
+| Custom transformer code     | ✅ Used in enricher, filter       |
+| Custom destination code     | ✅ Used in debug logger           |
 
 #### Omitted for Clarity (6)
 

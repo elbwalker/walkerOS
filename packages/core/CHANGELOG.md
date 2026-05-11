@@ -1,5 +1,68 @@
 # @walkeros/core
 
+## 4.0.1
+
+### Patch Changes
+
+- 381dfe7: Add an optional `setup` lifecycle to destinations, sources, and
+  stores.
+
+  Each package may now implement `setup?: SetupFn` to provision external
+  resources (BigQuery datasets and tables, Pub/Sub topics and subscriptions,
+  SQLite tables, webhook registrations, etc.). Setup is triggered only by the
+  new `walkeros setup <kind>.<name>` CLI command, never automatically by the
+  runtime, push, or deploy. Idempotency, ordering, and error semantics are the
+  package's responsibility; the framework provides the type slot, the CLI
+  invocation, and a `resolveSetup(value, defaults)` helper.
+
+  `LifecycleContext<C, E>` is the new shared context type used by both `setup`
+  and `destroy`. `DestroyContext` remains as a deprecated type alias for one
+  minor cycle. The `Types` bundle on `Destination`, `Source`, and `Store` gains
+  a 5th/6th/4th positional slot for setup options; existing aliases compile
+  unchanged because the slot defaults to `unknown`.
+  `Config<T>.setup?: boolean | SetupOptions<T>` is added across all three kinds
+  and validated by the corresponding Zod `ConfigSchema` plus the flow component
+  schemas in `@walkeros/core/schemas/flow.ts`.
+
+  CLI:
+  - `walkeros setup <kind>.<name>` runs a single component's `setup()` function.
+  - `<kind>` is `source`, `destination`, or `store` (transformers have no
+    provisioning).
+  - `--config <path>` (default `./flow.json`), `--flow <name>` for multi-flow
+    configs, plus standard `--json` / `--verbose` / `--silent`.
+  - Exit 0 on success or skip; non-zero on failure. Skip narration covers three
+    cases: no `setup()` on the package, `config.setup === false`, or
+    `config.setup` unset.
+  - When the package's `setup()` returns a non-undefined value, the CLI emits it
+    as JSON on stdout for `jq` piping.
+
+- 1524275: Source lifecycle redesign: factory + eager `init` + collector-gated
+  `on()`
+
+  Source factories must now be side-effect-free. The collector calls
+  `Instance.init()` on each source eagerly after all factories register.
+  `require` no longer gates code execution. It gates `on(type)` delivery (events
+  queue in `Instance.queueOn` until the source is started, then replay).
+  `collector.pending.sources` has been removed; per-source state lives on
+  `Source.Instance` (`queueOn`) and `Source.Config` (`init`, `require`).
+
+  Migration: any source factory with side effects (queue draining, walker
+  command emission, listener attachment) should move those into the returned
+  Instance's optional `init` method. Tests asserting on
+  `collector.pending.sources` should read `collector.sources[id]` and inspect
+  `config.init` / `config.require` instead.
+
+  Fixes the elbLayer queue replay clobbering fresh consent/user state,
+  late-activated sources missing `walker run`, and inter-source require chains
+  racing when a non-required source's init fired a state-mutating walker command
+  before later require-gated sources had been registered.
+
+- 03d7055: Merge `definitions` into `variables`. Single concept, single syntax
+  `$var.name(.deep.path)?`. Whole-string references preserve native type; inline
+  interpolation requires scalars. Deep paths and recursive resolution with cycle
+  detection now supported. `Flow.Definitions`, `Flow.Primitive`, and the `$def.`
+  reference syntax are removed.
+
 ## 4.0.0
 
 ### Major Changes

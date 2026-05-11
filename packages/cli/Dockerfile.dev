@@ -28,7 +28,7 @@ USER walker
 # Default environment variables
 ENV NODE_ENV=production
 ENV PORT=8080
-ENV BUNDLE=/app/flow/bundle.mjs
+ENV BUNDLE=/app/flow/flow.mjs
 
 # Expose default port
 EXPOSE 8080

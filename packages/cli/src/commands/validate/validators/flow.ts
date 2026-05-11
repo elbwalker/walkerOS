@@ -208,8 +208,8 @@ export function validateFlow(
         });
       } catch (err) {
         // Only surface CYCLES as errors here; other resolver failures (missing
-        // $var / $def / etc.) are already reported by the schema/reference
-        // checker above and should not double-fail this pass.
+        // $var / etc.) are already reported by the schema/reference checker
+        // above and should not double-fail this pass.
         const message = err instanceof Error ? err.message : String(err);
         if (/Cyclic \$flow reference/.test(message)) {
           errors.push({

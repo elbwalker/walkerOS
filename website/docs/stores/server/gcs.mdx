@@ -70,6 +70,57 @@ Add to your `flow.json`:
 
 <Configuration type="store" data={data} />
 
+## Provisioning
+
+The package ships an idempotent `setup()` lifecycle that creates the GCS bucket described in flow config. It is invoked only by the explicit operator command:
+
+<CodeSnippet
+  code={`walkeros setup store.<id>`}
+  language="bash"
+/>
+
+It never runs automatically and never alters an existing bucket.
+
+### Setup options
+
+| Option         | Type                                                  | Default      | Notes                                                          |
+| -------------- | ----------------------------------------------------- | ------------ | -------------------------------------------------------------- |
+| `projectId`    | `string`                                              | (resolved)   | GCP project that owns the bucket. Resolution order below.      |
+| `location`     | `string`                                              | `'EU'`       | Multi-region or regional location.                             |
+| `storageClass` | `'STANDARD' \| 'NEARLINE' \| 'COLDLINE' \| 'ARCHIVE'` | `'STANDARD'` | Default object storage class.                                  |
+| `versioning`   | `boolean`                                             | `false`      | Object versioning. Off by default; opt in.                     |
+| `lifecycle`    | `{ rule: unknown[] }`                                 | (none)       | Applied at create. Drift detection NOT included for lifecycle. |
+| `kmsKeyName`   | `string`                                              | (none)       | Customer-managed encryption key (CMEK) at create time.         |
+| `labels`       | `Record<string, string>`                              | (none)       | Cost-allocation labels.                                        |
+
+`bucket` is taken from `settings.bucket` and is NOT duplicated under `setup`.
+
+### projectId resolution
+
+The GCS create call requires a project. Resolution order:
+
+1. Explicit `setup.projectId`.
+2. `project_id` field inside the `settings.credentials` service-account JSON.
+3. `process.env.GOOGLE_CLOUD_PROJECT` (Cloud Run / GKE convention).
+4. Throws with an actionable error if none of the above is available.
+
+### Behavior
+
+- **Idempotent**: HTTP 409 (bucket exists) is treated as success. The setup never patches or mutates an existing bucket.
+- **Drift detection**: when the bucket already exists, setup performs a `GET /b/<bucket>` and logs `WARN setup.drift { field, declared, actual }` for any of `location`, `storageClass`, `versioning`, `iamConfiguration` (uniform bucket-level access, public access prevention), and `labels` that do not match. Drift is logged, never auto-fixed.
+- **Defaults enforced at create**: uniform bucket-level access on, public access prevention enforced. These are baked in by the package.
+
+### Runtime hard-fail
+
+At runtime, the first `get` / `set` / `delete` call issues a single `HEAD /b/<bucket>` per process per bucket. On 404, it throws with an actionable message:
+
+<CodeSnippet
+  code={`GCS bucket not found: <bucket> in project <projectId>. Run "walkeros setup store.<id>" to create it.`}
+  language="text"
+/>
+
+Operators see the error pointing at the exact command to fix it. Subsequent operations in the same process skip the check via an in-memory cache.
+
 ## Authentication
 
 ### Cloud Run / GKE (ADC)

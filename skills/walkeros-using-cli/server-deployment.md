@@ -125,9 +125,10 @@ Flow.Json JSON → CLI bundles → API stores config → Scaleway builds contain
 `PORT` environment variable (set by the hosting platform) overrides it
 automatically. You don't need to change the config per environment.
 
-**Platform detection:** The bundler reads `config.platform: "server"` and
-generates an ESM bundle (`bundle.mjs`) with a default export function. Web flows
-(`config.platform: "web"`) generate an IIFE (`walker.js`) instead.
+**Platform detection:** The bundler reads `config.platform: "server"` and emits
+an ESM `flow.mjs` plus a `node_modules/` traced by `@vercel/nft`, all inside
+`dist/`. Web flows (`config.platform: "web"`) emit a single self-contained IIFE
+(`dist/walker.js`) instead.
 
 ## Troubleshooting
 

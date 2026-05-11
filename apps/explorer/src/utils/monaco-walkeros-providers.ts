@@ -1,7 +1,5 @@
 import type { languages, editor, IDisposable, Position } from 'monaco-editor';
 import {
-  REF_VAR,
-  REF_DEF,
   REF_ENV,
   REF_CONTRACT,
   REF_FLOW,
@@ -11,7 +9,6 @@ import {
 import type { IntelliSenseContext } from '../types/intellisense';
 import {
   getVariableCompletions,
-  getDefinitionCompletions,
   getSecretCompletions,
   getStoreCompletions,
   getFlowCompletions,
@@ -142,11 +139,6 @@ export function registerWalkerOSProviders(
         ) {
           entries.push(...getVariableCompletions(context.variables));
         } else if (
-          textBeforeCursor.includes('$def.') ||
-          textBeforeCursor.endsWith('"$def')
-        ) {
-          entries.push(...getDefinitionCompletions(context.definitions));
-        } else if (
           textBeforeCursor.includes('$secret.') ||
           textBeforeCursor.endsWith('"$secret')
         ) {
@@ -195,7 +187,6 @@ export function registerWalkerOSProviders(
           textBeforeCursor.endsWith('"')
         ) {
           entries.push(...getVariableCompletions(context.variables));
-          entries.push(...getDefinitionCompletions(context.definitions));
           entries.push(...getSecretCompletions(context.secrets));
           entries.push(...getStoreCompletions(context.stores));
           entries.push(...getFlowCompletions(context.flows));
@@ -229,7 +220,7 @@ export function registerWalkerOSProviders(
         // Monaco's getWordUntilPosition doesn't understand $ or . as word chars,
         // so we scan backwards to find the $ that starts the reference.
         const refStartMatch = textBeforeCursor.match(
-          /\$(?:var|def|secret|env|code|contract|store|flow)[.:]?[\w.]*$/,
+          /\$(?:var|secret|env|code|contract|store|flow)[.:]?[\w.]*$/,
         );
         const mappingPathMatch = !refStartMatch
           ? textBeforeCursor.match(/[a-z_][\w.]*$/i)
@@ -283,10 +274,13 @@ export function registerWalkerOSProviders(
           return null;
         }
 
-        // $var.name
-        const varMatch = matchAtCursor(inlineGlobal(REF_VAR));
+        // $var.name(.deep.path)?
+        const VAR_INLINE =
+          /\$var\.([a-zA-Z_][a-zA-Z0-9_]*)(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*/g;
+        const varMatch = matchAtCursor(VAR_INLINE);
         if (varMatch && context.variables) {
           const name = varMatch[1];
+          const fullToken = varMatch[0];
           if (name in context.variables) {
             const value = context.variables[name];
             return {
@@ -294,11 +288,11 @@ export function registerWalkerOSProviders(
                 startLineNumber: position.lineNumber,
                 startColumn: varMatch.index + 1,
                 endLineNumber: position.lineNumber,
-                endColumn: varMatch.index + varMatch[0].length + 1,
+                endColumn: varMatch.index + fullToken.length + 1,
               },
               contents: [
                 {
-                  value: `**Variable:** \`$var.${name}\`\n\n**Value:** \`${JSON.stringify(value)}\`\n\n*Resolved at runtime via variable interpolation*`,
+                  value: `**Variable:** \`${fullToken}\`\n\n**Value:** \`${JSON.stringify(value)}\`\n\n*Resolved at runtime via variable interpolation*`,
                 },
               ],
             };
@@ -307,34 +301,6 @@ export function registerWalkerOSProviders(
             contents: [
               {
                 value: `**Unknown variable** \`$var.${name}\`\n\nDefined variables: ${Object.keys(context.variables).join(', ') || 'none'}`,
-              },
-            ],
-          };
-        }
-
-        // $def.name
-        const defMatch = matchAtCursor(inlineGlobal(REF_DEF));
-        if (defMatch && context.definitions) {
-          const name = defMatch[1];
-          if (name in context.definitions) {
-            return {
-              range: {
-                startLineNumber: position.lineNumber,
-                startColumn: defMatch.index + 1,
-                endLineNumber: position.lineNumber,
-                endColumn: defMatch.index + defMatch[0].length + 1,
-              },
-              contents: [
-                {
-                  value: `**Definition:** \`$def.${name}\`\n\n*Injects reusable config fragment at runtime*`,
-                },
-              ],
-            };
-          }
-          return {
-            contents: [
-              {
-                value: `**Unknown definition** \`$def.${name}\`\n\nDefined: ${Object.keys(context.definitions).join(', ') || 'none'}`,
               },
             ],
           };

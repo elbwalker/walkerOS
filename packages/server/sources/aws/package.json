@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-source-aws",
   "description": "AWS server sources for walkerOS (Lambda, API Gateway, Function URLs)",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "tsup --silent",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "clean": "rm -rf .turbo && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.ts*\"",
@@ -21,14 +21,16 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.0.0"
+    "@aws-sdk/client-sqs": "^3.952.0",
+    "@aws-sdk/client-sns": "^3.952.0",
+    "@walkeros/core": "4.0.1"
   },
   "peerDependencies": {
     "@types/aws-lambda": "^8.10.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.159",
-    "@walkeros/collector": "4.0.0"
+    "@walkeros/collector": "4.0.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
@@ -46,7 +48,8 @@
     ],
     "docs": "https://www.walkeros.io/docs/sources/server/aws",
     "exports": {
-      "sourceLambda": "AWS Lambda event source"
+      "sourceLambda": "AWS Lambda event source",
+      "sourceSqs": "AWS SQS event source (long-running poll-and-forward, with setup lifecycle)"
     }
   },
   "keywords": [
@@ -70,6 +73,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./sqs": {
+      "types": "./dist/sqs/index.d.ts",
+      "import": "./dist/sqs/index.mjs",
+      "require": "./dist/sqs/index.js"
     },
     "./dev": {
       "types": "./dist/dev.d.ts",

@@ -1,0 +1,186 @@
+---
+title: Google Pub/Sub
+description: 'Server-side event publishing to Google Cloud Pub/Sub topics with per-key ordering and dynamic attributes'
+path: /docs/destinations/server/pubsub
+sidebar_position: 3
+package: '@walkeros/server-destination-gcp'
+---
+
+import gcpData from '@walkeros/server-destination-gcp/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+export const data = {
+  ...gcpData,
+  schemas: {
+    settings: gcpData.schemas?.pubsubSettings,
+    mapping: gcpData.schemas?.pubsubMapping,
+  },
+  examples: {},
+};
+
+# Google Pub/Sub
+
+<PackageLink env="server" github="packages/server/destinations/gcp" npm="@walkeros/server-destination-gcp" />
+
+Server-side event publishing to [Google Cloud Pub/Sub](https://cloud.google.com/pubsub) topics. Each event is serialized as JSON, optionally keyed for per-message ordering, and published via the official `@google-cloud/pubsub` SDK. Supports Application Default Credentials, service account JSON, or pre-configured client injection. Per-rule topic, ordering-key, and attribute overrides. Idempotent topic provisioning with EU storage policy by default.
+
+The destination ships inside `@walkeros/server-destination-gcp` alongside BigQuery; install the package once and import `destinationPubSub` for Pub/Sub.
+
+<WhereThisFits
+  pre={<>Pub/Sub is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Google Pub/Sub', highlight: true } },
+  }}
+  post={<>Publishes events to a Pub/Sub topic for fan-out, asynchronous processing, cross-region delivery, and integration with downstream consumers (Dataflow, Cloud Functions, Cloud Run, custom subscribers).</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-gcp`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationPubSub } from '@walkeros/server-destination-gcp';
+
+await startFlow({
+  destinations: {
+    pubsub: {
+      code: destinationPubSub,
+      config: {
+        settings: {
+          projectId: 'YOUR_PROJECT_ID',
+          topic: 'events',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "pubsub": {
+    "package": "@walkeros/server-destination-gcp",
+    "code": "destinationPubSub",
+    "config": {
+      "settings": {
+        "projectId": "YOUR_PROJECT_ID",
+        "topic": "events"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## Authentication
+
+Three modes, evaluated in order:
+
+1. **Application Default Credentials (ADC).** Nothing to configure beyond `projectId`. Works on GCP-native runtimes (Cloud Run, Cloud Functions, GKE, GCE) where the runtime service account is attached, and locally with `gcloud auth application-default login`.
+2. **Service account JSON.** Pass credentials via `settings.credentials`, either as a parsed object or a JSON string (the destination JSON-parses strings). Pair with `$env.NAME` to inject from an environment variable.
+3. **Pre-configured client.** Pass an existing `PubSub` SDK instance as `settings.client`. Useful for shared clients across destinations or custom transport configuration.
+
+When `settings.projectId` and `credentials.project_id` both resolve, the top-level `settings.projectId` wins. The runtime publish target stays unambiguous.
+
+## Ordering
+
+`orderingKey` is a `Mapping.Value` resolved per event. Truthy resolved values enable per-key ordering, the topic handle is constructed with `messageOrdering: true`, and the resolved key flows on the publish.
+
+```json
+{
+  "settings": {
+    "projectId": "my-project",
+    "topic": "user-events",
+    "orderingKey": "user.id"
+  }
+}
+```
+
+Per-rule overrides live under `mapping.<entity>.<action>.settings.orderingKey`.
+
+If a publish fails for an ordered key, Pub/Sub permanently halts subsequent publishes for that key until `topic.resumePublishing(key)` is called. The destination handles this automatically: on publish failure for an ordered key it calls `resumePublishing` immediately and re-throws so the caller observes the original error.
+
+## Attributes
+
+`settings.attributes` is a `Mapping.Map` of attribute name to mapping value. Each value is resolved per event and stringified. Per-rule overrides under `mapping.<entity>.<action>.settings.attributes` are merged onto the defaults.
+
+```json
+{
+  "settings": {
+    "projectId": "my-project",
+    "topic": "events",
+    "attributes": {
+      "tenant": "user.tenant_id",
+      "schema_version": { "value": "v4" }
+    }
+  }
+}
+```
+
+## Setup
+
+Provision the topic once per environment:
+
+<CodeSnippet
+  code={`walkeros setup destination.pubsub`}
+  language="bash"
+/>
+
+Idempotent: re-running on an existing topic logs `setup: topic exists` and runs drift detection. Drift on `messageStoragePolicy.allowedPersistenceRegions`, `messageRetentionDuration`, `kmsKeyName`, or `labels` emits `WARN setup.drift {...}` and never auto-mutates. Migrations are an operator decision.
+
+`config.setup`:
+
+- `false` (default): no provisioning. Operator must run setup explicitly.
+- `true`: provisions with safe defaults (EU multi-region storage policy).
+- `{ messageStoragePolicy, messageRetentionDuration, kmsKeyName, labels }`: object form for explicit overrides.
+
+Default storage regions: `['europe-west1', 'europe-west3', 'europe-west4']` (EU multi-region). Override `messageStoragePolicy.allowedPersistenceRegions` for projects with org policies that restrict geography.
+
+The provisioning identity needs `pubsub.topics.create` and `pubsub.topics.get` on the project. The runtime publish identity needs `roles/pubsub.publisher` on the topic itself.
+
+Subscription provisioning is owned by the [Pub/Sub source](/docs/sources/server/pubsub), not this destination.
+
+## Emulator
+
+The official Pub/Sub emulator runs locally for development:
+
+<CodeSnippet
+  code={`gcloud beta emulators pubsub start --host-port=localhost:8085
+export PUBSUB_EMULATOR_HOST=localhost:8085`}
+  language="bash"
+/>
+
+The SDK automatically picks up `PUBSUB_EMULATOR_HOST`. For explicit configuration, set `settings.apiEndpoint` (e.g. `localhost:8085`).
+
+## Troubleshooting
+
+- **`NOT_FOUND` on publish**: the topic does not exist. Run `walkeros setup destination.<id>` once.
+- **`PERMISSION_DENIED` / `UNAUTHENTICATED`**: the runtime service account lacks `roles/pubsub.publisher` on the topic, or ADC is not configured. The destination logs the actionable message including the topic and project IDs.
+- **Ordering stuck**: a previous publish for an ordering key failed. The destination calls `resumePublishing` automatically; if stalls persist, check publish-side error logs for the original failure.
+
+## Next steps
+
+- [Pub/Sub source](/docs/sources/server/pubsub) for consuming events from a Pub/Sub topic
+- [GCP package overview](/docs/destinations/server/gcp) for BigQuery and shared GCP setup

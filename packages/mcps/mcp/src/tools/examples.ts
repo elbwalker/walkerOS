@@ -155,7 +155,7 @@ async function flowExamplesHandlerBody(input: unknown) {
     };
     if (examples.length === 0) {
       hints.warnings = [
-        'No examples found. Add examples to step definitions in your flow config for testing.',
+        'No examples found. Add examples to step entries in your flow config for testing.',
       ];
     }
     return mcpResult(result, hints);

@@ -1,20 +1,81 @@
 import pacote from 'pacote';
 import path from 'path';
 import fs from 'fs-extra';
+import { readFile } from 'fs/promises';
+import os from 'os';
 import semver from 'semver';
 import { resolveLocalPackage, copyLocalPackage } from '../../core/index.js';
 import type { Logger } from '@walkeros/core';
 import { getPackageCacheKey } from '../../core/cache-utils.js';
 import { getTmpPath } from '../../core/tmp.js';
 
-const PACKAGE_DOWNLOAD_TIMEOUT_MS = 60000;
-const PACOTE_OPTS = {
-  registry: 'https://registry.npmjs.org',
+export const PACKAGE_DOWNLOAD_TIMEOUT_MS = 60000;
+
+export interface NpmConfig {
+  registry: string;
+  [key: string]: unknown;
+}
+
+export const PACOTE_OPTS: NpmConfig = {
+  registry: 'https://registry.npmjs.org/',
   preferOnline: true,
   where: undefined,
 };
 
-async function withTimeout<T>(
+/**
+ * Walks user + project .npmrc files and merges into a flat config object
+ * pacote consumes. Project-level overrides user-level. Tiny INI parser
+ * (no sections, surrounding quotes stripped, ${VAR} expansion preserves
+ * literal on miss so silent auth failures become loud).
+ */
+export async function loadNpmConfigForPacote(
+  projectDir = process.cwd(),
+  homeDir = os.homedir(),
+): Promise<NpmConfig> {
+  const merged: Record<string, string> = {};
+  const sources = [
+    path.join(homeDir, '.npmrc'),
+    path.join(projectDir, '.npmrc'),
+  ];
+  for (const file of sources) {
+    let content: string;
+    try {
+      content = await readFile(file, 'utf-8');
+    } catch {
+      continue;
+    }
+    for (const rawLine of content.split('\n')) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#') || line.startsWith(';')) continue;
+      const eq = line.indexOf('=');
+      if (eq < 0) continue;
+      const key = line.slice(0, eq).trim();
+      let value = line.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      value = value.replace(
+        /\$\{([^}]+)\}/g,
+        (match, v) => process.env[v] ?? match,
+      );
+      merged[key] = value;
+    }
+  }
+  let registry = merged['registry'] ?? 'https://registry.npmjs.org/';
+  if (!registry.endsWith('/')) registry = `${registry}/`;
+  for (const key of Object.keys(merged)) {
+    if (key.endsWith(':registry') && key.startsWith('@')) {
+      const v = merged[key];
+      if (!v.endsWith('/')) merged[key] = `${v}/`;
+    }
+  }
+  return { ...merged, registry, preferOnline: true };
+}
+
+export async function withTimeout<T>(
   promise: Promise<T>,
   ms: number,
   errorMessage: string,
@@ -88,6 +149,7 @@ export async function collectAllSpecs(
   logger: Logger.Instance,
   configDir?: string,
   overrides: Record<string, string> = {},
+  npmConfig: NpmConfig = PACOTE_OPTS,
 ): Promise<Map<string, VersionSpec[]>> {
   const allSpecs = new Map<string, VersionSpec[]>();
   const visited = new Set<string>();
@@ -145,19 +207,27 @@ export async function collectAllSpecs(
 
   while (queue.length > 0) {
     const item = queue.shift()!;
+
+    // Record this spec for EVERY queue item — the same name@spec can arrive
+    // from multiple consumers (e.g., common AND pubsub both declare arrify@^2.0.0),
+    // and the resolver needs to know all of them to nest correctly under each.
+    // De-dup only exact (name@spec, from) tuples defensively.
+    if (!allSpecs.has(item.name)) allSpecs.set(item.name, []);
+    const existing = allSpecs.get(item.name)!;
+    if (!existing.some((s) => s.spec === item.spec && s.from === item.from)) {
+      existing.push({
+        spec: item.spec,
+        source: item.source,
+        from: item.from,
+        optional: item.optional,
+        localPath: item.localPath,
+      });
+    }
+
+    // Walk transitive deps only once per name@spec (prevents cycles).
     const visitKey = `${item.name}@${item.spec}`;
     if (visited.has(visitKey)) continue;
     visited.add(visitKey);
-
-    // Record this spec
-    if (!allSpecs.has(item.name)) allSpecs.set(item.name, []);
-    allSpecs.get(item.name)!.push({
-      spec: item.spec,
-      source: item.source,
-      from: item.from,
-      optional: item.optional,
-      localPath: item.localPath,
-    });
 
     // Resolve transitive deps for local packages by reading package.json
     if (item.localPath) {
@@ -227,7 +297,7 @@ export async function collectAllSpecs(
     let manifest: ManifestWithMeta;
     try {
       manifest = await withTimeout(
-        pacote.manifest(`${item.name}@${item.spec}`, PACOTE_OPTS),
+        pacote.manifest(`${item.name}@${item.spec}`, npmConfig),
         PACKAGE_DOWNLOAD_TIMEOUT_MS,
         `Manifest fetch timed out: ${item.name}@${item.spec}`,
       );
@@ -281,10 +351,11 @@ const SOURCE_PRIORITY: Record<VersionSpec['source'], number> = {
   peerDependency: 3,
 };
 
-export function resolveVersionConflicts(
+export async function resolveVersionConflicts(
   allSpecs: Map<string, VersionSpec[]>,
   logger: Logger.Instance,
-): ResolutionResult {
+  npmConfig: pacote.Options = {},
+): Promise<ResolutionResult> {
   const topLevel = new Map<string, ResolvedPackage>();
   const nested: NestedPackage[] = [];
 
@@ -330,6 +401,28 @@ export function resolveVersionConflicts(
     let chosenVersion: string;
     const alreadyNested = new Set<string>();
 
+    function nestLoser(spec: VersionSpec, alreadyNested: Set<string>): void {
+      if (spec.localPath) return;
+      if (alreadyNested.has(spec.spec)) return;
+      // Skip non-semver loser specs (git URLs, file:, tags) — pacote can resolve them but
+      // we cannot statically verify satisfaction. Log and let pacote handle it.
+      if (
+        semver.valid(spec.spec) === null &&
+        semver.validRange(spec.spec) === null
+      ) {
+        logger.debug(
+          `Skipping non-semver loser spec for ${name}: ${spec.spec} from ${spec.from}`,
+        );
+        return;
+      }
+      // Gather all consumers sharing this exact spec string (mirror line 414-417 pattern)
+      const consumers = activeSpecs
+        .filter((s) => s.spec === spec.spec)
+        .map((s) => s.from);
+      nested.push({ name, version: spec.spec, consumers });
+      alreadyNested.add(spec.spec);
+    }
+
     if (directExact) {
       // Direct exact version always wins
       chosenVersion = directExact.spec;
@@ -363,40 +456,56 @@ export function resolveVersionConflicts(
       }
     }
 
-    // Validate against ALL specs (including peerDeps)
+    // Resolve chosenVersion to a concrete version we can validate against.
+    // If chosen is already exact, use it directly. If it's a range/tag, ask pacote
+    // what concrete version it would actually install.
+    let concreteVersion: string;
     if (semver.valid(chosenVersion)) {
-      for (const spec of specs) {
-        if (spec.localPath) continue;
-        if (semver.valid(spec.spec)) {
-          // Both exact — must match
-          if (spec.spec !== chosenVersion) {
-            if (spec.source === 'peerDependency') {
-              logger.warn(
-                `${name}@${chosenVersion} differs from peer constraint ${spec.spec} (from ${spec.from})`,
-              );
-            } else if (!alreadyNested.has(spec.spec)) {
-              // Site C: transitive exact differs from chosen — nest it
-              nested.push({ name, version: spec.spec, consumers: [spec.from] });
-              alreadyNested.add(spec.spec);
-            }
-          }
-        } else {
-          // Chosen is exact, spec is range — check satisfaction
-          if (
-            !semver.satisfies(chosenVersion, spec.spec, {
+      concreteVersion = chosenVersion;
+    } else {
+      try {
+        const manifest = await pacote.manifest(
+          `${name}@${chosenVersion}`,
+          npmConfig,
+        );
+        concreteVersion = manifest.version;
+      } catch (err) {
+        if (process.env.BUNDLER_STRICT_RANGES === '0') {
+          logger.warn(
+            `Could not resolve ${name}@${chosenVersion} for strict validation: ${err instanceof Error ? err.message : String(err)}. Skipping range validation (BUNDLER_STRICT_RANGES=0).`,
+          );
+          topLevel.set(name, { name, version: chosenVersion });
+          continue;
+        }
+        throw new Error(
+          `Failed to resolve ${name}@${chosenVersion} for range conflict validation. ` +
+            `Set BUNDLER_STRICT_RANGES=0 to bypass with a warning. ` +
+            `Original error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    // Validate every spec against the concrete version. Non-satisfying specs get nested.
+    for (const spec of specs) {
+      if (spec.localPath) continue;
+      if (spec.spec === chosenVersion) continue; // identical strings can't conflict
+
+      const satisfied = semver.valid(spec.spec)
+        ? spec.spec === concreteVersion
+        : semver.validRange(spec.spec)
+          ? semver.satisfies(concreteVersion, spec.spec, {
               includePrerelease: true,
             })
-          ) {
-            if (spec.source === 'peerDependency') {
-              logger.warn(
-                `${name}@${chosenVersion} may not satisfy peer constraint ${spec.spec} (from ${spec.from})`,
-              );
-            } else {
-              // Site B: range not satisfied — nest the range
-              nested.push({ name, version: spec.spec, consumers: [spec.from] });
-            }
-          }
-        }
+          : true; // non-semver (git, file:, tag) — let pacote handle, don't nest blindly
+
+      if (satisfied) continue;
+
+      if (spec.source === 'peerDependency') {
+        logger.warn(
+          `${name}@${concreteVersion} does not satisfy peer constraint ${spec.spec} (from ${spec.from})`,
+        );
+      } else {
+        nestLoser(spec, alreadyNested);
       }
     }
 
@@ -424,7 +533,12 @@ export function resolveVersionConflicts(
 // Phase 3: Install resolved packages
 // ============================================================
 
-export async function downloadPackages(
+export interface DownloadResult {
+  packagePaths: Map<string, string>;
+  resolution: ResolutionResult;
+}
+
+export async function downloadPackagesWithResolution(
   packages: Package[],
   targetDir: string,
   logger: Logger.Instance,
@@ -432,7 +546,34 @@ export async function downloadPackages(
   configDir?: string,
   tmpDir?: string,
   overrides: Record<string, string> = {},
-): Promise<Map<string, string>> {
+  npmConfig: NpmConfig = PACOTE_OPTS,
+): Promise<DownloadResult> {
+  return downloadPackagesImpl(
+    packages,
+    targetDir,
+    logger,
+    useCache,
+    configDir,
+    tmpDir,
+    overrides,
+    npmConfig,
+  );
+}
+
+/**
+ * Shared body for `downloadPackagesWithResolution`. Returns both the
+ * installed package paths and the underlying ResolutionResult.
+ */
+async function downloadPackagesImpl(
+  packages: Package[],
+  targetDir: string,
+  logger: Logger.Instance,
+  useCache: boolean,
+  configDir: string | undefined,
+  tmpDir: string | undefined,
+  overrides: Record<string, string>,
+  npmConfig: NpmConfig,
+): Promise<DownloadResult> {
   const packagePaths = new Map<string, string>();
 
   // Track user-specified packages (only these are logged)
@@ -448,10 +589,12 @@ export async function downloadPackages(
     logger,
     configDir,
     overrides,
+    npmConfig,
   );
 
   // Phase 2: Resolve conflicts
-  const { topLevel, nested } = resolveVersionConflicts(allSpecs, logger);
+  const resolution = await resolveVersionConflicts(allSpecs, logger, npmConfig);
+  const { topLevel, nested } = resolution;
 
   // Phase 3: Install each resolved package exactly once
   await fs.ensureDir(targetDir);
@@ -507,7 +650,7 @@ export async function downloadPackages(
         process.env.NPM_CACHE_DIR || getTmpPath(tmpDir, 'cache', 'npm');
       await withTimeout(
         pacote.extract(packageSpec, packageDir, {
-          ...PACOTE_OPTS,
+          ...npmConfig,
           cache: cacheDir,
         }),
         PACKAGE_DOWNLOAD_TIMEOUT_MS,
@@ -541,7 +684,7 @@ export async function downloadPackages(
     if (!semver.valid(nestedPkg.version)) {
       try {
         const manifest = await withTimeout(
-          pacote.manifest(resolvedSpec, PACOTE_OPTS),
+          pacote.manifest(resolvedSpec, npmConfig),
           PACKAGE_DOWNLOAD_TIMEOUT_MS,
           `Manifest fetch timed out: ${resolvedSpec}`,
         );
@@ -565,7 +708,7 @@ export async function downloadPackages(
           process.env.NPM_CACHE_DIR || getTmpPath(tmpDir, 'cache', 'npm');
         await withTimeout(
           pacote.extract(resolvedSpec, nestedDir, {
-            ...PACOTE_OPTS,
+            ...npmConfig,
             cache: cacheDir,
           }),
           PACKAGE_DOWNLOAD_TIMEOUT_MS,
@@ -580,7 +723,7 @@ export async function downloadPackages(
     }
   }
 
-  return packagePaths;
+  return { packagePaths, resolution };
 }
 
 // ============================================================

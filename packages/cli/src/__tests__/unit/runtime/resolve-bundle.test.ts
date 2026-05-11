@@ -17,7 +17,7 @@ beforeEach(() => {
 
 const { isStdinPiped, readStdin } = require('../../../core/stdin.js');
 
-const DEFAULT_WRITE_PATH = '/tmp/walkeros-bundle.mjs';
+const DEFAULT_WRITE_PATH = '/tmp/walkeros-flow.mjs';
 
 describe('resolveBundle', () => {
   afterEach(() => {

@@ -90,42 +90,44 @@ function validateReference(
  * @param inline - InlineCode object with push, optional init, optional type
  * @param config - Component configuration
  * @param env - Optional environment configuration
- * @param chain - Optional chain value (next for sources/transformers, before for destinations)
- * @param chainPropertyName - Name of chain property in output ('next' | 'before')
+ * @param chains - Optional chain values: `before` (post-collector for destinations,
+ *   pre-push for transformers, pre-source for sources) and `next`
+ *   (pre-collector for sources/transformers, post-push for destinations).
  * @param isDestination - Whether this is a destination (uses different code structure)
  */
 function generateInlineCode(
   inline: Flow.Code,
   config: object,
   env?: object,
-  chain?: string | string[],
-  chainPropertyName?: 'next' | 'before',
+  chains?: { before?: string | string[]; next?: string | string[] },
   isDestination?: boolean,
 ): string {
   const pushFn = inline.push.replace('$code:', '');
   const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
   const typeLine = inline.type ? `type: '${inline.type}',` : '';
-  const chainLine =
-    chain && chainPropertyName
-      ? `${chainPropertyName}: ${JSON.stringify(chain)},`
-      : '';
+
+  const chainLines: string[] = [];
+  if (chains?.before !== undefined) {
+    chainLines.push(`before: ${JSON.stringify(chains.before)}`);
+  }
+  if (chains?.next !== undefined) {
+    chainLines.push(`next: ${JSON.stringify(chains.next)}`);
+  }
+  const chainBlock = chainLines.length
+    ? `,\n      ${chainLines.join(',\n      ')}`
+    : '';
 
   // Destinations have a different structure - code is the instance directly
   if (isDestination) {
     return `{
       code: {
         ${typeLine}
-        config: ${JSON.stringify(config || {})},
+        config: ${processConfigValue(config || {})},
         ${initFn ? `init: ${initFn},` : ''}
         push: ${pushFn}
       },
-      config: ${JSON.stringify(config || {})},
-      env: ${JSON.stringify(env || {})}${
-        chain
-          ? `,
-      ${chainLine.slice(0, -1)}`
-          : ''
-      }
+      config: ${processConfigValue(config || {})},
+      env: ${processConfigValue(env || {})}${chainBlock}
     }`;
   }
 
@@ -137,18 +139,19 @@ function generateInlineCode(
         ${initFn ? `init: ${initFn},` : ''}
         push: ${pushFn}
       }),
-      config: ${JSON.stringify(config || {})},
-      env: ${JSON.stringify(env || {})}${
-        chain
-          ? `,
-      ${chainLine.slice(0, -1)}`
-          : ''
-      }
+      config: ${processConfigValue(config || {})},
+      env: ${processConfigValue(env || {})}${chainBlock}
     }`;
 }
 import type { BuildOptions } from '../../types/bundle.js';
-import { downloadPackages } from './package-manager.js';
+import {
+  downloadPackagesWithResolution,
+  loadNpmConfigForPacote,
+} from './package-manager.js';
+import { traceAndCopy, assertDepsTraced } from './nft-trace.js';
+import { assertConsumerDepsSatisfied } from './assert-consumer-deps.js';
 import type { Logger } from '@walkeros/core';
+import { getHashServer } from '@walkeros/server-core';
 import { getTmpPath } from '../../core/tmp.js';
 import { toFileImportSpecifier } from '../../core/import-specifier.js';
 import {
@@ -159,6 +162,7 @@ import {
   cacheCode,
   ensureCodeOnDisk,
 } from '../../core/build-cache.js';
+import type { CodeCacheKeyInputs } from '../../core/build-cache.js';
 
 export interface BundleStats {
   totalSize: number;
@@ -207,10 +211,18 @@ export async function copyIncludes(
 /**
  * Generate cache key content from flow config and build options.
  * Excludes non-deterministic fields (tempDir, output) from cache key.
+ *
+ * Hashes pacote's resolved top-level set as the dependency-version signal:
+ * a version bump in `flow.<name>.config.bundle.packages` (or any transitive re-resolution
+ * pacote performs) produces a new `versionsHash`, which produces a new
+ * cache key, which produces a new traced `node_modules/`. The user does
+ * NOT maintain a `package-lock.json` for step packages in the zero-setup
+ * design, so pacote's resolution is the authoritative version signal.
  */
 function generateCacheKeyContent(
   flowSettings: Flow,
   buildOptions: BuildOptions,
+  versionsHash: string,
 ): string {
   const configForCache = {
     flow: flowSettings,
@@ -220,6 +232,7 @@ function generateCacheKeyContent(
       tempDir: undefined,
       output: undefined,
     },
+    versionsHash,
   };
   return JSON.stringify(configForCache);
 }
@@ -238,50 +251,28 @@ export async function bundleCore(
     buildOptions.tempDir || getTmpPath(undefined, `walkeros-build-${buildId}`);
   const CACHE_DIR = buildOptions.tempDir || getTmpPath();
 
-  // Check build cache if caching is enabled
-  if (buildOptions.cache !== false) {
-    const configContent = generateCacheKeyContent(flowSettings, buildOptions);
+  // Resolve npm config (registry + scope overrides + auth tokens) from .npmrc
+  // once per build. Threaded into every pacote call so private registries and
+  // scoped tokens (e.g. @elbwalker:registry=...) work the same as `npm install`.
+  const npmConfig = await loadNpmConfigForPacote(
+    buildOptions.configDir ?? process.cwd(),
+  );
 
-    const cached = await isBuildCached(configContent, CACHE_DIR);
-    if (cached) {
-      const cachedBuild = await getCachedBuild(configContent, CACHE_DIR);
-      if (cachedBuild) {
-        logger.debug('Using cached build');
+  // Resolve the deploy artifact directory once so stale-artifact cleanup,
+  // sidecar emission, and the install pipeline all agree on which folder
+  // hosts `flow.mjs` + `node_modules/` + `package.json` + `package-lock.json`.
+  const outputPath = path.resolve(buildOptions.output);
+  const outputDirAbs = path.dirname(outputPath);
 
-        // Write cached build to output
-        const outputPath = path.resolve(buildOptions.output);
-        await fs.ensureDir(path.dirname(outputPath));
-        await fs.writeFile(outputPath, cachedBuild);
-
-        const stats = await fs.stat(outputPath);
-        const sizeKB = (stats.size / 1024).toFixed(1);
-        logger.info(`Output: ${outputPath} (${sizeKB} KB, cached)`);
-
-        // Return stats if requested
-        if (showStats) {
-          const stats = await fs.stat(outputPath);
-          // Generate basic package stats from buildOptions
-          const packageStats = Object.entries(buildOptions.packages).map(
-            ([name, pkg]) => ({
-              name: `${name}@${pkg.version || 'latest'}`,
-              size: 0, // Size estimation not available for cached builds
-            }),
-          );
-          // Check user code for wildcard imports (same logic as collectBundleStats)
-          const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(
-            buildOptions.code || '',
-          );
-          return {
-            totalSize: stats.size,
-            packages: packageStats,
-            buildTime: Date.now() - bundleStartTime,
-            treeshakingEffective: !hasWildcardImports,
-          };
-        }
-        return;
-      }
-    }
-  }
+  // Stale cleanup: a previous build with externals can leave behind
+  // node_modules/, package.json, and package-lock.json that no longer match
+  // the current flow. We unconditionally purge them at the top so a flow
+  // that USED to declare externals but no longer does cannot ship stale
+  // install artifacts. Runs before any cache check so it applies on cache
+  // hits too.
+  await fs.remove(path.join(outputDirAbs, 'node_modules'));
+  await fs.remove(path.join(outputDirAbs, 'package.json'));
+  await fs.remove(path.join(outputDirAbs, 'package-lock.json'));
 
   try {
     // Step 1: Ensure temporary directory exists
@@ -343,33 +334,159 @@ export async function bundleCore(
         path: packageConfig.path, // Pass local path if defined
       }),
     );
-    // downloadPackages adds 'node_modules' subdirectory automatically
-    const packagePaths = await downloadPackages(
-      packagesArray,
-      TEMP_DIR,
-      logger,
-      buildOptions.cache,
-      buildOptions.configDir, // For resolving relative local paths
-      CACHE_DIR,
-      buildOptions.overrides,
-    );
+    // downloadPackagesWithResolution adds 'node_modules' subdirectory
+    // automatically and returns the underlying ResolutionResult so the
+    // install pipeline can pin extracted versions to the same graph the
+    // bundler resolved (no second resolve, no version drift).
+    const { packagePaths, resolution: resolutionResult } =
+      await downloadPackagesWithResolution(
+        packagesArray,
+        TEMP_DIR,
+        logger,
+        buildOptions.cache,
+        buildOptions.configDir, // For resolving relative local paths
+        CACHE_DIR,
+        buildOptions.overrides,
+        npmConfig,
+      );
 
-    // Fix @walkeros packages to have proper ESM exports
-    // This ensures Node resolves to .mjs files instead of .js (CJS)
+    // Fix @walkeros packages to have proper ESM exports and scan every
+    // resolved package's manifest for the legacy `walkerOS.bundle` field.
+    // The annotation is silently ignored in @walkeros/cli@4.x (nft tracing
+    // replaces it). One-time WARN per package nudges authors to clean up.
+    const warnedBundleFieldPackages = new Set<string>();
     for (const [pkgName, pkgPath] of packagePaths.entries()) {
-      if (pkgName.startsWith('@walkeros/')) {
-        const pkgJsonPath = path.join(pkgPath, 'package.json');
-        const pkgJson = await fs.readJSON(pkgJsonPath);
+      const pkgJsonPath = path.join(pkgPath, 'package.json');
+      let pkgJson: Record<string, unknown>;
+      try {
+        pkgJson = await fs.readJSON(pkgJsonPath);
+      } catch {
+        continue;
+      }
 
+      const walkerOSBlock = pkgJson.walkerOS;
+      if (
+        walkerOSBlock &&
+        typeof walkerOSBlock === 'object' &&
+        !Array.isArray(walkerOSBlock)
+      ) {
+        const bundleField = (walkerOSBlock as Record<string, unknown>).bundle;
+        if (
+          bundleField &&
+          typeof bundleField === 'object' &&
+          !Array.isArray(bundleField) &&
+          !warnedBundleFieldPackages.has(pkgName)
+        ) {
+          warnedBundleFieldPackages.add(pkgName);
+          const keys = Object.keys(bundleField as Record<string, unknown>)
+            .sort()
+            .join(', ');
+          logger.warn(
+            `walkeros: package ${pkgName} still declares walkerOS.bundle.${keys}; this is ignored in @walkeros/cli@4.x. Tell the package author to remove it.`,
+          );
+        }
+      }
+
+      if (pkgName.startsWith('@walkeros/')) {
         // Add exports field to force ESM resolution
-        if (!pkgJson.exports && pkgJson.module) {
+        const exportsField = pkgJson.exports;
+        const moduleField = pkgJson.module;
+        if (!exportsField && typeof moduleField === 'string') {
           pkgJson.exports = {
             '.': {
-              import: pkgJson.module,
+              import: moduleField,
               require: pkgJson.main,
             },
           };
           await fs.writeJSON(pkgJsonPath, pkgJson, { spaces: 2 });
+        }
+      }
+    }
+
+    // Defense-in-depth: walk every installed package and assert that each
+    // declared dependency resolves (Node-style nearest-ancestor lookup) to a
+    // satisfying version. Catches resolver bugs, future regressions, and
+    // unforeseen hoisting issues before esbuild/nft pick up wrong code.
+    if (process.env.BUNDLER_STRICT_RANGES !== '0') {
+      await assertConsumerDepsSatisfied(TEMP_DIR, logger);
+    }
+
+    // Hash pacote's resolved top-level set once per build. Used in both the
+    // L1 cache-key check below and the L2 code-cache key further down. A
+    // version bump in `flow.<name>.config.bundle.packages` (or any pacote re-resolution)
+    // produces a new hash, which produces a new cache key, which forces a
+    // fresh trace + esbuild. This is the right invalidation signal because
+    // pacote (not the user's package-lock.json) is the install layer.
+    const sortedVersions = [...resolutionResult.topLevel.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, p]) => `${name}@${p.version}`);
+    const versionsHash = await getHashServer(sortedVersions.join('\n'), 12);
+    // Step packages externalized by esbuild and asserted by nft trace. Use
+    // the packages the user (or auto-add) actually declared, not pacote's
+    // full top-level set: peer dependencies pacote installs (e.g. zod for
+    // schema validation) are not necessarily imported by the runtime
+    // bundle. Tree-shaking drops the bare import, nft never sees it, and
+    // the cross-check would otherwise false-positive. The intent that
+    // matters here is "what step packages does the flow declare".
+    const expectedTopLevelPackages = Object.keys(buildOptions.packages).filter(
+      (name) => !name.startsWith('.') && !name.startsWith('/'),
+    );
+
+    // Check build cache (Level 1 fast path) — moved after package resolution
+    // so the cache key reflects the resolved dependency graph (versionsHash).
+    if (buildOptions.cache !== false) {
+      const configContent = generateCacheKeyContent(
+        flowSettings,
+        buildOptions,
+        versionsHash,
+      );
+
+      const cached = await isBuildCached(configContent, CACHE_DIR);
+      if (cached) {
+        const cachedBuild = await getCachedBuild(configContent, CACHE_DIR);
+        if (cachedBuild) {
+          logger.debug('Using cached build');
+
+          await fs.ensureDir(path.dirname(outputPath));
+          await fs.writeFile(outputPath, cachedBuild);
+
+          if (buildOptions.platform === 'node') {
+            // Server path: trace from the cached bundle, copy files into
+            // `outDir/node_modules/`, write the informational sidecar.
+            await runNftServerPath(
+              outputPath,
+              flowSettings,
+              buildOptions,
+              TEMP_DIR,
+              expectedTopLevelPackages,
+              logger,
+            );
+          }
+          // Web flows don't ship a sidecar node_modules — esbuild emits a
+          // self-contained IIFE.
+
+          const stats = await fs.stat(outputPath);
+          const sizeKB = (stats.size / 1024).toFixed(1);
+          logger.info(`Output: ${outputPath} (${sizeKB} KB, cached)`);
+
+          if (showStats) {
+            const packageStats = Object.entries(buildOptions.packages).map(
+              ([name, pkg]) => ({
+                name: `${name}@${pkg.version || 'latest'}`,
+                size: 0, // Size estimation not available for cached builds
+              }),
+            );
+            const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(
+              buildOptions.code || '',
+            );
+            return {
+              totalSize: stats.size,
+              packages: packageStats,
+              buildTime: Date.now() - bundleStartTime,
+              treeshakingEffective: !hasWildcardImports,
+            };
+          }
+          return;
         }
       }
     }
@@ -390,16 +507,36 @@ export async function bundleCore(
       packagePaths,
     );
 
-    const outputPath = path.resolve(buildOptions.output);
-
-    // Ensure output directory exists
+    // outputPath was resolved at the top of bundleCore (alongside the stale
+    // cleanup paths). Just ensure its directory exists.
     await fs.ensureDir(path.dirname(outputPath));
 
     // === LEVEL 2: Two-phase build (code cache) ===
+    // Build the L2 cache key inputs once. This must include every input that
+    // affects stage-1 output, otherwise different builds with identical entry
+    // code (but e.g. different platform) would alias to the same cache slot
+    // and stage-2 would receive stale stage-1 bytes.
+    //
+    // `versionsHash` was hoisted above the L1 cache check (it is also the
+    // dependency-version signal in `generateCacheKeyContent`). Reuse it here
+    // so a transitive version bump busts both cache layers consistently.
+    const codeKeyInputs: CodeCacheKeyInputs = {
+      externals: new Set(),
+      platform: buildOptions.platform === 'node' ? 'node' : 'browser',
+      target: resolveTarget(buildOptions),
+      nodeMajor: parseInt(process.versions.node.split('.')[0], 10),
+      format: buildOptions.format,
+      minify: buildOptions.minify,
+      minifyOptions: buildOptions.minifyOptions,
+      windowCollector: buildOptions.windowCollector,
+      windowElb: buildOptions.windowElb,
+      versionsHash,
+    };
+
     // Check if we have a cached compilation of this exact code entry
     let compiledCode: string | null = null;
     if (buildOptions.cache !== false) {
-      compiledCode = await getCachedCode(codeEntry, CACHE_DIR);
+      compiledCode = await getCachedCode(codeEntry, CACHE_DIR, codeKeyInputs);
     }
 
     if (compiledCode) {
@@ -423,6 +560,7 @@ export async function bundleCore(
         TEMP_DIR,
         packagePaths,
         logger,
+        expectedTopLevelPackages,
       );
 
       try {
@@ -442,7 +580,7 @@ export async function bundleCore(
 
       // Cache the compiled code for future builds
       if (buildOptions.cache !== false) {
-        await cacheCode(codeEntry, compiledCode, CACHE_DIR);
+        await cacheCode(codeEntry, compiledCode, CACHE_DIR, codeKeyInputs);
       }
     }
 
@@ -451,6 +589,7 @@ export async function bundleCore(
       codeEntry,
       compiledCode,
       CACHE_DIR,
+      codeKeyInputs,
     );
 
     if (buildOptions.skipWrapper || !hasFlow) {
@@ -502,13 +641,21 @@ export async function bundleCore(
           'process.env.NODE_ENV': '"production"',
           global: 'globalThis',
         };
-        stage2Options.target = buildOptions.target || 'es2018';
+        stage2Options.target = resolveTarget(buildOptions);
       } else {
-        stage2Options.external = getNodeExternals();
+        // Externalize node builtins AND step packages. Step packages must
+        // remain bare imports here too, otherwise stage 2 would re-bundle
+        // them after stage 1 carefully kept them external. nft traces the
+        // bare imports from the final bundle and copies code from
+        // `TEMP_DIR/node_modules/` to `dist/node_modules/`.
+        stage2Options.external = [
+          ...getNodeExternals(),
+          ...expectedTopLevelPackages,
+        ];
         stage2Options.banner = {
           js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
         };
-        stage2Options.target = buildOptions.target || 'node18';
+        stage2Options.target = resolveTarget(buildOptions);
       }
 
       try {
@@ -526,11 +673,30 @@ export async function bundleCore(
 
     // Cache the full build result if caching is enabled (Level 1 fast path)
     if (buildOptions.cache !== false) {
-      const configContent = generateCacheKeyContent(flowSettings, buildOptions);
+      const configContent = generateCacheKeyContent(
+        flowSettings,
+        buildOptions,
+        versionsHash,
+      );
       const buildOutput = await fs.readFile(outputPath, 'utf-8');
       await cacheBuild(configContent, buildOutput, CACHE_DIR);
       logger.debug('Build cached for future use');
     }
+
+    if (buildOptions.platform === 'node') {
+      // Server path: trace the just-emitted bundle, copy used files into
+      // `outDir/node_modules/`, write an informational sidecar package.json.
+      await runNftServerPath(
+        outputPath,
+        flowSettings,
+        buildOptions,
+        TEMP_DIR,
+        expectedTopLevelPackages,
+        logger,
+      );
+    }
+    // Web flows don't ship a sidecar node_modules — esbuild emits a
+    // self-contained IIFE.
 
     // Collect stats if requested
     let stats: BundleStats | undefined;
@@ -609,6 +775,19 @@ async function collectBundleStats(
   };
 }
 
+/**
+ * Resolve the effective esbuild `target` for a build. Single source of truth
+ * shared between `createEsbuildOptions` (where esbuild actually compiles) and
+ * the L2 cache-key construction in `bundle()`. Drift between these two would
+ * silently alias different builds onto the same cache slot.
+ */
+function resolveTarget(buildOptions: BuildOptions): string {
+  return (
+    buildOptions.target ??
+    (buildOptions.platform === 'node' ? 'node18' : 'es2018')
+  );
+}
+
 function createEsbuildOptions(
   buildOptions: BuildOptions,
   entryPath: string,
@@ -616,6 +795,7 @@ function createEsbuildOptions(
   tempDir: string,
   packagePaths: Map<string, string>,
   logger: Logger.Instance,
+  stepPackageExternals: string[] = [],
 ): esbuild.BuildOptions {
   // Don't use aliases - they cause esbuild to bundle even external packages
   // Instead, use absWorkingDir to point to temp directory where node_modules is
@@ -656,25 +836,26 @@ function createEsbuildOptions(
     // For browser bundles, let users handle Node.js built-ins as needed
     baseOptions.external = buildOptions.external || [];
   } else if (buildOptions.platform === 'node') {
-    // Only Node.js built-ins are external — everything else gets bundled.
-    // This makes server bundles self-contained (no node_modules needed at runtime).
+    // Node builtins are always external. Step packages (sources, destinations,
+    // transformers, stores resolved by pacote) are also externalized so the
+    // emitted entry stays small: nft traces those bare imports from the
+    // emitted bundle and copies the actual code from `tempDir/node_modules/`
+    // into the sibling `dist/node_modules/`. Without this, esbuild would
+    // inline every step package's source into flow.mjs and we would ship
+    // both the inline copy and the nft-traced copy. Decision #9 in the
+    // bundler-nft-redesign plan.
     const nodeExternals = getNodeExternals();
-    baseOptions.external = buildOptions.external
-      ? [...nodeExternals, ...buildOptions.external]
-      : nodeExternals;
+    const externalsParts = [nodeExternals, stepPackageExternals];
+    if (buildOptions.external) externalsParts.push(buildOptions.external);
+    baseOptions.external = externalsParts.flat();
 
     // createRequire shim is added in stage 2, not here.
     // Stage 1 produces importable ESM; stage 2 wraps it with the banner.
   }
 
-  // Set target if specified
-  if (buildOptions.target) {
-    baseOptions.target = buildOptions.target;
-  } else if (buildOptions.platform === 'node') {
-    baseOptions.target = 'node18';
-  } else {
-    baseOptions.target = 'es2018';
-  }
+  // Set target via shared resolver so the L2 cache key cannot drift from the
+  // value esbuild actually compiles against.
+  baseOptions.target = resolveTarget(buildOptions);
 
   return baseOptions;
 }
@@ -719,6 +900,105 @@ export function getNodeExternals(): string[] {
     externals.push(mod, `node:${mod}`, `${mod}/*`, `node:${mod}/*`);
   }
   return externals;
+}
+
+/**
+ * Server-only post-build pass: run nft on the just-emitted server bundle to
+ * copy every actually-used file into `outDir/node_modules/`, then write a
+ * minimal informational `package.json` next to it that lists the step
+ * packages declared by the flow. The artifact shape is deliberately
+ * directory-shaped: `{ flow.mjs, package.json, node_modules/ }`.
+ *
+ * `tempDir` is the pacote-populated install root (the same dir esbuild
+ * stage 1 used as `absWorkingDir`). We trace from there so nft and esbuild
+ * see the same `node_modules/` tree. The bundle at `outputPath` lives
+ * outside `tempDir`, so we stage a copy inside `tempDir` to give nft an
+ * entry whose relative path under `base` does not escape via `..`.
+ * `expectedPackages` is the pacote-resolved top-level set, used for the
+ * post-trace cross-check that catches dynamic-require regressions and
+ * hoisted-symlink mistakes.
+ */
+async function runNftServerPath(
+  outputPath: string,
+  flowSettings: Flow,
+  buildOptions: BuildOptions,
+  tempDir: string,
+  expectedPackages: string[],
+  logger: Logger.Instance,
+): Promise<void> {
+  const outDir = path.dirname(outputPath);
+
+  // Wire `flow.<name>.config.bundle.traceInclude` into the file tracer. The
+  // user-facing field is under the per-flow bundle block; the loader threads
+  // it through `buildOptions.traceInclude`. Each entry is a literal path or a
+  // glob (resolved against `tempDir`). `traceAndCopy` performs the expansion.
+  const flowExtraIncludes: string[] = [
+    ...(flowSettings.config?.bundle?.traceInclude ?? []),
+    ...(buildOptions.traceInclude ?? []),
+  ];
+
+  // Stage the just-emitted bundle into tempDir so nft sees an entry whose
+  // path is relative to `base` (without `..`). Without this, the path-
+  // escape guard in `traceAndCopy` rejects the entry's own fileList entry
+  // (resolved relative to base, it would point outside outDir).
+  const stagedEntry = path.join(tempDir, '__nft-flow.mjs');
+  await fs.copyFile(outputPath, stagedEntry);
+
+  let result;
+  try {
+    result = await traceAndCopy({
+      entry: stagedEntry,
+      base: tempDir,
+      outDir,
+      extraIncludes: flowExtraIncludes,
+    });
+  } finally {
+    // The staged copy is internal scaffolding; the real bundle stays at
+    // outputPath. Clean up the staged file but never touch outputPath.
+    await fs.remove(stagedEntry).catch(() => {});
+  }
+
+  // The staged entry itself appears in nft's fileList. Drop it from the
+  // copy results before the cross-check so we don't accidentally ship a
+  // copy of the bundle inside `outDir/__nft-flow.mjs` (and so the
+  // assertDepsTraced check sees only the resolved package files).
+  const stagedRel = path.relative(await fs.realpath(tempDir), stagedEntry);
+  const trimmedFileList = result.fileList.filter((f) => f !== stagedRel);
+  await fs.remove(path.join(outDir, stagedRel)).catch(() => {});
+
+  // Cross-check: every package pacote resolved at the top level must appear
+  // in the trace output. Catches hoisted-symlink misses, nft per-release
+  // regressions, and dynamic-require deps nft cannot statically follow.
+  // The check is always meaningful now (the expected set comes from the
+  // install layer, not user package.json), so there is no opt-out flag.
+  if (expectedPackages.length > 0) {
+    assertDepsTraced({
+      fileList: trimmedFileList,
+      expectedPackages,
+    });
+  }
+
+  const stepPackages = collectAllStepPackages(flowSettings);
+  const dependencies: Record<string, string> = {};
+  for (const name of [...stepPackages].sort()) {
+    if (name.startsWith('.') || name.startsWith('/')) continue;
+    dependencies[name] = '*';
+  }
+
+  const sidecarPath = path.join(outDir, 'package.json');
+  await fs.writeJson(
+    sidecarPath,
+    {
+      name: 'walkeros-bundle',
+      private: true,
+      type: 'module',
+      dependencies,
+    },
+    { spaces: 2 },
+  );
+  logger.debug(
+    `nft-trace: copied ${result.copied} file(s); wrote ${sidecarPath}`,
+  );
 }
 
 /**
@@ -1280,7 +1560,7 @@ export function buildSplitConfigObject(
     .filter(([, source]) => source.package || hasCodeReference(source.code))
     .map(([key, source]) => {
       if (isInlineCode(source.code)) {
-        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next as string | string[] | undefined, 'next')}`;
+        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, { next: source.next as string | string[] | undefined })}`;
       }
       return buildSplitStepEntry('sources', key, source);
     });
@@ -1290,7 +1570,7 @@ export function buildSplitConfigObject(
     .filter(([, dest]) => dest.package || hasCodeReference(dest.code))
     .map(([key, dest]) => {
       if (isInlineCode(dest.code)) {
-        return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, dest.before, 'before', true)}`;
+        return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, { before: dest.before, next: dest.next as string | string[] | undefined }, true)}`;
       }
       return buildSplitStepEntry('destinations', key, dest);
     });
@@ -1303,7 +1583,7 @@ export function buildSplitConfigObject(
     )
     .map(([key, transformer]) => {
       if (isInlineCode(transformer.code)) {
-        return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, transformer.next, 'next')}`;
+        return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, { before: transformer.before, next: transformer.next })}`;
       }
       return buildSplitStepEntry('transformers', key, transformer);
     });

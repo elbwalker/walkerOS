@@ -1,4 +1,7 @@
 import type { Flow } from '@walkeros/core';
+import { parseComponentRef } from '../../core/parse-component-ref.js';
+
+const STEP_KINDS = ['source', 'destination', 'transformer'] as const;
 
 /**
  * Overrides structure for destination config properties.
@@ -184,41 +187,29 @@ export interface ParsedStep {
  * @throws if format is invalid
  */
 export function parseStep(step: string): ParsedStep {
-  const parts = step.split('.');
-
-  if (parts.length < 2) {
-    throw new Error(
-      `Invalid step format: "${step}". Expected "source.NAME" or "destination.NAME"`,
-    );
-  }
-
-  const prefix = parts[0];
-  if (
-    prefix !== 'source' &&
-    prefix !== 'destination' &&
-    prefix !== 'transformer'
-  ) {
-    throw new Error(
-      `Unsupported step type: "${prefix}". Use "source", "destination", or "transformer"`,
-    );
-  }
-
-  const name = parts[1];
-  if (!name) {
-    throw new Error(
-      `Invalid step format: "${step}". Missing name after "${prefix}."`,
-    );
-  }
+  // Shared `<prefix>.<name>` parsing lives in core/parse-component-ref.
+  // We layer the chain-aware logic (destination.NAME.before.TRANSFORMER) on top.
+  const { prefix, name, rest } = parseComponentRef(step, {
+    allowed: STEP_KINDS,
+    messages: {
+      invalidFormat: (input) =>
+        `Invalid step format: "${input}". Expected "source.NAME" or "destination.NAME"`,
+      invalidPrefix: (p) =>
+        `Unsupported step type: "${p}". Use "source", "destination", or "transformer"`,
+      missingName: (input, p) =>
+        `Invalid step format: "${input}". Missing name after "${p}."`,
+    },
+  });
 
   // Path-specific: destination.ga4.before.redact
-  if (parts.length >= 4) {
-    const chainType = parts[2];
+  if (rest.length >= 2) {
+    const chainType = rest[0];
     if (chainType !== 'before' && chainType !== 'next') {
       throw new Error(
         `Invalid chain type: "${chainType}". Use "before" or "next"`,
       );
     }
-    const transformerId = parts[3];
+    const transformerId = rest[1];
     if (!transformerId) {
       throw new Error(
         `Invalid step format: "${step}". Missing transformer name after "${chainType}."`,
@@ -228,7 +219,7 @@ export function parseStep(step: string): ParsedStep {
   }
 
   // 3-part (destination.ga4.before without transformer) — invalid
-  if (parts.length === 3) {
+  if (rest.length === 1) {
     throw new Error(
       `Invalid step format: "${step}". Specify a transformer: "${step}.TRANSFORMER_NAME"`,
     );

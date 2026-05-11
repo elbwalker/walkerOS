@@ -160,6 +160,94 @@ describe('validateFlow', () => {
     ).toBe(true);
   });
 
+  it('warns for dangling $store. references', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          stores: { files: { package: '@walkeros/server-store-fs' } },
+          transformers: {
+            t: {
+              package: '@walkeros/transformer-redact',
+              env: { store: '$store.bogus' },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    expect(
+      result.warnings.some((w) => w.message.includes('$store.bogus')),
+    ).toBe(true);
+  });
+
+  it('warns on colon-instead-of-dot typos ($store:NAME)', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          stores: { files: { package: '@walkeros/server-store-fs' } },
+          transformers: {
+            t: {
+              package: '@walkeros/transformer-redact',
+              env: { store: '$store:files' },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    const warning = result.warnings.find((w) =>
+      w.message.includes('$store:files'),
+    );
+    expect(warning).toBeDefined();
+    if (!warning) throw new Error('warning expected');
+    expect(warning.message).toMatch(/\$store\.files/);
+  });
+
+  it('warns on malformed $env.NAME=default syntax', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          destinations: {
+            api: { config: { settings: { url: '$env.API_URL=fallback' } } },
+          },
+        },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    expect(
+      result.warnings.some((w) => /\$env\.API_URL=fallback/.test(w.message)),
+    ).toBe(true);
+  });
+
+  it('warns for unknown $flow. references', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        web: {
+          config: {
+            platform: 'web',
+            settings: { backend: '$flow.serverr.url' },
+          },
+        },
+        server: { config: { platform: 'server', url: 'https://api.test' } },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((w) => /\$flow\.serverr/.test(w.message))).toBe(
+      true,
+    );
+  });
+
   it('warns (not errors) for unresolved $flow.X.url references in soft mode', () => {
     const result = validateFlow({
       version: 4,
@@ -226,7 +314,6 @@ describe('validateFlow', () => {
     const result = validateFlow({
       version: 4,
       variables: { gaId: 'G-12345', debug: false },
-      definitions: { cleanUrl: { condition: true } },
       flows: {
         production: {
           config: {

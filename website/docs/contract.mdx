@@ -301,44 +301,14 @@ Access nested values with dot notation:
 - `$contract.web.tagging`: contract version metadata
 
 <details>
-<summary>Advanced: `$def` aliasing</summary>
+<summary>Advanced: shared schema fragments via `variables`</summary>
 
-Reduce repetition by aliasing a contract in definitions:
-
-<CodeSnippet
-  code={`{
-  "definitions": {
-    "c": "$contract.web"
-  },
-  "flows": {
-    "web-shop": {
-      "config": { "platform": "web" },
-      "transformers": {
-        "validator": {
-          "config": {
-            "settings": {
-              "events": "$def.c.events",
-              "globals": "$def.c.globals"
-            }
-          }
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-</details>
-
-<details>
-<summary>Advanced: `$def` inside contracts</summary>
-
-Definitions can be used inside contracts for shared schema fragments:
+Variables can hold JSON Schema fragments that get reused across multiple
+contract events:
 
 <CodeSnippet
   code={`{
-  "definitions": {
+  "variables": {
     "idSchema": {
       "required": ["id"],
       "properties": { "id": { "type": "string" } }
@@ -348,7 +318,7 @@ Definitions can be used inside contracts for shared schema fragments:
     "web": {
       "events": {
         "product": {
-          "*": { "properties": { "data": "$def.idSchema" } }
+          "*": { "properties": { "data": "$var.idSchema" } }
         }
       }
     }
@@ -356,6 +326,9 @@ Definitions can be used inside contracts for shared schema fragments:
 }`}
   language="json"
 />
+
+A whole-string `$var.idSchema` reference is replaced by the entire schema
+object. Deep paths (`$var.idSchema.properties.id`) walk into the value.
 
 </details>
 

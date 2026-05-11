@@ -60,6 +60,9 @@ export interface Settings {
   /** Guided helper: GA4 client ID */
   clientId?: WalkerOSMapping.Value;
 
+  /** Guided helper: GA4 app instance ID (Firebase) */
+  appInstanceId?: WalkerOSMapping.Value;
+
   /** Guided helper: Privacy-safe attribution (Google's sessionAttributes) */
   sessionAttributes?: WalkerOSMapping.Value;
 
@@ -87,8 +90,7 @@ export type InitSettings = Partial<Settings>;
 
 export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
 
-export interface DestinationInterface
-  extends DestinationServer.Destination<Types> {
+export interface DestinationInterface extends DestinationServer.Destination<Types> {
   init: DestinationServer.InitFn<Types>;
 }
 
@@ -161,6 +163,12 @@ export type AccountType =
 export type EventSource = 'WEB' | 'APP' | 'IN_STORE' | 'PHONE' | 'OTHER';
 
 /**
+ * Hash encoding for user identifiers (required for UserData uploads)
+ * https://developers.google.com/data-manager/api/reference/rest/v1/Encoding
+ */
+export type Encoding = 'HEX' | 'BASE64';
+
+/**
  * Consent for Digital Markets Act (DMA) compliance
  * https://developers.google.com/data-manager/api/devguides/concepts/dma
  */
@@ -193,6 +201,9 @@ export interface IngestEventsRequest {
 
   /** Test event code for debugging */
   testEventCode?: string;
+
+  /** Hash encoding for user identifiers. Required for UserData uploads. */
+  encoding?: Encoding;
 }
 
 /**
@@ -256,6 +267,24 @@ export interface Event {
 
   /** Additional event parameters */
   additionalEventParameters?: EventParameter[];
+
+  /** GA4 app instance ID (Firebase) */
+  appInstanceId?: string;
+
+  /** Third-party user data (e.g. data partner identifiers) */
+  thirdPartyUserData?: UserData;
+
+  /** Event location (required for Store Sales / IN_STORE events) */
+  eventLocation?: EventLocation;
+}
+
+/**
+ * Event location data
+ * https://developers.google.com/data-manager/api/reference/rest/v1/EventLocation
+ */
+export interface EventLocation {
+  /** Required for Store Sales. Identifier of the physical store where the event happened. */
+  storeId?: string;
 }
 
 /**

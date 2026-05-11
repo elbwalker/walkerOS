@@ -41,6 +41,7 @@ npx walkeros --version`}
 |---------|---------|----------|
 | `bundle` | Build production-ready bundle from flow config | Create deployable JavaScript from configuration |
 | `push` | Execute event with real API calls (or `--simulate` for mocked) | Testing and production validation |
+| `setup` | Run the optional `setup()` lifecycle on one component | Provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook registrations) |
 | `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
 | `run` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
@@ -63,24 +64,68 @@ The CLI uses types from `@walkeros/core`:
 
 The CLI transforms `Flow.Json` → `Flow` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
 
-## The `bundle` section
+## Packages and overrides
 
-Build-time concerns for the bundler live under `flow.<name>.bundle`. Two fields are supported:
+Build-time concerns live under each flow's `config.bundle` block. Three fields are supported:
 
-- **`packages`**: the list of npm packages (or local paths) the bundler should install for this flow.
+- **`packages`**: the list of npm packages (or local paths) the bundler should install for this flow. Pacote downloads them based on this list. You do **not** need to run `npm install` yourself for step packages; the CLI handles it transparently.
 - **`overrides`**: pin transitive dependency versions, matching npm's `overrides` semantics. Useful when an upstream package declares an overly narrow version range that conflicts with a newer transitive version in the same tree.
+- **`traceInclude`** (server flows only): an escape hatch for the file tracer. See below.
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@walkeros/collector": {}
-  },
-  "overrides": {
-    "@amplitude/analytics-types": "2.11.1"
+  code={`"flows": {
+  "default": {
+    "config": {
+      "platform": "server",
+      "bundle": {
+        "packages": {
+          "@walkeros/collector": {}
+        },
+        "overrides": {
+          "@amplitude/analytics-types": "2.11.1"
+        }
+      }
+    }
   }
 }`}
   language="json"
 />
+
+### Server bundles use nft tracing
+
+Server flows (`platform: "server"`) are traced automatically with [`@vercel/nft`](https://github.com/vercel/nft). The bundler externalizes every step package, then nft walks the entry to figure out which files are actually reachable at runtime, and copies only those files into `dist/node_modules/`. Native add-ons, `.proto` files, and `__dirname`-loaded assets are picked up.
+
+There is no `walkerOS.bundle.external` annotation: nft figures out the externalization automatically.
+
+### Escape hatch: `traceInclude`
+
+If nft cannot statically reach a file (rare: dynamic `require(somePath)` constructed from a runtime variable, dynamically loaded data files), declare it explicitly with `flow.<name>.config.bundle.traceInclude`. Paths and globs are both supported (matched via picomatch). Paths resolve against the install root, not your project directory.
+
+<CodeSnippet
+  code={`"flows": {
+  "default": {
+    "config": {
+      "platform": "server",
+      "bundle": {
+        "packages": { "@walkeros/server-destination-gcp": {} },
+        "traceInclude": [
+          "node_modules/some-pkg/data/*.json",
+          "node_modules/another-pkg/lib/runtime-loaded.js"
+        ]
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### Range conflict resolution
+
+When two transitive consumers declare incompatible ranges for the same dependency (e.g., `arrify@^3.0.0` from one package, `arrify@^2.0.0` from another), the bundler now resolves the chosen range to a concrete version via the npm registry and nests any non-satisfying spec under its consumer's `node_modules/`. This kills classes of upstream chaos (like `arrify is not a function` from `@google-cloud/common`) before they can reach runtime. After install, a defense-in-depth check warns when any installed package's declared deps don't match what's reachable on its resolution path; if you see those warnings, add an `overrides` entry to your flow's `config.bundle.overrides` to pin the offending dep. If the npm registry is unreachable during validation, set `BUNDLER_STRICT_RANGES=0` to bypass strict validation with a warning instead of failing the build.
+
+### Schema version
+
+The flow.json schema stays at `version: 4`. Build-time fields live under `flow.<name>.config.bundle.{packages, overrides, traceInclude}`. The `flow.<name>.config.bundle.external` sub-field is no longer supported in @walkeros/cli@4.x.
 
 ## Package imports
 
@@ -89,12 +134,10 @@ Build-time concerns for the bundler live under `flow.<name>.bundle`. Two fields 
 The collector is added automatically. To pin a specific version (recommended for production), add the collector explicitly:
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@walkeros/collector": { "version": "1.0.0" },
-    "@walkeros/web-source-browser": {},
-    "@walkeros/destination-demo": {}
-  }
+  code={`"packages": {
+  "@walkeros/collector": { "version": "1.0.0" },
+  "@walkeros/web-source-browser": {},
+  "@walkeros/destination-demo": {}
 }`}
   language="json"
 />
@@ -104,11 +147,9 @@ The collector is added automatically. To pin a specific version (recommended for
 Sources and destinations automatically use their **default export** - no `imports` needed:
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@walkeros/web-source-browser": {},        // Uses default export
-    "@walkeros/destination-demo": {}           // Uses default export
-  }
+  code={`"packages": {
+  "@walkeros/web-source-browser": {},        // Uses default export
+  "@walkeros/destination-demo": {}           // Uses default export
 }`}
   language="json"
 />
@@ -118,12 +159,10 @@ Sources and destinations automatically use their **default export** - no `import
 Use `imports` when you need specific utility functions from a package:
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@walkeros/core": { "imports": ["getId", "clone"] },     // Optional utilities
-    "@walkeros/web-source-browser": {
-      "imports": ["createTagger"]                            // Additional utility
-    }
+  code={`"packages": {
+  "@walkeros/core": { "imports": ["getId", "clone"] },     // Optional utilities
+  "@walkeros/web-source-browser": {
+    "imports": ["createTagger"]                            // Additional utility
   }
 }`}
   language="json"
@@ -134,10 +173,8 @@ Use `imports` when you need specific utility functions from a package:
 For packages without a default export, specify both `imports` and `code`:
 
 <CodeSnippet
-  code={`"bundle": {
-  "packages": {
-    "@my/custom-package": { "imports": ["namedExport"] }
-  }
+  code={`"packages": {
+  "@my/custom-package": { "imports": ["namedExport"] }
 },
 "sources": {
   "custom": {
@@ -158,11 +195,9 @@ Add a `path` property to any package to use a local directory instead of npm:
 
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@my/custom-destination": {
-        "path": "./my-custom-destination"
-      }
+  "packages": {
+    "@my/custom-destination": {
+      "path": "./my-custom-destination"
     }
   }
 }`}
@@ -182,14 +217,12 @@ When a local package has dependencies on other packages that are also specified 
 
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@walkeros/core": {
-        "path": "../packages/core"
-      },
-      "@walkeros/collector": {
-        "path": "../packages/collector"
-      }
+  "packages": {
+    "@walkeros/core": {
+      "path": "../packages/core"
+    },
+    "@walkeros/collector": {
+      "path": "../packages/collector"
     }
   }
 }`}
@@ -203,11 +236,9 @@ In this example, even though `@walkeros/collector` depends on `@walkeros/core`, 
 **Development of custom packages:**
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@my-org/destination-custom": {
-        "path": "../my-destination"
-      }
+  "packages": {
+    "@my-org/destination-custom": {
+      "path": "../my-destination"
     }
   }
 }`}
@@ -217,11 +248,9 @@ In this example, even though `@walkeros/collector` depends on `@walkeros/core`, 
 **Testing local changes to walkerOS packages:**
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@walkeros/collector": {
-        "path": "../../packages/collector"
-      }
+  "packages": {
+    "@walkeros/collector": {
+      "path": "../../packages/collector"
     }
   }
 }`}
@@ -297,7 +326,7 @@ The bundle command handles all of this.
   language="bash"
 />
 
-This writes the optimized bundle to stdout. Use `-o` to write to a file (e.g., `-o ./dist/walker.js` for web, `-o ./dist/bundle.mjs` for server).
+This writes the optimized bundle to stdout (web flows only). Use `-o` to write to a file or directory (e.g., `-o ./dist/walker.js` for web, `-o ./dist/` for server, which produces `dist/{flow.mjs, package.json, node_modules/}`).
 
 ### Step-by-Step Guide
 
@@ -364,7 +393,7 @@ Output:
 ✓ @walkeros/destination-demo@latest
 
 🔨 Bundling...
-✓ Bundle created: ./dist/bundle.mjs
+✓ Bundle created: ./dist/flow.mjs
 
 📊 Bundle Statistics:
    Size: 45.2 KB (minified)
@@ -376,10 +405,12 @@ Output:
 
 <CodeSnippet
   code={`ls -lh dist/
-# -rw-r--r--  1 user  staff   45K  bundle.mjs
+# -rw-r--r--  1 user  staff   45K  flow.mjs
+# -rw-r--r--  1 user  staff  152B  package.json
+# drwxr-xr-x 12 user  staff  384B  node_modules
 
-file dist/bundle.mjs
-# dist/bundle.mjs: JavaScript source, UTF-8 Unicode text`}
+file dist/flow.mjs
+# dist/flow.mjs: JavaScript source, UTF-8 Unicode text`}
   language="bash"
 />
 
@@ -397,13 +428,14 @@ The bundle is now ready to deploy!
 | `-o, --output <path>` | Write bundle to file, directory, or presigned URL |
 | `-f, --flow <name>` | Build specific flow (for multi-flow configs) |
 | `--all` | Build all flows |
-| `--dockerfile` | Generate Dockerfile alongside bundle |
 | `-s, --stats` | Show bundle statistics |
 | `--json` | Output statistics as JSON (for CI/CD) |
 | `--no-cache` | Skip package cache, download fresh |
 | `-v, --verbose` | Detailed logging |
 
 When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads via HTTP PUT. This is used by the walkerOS cloud service for remote builds.
+
+For server flows, `-o` resolves to a directory: `dist/{flow.mjs, package.json, node_modules/}`. For multi-flow `--all`, each flow gets its own subdirectory: `dist/<flowName>/...`.
 
 ### Multi-Flow Example
 
@@ -442,7 +474,7 @@ Push handles both safe local testing (with `--simulate`) and real integration te
 walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'
 
 # With pre-built bundle
-walkeros push dist/bundle.mjs --event '{"name":"page view"}'`}
+walkeros push dist/flow.mjs --event '{"name":"page view"}'`}
   language="bash"
 />
 
@@ -634,6 +666,111 @@ walkeros push flow.json --event event.json --flow staging
 
 # Push to production
 walkeros push flow.json --event event.json --flow production`}
+  language="bash"
+/>
+
+## Setup command
+
+The `setup` command runs the optional `setup()` lifecycle on a single component to provision external resources before traffic flows. Use it for one-time provisioning steps like creating a BigQuery dataset and table, declaring a Pub/Sub topic and subscription, creating SQLite tables, or registering a webhook with a third-party API.
+
+For the conceptual overview of the lifecycle (when to implement `setup()` in a component, how it relates to the runtime hot path, and the operator separation rationale), see [Setup lifecycle](/docs/destinations/create-your-own#setup-lifecycle-optional).
+
+### Use case
+
+Setup is for the operator-time, "do this once before traffic" step that sits between writing config and accepting events:
+
+- A BigQuery destination needs its dataset and table to exist with the right schema before rows can be streamed in.
+- A Pub/Sub source needs a subscription against a topic before it can pull messages.
+- A SQLite store needs its tables created before reads and writes work.
+- A webhook integration needs to register its callback URL with the upstream service.
+
+Setup is **explicit only**. It is never triggered by `push`, `simulate`, `deploy`, or the long-running runtime. You run it once when provisioning, then again only when external resources need to be re-provisioned (for example, after changing the table schema in config). The runtime never tries to "fix" missing resources on its own.
+
+### Basic usage
+
+<CodeSnippet
+  code={`# Provision the BigQuery dataset and table for the destination named "bigquery"
+walkeros setup destination.bigquery`}
+  language="bash"
+/>
+
+### Target syntax
+
+The target uses the same `<kind>.<name>` syntax as `walkeros push --simulate`. Valid kinds are `source`, `destination`, and `store`. Transformers are pure functions and have no setup.
+
+| Target | Resolves to |
+|--------|-------------|
+| `destination.bigquery` | The destination named `bigquery` in the resolved flow |
+| `source.events-in` | The source named `events-in` |
+| `store.session` | The store named `session` |
+
+### Options
+
+<CodeSnippet
+  code={`walkeros setup <target> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config <path>` | Flow config file (default: `./flow.json`) |
+| `-f, --flow <name>` | Flow name for multi-flow configs |
+| `--json` | Output as JSON (passed to the package's setup logger) |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
+
+### What "skip" means
+
+The framework narrates one of three reasons when nothing runs and exits successfully:
+
+| Reason | Trigger |
+|--------|---------|
+| `no setup function` | The package does not export a `setup` function on its default export |
+| `config.setup is false` | The flow config explicitly opts out with `"setup": false` |
+| `config.setup is unset` | The flow config does not declare `setup` at all |
+
+In all three cases the exit code is `0`. Setup is a single-purpose command, not a tiered status check.
+
+### Result output
+
+When the package's `setup()` returns a non-undefined value, the CLI emits it as JSON on stdout for `jq`-style scripting. This lets you script around what was provisioned:
+
+<CodeSnippet
+  code={`walkeros setup destination.bigquery --json | jq .datasetCreated`}
+  language="bash"
+/>
+
+If the package returns nothing, no JSON is emitted; you only see the framework narration.
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success or skip (any of the three skip reasons above) |
+| non-zero | Failure (resolution error, missing default export, package threw) |
+
+### IAM note
+
+Setup typically needs higher permissions than runtime push: "create dataset" or "create subscription" vs "write rows" or "pull messages". Operators commonly run setup with a separate service account, or different credentials, than the runtime uses. Plan your IAM accordingly: grant the runtime only what it needs to push, and grant setup the broader provisioning scope.
+
+### Examples
+
+<CodeSnippet
+  code={`# Provision the BigQuery dataset and table for the destination named "bigquery"
+# in the default flow file.
+walkeros setup destination.bigquery
+
+# Same but pointing to a specific flow in a multi-flow config.
+walkeros setup destination.bigquery --flow analytics
+
+# Custom config path.
+walkeros setup destination.bigquery --config ./flows/prod.json
+
+# Pipe the structured result to jq.
+walkeros setup destination.bigquery --json | jq .datasetCreated
+
+# Provision a Pub/Sub source's subscription.
+walkeros setup source.events-in`}
   language="bash"
 />
 
@@ -1557,7 +1694,7 @@ You can also run pre-built bundles directly:
 walkeros bundle collect.json
 
 # Then run the bundle
-walkeros run dist/bundle.mjs --port 8080`}
+walkeros run dist/flow.mjs --port 8080`}
   language="bash"
 />
 
@@ -1882,16 +2019,20 @@ jobs:
 
 ### Docker Build
 
-<CodeSnippet
-  code={`FROM node:18-alpine AS builder
-WORKDIR /build
-RUN npm install -g @walkeros/cli
-COPY flow.json .
-RUN walkeros bundle flow.json
+The canonical multi-stage Dockerfile installs the CLI in the build stage, bundles the flow into a `dist/` directory, then copies the directory into the runtime image. You do not need to declare step packages in `package.json`; pacote installs them transparently from `flow.json`.
 
-FROM walkeros/flow:latest
-COPY --from=builder /build/dist/bundle.mjs /app/flow.mjs
-ENV BUNDLE=/app/flow.mjs`}
+<CodeSnippet
+  code={`FROM node:22-alpine AS builder
+WORKDIR /build
+RUN npm init -y && npm install --save-dev @walkeros/cli
+COPY flow.json ./
+RUN npx walkeros bundle flow.json -o dist/
+
+FROM walkeros/flow:4
+WORKDIR /app/flow
+COPY --from=builder /build/dist/ ./
+ENV PORT=8080
+EXPOSE 8080`}
   language="dockerfile"
 />
 
@@ -1951,6 +2092,48 @@ walkeros auth login
 export WALKEROS_TOKEN=sk-walkeros-xxx`}
   language="bash"
 />
+
+### nft cannot trace a runtime asset
+
+If a runtime asset is missing in `dist/node_modules/` (typically because the dep loads it via a dynamically constructed path), declare it explicitly under the flow's `config.bundle.traceInclude`. Paths and globs both work, resolved against the install root:
+
+<CodeSnippet
+  code={`"flows": {
+  "default": {
+    "config": {
+      "platform": "server",
+      "bundle": {
+        "packages": { "@walkeros/server-destination-gcp": {} },
+        "traceInclude": [
+          "node_modules/some-pkg/data/*.json"
+        ]
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### Caching pacote downloads in CI
+
+The bundler caches downloads under `process.env.NPM_CACHE_DIR` (default
+`<tmpDir>/cache/npm`). On CI, persist that path with `actions/cache`:
+
+<CodeSnippet
+  code={`- uses: actions/cache@v4
+  with:
+    path: .walkeros-cache/npm
+    key: walkeros-\${{ hashFiles('**/flow.json') }}
+- run: WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o dist/`}
+  language="yaml"
+/>
+
+### Bundle output is large
+
+`dist/node_modules/` for a server flow with the GCP destination typically holds 30-50MB across 10k+ files (grpc, protobufjs, etc.). Recommendations:
+- Use `.dockerignore` to exclude irrelevant build output from non-bundle contexts.
+- Prefer `COPY --from=builder /build/dist/ /app/flow/` over file-by-file in your Dockerfile.
+- Expect ~30s artifact upload time on slow CI.
 
 ## Next steps
 

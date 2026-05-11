@@ -56,9 +56,24 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
         return;
       }
 
-      const body = req.body;
+      // navigator.sendBeacon forces Content-Type: text/plain;charset=UTF-8 even
+      // for JSON payloads. Functions Framework parses text/plain bodies as
+      // strings, so attempt JSON.parse before falling through to the empty-event
+      // branch. Mirrors the AWS Lambda parseBody() pattern.
+      let body: unknown = req.body;
+      if (typeof body === 'string') {
+        try {
+          body = JSON.parse(body);
+        } catch {
+          // Leave as string; falls through to empty-event branch below.
+        }
+      }
 
-      if (body && typeof body === 'object' && isEventRequest(body as RequestBody)) {
+      if (
+        body &&
+        typeof body === 'object' &&
+        isEventRequest(body as RequestBody)
+      ) {
         const result = await processEvent(body as RequestBody, envPush);
 
         if (result.error) {

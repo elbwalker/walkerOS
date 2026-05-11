@@ -103,7 +103,7 @@ describe('Config Loader', () => {
       expect(result.buildOptions.target).toBe('node20');
       expect(result.buildOptions.minify).toBe(true);
       // Output path is static (relative to cwd)
-      expect(result.buildOptions.output).toBe('./dist/bundle.mjs');
+      expect(result.buildOptions.output).toBe('./dist/flow.mjs');
     });
 
     test('extracts packages from flowSettings', () => {
@@ -465,8 +465,6 @@ describe('Config Loader', () => {
         version: 4,
         variables: {
           CURRENCY: 'USD',
-        },
-        definitions: {
           base_mapping: {
             page: { view: { name: 'page_view' } },
           },

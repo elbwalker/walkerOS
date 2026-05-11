@@ -1,52 +1,41 @@
-import type { WalkerOS } from '@walkeros/core';
 import type { PushFn } from './types';
-import { isObject, isArray } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
+import { eventToRow } from './eventToRow';
 
 export const push: PushFn = async function (
   event,
   { config, rule: _rule, data, logger },
 ) {
-  const { client, datasetId, tableId } = config.settings!;
+  const settings = config.settings;
+  if (!settings) return logger.throw('settings missing, init() not run');
+  const { writer, datasetId, tableId } = settings;
 
-  if (!client) return logger.throw('client is missing');
+  if (!writer) return logger.throw('writer is missing, init() not run');
   if (!datasetId) return logger.throw('datasetId is missing');
   if (!tableId) return logger.throw('tableId is missing');
 
-  let row: WalkerOS.AnyObject | undefined;
+  const row = isObject(data) ? data : eventToRow(event);
+  const rows = [row];
 
-  if (isObject(data)) {
-    row = data;
-  } else {
-    const now = new Date();
-    row = {
-      ...event,
-      timestamp: event.timestamp ? new Date(event.timestamp) : now,
-      createdAt: now,
-    };
-  }
-
-  const rows = [mapEvent(row)];
-
-  logger.debug('Calling BigQuery API', {
+  logger.debug('Calling BigQuery Storage Write API', {
     dataset: datasetId,
     table: tableId,
     rowCount: rows.length,
   });
 
-  await client.dataset(datasetId).table(tableId).insert(rows);
+  const pending = writer.appendRows(rows);
+  const result = await pending.getResult();
 
-  logger.debug('BigQuery API response', { ok: true });
+  if (result.rowErrors && result.rowErrors.length > 0) {
+    // Single-event push path: throw with row context so the caller sees the failure.
+    const first = result.rowErrors[0];
+    return logger.throw(
+      `BigQuery row append failed: code=${first.code} message=${first.message}`,
+    );
+  }
 
-  return;
-};
-
-export const mapEvent = (event: WalkerOS.AnyObject) => {
-  return Object.entries(event).reduce<WalkerOS.AnyObject>(
-    (acc, [key, value]) => {
-      acc[key] =
-        isObject(value) || isArray(value) ? JSON.stringify(value) : value;
-      return acc;
-    },
-    {},
-  );
+  logger.debug('BigQuery Storage Write API response', {
+    ok: true,
+    offset: result.appendResult?.offset?.value,
+  });
 };

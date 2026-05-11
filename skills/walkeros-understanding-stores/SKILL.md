@@ -116,7 +116,9 @@ Use `$store.storeId` in a component's `env` to inject a store instance:
 ```
 
 The bundler resolves `$store.data` to a runtime reference. Invalid references
-are caught at build time.
+are caught at build time. `walkeros validate` also catches typos at validation
+time, including unknown store names and the colon-instead-of-dot mistake (e.g.
+`$store:data` is flagged with the suggested form `$store.data`).
 
 ### Integrated mode (TypeScript)
 
@@ -222,6 +224,35 @@ import { storeGcsInit } from '@walkeros/server-store-gcs';
 
 **Primary use case:** Serving static files on GCP infrastructure (Cloud Run,
 GKE) where ADC provides seamless authentication.
+
+### `@walkeros/server-store-sheets` (Google Sheets)
+
+Zero-dependency Google Sheets store using raw `fetch` + Sheets v4 REST API. One
+row per key, one cell per value (JSON-serialized). Built-in auth shared with the
+GCS store. Server-only.
+
+```typescript
+import { storeSheetsInit } from '@walkeros/server-store-sheets';
+```
+
+**Settings:**
+
+| Setting       | Type               | Required | Default    | Purpose                          |
+| ------------- | ------------------ | -------- | ---------- | -------------------------------- |
+| `id`          | `string`           | Yes      | —          | Spreadsheet ID (segment in URL)  |
+| `sheet`       | `string`           | No       | `'Sheet1'` | Sheet (tab) name                 |
+| `key`         | `string`           | No       | `'A'`      | Column letter for keys           |
+| `value`       | `string`           | No       | `'B'`      | Column letter for JSON values    |
+| `headerRows`  | `number`           | No       | `1`        | Header rows to skip when reading |
+| `credentials` | `string \| object` | No       | ADC        | SA JSON for non-GCP envs         |
+
+**Primary use case:** Demos and small prototypes where the spreadsheet is the
+operator-facing UI for tweaking lookup data. Quota: 60 reads/min and 60
+writes/min per project. Wire a fast cache (e.g., `@walkeros/store-memory`) in
+front via the core `Cache` config on the consuming transformer or destination,
+otherwise quota burns in seconds. **Not a production CRM substitute.** See
+[Website: Sheets Store](../../website/docs/stores/server/sheets.mdx) for the
+cache-wiring example.
 
 ## Stores vs direct construction
 
@@ -377,6 +408,28 @@ export { hints } from './hints';
 Most stores don't need hints — only add them for non-obvious behaviors,
 prerequisites, or troubleshooting patterns.
 
+## Setup (optional)
+
+Stores can implement an optional `setup()` lifecycle to provision external
+resources, for example creating a SQLite table, initializing an S3 bucket, or
+running a one-off schema migration. Setup is **never** invoked by the runtime,
+push, init, or deploy. It runs only when an operator explicitly types
+`walkeros setup store.<name>`.
+
+The signature is
+`(ctx: LifecycleContext<Config<T>, Env<T>>) => Promise<unknown>`, where
+`LifecycleContext` carries `{ id, config, env, logger }`. Idempotency is the
+package's responsibility: the framework adds no opinion. Use
+`resolveSetup(ctx.config.setup, DEFAULTS)` from `@walkeros/core` to normalize
+the `boolean | object` shape into a concrete options object.
+
+See [walkeros-create-destination](../walkeros-create-destination/SKILL.md),
+[walkeros-create-source](../walkeros-create-source/SKILL.md),
+[walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md),
+[walkeros-understanding-sources](../walkeros-understanding-sources/SKILL.md),
+and the `walkeros setup` CLI documentation for the authoring template and
+operator workflow.
+
 ## Related skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) -
@@ -400,6 +453,8 @@ prerequisites, or troubleshooting patterns.
   store package
 - [packages/server/stores/gcs/src/](../../packages/server/stores/gcs/src/) - GCS
   store package
+- [packages/server/stores/sheets/src/](../../packages/server/stores/sheets/src/) -
+  Google Sheets store package
 
 **Documentation:**
 
@@ -414,3 +469,5 @@ prerequisites, or troubleshooting patterns.
   documentation
 - [Website: GCS Store](../../website/docs/stores/server/gcs.mdx) - GCS store
   documentation
+- [Website: Sheets Store](../../website/docs/stores/server/sheets.mdx) - Google
+  Sheets store documentation

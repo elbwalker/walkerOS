@@ -10,10 +10,10 @@ import type { Flow } from './types';
 import { resolveContracts } from './contract';
 import {
   REF_CONTRACT,
-  REF_DEF,
   REF_ENV,
   REF_FLOW,
-  REF_VAR,
+  REF_VAR_FULL,
+  REF_VAR_INLINE,
 } from './references';
 import { throwError } from './throwError';
 
@@ -25,22 +25,6 @@ function mergeVariables(
   ...sources: (Flow.Variables | undefined)[]
 ): Flow.Variables {
   const result: Flow.Variables = {};
-  for (const source of sources) {
-    if (source) {
-      Object.assign(result, source);
-    }
-  }
-  return result;
-}
-
-/**
- * Merge definitions with cascade priority.
- * Later arguments have higher priority.
- */
-function mergeDefinitions(
-  ...sources: (Flow.Definitions | undefined)[]
-): Flow.Definitions {
-  const result: Flow.Definitions = {};
   for (const source of sources) {
     if (source) {
       Object.assign(result, source);
@@ -123,9 +107,9 @@ export function walkPath(
  * Resolver callback for `$flow.X.Y` references.
  *
  * Given a sibling flow name, returns its fully resolved `Flow.Config` block
- * (with `$env`/`$var`/`$def`/`$contract` already resolved) as `unknown` so
- * that {@link walkPath} can traverse it. Returns `undefined` if the flow
- * does not exist. Implementations are responsible for cycle detection across
+ * (with `$env`/`$var`/`$contract` already resolved) as `unknown` so that
+ * {@link walkPath} can traverse it. Returns `undefined` if the flow does
+ * not exist. Implementations are responsible for cycle detection across
  * recursive calls.
  */
 export type FlowConfigResolver = (flowName: string) => unknown;
@@ -134,9 +118,11 @@ export type FlowConfigResolver = (flowName: string) => unknown;
  * Resolve all dynamic patterns in a value.
  *
  * Patterns:
- * - $def.name → Look up definitions[name], replace entire value with definition content
- * - $def.name.path → Look up definitions[name], then walk dot-separated path
- * - $var.name → Look up variables[name]
+ * - $var.name (or $var.name.deep.path) → Look up variables[name], optional deep
+ *   path walk. Whole-string match preserves the native type of the variable
+ *   (object, array, number, boolean, string). Inline interpolation requires a
+ *   scalar (string/number/boolean) and throws on objects/arrays. Resolution is
+ *   recursive (variables may reference other variables) with cycle detection.
  * - $env.NAME or $env.NAME:default → Look up process.env[NAME]
  * - $contract.name(.path)? → Resolved contract value (when contracts available)
  * - $flow.name(.path)? → Sibling flow's resolved {@link Flow.Config} (when resolver available)
@@ -151,51 +137,63 @@ export type FlowConfigResolver = (flowName: string) => unknown;
 function resolvePatterns<T extends object>(
   value: T,
   variables: Flow.Variables,
-  definitions: Flow.Definitions,
   options?: ResolveOptions,
   resolvedContracts?: Record<string, Flow.ContractRule>,
   resolveFlow?: FlowConfigResolver,
+  varVisiting?: Set<string>,
 ): T;
 function resolvePatterns(
   value: unknown,
   variables: Flow.Variables,
-  definitions: Flow.Definitions,
   options?: ResolveOptions,
   resolvedContracts?: Record<string, Flow.ContractRule>,
   resolveFlow?: FlowConfigResolver,
+  varVisiting?: Set<string>,
 ): unknown;
 function resolvePatterns(
   value: unknown,
   variables: Flow.Variables,
-  definitions: Flow.Definitions,
   options?: ResolveOptions,
   resolvedContracts?: Record<string, Flow.ContractRule>,
   resolveFlow?: FlowConfigResolver,
+  varVisiting?: Set<string>,
 ): unknown {
   if (typeof value === 'string') {
-    // Check if entire string is a $def reference with optional deep path
-    const defMatch = value.match(REF_DEF);
-    if (defMatch) {
-      const defName = defMatch[1];
-      const path = defMatch[2]; // e.g., "nested.deep" or undefined
+    // Whole-string $var match: preserve native type, support deep paths
+    const fullMatch = value.match(REF_VAR_FULL);
+    if (fullMatch) {
+      const path = fullMatch[1]; // e.g. "name" or "name.deep.path"
+      const segments = path.split('.');
+      const varName = segments[0];
+      const deepPath = segments.slice(1).join('.');
 
-      if (definitions[defName] === undefined) {
-        throwError(`Definition "${defName}" not found`);
+      if (variables[varName] === undefined) {
+        throwError(`Variable "${varName}" not found`);
       }
 
-      // Resolve the definition content recursively first
-      let resolved = resolvePatterns(
-        definitions[defName],
-        variables,
-        definitions,
-        options,
-        resolvedContracts,
-        resolveFlow,
-      );
+      const visiting = varVisiting ?? new Set<string>();
+      if (visiting.has(varName)) {
+        const chain = [...visiting, varName].join(' -> ');
+        throwError(`Cyclic $var reference: ${chain}`);
+      }
 
-      // Walk deep path if present
-      if (path) {
-        resolved = walkPath(resolved, path, `$def.${defName}`);
+      visiting.add(varName);
+      let resolved: unknown;
+      try {
+        resolved = resolvePatterns(
+          variables[varName],
+          variables,
+          options,
+          resolvedContracts,
+          resolveFlow,
+          visiting,
+        );
+      } finally {
+        visiting.delete(varName);
+      }
+
+      if (deepPath) {
+        resolved = walkPath(resolved, deepPath, `$var.${varName}`);
       }
 
       return resolved;
@@ -271,12 +269,54 @@ function resolvePatterns(
       return resolved;
     }
 
-    // Replace $var.name patterns (inline substitution)
-    let result = value.replace(REF_VAR, (match, name) => {
-      if (variables[name] !== undefined) {
-        return String(variables[name]);
+    // Inline $var: must resolve to scalar
+    let result = value.replace(REF_VAR_INLINE, (_match, path: string) => {
+      const segments = path.split('.');
+      const varName = segments[0];
+      const deepPath = segments.slice(1).join('.');
+
+      if (variables[varName] === undefined) {
+        throwError(`Variable "${varName}" not found`);
       }
-      throwError(`Variable "${name}" not found`);
+
+      const visiting = varVisiting ?? new Set<string>();
+      if (visiting.has(varName)) {
+        const chain = [...visiting, varName].join(' -> ');
+        throwError(`Cyclic $var reference: ${chain}`);
+      }
+
+      visiting.add(varName);
+      let resolved: unknown;
+      try {
+        resolved = resolvePatterns(
+          variables[varName],
+          variables,
+          options,
+          resolvedContracts,
+          resolveFlow,
+          visiting,
+        );
+      } finally {
+        visiting.delete(varName);
+      }
+
+      if (deepPath) {
+        resolved = walkPath(resolved, deepPath, `$var.${varName}`);
+      }
+
+      if (
+        resolved === null ||
+        (typeof resolved !== 'string' &&
+          typeof resolved !== 'number' &&
+          typeof resolved !== 'boolean')
+      ) {
+        const type = Array.isArray(resolved) ? 'array' : typeof resolved;
+        throwError(
+          `Variable "${path}" resolves to non-scalar (${type}) and cannot be inlined into a string. Use it as a whole-string reference: "$var.${path}"`,
+        );
+      }
+
+      return String(resolved);
     });
 
     // Replace $env.NAME or $env.NAME:default patterns
@@ -305,10 +345,10 @@ function resolvePatterns(
       resolvePatterns(
         item,
         variables,
-        definitions,
         options,
         resolvedContracts,
         resolveFlow,
+        varVisiting,
       ),
     );
   }
@@ -319,10 +359,10 @@ function resolvePatterns(
       result[key] = resolvePatterns(
         val,
         variables,
-        definitions,
         options,
         resolvedContracts,
         resolveFlow,
+        varVisiting,
       );
     }
     return result;
@@ -379,20 +419,22 @@ function resolveCodeFromPackage(
  *
  * Resolution pass order:
  * 1. `$env` / `$var` resolve per-flow in isolation (no cross-flow context).
+ *    `$var` resolves recursively (variables may reference other variables,
+ *    `$env`, `$contract`, or `$flow`); cycles are detected via a visiting set.
  * 2. `$flow.X.Y` resolves against pass-1 outputs of sibling flows (so `$env`/`$var`
  *    inside the referenced flow are already resolved when `$flow` reads it).
- * 3. `$def` / `$contract` resolve last (with `$flow` results available).
+ * 3. `$contract` resolves last (with `$flow` results available).
  *
  * In practice these passes are interleaved by the resolver: when `$flow.X.Y`
  * is encountered, the sibling flow X's `Flow.Config` block is recursively
- * resolved on demand (with all its own `$env`/`$var`/`$def`/`$contract`
- * references resolved first), then the deep path is walked. Cycles are
- * detected via a visiting set.
+ * resolved on demand (with all its own `$env`/`$var`/`$contract` references
+ * resolved first), then the deep path is walked. Cycles are detected via a
+ * visiting set.
  *
  * @param config - The complete Flow.Json (root multi-flow config)
  * @param flowName - Flow name (auto-selected if only one exists)
  * @param options - Resolution options
- * @returns Resolved {@link Flow} with $var, $env, $def, $contract, and $flow patterns resolved
+ * @returns Resolved {@link Flow} with $var, $env, $contract, and $flow patterns resolved
  * @throws Error if flow selection is required but not specified, or flow not found
  * @throws Error if a `$flow.X.Y` reference forms a cycle
  *
@@ -441,15 +483,10 @@ export function getFlowSettings(
     visitOrder.push(targetName);
     try {
       const vars = mergeVariables(config.variables, targetSettings.variables);
-      const defs = mergeDefinitions(
-        config.definitions,
-        targetSettings.definitions,
-      );
       // Resolve only the public config block: that is what $flow may read.
       const resolved = resolvePatterns(
         targetSettings.config ?? {},
         vars,
-        defs,
         options,
         undefined, // contracts not consulted inside Flow.Config
         resolveFlowConfig,
@@ -506,16 +543,14 @@ function resolveFlowSettings(
   // Deep clone to avoid mutations
   const result = JSON.parse(JSON.stringify(settings)) as Flow;
 
-  // Pre-process contracts: resolve $def inside contracts, then extends + wildcards
+  // Pre-process contracts: resolve $var/$env inside contracts, then extends + wildcards
   let resolvedContracts: Record<string, Flow.ContractRule> | undefined;
   if (config.contract) {
-    // Two-pass: resolve $def/$var/$env inside contract first
+    // Two-pass: resolve $var/$env inside contract first
     const vars = mergeVariables(config.variables, settings.variables);
-    const defs = mergeDefinitions(config.definitions, settings.definitions);
     const resolvedContractInput = resolvePatterns(
       config.contract,
       vars,
-      defs,
       options,
       undefined,
       resolveFlow,
@@ -528,18 +563,16 @@ function resolveFlowSettings(
   // it (e.g. settings.url = '$flow.server.url') are resolved.
   if (result.config) {
     const vars = mergeVariables(config.variables, settings.variables);
-    const defs = mergeDefinitions(config.definitions, settings.definitions);
     result.config = resolvePatterns(
       result.config,
       vars,
-      defs,
       options,
       resolvedContracts,
       resolveFlow,
     );
   }
 
-  // Process sources with variable and definition cascade
+  // Process sources with variable cascade
   if (result.sources) {
     for (const [name, source] of Object.entries(result.sources)) {
       const vars = mergeVariables(
@@ -547,16 +580,10 @@ function resolveFlowSettings(
         settings.variables,
         source.variables,
       );
-      const defs = mergeDefinitions(
-        config.definitions,
-        settings.definitions,
-        source.definitions,
-      );
 
       const processedConfig = resolvePatterns(
         source.config,
         vars,
-        defs,
         options,
         resolvedContracts,
         resolveFlow,
@@ -565,7 +592,6 @@ function resolveFlowSettings(
       const processedEnv = resolvePatterns(
         source.env,
         vars,
-        defs,
         options,
         resolvedContracts,
         resolveFlow,
@@ -590,7 +616,6 @@ function resolveFlowSettings(
         env: processedEnv,
         primary: source.primary,
         variables: source.variables,
-        definitions: source.definitions,
         before: source.before,
         next: source.next,
         cache: source.cache,
@@ -599,7 +624,7 @@ function resolveFlowSettings(
     }
   }
 
-  // Process destinations with variable and definition cascade
+  // Process destinations with variable cascade
   if (result.destinations) {
     for (const [name, dest] of Object.entries(result.destinations)) {
       const vars = mergeVariables(
@@ -607,16 +632,10 @@ function resolveFlowSettings(
         settings.variables,
         dest.variables,
       );
-      const defs = mergeDefinitions(
-        config.definitions,
-        settings.definitions,
-        dest.definitions,
-      );
 
       const processedConfig = resolvePatterns(
         dest.config,
         vars,
-        defs,
         options,
         resolvedContracts,
         resolveFlow,
@@ -625,7 +644,6 @@ function resolveFlowSettings(
       const processedEnv = resolvePatterns(
         dest.env,
         vars,
-        defs,
         options,
         resolvedContracts,
         resolveFlow,
@@ -649,7 +667,6 @@ function resolveFlowSettings(
         config: processedConfig,
         env: processedEnv,
         variables: dest.variables,
-        definitions: dest.definitions,
         before: dest.before,
         next: dest.next,
         cache: dest.cache,
@@ -658,7 +675,7 @@ function resolveFlowSettings(
     }
   }
 
-  // Process stores with variable and definition cascade
+  // Process stores with variable cascade
   if (result.stores) {
     for (const [name, store] of Object.entries(result.stores)) {
       const vars = mergeVariables(
@@ -666,16 +683,10 @@ function resolveFlowSettings(
         settings.variables,
         store.variables,
       );
-      const defs = mergeDefinitions(
-        config.definitions,
-        settings.definitions,
-        store.definitions,
-      );
 
       const processedConfig = resolvePatterns(
         store.config,
         vars,
-        defs,
         options,
         resolvedContracts,
         resolveFlow,
@@ -684,7 +695,6 @@ function resolveFlowSettings(
       const processedEnv = resolvePatterns(
         store.env,
         vars,
-        defs,
         options,
         resolvedContracts,
         resolveFlow,
@@ -706,13 +716,12 @@ function resolveFlowSettings(
         config: processedConfig,
         env: processedEnv,
         variables: store.variables,
-        definitions: store.definitions,
         code: finalCode,
       } as Flow.Store;
     }
   }
 
-  // Process transformers with variable and definition cascade
+  // Process transformers with variable cascade
   if (result.transformers) {
     for (const [name, transformer] of Object.entries(result.transformers)) {
       const vars = mergeVariables(
@@ -720,16 +729,10 @@ function resolveFlowSettings(
         settings.variables,
         transformer.variables,
       );
-      const defs = mergeDefinitions(
-        config.definitions,
-        settings.definitions,
-        transformer.definitions,
-      );
 
       const processedConfig = resolvePatterns(
         transformer.config,
         vars,
-        defs,
         options,
         resolvedContracts,
         resolveFlow,
@@ -738,7 +741,6 @@ function resolveFlowSettings(
       const processedEnv = resolvePatterns(
         transformer.env,
         vars,
-        defs,
         options,
         resolvedContracts,
         resolveFlow,
@@ -761,7 +763,6 @@ function resolveFlowSettings(
         config: processedConfig,
         env: processedEnv,
         variables: transformer.variables,
-        definitions: transformer.definitions,
         before: transformer.before,
         next: transformer.next,
         cache: transformer.cache,
@@ -773,12 +774,10 @@ function resolveFlowSettings(
   // Process collector config
   if (result.collector) {
     const vars = mergeVariables(config.variables, settings.variables);
-    const defs = mergeDefinitions(config.definitions, settings.definitions);
 
     const processedCollector = resolvePatterns(
       result.collector,
       vars,
-      defs,
       options,
       resolvedContracts,
       resolveFlow,

@@ -1,6 +1,6 @@
 ---
 title: GCP Cloud Functions
-description: Google Cloud Functions HTTP handler for event collection
+description: Google Cloud Functions HTTP handler source for walkerOS
 sidebar_position: 4
 package: '@walkeros/server-source-gcp'
 ---
@@ -14,7 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # GCP Cloud Functions
 
-Google Cloud Functions source for walkerOS. Lightweight runtime adapter with plug-and-play assignment to a Cloud Functions handler, batch processing for multiple events per request, and configurable CORS.
+Google Cloud Functions source for walkerOS. Lightweight runtime adapter with plug-and-play assignment to a Cloud Functions handler, batch processing for multiple events per request, and configurable CORS. The `@walkeros/server-source-gcp` package also ships [`sourcePubSubPull` and `sourcePubSubPush`](/docs/sources/server/pubsub) for ingesting from Pub/Sub topics; this page covers the Cloud Functions handler only.
 
 <WhereThisFits
   pre={<>The GCP Cloud Functions source is a <strong>server source</strong> in the walkerOS flow:</>}
@@ -145,3 +145,7 @@ Extract request metadata and forward it through the pipeline.
 | `headers.*` | HTTP headers (user-agent, origin, etc.) |
 | `method` | HTTP method |
 | `hostname` | Request hostname |
+
+## Pub/Sub
+
+The same `@walkeros/server-source-gcp` package also exports `sourcePubSubPull` (streaming pull subscriber) and `sourcePubSubPush` (HTTP webhook handler) for ingesting events from a Pub/Sub topic. See the [Pub/Sub source page](/docs/sources/server/pubsub) for full settings, lifecycle, decoders, OIDC verification, and setup reference.

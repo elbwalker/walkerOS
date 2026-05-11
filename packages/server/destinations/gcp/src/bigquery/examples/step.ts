@@ -1,35 +1,20 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent, isObject, isArray } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
+import { eventToRow } from '../eventToRow';
 
 /**
- * Fixed "now" used for createdAt in step examples. Tests must lock
- * Date to this value via jest.useFakeTimers().setSystemTime(FIXED_NOW).
+ * Mirror of push.ts via eventToRow() -- produces a flat 15-column row
+ * with nested object/array values JSON-stringified. Imported directly
+ * from the runtime helper so the step examples stay in sync with what
+ * push.ts actually emits to JSONWriter.appendRows.
  */
-const FIXED_NOW = new Date('2024-01-01T00:00:00.000Z');
-
-/**
- * Mirror of push.ts mapEvent -- stringifies any nested object/array.
- * Duplicated here so examples remain import-free from the runtime push
- * implementation.
- */
-function expectedRow(event: WalkerOS.Event): WalkerOS.AnyObject {
-  const row: WalkerOS.AnyObject = {
-    ...event,
-    timestamp: new Date(event.timestamp),
-    createdAt: FIXED_NOW,
-  };
-  return Object.entries(row).reduce<WalkerOS.AnyObject>((acc, [key, value]) => {
-    acc[key] =
-      isObject(value) || isArray(value) ? JSON.stringify(value) : value;
-    return acc;
-  }, {});
+function expectedRow(event: WalkerOS.Event) {
+  return eventToRow(event);
 }
 
 /**
- * Page view -- client.dataset(datasetId).table(tableId).insert([row])
- * The row is the full event with timestamp converted to Date and nested
- * objects/arrays flattened via JSON.stringify. Captured as a single
- * intent-level call: ['dataset.table.insert', datasetId, tableId, rows].
+ * Page view -- one row appended through JSONWriter.appendRows([row]).
+ * Captured as a single intent-level call: ['appendRows', [row]].
  */
 const pageViewEvent = getEvent('page view', {
   timestamp: 1700001100,
@@ -40,22 +25,15 @@ const pageViewEvent = getEvent('page view', {
 export const pageView: Flow.StepExample = {
   title: 'Page view',
   description:
-    'A page view is inserted as one row into the configured BigQuery table with timestamp converted to Date.',
+    'A page view is appended as one row through the BigQuery Storage Write API JSONWriter. Nested objects/arrays in data, source, etc. are JSON-stringified by eventToRow.',
   in: pageViewEvent,
   mapping: undefined,
-  out: [
-    [
-      'dataset.table.insert',
-      'test-dataset',
-      'test-table',
-      [expectedRow(pageViewEvent)],
-    ],
-  ],
+  out: [['appendRows', [expectedRow(pageViewEvent)]]],
 };
 
 /**
- * Purchase -- nested array in data.items is JSON.stringified as part of
- * the data field in the inserted row.
+ * Purchase -- nested array in data.items is JSON.stringified into the
+ * data column of the appended row.
  */
 const purchaseEvent = getEvent('order complete', {
   timestamp: 1700001101,
@@ -70,15 +48,8 @@ const purchaseEvent = getEvent('order complete', {
 export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
-    'An order event is inserted into BigQuery as a single row. The entire nested data object (including arrays like items) is JSON-stringified into the data field via expectedRow().',
+    'An order event is appended as a single row through JSONWriter.appendRows. The entire nested data object (including arrays like items) is JSON-stringified into the data column via eventToRow().',
   in: purchaseEvent,
   mapping: undefined,
-  out: [
-    [
-      'dataset.table.insert',
-      'test-dataset',
-      'test-table',
-      [expectedRow(purchaseEvent)],
-    ],
-  ],
+  out: [['appendRows', [expectedRow(purchaseEvent)]]],
 };

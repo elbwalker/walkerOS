@@ -1,0 +1,199 @@
+---
+title: Sheets
+description: Google Sheets store for walkerOS server flows
+sidebar_position: 4
+package: '@walkeros/server-store-sheets'
+---
+
+import data from '@walkeros/server-store-sheets/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+# Sheets
+
+<PackageLink env="server" github="packages/server/stores/sheets" npm="@walkeros/server-store-sheets" />
+
+Google Sheets store with zero runtime dependencies. Uses raw `fetch` against the Sheets v4 REST API with built-in auth: Application Default Credentials (ADC) on Cloud Run / GKE, or explicit service account JWT for non-GCP environments.
+
+Designed for demos and small-scale prototyping where the spreadsheet itself is the operator-facing UI for tweaking lookup data. Not a production CRM substitute.
+
+## Caveats and quotas (read first)
+
+The Sheets API is rate-limited and slow. Wiring this store directly into a high-throughput pipeline burns quota in seconds.
+
+- **Quota:** 60 read requests / minute / user / project, 60 write requests / minute / user / project.
+- **Latency:** 200 to 800 ms per HTTP round-trip.
+- **No internal cache:** the package does NOT cache reads. Caching is the consumer's responsibility, see "Wiring with the core cache" below.
+- **Concurrency:** last writer wins on the same cell. There is no transactional `getAndSet`.
+- **Single-writer model:** if two pipeline instances both write to the same sheet, their `keyToRow` indexes diverge.
+- **Demo and small-prototype grade only.** Not a production CRM substitute.
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-store-sheets`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeSheetsInit } from '@walkeros/server-store-sheets';
+
+await startFlow({
+  stores: {
+    crm: {
+      code: storeSheetsInit,
+      config: {
+        settings: {
+          id: '1AbCdEfGhIjKlMnOpQrStUvWxYz',
+          sheet: 'Customers',
+          // Omit credentials for ADC on Cloud Run/GKE
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"stores": {
+  "crm": {
+    "package": "@walkeros/server-store-sheets",
+    "config": {
+      "settings": {
+        "id": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
+        "sheet": "Customers"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="store" data={data} />
+
+## Wiring with the core cache
+
+To absorb the Sheets quota, wire the consuming transformer or destination with the core `Cache` config, backed by a fast in-memory store (`@walkeros/store-memory`):
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "crm": {
+      "package": "@walkeros/server-store-sheets",
+      "config": {
+        "settings": {
+          "id": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
+          "sheet": "Customers"
+        }
+      }
+    },
+    "lookupCache": {
+      "package": "@walkeros/store-memory",
+      "config": { "settings": {} }
+    }
+  },
+  "transformers": {
+    "enrich": {
+      "package": "@walkeros/transformer-enrich",
+      "env": {
+        "store": "$store.crm",
+        "cache": "$store.lookupCache"
+      },
+      "config": {
+        "settings": {
+          "cache": { "ttl": 60000 }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Use `ttl: 5000` for demos (fast iteration), `ttl: 60000` or higher for production-ish loads. Without a cache, every event hits Sheets directly and trips the 60 req/min quota in under one second.
+
+The cache config lives at `packages/core/src/types/cache.ts`. See the [`understanding-stores`](https://github.com/elbwalker/walkerOS/tree/main/skills/understanding-stores) skill for the broader store/cache pattern.
+
+## Provisioning
+
+The package ships an idempotent `setup()` lifecycle, invoked only by the explicit operator command:
+
+<CodeSnippet
+  code={`walkeros setup store.<id>`}
+  language="bash"
+/>
+
+It never runs automatically. It verifies the spreadsheet exists and (if configured) writes the `setup.headers` row.
+
+### Setup options
+
+| Option    | Type       | Default | Notes                                                                                          |
+| --------- | ---------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `headers` | `string[]` | (none)  | Header values written to row 1 of the configured sheet. Idempotent overwrite, no drift detect. |
+
+`id` is taken from `settings.id` and is NOT duplicated under `setup`.
+
+### Behavior
+
+- **Existence probe:** setup issues `GET /spreadsheets/<id>?fields=spreadsheetId` and throws an actionable error on 404.
+- **Header write:** when `setup.headers` is provided, setup issues `PUT /values/<sheet>!A1:<lastCol>1?valueInputOption=RAW` with the headers as the row values. Re-running with the same headers is a no-op overwrite.
+- **No `shareWith`:** Drive API integration is intentionally out of scope in this version (it requires a separate OAuth scope). Share the spreadsheet manually with the service account email before running setup.
+
+### Runtime hard-fail
+
+The first call to `init()` issues a single `GET /spreadsheets/<id>?fields=spreadsheetId` per process per spreadsheet ID. On 404 it throws with an actionable message:
+
+<CodeSnippet
+  code={`Spreadsheet not found: <id>. Run "walkeros setup store.<id>" to ensure the sheet exists and is shared with the service account.`}
+  language="text"
+/>
+
+Operators see the error pointing at the exact command to fix it. Subsequent calls in the same process skip the check via an in-memory cache.
+
+## Authentication
+
+### Cloud Run / GKE (ADC)
+
+When running on GCP infrastructure, omit `credentials`. The store fetches access tokens from the metadata server automatically. Required OAuth scope: `https://www.googleapis.com/auth/spreadsheets`.
+
+### Non-GCP (service account)
+
+Pass a service account JSON via `$env.` reference. The store signs JWTs locally using `node:crypto` and exchanges them for access tokens via Google's OAuth2 endpoint.
+
+<CodeSnippet
+  code={`"credentials": "$env.SHEETS_SA_KEY"`}
+  language="json"
+/>
+
+The `SHEETS_SA_KEY` environment variable should contain the full service account JSON (with `client_email` and `private_key` fields). Share the spreadsheet with the service account email before running setup.
+
+## API
+
+<CodeSnippet
+  code={`const value = await store.get('alice');           // unknown | undefined (parsed JSON)
+await store.set('bob', { tier: 'silver' });        // void
+await store.delete('charlie');                     // void`}
+  language="typescript"
+/>
+
+Each value is JSON-stringified into one cell (the `value` column). Reads JSON-parse the cell back. A non-parseable cell logs a debug line and returns `undefined`.
+
+`set()` for an unknown key appends a new row, capturing the row index from the API response. `set()` for a known key updates the existing value cell. `delete()` blanks the value cell, the row stays in place to keep `keyToRow` indexes stable.
+
+## Limitations
+
+- **Single-cell value shape.** Multi-column structured rows are out of scope, ship a richer schema in a later phase if customers ask.
+- **No drift detection on header content.** If an operator manually edits row 1, the next `walkeros setup store.<id>` overwrites it without warning.
+- **No transactional updates.** `set` is two HTTP calls (read index, write cell). Concurrent writers can interleave.

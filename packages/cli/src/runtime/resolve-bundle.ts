@@ -18,8 +18,8 @@ import { isStdinPiped, readStdin } from '../core/stdin.js';
  * Local dev: falls back to /tmp/.
  */
 function getDefaultWritePath(): string {
-  if (existsSync('/app/flow')) return '/app/flow/bundle.mjs';
-  return '/tmp/walkeros-bundle.mjs';
+  if (existsSync('/app/flow')) return '/app/flow/flow.mjs';
+  return '/tmp/walkeros-flow.mjs';
 }
 
 export type BundleSource = 'stdin' | 'url' | 'file';

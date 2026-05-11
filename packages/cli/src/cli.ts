@@ -7,6 +7,7 @@ import { createEmitter } from './telemetry/index.js';
 import { bundleCommand } from './commands/bundle/index.js';
 import { pushCommand } from './commands/push/index.js';
 import { runCommand } from './commands/run/index.js';
+import { setupCommand } from './commands/setup/index.js';
 import { validateCommand } from './commands/validate/index.js';
 import { registerCacheCommand } from './commands/cache.js';
 import { loginCommand } from './commands/login/index.js';
@@ -90,7 +91,9 @@ program
 // Bundle command
 program
   .command('bundle [file]')
-  .description('Bundle NPM packages with custom code')
+  .description(
+    'Bundle a flow.json. Server flows produce dist/{flow.mjs,package.json,node_modules/} via @vercel/nft tracing; web flows produce a single walker.js.',
+  )
   .option('-o, --output <path>', 'write bundle to file or directory')
   .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('--all', 'build all flows for multi-flow configs')
@@ -99,10 +102,6 @@ program
   .option('--no-cache', 'disable package caching')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
-  .option(
-    '--dockerfile [file]',
-    'generate Dockerfile (or copy custom file) to dist/',
-  )
   .action(async (file, options) => {
     await bundleCommand({
       config: file,
@@ -114,7 +113,6 @@ program
       cache: options.cache,
       verbose: options.verbose,
       silent: options.silent,
-      dockerfile: options.dockerfile,
     });
   });
 
@@ -167,6 +165,32 @@ program
       simulate: options.simulate,
       mock: options.mock,
       snapshot: options.snapshot,
+    });
+  });
+
+// Setup command
+// Note: positional arg is `<target>` (component selector like
+// `destination.NAME`), not `[file]`. The flow config path comes from
+// `-c/--config`, mirroring how `deploy start <flowId>` selects an entity.
+program
+  .command('setup <target>')
+  .description(
+    'Run the setup function for one component. ' +
+      'Target format: source.NAME | destination.NAME | store.NAME.',
+  )
+  .option('-c, --config <path>', 'flow config file', './flow.json')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .action(async (target, options) => {
+    await setupCommand({
+      target,
+      config: options.config,
+      flow: options.flow,
+      json: options.json,
+      verbose: options.verbose,
+      silent: options.silent,
     });
   });
 

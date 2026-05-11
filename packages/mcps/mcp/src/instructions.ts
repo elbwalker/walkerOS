@@ -50,7 +50,7 @@ Every component in a flow is a **step**: sources capture events, transformers pr
 
 - **Mapping** transforms events using data/map/loop/set/condition rules. Same syntax on sources and destinations. Mapping rules use NESTED entity → action keying: event name "product add" maps to \`{ "product": { "add": Rule } }\`. Wildcards: \`{ "*": { "view": Rule } }\`.
 - **Contracts** define event schemas using entity-action keying. Can generate FROM mappings or scaffold mappings FROM contracts.
-- **Variables** (\$var, \$env, \$def, \$code, \$store) enable DRY, environment-aware config. Use the \`use-definitions\` prompt to extract shared patterns.
+- **Variables** (\$var, \$env, \$code, \$store) enable DRY, environment-aware config. Whole-string \`$var.name\` references preserve native type (object/array/scalar); inline interpolation requires a scalar. Deep paths via \`$var.name.deep.path\`.
 - **Consent** gates destinations, mapping rules, and individual fields. Privacy-first by design.
 
 ## Simulation Tips

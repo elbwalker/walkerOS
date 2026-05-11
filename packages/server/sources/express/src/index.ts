@@ -37,9 +37,15 @@ export const sourceExpress = async (
 
   const app = expressLib();
 
-  // Middleware setup - JSON body parsing with 10mb default limit
-  app.use(expressLib.json({ limit: '1mb' }));
-  app.use(expressLib.text({ limit: '1mb' }));
+  // Body parsing — JSON content-type plus text/plain so navigator.sendBeacon
+  // payloads (which the browser forces to text/plain;charset=UTF-8) are also
+  // parsed as JSON. 1mb default limit.
+  app.use(
+    expressLib.json({
+      limit: '1mb',
+      type: ['application/json', 'text/plain'],
+    }),
+  );
 
   // CORS middleware (enabled by default)
   if (settings.cors !== false) {

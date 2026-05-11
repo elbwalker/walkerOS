@@ -333,7 +333,6 @@ Transformers process events between sources and destinations. They validate, enr
 - **`before`** - Pre-transformer chain (runs before this transformer's push)
 - **`next`** - Next transformer in chain (omit to end chain)
 - **`variables`** - Transformer-level variable overrides
-- **`definitions`** - Transformer-level definitions
 
 **Chaining transformers:**
 
@@ -848,54 +847,6 @@ Reference environment variables with optional defaults:
 Environment variables are external and unpredictable - they might not be set in all environments. Config variables (`$var`) are explicitly defined, so a missing one indicates a configuration error.
 :::
 
-### `$def.name` - Definition References
-
-Reference reusable configuration blocks defined in `definitions`:
-
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "definitions": {
-    "commonMapping": {
-      "page": {
-        "view": { "name": "page_view" }
-      }
-    },
-    "itemsLoop": {
-      "loop": ["nested", { "map": { "item_id": "data.id", "item_name": "data.name" } }]
-    }
-  },
-  "flows": {
-    "default": {
-      "config": { "platform": "web" },
-      "destinations": {
-        "gtag": {
-          "package": "@walkeros/web-destination-gtag",
-          "config": {
-            "mapping": "$def.commonMapping"
-          }
-        },
-        "api": {
-          "package": "@walkeros/web-destination-api",
-          "config": {
-            "mapping": {
-              "order": {
-                "complete": {
-                  "data": { "map": { "items": "$def.itemsLoop" } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-Definitions cascade like variables - defined at setup, flow, or source/destination level.
-
 ### `$code:` - Inline JavaScript
 
 Embed JavaScript code directly in JSON config values:
@@ -959,12 +910,11 @@ walkerOS uses a clear type hierarchy:
 │  Flow.Json (config file)                                        │
 │  ├── version: 4                                                 │
 │  ├── variables?: { currency: "EUR" }                            │
-│  ├── definitions?: { commonMapping: {...} }                     │
 │  └── flows:                                                     │
 │       └── default: Flow                                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ CLI resolves $var, $env, $def, $flow
+                              │ CLI resolves $var, $env, $flow
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  Flow (resolved flow)                                           │

@@ -61,7 +61,7 @@ export async function collector(
     timing: Date.now(),
     user: initConfig.user || {},
     sources: {},
-    pending: { sources: {}, destinations: {} },
+    pending: { destinations: {} },
     push: undefined as unknown as Collector.PushFn, // Placeholder, will be set below
     command: undefined as unknown as Collector.CommandFn, // Placeholder, will be set below
   };

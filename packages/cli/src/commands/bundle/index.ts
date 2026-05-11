@@ -6,7 +6,6 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import { getPlatform } from '@walkeros/core';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   createTimer,
@@ -32,7 +31,6 @@ import type { BundleTarget } from './targets.js';
 import { resolveTarget } from './targets.js';
 import { uploadBundleToUrl, sanitizeUrl } from './upload.js';
 import { displayStats, createStatsSummary } from './stats.js';
-import { generateDockerfile } from './dockerfile.js';
 
 export interface BundleCommandOptions {
   config?: string;
@@ -44,18 +42,31 @@ export interface BundleCommandOptions {
   cache?: boolean;
   verbose?: boolean;
   silent?: boolean;
-  dockerfile?: boolean | string;
 }
 
 /**
  * Resolve -o path: if directory, use platform-default filename.
+ *
+ * When `flowSubdir` is provided (multi-flow `--all` mode), the output is
+ * always treated as a directory and the flow name is inserted as a
+ * subdirectory: `<output>/<flowSubdir>/<defaultFilename>`. This keeps each
+ * flow's artifacts isolated from the others.
+ *
+ * Exported for unit tests.
  */
-function resolveOutputPath(output: string, buildOptions: BuildOptions): string {
+export function resolveOutputPath(
+  output: string,
+  buildOptions: BuildOptions,
+  flowSubdir?: string,
+): string {
   const resolved = path.resolve(output);
+  const filename =
+    buildOptions.platform === 'browser' ? 'walker.js' : 'flow.mjs';
+  if (flowSubdir) {
+    return path.join(resolved, flowSubdir, filename);
+  }
   const ext = path.extname(resolved);
   if (output.endsWith('/') || output.endsWith(path.sep) || !ext) {
-    const filename =
-      buildOptions.platform === 'browser' ? 'walker.js' : 'bundle.mjs';
     return path.join(resolved, filename);
   }
   return resolved;
@@ -146,7 +157,11 @@ export async function bundleCommand(
             `url-bundle-${Date.now()}${ext}`,
           );
         } else if (options.output) {
-          buildOptions.output = resolveOutputPath(options.output, buildOptions);
+          buildOptions.output = resolveOutputPath(
+            options.output,
+            buildOptions,
+            options.all ? flowName : undefined,
+          );
         } else {
           // Stdout mode: bundle to temp file, then write to stdout
           const ext = buildOptions.platform === 'browser' ? '.js' : '.mjs';
@@ -194,28 +209,9 @@ export async function bundleCommand(
             const defaultPath =
               buildOptions.platform === 'browser'
                 ? './dist/walker.js'
-                : './dist/bundle.mjs';
+                : './dist/flow.mjs';
             logger.info(
               `Bundle written to stdout. Use -o ${defaultPath} to write to file.`,
-            );
-          }
-        }
-
-        // Dockerfile only with -o
-        if (options.dockerfile && options.output) {
-          const platform = getPlatform(flowSettings);
-          if (platform) {
-            const outputDir = path.dirname(buildOptions.output);
-            const customFile =
-              typeof options.dockerfile === 'string'
-                ? options.dockerfile
-                : undefined;
-            await generateDockerfile(
-              outputDir,
-              platform,
-              logger,
-              customFile,
-              buildOptions.include,
             );
           }
         }

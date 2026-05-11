@@ -1,4 +1,7 @@
-import type { Destination as CoreDestination } from '@walkeros/core';
+import type {
+  Destination as CoreDestination,
+  SetupFn as CoreSetupFn,
+} from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
 
 /**
@@ -13,10 +16,52 @@ export interface KafkaProducerMock {
 }
 
 /**
+ * Mock-friendly Admin interface used by setup (subset of kafkajs.Admin).
+ * Tests provide this via env.Kafka; production creates a real
+ * kafkajs Admin client.
+ */
+export interface KafkaAdminMock {
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  createTopics: (args: {
+    topics: Array<{
+      topic: string;
+      numPartitions: number;
+      replicationFactor: number;
+      configEntries?: Array<{ name: string; value: string }>;
+    }>;
+    validateOnly?: boolean;
+    waitForLeaders?: boolean;
+    timeout?: number;
+  }) => Promise<boolean>;
+  fetchTopicMetadata: (args: { topics?: string[] }) => Promise<{
+    topics: Array<{
+      name: string;
+      partitions: Array<{
+        partitionId: number;
+        leader: number;
+        replicas: number[];
+        isr: number[];
+      }>;
+    }>;
+  }>;
+  describeConfigs: (args: {
+    resources: Array<{ type: number; name: string }>;
+    includeSynonyms?: boolean;
+  }) => Promise<{
+    resources: Array<{
+      resourceName: string;
+      configEntries: Array<{ configName: string; configValue: string }>;
+    }>;
+  }>;
+}
+
+/**
  * Mock-friendly Kafka client interface (subset of kafkajs.Kafka).
  */
 export interface KafkaClientMock {
   producer: (config?: ProducerConfig) => KafkaProducerMock;
+  admin: () => KafkaAdminMock;
 }
 
 /**
@@ -142,7 +187,51 @@ export interface Env extends DestinationServer.Env {
   };
 }
 
-export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
+/**
+ * Provisioning options for `walkeros setup destination.<id>`.
+ *
+ * Triggered only by the explicit CLI command. Idempotent. Never auto-run.
+ *
+ * NO SAFE DEFAULTS for `numPartitions` or `replicationFactor`: these are
+ * cluster-specific operational decisions and depend on broker count,
+ * expected throughput, and consumer parallelism. Both fields are optional
+ * in the TypeScript shape (config often comes from JSON), but the runtime
+ * REQUIRES both. Missing values throw with an actionable message. The
+ * boolean form (setup: true) is rejected at runtime; only the object form
+ * is valid.
+ */
+export interface Setup {
+  topic?: string;
+  numPartitions?: number;
+  replicationFactor?: number;
+  configEntries?: Record<string, string>;
+  schemaRegistry?: SchemaRegistrySetup;
+  validateOnly?: boolean;
+}
+
+export interface SchemaRegistrySetup {
+  url: string;
+  subject: string;
+  schemaType: 'AVRO' | 'JSON' | 'PROTOBUF';
+  schema: string;
+  compatibility?:
+    | 'BACKWARD'
+    | 'FORWARD'
+    | 'FULL'
+    | 'NONE'
+    | 'BACKWARD_TRANSITIVE'
+    | 'FORWARD_TRANSITIVE'
+    | 'FULL_TRANSITIVE';
+  auth?: { username: string; password: string };
+}
+
+export type Types = CoreDestination.Types<
+  Settings,
+  Mapping,
+  Env,
+  InitSettings,
+  Setup
+>;
 
 export interface Destination extends DestinationServer.Destination<Types> {
   init: DestinationServer.InitFn<Types>;
@@ -154,5 +243,8 @@ export type Config = {
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;
+export type SetupFn = CoreSetupFn<Config, Env>;
+
 export type PartialConfig = DestinationServer.PartialConfig<Types>;
+
 export type PushEvents = DestinationServer.PushEvents<Mapping>;

@@ -8,10 +8,7 @@ export interface PackageInfo {
 
 export interface IntelliSenseContext {
   /** Variable names and values from the flow's `variables` section */
-  variables?: Record<string, string | number | boolean>;
-
-  /** Definition names from the flow's `definitions` section */
-  definitions?: Record<string, unknown>;
+  variables?: Record<string, unknown>;
 
   /** Secret names available in the project (values are NOT included) */
   secrets?: string[];

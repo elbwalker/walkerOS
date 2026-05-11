@@ -125,16 +125,16 @@ describe('validateFlowConfig', () => {
     ).toHaveLength(0);
   });
 
-  it('warns for dangling $def. reference', () => {
+  it('warns for dangling $var. reference with sibling defined', () => {
     const json = JSON.stringify(
       {
         version: 4,
-        definitions: { clean: {} },
+        variables: { clean: {} },
         flows: {
           default: {
             config: { platform: 'web' },
             destinations: {
-              ga4: { config: { transform: '$def.missing' } },
+              ga4: { config: { transform: '$var.missing' } },
             },
           },
         },
@@ -144,7 +144,7 @@ describe('validateFlowConfig', () => {
     );
     const result = validateFlowConfig(json);
     expect(
-      result.warnings.some((w) => w.message.includes('$def.missing')),
+      result.warnings.some((w) => w.message.includes('$var.missing')),
     ).toBe(true);
   });
 
@@ -246,6 +246,65 @@ describe('validateFlowConfig', () => {
     expect(result.context).toBeUndefined();
   });
 
+  it('returns context with store names', () => {
+    const json = JSON.stringify(
+      {
+        version: 4,
+        flows: {
+          default: {
+            config: { platform: 'server' },
+            stores: { files: { package: '@walkeros/server-store-fs' } },
+          },
+        },
+      },
+      null,
+      2,
+    );
+    const result = validateFlowConfig(json);
+    expect(result.context?.stepNames?.stores).toEqual(['files']);
+  });
+
+  it('returns context with flow names', () => {
+    const json = JSON.stringify(
+      {
+        version: 4,
+        flows: {
+          web: { config: { platform: 'web' } },
+          server: { config: { platform: 'server' } },
+        },
+      },
+      null,
+      2,
+    );
+    const result = validateFlowConfig(json);
+    expect(result.context?.flowNames).toEqual(['web', 'server']);
+  });
+
+  it('aggregates stores across multiple flows', () => {
+    const json = JSON.stringify(
+      {
+        version: 4,
+        flows: {
+          a: {
+            config: { platform: 'server' },
+            stores: { cache: { package: '@walkeros/store-memory' } },
+          },
+          b: {
+            config: { platform: 'server' },
+            stores: { files: { package: '@walkeros/server-store-fs' } },
+          },
+        },
+      },
+      null,
+      2,
+    );
+    const result = validateFlowConfig(json);
+    expect(result.context?.stepNames?.stores?.sort()).toEqual([
+      'cache',
+      'files',
+    ]);
+  });
+
   // --- Symmetric before/next ---
 
   it('accepts source with before property', () => {
@@ -330,5 +389,420 @@ describe('validateFlowConfig', () => {
     );
     const result = validateFlowConfig(json);
     expect(result.valid).toBe(true);
+  });
+
+  // --- $store. references ---
+
+  describe('$store. references', () => {
+    it('warns for dangling $store. reference', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: { files: { package: '@walkeros/server-store-fs' } },
+              transformers: {
+                t: {
+                  package: '@walkeros/transformer-redact',
+                  env: { store: '$store.missing' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.some((w) => w.message.includes('$store.missing')),
+      ).toBe(true);
+    });
+
+    it('does not warn for valid $store. reference', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: { files: { package: '@walkeros/server-store-fs' } },
+              transformers: {
+                t: {
+                  package: '@walkeros/transformer-redact',
+                  env: { store: '$store.files' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.filter((w) => w.message.includes('$store.')),
+      ).toHaveLength(0);
+    });
+
+    it('lists defined stores in the warning message', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: {
+                cache: { package: '@walkeros/store-memory' },
+                files: { package: '@walkeros/server-store-fs' },
+              },
+              transformers: {
+                t: {
+                  package: '@walkeros/transformer-redact',
+                  env: { store: '$store.bogus' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      const warning = result.warnings.find((w) =>
+        w.message.includes('$store.bogus'),
+      );
+      expect(warning).toBeDefined();
+      if (!warning) throw new Error('warning expected');
+      expect(warning.message).toMatch(/cache/);
+      expect(warning.message).toMatch(/files/);
+    });
+  });
+
+  // --- $env. references ---
+
+  describe('$env. references', () => {
+    it('does not warn for valid $env.NAME', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: { config: { settings: { url: '$env.API_URL' } } },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.filter((w) => w.message.includes('$env.')),
+      ).toHaveLength(0);
+    });
+
+    it('does not warn for valid $env.NAME:default', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: {
+                  config: {
+                    settings: { url: '$env.API_URL:https://default.test' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.filter((w) => w.message.includes('$env.')),
+      ).toHaveLength(0);
+    });
+
+    it('warns when $env. uses = instead of : for default value', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: {
+                  config: { settings: { url: '$env.API_URL=fallback' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.some((w) => /\$env\.API_URL=fallback/.test(w.message)),
+      ).toBe(true);
+    });
+
+    it('warns on lowercase env var name (convention)', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: { config: { settings: { url: '$env.apiUrl' } } },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.some(
+          (w) =>
+            /\$env\.apiUrl/.test(w.message) &&
+            /uppercase|UPPER_SNAKE/i.test(w.message),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  // --- $flow. references ---
+
+  describe('$flow. references', () => {
+    it('warns when $flow.NAME references an undefined flow', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            web: {
+              config: {
+                platform: 'web',
+                settings: { backend: '$flow.serverr.url' },
+              },
+            },
+            server: {
+              config: { platform: 'server', url: 'https://api.test' },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.some(
+          (w) =>
+            /\$flow\.serverr/.test(w.message) &&
+            /Defined: web, server|Defined flows/.test(w.message),
+        ),
+      ).toBe(true);
+    });
+
+    it('does not warn for valid $flow.NAME reference', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            web: {
+              config: {
+                platform: 'web',
+                settings: { backend: '$flow.server.url' },
+              },
+            },
+            server: {
+              config: { platform: 'server', url: 'https://api.test' },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.filter(
+          (w) =>
+            /Unknown flow/.test(w.message) ||
+            /\$flow\.\w+ references undefined/.test(w.message),
+        ),
+      ).toHaveLength(0);
+    });
+  });
+
+  // --- Colon-instead-of-dot typo detection ---
+
+  describe('colon-instead-of-dot typo detection', () => {
+    it('warns on $store:NAME and suggests $store.NAME', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: { files: { package: '@walkeros/server-store-fs' } },
+              transformers: {
+                t: {
+                  package: '@walkeros/transformer-redact',
+                  env: { store: '$store:files' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      const warning = result.warnings.find((w) =>
+        w.message.includes('$store:files'),
+      );
+      expect(warning).toBeDefined();
+      if (!warning) throw new Error('warning expected');
+      expect(warning.message).toMatch(/\$store\.files/);
+      expect(warning.message).toMatch(/dot/i);
+    });
+
+    it('warns on $var:NAME and suggests $var.NAME', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          variables: { gaId: 'G-XXX' },
+          flows: {
+            default: {
+              config: { platform: 'web' },
+              destinations: {
+                ga4: { config: { settings: { id: '$var:gaId' } } },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      const warning = result.warnings.find((w) =>
+        w.message.includes('$var:gaId'),
+      );
+      expect(warning).toBeDefined();
+      if (!warning) throw new Error('warning expected');
+      expect(warning.message).toMatch(/\$var\.gaId/);
+    });
+
+    it('warns on $flow:NAME and suggests $flow.NAME', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            web: {
+              config: { platform: 'web', settings: { url: '$flow:server' } },
+            },
+            server: {
+              config: { platform: 'server', url: 'https://api.test' },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      const warning = result.warnings.find((w) =>
+        w.message.includes('$flow:server'),
+      );
+      expect(warning).toBeDefined();
+      if (!warning) throw new Error('warning expected');
+      expect(warning.message).toMatch(/\$flow\.server/);
+    });
+
+    it('warns on $secret:NAME and suggests $secret.NAME', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: {
+                  config: { settings: { token: '$secret:API_TOKEN' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      const warning = result.warnings.find((w) =>
+        w.message.includes('$secret:API_TOKEN'),
+      );
+      expect(warning).toBeDefined();
+      if (!warning) throw new Error('warning expected');
+      expect(warning.message).toMatch(/\$secret\.API_TOKEN/);
+    });
+
+    it('does not warn on $code: prefix (legitimate colon usage)', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'web' },
+              transformers: {
+                t: { code: { push: '$code:(e) => e' } },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.filter((w) => /colon|dot/.test(w.message)),
+      ).toHaveLength(0);
+    });
+
+    it('does not warn on $env.NAME:default (legitimate colon usage)', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: {
+                  config: {
+                    settings: { url: '$env.API_URL:https://default.test' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.filter((w) =>
+          /colon-instead-of-dot|use a dot/.test(w.message),
+        ),
+      ).toHaveLength(0);
+    });
   });
 });

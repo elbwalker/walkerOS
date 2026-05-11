@@ -10,9 +10,25 @@ import type { Collector } from '@walkeros/core';
 import { getMappingValue, isObject, isString } from '@walkeros/core';
 import { getCompressionType } from './config';
 
+const UNKNOWN_TOPIC_CODE = 3;
+const UNKNOWN_TOPIC_TYPE = 'UNKNOWN_TOPIC_OR_PARTITION';
+
+function hasCodeOrType(
+  err: unknown,
+): err is { code?: unknown; type?: unknown } {
+  return (
+    typeof err === 'object' && err !== null && ('code' in err || 'type' in err)
+  );
+}
+
+function isUnknownTopicError(err: unknown): boolean {
+  if (!hasCodeOrType(err)) return false;
+  return err.code === UNKNOWN_TOPIC_CODE || err.type === UNKNOWN_TOPIC_TYPE;
+}
+
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, env, logger },
+  { config, rule, data, collector, env, logger, id },
 ) {
   const settings = config.settings as { kafka?: KafkaSettings } | undefined;
   const kafka: KafkaSettings | undefined = settings?.kafka;
@@ -76,11 +92,26 @@ export const push: PushFn = async function (
   try {
     await (producer as KafkaProducerMock).send(record);
   } catch (error) {
-    logger.error('Kafka push failed', {
-      topic,
-      error: error instanceof Error ? error.message : String(error),
-      event: eventName,
-    });
+    if (isUnknownTopicError(error)) {
+      const brokers = (kafka.brokers ?? []).join(',');
+      logger.error(
+        `Kafka topic "${topic}" not found on cluster ${brokers}. ` +
+          `Run "walkeros setup destination.${id}" with explicit ` +
+          `{ numPartitions, replicationFactor } to create it.`,
+        {
+          topic,
+          brokers,
+          event: eventName,
+          originalError: error instanceof Error ? error.message : String(error),
+        },
+      );
+    } else {
+      logger.error('Kafka push failed', {
+        topic,
+        error: error instanceof Error ? error.message : String(error),
+        event: eventName,
+      });
+    }
   }
 };
 

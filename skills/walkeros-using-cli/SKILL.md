@@ -128,28 +128,38 @@ runtime override it.
     "<flowName>": {
       "config": {
         "platform": "web" | "server",  // Platform (required)
-        "settings": {},                // Platform-specific settings (optional)
-        "bundle": {                    // Build-time config
-          "packages": {},              // NPM packages to bundle
-          "overrides": {}              // Transitive dep version pins (npm-style)
+        "settings": {},                 // Platform-specific settings (optional)
+        "bundle": {
+          "packages": {},               // NPM packages pacote will install
+          "overrides": {},              // Transitive dep version pins (npm-style)
+          "traceInclude": []            // Optional: nft escape hatch (paths/globs)
         }
       },
-      "sources": {},                   // Event sources
-      "destinations": {},              // Event destinations
-      "transformers": {},              // Transformer chain (optional)
-      "mappings": {},                  // Event transformation rules
-      "collector": {}                  // Collector configuration
+      "sources": {},                    // Event sources
+      "destinations": {},               // Event destinations
+      "transformers": {},               // Transformer chain (optional)
+      "mappings": {},                   // Event transformation rules
+      "collector": {}                   // Collector configuration
     }
   }
 }
 ```
 
-**`bundle.overrides`** pins transitive dependency versions. Use it when a vendor
-SDK's declared peer/dep range conflicts with another required version in the
-same tree. Example: `{"@amplitude/analytics-types": "2.11.1"}` forces that exact
-version everywhere in the install graph, regardless of what upstream packages
-declare. Direct package specs always win over overrides; overrides only
-substitute transitive resolution.
+**You do NOT need `npm install` for step packages.** flow.json's
+`config.bundle.packages` is the single source of truth. Pacote installs them
+transparently when you run `walkeros bundle`. Only `@walkeros/cli` belongs in
+your project's `package.json` (as a devDependency).
+
+**`config.bundle.overrides`** pins transitive dependency versions. Use it when a
+vendor SDK's declared peer/dep range conflicts with another required version in
+the same tree. Example: `{"@amplitude/analytics-types": "2.11.1"}` forces that
+exact version everywhere in the install graph. Direct `packages` specs always
+win over overrides; overrides only substitute transitive resolution.
+
+**Schema version stays at 4.** Build-time fields live under
+`flow.<name>.config.bundle.{packages, overrides, traceInclude}`. The
+`flow.<name>.config.bundle.external` sub-field is no longer supported in
+@walkeros/cli@4.x.
 
 For detailed configuration options, see
 [flow-configuration.md](flow-configuration.md).
@@ -228,13 +238,17 @@ Options:
   --stats           Show bundle statistics
   --json            JSON output
   --no-cache        Skip build cache
-  --dockerfile      Generate Dockerfile
   -v, --verbose     Verbose output
   -s, --silent      Silent mode
 ```
 
-Output: stdout (use `-o ./dist/walker.js` for web or `-o ./dist/bundle.mjs` for
-server)
+Output:
+
+- Web: `dist/walker.js` (single self-contained IIFE)
+- Server: `dist/{flow.mjs, package.json, node_modules/}` (always a directory;
+  nft-traced)
+
+Use `-o ./dist/walker.js` for web or `-o ./dist/` for server.
 
 ### Push Command
 
@@ -285,13 +299,118 @@ Options:
 ## Bundler Gotchas
 
 - **Circular copies:** Never include the output directory itself (e.g.,
-  `include: ["./dist"]` when output is `dist/bundle.mjs`). The CLI detects this
-  and errors.
+  `include: ["./dist"]` when output is `dist/`). The CLI detects this and
+  errors.
 - **Runtime paths:** The runner sets CWD to the bundle directory. File paths in
   `settings` resolve relative to the bundle, not the project root.
 - **Component names:** Source, transformer, destination, and store names must be
   valid JavaScript identifiers (camelCase). Hyphens like `gtag-wrapper` cause
   syntax errors — use `gtagWrapper` instead.
+- **Range conflicts:** When two transitive consumers declare incompatible ranges
+  for the same dep (e.g., `arrify@^3.0.0` vs `arrify@^2.0.0`), the bundler
+  resolves the chosen range to a concrete version and nests non-satisfying specs
+  under their consumer. If a post-install warning surfaces declared-vs-installed
+  mismatches, pin the dep in `config.bundle.overrides`. Set
+  `BUNDLER_STRICT_RANGES=0` to bypass strict range validation when the npm
+  registry is unreachable.
+
+---
+
+## Server bundles use nft tracing
+
+Server flows are bundled with [`@vercel/nft`](https://github.com/vercel/nft).
+The CLI:
+
+1. Pacote installs every package declared in
+   `flow.<name>.config.bundle.packages` into a per-build install root. Users do
+   **not** run `npm install` for step packages; only `@walkeros/cli` lives in
+   their `package.json`.
+2. esbuild stage 1 externalizes all step packages.
+3. esbuild stage 2 emits a small ESM `flow.mjs` that imports from those
+   externalized packages.
+4. nft traces `flow.mjs`, finds every file actually reachable at runtime
+   (including `__dirname`-loaded `.proto` files and other assets), and copies
+   only those files into `dist/node_modules/`.
+
+There is no `walkerOS.bundle.external` annotation. nft figures it out.
+
+**Output shape (always a directory for server flows):**
+
+```
+dist/
+├── flow.mjs        # ESM entry, expects to be at /app/flow/flow.mjs in prod
+├── package.json     # informational sidecar (not used by the runner)
+└── node_modules/    # only the files nft traced
+```
+
+Web flows are unchanged: a single `dist/walker.js`.
+
+### Canonical Dockerfile
+
+```dockerfile
+FROM node:22-alpine AS builder
+WORKDIR /build
+RUN npm init -y && npm install --save-dev @walkeros/cli
+COPY flow.json ./
+RUN npx walkeros bundle flow.json -o dist/
+
+FROM walkeros/flow:4
+WORKDIR /app/flow
+COPY --from=builder /build/dist/ ./
+ENV PORT=8080
+EXPOSE 8080
+```
+
+Notes:
+
+- The build stage only needs `@walkeros/cli`. flow.json drives every step
+  package install; pacote handles it.
+- `COPY --from=builder /build/dist/ ./` copies the whole directory (flow.mjs +
+  package.json + node_modules/) into `/app/flow/`.
+- The runner image's defaults match `/app/flow/flow.mjs`. No `BUNDLE` env var
+  needed.
+
+### Escape hatch: `traceInclude`
+
+If nft cannot statically reach a runtime asset (rare: `require()` of a path
+constructed from a runtime variable), declare it explicitly under
+`flow.<name>.config.bundle.traceInclude`. Paths and globs both work; both
+resolve against the install root, not the project directory:
+
+```json
+"flows": {
+  "default": {
+    "config": {
+      "platform": "server",
+      "bundle": {
+        "packages": { "@walkeros/server-destination-gcp": {} },
+        "traceInclude": [
+          "node_modules/some-pkg/data/*.json",
+          "node_modules/another-pkg/lib/runtime-loaded.js"
+        ]
+      }
+    }
+  }
+}
+```
+
+### Cache (CI)
+
+The bundler caches pacote downloads under `process.env.NPM_CACHE_DIR` (default
+`<tmpDir>/cache/npm`). On CI, persist that path with `actions/cache`:
+
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: .walkeros-cache/npm
+    key: walkeros-${{ hashFiles('**/flow.json') }}
+- run: WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o dist/
+```
+
+**CI smoke check:**
+`cd dist && node -e "import('./flow.mjs').then(()=>console.log('ok'))"` plus
+`du -sh node_modules` (typical: 30-50MB for GCP destination, 10k+ files; use
+`.dockerignore`).
 
 ---
 
@@ -352,14 +471,17 @@ included in `PushResult.networkCalls` when present.
 
 ### Local Packages Not Found
 
-Use absolute or relative paths:
+Use absolute or relative paths in `flow.<name>.config.bundle.packages`:
 
 ```json
 {
-  "bundle": {
-    "packages": {
-      "my-destination": {
-        "path": "./local/my-destination"
+  "config": {
+    "platform": "web",
+    "bundle": {
+      "packages": {
+        "my-destination": {
+          "path": "./local/my-destination"
+        }
       }
     }
   }

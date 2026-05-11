@@ -109,3 +109,101 @@ and `secretAccessKey` are always required.
 This is the recommended store for managed walkerOS deployments. Files live in a
 bucket rather than needing to be baked into a Docker image, enabling hot-swap of
 static assets.
+
+## Provisioning the bucket
+
+Run setup once to create the bucket idempotently:
+
+```bash
+walkeros setup store.assets
+```
+
+The CLI imports the package, reads `default.setup`, and calls it with the
+component's resolved config. Setup is idempotent: if the bucket already exists
+(your account or a concurrent caller), it returns `{ bucketCreated: false }` and
+exits ok. If the global bucket name is taken by a different AWS account, setup
+fails with an actionable error so you pick a different name.
+
+Configure provisioning under `config.setup`:
+
+```json
+{
+  "stores": {
+    "assets": {
+      "package": "@walkeros/server-store-s3",
+      "config": {
+        "settings": {
+          "bucket": "my-assets",
+          "endpoint": "https://s3.eu-central-1.amazonaws.com",
+          "accessKeyId": "$env.S3_ACCESS_KEY",
+          "secretAccessKey": "$env.S3_SECRET_KEY",
+          "region": "eu-central-1"
+        },
+        "setup": true
+      }
+    }
+  }
+}
+```
+
+`setup: true` enables provisioning with defaults. Pass an object to override:
+
+```json
+"setup": { "region": "eu-central-1" }
+```
+
+Setup options (Variant B, minimal):
+
+| Option   | Type     | Default        | Description                                                                                                       |
+| -------- | -------- | -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `region` | `string` | `eu-central-1` | Region the bucket is created in (LocationConstraint). Falls back to `settings.region` when concrete (not `auto`). |
+
+### What setup does NOT apply
+
+`s3mini` is a minimal S3 client. It exposes `createBucket` and `bucketExists`,
+but not the bucket-level admin operations (encryption, public-access block,
+versioning, lifecycle rules, tags). To configure those, run them once via the
+AWS Console or `aws s3api`:
+
+```bash
+aws s3api put-public-access-block --bucket my-assets \
+  --public-access-block-configuration \
+  "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+aws s3api put-bucket-encryption --bucket my-assets \
+  --server-side-encryption-configuration \
+  '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+```
+
+## Init-time bucket guard
+
+`storeS3Init` probes `bucketExists()` once when the collector wires the store.
+If the bucket is missing, init throws an actionable error instead of letting
+later `get`/`set` calls return undefined or throw raw provider errors:
+
+```
+S3 bucket not found: my-assets at https://s3.eu-central-1.amazonaws.com.
+Run "walkeros setup store.assets" to create it.
+```
+
+Run `walkeros setup store.<id>` once to provision the bucket, then redeploy.
+
+## Default export shape
+
+The package's default export is an object describing the store's lifecycle:
+
+```ts
+{
+  type: 's3',
+  init: storeS3Init,
+  setup,
+}
+```
+
+The CLI reads `default.setup`. Named imports continue to work:
+
+```ts
+import { storeS3Init } from '@walkeros/server-store-s3';
+```
+
+Default-import callers must call `.init` on the returned object.

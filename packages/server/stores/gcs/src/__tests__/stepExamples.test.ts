@@ -6,7 +6,11 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
 
 import type { Collector, Logger } from '@walkeros/core';
-import { storeGcsInit } from '../store';
+import {
+  storeGcsInit,
+  __resetBucketExistenceCache,
+  __seedBucketExists,
+} from '../store';
 import { examples } from '../dev';
 
 const mockLogger: Logger.Instance = {
@@ -42,6 +46,11 @@ describe('Step Examples', () => {
   beforeEach(() => {
     mockFetch.mockReset();
     jest.clearAllMocks();
+    __resetBucketExistenceCache();
+    // Seed the buckets used by the example fixtures so the existence
+    // pre-check does not consume a fetch mock.
+    __seedBucketExists('my-bucket');
+    __seedBucketExists('my-assets');
   });
 
   it('readWithAdc — read object from GCS using ADC', async () => {

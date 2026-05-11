@@ -1,10 +1,18 @@
 import type { Env } from '../types';
+import {
+  managedwriter as mockManagedwriter,
+  adapt as mockAdapt,
+} from '../__mocks__/@google-cloud/bigquery-storage';
 
 /**
  * Example environment configurations for GCP BigQuery destination
  *
  * These environments provide standardized mock structures for testing
  * and development without requiring actual BigQuery SDK dependencies.
+ *
+ * The Storage Write API mocks (WriterClient, JSONWriter, adapt) are
+ * re-exported from the package-local __mocks__ folder so example/test
+ * code shares a single source of truth with the jest auto-mock.
  */
 
 // Simple no-op function for mocking
@@ -55,6 +63,18 @@ export const push: Env = {
   get BigQuery() {
     return createMockBigQuery() as unknown as Env['BigQuery'];
   },
+  get WriterClient() {
+    return mockManagedwriter.WriterClient as unknown as Env['WriterClient'];
+  },
+  get JSONWriter() {
+    return mockManagedwriter.JSONWriter as unknown as Env['JSONWriter'];
+  },
+  get adapt() {
+    return mockAdapt as unknown as Env['adapt'];
+  },
+  get managedwriterModule() {
+    return mockManagedwriter as unknown as Env['managedwriterModule'];
+  },
 };
 
-export const simulation = ['BigQuery'];
+export const simulation = ['BigQuery', 'WriterClient', 'JSONWriter', 'adapt'];

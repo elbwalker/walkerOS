@@ -24,20 +24,6 @@ export function getVariableCompletions(
   }));
 }
 
-export function getDefinitionCompletions(
-  definitions: IntelliSenseContext['definitions'],
-): CompletionEntry[] {
-  if (!definitions || Object.keys(definitions).length === 0) return [];
-  return Object.keys(definitions).map((name) => ({
-    label: `$def.${name}`,
-    insertText: `$def.${name}`,
-    detail: '(definition)',
-    documentation: `Definition reference. Injects the reusable config fragment "${name}" at runtime.`,
-    kind: 'reference' as const,
-    sortText: '0_def_' + name,
-  }));
-}
-
 export function getSecretCompletions(
   secrets: IntelliSenseContext['secrets'],
 ): CompletionEntry[] {

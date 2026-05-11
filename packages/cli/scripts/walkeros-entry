@@ -1,0 +1,7 @@
+#!/bin/sh
+[ -f "${BUNDLE:-/app/flow/flow.mjs}" ] || {
+  echo "walkeros: bundle not found at ${BUNDLE:-/app/flow/flow.mjs}." >&2
+  echo "Did you COPY --from=builder /build/dist/ /app/flow/ ?" >&2
+  exit 1
+}
+exec /sbin/tini -- walkeros run

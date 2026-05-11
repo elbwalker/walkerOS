@@ -113,6 +113,12 @@ Stores follow a strict lifecycle relative to other components:
 
 This guarantees stores are available when any component starts and remain available while they gracefully shut down.
 
+### Setup lifecycle (optional)
+
+Stores may also implement an optional `setup()` lifecycle for one-time, operator-time provisioning, for example creating SQLite tables or an S3 bucket. Setup runs only when an operator explicitly invokes `walkeros setup store.<name>`; the runtime never auto-invokes it. Opt in via `config.setup` in the flow config (`true` or an object).
+
+See [Setup lifecycle](/docs/destinations/create-your-own#setup-lifecycle-optional) on the destinations page for the full concept, and [walkeros setup CLI command](/docs/apps/cli#setup-command) for the operator-facing command.
+
 ## Next steps
 
 - **[Flow configuration](/docs/getting-started/modes/bundled)** - Stores in flow.json

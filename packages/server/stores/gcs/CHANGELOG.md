@@ -1,5 +1,20 @@
 # @walkeros/server-store-gcs
 
+## 4.0.1
+
+### Patch Changes
+
+- cc3bbd0: Add `setup()` lifecycle. Operators can now run
+  `walkeros setup store.<id>` to create the GCS bucket idempotently with
+  sensible defaults (location EU, STANDARD storage class, uniform bucket-level
+  access, public access prevention enforced). Detects drift on subsequent runs
+  without mutating the bucket. Adds a hard-fail with actionable message at
+  runtime when the bucket does not exist.
+- Updated dependencies [381dfe7]
+- Updated dependencies [1524275]
+- Updated dependencies [03d7055]
+  - @walkeros/core@4.0.1
+
 ## 4.0.0
 
 ### Patch Changes

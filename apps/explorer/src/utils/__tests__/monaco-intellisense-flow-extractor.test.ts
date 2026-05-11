@@ -48,28 +48,28 @@ describe('extractFlowIntelliSenseContext', () => {
     });
   });
 
-  it('extracts definitions from all levels', () => {
+  it('extracts structural variables from all levels', () => {
     const json = JSON.stringify({
       version: 4,
-      definitions: { commonSettings: { key: 'value' } },
+      variables: { commonSettings: { key: 'value' } },
       flows: {
         default: {
           config: { platform: 'web' },
-          definitions: { flowDef: { x: 1 } },
+          variables: { flowVar: { x: 1 } },
           sources: {
             browser: {
               package: '@walkeros/web-source-browser',
-              definitions: { stepDef: { y: 2 } },
+              variables: { stepVar: { y: 2 } },
             },
           },
         },
       },
     });
     const ctx = extractFlowIntelliSenseContext(json);
-    expect(ctx.definitions).toEqual({
+    expect(ctx.variables).toEqual({
       commonSettings: { key: 'value' },
-      flowDef: { x: 1 },
-      stepDef: { y: 2 },
+      flowVar: { x: 1 },
+      stepVar: { y: 2 },
     });
   });
 
@@ -217,7 +217,6 @@ describe('extractFlowIntelliSenseContext', () => {
     });
     const ctx = extractFlowIntelliSenseContext(json);
     expect(ctx.variables).toEqual({});
-    expect(ctx.definitions).toEqual({});
     expect(ctx.stepNames).toEqual({
       sources: [],
       destinations: [],

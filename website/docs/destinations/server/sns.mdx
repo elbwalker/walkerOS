@@ -1,0 +1,259 @@
+---
+title: AWS SNS
+description: 'Server-side event publishing to AWS SNS topics with FIFO ordering, KMS encryption, and idempotent topic provisioning'
+path: /docs/destinations/server/sns
+sidebar_position: 2
+package: '@walkeros/server-destination-aws'
+---
+
+import awsData from '@walkeros/server-destination-aws/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+export const data = {
+  ...awsData,
+  schemas: {
+    settings: awsData.schemas?.snsSettings,
+    mapping: awsData.schemas?.snsMapping,
+    setup: awsData.schemas?.snsSetup,
+  },
+  examples: {},
+};
+
+# AWS SNS
+
+<PackageLink env="server" github="packages/server/destinations/aws" npm="@walkeros/server-destination-aws" />
+
+Server-side event publishing to [AWS Simple Notification Service](https://aws.amazon.com/sns/)
+topics. Each event is serialized as JSON and published via the official
+`@aws-sdk/client-sns` SDK. Supports the AWS default credential chain,
+profile-based authentication, and pre-configured client injection. Idempotent
+topic provisioning via the `setup()` lifecycle, with declared subscriptions,
+KMS encryption, FIFO ordering, and per-event message attributes.
+
+The destination ships inside `@walkeros/server-destination-aws` alongside
+Firehose. Import the named export `destinationSNS` and reference it via
+the `code` field in `flow.json`.
+
+<WhereThisFits
+  pre={<>SNS is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'AWS SNS', highlight: true } },
+  }}
+  post={<>Publishes events to an SNS topic for fan-out delivery to SQS queues, Lambda functions, HTTPS endpoints, email, SMS, and custom subscribers.</>}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-aws`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationSNS } from '@walkeros/server-destination-aws';
+
+await startFlow({
+  destinations: {
+    sns: {
+      code: destinationSNS,
+      config: {
+        settings: {
+          topicName: 'walkeros-events',
+          region: 'eu-central-1',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "sns": {
+    "package": "@walkeros/server-destination-aws",
+    "code": "destinationSNS",
+    "config": {
+      "settings": {
+        "topicName": "walkeros-events",
+        "region": "eu-central-1"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />
+
+## Authentication
+
+Three modes, evaluated in order:
+
+1. **Default credential chain.** Nothing to configure beyond `region`. The
+   AWS SDK resolves credentials in the standard order: environment variables,
+   shared credentials file, IAM role attached to the runtime (EC2, ECS, Lambda).
+2. **Profile or explicit credentials via `settings.config`.** Pass
+   `config.credentials` or `config.profile`, forwarded directly to the SDK.
+3. **Pre-configured client.** Pass an existing `SNSClient` instance as
+   `settings.client` for shared clients across destinations or custom transport.
+
+## Setup
+
+Provision the topic, attributes, tags, and declared subscriptions in one shot:
+
+```bash
+walkeros setup destination.sns -c flow.json
+```
+
+Setup is **authoritative-apply**: declared state is written to declared
+resources via a single idempotent `CreateTopic` call (plus one `Subscribe`
+call per declared subscription). Non-declared subscriptions and tags are
+left untouched, never listed, never logged. Operators may freely manage
+subscriptions or tags outside walkerOS without interference. Re-running setup
+against a fully provisioned topic with declared state matching actual produces
+zero state mutations.
+
+The result is JSON-stringified to stdout:
+
+```json
+{
+  "topicArn": "arn:aws:sns:eu-central-1:000000000000:walkeros-events",
+  "topicCreated": true,
+  "tagsApplied": 2,
+  "subscriptionsCreated": 1
+}
+```
+
+`topicCreated` reflects whether the topic existed before this setup run
+(via a `GetTopicAttributes` probe against an STS-derived candidate ARN).
+`tagsApplied` and `subscriptionsCreated` count declared resources written.
+
+### FIFO topics
+
+Set `setup.fifoTopic: true`. The destination auto-appends `.fifo` to the
+topic name when missing and applies `FifoTopic`/`ContentBasedDeduplication`
+attributes at creation. Reverse: `setup.fifoTopic: false` with a `.fifo`
+suffix throws a clear error.
+
+### KMS encryption
+
+Set `setup.kmsMasterKeyId` to apply server-side encryption at creation.
+The AWS-managed default key alias is `alias/aws/sns`.
+
+### Subscriptions
+
+Each declared subscription is created with one idempotent `Subscribe` call.
+Supported protocols: `sqs`, `lambda`, `https`, `http`, `email`, `sms`.
+Per-subscription attributes (`rawMessageDelivery`, `filterPolicy`,
+`deadLetterTargetArn`) are applied at the same call.
+
+```json
+"setup": {
+  "subscriptions": [
+    {
+      "protocol": "sqs",
+      "endpoint": "arn:aws:sqs:eu-central-1:000000000000:walkeros-q",
+      "rawMessageDelivery": true
+    }
+  ]
+}
+```
+
+## FIFO ordering
+
+`messageGroupId` and `messageDeduplicationId` are `Mapping.Value` fields
+resolved per event. A string path drives the value from event data; a
+value-config form supplies a literal:
+
+```json
+"mapping": {
+  "order": {
+    "complete": {
+      "settings": {
+        "messageGroupId": "user.id",
+        "messageDeduplicationId": "id"
+      }
+    }
+  }
+}
+```
+
+## Message attributes
+
+`messageAttributes` is a `Mapping.Map`. Each value resolves per event to the
+SDK's `{ DataType, StringValue }` shape. Bare strings are auto-wrapped as
+`{ DataType: 'String', StringValue }`:
+
+```json
+"mapping": {
+  "product": {
+    "view": {
+      "settings": {
+        "messageAttributes": {
+          "schema_version": { "value": { "DataType": "String", "StringValue": "v4" } },
+          "tenant": "data.tenant_id"
+        }
+      }
+    }
+  }
+}
+```
+
+## IAM
+
+Setup role:
+
+- `sns:CreateTopic`
+- `sns:GetTopicAttributes` (existence probe)
+- `sns:Subscribe`
+- `sts:GetCallerIdentity` (account-ID resolution)
+
+Runtime push role:
+
+- `sns:Publish`
+- `sns:CreateTopic` (init's idempotent ARN capture). Drop this if you
+  pre-populate `settings.topicArn` from setup output.
+
+Recommended: separate roles for setup and runtime. Setup runs from a
+provisioner identity; runtime push uses a least-privileged role.
+
+## Troubleshooting
+
+**`NotFoundException` at push time.** The topic was deleted or the runtime
+role lacks `sns:Publish`. Re-run `walkeros setup destination.sns` or
+verify IAM.
+
+**`AccessDenied` at setup.** The setup role is missing one of the four
+permissions above. Check that `sts:GetCallerIdentity` is granted; SNS errors
+on a missing account-ID probe propagate verbatim.
+
+**FIFO suffix error.** A topic name ending in `.fifo` was supplied with
+`setup.fifoTopic: false`, or vice versa. Either set `fifoTopic: true` or
+rename the topic.
+
+**Subscription endpoint rejected.** AWS validates the endpoint at `Subscribe`
+time. SNS does NOT create the SQS queue, Lambda, or HTTPS endpoint. Provision
+those resources separately, then declare the subscription here.
+
+## Next steps
+
+- [AWS SQS source](/docs/sources/server/sqs) for the consumer side. Standard pattern: SNS topic fans out to one or more SQS queues that walkerOS pulls.
+- [Mapping configuration](/docs/mapping)
+- [Flow configuration](/docs/getting-started/flow)

@@ -1,5 +1,107 @@
 # @walkeros/cli
 
+## 4.0.1
+
+### Patch Changes
+
+- abfb0bb: @walkeros/cli: Server bundles now use @vercel/nft to trace
+  dependencies and copy only files actually used into dist/node_modules/. Pacote
+  remains the install layer (driven by flow.json's config.bundle.packages field;
+  users do not run npm install for step packages). The walkerOS.bundle.external
+  annotation field on package manifests is no longer recognized (deprecation
+  warning if seen). The flow.<name>.config.bundle.external sub-field on flow
+  configs is also no longer supported (warned and stripped during load). The
+  flow.<name>.config.bundle.traceInclude field is the escape hatch for cases nft
+  cannot statically trace. Server output is always a directory: dist/{flow.mjs,
+  package.json, node_modules/}. Default output filename changed from bundle.mjs
+  to flow.mjs. The runtime image expects /app/flow/flow.mjs. flow.json schema is
+  unchanged (still v4); only @walkeros/cli bumps. Migration: see
+  https://walkeros.io/docs/migrate/cli-4x.
+
+  @walkeros/server-destination-gcp: removed obsolete walkerOS.bundle.external
+  annotation from package manifest. nft handles externalization automatically.
+  No behavior change for consumers.
+
+- ed304b4: Bundler honors `walkerOS.bundle.external` declared in step-package
+  package.json files. Listed packages are externalized from the ESM bundle and
+  the bundler always installs them (plus their full transitive deps) into
+  `<outputDir>/node_modules/` via pacote — no `npm install` shell-out, no manual
+  deploy step. When externals is empty, output remains a single `bundle.mjs`
+  (backward compatible). When non-empty, output is a self-contained directory:
+  `bundle.mjs`, `package.json`, `package-lock.json`, `node_modules/`.
+
+  The bundler reads npm config (registry, scope tokens) from `.npmrc`,
+  parallelizes manifest fetches with retry, atomically stages each package
+  extraction (no half-populated `node_modules/` on failure), and reuses the
+  closure resolution from the existing `collectAllSpecs` BFS so peerDependencies
+  are honored.
+
+  Hard-errors when:
+  - A package in the install closure declares a `pre/install/postinstall` script
+    (pacote.extract does not run them).
+  - A step package names an external in `walkerOS.bundle.external` but does not
+    list it in `dependencies` or `peerDependencies`.
+  - Two step packages declare the same external and the resolved version does
+    not satisfy all consumers' constraints.
+
+  Warns (not errors) when:
+  - Bundle output contains unresolved `__dirname` / `__filename` references
+    (with package attribution by hit count).
+  - A step package's `walkerOS.bundle.*` block contains unknown keys (typo
+    guard).
+
+  New sibling export `downloadPackagesWithResolution` returns both the package
+  paths and the full `ResolutionResult`. Existing `downloadPackages` keeps its
+  return shape unchanged.
+
+- e4b6cf4: Fix `walkeros bundle` failing on Windows when stage 2 import paths
+  contained backslashes that JS parsed as escape sequences.
+- 381dfe7: Add an optional `setup` lifecycle to destinations, sources, and
+  stores.
+
+  Each package may now implement `setup?: SetupFn` to provision external
+  resources (BigQuery datasets and tables, Pub/Sub topics and subscriptions,
+  SQLite tables, webhook registrations, etc.). Setup is triggered only by the
+  new `walkeros setup <kind>.<name>` CLI command, never automatically by the
+  runtime, push, or deploy. Idempotency, ordering, and error semantics are the
+  package's responsibility; the framework provides the type slot, the CLI
+  invocation, and a `resolveSetup(value, defaults)` helper.
+
+  `LifecycleContext<C, E>` is the new shared context type used by both `setup`
+  and `destroy`. `DestroyContext` remains as a deprecated type alias for one
+  minor cycle. The `Types` bundle on `Destination`, `Source`, and `Store` gains
+  a 5th/6th/4th positional slot for setup options; existing aliases compile
+  unchanged because the slot defaults to `unknown`.
+  `Config<T>.setup?: boolean | SetupOptions<T>` is added across all three kinds
+  and validated by the corresponding Zod `ConfigSchema` plus the flow component
+  schemas in `@walkeros/core/schemas/flow.ts`.
+
+  CLI:
+  - `walkeros setup <kind>.<name>` runs a single component's `setup()` function.
+  - `<kind>` is `source`, `destination`, or `store` (transformers have no
+    provisioning).
+  - `--config <path>` (default `./flow.json`), `--flow <name>` for multi-flow
+    configs, plus standard `--json` / `--verbose` / `--silent`.
+  - Exit 0 on success or skip; non-zero on failure. Skip narration covers three
+    cases: no `setup()` on the package, `config.setup === false`, or
+    `config.setup` unset.
+  - When the package's `setup()` returns a non-undefined value, the CLI emits it
+    as JSON on stdout for `jq` piping.
+
+- 03d7055: Merge `definitions` into `variables`. Single concept, single syntax
+  `$var.name(.deep.path)?`. Whole-string references preserve native type; inline
+  interpolation requires scalars. Deep paths and recursive resolution with cycle
+  detection now supported. `Flow.Definitions`, `Flow.Primitive`, and the `$def.`
+  reference syntax are removed.
+- Updated dependencies [cb265eb]
+- Updated dependencies [381dfe7]
+- Updated dependencies [1524275]
+- Updated dependencies [03d7055]
+  - @walkeros/collector@4.0.1
+  - @walkeros/core@4.0.1
+  - @walkeros/server-core@4.0.1
+  - @walkeros/server-destination-api@4.0.1
+
 ## 4.0.0
 
 ### Major Changes

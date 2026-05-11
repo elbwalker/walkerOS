@@ -11,8 +11,12 @@ interface LibsqlExecuteArgs {
   args?: ReadonlyArray<unknown>;
 }
 
+interface LibsqlResultSet {
+  rows?: ReadonlyArray<Record<string, unknown>>;
+}
+
 interface LibsqlClient {
-  execute: (input: LibsqlExecuteArgs) => Promise<unknown>;
+  execute: (input: LibsqlExecuteArgs) => Promise<LibsqlResultSet>;
   close: () => void;
 }
 
@@ -58,6 +62,10 @@ export async function createLibsqlClient(
       return async (args) => {
         await client.execute({ sql, args });
       };
+    },
+    async query(sql, args = []) {
+      const result = await client.execute({ sql, args });
+      return result?.rows ?? [];
     },
     async close() {
       client.close();

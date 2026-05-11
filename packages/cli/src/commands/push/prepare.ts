@@ -84,7 +84,7 @@ export async function prepareFlow(input: PrepareInput): Promise<PreparedFlow> {
     `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   );
   await fs.ensureDir(tempDir);
-  const bundlePath = path.join(tempDir, 'bundle.mjs');
+  const bundlePath = path.join(tempDir, 'flow.mjs');
 
   const pushBuildOptions = {
     ...buildOptions,

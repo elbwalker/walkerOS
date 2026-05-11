@@ -1,5 +1,23 @@
 # @walkeros/mcp
 
+## 4.0.1
+
+### Patch Changes
+
+- 03d7055: Merge `definitions` into `variables`. Single concept, single syntax
+  `$var.name(.deep.path)?`. Whole-string references preserve native type; inline
+  interpolation requires scalars. Deep paths and recursive resolution with cycle
+  detection now supported. `Flow.Definitions`, `Flow.Primitive`, and the `$def.`
+  reference syntax are removed.
+- Updated dependencies [abfb0bb]
+- Updated dependencies [ed304b4]
+- Updated dependencies [e4b6cf4]
+- Updated dependencies [381dfe7]
+- Updated dependencies [1524275]
+- Updated dependencies [03d7055]
+  - @walkeros/cli@4.0.1
+  - @walkeros/core@4.0.1
+
 ## 4.0.0
 
 ### Major Changes

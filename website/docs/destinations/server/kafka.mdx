@@ -100,6 +100,105 @@ Events are serialized as JSON and produced with the following structure:
 
 Use `mapping.settings.topic` to route specific events to dedicated topics (e.g. orders to `orders-stream`, identities to `identity-stream`). Use `mapping.settings.key` to set a key path per rule (e.g. `data.order_id` for order events).
 
+## Setup
+
+:::caution No safe defaults
+Kafka topic creation requires explicit `numPartitions` and `replicationFactor`.
+There is no universally correct default for either: `replicationFactor` must be
+less than or equal to broker count, and `numPartitions` is a function of
+expected throughput and consumer parallelism. The boolean form `setup: true` is
+rejected with an error listing the required fields. Only the object form is
+valid.
+:::
+
+Provision a topic once per environment with the CLI:
+
+<CodeSnippet
+  code={`walkeros setup destination.kafka`}
+  language="bash"
+/>
+
+Output: `setup: ok destination.kafka` plus a JSON line reporting
+`{ topicCreated, schemaRegistered }`. The command is idempotent, safe to
+re-run. Drift on `numPartitions`, `replicationFactor`, or `configEntries` is
+logged as `WARN setup.drift {...}` and never auto-mutates the broker.
+
+`config.setup`:
+
+- `false` (default): no provisioning. Operator must run setup explicitly.
+- `true`: rejected at runtime with an actionable error. There are no safe
+  defaults for partition count or replication factor.
+- `{ numPartitions, replicationFactor, ... }`: object form is the only valid
+  form. See the `Setup` interface in the package for full options.
+
+### Required fields
+
+| Field               | Type   | Notes                                                     |
+| ------------------- | ------ | --------------------------------------------------------- |
+| `numPartitions`     | number | Required at runtime. No safe default.                     |
+| `replicationFactor` | number | Required at runtime. Must be `<= broker count`.           |
+| `topic`             | string | Falls back to `settings.kafka.topic` when omitted.        |
+
+### Optional fields
+
+| Field            | Type    | Notes                                                       |
+| ---------------- | ------- | ----------------------------------------------------------- |
+| `configEntries`  | object  | Topic-level config, e.g. `{ "retention.ms": "604800000" }`. |
+| `schemaRegistry` | object  | Confluent Schema Registry binding (see below).              |
+| `validateOnly`   | boolean | kafkajs broker-side dry-run. No topic is created.           |
+
+### Example
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "kafka": {
+      "package": "@walkeros/server-destination-kafka",
+      "config": {
+        "settings": {
+          "kafka": { "brokers": ["broker:9092"], "topic": "walkeros-events" }
+        },
+        "setup": {
+          "numPartitions": 6,
+          "replicationFactor": 3,
+          "configEntries": { "retention.ms": "604800000" }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### Schema Registry (optional)
+
+<CodeSnippet
+  code={`{
+  "setup": {
+    "numPartitions": 6,
+    "replicationFactor": 3,
+    "schemaRegistry": {
+      "url": "https://schema-registry.example.com",
+      "subject": "walkeros-events-value",
+      "schemaType": "JSON",
+      "schema": "{ \\"type\\": \\"object\\" }",
+      "compatibility": "BACKWARD"
+    }
+  }
+}`}
+  language="json"
+/>
+
+The schema is registered via the Confluent Schema Registry REST API. The
+optional `compatibility` level is set on the subject after registration.
+
+### Runtime error when the topic is missing
+
+When `setup` was not run and the topic does not exist on the cluster, `push()`
+catches the kafkajs `UNKNOWN_TOPIC_OR_PARTITION` error and logs an actionable
+message pointing the operator at `walkeros setup destination.<id>`. Run setup
+with explicit `numPartitions` and `replicationFactor` to provision the topic.
+
 ## Authentication
 
 ### Confluent Cloud (SASL/PLAIN)

@@ -88,7 +88,8 @@ mapping:
             phone: 'data.phone',
           },
           userId: 'user.id',
-          clientId: 'user.device',
+          clientId: 'user.device',                  // GA4 web stream
+          appInstanceId: 'user.appInstanceId',      // GA4 app stream (Firebase)
           sessionAttributes: 'context.sessionAttributes',
 
           // Consent mapping
@@ -103,3 +104,36 @@ mapping:
 />
 
 **Consent mapping**: Map your consent field names (string) or use static values (boolean). Event mappings always override Settings helpers.
+
+## Store sales (IN_STORE)
+
+For physical store conversions, set `eventSource: 'IN_STORE'` on the destination
+and map a `storeId` in the event mapping. The destination wraps it into the
+API's required `eventLocation.storeId` shape.
+
+<CodeSnippet
+  code={`mapping: {
+  order: {
+    complete: {
+      name: 'purchase',
+      data: {
+        map: {
+          transactionId: 'data.id',
+          conversionValue: 'data.total',
+          currency: 'data.currency',
+          storeId: 'data.storeId',
+          email: 'user.email', // hashed PII still applies
+        },
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+## Hash encoding
+
+Every request is sent with `encoding: 'HEX'`. Google requires the field
+whenever the payload contains hashed `userData`. The value is pinned because
+all hashing in this destination produces lowercase hex SHA-256 digests;
+exposing encoding as a setting would risk silently mismatched identifiers.
