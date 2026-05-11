@@ -1,5 +1,12 @@
 # @walkeros/web-source-browser
 
+## 4.0.2
+
+### Patch Changes
+
+- @walkeros/collector@4.0.2
+- @walkeros/web-core@4.0.2
+
 ## 4.0.1
 
 ### Patch Changes

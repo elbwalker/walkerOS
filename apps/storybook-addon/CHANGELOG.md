@@ -1,5 +1,15 @@
 # @walkeros/storybook-addon
 
+## 4.0.2
+
+### Patch Changes
+
+- Updated dependencies [a6a0ea7]
+  - @walkeros/core@4.0.2
+  - @walkeros/collector@4.0.2
+  - @walkeros/web-core@4.0.2
+  - @walkeros/web-source-browser@4.0.2
+
 ## 4.0.1
 
 ### Patch Changes

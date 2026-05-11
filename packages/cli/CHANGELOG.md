@@ -1,5 +1,21 @@
 # @walkeros/cli
 
+## 4.0.2
+
+### Patch Changes
+
+- a6a0ea7: Rename routing types: `NextRule` to `Route`, `Next` to `RouteSpec`
+  (Zod schemas and `MatcherNext*` IDs renamed in step). Widen
+  `Flow.*.before/next` to `RouteSpec` so `Route[]` conditional routing
+  type-checks at the JSON layer. Fix the CLI bundler dropping `Route[]` data via
+  a narrowing cast on the inline path. Hard cut, no aliases; flow.json shape
+  unchanged.
+- Updated dependencies [a6a0ea7]
+  - @walkeros/core@4.0.2
+  - @walkeros/collector@4.0.2
+  - @walkeros/server-core@4.0.2
+  - @walkeros/server-destination-api@4.0.2
+
 ## 4.0.1
 
 ### Patch Changes
