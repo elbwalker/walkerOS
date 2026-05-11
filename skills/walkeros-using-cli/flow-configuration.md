@@ -200,6 +200,19 @@ globs both work, resolved against the install root (where pacote put files):
 | `consent` | `object`                        | Required consent levels                                               |
 | `before`  | `string \| string[] \| Route[]` | First transformer in post-collector chain (conditional via `Route[]`) |
 
+**Route shape** (used wherever the type column shows `Route[]`):
+
+```json
+{
+  "match": "*" | { "key": "<ingest path>", "operator": "eq|contains|prefix|suffix|regex|gt|lt|exists", "value": "<expected>" },
+  "next": "<transformerId>" | ["<id1>", "<id2>"]
+}
+```
+
+Routes evaluate in order, first match wins. `"*"` is the wildcard. The match
+object reads from ingest metadata (e.g. `ingest.path`, `ingest.method`). No
+match plus no wildcard means the event passes through unchanged.
+
 For mapping syntax, see
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
 
@@ -229,6 +242,8 @@ For mapping syntax, see
 | `config`  | `object`                        | Source-specific configuration                                        |
 | `next`    | `string \| string[] \| Route[]` | First transformer in pre-collector chain (conditional via `Route[]`) |
 
+`Route[]` shape: see [Destination Properties](#destination-properties) above.
+
 ---
 
 ## Transformers
@@ -257,6 +272,8 @@ For mapping syntax, see
 | `config`  | `object`                        | Transformer-specific configuration                        |
 | `code`    | `object`                        | Inline code (`push`, `init`) with `$code:`                |
 | `next`    | `string \| string[] \| Route[]` | Next transformer in the chain (conditional via `Route[]`) |
+
+`Route[]` shape: see [Destination Properties](#destination-properties) above.
 
 ### Transformer Chaining
 
