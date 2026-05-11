@@ -57,6 +57,7 @@
     "@walkeros/server-store-fs": "^4.0.1",
     "@walkeros/server-store-gcs": "^4.0.1",
     "@walkeros/server-store-s3": "^4.0.1",
+    "@walkeros/server-store-sheets": "^4.0.1",
     "@walkeros/server-transformer-file": "^4.0.1",
     "@walkeros/server-transformer-fingerprint": "^4.0.1",
     "@walkeros/store-memory": "^4.0.1",
