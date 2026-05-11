@@ -34,7 +34,7 @@ export interface BaseEnv {
  * @template P - Push function signature (flexible to support HTTP handlers, etc.)
  * @template E - Environment dependencies type
  * @template I - InitSettings configuration type (user input)
- * @template U - Setup options type (provisioning options for `walker setup`)
+ * @template U - Setup options type (provisioning options for `walkeros setup`)
  */
 export interface Types<
   S = unknown,
@@ -95,7 +95,7 @@ export interface Config<
   /** Defer source initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
   /**
-   * Provisioning options for `walker setup`. `boolean | object`.
+   * Provisioning options for `walkeros setup`. `boolean | object`.
    * Triggered only by explicit CLI invocation; never automatic.
    */
   setup?: boolean | SetupOptions<T>;

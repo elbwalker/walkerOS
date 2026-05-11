@@ -113,7 +113,7 @@ export interface Config<T extends TypesGeneric = Types> {
   /** Defer destination initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
   /**
-   * Provisioning options for `walker setup`. `boolean | object`.
+   * Provisioning options for `walkeros setup`. `boolean | object`.
    * Triggered only by explicit CLI invocation; never automatic.
    */
   setup?: boolean | SetupOptions<T>;
