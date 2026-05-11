@@ -1,5 +1,13 @@
 # @walkeros/server-source-express
 
+## 4.0.2
+
+### Patch Changes
+
+- Updated dependencies [a6a0ea7]
+  - @walkeros/core@4.0.2
+  - @walkeros/collector@4.0.2
+
 ## 4.0.1
 
 ### Patch Changes

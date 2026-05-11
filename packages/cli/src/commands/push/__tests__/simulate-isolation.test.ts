@@ -14,6 +14,24 @@ import {
   walkChain,
   extractTransformerNextMap,
 } from '@walkeros/collector';
+import { isRouteArray } from '@walkeros/core';
+
+/**
+ * Narrow a `RouteSpec` to the static form expected by `walkChain` in these
+ * static-fixture tests. Throws if a future fixture accidentally uses
+ * conditional routing, surfacing the mistake instead of silently casting.
+ */
+function staticChain(
+  spec: Transformer.RouteSpec | undefined,
+): string | string[] | undefined {
+  if (spec === undefined) return undefined;
+  if (isRouteArray(spec)) {
+    throw new Error(
+      'test fixture uses conditional routing, not supported here',
+    );
+  }
+  return spec;
+}
 
 /**
  * Tests for before-chain execution in transformer simulation.
@@ -99,7 +117,7 @@ describe('transformer simulation isolation — before chain', () => {
     // Step 1: Resolve before chain
     const before = transformer.config.before;
     const beforeChainIds = walkChain(
-      before as string | string[],
+      staticChain(before),
       extractTransformerNextMap(transformers),
     );
     expect(beforeChainIds).toEqual(['enrich']);
@@ -118,7 +136,9 @@ describe('transformer simulation isolation — before chain', () => {
 
     expect(beforeResult.event).not.toBeNull();
     processedEvent = (
-      Array.isArray(beforeResult.event) ? beforeResult.event![0] : beforeResult.event
+      Array.isArray(beforeResult.event)
+        ? beforeResult.event![0]
+        : beforeResult.event
     ) as WalkerOS.DeepPartialEvent;
 
     // Verify enrichment was applied
@@ -227,7 +247,7 @@ describe('transformer simulation isolation — before chain', () => {
     // Resolve before chain
     const before = transformer.config.before;
     const beforeChainIds = walkChain(
-      before as string | string[],
+      staticChain(before),
       extractTransformerNextMap(transformers),
     );
     expect(beforeChainIds).toEqual(['gate']);
@@ -298,7 +318,7 @@ describe('transformer simulation isolation — before chain', () => {
     // Resolve before chain — should follow validate -> enrich via next link
     const before = transformer.config.before;
     const beforeChainIds = walkChain(
-      before as string | string[],
+      staticChain(before),
       extractTransformerNextMap(transformers),
     );
     expect(beforeChainIds).toEqual(['validate', 'enrich']);
@@ -316,7 +336,9 @@ describe('transformer simulation isolation — before chain', () => {
 
     expect(beforeResult.event).not.toBeNull();
     const processedEvent = (
-      Array.isArray(beforeResult.event) ? beforeResult.event![0] : beforeResult.event
+      Array.isArray(beforeResult.event)
+        ? beforeResult.event![0]
+        : beforeResult.event
     ) as WalkerOS.DeepPartialEvent;
 
     // Both validate and enrich ran
@@ -471,7 +493,7 @@ describe('destination simulation with before chain', () => {
     let processedEvent: WalkerOS.Event = inputEvent;
     if (before && collector.transformers) {
       const beforeChainIds = walkChain(
-        before as string | string[],
+        staticChain(before),
         extractTransformerNextMap(collector.transformers),
       );
       expect(beforeChainIds).toEqual(['enrich']);
@@ -488,7 +510,9 @@ describe('destination simulation with before chain', () => {
 
       expect(beforeResult.event).not.toBeNull();
       processedEvent = (
-        Array.isArray(beforeResult.event) ? beforeResult.event![0] : beforeResult.event
+        Array.isArray(beforeResult.event)
+          ? beforeResult.event![0]
+          : beforeResult.event
       ) as WalkerOS.Event;
     }
 
@@ -545,7 +569,7 @@ describe('destination simulation with before chain', () => {
     // Resolve and run before chain
     const before = destination.config.before;
     const beforeChainIds = walkChain(
-      before as string | string[],
+      staticChain(before),
       extractTransformerNextMap(collector.transformers!),
     );
     expect(beforeChainIds).toEqual(['gate']);

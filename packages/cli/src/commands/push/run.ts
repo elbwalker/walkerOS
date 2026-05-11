@@ -54,7 +54,7 @@ export async function runPushCommand(
 
     // 4. Route to the correct typed function based on the plan.
     let result: PushResult;
-    switch (plan.route) {
+    switch (plan.kind) {
       case 'none':
         result = await push(config, resolvedEvent, {
           flow: options.flow,

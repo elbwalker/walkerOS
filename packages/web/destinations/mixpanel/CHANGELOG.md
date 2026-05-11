@@ -1,5 +1,11 @@
 # @walkeros/web-destination-mixpanel
 
+## 4.0.2
+
+### Patch Changes
+
+- @walkeros/web-core@4.0.2
+
 ## 4.0.1
 
 ### Patch Changes

@@ -3,7 +3,7 @@ import esbuild from 'esbuild';
 import { builtinModules } from 'module';
 import path from 'path';
 import fs from 'fs-extra';
-import type { Flow } from '@walkeros/core';
+import type { Flow, Transformer } from '@walkeros/core';
 import { packageNameToVariable, ENV_MARKER_PREFIX } from '@walkeros/core';
 import {
   classifyStepProperties,
@@ -99,7 +99,7 @@ function generateInlineCode(
   inline: Flow.Code,
   config: object,
   env?: object,
-  chains?: { before?: string | string[]; next?: string | string[] },
+  chains?: { before?: Transformer.RouteSpec; next?: Transformer.RouteSpec },
   isDestination?: boolean,
 ): string {
   const pushFn = inline.push.replace('$code:', '');
@@ -1560,7 +1560,7 @@ export function buildSplitConfigObject(
     .filter(([, source]) => source.package || hasCodeReference(source.code))
     .map(([key, source]) => {
       if (isInlineCode(source.code)) {
-        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, { next: source.next as string | string[] | undefined })}`;
+        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, { next: source.next })}`;
       }
       return buildSplitStepEntry('sources', key, source);
     });
@@ -1570,7 +1570,7 @@ export function buildSplitConfigObject(
     .filter(([, dest]) => dest.package || hasCodeReference(dest.code))
     .map(([key, dest]) => {
       if (isInlineCode(dest.code)) {
-        return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, { before: dest.before, next: dest.next as string | string[] | undefined }, true)}`;
+        return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, { before: dest.before, next: dest.next }, true)}`;
       }
       return buildSplitStepEntry('destinations', key, dest);
     });

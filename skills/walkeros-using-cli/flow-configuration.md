@@ -192,13 +192,26 @@ globs both work, resolved against the install root (where pacote put files):
 
 ### Destination Properties
 
-| Property  | Type                 | Description                               |
-| --------- | -------------------- | ----------------------------------------- |
-| `package` | `string`             | NPM package or local package name         |
-| `config`  | `object`             | Destination-specific configuration        |
-| `mapping` | `object`             | Event transformation rules                |
-| `consent` | `object`             | Required consent levels                   |
-| `before`  | `string \| string[]` | First transformer in post-collector chain |
+| Property  | Type                            | Description                                                           |
+| --------- | ------------------------------- | --------------------------------------------------------------------- |
+| `package` | `string`                        | NPM package or local package name                                     |
+| `config`  | `object`                        | Destination-specific configuration                                    |
+| `mapping` | `object`                        | Event transformation rules                                            |
+| `consent` | `object`                        | Required consent levels                                               |
+| `before`  | `string \| string[] \| Route[]` | First transformer in post-collector chain (conditional via `Route[]`) |
+
+**Route shape** (used wherever the type column shows `Route[]`):
+
+```json
+{
+  "match": "*" | { "key": "<ingest path>", "operator": "eq|contains|prefix|suffix|regex|gt|lt|exists", "value": "<expected>" },
+  "next": "<transformerId>" | ["<id1>", "<id2>"]
+}
+```
+
+Routes evaluate in order, first match wins. `"*"` is the wildcard. The match
+object reads from ingest metadata (e.g. `ingest.path`, `ingest.method`). No
+match plus no wildcard means the event passes through unchanged.
 
 For mapping syntax, see
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
@@ -223,11 +236,13 @@ For mapping syntax, see
 
 ### Source Properties
 
-| Property  | Type                 | Description                              |
-| --------- | -------------------- | ---------------------------------------- |
-| `package` | `string`             | Source package name                      |
-| `config`  | `object`             | Source-specific configuration            |
-| `next`    | `string \| string[]` | First transformer in pre-collector chain |
+| Property  | Type                            | Description                                                          |
+| --------- | ------------------------------- | -------------------------------------------------------------------- |
+| `package` | `string`                        | Source package name                                                  |
+| `config`  | `object`                        | Source-specific configuration                                        |
+| `next`    | `string \| string[] \| Route[]` | First transformer in pre-collector chain (conditional via `Route[]`) |
+
+`Route[]` shape: see [Destination Properties](#destination-properties) above.
 
 ---
 
@@ -251,12 +266,14 @@ For mapping syntax, see
 
 ### Transformer Properties
 
-| Property  | Type                 | Description                                |
-| --------- | -------------------- | ------------------------------------------ |
-| `package` | `string`             | Transformer package name                   |
-| `config`  | `object`             | Transformer-specific configuration         |
-| `code`    | `object`             | Inline code (`push`, `init`) with `$code:` |
-| `next`    | `string \| string[]` | Next transformer in the chain              |
+| Property  | Type                            | Description                                               |
+| --------- | ------------------------------- | --------------------------------------------------------- |
+| `package` | `string`                        | Transformer package name                                  |
+| `config`  | `object`                        | Transformer-specific configuration                        |
+| `code`    | `object`                        | Inline code (`push`, `init`) with `$code:`                |
+| `next`    | `string \| string[] \| Route[]` | Next transformer in the chain (conditional via `Route[]`) |
+
+`Route[]` shape: see [Destination Properties](#destination-properties) above.
 
 ### Transformer Chaining
 

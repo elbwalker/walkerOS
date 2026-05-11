@@ -55,7 +55,7 @@ function pluralLabel(kind: ComponentKind): string {
 }
 
 /**
- * Parse `<kind>.<name>` syntax matching `walker push --simulate`.
+ * Parse `<kind>.<name>` syntax matching `walkeros push --simulate`.
  * Throws on invalid kind, missing component, or unparseable input.
  */
 export function resolveComponent(

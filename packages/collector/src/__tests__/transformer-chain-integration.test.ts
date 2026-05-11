@@ -219,7 +219,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
     });
   });
 
-  describe('conditional NextRule[] before', () => {
+  describe('conditional Route[] before', () => {
     it('should resolve conditional before routes based on event entity', async () => {
       const order: string[] = [];
 

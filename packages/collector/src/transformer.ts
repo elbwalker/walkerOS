@@ -64,7 +64,7 @@ export function extractTransformerNextMap(
   for (const [id, transformer] of Object.entries(transformers)) {
     const next = transformer.config?.next;
     if (next && !isRouteArray(next)) {
-      result[id] = { next: next as string | string[] };
+      result[id] = { next };
     } else {
       result[id] = {};
     }
@@ -334,6 +334,27 @@ export async function transformerPush(
 }
 
 /**
+ * Resolve a `RouteSpec` (string, string[], or Route[]) to the static form
+ * the downstream walkChain consumer understands. Used at every site inside
+ * `runTransformerChain` that accepts a route spec from config or transformer
+ * result (transformer.config.before, fork result.next, unified result.next).
+ *
+ * Returns `undefined` when the spec is absent, or when a Route[] evaluated
+ * against the given context produced no match. Callers treat undefined as
+ * "no static target" (either skip the chain or fall through to passthrough,
+ * depending on the call site).
+ */
+function resolveRouteSpec(
+  spec: Transformer.RouteSpec | undefined,
+  ctx: Record<string, unknown>,
+): string | string[] | undefined {
+  if (!spec) return undefined;
+  if (typeof spec === 'string') return spec;
+  if (Array.isArray(spec) && !isRouteArray(spec)) return spec;
+  return resolveNext(compileNext(spec), ctx) ?? undefined;
+}
+
+/**
  * Runs an event through a chain of transformers.
  *
  * @param collector - The collector instance with transformers
@@ -454,15 +475,10 @@ export async function runTransformerChain(
     // Run transformer.before chain if configured
     const transformerBefore = transformer.config.before;
     if (transformerBefore) {
-      const beforeStartId =
-        typeof transformerBefore === 'string'
-          ? transformerBefore
-          : Array.isArray(transformerBefore) && !isRouteArray(transformerBefore)
-            ? transformerBefore
-            : resolveNext(
-                compileNext(transformerBefore),
-                buildCacheContext(ingest, processedEvent),
-              ) || undefined;
+      const beforeStartId = resolveRouteSpec(
+        transformerBefore,
+        buildCacheContext(ingest, processedEvent),
+      );
 
       const beforeChainIds = walkChain(
         beforeStartId,
@@ -530,15 +546,10 @@ export async function runTransformerChain(
 
           if (forkResult.next) {
             // Fork has explicit routing
-            let resolvedNext: string | string[] | undefined =
-              forkResult.next as string | string[];
-            if (isRouteArray(forkResult.next)) {
-              const compiled = compileNext(forkResult.next);
-              resolvedNext = resolveNext(
-                compiled,
-                buildCacheContext(forkIngest, forkEvent),
-              );
-            }
+            const resolvedNext = resolveRouteSpec(
+              forkResult.next,
+              buildCacheContext(forkIngest, forkEvent),
+            );
             if (resolvedNext) {
               const branchedChain = walkChain(
                 resolvedNext,
@@ -608,21 +619,14 @@ export async function runTransformerChain(
 
       // Handle chain branching
       if (next) {
-        // Resolve NextRule[] if present
-        let resolvedNext: string | string[] | undefined = next as
-          | string
-          | string[];
-        if (isRouteArray(next)) {
-          const compiled = compileNext(next);
-          resolvedNext = resolveNext(
-            compiled,
-            buildCacheContext(ingest, processedEvent),
-          );
-          if (!resolvedNext) {
-            // No route matched → passthrough (continue chain)
-            if (resultEvent) processedEvent = resultEvent;
-            continue;
-          }
+        const resolvedNext = resolveRouteSpec(
+          next,
+          buildCacheContext(ingest, processedEvent),
+        );
+        if (!resolvedNext) {
+          // No route matched → passthrough (continue chain)
+          if (resultEvent) processedEvent = resultEvent;
+          continue;
         }
 
         const branchedChain = walkChain(
@@ -661,7 +665,7 @@ export async function runTransformerChain(
       storeCache(tCacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
     }
 
-    // If transformer didn't return { next } but has NextRule[] config.next, resolve it
+    // If transformer didn't return { next } but has Route[] config.next, resolve it
     if (
       (!result || (typeof result === 'object' && !result.next)) &&
       transformer.config.next &&

@@ -1,9 +1,9 @@
 import { dispatchSimulate } from '../dispatch-simulate';
 
 describe('dispatchSimulate', () => {
-  it('returns route=none for empty flags', () => {
+  it('returns kind=none for empty flags', () => {
     expect(dispatchSimulate([])).toEqual({
-      route: 'none',
+      kind: 'none',
       ids: [],
     });
   });
@@ -12,16 +12,16 @@ describe('dispatchSimulate', () => {
     expect(() => dispatchSimulate(['api'])).toThrow(/Invalid step format/);
   });
 
-  it('returns destination route with every id', () => {
+  it('returns destination kind with every id', () => {
     expect(dispatchSimulate(['destination.api', 'destination.meta'])).toEqual({
-      route: 'destination',
+      kind: 'destination',
       ids: ['api', 'meta'],
     });
   });
 
-  it('returns source route with single id', () => {
+  it('returns source kind with single id', () => {
     expect(dispatchSimulate(['source.browser'])).toEqual({
-      route: 'source',
+      kind: 'source',
       ids: ['browser'],
     });
   });

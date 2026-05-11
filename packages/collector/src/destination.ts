@@ -39,13 +39,17 @@ import { getCacheStore } from './cache';
 
 /**
  * Resolves transformer chain for a destination.
- * For conditional routing (NextRule[]), compiledBefore must be provided (compiled at init).
+ * For conditional routing (Route[]), compiledBefore must be provided (compiled at init).
  * For static routing (string | string[]), resolution is direct.
+ *
+ * `transformerNextMap` is computed once per `pushToDestinations` call (it depends
+ * only on `collector.transformers`) and passed in to avoid rebuilding it for
+ * every destination's before and next chain resolution.
  */
 function resolveDestinationChain(
-  before: Transformer.Next | undefined,
+  before: Transformer.RouteSpec | undefined,
   compiledBefore: CompiledNext | undefined,
-  transformers: Transformer.Transformers,
+  transformerNextMap: ReturnType<typeof extractTransformerNextMap>,
   ingest?: Ingest,
 ): string[] {
   if (!before) return [];
@@ -53,13 +57,12 @@ function resolveDestinationChain(
   if (compiledBefore) {
     const resolved = resolveNext(compiledBefore, buildCacheContext(ingest));
     if (!resolved) return [];
-    return walkChain(resolved, extractTransformerNextMap(transformers));
+    return walkChain(resolved, transformerNextMap);
   }
 
-  return walkChain(
-    before as string | string[],
-    extractTransformerNextMap(transformers),
-  );
+  // Without compiledBefore, before is static (string | string[]); skip Route[] case.
+  if (isRouteArray(before)) return [];
+  return walkChain(before, transformerNextMap);
 }
 
 /**
@@ -152,6 +155,14 @@ export async function pushToDestinations(
 
   // Use given destinations or use internal destinations
   if (!destinations) destinations = collector.destinations;
+
+  // Precompute the transformer next map once per push (shared across all
+  // destinations in this batch, used for both before and next chain resolution).
+  // Guarded because tests and partially-initialized collectors may pass
+  // `transformers` as undefined.
+  const transformerNextMap = collector.transformers
+    ? extractTransformerNextMap(collector.transformers)
+    : {};
 
   const results = await Promise.all(
     // Process all destinations in parallel
@@ -260,7 +271,7 @@ export async function pushToDestinations(
       const postChain = resolveDestinationChain(
         before,
         compiledBefore,
-        collector.transformers,
+        transformerNextMap,
         destIngest,
       );
 
@@ -411,7 +422,7 @@ export async function pushToDestinations(
             const nextChain = resolveDestinationChain(
               nextConfig,
               compiledNext,
-              collector.transformers,
+              transformerNextMap,
               destIngest,
             );
 

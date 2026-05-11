@@ -243,7 +243,7 @@ describe('Source Transformer Chains (source.next)', () => {
     });
   });
 
-  describe('conditional NextRule[] next', () => {
+  describe('conditional Route[] next', () => {
     it('should resolve conditional next routes based on ingest', async () => {
       const order: string[] = [];
 

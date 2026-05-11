@@ -1,6 +1,6 @@
 import { z, toJsonSchema } from './validation';
 import { Identifier } from './primitives';
-import { RoutableNextSchema } from './matcher';
+import { RouteSpecSchema } from './matcher';
 import { CacheSchema } from './cache';
 import { LoggerConfigSchema } from './logger';
 
@@ -53,10 +53,10 @@ export const ConfigSchema = z
     logger: LoggerConfigSchema.optional().describe(
       'Logger configuration (level, handler) to override the collector defaults',
     ),
-    before: RoutableNextSchema.optional().describe(
+    before: RouteSpecSchema.optional().describe(
       'Pre-transformer chain that runs before this transformer pushes',
     ),
-    next: RoutableNextSchema.optional().describe(
+    next: RouteSpecSchema.optional().describe(
       'Graph wiring to the next transformer in the chain',
     ),
     cache: CacheSchema.optional().describe(

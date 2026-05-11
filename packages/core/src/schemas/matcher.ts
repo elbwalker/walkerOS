@@ -35,33 +35,33 @@ export const MatchExpressionSchema: z.ZodType = z
 
 const MatchOrWildcard = z.union([MatchExpressionSchema, z.literal('*')]);
 
-// Recursive: NextRule.next is itself a RoutableNext
-export const RoutableNextSchema: z.ZodType = z
+// Recursive: Route.next is itself a RouteSpec
+export const RouteSpecSchema: z.ZodType = z
   .union([
     z.string(),
     z.array(z.string()),
     z.array(
       z.object({
         match: MatchOrWildcard,
-        next: z.lazy(() => RoutableNextSchema),
+        next: z.lazy(() => RouteSpecSchema),
       }),
     ),
   ])
   .meta({
-    id: 'MatcherNext',
-    title: 'Matcher.Next',
+    id: 'MatcherRouteSpec',
+    title: 'Matcher.RouteSpec',
     description:
       'Routable next target: ID, ID list, or list of {match, next} rules.',
   });
 
-export const NextRuleSchema = z
+export const RouteSchema = z
   .object({
     match: MatchOrWildcard,
-    next: z.lazy(() => RoutableNextSchema),
+    next: z.lazy(() => RouteSpecSchema),
   })
   .meta({
-    id: 'MatcherNextRule',
-    title: 'Matcher.NextRule',
+    id: 'MatcherRoute',
+    title: 'Matcher.Route',
     description:
       'Single routing rule pairing a match expression with a next target.',
   });

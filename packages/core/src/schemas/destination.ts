@@ -8,7 +8,7 @@ import {
   PolicySchema,
 } from './mapping';
 import { Identifier } from './primitives';
-import { RoutableNextSchema } from './matcher';
+import { RouteSpecSchema } from './matcher';
 import { CacheSchema } from './cache';
 import { LoggerConfigSchema } from './logger';
 
@@ -116,10 +116,10 @@ export const ConfigSchema = z
       .describe(
         'One-time setup options applied during destination registration (boolean enables defaults, object configures specifics)',
       ),
-    before: RoutableNextSchema.optional().describe(
+    before: RouteSpecSchema.optional().describe(
       'Post-collector transformer chain applied before this destination receives the event',
     ),
-    next: RoutableNextSchema.optional().describe(
+    next: RouteSpecSchema.optional().describe(
       'Post-push transformer chain. Runs after destination push completes; push response is available at ingest._response',
     ),
     cache: CacheSchema.optional().describe(

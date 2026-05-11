@@ -244,13 +244,35 @@ interface StepConnection {
   to: StepInfo;
 }
 
+/**
+ * Flatten a RouteSpec into the unique step IDs it can target.
+ * For string and string[] forms, returns the IDs directly.
+ * For Route[] form, recursively unwraps each rule's next.
+ * Used by the connection-graph builder to enumerate static-graph edges
+ * for example-compatibility checks; runtime routing remains dynamic.
+ */
+function flattenRouteTargets(
+  spec: import('@walkeros/core').Transformer.RouteSpec | undefined,
+): string[] {
+  if (!spec) return [];
+  if (typeof spec === 'string') return [spec];
+  if (!Array.isArray(spec) || spec.length === 0) return [];
+  if (typeof spec[0] === 'string') {
+    return spec.filter((s): s is string => typeof s === 'string');
+  }
+  const routes = spec as import('@walkeros/core').Transformer.Route[];
+  return Array.from(
+    new Set(routes.flatMap((r) => flattenRouteTargets(r.next))),
+  );
+}
+
 function buildConnectionGraph(config: Flow): StepConnection[] {
   const connections: StepConnection[] = [];
 
   // Source → next transformer
   for (const [name, source] of Object.entries(config.sources || {})) {
     if (!source.next || !source.examples) continue;
-    const nextNames = Array.isArray(source.next) ? source.next : [source.next];
+    const nextNames = flattenRouteTargets(source.next);
     for (const nextName of nextNames) {
       const transformer = config.transformers?.[nextName];
       if (transformer?.examples) {
@@ -269,9 +291,7 @@ function buildConnectionGraph(config: Flow): StepConnection[] {
   // Transformer → next transformer
   for (const [name, transformer] of Object.entries(config.transformers || {})) {
     if (!transformer.next || !transformer.examples) continue;
-    const nextNames = Array.isArray(transformer.next)
-      ? transformer.next
-      : [transformer.next];
+    const nextNames = flattenRouteTargets(transformer.next);
     for (const nextName of nextNames) {
       const nextTransformer = config.transformers?.[nextName];
       if (nextTransformer?.examples) {
@@ -294,9 +314,7 @@ function buildConnectionGraph(config: Flow): StepConnection[] {
   // Destination.before → transformer chain → destination
   for (const [name, dest] of Object.entries(config.destinations || {})) {
     if (!dest.before || !dest.examples) continue;
-    const beforeNames = Array.isArray(dest.before)
-      ? dest.before
-      : [dest.before];
+    const beforeNames = flattenRouteTargets(dest.before);
     for (const beforeName of beforeNames) {
       const transformer = config.transformers?.[beforeName];
       if (transformer?.examples) {
