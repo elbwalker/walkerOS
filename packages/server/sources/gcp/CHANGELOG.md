@@ -1,5 +1,24 @@
 # @walkeros/server-source-gcp
 
+## 4.0.1
+
+### Patch Changes
+
+- 70e4d89: Fix events being silently dropped when posted via
+  `navigator.sendBeacon`. The browser forces
+  `Content-Type: text/plain;charset=UTF-8` for beacon requests even when the
+  payload is JSON, which previously caused the express middleware to skip body
+  parsing and the GCP Cloud Functions handler to treat the body as an opaque
+  string, both falling through to an empty-event push. Express now accepts
+  `text/plain` bodies through `express.json()`, and the Cloud Functions handler
+  attempts `JSON.parse` on string bodies before classifying the request.
+- Updated dependencies [cb265eb]
+- Updated dependencies [381dfe7]
+- Updated dependencies [1524275]
+- Updated dependencies [03d7055]
+  - @walkeros/collector@4.0.1
+  - @walkeros/core@4.0.1
+
 ## 4.0.0
 
 ### Major Changes

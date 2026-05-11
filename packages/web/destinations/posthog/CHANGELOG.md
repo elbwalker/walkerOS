@@ -1,5 +1,11 @@
 # @walkeros/web-destination-posthog
 
+## 4.0.1
+
+### Patch Changes
+
+- @walkeros/web-core@4.0.1
+
 ## 4.0.0
 
 ### Patch Changes

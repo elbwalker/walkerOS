@@ -1,5 +1,12 @@
 # @walkeros/storybook-demo
 
+## 4.0.1
+
+### Patch Changes
+
+- Updated dependencies [1524275]
+  - @walkeros/web-source-browser@4.0.1
+
 ## 4.0.0
 
 ### Patch Changes
