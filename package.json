@@ -8,6 +8,7 @@
     "packages/collector",
     "packages/mcps/mcp",
     "packages/mcps/source-browser",
+    "packages/destinations/*",
     "packages/transformers/*",
     "packages/server/core",
     "packages/server/destinations/*",
