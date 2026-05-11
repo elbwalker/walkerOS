@@ -17,18 +17,19 @@ npm run lint       # Check code quality
 
 Learn the concepts before coding:
 
-| Skill                                                                    | What You'll Learn                                  |
-| ------------------------------------------------------------------------ | -------------------------------------------------- |
-| [understanding-development](skills/understanding-development/SKILL.md)   | Build workflow, XP principles, folder structure    |
-| [understanding-flow](skills/understanding-flow/SKILL.md)                 | Architecture, composability, data flow             |
-| [understanding-events](skills/understanding-events/SKILL.md)             | Event model, entity-action naming, properties      |
-| [understanding-mapping](skills/understanding-mapping/SKILL.md)           | Event transformation, data/map/loop                |
-| [understanding-destinations](skills/understanding-destinations/SKILL.md) | Destination interface, env pattern                 |
-| [understanding-sources](skills/understanding-sources/SKILL.md)           | Source interface, capture patterns                 |
-| [understanding-transformers](skills/understanding-transformers/SKILL.md) | Transformer interface, chaining, pipeline          |
-| [understanding-stores](skills/understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle         |
-| [using-logger](skills/using-logger/SKILL.md)                             | Logger access, DRY principles, when to log         |
-| [using-step-examples](skills/using-step-examples/SKILL.md)               | Step examples lifecycle, Three Type Zones, testing |
+| Skill                                                                    | What You'll Learn                                                          |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| [understanding-development](skills/understanding-development/SKILL.md)   | Build workflow, XP principles, folder structure                            |
+| [understanding-flow](skills/understanding-flow/SKILL.md)                 | Architecture, composability, data flow                                     |
+| [understanding-events](skills/understanding-events/SKILL.md)             | Event model, entity-action naming, properties                              |
+| [understanding-mapping](skills/understanding-mapping/SKILL.md)           | Event transformation, data/map/loop                                        |
+| [understanding-destinations](skills/understanding-destinations/SKILL.md) | Destination interface, env pattern                                         |
+| [understanding-sources](skills/understanding-sources/SKILL.md)           | Source interface, capture patterns                                         |
+| [understanding-transformers](skills/understanding-transformers/SKILL.md) | Transformer interface, chaining, pipeline                                  |
+| [understanding-stores](skills/understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle                                 |
+| [using-logger](skills/using-logger/SKILL.md)                             | Logger access, DRY principles, when to log                                 |
+| [using-step-examples](skills/using-step-examples/SKILL.md)               | Step examples lifecycle, Three Type Zones, testing                         |
+| [using-transformer-ga4](skills/walkeros-using-transformer-ga4/SKILL.md)  | Wire `@walkeros/transformer-ga4`, override mappings, troubleshoot decoding |
 
 ## Creating Things
 

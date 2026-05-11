@@ -103,7 +103,6 @@ export async function initSource(
     rawEvent: WalkerOS.DeepPartialEvent,
     options: Collector.PushOptions = {},
   ) => {
-    let event = rawEvent;
     let pendingRespond: Promise<void> | undefined;
 
     // Resolve before chain (static or conditional)
@@ -116,6 +115,13 @@ export async function initSource(
           )
         : []);
 
+    // The before chain may fan out (return an array of events). The cache
+    // check and destination push must run once per event so fan-out is
+    // preserved end-to-end. Cache logic is request-scoped (keyed by
+    // `currentIngest`), so it lives outside the loop. The actual pipeline
+    // (preChain + collector.push) runs inside the loop, once per event.
+    let events: WalkerOS.DeepPartialEvent[] = [rawEvent];
+
     // Run source.before chain (consent-exempt, pre-source preprocessing)
     if (
       beforeChain.length > 0 &&
@@ -126,7 +132,7 @@ export async function initSource(
         collector,
         collector.transformers,
         beforeChain,
-        event,
+        rawEvent,
         currentIngest,
         currentRespond,
         `source.${sourceId}.before`,
@@ -135,10 +141,9 @@ export async function initSource(
         return { ok: true } as Elb.PushResult;
       }
       if (beforeResult.respond) currentRespond = beforeResult.respond;
-      // Before chains use first result if fan-out occurred
-      event = Array.isArray(beforeResult.event)
-        ? beforeResult.event[0]
-        : beforeResult.event;
+      events = Array.isArray(beforeResult.event)
+        ? beforeResult.event
+        : [beforeResult.event];
     }
 
     // Source cache check (full=true by default for sources)
@@ -236,14 +241,20 @@ export async function initSource(
           )
         : []);
 
-    const pushResult = await collector.push(event, {
-      ...options,
-      id: sourceId,
-      ingest: currentIngest,
-      respond: currentRespond,
-      mapping: config,
-      preChain,
-    });
+    // Push each event independently through the post-before pipeline.
+    // For non-fan-out (single event) this is a one-iteration loop and
+    // behaves exactly like the previous implementation.
+    let pushResult: Elb.PushResult = { ok: true } as Elb.PushResult;
+    for (const event of events) {
+      pushResult = await collector.push(event, {
+        ...options,
+        id: sourceId,
+        ingest: currentIngest,
+        respond: currentRespond,
+        mapping: config,
+        preChain,
+      });
+    }
 
     // Wait for any deferred MISS update work to land on the source's
     // respond sender before returning control to the source. This
