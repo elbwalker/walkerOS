@@ -1,15 +1,6 @@
 import type { Flow } from './types';
 import { throwError } from './throwError';
 
-/** Section keys that map to WalkerOS.Event fields. */
-const SECTION_KEYS = [
-  'globals',
-  'context',
-  'custom',
-  'user',
-  'consent',
-] as const;
-
 /** Annotation keys to strip from AJV-compatible schemas. */
 const ANNOTATION_KEYS = new Set([
   'description',
@@ -92,9 +83,9 @@ export function resolveContracts(
 
 /**
  * Merge two contract entries additively.
- * Sections merge via mergeContractSchemas.
- * Events merge at the entity-action level.
- * Metadata: child wins for scalars.
+ * Scalar metadata (tagging, description): child wins, otherwise inherited.
+ * `schema`: deep additive merge via mergeContractSchemas.
+ * `events`: per-entity-action merge.
  */
 function mergeContractEntries(
   parent: Flow.ContractRule,
@@ -102,10 +93,7 @@ function mergeContractEntries(
 ): Flow.ContractRule {
   const result: Flow.ContractRule = {};
 
-  // Merge scalar metadata (child overrides if set, otherwise inherited from parent).
-  // Excluded: `extends` (structural, stripped at resolution), section keys
-  // (handled via SECTION_KEYS below), `events` (handled below).
-  // Add a new block here when a new scalar field is added to ContractRule.
+  // Scalar metadata: child overrides if set, otherwise inherited.
   if (parent.tagging !== undefined || child.tagging !== undefined) {
     result.tagging = child.tagging ?? parent.tagging;
   }
@@ -113,21 +101,19 @@ function mergeContractEntries(
     result.description = child.description ?? parent.description;
   }
 
-  // Merge sections additively
-  for (const key of SECTION_KEYS) {
-    const p = parent[key];
-    const c = child[key];
-    if (p && c) {
-      result[key] = mergeContractSchemas(
-        p as Record<string, unknown>,
-        c as Record<string, unknown>,
-      );
-    } else if (p || c) {
-      result[key] = { ...((p || c) as Record<string, unknown>) };
-    }
+  // Schema: additive deep-merge via mergeContractSchemas.
+  if (parent.schema && child.schema) {
+    result.schema = mergeContractSchemas(
+      parent.schema as Record<string, unknown>,
+      child.schema as Record<string, unknown>,
+    ) as Flow.ContractRule['schema'];
+  } else if (parent.schema || child.schema) {
+    result.schema = {
+      ...((parent.schema || child.schema) as Record<string, unknown>),
+    } as Flow.ContractRule['schema'];
   }
 
-  // Merge events
+  // Events: per-entity-action merge (unchanged semantics).
   if (parent.events || child.events) {
     const merged: Flow.ContractEvents = {};
     const allEntities = new Set([

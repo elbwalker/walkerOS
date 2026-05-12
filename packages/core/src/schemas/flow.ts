@@ -227,6 +227,46 @@ export const StepExamplesSchema = z
   .describe('Named step examples for testing and documentation');
 
 // ========================================
+// Validate Schemas (shared by step Init schemas and ContractRule)
+// ========================================
+
+/**
+ * JSON Schema fragment - structural JSON Schema object.
+ */
+export const JsonSchemaSchema = z.record(z.string(), z.unknown()).meta({
+  id: 'JsonSchema',
+  title: 'JsonSchema',
+  description: 'Structural JSON Schema fragment (Record<string, unknown>)',
+});
+
+/**
+ * Validate events map - entity → action → JSON Schema.
+ */
+export const ValidateEventsSchema = z
+  .record(z.string(), z.record(z.string(), JsonSchemaSchema))
+  .meta({
+    id: 'ValidateEvents',
+    title: 'ValidateEvents',
+    description: 'Entity-action keyed JSON Schemas',
+  })
+  .describe('Entity-action keyed JSON Schemas');
+
+/**
+ * Validate schema - step-level validation configuration.
+ */
+export const ValidateSchema = z
+  .object({
+    format: z.boolean().optional(),
+    events: ValidateEventsSchema.optional(),
+    schema: JsonSchemaSchema.optional(),
+  })
+  .meta({
+    id: 'Validate',
+    title: 'Validate',
+    description: 'Step-level validation: { format?, events?, schema? }',
+  });
+
+// ========================================
 // Source / Destination / Transformer / Store Schemas
 // ========================================
 
@@ -300,6 +340,7 @@ export const SourceSchema = z
     cache: CacheSchema.optional().describe(
       'Cache configuration for this source (match → key → ttl rules)',
     ),
+    validate: ValidateSchema.optional(),
   })
   .meta({
     id: 'FlowSource',
@@ -360,6 +401,7 @@ export const TransformerSchema = z
     cache: CacheSchema.optional().describe(
       'Cache configuration for this transformer (match → key → ttl rules)',
     ),
+    validate: ValidateSchema.optional(),
   })
   .meta({
     id: 'FlowTransformer',
@@ -427,6 +469,7 @@ export const DestinationSchema = z
     cache: CacheSchema.optional().describe(
       'Cache configuration for this destination (match → key → ttl rules)',
     ),
+    validate: ValidateSchema.optional(),
   })
   .meta({
     id: 'FlowDestination',
@@ -543,39 +586,17 @@ export const ContractEventsSchema = z
  */
 export const ContractRuleSchema = z
   .object({
-    extends: z
-      .string()
-      .optional()
-      .describe('Inherit from another named contract'),
-    tagging: z
-      .number()
-      .optional()
-      .describe('Tagging level (used by validators / runtime tagging policy)'),
-    description: z.string().optional().describe('Human-readable description'),
-    globals: ContractSchemaEntry.optional().describe(
-      'JSON Schema for event.globals',
-    ),
-    context: ContractSchemaEntry.optional().describe(
-      'JSON Schema for event.context',
-    ),
-    custom: ContractSchemaEntry.optional().describe(
-      'JSON Schema for event.custom',
-    ),
-    user: ContractSchemaEntry.optional().describe('JSON Schema for event.user'),
-    consent: ContractSchemaEntry.optional().describe(
-      'JSON Schema for event.consent',
-    ),
-    events: ContractEventsSchema.optional().describe(
-      'Entity-action event schemas',
-    ),
+    extends: z.string().optional(),
+    tagging: z.number().optional(),
+    description: z.string().optional(),
+    events: ValidateEventsSchema.optional(),
+    schema: JsonSchemaSchema.optional(),
   })
   .meta({
-    id: 'FlowContractRule',
+    id: 'ContractRule',
     title: 'Flow.ContractRule',
-    description:
-      'Named contract rule with optional sections (globals/context/custom/user/consent) and event schemas.',
-  })
-  .describe('Named contract rule with optional sections and events');
+    description: 'Named contract entry',
+  });
 
 /**
  * Named contract map.

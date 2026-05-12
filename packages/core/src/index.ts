@@ -40,6 +40,7 @@ export * from './matcher';
 export * from './route';
 export * from './cache';
 export * from './examples/formatOut';
+export { autoInjectValidators } from './validate-inject';
 export {
   REF_VAR_FULL,
   REF_VAR_INLINE,

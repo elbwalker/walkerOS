@@ -42,24 +42,29 @@
   "contract": {
     "default": {
       "description": "Web shop tracking contract",
-      "globals": {
+      "schema": {
         "type": "object",
         "properties": {
-          "environment": {
-            "type": "string"
+          "globals": {
+            "type": "object",
+            "properties": {
+              "environment": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            }
           },
-          "version": {
-            "type": "string"
-          }
-        }
-      },
-      "consent": {
-        "type": "object",
-        "required": ["functional"],
-        "properties": {
-          "functional": {
-            "type": "boolean",
-            "const": true
+          "consent": {
+            "type": "object",
+            "required": ["functional"],
+            "properties": {
+              "functional": {
+                "type": "boolean",
+                "const": true
+              }
+            }
           }
         }
       },
@@ -285,7 +290,7 @@
           "config": {
             "settings": {
               "events": "$contract.default.events",
-              "globals": "$contract.default.globals"
+              "schema": "$contract.default.schema"
             }
           }
         }
@@ -293,6 +298,19 @@
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
+          "validate": {
+            "events": {
+              "order": {
+                "complete": {
+                  "properties": {
+                    "data": {
+                      "required": ["id", "total"]
+                    }
+                  }
+                }
+              }
+            }
+          },
           "config": {
             "require": ["consent", "user"],
             "consent": {
@@ -742,8 +760,7 @@
             "settings": {
               "format": true,
               "events": "$contract.default.events",
-              "globals": "$contract.default.globals",
-              "consent": "$contract.default.consent"
+              "schema": "$contract.default.schema"
             }
           }
         }

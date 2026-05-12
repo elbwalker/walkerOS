@@ -1,0 +1,171 @@
+---
+title: Validate
+description: Step-level validation primitive. Declare validation inline on any step.
+sidebar_position: 3
+---
+
+# Validate
+
+`validate:` is a step-level primitive that attaches validation rules directly to a source, transformer, or destination. The flow loader rewrites it into a validator transformer at the right position in the step's chain, so a failed check skips only that step.
+
+```json
+"destinations": {
+  "ga4": {
+    "package": "@walkeros/web-destination-gtag-ga4",
+    "validate": {
+      "events": {
+        "order": {
+          "complete": { "properties": { "data": { "required": ["total"] } } }
+        }
+      }
+    }
+  }
+}
+```
+
+## The shape
+
+`validate` is an object with three optional fields. At least one must be set for the primitive to do anything.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `format?` | `boolean` | Check the full `WalkerOS.Event` structural shape (name, source, timestamp, etc.) |
+| `events?` | `Record<entity, Record<action, JsonSchema>>` | Per-event JSON Schemas keyed by entity then action, with `*` wildcard fallback |
+| `schema?` | `JsonSchema` | A single JSON Schema applied to every event that reaches the step |
+
+## events or schema
+
+Per-event rules go in `events`. Apply-to-every-event rules go in `schema`.
+
+## Step-level usage
+
+`validate:` lives on the step it protects. Same shape on every step type, only the placement of the resulting validator in the chain differs (see [Lifecycle position](#lifecycle-position)).
+
+### On a destination
+
+Reject orders without a total before they reach GA4. Other destinations on the same flow still see the event.
+
+<CodeSnippet
+  code={`"destinations": {
+  "ga4": {
+    "package": "@walkeros/web-destination-gtag-ga4",
+    "config": { "settings": { "measurementId": "G-DEMO123456" } },
+    "validate": {
+      "events": {
+        "order": {
+          "complete": {
+            "properties": {
+              "data": { "required": ["total"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### On a source
+
+Drop ingest payloads that miss a required field before they hit the collector.
+
+<CodeSnippet
+  code={`"sources": {
+  "http": {
+    "package": "@walkeros/server-source-express",
+    "config": { "settings": { "port": 8080 } },
+    "validate": {
+      "schema": {
+        "required": ["name"],
+        "properties": { "name": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### On a transformer
+
+Validate before a transformer runs, for example to guarantee a downstream enrichment transformer never sees an event without a user id.
+
+<CodeSnippet
+  code={`"transformers": {
+  "enrich": {
+    "package": "@walkeros/transformer-enrich",
+    "validate": {
+      "events": {
+        "*": {
+          "*": { "properties": { "user": { "required": ["id"] } } }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Failure semantic
+
+A failed validation skips only the step it is attached to. Other destinations, transformers, and sources on the same flow continue to receive the event.
+
+```
+                         ┌──────────────────────────┐
+                         │ ga4 (validate fails)     │
+event "order complete" ──┤   skipped                │
+                         │                          │
+                         │ meta (no validate here)  │
+                         │   receives event         │
+                         └──────────────────────────┘
+```
+
+This is the key difference from a flow-level validator that drops events globally. Step-level `validate:` is local to the step.
+
+## Lifecycle position
+
+Validation runs after the step's `before` chain, before the step's main action. On a source the validator prepends to `next`. On a transformer or destination the validator appends to `before`. That positioning means the validator sees the event in the same shape the step itself would see.
+
+You write `validate:`, the flow loader rewrites it into an entry in `flow.transformers` named `__validate_<kind>_<stepName>` and wires it into the right chain. The `validate:` field is removed from the original step. Re-running the loader is idempotent.
+
+## Wiring from a contract
+
+`validate:` accepts `$contract.<name>.<path>` references just like any other config value. Define rules once in a contract, reference them from each step:
+
+<CodeSnippet
+  code={`"contract": {
+  "web": {
+    "events": {
+      "order": {
+        "complete": { "properties": { "data": { "required": ["total"] } } }
+      }
+    }
+  }
+},
+"flows": {
+  "default": {
+    "destinations": {
+      "ga4": {
+        "package": "@walkeros/web-destination-gtag-ga4",
+        "validate": {
+          "schema":  "$contract.web.schema",
+          "events":  "$contract.web.events"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+See [Contract](/docs/getting-started/flow/contract) for the full contract shape, inheritance with `extends`, and wildcard merging.
+
+## Format layer
+
+Setting `format: true` runs the full `WalkerOS.Event` structural check on the input. That covers required top-level fields (`name`, `source`, `timestamp`, `id`, ...), the entity-action `event name` pattern, `source.type` being one of the known kinds, and the basic shape of nested objects (`data`, `context`, `globals`, `user`, `consent`). Use it as a cheap sanity gate when the step receives data from arbitrary callers; skip it when the input is already a `WalkerOS.Event` produced by the collector.
+
+## Next steps
+
+- **[Contract](/docs/getting-started/flow/contract)**: named, inheritable schemas referenced via `$contract`
+- **[Validator](/docs/transformers/validator)**: the underlying transformer package (now deprecated in favor of step-level `validate:`)
+- **[Mapping](/docs/mapping)**: transform events between steps

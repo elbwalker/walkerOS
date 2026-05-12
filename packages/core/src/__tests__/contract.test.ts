@@ -49,22 +49,37 @@ describe('resolveContracts', () => {
   it('should resolve a single contract with no extends', () => {
     const contract: Flow.Contract = {
       default: {
-        globals: { required: ['country'] },
+        schema: {
+          type: 'object',
+          properties: {
+            globals: { type: 'object', required: ['country'] },
+          },
+        },
         events: {
           product: { view: { properties: { data: { required: ['id'] } } } },
         },
       },
     };
     const resolved = resolveContracts(contract);
-    expect(resolved.default.globals).toEqual({ required: ['country'] });
+    expect(resolved.default.schema).toEqual({
+      type: 'object',
+      properties: {
+        globals: { type: 'object', required: ['country'] },
+      },
+    });
     expect(resolved.default.events?.product.view).toBeDefined();
   });
 
   it('should resolve extends chain', () => {
     const contract: Flow.Contract = {
       default: {
-        globals: { required: ['country'] },
-        consent: { required: ['analytics'] },
+        schema: {
+          type: 'object',
+          properties: {
+            globals: { type: 'object', required: ['country'] },
+            consent: { type: 'object', required: ['analytics'] },
+          },
+        },
       },
       web: {
         extends: 'default',
@@ -74,28 +89,50 @@ describe('resolveContracts', () => {
       },
     };
     const resolved = resolveContracts(contract);
-    // web inherits from default
-    expect(resolved.web.globals).toEqual({ required: ['country'] });
-    expect(resolved.web.consent).toEqual({ required: ['analytics'] });
+    // web inherits schema from default
+    const webProps = (resolved.web.schema as Record<string, unknown>)
+      .properties as Record<string, unknown>;
+    expect(webProps.globals).toEqual({ type: 'object', required: ['country'] });
+    expect(webProps.consent).toEqual({
+      type: 'object',
+      required: ['analytics'],
+    });
     expect(resolved.web.events?.product.view).toBeDefined();
   });
 
   it('should resolve deep extends chain', () => {
     const contract: Flow.Contract = {
-      default: { consent: { required: ['analytics'] } },
+      default: {
+        schema: {
+          type: 'object',
+          properties: {
+            consent: { type: 'object', required: ['analytics'] },
+          },
+        },
+      },
       web: {
         extends: 'default',
         events: { product: { view: {} } },
       },
       web_loggedin: {
         extends: 'web',
-        user: { required: ['id'] },
+        schema: {
+          type: 'object',
+          properties: {
+            user: { type: 'object', required: ['id'] },
+          },
+        },
       },
     };
     const resolved = resolveContracts(contract);
-    expect(resolved.web_loggedin.consent).toEqual({ required: ['analytics'] });
+    const props = (resolved.web_loggedin.schema as Record<string, unknown>)
+      .properties as Record<string, unknown>;
+    expect(props.consent).toEqual({
+      type: 'object',
+      required: ['analytics'],
+    });
+    expect(props.user).toEqual({ type: 'object', required: ['id'] });
     expect(resolved.web_loggedin.events?.product.view).toBeDefined();
-    expect(resolved.web_loggedin.user).toEqual({ required: ['id'] });
   });
 
   it('should detect circular extends', () => {
@@ -187,25 +224,14 @@ describe('resolveContracts', () => {
     });
   });
 
-  it('should merge sections additively via extends', () => {
-    const contract: Flow.Contract = {
-      default: {
-        consent: { required: ['analytics'] },
-      },
-      web: {
-        extends: 'default',
-        consent: { required: ['marketing'] },
-      },
-    };
-    const resolved = resolveContracts(contract);
-    expect(resolved.web.consent?.required).toEqual(['analytics', 'marketing']);
-  });
-
   it('should inherit tagging from parent when child omits it', () => {
     const contract: Flow.Contract = {
       default: {
         tagging: 1,
-        globals: { required: ['country'] },
+        schema: {
+          type: 'object',
+          properties: { globals: { type: 'object', required: ['country'] } },
+        },
       },
       web: {
         extends: 'default',
@@ -259,17 +285,99 @@ describe('resolveContracts', () => {
     });
   });
 
-  it('should handle contract with only sections, no events', () => {
+  it('should handle contract with only schema, no events', () => {
     const contract: Flow.Contract = {
       consent_only: {
-        consent: {
-          required: ['analytics'],
-          properties: { analytics: { type: 'boolean' } },
+        schema: {
+          type: 'object',
+          properties: {
+            consent: {
+              type: 'object',
+              required: ['analytics'],
+              properties: { analytics: { type: 'boolean' } },
+            },
+          },
         },
       },
     };
     const resolved = resolveContracts(contract);
-    expect(resolved.consent_only.consent?.required).toEqual(['analytics']);
+    const props = (resolved.consent_only.schema as Record<string, unknown>)
+      .properties as Record<string, unknown>;
+    expect((props.consent as Record<string, unknown>).required).toEqual([
+      'analytics',
+    ]);
     expect(resolved.consent_only.events).toBeUndefined();
+  });
+
+  it('resolves a contract with schema only', () => {
+    const contract: Flow.Contract = {
+      web: {
+        schema: {
+          type: 'object',
+          properties: {
+            globals: { type: 'object', required: ['country'] },
+          },
+        },
+      },
+    };
+    const resolved = resolveContracts(contract);
+    expect(resolved.web.schema).toEqual({
+      type: 'object',
+      properties: {
+        globals: { type: 'object', required: ['country'] },
+      },
+    });
+  });
+
+  it('merges schemas additively via extends', () => {
+    const contract: Flow.Contract = {
+      default: {
+        schema: {
+          type: 'object',
+          properties: { globals: { required: ['country'] } },
+        },
+      },
+      web: {
+        extends: 'default',
+        schema: {
+          type: 'object',
+          properties: { consent: { required: ['analytics'] } },
+        },
+      },
+    };
+    const resolved = resolveContracts(contract);
+    const props = (resolved.web.schema as Record<string, unknown>).properties;
+    expect(props).toEqual({
+      globals: { required: ['country'] },
+      consent: { required: ['analytics'] },
+    });
+  });
+
+  it('unions required arrays via extends', () => {
+    const contract: Flow.Contract = {
+      default: {
+        schema: {
+          type: 'object',
+          properties: { globals: { type: 'object', required: ['country'] } },
+        },
+      },
+      web: {
+        extends: 'default',
+        schema: {
+          type: 'object',
+          properties: { globals: { type: 'object', required: ['currency'] } },
+        },
+      },
+    };
+    const resolved = resolveContracts(contract);
+    const globals = (
+      (resolved.web.schema as Record<string, unknown>).properties as Record<
+        string,
+        unknown
+      >
+    ).globals as Record<string, unknown>;
+    expect(globals.required).toEqual(
+      expect.arrayContaining(['country', 'currency']),
+    );
   });
 });

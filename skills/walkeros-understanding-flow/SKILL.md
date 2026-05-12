@@ -163,6 +163,16 @@ for the full store interface and lifecycle.
 | Transformation   | Mapping system | Raw push calls          |
 | Delivery         | Destinations   | Sources, Collector      |
 
+## Step-Level Primitives
+
+Every step (source, transformer, destination) supports a small set of inline
+primitives alongside its package wiring. `cache`, `mapping`, and `consent` are
+the long-established ones; `validate?` is the newest. Declare `validate:` on a
+step and the CLI bundler auto-injects a validator transformer at the correct
+chain position, so a failed check only skips that step. See
+[Website: Validate](../../website/docs/getting-started/flow/validate.mdx) for
+the full shape and lifecycle position.
+
 ## Transformer Chains
 
 Transformers run at two points in the pipeline, configured via `next` and
@@ -179,16 +189,16 @@ Runs after source captures event, before collector processing:
   "sources": {
     "browser": {
       "package": "@walkeros/web-source-browser",
-      "next": "validate"
+      "next": "enrich"
     }
   },
   "transformers": {
-    "validate": {
-      "package": "@walkeros/transformer-validator",
-      "next": "enrich"
-    },
     "enrich": {
-      "package": "@walkeros/transformer-enricher"
+      "package": "@walkeros/transformer-enricher",
+      "next": "redact"
+    },
+    "redact": {
+      "package": "@walkeros/transformer-redact"
     }
   }
 }
@@ -200,19 +210,23 @@ Runs after source captures event, before collector processing:
 sources: {
   browser: {
     code: sourceBrowser,
-    next: 'validate'
+    next: 'enrich'
   }
 },
 transformers: {
-  validate: {
-    code: transformerValidator,
-    config: { next: 'enrich' }
-  },
   enrich: {
-    code: transformerEnrich
+    code: transformerEnrich,
+    config: { next: 'redact' }
+  },
+  redact: {
+    code: transformerRedact
   }
 }
 ```
+
+For validation, prefer the step-level `validate:` primitive over wiring a
+validator transformer by hand. The CLI auto-injects the validator at the right
+chain position.
 
 Note: In flow.json, `next` is at the reference level. The CLI bundler
 automatically moves it into `config.next` for runtime - you don't need to handle

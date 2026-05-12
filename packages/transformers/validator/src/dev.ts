@@ -16,39 +16,17 @@ export const settingsSchema: JsonSchema = {
   properties: {
     format: {
       type: 'boolean',
-      description:
-        'Validate full WalkerOS.Event structure. Pre-compiled at init.',
+      description: 'Validate full WalkerOS.Event structure.',
       default: true,
     },
     events: {
       type: 'object',
       description:
-        'Entity-action keyed JSON Schemas for event validation. Wildcard fallback: entity.action → entity.* → *.action → *.*. Typically wired from $contract.<name>.events.',
+        'Entity-action keyed JSON Schemas. Wildcard fallback: entity.action → entity.* → *.action → *.*.',
     },
-    globals: {
+    schema: {
       type: 'object',
-      description:
-        'JSON Schema for event.globals. Runs on every event. Typically wired from $contract.<name>.globals.',
-    },
-    context: {
-      type: 'object',
-      description:
-        'JSON Schema for event.context. Runs on every event. Typically wired from $contract.<name>.context.',
-    },
-    custom: {
-      type: 'object',
-      description:
-        'JSON Schema for event.custom. Runs on every event. Typically wired from $contract.<name>.custom.',
-    },
-    user: {
-      type: 'object',
-      description:
-        'JSON Schema for event.user. Runs on every event. Typically wired from $contract.<name>.user.',
-    },
-    consent: {
-      type: 'object',
-      description:
-        'JSON Schema for event.consent. Runs on every event. Typically wired from $contract.<name>.consent.',
+      description: 'JSON Schema run against the full input.',
     },
   },
 };

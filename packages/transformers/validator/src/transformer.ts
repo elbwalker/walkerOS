@@ -8,50 +8,33 @@ export const transformerValidator: Transformer.Init<
 > = (context) => {
   const { config } = context;
   const settings = config.settings || {};
-  const {
-    format = true,
-    events,
-    globals,
-    context: ctx,
-    custom,
-    user,
-    consent,
-  } = settings;
+  const { format = true, events, schema } = settings;
 
   const ajv = new Ajv({ allErrors: true, strict: false });
 
-  // Pre-compile format validator
+  // Pre-compiled validators
   const formatValidator = format ? ajv.compile(formatSchema) : null;
+  const schemaValidator = schema
+    ? ajv.compile({ type: 'object', ...(schema as Record<string, unknown>) })
+    : null;
 
-  // Pre-compile section validators (run on every event)
-  const sectionValidators: Array<{
-    name: string;
-    field: string;
-    validate: ValidateFunction;
-  }> = [];
-
-  const sectionSchemas = { globals, context: ctx, custom, user, consent };
-  for (const [name, schema] of Object.entries(sectionSchemas)) {
-    if (schema) {
-      sectionValidators.push({
-        name,
-        field: name,
-        validate: ajv.compile({ type: 'object', ...schema }),
-      });
-    }
-  }
-
-  // Lazy-compiled event validators
+  // Lazy event validators
   const eventValidators = new Map<string, ValidateFunction>();
 
   function getEventValidator(
     entity: string,
     action: string,
-    schema: JsonSchema,
-  ) {
+    eventSchema: JsonSchema,
+  ): ValidateFunction {
     const key = `${entity}.${action}`;
     if (!eventValidators.has(key)) {
-      eventValidators.set(key, ajv.compile({ type: 'object', ...schema }));
+      eventValidators.set(
+        key,
+        ajv.compile({
+          type: 'object',
+          ...(eventSchema as Record<string, unknown>),
+        }),
+      );
     }
     return eventValidators.get(key)!;
   }
@@ -89,10 +72,10 @@ export const transformerValidator: Transformer.Init<
     type: 'validator',
     config,
 
-    async push(event, context) {
-      const { logger } = context;
+    async push(event, ctx) {
+      const { logger } = ctx;
 
-      // 1. Format validation (pre-compiled, fast)
+      // 1. Format
       if (formatValidator && !formatValidator(event)) {
         logger.error('Event format invalid', {
           errors: ajv.errorsText(formatValidator.errors),
@@ -100,36 +83,26 @@ export const transformerValidator: Transformer.Init<
         return false;
       }
 
-      // 2. Section validation (pre-compiled, runs on every event)
-      for (const { name, field, validate } of sectionValidators) {
-        const value = (event as Record<string, unknown>)[field];
-        if (!validate(value)) {
-          logger.error(`${name} validation failed`, {
-            errors: ajv.errorsText(validate.errors),
-          });
-          return false;
-        }
+      // 2. Schema (whole-event)
+      if (schemaValidator && !schemaValidator(event)) {
+        logger.error('Schema validation failed', {
+          errors: ajv.errorsText(schemaValidator.errors),
+        });
+        return false;
       }
 
-      // 3. Event validation (lazy compiled)
+      // 3. Events (entity-action keyed)
       if (events && event.entity && event.action) {
         const match = findEventSchema(event.entity, event.action);
-
         if (match) {
-          const validator = getEventValidator(
-            event.entity,
-            event.action,
-            match.schema,
-          );
-
-          if (!validator(event)) {
+          const v = getEventValidator(event.entity, event.action, match.schema);
+          if (!v(event)) {
             logger.error('Contract validation failed', {
               rule: match.key,
-              errors: ajv.errorsText(validator.errors),
+              errors: ajv.errorsText(v.errors),
             });
             return false;
           }
-
           logger.debug('Contract validation passed', { rule: match.key });
         }
       }

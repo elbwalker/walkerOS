@@ -1,7 +1,11 @@
 // walkerOS/packages/cli/src/commands/validate/validators/flow.ts
 
 import type { Flow } from '@walkeros/core';
-import { getFlowSettings, isObject } from '@walkeros/core';
+import {
+  autoInjectValidators,
+  getFlowSettings,
+  isObject,
+} from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import type {
   ValidateResult,
@@ -173,8 +177,11 @@ export function validateFlow(
 
     let totalConnections = 0;
     for (const name of flowsToCheck) {
-      const flowSettings = typedFlows[name];
-      if (!flowSettings) continue;
+      const rawFlow = typedFlows[name];
+      if (!rawFlow) continue;
+      // Apply the same validator auto-injection the bundler / runtime use so
+      // deep checks see the rewritten transformer chain (mirrors loader).
+      const flowSettings = autoInjectValidators(rawFlow);
 
       const connections = buildConnectionGraph(flowSettings);
       for (const conn of connections) {

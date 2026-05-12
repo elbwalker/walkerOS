@@ -161,14 +161,19 @@ bundler to parse the following string as executable JavaScript:
       "code": {
         "push": "$code:(event) => { event.data.processedAt = new Date().toISOString(); return { event }; }"
       },
-      "next": "validate"
+      "next": "enrich"
     },
-    "validate": {
-      "package": "@walkeros/transformer-validator"
+    "enrich": {
+      "package": "@walkeros/transformer-enricher"
     }
   }
 }
 ```
+
+For validation, prefer the step-level `validate:` primitive on the source,
+transformer, or destination instead of wiring a validator transformer
+explicitly. The CLI bundler auto-injects the validator at the correct chain
+position.
 
 ## Pipeline Integration
 

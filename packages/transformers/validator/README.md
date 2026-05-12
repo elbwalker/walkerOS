@@ -1,5 +1,12 @@
 # @walkeros/transformer-validator
 
+> **Deprecated for direct user-facing imports.** Prefer step-level `validate:`
+> on sources, transformers, and destinations. The walkerOS CLI auto-injects this
+> transformer when `validate:` is declared. See
+> [Validate](https://www.walkeros.io/docs/getting-started/flow/validate).
+>
+> This package stays published as the runtime that powers `validate:`.
+
 Event validation transformer using JSON Schema.
 
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/transformers/validator)

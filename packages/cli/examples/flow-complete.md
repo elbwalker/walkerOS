@@ -146,15 +146,16 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 
 #### Destinations
 
-| Feature                 | Location         | Example                                 |
-| ----------------------- | ---------------- | --------------------------------------- |
-| Require (deferred init) | GA4              | `"require": ["consent", "user"]`        |
-| Destination consent     | GA4              | `"consent": { "marketing": true }`      |
-| Destination mapping     | All destinations | Entity/action to vendor events          |
-| Multiple destinations   | Both flows       | GA4 + API, Meta + Demo                  |
-| Batch option            | API              | `"batch": 5`                            |
-| Transform function      | API              | `"transform": "$code:(data) => ..."`    |
-| Empty consent (always)  | debug            | `"consent": {}` (fires without consent) |
+| Feature                 | Location         | Example                                     |
+| ----------------------- | ---------------- | ------------------------------------------- |
+| Require (deferred init) | GA4              | `"require": ["consent", "user"]`            |
+| Destination consent     | GA4              | `"consent": { "marketing": true }`          |
+| Destination mapping     | All destinations | Entity/action to vendor events              |
+| Multiple destinations   | Both flows       | GA4 + API, Meta + Demo                      |
+| Batch option            | API              | `"batch": 5`                                |
+| Transform function      | API              | `"transform": "$code:(data) => ..."`        |
+| Empty consent (always)  | debug            | `"consent": {}` (fires without consent)     |
+| Inline `validate:`      | GA4              | Step-level schema check on `order complete` |
 
 #### Collector
 
@@ -215,14 +216,13 @@ in this example):
 
 These features could be added but were omitted to keep the example focused:
 
-| Feature                   | Why Omitted                    |
-| ------------------------- | ------------------------------ |
-| Multiple named flows (3+) | Two flows sufficient for demo  |
-| Queue config              | Advanced batching scenario     |
-| Retry config              | Advanced error handling        |
-| Custom fetch options      | API destination advanced       |
-| Custom headers in API     | Would add complexity           |
-| `validate:` function      | Could add via $code: if needed |
+| Feature                   | Why Omitted                   |
+| ------------------------- | ----------------------------- |
+| Multiple named flows (3+) | Two flows sufficient for demo |
+| Queue config              | Advanced batching scenario    |
+| Retry config              | Advanced error handling       |
+| Custom fetch options      | API destination advanced      |
+| Custom headers in API     | Would add complexity          |
 
 ---
 

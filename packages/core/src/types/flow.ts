@@ -551,32 +551,16 @@ export namespace Flow {
    * Use `extends` to inherit from another named contract (additive merge).
    */
   export interface ContractRule {
-    /** Inherit from another named contract (additive merge). */
+    /** Inherit from another named contract entry. */
     extends?: string;
-
-    /** Tagging level (used by validators / runtime tagging policy). */
+    /** Contract revision marker. */
     tagging?: number;
-
-    /** Human-readable description of the contract. */
+    /** Human-readable note. */
     description?: string;
-
-    /** JSON Schema for event.globals. */
-    globals?: ContractSchema;
-
-    /** JSON Schema for event.context. */
-    context?: ContractSchema;
-
-    /** JSON Schema for event.custom. */
-    custom?: ContractSchema;
-
-    /** JSON Schema for event.user. */
-    user?: ContractSchema;
-
-    /** JSON Schema for event.consent. */
-    consent?: ContractSchema;
-
-    /** Entity-action event schemas. */
-    events?: ContractEvents;
+    /** Entity-action keyed JSON Schemas (wildcard fallback at runtime). */
+    events?: import('./validate').ValidateEvents;
+    /** JSON Schema for the full event. */
+    schema?: import('./validate').JsonSchema;
   }
 
   /**

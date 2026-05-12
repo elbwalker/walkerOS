@@ -1,6 +1,7 @@
 {
   "name": "@walkeros/transformer-validator",
   "description": "Event validation transformer for walkerOS using AJV and JSON Schema",
+  "deprecated": "Prefer the step-level `validate:` primitive. The CLI auto-injects this transformer when `validate:` is declared on any step. This package remains as the runtime.",
   "version": "4.0.2",
   "license": "MIT",
   "main": "./dist/index.js",

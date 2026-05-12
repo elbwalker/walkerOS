@@ -193,4 +193,90 @@ describe('Transformer Validator', () => {
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
   });
+
+  // TODO(task-3.2): `schema` is not yet part of ValidatorSettings. These tests
+  // describe the target shape after Task 3.2 rewrites ValidatorSettings to
+  // mirror the new `Validate` type from @walkeros/core (`{ format, events,
+  // schema }`). Type-check will fail against the current ValidatorSettings,
+  // but @swc/jest strips types so the tests run. They should FAIL because the
+  // transformer does not yet read `settings.schema`.
+  describe('ValidatorSettings: schema field', () => {
+    it('validates full event against settings.schema', async () => {
+      const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
+        settings: {
+          format: false,
+          schema: {
+            type: 'object',
+            properties: {
+              globals: { type: 'object', required: ['country'] },
+            },
+          },
+        },
+      };
+      const context = createContext(config);
+      const transformer = await transformerValidator(context);
+
+      const validWithCountry: WalkerOS.Event = {
+        ...validEvent,
+        globals: { country: 'DE' },
+      };
+      const invalidWithoutCountry: WalkerOS.Event = {
+        ...validEvent,
+        globals: {},
+      };
+
+      const passResult = await transformer.push(validWithCountry, context);
+      expect(passResult).toEqual({ event: validWithCountry });
+
+      const dropResult = await transformer.push(invalidWithoutCountry, context);
+      expect(dropResult).toBe(false);
+    });
+
+    it('combines format + events + schema; all must pass', async () => {
+      const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
+        settings: {
+          format: true,
+          events: {
+            order: {
+              complete: {
+                properties: {
+                  data: { type: 'object', required: ['id'] },
+                },
+              },
+            },
+          },
+          schema: {
+            type: 'object',
+            properties: {
+              consent: { type: 'object', required: ['analytics'] },
+            },
+          },
+        },
+      };
+      const context = createContext(config);
+      const transformer = await transformerValidator(context);
+
+      const allValid: WalkerOS.Event = {
+        ...validEvent,
+        name: 'order complete',
+        entity: 'order',
+        action: 'complete',
+        data: { id: 'X' },
+        consent: { analytics: true },
+      };
+
+      const result = await transformer.push(allValid, context);
+      expect(result).toEqual({ event: allValid });
+
+      // Schema layer must enforce: same event minus consent.analytics
+      // should be dropped because schema requires consent.analytics.
+      const failsSchema: WalkerOS.Event = {
+        ...allValid,
+        consent: {},
+      };
+
+      const dropResult = await transformer.push(failsSchema, context);
+      expect(dropResult).toBe(false);
+    });
+  });
 });

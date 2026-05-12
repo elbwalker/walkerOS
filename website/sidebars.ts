@@ -48,6 +48,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'getting-started/flow/step-examples',
             'getting-started/flow/contract',
+            'getting-started/flow/validate',
           ],
         },
         'getting-started/event-model',

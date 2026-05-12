@@ -6,14 +6,19 @@ sidebar_position: 2
 
 # Contract
 
-A contract is the schema for your event data: which fields are required, what types they have, what values are allowed. It lives alongside `flows` in flow.json as a named, inheritable block that any flow can reference via `$contract.name.path`.
+A contract is the schema for your event data: which fields are required, what types they have, what values are allowed. It lives alongside `flows` in flow.json as a named, inheritable block that any flow can reference via `$contract.<name>.<path>`.
 
 ```json
 {
   "contract": {
     "default": {
       "tagging": 1,
-      "globals": { "required": ["country"] },
+      "schema": {
+        "type": "object",
+        "properties": {
+          "globals": { "required": ["country"] }
+        }
+      },
       "events": {
         "product": {
           "*": { "properties": { "data": { "required": ["id", "name"] } } },
@@ -27,17 +32,17 @@ A contract is the schema for your event data: which fields are required, what ty
 
 ## Why use a contract
 
-Without a contract, schema rules live inside each transformer, duplicated across flows. As the number of flows, events, and destinations grows, they drift.
+Without a contract, schema rules live inside each step's `validate:` block, duplicated across flows. As the number of flows, events, and destinations grows, they drift.
 
 A contract pulls those rules into one named, inheritable shape:
 
-- **Single source of truth.** Define `product add` requirements once. Every flow that validates events references the same definition.
+- **Single source of truth.** Define `product add` requirements once. Every step that validates events references the same definition.
 - **Inheritance.** Layer additional rules on top with `extends` (for example, `web_loggedin` extends `web` extends `default`) rather than copying.
 - **Versioned.** `tagging` tracks contract revisions alongside the events they govern.
-- **Decoupled from validation.** Contracts describe what events should look like; transformers like `@walkeros/transformer-validator` enforce them at runtime. Same contract, multiple enforcement points.
-- **Self-documenting.** Each section is JSON Schema, so `description` and `examples` annotate fields the same way humans and tools read them.
+- **Decoupled from validation.** Contracts describe what events should look like; step-level `validate:` enforces them at runtime. Same contract, multiple enforcement points.
+- **Self-documenting.** Each schema is JSON Schema, so `description` and `examples` annotate fields the same way humans and tools read them.
 
-If your flow has a single throwaway event with no validation, you do not need a contract. Reach for one as soon as the same shape needs to hold across more than one flow, transformer, or environment.
+If your flow has a single throwaway event with no validation, you do not need a contract. Reach for one as soon as the same shape needs to hold across more than one flow or step.
 
 ## The shape
 
@@ -45,11 +50,11 @@ If your flow has a single throwaway event with no validation, you do not need a 
 
 | Field | Purpose |
 |-------|---------|
-| `extends` | Inherit from another named contract |
-| `tagging` | Integer revision marker |
-| `description` | Human-readable note |
-| `globals`, `context`, `custom`, `user`, `consent` | JSON Schema for the matching `WalkerOS.Event` field, applied to every event |
-| `events` | Entity-action keyed JSON Schemas, applied per event |
+| `extends?` | Inherit from another named contract |
+| `tagging?` | Integer revision marker |
+| `description?` | Human-readable note |
+| `events?` | Entity-action keyed JSON Schemas, applied per event |
+| `schema?` | A single JSON Schema applied to every event |
 
 ```json
 {
@@ -57,16 +62,21 @@ If your flow has a single throwaway event with no validation, you do not need a 
   "contract": {
     "default": {
       "tagging": 1,
-      "globals": {
-        "required": ["country"],
+      "schema": {
+        "type": "object",
         "properties": {
-          "country": { "type": "string" }
-        }
-      },
-      "consent": {
-        "required": ["analytics"],
-        "properties": {
-          "analytics": { "type": "boolean", "const": true }
+          "globals": {
+            "required": ["country"],
+            "properties": {
+              "country": { "type": "string" }
+            }
+          },
+          "consent": {
+            "required": ["analytics"],
+            "properties": {
+              "analytics": { "type": "boolean", "const": true }
+            }
+          }
         }
       }
     },
@@ -86,17 +96,9 @@ If your flow has a single throwaway event with no validation, you do not need a 
 }
 ```
 
-### Sections
+### Schema
 
-Each section is a JSON Schema for the matching `WalkerOS.Event` field. Sections run on every event:
-
-| Section | Event field | Purpose |
-|---------|-------------|---------|
-| `globals` | `event.globals` | Cross-event key-value pairs (country, currency) |
-| `context` | `event.context` | Timing and context properties |
-| `custom` | `event.custom` | Custom properties |
-| `user` | `event.user` | User identity and attributes |
-| `consent` | `event.consent` | Consent state |
+`schema` is a JSON Schema for the full event. Standard event field names (`globals`, `context`, `consent`, `user`, `custom`, `source`, `data`) live inside `schema.properties`. The schema runs on every event the contract governs, in addition to any per-event rules under `events`.
 
 ### Event schemas
 
@@ -138,19 +140,23 @@ Inside `events`, entity-action keyed entries define JSON Schemas for a partial `
 
 Use `extends` to inherit from another named contract. Inheritance is additive:
 
-- **Sections** (`globals`, `consent`, etc.) merge additively across the chain
-- **Events** merge at the entity-action level
+- **`schema`** merges additively across the chain (deep merge of `properties`, union of `required`)
+- **`events`** merge at the entity-action level
 - **Scalars** (`tagging`, `description`): child overrides if set, otherwise inherited from parent
 - **Chains supported**: `web_loggedin` extends `web` extends `default`
 - **Circular references** are detected and throw
 
-Extends chains are resolved first, then wildcards expand on the merged result.
+Extends chains are resolved first, then wildcards expand on the merged result. Schema merging follows the same additive rules as wildcard merging (see [Merge rules](#merge-rules)), so the same limitations on JSON Schema composition keywords apply.
 
 ```json
 "contract": {
   "default": {
     "tagging": 1,
-    "globals": { "required": ["country"] }
+    "schema": {
+      "properties": {
+        "globals": { "required": ["country"] }
+      }
+    }
   },
   "web": {
     "extends": "default",
@@ -162,19 +168,23 @@ Extends chains are resolved first, then wildcards expand on the merged result.
   },
   "web_loggedin": {
     "extends": "web",
-    "user": {
-      "required": ["id"],
-      "properties": { "id": { "type": "string" } }
+    "schema": {
+      "properties": {
+        "user": {
+          "required": ["id"],
+          "properties": { "id": { "type": "string" } }
+        }
+      }
     }
   }
 }
 ```
 
-`web_loggedin` resolves to: `tagging: 1` (from `default`), `globals.country` required (from `default`), `events.product.add` (from `web`), and `user.id` required (added by `web_loggedin`).
+`web_loggedin` resolves to: `tagging: 1` (from `default`), `globals.country` required (from `default`), `events.product.add` (from `web`), and `user.id` required (added by `web_loggedin`), all within a single merged `schema`.
 
 ## Wildcard inheritance
 
-Contracts support four wildcard levels that all merge **additively**:
+Contracts support four wildcard levels in `events` that all merge **additively**:
 
 | Level | Pattern | Matches |
 |-------|---------|---------|
@@ -193,9 +203,9 @@ For `product add`, levels 1, 3, and 4 all apply and combine:
 }
 
 // Resolved "product add":
-//   consent.analytics required   (from * → *)
-//   data.id, data.name required  (from product → *)
-//   data.quantity required       (from product → add)
+//   consent.analytics required   (from * -> *)
+//   data.id, data.name required  (from product -> *)
+//   data.quantity required       (from product -> add)
 ```
 
 :::warning Contracts vs mapping wildcards
@@ -210,7 +220,7 @@ This difference is intentional. Contracts express cumulative requirements (entit
 
 ### Merge rules
 
-When multiple wildcard levels match, the JSON Schemas merge with these rules:
+When multiple wildcard levels (or `extends` chains) match, the JSON Schemas merge with these rules:
 
 | JSON Schema keyword | Merge behavior |
 |---------------------|----------------|
@@ -219,6 +229,8 @@ When multiple wildcard levels match, the JSON Schemas merge with these rules:
 | Scalar keywords (`minimum`, `pattern`, ...) | Child overrides parent |
 | Annotations (`description`, `examples`, `title`, `$comment`) | Stripped from resolved event schemas |
 
+Additive deep-merge applies to `properties` (deep-merge) and `required` arrays (union/dedup). Other JSON Schema keywords (`oneOf`, `enum`, `type` arrays, `allOf`) follow child-wins. Use `allOf` composition at the schema level if full JSON Schema composition is needed.
+
 Annotations stay on the source contract for tooling (CLI hints, IDE descriptions), but the runtime schema seen by validators is the stripped form.
 
 ## `$contract` references
@@ -226,15 +238,12 @@ Annotations stay on the source contract for tooling (CLI hints, IDE descriptions
 Reference any part of a resolved contract with `$contract.<name>.<path>`. The contract is fully resolved (extends + wildcards) before path access, so the returned value is the merged shape, not the raw entry.
 
 ```json
-"transformers": {
-  "validator": {
-    "package": "@walkeros/transformer-validator",
-    "config": {
-      "settings": {
-        "events":  "$contract.web.events",
-        "globals": "$contract.web.globals",
-        "consent": "$contract.web.consent"
-      }
+"destinations": {
+  "ga4": {
+    "package": "@walkeros/web-destination-gtag-ga4",
+    "validate": {
+      "schema": "$contract.web.schema",
+      "events": "$contract.web.events"
     }
   }
 }
@@ -247,9 +256,11 @@ Walk into the resolved shape with dot notation:
 | Path | Returns |
 |------|---------|
 | `$contract.web` | The fully resolved contract entry |
+| `$contract.web.schema` | The merged event-level JSON Schema |
+| `$contract.web.schema.properties.globals` | Just the resolved globals sub-schema |
+| `$contract.web.schema.properties.consent` | Just the resolved consent sub-schema |
 | `$contract.web.events` | All resolved event schemas for the `web` contract |
 | `$contract.web.events.product.add` | Resolved schema for `product add`, with all matching wildcard levels merged in |
-| `$contract.web.consent` | The resolved consent section |
 | `$contract.web.tagging` | The contract revision number |
 
 ## CLI validation
@@ -272,7 +283,7 @@ The contract validator checks:
 - `tagging` is a non-negative integer (if present)
 - `extends` references exist and are not circular
 - Entity and action keys are non-empty
-- Each section is a valid JSON Schema object
+- `schema`, if present, is a valid JSON Schema object
 - Each event entry is a valid JSON Schema object
 
 <details>
@@ -318,17 +329,22 @@ A shorter end-to-end illustration:
     "default": {
       "tagging": 1,
       "description": "Web shop tracking contract",
-      "globals": {
-        "required": ["country", "currency"],
+      "schema": {
+        "type": "object",
         "properties": {
-          "country":  { "type": "string", "pattern": "^[A-Z]{2}$" },
-          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
-        }
-      },
-      "consent": {
-        "required": ["analytics"],
-        "properties": {
-          "analytics": { "type": "boolean", "const": true }
+          "globals": {
+            "required": ["country", "currency"],
+            "properties": {
+              "country":  { "type": "string", "pattern": "^[A-Z]{2}$" },
+              "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+            }
+          },
+          "consent": {
+            "required": ["analytics"],
+            "properties": {
+              "analytics": { "type": "boolean", "const": true }
+            }
+          }
         }
       },
       "events": {
@@ -343,11 +359,15 @@ A shorter end-to-end illustration:
     },
     "web_loggedin": {
       "extends": "default",
-      "user": {
-        "required": ["id", "email"],
+      "schema": {
         "properties": {
-          "id":    { "type": "string" },
-          "email": { "type": "string", "format": "email" }
+          "user": {
+            "required": ["id", "email"],
+            "properties": {
+              "id":    { "type": "string" },
+              "email": { "type": "string", "format": "email" }
+            }
+          }
         }
       }
     }
@@ -355,21 +375,16 @@ A shorter end-to-end illustration:
   "flows": {
     "web-shop": {
       "config": { "platform": "web" },
-      "transformers": {
-        "validator": {
-          "package": "@walkeros/transformer-validator",
-          "config": {
-            "settings": {
-              "events":  "$contract.web_loggedin.events",
-              "globals": "$contract.web_loggedin.globals",
-              "consent": "$contract.web_loggedin.consent",
-              "user":    "$contract.web_loggedin.user"
-            }
+      "sources": {},
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag-ga4",
+          "validate": {
+            "schema": "$contract.web_loggedin.schema",
+            "events": "$contract.web_loggedin.events"
           }
         }
-      },
-      "sources": {},
-      "destinations": {}
+      }
     }
   }
 }
@@ -379,15 +394,16 @@ For `product add` in this flow, the validator enforces (all from the merged cont
 
 | Source | Rule |
 |--------|------|
-| `default.globals` | `country`, `currency` required, both match pattern |
-| `default.consent` | `analytics` required and `true` |
+| `default.schema.properties.globals` | `country`, `currency` required, both match pattern |
+| `default.schema.properties.consent` | `analytics` required and `true` |
 | `default.events.product.*` | `data.id`, `data.name` required |
 | `default.events.product.add` | `data.quantity` required, integer, minimum 1 |
-| `web_loggedin.user` | `user.id`, `user.email` required |
+| `web_loggedin.schema.properties.user` | `user.id`, `user.email` required |
 
 ## Next steps
 
-- **[Validator](/docs/transformers/validator)** — enforce contracts at runtime
-- **[Mapping](/docs/mapping)** — transform events between steps
-- **[Step examples](/docs/getting-started/flow/step-examples)** — pair every step with input/output fixtures
-- **[Reference syntax](/docs/guides/reference-syntax)** — all `$contract`, `$var`, `$flow`, `$store`, `$secret`, `$code:`, `$env` references
+- **[Validate](/docs/getting-started/flow/validate)**: step-level `validate:` primitive that consumes contracts
+- **[Validator](/docs/transformers/validator)**: the underlying transformer package (deprecated in favor of step-level `validate:`)
+- **[Mapping](/docs/mapping)**: transform events between steps
+- **[Step examples](/docs/getting-started/flow/step-examples)**: pair every step with input/output fixtures
+- **[Reference syntax](/docs/guides/reference-syntax)**: all `$contract`, `$var`, `$flow`, `$store`, `$secret`, `$code:`, `$env` references

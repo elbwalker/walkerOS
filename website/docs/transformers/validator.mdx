@@ -5,9 +5,6 @@ sidebar_position: 1
 package: '@walkeros/transformer-validator'
 ---
 
-import data from '@walkeros/transformer-validator/walkerOS.json';
-import Configuration from '@site/src/components/snippets/_configuration.mdx';
-
 # Validator
 
 <PackageLink
@@ -16,116 +13,44 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
   npm="@walkeros/transformer-validator"
 />
 
-Validates events with JSON Schema. Two layers run in order: **format** (the structural shape of the full `WalkerOS.Event`) and **schemas** (per-section and per-event rules). Invalid events are dropped and logged; valid events pass through unchanged.
+:::warning Deprecated for direct use
+Prefer the step-level [`validate:`](/docs/getting-started/flow/validate) primitive. The walkerOS CLI auto-injects this transformer when `validate:` is declared on any step. This page documents the underlying transformer for users who need explicit chain wiring (for example a catch-all validator upstream of every destination).
+:::
 
-The schema layer is typically wired from a [contract](/docs/getting-started/flow/contract) via `$contract.<name>.events` and section references, so the same definition holds across every flow that validates events.
+The validator runs events through JSON Schema using AJV. Invalid events are dropped and logged, valid events pass through unchanged. The recommended way to declare validation is the step-level `validate:` primitive, which auto-injects this transformer at the right chain position. Use the transformer directly only when you need explicit placement, for example one validator sitting in front of every destination via `before`.
 
-## Installation
+## Explicit wiring
 
-<CodeSnippet
-  code={`npm install @walkeros/transformer-validator`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
+Place the validator at the head of every destination's `before` chain to gate the whole fan-out behind a single contract.
 
 <CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { transformerValidator } from '@walkeros/transformer-validator';
-
-await startFlow({
-  transformers: {
-    validate: {
-      code: transformerValidator,
-      config: {
-        logger: { level: 'DEBUG' },
-        settings: {
-          format: true,
-          events: {
-            product: {
-              add: {
-                properties: {
-                  data: { required: ['id', 'name'] },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json`:
-
-<CodeSnippet
-  code={`"transformers": {
-  "validate": {
-    "package": "@walkeros/transformer-validator",
-    "config": {
-      "logger": { "level": "DEBUG" },
-      "settings": {
-        "format": true,
-        "events": {
-          "product": {
-            "add": {
-              "properties": {
-                "data": { "required": ["id", "name"] }
+  code={`"flows": {
+  "default": {
+    "transformers": {
+      "validate": {
+        "package": "@walkeros/transformer-validator",
+        "config": {
+          "settings": {
+            "format": true,
+            "events": {
+              "order": {
+                "complete": {
+                  "properties": { "data": { "required": ["total"] } }
+                }
               }
             }
           }
         }
       }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
-
-<Configuration type="transformer" data={data} />
-
-## Wiring from a contract
-
-When the validation rules live in a [contract](/docs/getting-started/flow/contract), wire each section by reference. The CLI resolves `$contract.<name>.<path>` to the merged contract before the validator initializes.
-
-<CodeSnippet
-  code={`{
-  "contract": {
-    "web": {
-      "globals": { "required": ["country"] },
-      "consent": { "required": ["analytics"] },
-      "events": {
-        "product": { "*": { "properties": { "data": { "required": ["id", "name"] } } } },
-        "order":   { "complete": { "properties": { "data": { "required": ["total"] } } } }
-      }
-    }
-  },
-  "flows": {
-    "default": {
-      "config": { "platform": "web" },
-      "transformers": {
-        "validate": {
-          "package": "@walkeros/transformer-validator",
-          "config": {
-            "settings": {
-              "format":  true,
-              "events":  "$contract.web.events",
-              "globals": "$contract.web.globals",
-              "consent": "$contract.web.consent"
-            }
-          }
-        }
+    },
+    "destinations": {
+      "ga4": {
+        "package": "@walkeros/web-destination-gtag-ga4",
+        "before": ["validate"]
+      },
+      "meta": {
+        "package": "@walkeros/web-destination-meta-pixel",
+        "before": ["validate"]
       }
     }
   }
@@ -133,76 +58,20 @@ When the validation rules live in a [contract](/docs/getting-started/flow/contra
   language="json"
 />
 
-Use inline `events` / `globals` / `consent` for one-off rules; use `$contract` references when the same rules need to hold across multiple flows or environments.
+A failed check drops the event globally (it never reaches any step that lists `validate` in its `before`). This is the difference from step-level `validate:`, which skips only the step it is attached to.
 
-## Validation layers
+## Settings
 
-Layers run in order. If any layer fails, the event is dropped and the remaining layers are skipped.
+| Field | Type | Description |
+|-------|------|-------------|
+| `format?` | `boolean` | Check the full `WalkerOS.Event` structural shape (name, source, timestamp, etc.). Defaults to `true`. |
+| `events?` | `Record<entity, Record<action, JsonSchema>>` | Per-event JSON Schemas keyed by entity then action, with `*` wildcard fallback. |
+| `schema?` | `JsonSchema` | A single JSON Schema applied to every event that reaches the transformer. |
 
-| Layer | Setting | Triggered by | What it checks |
-|-------|---------|--------------|----------------|
-| 1. Format | `format: true` (default) | Every event | Structural shape of the full `WalkerOS.Event` (required fields, event name pattern, `source.type`, …) |
-| 2. Section | `globals`, `context`, `custom`, `user`, `consent` | Every event, per configured section | The matching `event.<section>` field against the section's JSON Schema |
-| 3. Event | `events` | Events whose `entity.action` (or a wildcard of it) is defined in `events` | The full event against the entity-action JSON Schema |
-
-Events with no matching entry in `events` pass the event layer unchanged. Validation is opt-in per entity-action.
-
-### Event wildcards
-
-When the validator looks up a schema for an event, it falls back through four levels and **uses the first match**:
-
-1. `entity.action` (exact)
-2. `entity.*`
-3. `*.action`
-4. `*.*`
-
-This is first-match, not additive merging. Contract wildcards merge additively at contract resolution time; by the time the validator sees the schema, the merging has already happened. See [Contract wildcards](/docs/getting-started/flow/contract#wildcard-inheritance) for the merge semantics.
-
-<CodeSnippet
-  code={`"settings": {
-  "events": {
-    "order": {
-      "*": { "properties": { "data": { "required": ["total", "currency"] } } }
-    }
-  }
-}`}
-  language="json"
-/>
-
-## Logger levels
-
-| Level | Output |
-|-------|--------|
-| `ERROR` | Validation failures only |
-| `DEBUG` | All validation results (pass and fail) |
-
-## Behavior
-
-### When validation fails
-
-Invalid events are **dropped from the pipeline** and never reach downstream transformers or destinations. The validator logs the failing layer and field-level errors from AJV:
-
-| Layer | Log message | Includes |
-|-------|-------------|----------|
-| Format | `Event format invalid` | Field-level errors |
-| Section | `<section> validation failed` | Section name + field-level errors |
-| Event | `Contract validation failed` | Rule key (e.g. `product add`) + field-level errors |
-
-**Example log output:**
-
-```
-[ERROR] Event format invalid       { errors: "name must match pattern \"^\\S+ \\S+$\"" }
-[ERROR] globals validation failed  { errors: "must have required property 'country'" }
-[ERROR] Contract validation failed { rule: "product add", errors: "data must have required property 'id'" }
-```
-
-### When validation passes
-
-- **Format valid**: event continues to section validation
-- **Sections valid**: event continues to event validation
-- **Event valid (or no matching rule)**: event continues to the next transformer or destination
+`events` looks up rules by `entity.action` with fallback through `entity.*`, `*.action`, `*.*`, first match wins. Events with no matching entry pass the events layer unchanged.
 
 ## Next steps
 
-- **[Contract](/docs/getting-started/flow/contract)** — define reusable, inheritable validation rules and wire them in via `$contract`
-- **[Create your own](./create-your-own)** — build a custom transformer
+- **[Validate](/docs/getting-started/flow/validate)**: the recommended step-level primitive (auto-injects this transformer)
+- **[Contract](/docs/getting-started/flow/contract)**: define reusable schemas referenced via `$contract`
+- **[Create your own](./create-your-own)**: build a custom transformer
