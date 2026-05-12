@@ -23,8 +23,10 @@ describe('compileNext', () => {
         match: { key: 'ingest.path', operator: 'prefix', value: '/gtag' },
         next: 'gtag-parser',
       },
-      { match: '*', next: 'default' },
+      { next: 'default' },
     ]);
+    expect(compiled).toBeDefined();
+    expect(compiled!.type).toBe('case');
     expect(resolveNext(compiled!, { ingest: { path: '/gtag/collect' } })).toBe(
       'gtag-parser',
     );
@@ -54,10 +56,10 @@ describe('compileNext', () => {
             match: { key: 'ingest.method', operator: 'eq', value: 'POST' },
             next: 'api-writer',
           },
-          { match: '*', next: 'api-reader' },
+          { next: 'api-reader' },
         ],
       },
-      { match: '*', next: 'default' },
+      { next: 'default' },
     ]);
     expect(
       resolveNext(compiled!, { ingest: { path: '/api/data', method: 'POST' } }),
@@ -76,7 +78,7 @@ describe('compileNext', () => {
         match: { key: 'ingest.method', operator: 'eq', value: 'POST' },
         next: ['validator', 'writer'],
       },
-      { match: '*', next: 'reader' },
+      { next: 'reader' },
     ]);
     expect(resolveNext(compiled!, { ingest: { method: 'POST' } })).toEqual([
       'validator',
@@ -95,7 +97,7 @@ describe('compileNext', () => {
         },
         next: 'api-writer',
       },
-      { match: '*', next: 'default' },
+      { next: 'default' },
     ]);
     expect(
       resolveNext(compiled!, { ingest: { path: '/api/data', method: 'POST' } }),
@@ -116,10 +118,63 @@ describe('compileNext', () => {
         match: { key: 'event.name', operator: 'eq', value: 'page view' },
         next: 'page-handler',
       },
-      { match: '*', next: 'default' },
+      { next: 'default' },
     ]);
     expect(resolveNext(compiled!, { event: { name: 'page view' } })).toBe(
       'page-handler',
     );
   });
+
+  it('compiles a RouteConfig with explicit case', () => {
+    const compiled = compileNext({
+      case: [
+        {
+          match: { key: 'event.name', operator: 'eq', value: 'order complete' },
+          next: 'a',
+        },
+        { next: 'b' },
+      ],
+    });
+    expect(compiled).toBeDefined();
+    expect(compiled!.type).toBe('case');
+    expect(resolveNext(compiled!, { event: { name: 'order complete' } })).toBe(
+      'a',
+    );
+    expect(resolveNext(compiled!, { event: { name: 'page view' } })).toBe('b');
+  });
+
+  it('compiles a gate-only RouteConfig', () => {
+    const compiled = compileNext({
+      match: { key: 'event.name', operator: 'eq', value: 'order complete' },
+    });
+    expect(compiled).toBeDefined();
+    expect(compiled!.type).toBe('gate');
+    // gate fails → resolveNext returns undefined (fall-through)
+    expect(
+      resolveNext(compiled!, { event: { name: 'page view' } }),
+    ).toBeUndefined();
+    // gate passes → resolveNext returns inner next (undefined here since gate has no next)
+    expect(
+      resolveNext(compiled!, { event: { name: 'order complete' } }),
+    ).toBeUndefined();
+  });
+
+  it('compiles a gate-only RouteConfig with inner next propagation', () => {
+    // A gate wraps an outer match around an inner case/next. When match passes,
+    // resolveNext returns the inner next's value; when it fails, returns undefined.
+    const compiled = compileNext({
+      match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
+      next: 'api-handler',
+    });
+    expect(compiled).toBeDefined();
+    expect(compiled!.type).toBe('gate');
+    expect(resolveNext(compiled!, { ingest: { path: '/api/data' } })).toBe(
+      'api-handler',
+    );
+    expect(
+      resolveNext(compiled!, { ingest: { path: '/other' } }),
+    ).toBeUndefined();
+  });
+
+  // TODO: type-level test via tsd or similar — disjoint union is enforced by RouteConfig's `never` properties
 });

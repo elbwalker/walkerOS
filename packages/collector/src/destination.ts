@@ -54,15 +54,10 @@ function resolveDestinationChain(
 ): string[] {
   if (!before) return [];
 
-  if (compiledBefore) {
-    const resolved = resolveNext(compiledBefore, buildCacheContext(ingest));
-    if (!resolved) return [];
-    return walkChain(resolved, transformerNextMap);
-  }
-
-  // Without compiledBefore, before is static (string | string[]); skip Route[] case.
-  if (isRouteArray(before)) return [];
-  return walkChain(before, transformerNextMap);
+  const compiled = compiledBefore ?? compileNext(before);
+  const resolved = resolveNext(compiled, buildCacheContext(ingest));
+  if (!resolved) return [];
+  return walkChain(resolved, transformerNextMap);
 }
 
 /**
@@ -301,13 +296,12 @@ export async function pushToDestinations(
 
           // Full cache check: before the before chain (skips everything on HIT)
           let cacheMiss: { key: string; ttl: number } | undefined;
-          if (compiledDCache?.full && dCacheStore) {
+          if (compiledDCache?.stop && dCacheStore) {
             const cacheContext = buildCacheContext(destIngest, event);
             const cacheResult = checkCache(
               compiledDCache,
               dCacheStore,
               cacheContext,
-              `d:${id}`,
             );
             if (cacheResult?.status === 'HIT') {
               return event; // Skip before chain + push
@@ -353,13 +347,12 @@ export async function pushToDestinations(
           }
 
           // Step-level cache check: after before chain, skip only push on HIT
-          if (compiledDCache && !compiledDCache.full && dCacheStore) {
+          if (compiledDCache && !compiledDCache.stop && dCacheStore) {
             const cacheContext = buildCacheContext(destIngest, processedEvent);
             const cacheResult = checkCache(
               compiledDCache,
               dCacheStore,
               cacheContext,
-              `d:${id}`,
             );
             if (cacheResult?.status === 'HIT') {
               return event; // Skip push — deduplicated

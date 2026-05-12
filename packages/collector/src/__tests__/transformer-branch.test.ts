@@ -227,7 +227,7 @@ describe('chain branching', () => {
             match: { key: 'ingest.type', operator: 'eq', value: 'api' },
             next: 'api-handler',
           },
-          { match: '*', next: 'default-handler' },
+          { next: 'default-handler' },
         ],
       },
     );
@@ -273,7 +273,7 @@ describe('chain branching', () => {
             match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
             next: 'api',
           },
-          { match: '*', next: 'fallback' },
+          { next: 'fallback' },
         ],
       };
     });

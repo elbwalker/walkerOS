@@ -122,19 +122,34 @@ token after `:` is used verbatim.
 ## `$contract.` — contract references
 
 Inject a fragment of a named contract entry. Same whole-string and deep-path
-rules as `$var.`.
+rules as `$var.`. The contract is fully resolved (extends + wildcards) before
+path access, so the value you get is the merged shape.
+
+See [Contract](/docs/getting-started/flow/contract) for the full structure.
 
 ```json
 {
   "contract": {
-    "default": { "events": { "product": { "add": { /* schema */ } } } }
+    "default": {
+      "globals": { "required": ["country"] },
+      "events": {
+        "product": {
+          "add": { "properties": { "data": { "required": ["id", "name"] } } }
+        }
+      }
+    }
   },
   "flows": {
     "server": {
       "transformers": {
         "validator": {
           "package": "@walkeros/transformer-validator",
-          "config": { "schemas": "$contract.default.events" }
+          "config": {
+            "settings": {
+              "events":  "$contract.default.events",
+              "globals": "$contract.default.globals"
+            }
+          }
         }
       }
     }

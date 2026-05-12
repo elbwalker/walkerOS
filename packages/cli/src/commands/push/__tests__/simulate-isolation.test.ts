@@ -14,23 +14,19 @@ import {
   walkChain,
   extractTransformerNextMap,
 } from '@walkeros/collector';
-import { isRouteArray } from '@walkeros/core';
+import { compileNext, resolveNext } from '@walkeros/core';
 
 /**
- * Narrow a `RouteSpec` to the static form expected by `walkChain` in these
- * static-fixture tests. Throws if a future fixture accidentally uses
- * conditional routing, surfacing the mistake instead of silently casting.
+ * Resolve a `RouteSpec` to the static form expected by `walkChain` in these
+ * fixture tests. Conditional shapes (`case` / `gate`) resolve through
+ * `resolveNext` with an empty context, surfacing the result the engine would
+ * compute for a request with no ingest or event.
  */
 function staticChain(
   spec: Transformer.RouteSpec | undefined,
 ): string | string[] | undefined {
   if (spec === undefined) return undefined;
-  if (isRouteArray(spec)) {
-    throw new Error(
-      'test fixture uses conditional routing, not supported here',
-    );
-  }
-  return spec;
+  return resolveNext(compileNext(spec)) ?? undefined;
 }
 
 /**

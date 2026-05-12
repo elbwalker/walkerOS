@@ -45,7 +45,10 @@ const sidebars: SidebarsConfig = {
             type: 'doc',
             id: 'getting-started/flow/index',
           },
-          items: ['getting-started/flow/step-examples'],
+          items: [
+            'getting-started/flow/step-examples',
+            'getting-started/flow/contract',
+          ],
         },
         'getting-started/event-model',
         'apps/mcp',

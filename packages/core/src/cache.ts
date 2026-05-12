@@ -13,8 +13,9 @@ interface CompiledCacheRule {
 }
 
 export interface CompiledCache {
-  full: boolean;
+  stop: boolean;
   storeId?: string;
+  namespace?: string;
   rules: CompiledCacheRule[];
 }
 
@@ -44,10 +45,11 @@ export function buildCacheContext(
 
 export function compileCache(cache: Cache): CompiledCache {
   return {
-    full: cache.full ?? false,
+    stop: cache.stop ?? false,
     storeId: cache.store,
+    namespace: cache.namespace,
     rules: cache.rules.map((rule) => ({
-      match: compileMatcher(rule.match),
+      match: rule.match ? compileMatcher(rule.match) : () => true,
       key: rule.key,
       ttl: rule.ttl,
       update: rule.update,
@@ -59,7 +61,7 @@ export function checkCache(
   compiled: CompiledCache,
   store: Store.Instance,
   context: Record<string, unknown>,
-  namespace: string,
+  namespace?: string,
 ): CacheResult | null {
   const rule = compiled.rules.find((r) => r.match(context));
   if (!rule) return null;
@@ -71,7 +73,8 @@ export function checkCache(
   if (keyParts.every((p) => p === '')) return null;
 
   const keyValue = keyParts.join(':');
-  const namespacedKey = `${namespace}:${keyValue}`;
+  const ns = namespace ?? compiled.namespace;
+  const namespacedKey = ns ? `${ns}:${keyValue}` : keyValue;
 
   const cached = store.get(namespacedKey);
 

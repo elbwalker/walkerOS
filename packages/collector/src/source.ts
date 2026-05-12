@@ -6,7 +6,6 @@ import {
   tryCatchAsync,
   compileNext,
   resolveNext,
-  isRouteArray,
   compileCache,
   checkCache,
   storeCache,
@@ -72,26 +71,29 @@ export async function initSource(
 
   // Compile source cache config (if configured)
   const compiledSourceCache = cache
-    ? compileCache({ ...cache, full: cache.full ?? true })
+    ? compileCache({ ...cache, stop: cache.stop ?? true })
     : undefined;
 
-  // Resolve transformer chain for this source
+  // Resolve transformer chain for this source.
+  // Static (string / string[]) chains pre-walk at init (optimization).
+  // Conditional shapes (case / gate) require per-request context — see wrappedPush.
   const compiledNext = compileNext(next);
-  const isConditional = Array.isArray(next) && isRouteArray(next);
-  // For static next, pre-walk at init (optimization)
+  const isStaticNext =
+    compiledNext?.type === 'static' || compiledNext?.type === 'chain';
   const staticPreChain =
-    !isConditional && compiledNext
+    isStaticNext && compiledNext
       ? walkChain(
           resolveNext(compiledNext)!,
           extractTransformerNextMap(collector.transformers),
         )
       : undefined;
 
-  // Resolve before chain for this source (consent-exempt, pre-source preprocessing)
+  // Resolve before chain for this source (consent-exempt, pre-source preprocessing).
   const compiledBefore = compileNext(before);
-  const isBeforeConditional = Array.isArray(before) && isRouteArray(before);
+  const isStaticBefore =
+    compiledBefore?.type === 'static' || compiledBefore?.type === 'chain';
   const staticBeforeChain =
-    !isBeforeConditional && compiledBefore
+    isStaticBefore && compiledBefore
       ? walkChain(
           resolveNext(compiledBefore)!,
           extractTransformerNextMap(collector.transformers),
@@ -155,13 +157,13 @@ export async function initSource(
           compiledSourceCache,
           cacheStore,
           cacheContext,
-          `s:${sourceId}`,
+          // no per-step prefix — cache keys honor user-provided namespace only
         );
 
         if (cacheResult) {
           if (cacheResult.status === 'HIT' && cacheResult.value !== undefined) {
-            if (compiledSourceCache.full) {
-              // full=true (default): respond with cached value, skip pipeline
+            if (compiledSourceCache.stop) {
+              // stop=true (default): respond with cached value, skip pipeline
               let respondValue: unknown = cacheResult.value;
               if (cacheResult.rule.update) {
                 respondValue = await applyUpdate(
@@ -174,15 +176,15 @@ export async function initSource(
               currentRespond?.(respondValue as Record<string, unknown>);
               return { ok: true } as Elb.PushResult;
             }
-            // full=false: cached value unused — HIT signals "seen before", pipeline continues
+            // stop=false: cached value unused — HIT signals "seen before", pipeline continues
           }
 
           if (
             cacheResult.status === 'MISS' &&
-            compiledSourceCache.full &&
+            compiledSourceCache.stop &&
             currentRespond
           ) {
-            // full=true MISS: wrap respond to intercept and cache the value.
+            // stop=true MISS: wrap respond to intercept and cache the value.
             // Store original in cache, then apply update rules with MISS
             // status before responding (mirrors HIT path which applies
             // with HIT status).
@@ -223,8 +225,8 @@ export async function initSource(
             currentRespond = missRespond;
           }
 
-          // full=false MISS: store sentinel so subsequent requests get a HIT
-          if (cacheResult.status === 'MISS' && !compiledSourceCache.full) {
+          // stop=false MISS: store sentinel so subsequent requests get a HIT
+          if (cacheResult.status === 'MISS' && !compiledSourceCache.stop) {
             storeCache(cacheStore, cacheResult.key, true, cacheResult.rule.ttl);
           }
         }

@@ -2,32 +2,47 @@
 import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn } from './lifecycle';
 import type { Ingest } from './ingest';
+import type { MatchExpression } from './matcher';
 
 /**
- * A single conditional routing rule. Pairs a `match` expression (or `'*'`
- * wildcard) against ingest metadata with a `next` step to follow when the
- * match fires. Used inside `Route[]` arrays on `Flow.Source.next`,
- * `Flow.Source.before`, `Flow.Transformer.next/before`, and
- * `Flow.Destination.next/before`. Routes are evaluated in order, first match
- * wins, no match falls through unchanged. The `next` field of a Route
- * mirrors the outer-position `next` semantics: it points to whatever comes
- * downstream when this rule fires.
+ * Unified route grammar for Flow v4. A `Route` is one of:
+ * - a string transformer ID (`"redact"`)
+ * - a sequence of routes (`["a", "b", "c"]` — sugar for chained `.next`)
+ * - a `RouteConfig` — a gated / dispatching node.
+ *
+ * `RouteConfig` is a disjoint union: a single config may set either `next`,
+ * `case`, or neither (pure gate), but never more than one operator.
+ *
+ * The `branch` operator from the design plan is intentionally absent until
+ * `docs/plans/2026-05-12-route-branch-semantics-design.md` resolves.
  */
-export interface Route {
-  match: import('./matcher').MatchExpression | '*';
-  next: RouteSpec;
+export type Route = string | Route[] | RouteConfig;
+
+export type RouteConfig = RouteNextConfig | RouteCaseConfig | RouteGateConfig;
+
+export interface RouteNextConfig {
+  match?: MatchExpression;
+  next: Route;
+  case?: never;
+}
+
+export interface RouteCaseConfig {
+  match?: MatchExpression;
+  case: Route[];
+  next?: never;
+}
+
+export interface RouteGateConfig {
+  match: MatchExpression;
+  next?: never;
+  case?: never;
 }
 
 /**
- * The union accepted at every chain-routing boundary. A plain `string`
- * targets one step by ID; `string[]` declares an explicit sequence ignoring
- * per-step `next`; `Route[]` enables conditional routing on ingest metadata.
- * At runtime, `compileNext()` collapses any RouteSpec into a `CompiledNext`
- * (static, chain, or routes form) for hot-path evaluation. Surfaces via
- * `Flow.Source.before/next`, `Flow.Transformer.before/next`,
- * `Flow.Destination.before/next`.
+ * Backward-compatible alias. New code should use `Route` directly.
+ * Kept for compatibility with existing imports across the codebase.
  */
-export type RouteSpec = string | string[] | Route[];
+export type RouteSpec = Route;
 
 /**
  * Base environment interface for walkerOS transformers.
@@ -187,7 +202,17 @@ export type Init<T extends TypesGeneric = Types> = (
  * Used in collector registration.
  */
 export type InitTransformer<T extends TypesGeneric = Types> = {
-  code: Init<T>;
+  /**
+   * Initialization function. When omitted, the entry is a `path` —
+   * a code-less passthrough that the collector synthesizes as
+   * `(e) => ({ event: e })`. Paths exist so a `before` / `next` chain
+   * can be named and reused without inline code.
+   *
+   * Validation: a path entry must declare at least one of
+   * `package`, `before`, `next`, or `cache`. An entry with none
+   * of those is rejected by `flow_validate`.
+   */
+  code?: Init<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   before?: RouteSpec;

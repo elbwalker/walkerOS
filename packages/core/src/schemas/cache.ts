@@ -18,19 +18,14 @@ import { ValueSchema } from './mapping';
  */
 export const CacheRuleSchema = z
   .object({
-    match: z
-      .union([MatchExpressionSchema, z.literal('*')])
-      .describe(
-        'Match expression or wildcard to determine when this rule applies',
-      ),
+    match: MatchExpressionSchema.optional().describe(
+      'Optional match expression — omit for always-match.',
+    ),
     key: z
       .array(z.string())
       .min(1)
       .describe('Dot-path fields used to build the cache key'),
-    ttl: z
-      .number()
-      .positive()
-      .describe('Time-to-live in seconds for cached entries'),
+    ttl: z.number().positive().describe('Time-to-live in seconds'),
     update: z
       .record(z.string(), ValueSchema)
       .optional()
@@ -59,17 +54,23 @@ export const CacheRuleSchema = z
  */
 export const CacheSchema = z
   .object({
-    full: z
+    stop: z
       .boolean()
       .optional()
       .describe(
-        'Stop flow on cache HIT (default: false). When true, skip remaining steps and return cached value.',
+        'Stop the chain on cache HIT (default: false). When true, skip remaining steps and return cached value.',
       ),
     store: z
       .string()
       .optional()
       .describe(
         'Store ID for persistent caching (references a configured store)',
+      ),
+    namespace: z
+      .string()
+      .optional()
+      .describe(
+        'Optional key prefix. Omit to write keys directly to the store. Same store + same key + same namespace = same cache entry.',
       ),
     rules: z
       .array(CacheRuleSchema)

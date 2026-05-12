@@ -39,7 +39,6 @@ import {
   useHooks,
   compileNext,
   resolveNext,
-  isRouteArray,
   compileCache,
   checkCache,
   storeCache,
@@ -62,10 +61,11 @@ export function extractTransformerNextMap(
 ): Record<string, { next?: string | string[] }> {
   const result: Record<string, { next?: string | string[] }> = {};
   for (const [id, transformer] of Object.entries(transformers)) {
-    const next = transformer.config?.next;
-    if (next && !isRouteArray(next)) {
-      result[id] = { next };
+    const compiled = compileNext(transformer.config?.next);
+    if (compiled?.type === 'static' || compiled?.type === 'chain') {
+      result[id] = { next: compiled.value };
     } else {
+      // Conditional / gated routes resolve per-event in walkChain; no static link.
       result[id] = {};
     }
   }
@@ -183,6 +183,22 @@ export async function initTransformers(
   )) {
     const { code, env = {} } = transformerDef;
 
+    // Validate: a code-less entry must declare at least one of
+    // before / next / cache. An entry with none of those is empty
+    // and silently skipped (with a warning) at runtime. `package`
+    // belongs at the JSON-config layer, not the runtime layer.
+    if (
+      !code &&
+      !transformerDef.before &&
+      !transformerDef.next &&
+      !transformerDef.cache
+    ) {
+      collector.logger.warn(
+        `Transformer ${transformerId} is empty — skipping.`,
+      );
+      continue;
+    }
+
     // Use unified chain property extractor for both before and next
     const { config: configWithBefore } = extractChainProperty(
       transformerDef,
@@ -218,8 +234,19 @@ export async function initTransformers(
       env: env as Transformer.Env,
     };
 
+    // Synthesize a no-op passthrough instance when `code` is absent.
+    // This makes the entry a "path" — a named, code-less hop whose only
+    // purpose is to host a before / next / cache chain.
+    const codeFn =
+      code ??
+      ((ctx: Transformer.Context) => ({
+        type: 'path',
+        config: ctx.config,
+        push: (event: WalkerOS.DeepPartialEvent) => ({ event }),
+      }));
+
     // Initialize the transformer instance with context
-    const instance = await code(context);
+    const instance = await codeFn(context);
 
     result[transformerId] = instance;
   }
@@ -349,8 +376,6 @@ function resolveRouteSpec(
   ctx: Record<string, unknown>,
 ): string | string[] | undefined {
   if (!spec) return undefined;
-  if (typeof spec === 'string') return spec;
-  if (Array.isArray(spec) && !isRouteArray(spec)) return spec;
   return resolveNext(compileNext(spec), ctx) ?? undefined;
 }
 
@@ -453,18 +478,13 @@ export async function runTransformerChain(
     let cacheMiss: { key: string; ttl: number } | undefined;
     if (compiledTCache && tCacheStore) {
       const cacheContext = buildCacheContext(ingest, processedEvent);
-      const cacheResult = checkCache(
-        compiledTCache,
-        tCacheStore,
-        cacheContext,
-        `t:${transformerName}`,
-      );
+      const cacheResult = checkCache(compiledTCache, tCacheStore, cacheContext);
 
       if (cacheResult?.status === 'HIT' && cacheResult.value) {
         processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
-        if (compiledTCache.full)
-          return { event: processedEvent, respond: currentRespond }; // full=true → stop chain
-        continue; // full=false → next transformer
+        if (compiledTCache.stop)
+          return { event: processedEvent, respond: currentRespond }; // stop=true → stop chain
+        continue; // stop=false → next transformer
       }
 
       if (cacheResult?.status === 'MISS') {
@@ -665,14 +685,20 @@ export async function runTransformerChain(
       storeCache(tCacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
     }
 
-    // If transformer didn't return { next } but has Route[] config.next, resolve it
+    // If transformer didn't return { next } but has a conditional config.next,
+    // resolve it per-request. Static (string / string[]) chains are already
+    // wired statically via the next-map; only case / gate variants need this path.
+    const compiledConfigNext = transformer.config.next
+      ? compileNext(transformer.config.next)
+      : undefined;
+    const isConditionalConfigNext =
+      compiledConfigNext?.type === 'case' ||
+      compiledConfigNext?.type === 'gate';
     if (
       (!result || (typeof result === 'object' && !result.next)) &&
-      transformer.config.next &&
-      isRouteArray(transformer.config.next)
+      compiledConfigNext &&
+      isConditionalConfigNext
     ) {
-      const configNext = transformer.config.next;
-      const compiledConfigNext = compileNext(configNext);
       const resolvedConfigNext = resolveNext(
         compiledConfigNext,
         buildCacheContext(ingest, processedEvent),

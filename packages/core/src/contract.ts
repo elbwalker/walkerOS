@@ -102,7 +102,13 @@ function mergeContractEntries(
 ): Flow.ContractRule {
   const result: Flow.ContractRule = {};
 
-  // Merge metadata (child wins)
+  // Merge scalar metadata (child overrides if set, otherwise inherited from parent).
+  // Excluded: `extends` (structural, stripped at resolution), section keys
+  // (handled via SECTION_KEYS below), `events` (handled below).
+  // Add a new block here when a new scalar field is added to ContractRule.
+  if (parent.tagging !== undefined || child.tagging !== undefined) {
+    result.tagging = child.tagging ?? parent.tagging;
+  }
   if (parent.description !== undefined || child.description !== undefined) {
     result.description = child.description ?? parent.description;
   }

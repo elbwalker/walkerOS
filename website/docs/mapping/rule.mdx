@@ -42,6 +42,10 @@ When an event reaches a destination, the collector looks up
 matching rule wins". A wildcard `'*'` on either entity or action acts as a
 fallback.
 
+:::info Mapping wildcards differ from contract wildcards
+Mapping wildcards are **first-match**: once `entity.action` (or its `entity.*` / `*.action` / `*.*` fallback) hits, no other rule is consulted. [Contract wildcards](/docs/getting-started/flow/contract#wildcard-inheritance) are **additive**: every matching level merges in. The two systems intentionally pick different defaults — mapping selects a single transformation target, contract accumulates requirements.
+:::
+
 <LiveCode
   language="typescript"
   labelInput="Configuration"

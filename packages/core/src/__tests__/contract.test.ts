@@ -201,6 +201,40 @@ describe('resolveContracts', () => {
     expect(resolved.web.consent?.required).toEqual(['analytics', 'marketing']);
   });
 
+  it('should inherit tagging from parent when child omits it', () => {
+    const contract: Flow.Contract = {
+      default: {
+        tagging: 1,
+        globals: { required: ['country'] },
+      },
+      web: {
+        extends: 'default',
+      },
+    };
+    const resolved = resolveContracts(contract);
+    expect(resolved.web.tagging).toBe(1);
+  });
+
+  it('should let child tagging override parent tagging', () => {
+    const contract: Flow.Contract = {
+      default: { tagging: 1 },
+      web: { extends: 'default', tagging: 2 },
+    };
+    const resolved = resolveContracts(contract);
+    expect(resolved.web.tagging).toBe(2);
+  });
+
+  it('should propagate tagging through a multi-level extends chain', () => {
+    const contract: Flow.Contract = {
+      default: { tagging: 3 },
+      web: { extends: 'default' },
+      web_loggedin: { extends: 'web' },
+    };
+    const resolved = resolveContracts(contract);
+    expect(resolved.web.tagging).toBe(3);
+    expect(resolved.web_loggedin.tagging).toBe(3);
+  });
+
   it('should strip annotation keys', () => {
     const contract: Flow.Contract = {
       web: {

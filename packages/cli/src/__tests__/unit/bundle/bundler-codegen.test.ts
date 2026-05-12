@@ -729,7 +729,7 @@ describe('buildSplitConfigObject', () => {
           package: '@walkeros/server-source-express',
           config: {},
           next: ['validate', 'enrich'],
-          cache: { rules: [{ match: '*', key: ['entity'], ttl: 60 }] },
+          cache: { rules: [{ key: ['entity'], ttl: 60 }] },
           primary: true,
         },
       },

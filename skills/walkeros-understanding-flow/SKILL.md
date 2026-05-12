@@ -462,27 +462,59 @@ for the implementation.
 - **Non-existent transformer ID:** chain ends (no error, event proceeds without
   transformation)
 
-### Conditional routing (Route[])
+### Conditional routing (`case` operator)
 
-The `next` and `before` properties accept a `RouteSpec`
-(`string | string[] | Route[]`). A `Route` is one `{ match, next }` rule, and
-`Route[]` enables conditional routing evaluated against ingest data:
+The `next` and `before` properties accept a `Route`
+(`string | Route[] | RouteConfig`). A `RouteConfig` is a **disjoint union**:
+each config sets at most one of `next` (gated link) or `case` (first-match
+dispatch), never both. The `case` operator enables conditional routing evaluated
+against ingest data:
 
 ```json
-"next": [
-  { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
-  { "match": "*", "next": "default" }
-]
+"next": {
+  "case": [
+    { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
+    { "next": "default" }
+  ]
+}
 ```
 
-- Routes are evaluated in order - first match wins
-- No match and no wildcard = event passes through unchanged
+- `case` entries are evaluated in order, first match wins
+- An entry without `match` always matches — use it as the fallback
+- No matching entry means the event passes through unchanged
 - Works on all chain positions: `source.before`, `source.next`,
   `transformer.before`, `transformer.next`, `destination.before`, and
   `destination.next`
 - Routes are compiled to closures at init time for fast per-event evaluation
 - See [packages/core/src/route.ts](../../packages/core/src/route.ts) for
   `compileNext()` and `resolveNext()`
+
+### Path passthroughs (code-less transformer entries)
+
+A transformer entry with no `code` (and no `package`) is a **path** — a named
+chain that simply forwards events through its own `before` and `next` links.
+Paths let you share a `before` chain across multiple destinations without
+duplicating arrays:
+
+```json
+{
+  "transformers": {
+    "validateThenEnrich": {
+      "before": ["validate", "enrich"]
+    }
+  },
+  "destinations": {
+    "gtag": {
+      "package": "@walkeros/web-destination-gtag",
+      "before": "validateThenEnrich"
+    },
+    "meta": {
+      "package": "@walkeros/web-destination-meta",
+      "before": "validateThenEnrich"
+    }
+  }
+}
+```
 
 ### Transformer sharing
 

@@ -82,6 +82,35 @@ export function validateFlow(
     });
   }
 
+  // 5b. CLI-specific: reject empty transformer entries.
+  //     A transformer must declare at least one of: code, package, before, next, cache.
+  if (flows) {
+    for (const [flowName, flowValue] of Object.entries(flows)) {
+      if (!isObject(flowValue)) continue;
+      const transformersValue = flowValue.transformers;
+      if (!isObject(transformersValue)) continue;
+      for (const [name, transformerValue] of Object.entries(
+        transformersValue,
+      )) {
+        if (!isObject(transformerValue)) continue;
+        if (
+          !transformerValue.code &&
+          !transformerValue.package &&
+          !transformerValue.before &&
+          !transformerValue.next &&
+          !transformerValue.cache
+        ) {
+          errors.push({
+            path: `flows.${flowName}.transformers.${name}`,
+            message:
+              'Empty transformer entry. A transformer must declare at least one of: code, package, before, next, cache.',
+            code: 'EMPTY_TRANSFORMER',
+          });
+        }
+      }
+    }
+  }
+
   // 6. Extract flow details
   if (flows) {
     const flowNames = Object.keys(flows);
@@ -245,24 +274,45 @@ interface StepConnection {
 }
 
 /**
- * Flatten a RouteSpec into the unique step IDs it can target.
- * For string and string[] forms, returns the IDs directly.
- * For Route[] form, recursively unwraps each rule's next.
+ * Flatten a Route into the unique step IDs it can target.
+ * Handles all Route shapes:
+ * - string transformer ID
+ * - string[] sugar for chained .next
+ * - RouteConfig with `next` (recursive)
+ * - RouteConfig with `case` (fan-out)
+ * - bare gate RouteConfig (no targets)
+ * - Route[] of mixed RouteConfig entries
  * Used by the connection-graph builder to enumerate static-graph edges
  * for example-compatibility checks; runtime routing remains dynamic.
  */
 function flattenRouteTargets(
-  spec: import('@walkeros/core').Transformer.RouteSpec | undefined,
+  spec: import('@walkeros/core').Transformer.Route | undefined,
 ): string[] {
   if (!spec) return [];
   if (typeof spec === 'string') return [spec];
-  if (!Array.isArray(spec) || spec.length === 0) return [];
+  if (!Array.isArray(spec) && typeof spec === 'object') {
+    // RouteConfig
+    const cfg = spec as import('@walkeros/core').Transformer.RouteConfig;
+    if ('next' in cfg && cfg.next !== undefined)
+      return flattenRouteTargets(cfg.next);
+    if ('case' in cfg && cfg.case) {
+      return Array.from(new Set(cfg.case.flatMap(flattenRouteTargets)));
+    }
+    return []; // bare gate
+  }
+  if (Array.isArray(spec) && spec.length === 0) return [];
   if (typeof spec[0] === 'string') {
     return spec.filter((s): s is string => typeof s === 'string');
   }
-  const routes = spec as import('@walkeros/core').Transformer.Route[];
+  // Array of RouteConfig
   return Array.from(
-    new Set(routes.flatMap((r) => flattenRouteTargets(r.next))),
+    new Set(
+      spec.flatMap((entry) =>
+        flattenRouteTargets(
+          entry as import('@walkeros/core').Transformer.Route,
+        ),
+      ),
+    ),
   );
 }
 

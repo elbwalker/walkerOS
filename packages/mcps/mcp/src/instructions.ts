@@ -52,6 +52,9 @@ Every component in a flow is a **step**: sources capture events, transformers pr
 - **Contracts** define event schemas using entity-action keying. Can generate FROM mappings or scaffold mappings FROM contracts.
 - **Variables** (\$var, \$env, \$code, \$store) enable DRY, environment-aware config. Whole-string \`$var.name\` references preserve native type (object/array/scalar); inline interpolation requires a scalar. Deep paths via \`$var.name.deep.path\`.
 - **Consent** gates destinations, mapping rules, and individual fields. Privacy-first by design.
+- **Routing** wires steps via \`next\` (pre-collector) and \`before\` (post-collector). A route is a string ID, a sequence (\`["a", "b"]\`), or a RouteConfig (\`{ match?, next }\` or \`{ match?, case: [...] }\`). The \`case\` operator dispatches first-match against an ordered list. The optional \`match\` field is omitted to mean always-match (no wildcard literal).
+- **Path transformers** are code-less passthroughs: a transformer entry with no \`code\` synthesizes \`(e) => ({ event: e })\` so a \`before\` / \`next\` chain can be named and reused across destinations without inline code (declare at least one of \`package\`, \`before\`, \`next\`, or \`cache\`).
+- **Cache** memoizes step output on a configured store. Set \`cache.stop: true\` to short-circuit the chain on HIT (sources default to stop-on-HIT). Set \`cache.namespace\` to prefix keys; omit it to write keys directly. \`CacheRule.match\` is optional, omit for always-match.
 
 ## Simulation Tips
 

@@ -11,8 +11,10 @@ import { getByPath } from './byPath';
  * Regex patterns are compiled once. Numeric comparisons are parsed once.
  * Runtime evaluation is pure function calls with short-circuit logic.
  */
-export function compileMatcher(expr: MatchExpression | '*'): CompiledMatcher {
-  if (expr === '*') return () => true;
+export function compileMatcher(
+  expr: MatchExpression | '*' | undefined,
+): CompiledMatcher {
+  if (expr === undefined || expr === '*') return () => true;
 
   if ('and' in expr) {
     const fns = expr.and.map(compileMatcher);

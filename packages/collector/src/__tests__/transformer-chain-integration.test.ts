@@ -181,6 +181,54 @@ describe('Destination Transformer Chains (destination.before)', () => {
 
       expect(order).toEqual(['a', 'b']);
     });
+
+    it('synthesizes path passthrough for code-less transformer entries', async () => {
+      const filterCalls: string[] = [];
+      const destinationEvents: WalkerOS.Event[] = [];
+
+      const { elb } = await startFlow({
+        transformers: {
+          filterBots: {
+            code: async (): Promise<Transformer.Instance> => ({
+              type: 'filter',
+              config: {},
+              push: async (event) => {
+                filterCalls.push('filterBots');
+                return { event };
+              },
+            }),
+          },
+          // Code-less entry — synthesizes a passthrough whose only job is to
+          // host the `before: ['filterBots']` chain.
+          passthrough: {
+            before: ['filterBots'],
+          },
+        },
+        destinations: {
+          testDest: {
+            before: 'passthrough',
+            code: {
+              type: 'test',
+              config: {},
+              push: async (event) => {
+                destinationEvents.push(event);
+              },
+            },
+          },
+        },
+      });
+
+      const inputEvent = { name: 'page view', data: { title: 'Home' } };
+      await elb(inputEvent);
+
+      // filterBots ran via the code-less entry's `before` chain
+      expect(filterCalls).toEqual(['filterBots']);
+
+      // The destination received the event unchanged
+      expect(destinationEvents).toHaveLength(1);
+      expect(destinationEvents[0].name).toBe('page view');
+      expect(destinationEvents[0].data?.title).toBe('Home');
+    });
   });
 
   describe('destinations without before', () => {
@@ -265,17 +313,19 @@ describe('Destination Transformer Chains (destination.before)', () => {
                 order.push(`dest:${event.data?.enriched}`);
               },
             },
-            before: [
-              {
-                match: {
-                  key: 'ingest.entity',
-                  operator: 'eq',
-                  value: 'product',
+            before: {
+              case: [
+                {
+                  match: {
+                    key: 'ingest.entity',
+                    operator: 'eq',
+                    value: 'product',
+                  },
+                  next: 'product-enricher',
                 },
-                next: 'product-enricher',
-              },
-              { match: '*', next: 'default-enricher' },
-            ] as any,
+                { next: 'default-enricher' },
+              ],
+            },
           },
         },
       });

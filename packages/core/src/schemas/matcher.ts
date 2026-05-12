@@ -33,35 +33,36 @@ export const MatchExpressionSchema: z.ZodType = z
     description: 'Boolean expression tree of match conditions (leaf, and, or).',
   });
 
-const MatchOrWildcard = z.union([MatchExpressionSchema, z.literal('*')]);
+// Recursive Route grammar (Flow v4): string | Route[] | RouteConfig.
+// RouteConfig is a disjoint union enforcing exactly one of next/case/gate.
+const RouteNextConfigSchema = z.object({
+  match: MatchExpressionSchema.optional(),
+  next: z.lazy(() => RouteSchema),
+});
 
-// Recursive: Route.next is itself a RouteSpec
-export const RouteSpecSchema: z.ZodType = z
-  .union([
-    z.string(),
-    z.array(z.string()),
-    z.array(
-      z.object({
-        match: MatchOrWildcard,
-        next: z.lazy(() => RouteSpecSchema),
-      }),
-    ),
-  ])
+const RouteCaseConfigSchema = z.object({
+  match: MatchExpressionSchema.optional(),
+  case: z.array(z.lazy(() => RouteSchema)),
+});
+
+const RouteGateConfigSchema = z.object({
+  match: MatchExpressionSchema,
+});
+
+const RouteConfigSchema = z.union([
+  RouteNextConfigSchema,
+  RouteCaseConfigSchema,
+  RouteGateConfigSchema,
+]);
+
+export const RouteSchema: z.ZodType = z
+  .union([z.string(), z.array(z.lazy(() => RouteSchema)), RouteConfigSchema])
   .meta({
-    id: 'MatcherRouteSpec',
-    title: 'Matcher.RouteSpec',
+    id: 'Route',
+    title: 'Route',
     description:
-      'Routable next target: ID, ID list, or list of {match, next} rules.',
+      'Recursive route: string ID, sequence of routes, or a RouteConfig (next/case/gate).',
   });
 
-export const RouteSchema = z
-  .object({
-    match: MatchOrWildcard,
-    next: z.lazy(() => RouteSpecSchema),
-  })
-  .meta({
-    id: 'MatcherRoute',
-    title: 'Matcher.Route',
-    description:
-      'Single routing rule pairing a match expression with a next target.',
-  });
+// Backward-compatible alias
+export const RouteSpecSchema = RouteSchema;

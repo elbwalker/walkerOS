@@ -240,18 +240,49 @@ push(event, context) {
 }
 ```
 
-Conditional routing is built into `next`/`before` properties using `Route[]` —
-no separate router transformer needed:
+Conditional routing is built into `next`/`before` properties using the `case`
+operator — no separate router transformer needed:
 
 ```json
-"next": [
-  { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
-  { "match": "*", "next": "default" }
-]
+"next": {
+  "case": [
+    { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
+    { "next": "default" }
+  ]
+}
 ```
 
-Routes are evaluated in order — first match wins. If no route matches and
-there's no wildcard, the event passes through unchanged.
+`case` entries are evaluated in order, first match wins. A `RouteConfig` is a
+disjoint union: each config sets at most one of `next` or `case`, never both. An
+entry with no `match` always matches (use it as a fallback). If no entry
+matches, the event passes through unchanged.
+
+### Path passthroughs
+
+A transformer entry with no `code` (and no `package`) is a **path** — a named
+chain that simply forwards events through its own `before` and `next` links. Use
+paths to share a `before` chain across multiple destinations without duplicating
+arrays:
+
+```json
+{
+  "transformers": {
+    "validateThenEnrich": {
+      "before": ["validate", "enrich"]
+    }
+  },
+  "destinations": {
+    "gtag": {
+      "package": "@walkeros/web-destination-gtag",
+      "before": "validateThenEnrich"
+    },
+    "meta": {
+      "package": "@walkeros/web-destination-meta",
+      "before": "validateThenEnrich"
+    }
+  }
+}
+```
 
 ### Chain resolution safety
 

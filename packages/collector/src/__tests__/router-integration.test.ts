@@ -40,7 +40,7 @@ describe('native next routing', () => {
               match: { key: 'ingest.path', operator: 'prefix', value: '/gtag' },
               next: 'gtag-parser',
             },
-            { match: '*', next: [] },
+            { next: [] },
           ],
           config: {
             ingest: {
@@ -153,7 +153,7 @@ describe('native next routing', () => {
               push: env.push as Elb.Fn,
             };
           },
-          next: [{ match: '*', next: 'a' }],
+          next: [{ next: 'a' }],
         },
       },
       transformers: {

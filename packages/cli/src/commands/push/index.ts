@@ -5,7 +5,6 @@ import {
   getPlatform,
   compileNext,
   resolveNext,
-  isRouteArray,
   buildCacheContext,
 } from '@walkeros/core';
 import {
@@ -49,27 +48,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Resolve a before chain config to an ordered array of transformer IDs.
- * Handles both static (string/string[]) and conditional (Route[]) chains,
- * matching the pattern used by source.ts in the collector.
+ * All Route shapes (string, sequence, RouteConfig) go through compileNext +
+ * resolveNext; the engine handles narrowing.
  */
 function resolveBeforeChain(
-  before: unknown,
+  before: import('@walkeros/core').Transformer.RouteSpec | undefined,
   transformers: import('@walkeros/core').Transformer.Transformers,
   ingest?: import('@walkeros/core').Ingest,
   event?: WalkerOS.DeepPartialEvent,
 ): string[] {
   if (!before) return [];
-
-  const next = before as import('@walkeros/core').Transformer.RouteSpec;
-
-  if (isRouteArray(next)) {
-    const compiled = compileNext(next);
-    const resolved = resolveNext(compiled!, buildCacheContext(ingest, event));
-    if (!resolved) return [];
-    return walkChain(resolved, extractTransformerNextMap(transformers));
-  }
-
-  return walkChain(next, extractTransformerNextMap(transformers));
+  const resolved = resolveNext(
+    compileNext(before),
+    buildCacheContext(ingest, event),
+  );
+  if (!resolved) return [];
+  return walkChain(resolved, extractTransformerNextMap(transformers));
 }
 
 /**

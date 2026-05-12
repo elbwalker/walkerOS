@@ -9,6 +9,7 @@ export { formatSchema };
 
 /**
  * JSON Schema describing ValidatorSettings for documentation.
+ * Mirrors the ValidatorSettings interface in src/types.ts.
  */
 export const settingsSchema: JsonSchema = {
   type: 'object',
@@ -19,10 +20,35 @@ export const settingsSchema: JsonSchema = {
         'Validate full WalkerOS.Event structure. Pre-compiled at init.',
       default: true,
     },
-    contract: {
+    events: {
       type: 'object',
       description:
-        'Event-specific validation rules. Entity/action keyed, supports wildcards.',
+        'Entity-action keyed JSON Schemas for event validation. Wildcard fallback: entity.action → entity.* → *.action → *.*. Typically wired from $contract.<name>.events.',
+    },
+    globals: {
+      type: 'object',
+      description:
+        'JSON Schema for event.globals. Runs on every event. Typically wired from $contract.<name>.globals.',
+    },
+    context: {
+      type: 'object',
+      description:
+        'JSON Schema for event.context. Runs on every event. Typically wired from $contract.<name>.context.',
+    },
+    custom: {
+      type: 'object',
+      description:
+        'JSON Schema for event.custom. Runs on every event. Typically wired from $contract.<name>.custom.',
+    },
+    user: {
+      type: 'object',
+      description:
+        'JSON Schema for event.user. Runs on every event. Typically wired from $contract.<name>.user.',
+    },
+    consent: {
+      type: 'object',
+      description:
+        'JSON Schema for event.consent. Runs on every event. Typically wired from $contract.<name>.consent.',
     },
   },
 };

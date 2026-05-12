@@ -20,7 +20,7 @@ describe('Transformer cache integration', () => {
             },
           }),
           cache: {
-            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+            rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
       },
@@ -75,7 +75,7 @@ describe('Transformer cache integration', () => {
             },
           }),
           cache: {
-            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+            rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
         validator: {
@@ -114,7 +114,7 @@ describe('Transformer cache integration', () => {
     expect(validatorCalls).toBe(2); // Still runs — step cache continues chain
   });
 
-  it('should stop chain on HIT when full=true', async () => {
+  it('should stop chain on HIT when stop=true', async () => {
     let enricherCalls = 0;
     let validatorCalls = 0;
     const destinationEvents: WalkerOS.Event[] = [];
@@ -133,8 +133,8 @@ describe('Transformer cache integration', () => {
             },
           }),
           cache: {
-            full: true,
-            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+            stop: true,
+            rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
         validator: {
@@ -168,7 +168,7 @@ describe('Transformer cache integration', () => {
     expect(validatorCalls).toBe(1);
     expect(destinationEvents).toHaveLength(1);
 
-    // Second push: HIT with full=true — chain stops, validator does NOT run
+    // Second push: HIT with stop=true — chain stops, validator does NOT run
     destinationEvents.length = 0;
     await elb({ name: 'page view', data: {} });
     expect(enricherCalls).toBe(1); // Cached — not called
@@ -206,7 +206,7 @@ describe('Transformer cache integration', () => {
             },
           }),
           cache: {
-            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+            rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
       },

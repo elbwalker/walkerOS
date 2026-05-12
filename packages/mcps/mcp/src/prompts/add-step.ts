@@ -50,6 +50,8 @@ export function registerAddStepPrompt(server: McpServer) {
               '- Read the walkeros://reference/flow-schema resource to understand connection rules.',
               '- Sources connect to pre-collector transformers via `next`.',
               '- Destinations connect to post-collector transformers via `before`.',
+              '- Routing supports string IDs, sequences (`["a", "b"]`), or RouteConfig (`{ match?, next }` for gated single-target or `{ match?, case: [...] }` for first-match dispatch). Omit `match` for always-match.',
+              '- A transformer entry with no `code` is a `path` — a code-less passthrough useful for naming and reusing a shared `before`/`next` chain across destinations. A path must declare at least one of `package`, `before`, `next`, or `cache`.',
               '- Stores are passive — referenced via `$store.storeName` in env values.',
               '- Use variables ($var) for values that change between environments.',
               '- For required settings without defaults in the package schema, ask the user which value to use. Do not guess credentials, IDs, or environment-specific values.',
