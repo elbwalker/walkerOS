@@ -192,6 +192,7 @@ export type InitSource<T extends TypesGeneric = Types> = {
   next?: RouteSpec;
   before?: RouteSpec;
   cache?: import('./cache').Cache;
+  validate?: import('./validate').Validate;
 };
 
 /**

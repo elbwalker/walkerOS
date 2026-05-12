@@ -370,6 +370,7 @@ export namespace Flow {
 
     /** Cache configuration for this source. */
     cache?: import('./cache').Cache;
+    validate?: import('./validate').Validate;
 
     /**
      * Source-level variables (highest priority in cascade).
@@ -429,6 +430,7 @@ export namespace Flow {
 
     /** Cache configuration for this destination. */
     cache?: import('./cache').Cache;
+    validate?: import('./validate').Validate;
 
     /** Destination-level variables (highest priority in cascade). */
     variables?: Variables;
@@ -482,6 +484,7 @@ export namespace Flow {
 
     /** Cache configuration for this transformer. */
     cache?: import('./cache').Cache;
+    validate?: import('./validate').Validate;
 
     /** Transformer-level variables (highest priority in cascade). */
     variables?: Variables;

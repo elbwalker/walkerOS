@@ -218,6 +218,7 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   before?: RouteSpec;
   next?: RouteSpec;
   cache?: import('./cache').Cache;
+  validate?: import('./validate').Validate;
 };
 
 /**
