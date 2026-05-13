@@ -1,4 +1,10 @@
 import { compileNext, resolveNext } from '../route';
+import type {
+  Route,
+  RouteConfig,
+  RouteOneConfig,
+  RouteManyConfig,
+} from '../types/transformer';
 
 describe('compileNext', () => {
   it('returns undefined for undefined input', () => {
@@ -26,7 +32,7 @@ describe('compileNext', () => {
       { next: 'default' },
     ]);
     expect(compiled).toBeDefined();
-    expect(compiled!.type).toBe('case');
+    expect(compiled!.type).toBe('one');
     expect(resolveNext(compiled!, { ingest: { path: '/gtag/collect' } })).toBe(
       'gtag-parser',
     );
@@ -125,9 +131,9 @@ describe('compileNext', () => {
     );
   });
 
-  it('compiles a RouteConfig with explicit case', () => {
+  it('compiles a RouteConfig with explicit `one`', () => {
     const compiled = compileNext({
-      case: [
+      one: [
         {
           match: { key: 'event.name', operator: 'eq', value: 'order complete' },
           next: 'a',
@@ -136,11 +142,39 @@ describe('compileNext', () => {
       ],
     });
     expect(compiled).toBeDefined();
-    expect(compiled!.type).toBe('case');
+    expect(compiled!.type).toBe('one');
     expect(resolveNext(compiled!, { event: { name: 'order complete' } })).toBe(
       'a',
     );
     expect(resolveNext(compiled!, { event: { name: 'page view' } })).toBe('b');
+  });
+
+  it('compiles a RouteConfig with `many` (all-match aggregation)', () => {
+    const compiled = compileNext({
+      many: [
+        {
+          match: { key: 'event.name', operator: 'eq', value: 'order complete' },
+          next: 'audit',
+        },
+        { next: 'always' },
+        {
+          match: { key: 'event.name', operator: 'eq', value: 'never' },
+          next: 'skipped',
+        },
+      ],
+    });
+    expect(compiled).toBeDefined();
+    expect(compiled!.type).toBe('many');
+    expect(
+      resolveNext(compiled!, { event: { name: 'order complete' } }),
+    ).toEqual(['audit', 'always']);
+    expect(resolveNext(compiled!, { event: { name: 'page view' } })).toEqual([
+      'always',
+    ]);
+    expect(resolveNext(compiled!, { event: { name: 'never' } })).toEqual([
+      'always',
+      'skipped',
+    ]);
   });
 
   it('compiles a gate-only RouteConfig', () => {
@@ -177,4 +211,18 @@ describe('compileNext', () => {
   });
 
   // TODO: type-level test via tsd or similar — disjoint union is enforced by RouteConfig's `never` properties
+});
+
+describe('RouteConfig disjoint union surface', () => {
+  it('typechecks RouteOneConfig and RouteManyConfig members', () => {
+    const one: RouteOneConfig = {
+      match: { key: 'event.name', operator: 'eq', value: 'page view' },
+      one: ['handler-a', 'handler-b'],
+    };
+    const many: RouteManyConfig = { many: ['audit', 'process'] };
+    const a: RouteConfig = one;
+    const b: RouteConfig = many;
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+  });
 });

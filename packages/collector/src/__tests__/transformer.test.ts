@@ -9,6 +9,7 @@ import {
   extractTransformerNextMap,
   extractChainProperty,
 } from '../transformer';
+import { createCacheStore } from '../cache-store';
 
 describe('Transformer', () => {
   // Mock collector for tests
@@ -283,6 +284,357 @@ describe('Transformer', () => {
 
       expect(mockPush).toHaveBeenCalled();
       expect(result.event).toEqual(event);
+    });
+
+    it('transformer.before: many on transformer.before spawns parallel before-chains', async () => {
+      const collector = createMockCollector();
+      const seen: string[] = [];
+      const audit = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('audit');
+          return { event: e };
+        }),
+      });
+      const log = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('log');
+          return { event: e };
+        }),
+      });
+      const inner = createMockTransformer({
+        config: { before: { many: ['audit', 'log'] } },
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('inner');
+          return { event: e };
+        }),
+      });
+      const transformers = { audit, log, inner };
+      collector.transformers = transformers;
+      await runTransformerChain(collector, transformers, ['inner'], {});
+      expect(seen.sort()).toEqual(['audit', 'inner', 'log']);
+    });
+
+    it('result.next: many terminates main chain and fans out to N subchains', async () => {
+      const collector = createMockCollector();
+      // Strong assertions per Tasks 3.1 / 3.2 discipline:
+      // 1. tail never sees the head event (main chain terminates).
+      // 2. y sees the parent event UN-mutated by x (true fan-out, not a
+      //    sequential walk of ['x', 'y']).
+      const trailX: WalkerOS.DeepPartialEvent[] = [];
+      const trailY: WalkerOS.DeepPartialEvent[] = [];
+      const trailTail: WalkerOS.DeepPartialEvent[] = [];
+      const head = createMockTransformer({
+        push: jest.fn().mockImplementation(async () => ({
+          event: { name: 'h' },
+          next: { many: ['x', 'y'] },
+        })),
+      });
+      const tail = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          trailTail.push(e);
+          return { event: e };
+        }),
+      });
+      const x = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          trailX.push(e);
+          return { event: { ...e, data: { touchedBy: 'x' } } };
+        }),
+      });
+      const y = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          trailY.push(e);
+          return { event: e };
+        }),
+      });
+      const transformers = { head, tail, x, y };
+      collector.transformers = transformers;
+      await runTransformerChain(collector, transformers, ['head', 'tail'], {});
+      // Both branches must run.
+      expect(trailX).toHaveLength(1);
+      expect(trailY).toHaveLength(1);
+      // Main chain must terminate — `tail` must NOT have received the head event.
+      expect(trailTail).toHaveLength(0);
+      // Fan-out semantic: y sees the parent event, NOT x's mutation. Under
+      // the old sequential walk (walkChain(['x','y'])) this would fail
+      // because y would receive { name: 'h', data: { touchedBy: 'x' } }.
+      expect(trailY[0]).toEqual({ name: 'h' });
+      expect(trailX[0]).toEqual({ name: 'h' });
+    });
+
+    it('config.next: many on transformer config produces fan-out (each branch independent)', async () => {
+      const collector = createMockCollector();
+      // Each branch receives the routed event UN-mutated by sibling branch.
+      // Under SEQUENTIAL execution (the pre-fan-out behavior, where the
+      // dispatcher walks p then q as a chain), p mutates the event with
+      // `{ data: { touchedBy: 'p' } }` and q then sees that mutation. Under
+      // true fan-out, q must see the parent event unchanged.
+      const seenByP: WalkerOS.DeepPartialEvent[] = [];
+      const seenByQ: WalkerOS.DeepPartialEvent[] = [];
+      const router = createMockTransformer({
+        config: { next: { many: ['p', 'q'] } },
+        push: jest.fn().mockImplementation(async () => ({
+          event: { name: 'routed' },
+        })),
+      });
+      const p = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seenByP.push(e);
+          return { event: { ...e, data: { touchedBy: 'p' } } };
+        }),
+      });
+      const q = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seenByQ.push(e);
+          return { event: e };
+        }),
+      });
+      const transformers = { router, p, q };
+      collector.transformers = transformers;
+      await runTransformerChain(collector, transformers, ['router'], {});
+      // Both branches must run.
+      expect(seenByP).toHaveLength(1);
+      expect(seenByQ).toHaveLength(1);
+      // Fan-out semantic: q sees the parent event, NOT p's mutation. Under
+      // the old sequential walk this would fail because q would receive
+      // { name: 'routed', data: { touchedBy: 'p' } }.
+      expect(seenByQ[0]).toEqual({ name: 'routed' });
+      expect(seenByP[0]).toEqual({ name: 'routed' });
+    });
+
+    it('many: one branch throwing does not kill siblings', async () => {
+      const collector = createMockCollector();
+      const seen: string[] = [];
+      const router = createMockTransformer({
+        push: jest.fn().mockImplementation(async () => ({
+          event: { name: 'route' },
+          next: { many: ['boom', 'ok'] },
+        })),
+      });
+      const boom = createMockTransformer({
+        push: jest.fn().mockImplementation(async () => {
+          seen.push('boom-tried');
+          throw new Error('intentional');
+        }),
+      });
+      const ok = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('ok');
+          return { event: e };
+        }),
+      });
+      const transformers = { router, boom, ok };
+      collector.transformers = transformers;
+      await runTransformerChain(collector, transformers, ['router'], {});
+      expect(seen).toContain('boom-tried');
+      expect(seen).toContain('ok');
+    });
+
+    it('many: one branch returning false does not kill siblings', async () => {
+      const collector = createMockCollector();
+      const seen: string[] = [];
+      const router = createMockTransformer({
+        push: jest.fn().mockImplementation(async () => ({
+          event: { name: 'route' },
+          next: { many: ['stop', 'ok'] },
+        })),
+      });
+      const stop = createMockTransformer({
+        push: jest.fn().mockImplementation(async () => false),
+      });
+      const ok = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('ok');
+          return { event: e };
+        }),
+      });
+      const transformers = { router, stop, ok };
+      collector.transformers = transformers;
+      await runTransformerChain(collector, transformers, ['router'], {});
+      expect(seen).toEqual(['ok']);
+    });
+
+    it('many strips respond propagation: parent caller sees no wrapped respond', async () => {
+      const collector = createMockCollector();
+      // Properly typed respond: RespondFn = (options?: RespondOptions) => void.
+      // No `as unknown` cast — the no-op respond satisfies the signature
+      // directly, and the test only asserts on respond presence/absence at
+      // the parent boundary, not on call semantics.
+      const respondA: import('@walkeros/core').RespondFn = () => {};
+      const respondB: import('@walkeros/core').RespondFn = () => {};
+      const router = createMockTransformer({
+        push: jest.fn().mockImplementation(async () => ({
+          event: { name: 'r' },
+          next: { many: ['a', 'b'] },
+        })),
+      });
+      const a = createMockTransformer({
+        push: jest
+          .fn()
+          .mockImplementation(async (e) => ({ event: e, respond: respondA })),
+      });
+      const b = createMockTransformer({
+        push: jest
+          .fn()
+          .mockImplementation(async (e) => ({ event: e, respond: respondB })),
+      });
+      const transformers = { router, a, b };
+      collector.transformers = transformers;
+      const result = await runTransformerChain(
+        collector,
+        transformers,
+        ['router'],
+        {},
+      );
+      expect(result.respond).toBeUndefined();
+    });
+
+    it('many inside many dispatches the union of branches', async () => {
+      // Task 6.2 — nested fan-out: head → many: [midA, midB] where
+      // midA fans out to [x, y] and midB chains to z. All three terminal
+      // IDs must be reached as independent flows. Verifies graph traversal,
+      // not parallel-vs-sequential isolation (each terminal pushes a single
+      // token; reachability via `seen.sort()` membership is sufficient).
+      const collector = createMockCollector();
+      const seen: string[] = [];
+      const head = createMockTransformer({
+        push: jest.fn().mockImplementation(async () => ({
+          event: { name: 'h' },
+          next: { many: ['midA', 'midB'] },
+        })),
+      });
+      const midA = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => ({
+          event: e,
+          next: { many: ['x', 'y'] },
+        })),
+      });
+      const midB = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => ({
+          event: e,
+          next: 'z',
+        })),
+      });
+      const x = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('x');
+          return { event: e };
+        }),
+      });
+      const y = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('y');
+          return { event: e };
+        }),
+      });
+      const z = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('z');
+          return { event: e };
+        }),
+      });
+      const transformers = { head, midA, midB, x, y, z };
+      collector.transformers = transformers;
+      await runTransformerChain(collector, transformers, ['head'], {});
+      expect(seen.sort()).toEqual(['x', 'y', 'z']);
+    });
+
+    it('many cycle is bounded by MAX_PATH_LENGTH', async () => {
+      // Task 6.2 — cycle defense: a → many: [b]; b → many: [a]. The
+      // path-length valve in runTransformerChain (MAX_PATH_LENGTH = 256)
+      // must trip per-branch, terminating the cycle. cloneIngest must
+      // deep-copy `_meta.path` (not share the array reference) so the
+      // budget accumulates per fan-out branch.
+      const collector = createMockCollector();
+      const a = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => ({
+          event: e,
+          next: { many: ['b'] },
+        })),
+      });
+      const b = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => ({
+          event: e,
+          next: { many: ['a'] },
+        })),
+      });
+      const transformers = { a, b };
+      collector.transformers = transformers;
+      const result = await runTransformerChain(
+        collector,
+        transformers,
+        ['a'],
+        {},
+      );
+      // Path-length valve trips per-branch; runtime returns instead of
+      // hanging or throwing.
+      expect(result).toBeDefined();
+    }, 5000);
+
+    it('many: cache.stop in one branch does not halt sibling branches', async () => {
+      // Regression guard for Task 4.3 (route grammar refactor).
+      //
+      // When a `many` branch HITs a `cache.stop: true` cache, that branch's
+      // `runTransformerChain` returns `{ event, respond, stopped: true }`.
+      // The pipeline-halt `stopped` discriminator is branch-internal: it MUST
+      // NOT propagate to sibling branches under the same `many` dispatch.
+      //
+      // Task 4.2 added the per-branch side-channel strip (respond AND stopped)
+      // at every `many` dispatch site in `runTransformerChain`. This test
+      // covers Site 1 (`result.next: { many }` from the router transformer's
+      // push result, lines ~924-942 in transformer.ts). Because each branch
+      // runs in its own `runTransformerChain` invocation under `Promise.all`,
+      // sibling branches are dispatched concurrently and a `stopped: true`
+      // return from one branch cannot starve siblings.
+      const seen: string[] = [];
+
+      // Prime the cache store before running. The `stopBranch` transformer's
+      // cache rule keys off `event.name`. After fan-out, both branches receive
+      // the routed event `{ name: 'r' }`, so we pre-set key 'r' to force a HIT
+      // in stopBranch only (normal has no cache).
+      const cacheStore = createCacheStore({ sweepIntervalMs: 0 });
+      cacheStore.set('r', { name: 'r' }, 60_000);
+
+      const router = createMockTransformer({
+        push: jest.fn().mockImplementation(async () => ({
+          event: { name: 'r' },
+          next: { many: ['stopBranch', 'normal'] },
+        })),
+      });
+      const stopBranch = createMockTransformer({
+        config: {
+          cache: {
+            stop: true,
+            rules: [{ key: ['event.name'], ttl: 1000 }],
+          },
+        },
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('stopBranch');
+          return { event: e };
+        }),
+      });
+      const normal = createMockTransformer({
+        push: jest.fn().mockImplementation(async (e) => {
+          seen.push('normal');
+          return { event: e };
+        }),
+      });
+
+      const collector = createMockCollector({
+        stores: { __cache: cacheStore },
+      });
+      const transformers = { router, stopBranch, normal };
+      collector.transformers = transformers;
+
+      await runTransformerChain(collector, transformers, ['router'], {
+        name: 'r',
+      });
+
+      // stopBranch HIT the cache → its push was skipped (cache HIT returns
+      // before the push call). normal has no cache → its push ran.
+      // The critical assertion: branch isolation under `many`.
+      expect(seen).toContain('normal');
+      expect(seen).not.toContain('stopBranch');
     });
   });
 

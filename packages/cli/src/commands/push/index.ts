@@ -3,16 +3,13 @@ import fs from 'fs-extra';
 import {
   createIngest,
   getPlatform,
-  compileNext,
-  resolveNext,
+  getNextSteps,
   buildCacheContext,
 } from '@walkeros/core';
 import {
   transformerInit,
   transformerPush,
   runTransformerChain,
-  walkChain,
-  extractTransformerNextMap,
   wrapEnv,
 } from '@walkeros/collector';
 import { createCLILogger } from '../../core/cli-logger.js';
@@ -46,24 +43,66 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
 }
 
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+/**
+ * Walk a transformer chain via static `.next` links starting at `startId`.
+ * Mirrors the collector's internal `walkChain` for the case where the
+ * simulator already knows the entry-point id and the underlying chain is
+ * static. Conditional `.next` shapes terminate the walk at this hop.
+ */
+function walkStaticChain(
+  startId: string,
+  transformers: import('@walkeros/core').Transformer.Transformers,
+): string[] {
+  const chain: string[] = [];
+  const visited = new Set<string>();
+  let current: string | undefined = startId;
+
+  while (current && transformers[current]) {
+    if (visited.has(current)) break;
+    visited.add(current);
+    chain.push(current);
+
+    const next: import('@walkeros/core').Transformer.Route | undefined =
+      transformers[current].config?.next;
+    if (typeof next === 'string') {
+      current = next;
+      continue;
+    }
+    if (Array.isArray(next) && next.every(isString)) {
+      chain.push(...next);
+      break;
+    }
+    // Conditional / undefined → terminate walk.
+    break;
+  }
+
+  return chain;
+}
+
 /**
  * Resolve a before chain config to an ordered array of transformer IDs.
- * All Route shapes (string, sequence, RouteConfig) go through compileNext +
- * resolveNext; the engine handles narrowing.
+ * Uses `getNextSteps` for the entry points and follows static `.next`
+ * links via `walkStaticChain`.
  */
 function resolveBeforeChain(
-  before: import('@walkeros/core').Transformer.RouteSpec | undefined,
+  before: import('@walkeros/core').Transformer.Route | undefined,
   transformers: import('@walkeros/core').Transformer.Transformers,
   ingest?: import('@walkeros/core').Ingest,
   event?: WalkerOS.DeepPartialEvent,
 ): string[] {
   if (!before) return [];
-  const resolved = resolveNext(
-    compileNext(before),
-    buildCacheContext(ingest, event),
-  );
-  if (!resolved) return [];
-  return walkChain(resolved, extractTransformerNextMap(transformers));
+  // Explicit string[] chain — use as-is.
+  if (Array.isArray(before) && before.every(isString)) {
+    return before;
+  }
+  const ids = getNextSteps(before, buildCacheContext(ingest, event));
+  if (ids.length === 0) return [];
+  if (ids.length === 1) return walkStaticChain(ids[0], transformers);
+  return ids;
 }
 
 /**

@@ -39,7 +39,7 @@
 
 import type { Collector } from '.';
 import type { Cache, EventCacheRule, StoreCacheRule } from './cache';
-import type { RouteSpec } from './transformer';
+import type { Route } from './transformer';
 import type { Validate, ValidateEvents, JsonSchema } from './validate';
 
 /**
@@ -359,7 +359,7 @@ export namespace Flow {
      * (decode, validate, authenticate, normalize raw input).
      * Raw request data is available in context.ingest.
      */
-    before?: RouteSpec;
+    before?: Route;
 
     /**
      * First transformer in pre-collector chain.
@@ -369,7 +369,7 @@ export namespace Flow {
      * If omitted, events route directly to the collector.
      * Can be an array for explicit chain control (bypasses transformer.next resolution).
      */
-    next?: RouteSpec;
+    next?: Route;
 
     /** Cache configuration for this source. */
     cache?: Cache<EventCacheRule>;
@@ -420,7 +420,7 @@ export namespace Flow {
      * If omitted, events are sent directly from the collector.
      * Can be an array for explicit chain control.
      */
-    before?: RouteSpec;
+    before?: Route;
 
     /**
      * First transformer in post-push chain.
@@ -429,7 +429,7 @@ export namespace Flow {
      * at context.ingest._response. Consent is inherited from the destination
      * gate - no separate consent check needed.
      */
-    next?: RouteSpec;
+    next?: Route;
 
     /** Cache configuration for this destination. */
     cache?: Cache<EventCacheRule>;
@@ -471,7 +471,7 @@ export namespace Flow {
      * Enables pre-processing or context loading before the main transform.
      * Uses the same chain resolution as source.next and destination.before.
      */
-    before?: RouteSpec;
+    before?: Route;
 
     /**
      * Next transformer in chain.
@@ -483,7 +483,7 @@ export namespace Flow {
      * Array values define an explicit chain (no walking). Circular references
      * are safely detected at runtime by `walkChain()`.
      */
-    next?: RouteSpec;
+    next?: Route;
 
     /** Cache configuration for this transformer. */
     cache?: Cache<EventCacheRule>;

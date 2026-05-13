@@ -7,43 +7,57 @@ import type { MatchExpression } from './matcher';
 
 /**
  * Unified route grammar for Flow v4. A `Route` is one of:
- * - a string transformer ID (`"redact"`)
+ * - a transformer ID string (`"redact"`)
  * - a sequence of routes (`["a", "b", "c"]` — sugar for chained `.next`)
  * - a `RouteConfig` — a gated / dispatching node.
  *
- * `RouteConfig` is a disjoint union: a single config may set either `next`,
- * `case`, or neither (pure gate), but never more than one operator.
+ * `RouteConfig` is a disjoint union — set exactly one of `next`, `one`,
+ * `many`, or neither (pure gate). The disjointness is enforced by `never`
+ * sibling properties at the type level and `z.strictObject` at the schema
+ * level.
  *
- * The `branch` operator from the design plan is intentionally absent until
- * `docs/plans/2026-05-12-route-branch-semantics-design.md` resolves.
+ * Operators:
+ * - `next`: single continuation.
+ * - `one`: first-match dispatch (walk entries, first whose match passes wins).
+ * - `many`: all-match terminal fan-out (every matching entry spawns an
+ *   independent flow; main chain terminates here). Restricted to
+ *   pre-collector positions (source.next, transformer.next, transformer.before).
  */
 export type Route = string | Route[] | RouteConfig;
 
-export type RouteConfig = RouteNextConfig | RouteCaseConfig | RouteGateConfig;
+export type RouteConfig =
+  | RouteNextConfig
+  | RouteOneConfig
+  | RouteManyConfig
+  | RouteGateConfig;
 
 export interface RouteNextConfig {
   match?: MatchExpression;
   next: Route;
-  case?: never;
+  one?: never;
+  many?: never;
 }
 
-export interface RouteCaseConfig {
+export interface RouteOneConfig {
   match?: MatchExpression;
-  case: Route[];
+  one: Route[];
   next?: never;
+  many?: never;
+}
+
+export interface RouteManyConfig {
+  match?: MatchExpression;
+  many: Route[];
+  next?: never;
+  one?: never;
 }
 
 export interface RouteGateConfig {
   match: MatchExpression;
   next?: never;
-  case?: never;
+  one?: never;
+  many?: never;
 }
-
-/**
- * Backward-compatible alias. New code should use `Route` directly.
- * Kept for compatibility with existing imports across the codebase.
- */
-export type RouteSpec = Route;
 
 /**
  * Base environment interface for walkerOS transformers.
@@ -99,8 +113,8 @@ export interface Config<T extends TypesGeneric = Types> {
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
-  before?: RouteSpec; // Pre-transformer chain (runs before push)
-  next?: RouteSpec; // Graph wiring to next transformer
+  before?: Route; // Pre-transformer chain (runs before push)
+  next?: Route; // Graph wiring to next transformer
   cache?: import('./cache').Cache; // Step-level cache config
   init?: boolean; // Track init state (like Destination)
   disabled?: boolean; // Completely skip this transformer in chains
@@ -148,7 +162,7 @@ export interface Context<
 export interface Result<E = WalkerOS.DeepPartialEvent> {
   event?: E;
   respond?: import('../respond').RespondFn;
-  next?: RouteSpec;
+  next?: Route;
 }
 
 /**
@@ -239,8 +253,8 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   code?: Init<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
-  before?: RouteSpec;
-  next?: RouteSpec;
+  before?: Route;
+  next?: Route;
   cache?: import('./cache').Cache;
   mapping?: MappingConfig;
   validate?: import('./validate').Validate;

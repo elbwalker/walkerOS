@@ -463,11 +463,12 @@ validating configurations, and rendering UI visualizations.
 - Multiple destinations can share the same transformer
 - No `before` = collector connects directly to destination
 
-### Chain resolution algorithm (`walkChain`)
+### Chain resolution algorithm (`getNextSteps`)
 
 See
 [packages/collector/src/transformer.ts](../../packages/collector/src/transformer.ts)
-for the implementation.
+for the implementation. `getNextSteps` is the public dispatch helper that
+replaces the previous `walkChain` entry point.
 
 - **String start:** walks `transformer.next` links until chain ends
 - **Array start:** uses array as-is (explicit chain, no walking)
@@ -476,25 +477,30 @@ for the implementation.
 - **Non-existent transformer ID:** chain ends (no error, event proceeds without
   transformation)
 
-### Conditional routing (`case` operator)
+Note: `getNextSteps` is deterministic for the supplied event context. Static
+analyzers without a real event can only enumerate reachability under "match may
+pass or fail" speculation.
+
+### Conditional routing (`one` operator)
 
 The `next` and `before` properties accept a `Route`
 (`string | Route[] | RouteConfig`). A `RouteConfig` is a **disjoint union**:
-each config sets at most one of `next` (gated link) or `case` (first-match
-dispatch), never both. The `case` operator enables conditional routing evaluated
-against ingest data:
+each config sets at most one of `next` (gated link), `one` (first-match
+dispatch), or `many` (all-match dispatch), never more than one. The `one`
+operator enables conditional routing evaluated against ingest data and picks the
+first entry whose `match` succeeds:
 
 ```json
 "next": {
-  "case": [
+  "one": [
     { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
     { "next": "default" }
   ]
 }
 ```
 
-- `case` entries are evaluated in order, first match wins
-- An entry without `match` always matches — use it as the fallback
+- `one` entries are evaluated in order, first match wins
+- An entry without `match` always matches, use it as the fallback
 - No matching entry means the event passes through unchanged
 - Works on all chain positions: `source.before`, `source.next`,
   `transformer.before`, `transformer.next`, `destination.before`, and
@@ -502,6 +508,22 @@ against ingest data:
 - Routes are compiled to closures at init time for fast per-event evaluation
 - See [packages/core/src/route.ts](../../packages/core/src/route.ts) for
   `compileNext()` and `resolveNext()`
+
+### All-match dispatch (`many` operator)
+
+Use `many` when every matching entry should produce an independent parallel flow
+(audit-while-process, multi-decoder fan-out). `many` terminates the main chain,
+each branch runs to its own exit. Available only pre-collector. Post-collector
+fan-out uses the destinations map.
+
+```jsonc
+"next": {
+  "many": [
+    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "granted" }, "next": "ga4-pipeline" },
+    { "next": "audit-log" }
+  ]
+}
+```
 
 ### Paths and pass-through steps (code-less transformer entries)
 

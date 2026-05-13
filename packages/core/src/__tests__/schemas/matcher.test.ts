@@ -1,8 +1,4 @@
-import {
-  MatchExpressionSchema,
-  RouteSchema,
-  RouteSpecSchema,
-} from '../../schemas/matcher';
+import { MatchExpressionSchema, RouteSchema } from '../../schemas/matcher';
 import { safeParseConfig } from '../../schemas/flow';
 import { toJsonSchema } from '../../schemas/validation';
 
@@ -48,18 +44,18 @@ describe('MatchExpressionSchema', () => {
   });
 });
 
-describe('RouteSpecSchema', () => {
+describe('RouteSchema — basic shapes', () => {
   it('validates a string', () => {
-    expect(RouteSpecSchema.safeParse('enricher').success).toBe(true);
+    expect(RouteSchema.safeParse('enricher').success).toBe(true);
   });
 
   it('validates a string array', () => {
-    expect(RouteSpecSchema.safeParse(['a', 'b']).success).toBe(true);
+    expect(RouteSchema.safeParse(['a', 'b']).success).toBe(true);
   });
 
   it('validates a Route array', () => {
     expect(
-      RouteSpecSchema.safeParse([
+      RouteSchema.safeParse([
         {
           match: { key: 'path', operator: 'prefix', value: '/api' },
           next: 'handler',
@@ -71,7 +67,7 @@ describe('RouteSpecSchema', () => {
 
   it('validates nested routes', () => {
     expect(
-      RouteSpecSchema.safeParse([
+      RouteSchema.safeParse([
         {
           match: { key: 'path', operator: 'prefix', value: '/api' },
           next: [
@@ -88,17 +84,9 @@ describe('RouteSpecSchema', () => {
 });
 
 describe('RouteSchema disjoint union', () => {
-  it('documents Zod behavior for a RouteConfig with both next and case set', () => {
-    // Finding: Zod 4 unions over non-strict z.object schemas do NOT enforce
-    // disjointness at runtime. `{ next: 'a', case: ['b'] }` matches
-    // RouteNextConfigSchema (the first union variant) because additional
-    // properties are allowed and Zod returns on the first success.
-    // The disjoint-union guarantee is enforced at the TypeScript type level
-    // via the `never` properties on RouteNextConfig/RouteCaseConfig/RouteGateConfig.
-    // TODO: tighten with z.strictObject(...) or a runtime refine if we want
-    // schema-level disjointness, but that is out of scope for this task.
-    const result = RouteSchema.safeParse({ next: 'a', case: ['b'] });
-    expect(result.success).toBe(true);
+  it('rejects a RouteConfig with both next and one set', () => {
+    const result = RouteSchema.safeParse({ next: 'a', one: ['b'] });
+    expect(result.success).toBe(false);
   });
 
   it('accepts a bare gate RouteConfig with only match', () => {
@@ -142,5 +130,35 @@ describe('Flow config with Route[] in source.next', () => {
     };
     const result = safeParseConfig(config);
     expect(result.success).toBe(true);
+  });
+});
+
+describe('RouteSchema — one/many operators', () => {
+  it('accepts { one: [...] } and rejects { case: [...] }', () => {
+    expect(RouteSchema.safeParse({ one: ['a'] }).success).toBe(true);
+    expect(RouteSchema.safeParse({ case: ['a'] }).success).toBe(false);
+  });
+
+  it('accepts { many: [...] }', () => {
+    expect(RouteSchema.safeParse({ many: ['a', 'b'] }).success).toBe(true);
+  });
+
+  it('rejects both `next` and `one` set on the same RouteConfig', () => {
+    expect(RouteSchema.safeParse({ next: 'a', one: ['b'] }).success).toBe(
+      false,
+    );
+  });
+
+  it('accepts empty many: [] (lint surfaces the warning, schema does not)', () => {
+    expect(RouteSchema.safeParse({ many: [] }).success).toBe(true);
+  });
+
+  it('accepts nested `many` inside a gated entry', () => {
+    expect(
+      RouteSchema.safeParse({
+        match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
+        many: ['audit', 'process'],
+      }).success,
+    ).toBe(true);
   });
 });

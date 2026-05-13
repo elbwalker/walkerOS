@@ -11,8 +11,7 @@ import {
   createIngest,
   getMappingValue,
   tryCatchAsync,
-  compileNext,
-  resolveNext,
+  getNextSteps,
   compileCache,
   checkCache,
   storeCache,
@@ -23,7 +22,27 @@ import {
   walkChain,
   extractTransformerNextMap,
   runTransformerChain,
+  cloneIngest,
 } from './transformer';
+
+/**
+ * A Route is "static" when it's a transformer-ID string or an array of
+ * transformer-ID strings. Static routes can be resolved once at init and
+ * walked synchronously; conditional shapes (RouteConfig, mixed arrays)
+ * depend on per-event context and resolve via getNextSteps at dispatch.
+ */
+function isStaticRoute(
+  route: import('@walkeros/core').Transformer.Route | undefined,
+): route is string | string[] {
+  if (typeof route === 'string') return true;
+  if (
+    Array.isArray(route) &&
+    route.every((entry) => typeof entry === 'string')
+  ) {
+    return true;
+  }
+  return false;
+}
 import { getCacheStore } from './cache';
 
 /**
@@ -92,28 +111,14 @@ export async function initSource(
   // Resolve transformer chain for this source.
   // Static (string / string[]) chains pre-walk at init (optimization).
   // Conditional shapes (case / gate) require per-request context — see wrappedPush.
-  const compiledNext = compileNext(next);
-  const isStaticNext =
-    compiledNext?.type === 'static' || compiledNext?.type === 'chain';
-  const staticPreChain =
-    isStaticNext && compiledNext
-      ? walkChain(
-          resolveNext(compiledNext)!,
-          extractTransformerNextMap(collector.transformers),
-        )
-      : undefined;
+  const staticPreChain = isStaticRoute(next)
+    ? walkChain(next, extractTransformerNextMap(collector.transformers))
+    : undefined;
 
   // Resolve before chain for this source (consent-exempt, pre-source preprocessing).
-  const compiledBefore = compileNext(before);
-  const isStaticBefore =
-    compiledBefore?.type === 'static' || compiledBefore?.type === 'chain';
-  const staticBeforeChain =
-    isStaticBefore && compiledBefore
-      ? walkChain(
-          resolveNext(compiledBefore)!,
-          extractTransformerNextMap(collector.transformers),
-        )
-      : undefined;
+  const staticBeforeChain = isStaticRoute(before)
+    ? walkChain(before, extractTransformerNextMap(collector.transformers))
+    : undefined;
 
   // Create wrapped push that auto-applies source mapping config, preChain, and ingest
   const wrappedPush: Collector.PushFn = async (
@@ -122,14 +127,21 @@ export async function initSource(
   ) => {
     let pendingRespond: Promise<void> | undefined;
 
-    // Resolve before chain (static or conditional)
+    // Resolve before chain (static or conditional).
+    // Single-id results walk static `.next` links; multi-id results are
+    // explicit chains (fan-out from `many` is handled by the engine).
     const beforeChain =
       staticBeforeChain ??
-      (compiledBefore
-        ? walkChain(
-            resolveNext(compiledBefore, buildCacheContext(currentIngest))!,
-            extractTransformerNextMap(collector.transformers),
-          )
+      (before !== undefined
+        ? (() => {
+            const ids = getNextSteps(before, buildCacheContext(currentIngest));
+            if (ids.length === 0) return [];
+            const start = ids.length === 1 ? ids[0] : ids;
+            return walkChain(
+              start,
+              extractTransformerNextMap(collector.transformers),
+            );
+          })()
         : []);
 
     // The before chain may fan out (return an array of events). The cache
@@ -255,29 +267,95 @@ export async function initSource(
       }
     }
 
-    // Resolve chain: static (pre-computed) or conditional (per-event)
-    const preChain =
-      staticPreChain ??
-      (compiledNext
-        ? walkChain(
-            resolveNext(compiledNext, buildCacheContext(currentIngest)),
-            extractTransformerNextMap(collector.transformers),
-          )
-        : []);
+    // Resolve chain: static (pre-computed) or conditional (per-event).
+    // Three dispatch shapes from `getNextSteps`:
+    // - []          → no route matched; passthrough to collector with no
+    //                 pre-chain.
+    // - ['x']       → walk static `.next` links from x and run as a single
+    //                 sequential subchain inside `collector.push`.
+    // - ['a','b',…] → `many` fan-out. Each id is an INDEPENDENT terminal
+    //                 subchain dispatched via its own `collector.push` call
+    //                 with a per-branch cloned ingest and `respond` cleared
+    //                 (no-respond-across-many doctrine, Task 4.2). Error
+    //                 isolation per branch via tryCatchAsync (Task 4.1).
+    //
+    // Note: a plain `next: ['a','b','c']` is `isStaticRoute` → pre-walked
+    // by `staticPreChain` as the legacy explicit sequential chain. Only
+    // `{ many: [...] }` reaches the multi-id branch here.
+    type Dispatch =
+      | { kind: 'single'; preChain: string[] }
+      | { kind: 'many'; branches: string[][] };
+
+    const dispatch: Dispatch = staticPreChain
+      ? { kind: 'single', preChain: staticPreChain }
+      : next !== undefined
+        ? (() => {
+            const ids = getNextSteps(next, buildCacheContext(currentIngest));
+            if (ids.length === 0)
+              return { kind: 'single', preChain: [] } as Dispatch;
+            if (ids.length === 1)
+              return {
+                kind: 'single',
+                preChain: walkChain(
+                  ids[0],
+                  extractTransformerNextMap(collector.transformers),
+                ),
+              } as Dispatch;
+            return {
+              kind: 'many',
+              branches: ids.map((id) =>
+                walkChain(
+                  id,
+                  extractTransformerNextMap(collector.transformers),
+                ),
+              ),
+            } as Dispatch;
+          })()
+        : ({ kind: 'single', preChain: [] } as Dispatch);
 
     // Push each event independently through the post-before pipeline.
     // For non-fan-out (single event) this is a one-iteration loop and
     // behaves exactly like the previous implementation.
     let pushResult: Elb.PushResult = { ok: true } as Elb.PushResult;
     for (const event of events) {
-      pushResult = await collector.push(event, {
-        ...options,
-        id: sourceId,
-        ingest: currentIngest,
-        respond: currentRespond,
-        mapping: config,
-        preChain,
-      });
+      if (dispatch.kind === 'many') {
+        // `many` fan-out: each branch is an independent terminal flow.
+        // Per-branch ingest clone, no respond propagation, error isolation
+        // via tryCatchAsync. Branch results are awaited and discarded;
+        // currentRespond is NOT updated from any branch.
+        await Promise.all(
+          dispatch.branches.map((branchChain, idx) =>
+            tryCatchAsync(
+              async () =>
+                collector.push(event, {
+                  ...options,
+                  id: sourceId,
+                  ingest: cloneIngest(currentIngest, `${sourceId}:${idx}`),
+                  respond: undefined,
+                  mapping: config,
+                  preChain: branchChain,
+                }),
+              (err) => {
+                collector.logger
+                  .scope('source:many')
+                  .error(`many branch ${idx} failed`, { error: err });
+                return { ok: true } as Elb.PushResult;
+              },
+            )(),
+          ),
+        );
+        // `many` is fan-out, not enrichment — surface a generic OK.
+        pushResult = { ok: true } as Elb.PushResult;
+      } else {
+        pushResult = await collector.push(event, {
+          ...options,
+          id: sourceId,
+          ingest: currentIngest,
+          respond: currentRespond,
+          mapping: config,
+          preChain: dispatch.preChain,
+        });
+      }
     }
 
     // Wait for any deferred MISS update work to land on the source's

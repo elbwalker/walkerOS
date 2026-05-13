@@ -37,7 +37,10 @@ export * from './contract';
 export * from './mcpHelpers';
 export * from './respond';
 export * from './matcher';
-export * from './route';
+// Route helpers: only `getNextSteps` is public. `compileNext`, `resolveNext`,
+// `CompiledNext`, `CompiledRoute`, and `isRouteArray` remain package-internal
+// (importable from `./route` inside core, not from the public package).
+export { getNextSteps } from './route';
 export * from './cache';
 export * from './transformer-entry';
 export * from './examples/formatOut';

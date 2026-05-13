@@ -240,22 +240,33 @@ push(event, context) {
 }
 ```
 
-Conditional routing is built into `next`/`before` properties using the `case`
-operator — no separate router transformer needed:
+Conditional routing is built into `next`/`before` properties using the `one`
+operator, no separate router transformer needed:
 
 ```json
 "next": {
-  "case": [
+  "one": [
     { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
     { "next": "default" }
   ]
 }
 ```
 
-`case` entries are evaluated in order, first match wins. A `RouteConfig` is a
-disjoint union: each config sets at most one of `next` or `case`, never both. An
+`one` entries are evaluated in order, first match wins. A `RouteConfig` is a
+disjoint union: each config sets at most one of `next` (gated link), `one`
+(first-match dispatch), or `many` (all-match dispatch), never more than one. An
 entry with no `match` always matches (use it as a fallback). If no entry
-matches, the event passes through unchanged.
+matches, the event passes through unchanged. Use `many` (pre-collector only)
+when every matching branch should run in parallel, terminating the main chain:
+
+```json
+"next": {
+  "many": [
+    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "granted" }, "next": "ga4-pipeline" },
+    { "next": "audit-log" }
+  ]
+}
+```
 
 ### Paths and pass-through steps
 
@@ -369,9 +380,13 @@ rejected with `CONFLICT`.
 
 ### Chain resolution safety
 
-`walkChain()` uses a visited set to detect circular references. If a cycle is
-found, the loop is silently broken and the chain ends. If `next` points to a
-non-existent transformer, the chain also ends without error.
+`getNextSteps()` (the public dispatch helper, previously `walkChain`) uses a
+visited set to detect circular references. If a cycle is found, the loop is
+silently broken and the chain ends. If `next` points to a non-existent
+transformer, the chain also ends without error. Note: `getNextSteps` is
+deterministic for the supplied event context. Static analyzers without a real
+event can only enumerate reachability under "match may pass or fail"
+speculation.
 
 ### Composition principle
 
@@ -381,8 +396,8 @@ after, both are walked recursively, with cycle detection. Cache halt signals
 (`cache.stop: true`) at pre-collector positions propagate pipeline-wide;
 destinations do not see the dropped event. The grammar's recursive `Route` shape
 (`string | Route[] | RouteConfig`) compiles element-by-element, so sequences can
-mix transformer IDs and inline `case` / `next` routes
-(`next: ["dedup", { case: [...] }]` is valid). This is the model to default to
+mix transformer IDs and inline `one` / `many` / `next` routes
+(`next: ["dedup", { one: [...] }]` is valid). This is the model to default to
 when adding new chain primitives.
 
 See [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) for

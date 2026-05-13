@@ -18,7 +18,7 @@
  */
 
 import { z, toJsonSchema } from './validation';
-import { RouteSpecSchema } from './matcher';
+import { RouteSchema, RouteWithoutManySchema } from './matcher';
 import { EventCacheSchema, StoreCacheSchema } from './cache';
 
 // ========================================
@@ -328,10 +328,10 @@ export const SourceSchema = z
     variables: VariablesSchema.optional().describe(
       'Source-level variables (highest priority in cascade)',
     ),
-    next: RouteSpecSchema.optional().describe(
+    next: RouteSchema.optional().describe(
       'Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.',
     ),
-    before: RouteSpecSchema.optional().describe(
+    before: RouteSchema.optional().describe(
       'Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.',
     ),
     examples: StepExamplesSchema.optional().describe(
@@ -386,10 +386,10 @@ export const TransformerSchema = z
       })
       .optional()
       .describe('Transformer environment configuration'),
-    before: RouteSpecSchema.optional().describe(
+    before: RouteSchema.optional().describe(
       'Pre-transformer chain. Runs before this transformer push function.',
     ),
-    next: RouteSpecSchema.optional().describe(
+    next: RouteSchema.optional().describe(
       'Next transformer in chain. String, string[], or Route[] for conditional routing.',
     ),
     variables: VariablesSchema.optional().describe(
@@ -457,11 +457,11 @@ export const DestinationSchema = z
     variables: VariablesSchema.optional().describe(
       'Destination-level variables (highest priority in cascade)',
     ),
-    before: RouteSpecSchema.optional().describe(
-      'Post-collector transformer chain. String, string[], or Route[] for conditional routing.',
+    before: RouteWithoutManySchema.optional().describe(
+      'Post-collector transformer chain. String, string[], or Route[] for conditional routing. `many` is not valid here — use multiple destinations for post-collector fan-out.',
     ),
-    next: RouteSpecSchema.optional().describe(
-      'Post-push transformer chain. Push response available at context.ingest._response.',
+    next: RouteWithoutManySchema.optional().describe(
+      'Post-push transformer chain. Push response available at context.ingest._response. `many` is not valid here — use multiple destinations for post-collector fan-out.',
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',

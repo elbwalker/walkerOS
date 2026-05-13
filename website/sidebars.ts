@@ -154,6 +154,7 @@ const sidebars: SidebarsConfig = {
             id: 'stores/index',
           },
           items: [
+            'stores/cache',
             {
               type: 'doc',
               id: 'stores/server/fs',

@@ -108,7 +108,7 @@ function generateInlineCode(
   inline: Flow.Code,
   config: object,
   env?: object,
-  chains?: { before?: Transformer.RouteSpec; next?: Transformer.RouteSpec },
+  chains?: { before?: Transformer.Route; next?: Transformer.Route },
   isDestination?: boolean,
 ): string {
   const pushFn = inline.push.replace('$code:', '');

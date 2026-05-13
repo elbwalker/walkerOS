@@ -43,8 +43,7 @@ import {
   isObject,
   tryCatchAsync,
   useHooks,
-  compileNext,
-  resolveNext,
+  getNextSteps,
   compileCache,
   checkCache,
   storeCache,
@@ -69,11 +68,19 @@ export function extractTransformerNextMap(
 ): Record<string, { next?: string | string[] }> {
   const result: Record<string, { next?: string | string[] }> = {};
   for (const [id, transformer] of Object.entries(transformers)) {
-    const compiled = compileNext(transformer.config?.next);
-    if (compiled?.type === 'static' || compiled?.type === 'chain') {
-      result[id] = { next: compiled.value };
+    const next = transformer.config?.next;
+    // Static shapes are recorded for synchronous chain walking.
+    // Conditional shapes (RouteConfig, mixed arrays) resolve per-event via
+    // getNextSteps at dispatch time; they get an empty entry here so the
+    // chain walker stops at this hop rather than following a stale link.
+    if (typeof next === 'string') {
+      result[id] = { next };
+    } else if (
+      Array.isArray(next) &&
+      next.every((entry) => typeof entry === 'string')
+    ) {
+      result[id] = { next: next as string[] };
     } else {
-      // Conditional / gated routes resolve per-event in walkChain; no static link.
       result[id] = {};
     }
   }
@@ -445,22 +452,26 @@ export async function transformerPush(
 }
 
 /**
- * Resolve a `RouteSpec` (string, string[], or Route[]) to the static form
- * the downstream walkChain consumer understands. Used at every site inside
- * `runTransformerChain` that accepts a route spec from config or transformer
- * result (transformer.config.before, fork result.next, unified result.next).
+ * Clone an ingest for an independent branch (e.g. a `many` fan-out branch).
  *
- * Returns `undefined` when the spec is absent, or when a Route[] evaluated
- * against the given context produced no match. Callers treat undefined as
- * "no static target" (either skip the chain or fall through to passthrough,
- * depending on the call site).
+ * Each branch needs its own `_meta.path` so cycle protection and the
+ * MAX_PATH_LENGTH safety valve operate per-branch rather than colliding
+ * across sibling forks. The top-level object and `_meta` are shallow-copied;
+ * `_meta.path` is duplicated so appends in one branch do not leak into others.
+ *
+ * `branchId` is reserved for future per-branch labelling (Task 4.1) and is
+ * not currently written into `_meta`; it is accepted now so callers don't
+ * need to change their call sites when error-isolation lands.
  */
-function resolveRouteSpec(
-  spec: Transformer.RouteSpec | undefined,
-  ctx: Record<string, unknown>,
-): string | string[] | undefined {
-  if (!spec) return undefined;
-  return resolveNext(compileNext(spec), ctx) ?? undefined;
+export function cloneIngest(
+  ingest: Ingest | undefined,
+  branchId: string,
+): Ingest {
+  if (!ingest) return createIngest(branchId);
+  return {
+    ...ingest,
+    _meta: { ...ingest._meta, path: [...ingest._meta.path] },
+  };
 }
 
 /**
@@ -484,7 +495,16 @@ export async function runTransformerChain(
 ): Promise<Transformer.ChainResult> {
   const MAX_PATH_LENGTH = 256;
 
-  if (chainContext && ingest?._meta) {
+  // Ensure an ingest exists so the per-branch path budget engages
+  // regardless of caller. Production callers (source/push/destination)
+  // always pass one; this guards direct test invocations and any future
+  // entrypoint that omits it. Without an ingest, the safety valve below
+  // can never trip — leaving cyclic `many` graphs unbounded.
+  if (!ingest) {
+    ingest = createIngest(chain[0] ?? 'chain');
+  }
+
+  if (chainContext && ingest._meta) {
     ingest._meta.chainPath = chainContext;
   }
 
@@ -587,51 +607,94 @@ export async function runTransformerChain(
       }
     }
 
-    // Run transformer.before chain if configured
+    // Run transformer.before chain if configured.
+    //
+    // Dispatch uses `getNextSteps`:
+    // - []             → no route matched; skip the before chain (passthrough).
+    // - ['x']          → sequential continuation; walk static .next links from x
+    //                    and run as a single subchain. Preserves cache.stop and
+    //                    null/respond propagation from the nested chain.
+    // - ['a','b',...]  → `many` fan-out. Each branch is an independent
+    //                    terminal subchain with a cloned ingest (per-branch
+    //                    cycle protection). No merge: many is fan-out, not
+    //                    enrichment, so parent processedEvent is unchanged.
+    //                    Per-branch error isolation lands in Task 4.1;
+    //                    respond suppression lands in Task 4.2.
     const transformerBefore = transformer.config.before;
     if (transformerBefore) {
-      const beforeStartId = resolveRouteSpec(
+      const beforeIds = getNextSteps(
         transformerBefore,
         buildCacheContext(ingest, processedEvent),
       );
-
-      const beforeChainIds = walkChain(
-        beforeStartId,
-        extractTransformerNextMap(transformers),
-      );
-
-      if (beforeChainIds.length > 0) {
-        const beforeResult = await runTransformerChain(
-          collector,
-          transformers,
-          beforeChainIds,
-          processedEvent,
-          ingest,
-          currentRespond,
-          chainContext,
+      if (beforeIds.length === 1) {
+        const beforeChainIds = walkChain(
+          beforeIds[0],
+          extractTransformerNextMap(transformers),
         );
-        if (beforeResult.event === null)
-          return {
-            event: null,
-            respond: beforeResult.respond ?? currentRespond,
-          }; // Before chain stopped
-        // Propagate pipeline-halt from a nested `cache.stop: true` HIT in
-        // the before chain. The outer caller (push.ts / source.ts) drops
-        // the event before destinations see it.
-        if (beforeResult.stopped) {
-          return {
-            event: Array.isArray(beforeResult.event)
-              ? beforeResult.event[0]
-              : beforeResult.event,
-            respond: beforeResult.respond ?? currentRespond,
-            stopped: true,
-          };
+        if (beforeChainIds.length > 0) {
+          const beforeResult = await runTransformerChain(
+            collector,
+            transformers,
+            beforeChainIds,
+            processedEvent,
+            ingest,
+            currentRespond,
+            chainContext,
+          );
+          if (beforeResult.event === null)
+            return {
+              event: null,
+              respond: beforeResult.respond ?? currentRespond,
+            }; // Before chain stopped
+          // Propagate pipeline-halt from a nested `cache.stop: true` HIT in
+          // the before chain. The outer caller (push.ts / source.ts) drops
+          // the event before destinations see it.
+          if (beforeResult.stopped) {
+            return {
+              event: Array.isArray(beforeResult.event)
+                ? beforeResult.event[0]
+                : beforeResult.event,
+              respond: beforeResult.respond ?? currentRespond,
+              stopped: true,
+            };
+          }
+          if (beforeResult.respond) currentRespond = beforeResult.respond;
+          // Before chains use first result if fan-out occurred
+          processedEvent = Array.isArray(beforeResult.event)
+            ? beforeResult.event[0]
+            : beforeResult.event;
         }
-        if (beforeResult.respond) currentRespond = beforeResult.respond;
-        // Before chains use first result if fan-out occurred
-        processedEvent = Array.isArray(beforeResult.event)
-          ? beforeResult.event[0]
-          : beforeResult.event;
+      } else if (beforeIds.length > 1) {
+        // many: independent terminal subchains. Each branch walks to its own
+        // exit with a per-branch ingest clone. Per-branch error isolation
+        // (Task 4.1): wrap each branch dispatch in `tryCatchAsync` so a
+        // throw in one branch (init failure, unforeseen runtime error) does
+        // not reject the surrounding `Promise.all` and starve siblings.
+        // No-respond-across-many: respond ownership cannot be unambiguously
+        // assigned when one inbound request fans out to N terminal flows.
+        // Branch dispatch passes `undefined` instead of `currentRespond`, and
+        // branch results are awaited and discarded — currentRespond is NOT
+        // updated from any branch's wrapped respond.
+        await Promise.all(
+          beforeIds.map((id) =>
+            tryCatchAsync(runTransformerChain, (err) => {
+              collector.logger
+                .scope('transformer:many')
+                .error(`many branch ${id} failed`, { error: err });
+              return { event: null, respond: undefined };
+            })(
+              collector,
+              transformers,
+              walkChain(id, extractTransformerNextMap(transformers)),
+              processedEvent,
+              cloneIngest(ingest, id),
+              undefined,
+              chainContext,
+            ),
+          ),
+        );
+        // No merge: many is fan-out, not enrichment. Parent processedEvent
+        // unchanged.
       }
     }
 
@@ -664,22 +727,36 @@ export async function runTransformerChain(
         result.map(async (forkResult) => {
           const forkEvent = forkResult.event || processedEvent;
           // Clone ingest per fork to prevent cross-fork contamination
-          const forkIngest: Ingest = ingest
-            ? {
-                ...ingest,
-                _meta: { ...ingest._meta, path: [...ingest._meta.path] },
-              }
-            : createIngest('unknown');
+          const forkIngest = cloneIngest(ingest, 'unknown');
 
           if (forkResult.next) {
-            // Fork has explicit routing
-            const resolvedNext = resolveRouteSpec(
+            // Fork has explicit routing. Dispatch uses `getNextSteps`:
+            // - []             → no route matched; passthrough this fork's
+            //                    event without entering any subchain (fork
+            //                    has explicit routing, so we do NOT fall
+            //                    through to remainingChain).
+            // - ['x']          → walk static .next from x and run that as a
+            //                    single subchain. Preserves the existing
+            //                    "fork has explicit routing terminates the
+            //                    main chain at this branch" semantic — the
+            //                    subchain's ChainResult is this fork's
+            //                    result.
+            // - ['a','b',...]  → `many` fan-out. Each id dispatches as its
+            //                    own terminal subchain with a per-branch
+            //                    cloned ingest. Returns an array of
+            //                    ChainResults; the outer `.flat()` in the
+            //                    aggregation loop folds them into the
+            //                    surrounding flatEvents collection.
+            const forkIds = getNextSteps(
               forkResult.next,
               buildCacheContext(forkIngest, forkEvent),
             );
-            if (resolvedNext) {
+            if (forkIds.length === 0) {
+              return { event: forkEvent, respond: currentRespond };
+            }
+            if (forkIds.length === 1) {
               const branchedChain = walkChain(
-                resolvedNext,
+                forkIds[0],
                 extractTransformerNextMap(transformers),
               );
               if (branchedChain.length > 0) {
@@ -693,8 +770,48 @@ export async function runTransformerChain(
                   chainContext,
                 );
               }
+              return { event: forkEvent, respond: currentRespond };
             }
-            return { event: forkEvent, respond: currentRespond };
+            // Terminal fan-out. Each branch walks to its own exit with a
+            // per-branch ingest clone. Per-branch error isolation
+            // (Task 4.1): wrap each branch dispatch in `tryCatchAsync` so a
+            // throw in one branch does not reject the surrounding
+            // `Promise.all` and starve siblings.
+            // No-respond-across-many: respond ownership cannot be unambiguously
+            // assigned when one inbound request fans out to N terminal flows.
+            // Branches are dispatched with `respond: undefined`, and the
+            // ChainResults returned to the outer aggregation are stripped of
+            // any branch-internal respond so the outer fork's combined result
+            // never propagates a branch's wrapped respond back to the caller.
+            const branchResults = await Promise.all(
+              forkIds.map((id) =>
+                tryCatchAsync(runTransformerChain, (err) => {
+                  collector.logger
+                    .scope('transformer:many')
+                    .error(`many branch ${id} failed`, { error: err });
+                  return { event: null, respond: undefined };
+                })(
+                  collector,
+                  transformers,
+                  walkChain(id, extractTransformerNextMap(transformers)),
+                  forkEvent,
+                  cloneIngest(forkIngest, id),
+                  undefined,
+                  chainContext,
+                ),
+              ),
+            );
+            // Strip per-branch side-channels (respond, stopped) at the many
+            // boundary. The outer aggregation only learns about events from
+            // branch ChainResults; respond and stopped are branch-internal
+            // concerns and must not leak back to the surrounding fork's
+            // combined result.
+            return branchResults.map(
+              (br): Transformer.ChainResult => ({
+                event: br.event,
+                respond: undefined,
+              }),
+            );
           }
 
           // Fork continues through remaining chain
@@ -744,40 +861,88 @@ export async function runTransformerChain(
         currentRespond = resultRespond;
       }
 
-      // Handle chain branching
-      if (next) {
-        const resolvedNext = resolveRouteSpec(
+      // Handle chain branching.
+      //
+      // Dispatch uses `getNextSteps`:
+      // - []             → no route matched; passthrough (continue main chain
+      //                    with resultEvent if provided).
+      // - ['x']          → walk static .next from x and run that as a single
+      //                    subchain. The branched subchain's ChainResult
+      //                    becomes this transformer's final result; the main
+      //                    chain terminates here (explicit routing wins).
+      // - ['a','b',...]  → `many` fan-out. Terminal: each branch dispatches
+      //                    as its own subchain with a per-branch ingest
+      //                    clone. Main chain terminates here. Per-branch
+      //                    error isolation arrives in Task 4.1; respond
+      //                    suppression in 4.2.
+      if (next !== undefined) {
+        const nextIds = getNextSteps(
           next,
           buildCacheContext(ingest, processedEvent),
         );
-        if (!resolvedNext) {
+        if (nextIds.length === 0) {
           // No route matched → passthrough (continue chain)
           if (resultEvent) processedEvent = resultEvent;
           continue;
         }
-
-        const branchedChain = walkChain(
-          resolvedNext,
-          extractTransformerNextMap(transformers),
-        );
-
-        if (branchedChain.length > 0) {
-          return runTransformerChain(
-            collector,
-            transformers,
-            branchedChain,
-            resultEvent || processedEvent,
-            ingest,
-            currentRespond,
-            chainContext,
+        if (nextIds.length === 1) {
+          const branchedChain = walkChain(
+            nextIds[0],
+            extractTransformerNextMap(transformers),
           );
+          if (branchedChain.length > 0) {
+            return runTransformerChain(
+              collector,
+              transformers,
+              branchedChain,
+              resultEvent || processedEvent,
+              ingest,
+              currentRespond,
+              chainContext,
+            );
+          }
+          // Branch target not found — drop event (fail-safe).
+          collector.logger.warn(
+            `Branch target not found: ${JSON.stringify(next)}`,
+          );
+          return { event: null, respond: currentRespond };
         }
-
-        // Branch target not found — drop event (fail-safe).
-        collector.logger.warn(
-          `Branch target not found: ${JSON.stringify(next)}`,
+        // many: terminal fan-out. Main chain terminates here. Per-branch
+        // error isolation (Task 4.1): wrap each branch dispatch in
+        // `tryCatchAsync` so a throw in one branch does not reject the
+        // surrounding `Promise.all` and starve siblings.
+        // No-respond-across-many: respond ownership cannot be unambiguously
+        // assigned when one inbound request fans out to N terminal flows.
+        // Branches are dispatched with `respond: undefined`, branch results
+        // are awaited and discarded, and the outer return has
+        // `respond: undefined` so the parent caller (source) sees no
+        // wrapped respond.
+        // No-stopped-across-many (Task 4.2 / regression-guarded by Task 4.3):
+        // branch results — including any `stopped: true` from a nested
+        // `cache.stop` HIT inside one branch — are discarded here. The outer
+        // return omits `stopped`, so a cache.stop HIT in one branch does NOT
+        // halt sibling branches. See the regression test
+        // `transformer.test.ts > many: cache.stop in one branch does not
+        // halt sibling branches`.
+        await Promise.all(
+          nextIds.map((id) =>
+            tryCatchAsync(runTransformerChain, (err) => {
+              collector.logger
+                .scope('transformer:many')
+                .error(`many branch ${id} failed`, { error: err });
+              return { event: null, respond: undefined };
+            })(
+              collector,
+              transformers,
+              walkChain(id, extractTransformerNextMap(transformers)),
+              resultEvent || processedEvent,
+              cloneIngest(ingest, id),
+              undefined,
+              chainContext,
+            ),
+          ),
         );
-        return { event: null, respond: currentRespond };
+        return { event: null, respond: undefined };
       }
 
       // Update event if provided
@@ -792,29 +957,37 @@ export async function runTransformerChain(
       storeCache(tCacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
     }
 
-    // If transformer didn't return { next } but has a conditional config.next,
-    // resolve it per-request. Static (string / string[]) chains are already
-    // wired statically via the next-map; case / gate / sequence variants need
-    // this path (sequence may carry inner case/gate segments).
-    const compiledConfigNext = transformer.config.next
-      ? compileNext(transformer.config.next)
-      : undefined;
+    // If transformer didn't return { next } but has a conditional
+    // config.next (one / gate / sequence / many), resolve it per-request
+    // via `getNextSteps`. Static (string / string[]) chains are wired
+    // statically via the next-map and pre-baked into `chain` by the
+    // caller (or by `walkChain` when an explicit chain array is passed);
+    // re-dispatching them here would override an explicit caller chain.
+    //
+    // Dispatch (conditional variants only):
+    // - []             → no match; chain ends here (passthrough).
+    // - ['x']          → continue main chain via static walk from x.
+    // - ['a','b',...]  → `many` fan-out. Terminal: each branch dispatches
+    //                    as its own subchain with a per-branch ingest
+    //                    clone. Main chain terminates here.
+    const configNext = transformer.config.next;
+    const isStaticConfigNext =
+      typeof configNext === 'string' ||
+      (Array.isArray(configNext) &&
+        configNext.every((entry) => typeof entry === 'string'));
     const isConditionalConfigNext =
-      compiledConfigNext?.type === 'case' ||
-      compiledConfigNext?.type === 'gate' ||
-      compiledConfigNext?.type === 'sequence';
+      configNext !== undefined && !isStaticConfigNext;
     if (
       (!result || (typeof result === 'object' && !result.next)) &&
-      compiledConfigNext &&
       isConditionalConfigNext
     ) {
-      const resolvedConfigNext = resolveNext(
-        compiledConfigNext,
+      const configNextIds = getNextSteps(
+        transformer.config.next,
         buildCacheContext(ingest, processedEvent),
       );
-      if (resolvedConfigNext) {
+      if (configNextIds.length === 1) {
         const continuationChain = walkChain(
-          resolvedConfigNext,
+          configNextIds[0],
           extractTransformerNextMap(transformers),
         );
         if (continuationChain.length > 0) {
@@ -828,8 +1001,41 @@ export async function runTransformerChain(
             chainContext,
           );
         }
+        // Target not found → chain ends here (passthrough)
+        return { event: processedEvent, respond: currentRespond };
       }
-      // No match → chain ends here (passthrough to collector/destination)
+      if (configNextIds.length > 1) {
+        // many: terminal fan-out. Main chain terminates here. Per-branch
+        // error isolation (Task 4.1): wrap each branch dispatch in
+        // `tryCatchAsync` so a throw in one branch does not reject the
+        // surrounding `Promise.all` and starve siblings.
+        // No-respond-across-many: respond ownership cannot be unambiguously
+        // assigned when one inbound request fans out to N terminal flows.
+        // Branches are dispatched with `respond: undefined`, branch results
+        // are awaited and discarded, and the outer return has
+        // `respond: undefined` so the parent caller (source) sees no
+        // wrapped respond.
+        await Promise.all(
+          configNextIds.map((id) =>
+            tryCatchAsync(runTransformerChain, (err) => {
+              collector.logger
+                .scope('transformer:many')
+                .error(`many branch ${id} failed`, { error: err });
+              return { event: null, respond: undefined };
+            })(
+              collector,
+              transformers,
+              walkChain(id, extractTransformerNextMap(transformers)),
+              processedEvent,
+              cloneIngest(ingest, id),
+              undefined,
+              chainContext,
+            ),
+          ),
+        );
+        return { event: null, respond: undefined };
+      }
+      // configNextIds.length === 0: no match → chain ends here
       return { event: processedEvent, respond: currentRespond };
     }
   }

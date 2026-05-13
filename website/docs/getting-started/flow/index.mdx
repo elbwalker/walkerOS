@@ -498,9 +498,17 @@ Every chain field (`source.before`, `source.next`, `transformer.before`, `transf
 type Route = string | Route[] | RouteConfig;
 ```
 
-A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next` (continue to a single `Route`), `case` (first-match dispatch into a list of `Route`s), or neither (pure gate that only filters by `match`). `match` is optional everywhere; omit it to always match.
+A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, or none of them (pure gate that only filters by `match`). `match` is optional everywhere; omit it to always match.
 
-First-match dispatch is the `case` operator:
+##### Route operators
+
+A `RouteConfig` is a disjoint union. Pick the operator that matches the routing shape you need:
+
+- `next`: single continuation. Optionally gated by `match`.
+- `one`: first-match dispatch. Walk entries in order; the first whose `match` passes wins, and the main chain continues with that entry's `Route`.
+- `many`: all-match terminal fan-out. Every matching entry spawns an independent flow that runs to its own exit. The main chain terminates at the `many` step. Restricted to pre-collector positions (`source.next`, `transformer.next`, `transformer.before`). Post-collector fan-out uses the destinations map.
+
+First-match dispatch is the `one` operator:
 
 <CodeSnippet
   code={`{
@@ -508,7 +516,7 @@ First-match dispatch is the `case` operator:
     "http": {
       "package": "@walkeros/server-source-express",
       "next": {
-        "case": [
+        "one": [
           {
             "match": { "key": "ingest.path", "operator": "prefix", "value": "/purchase" },
             "next": "purchase_parser"
@@ -522,7 +530,34 @@ First-match dispatch is the `case` operator:
   language="json"
 />
 
-`case` entries are evaluated in order and the first matching `Route` wins. The trailing entry omits `match`, so it always matches and acts as the default branch. If no entry matches, the event passes through unchanged to the collector.
+`one` entries are evaluated in order and the first matching `Route` wins. The trailing entry omits `match`, so it always matches and acts as the default branch. If no entry matches, the event passes through unchanged to the collector.
+
+Terminal fan-out is the `many` operator. Use it when one inbound event needs to feed several independent processing branches (for example, splitting a webhook payload into per-vendor enrichment paths before the collector):
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": {
+        "many": [
+          {
+            "match": { "key": "ingest.path", "operator": "prefix", "value": "/purchase" },
+            "next": "purchase_parser"
+          },
+          {
+            "match": { "key": "ingest.path", "operator": "prefix", "value": "/signup" },
+            "next": "signup_parser"
+          }
+        ]
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Every entry in `many` whose `match` passes runs as its own branch. The main chain stops at the `many` step, so each branch is responsible for its own continuation. If no entry matches, the event is dropped from the pre-collector pipeline.
 
 To name and reuse a chain without writing code, declare a **path** transformer: a transformer entry with no `code` / `package`, just `before` / `next` / `cache`. The collector synthesizes a code-less passthrough so the named entry can be referenced from any `Route`:
 

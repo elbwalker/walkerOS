@@ -29,6 +29,7 @@ Learn the concepts before coding:
 | [understanding-stores](skills/understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle                                 |
 | [using-logger](skills/using-logger/SKILL.md)                             | Logger access, DRY principles, when to log                                 |
 | [using-step-examples](skills/using-step-examples/SKILL.md)               | Step examples lifecycle, Three Type Zones, testing                         |
+| [using-store-cache](skills/walkeros-using-store-cache/SKILL.md)          | Recipes for store-level cache, multi-tier composition                      |
 | [using-transformer-ga4](skills/walkeros-using-transformer-ga4/SKILL.md)  | Wire `@walkeros/transformer-ga4`, override mappings, troubleshoot decoding |
 
 ## Creating Things

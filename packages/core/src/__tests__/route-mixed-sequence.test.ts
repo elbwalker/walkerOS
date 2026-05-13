@@ -5,7 +5,7 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
     const compiled = compileNext([
       'a',
       {
-        case: [
+        one: [
           {
             match: {
               key: 'event.name',
@@ -24,15 +24,15 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
       expect(Array.isArray(compiled.value)).toBe(true);
       expect(compiled.value).toHaveLength(2);
       expect(compiled.value[0].type).toBe('static');
-      expect(compiled.value[1].type).toBe('case');
+      expect(compiled.value[1].type).toBe('one');
     }
   });
 
-  it('resolves a sequence concatenating segment results when inner case matches', () => {
+  it('resolves a sequence concatenating segment results when inner one matches', () => {
     const compiled = compileNext([
       'a',
       {
-        case: [
+        one: [
           {
             match: {
               key: 'event.name',
@@ -50,11 +50,11 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
     expect(resolved).toEqual(['a', 'x']);
   });
 
-  it('resolves a sequence skipping undefined segments when inner case fails', () => {
+  it('resolves a sequence skipping undefined segments when inner one fails', () => {
     const compiled = compileNext([
       'a',
       {
-        case: [
+        one: [
           {
             match: {
               key: 'event.name',
@@ -69,7 +69,7 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
     const resolved = resolveNext(compiled!, {
       event: { name: 'page view' },
     });
-    // Only "a" survives; inner case has no fallback so segment 2 → undefined
+    // Only "a" survives; inner one has no fallback so segment 2 → undefined
     expect(resolved).toEqual(['a']);
   });
 
@@ -77,7 +77,7 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
     const compiled = compileNext([
       'dedup',
       {
-        case: [
+        one: [
           {
             match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
             next: ['validate', 'enrich'],
@@ -110,7 +110,7 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
     expect(resolveNext(compiled!)).toEqual(['a', 'b']);
   });
 
-  it('still compiles a pure RouteConfig array as case (unchanged)', () => {
+  it('still compiles a pure RouteConfig array as one (unchanged)', () => {
     const compiled = compileNext([
       {
         match: { key: 'event.name', operator: 'eq', value: 'page view' },
@@ -119,7 +119,7 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
       { next: 'default' },
     ]);
     expect(compiled).toBeDefined();
-    expect(compiled!.type).toBe('case');
+    expect(compiled!.type).toBe('one');
     expect(resolveNext(compiled!, { event: { name: 'page view' } })).toBe(
       'page-handler',
     );
