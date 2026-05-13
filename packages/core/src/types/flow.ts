@@ -527,6 +527,23 @@ export namespace Flow {
   }
 
   /**
+   * Discriminator for the four step kinds in a Flow.
+   *
+   * Single source of truth for code that branches on step kind (bundler
+   * codegen, validators, CLI helpers).
+   */
+  export type StepKind = 'Source' | 'Transformer' | 'Destination' | 'Store';
+
+  /**
+   * Union of the four step interfaces.
+   *
+   * Use this where a function accepts "any step in a flow" — e.g. a
+   * shared `validateReference` that branches on `StepKind` without
+   * narrowing to one specific shape.
+   */
+  export type Step = Source | Transformer | Destination | Store;
+
+  /**
    * Named contract map.
    * Each key is a contract name, each value is a contract rule.
    *

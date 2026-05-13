@@ -1,7 +1,11 @@
 // walkerOS/packages/cli/src/commands/validate/validators/flow.ts
 
 import type { Flow } from '@walkeros/core';
-import { getFlowSettings, isObject } from '@walkeros/core';
+import {
+  getFlowSettings,
+  isObject,
+  validateTransformerEntry,
+} from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import type {
   ValidateResult,
@@ -82,8 +86,8 @@ export function validateFlow(
     });
   }
 
-  // 5b. CLI-specific: reject empty transformer entries.
-  //     A transformer must declare at least one of: code, package, before, next, cache.
+  // 5b. CLI-specific: closed-schema check on every transformer entry.
+  //     Delegates to @walkeros/core for a single source of truth.
   if (flows) {
     for (const [flowName, flowValue] of Object.entries(flows)) {
       if (!isObject(flowValue)) continue;
@@ -93,18 +97,12 @@ export function validateFlow(
         transformersValue,
       )) {
         if (!isObject(transformerValue)) continue;
-        if (
-          !transformerValue.code &&
-          !transformerValue.package &&
-          !transformerValue.before &&
-          !transformerValue.next &&
-          !transformerValue.cache
-        ) {
+        const result = validateTransformerEntry(transformerValue);
+        if (!result.ok) {
           errors.push({
             path: `flows.${flowName}.transformers.${name}`,
-            message:
-              'Empty transformer entry. A transformer must declare at least one of: code, package, before, next, cache.',
-            code: 'EMPTY_TRANSFORMER',
+            message: result.reason || 'Invalid transformer entry.',
+            code: result.code,
           });
         }
       }

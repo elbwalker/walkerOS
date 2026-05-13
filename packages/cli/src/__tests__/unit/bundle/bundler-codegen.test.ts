@@ -207,7 +207,6 @@ describe('createEntryPoint integration', () => {
       transformers: {
         fp: {
           package: '@walkeros/server-transformer-fingerprint',
-          code: 'transformerFingerprint',
           config: {},
           env: { store: '$store.cache' },
         },
@@ -469,7 +468,6 @@ describe('$store. prefix', () => {
       transformers: {
         fp: {
           package: '@walkeros/server-transformer-fingerprint',
-          code: 'transformerFingerprint',
           config: {},
           env: { store: '$store.cache' },
         },

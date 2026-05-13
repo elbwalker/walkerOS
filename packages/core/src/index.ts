@@ -39,6 +39,7 @@ export * from './respond';
 export * from './matcher';
 export * from './route';
 export * from './cache';
+export * from './transformer-entry';
 export * from './examples/formatOut';
 export {
   REF_VAR_FULL,

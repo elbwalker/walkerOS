@@ -281,19 +281,40 @@ For mapping syntax, see
 
 ### Transformer Properties
 
-| Property  | Type                               | Description                                            |
-| --------- | ---------------------------------- | ------------------------------------------------------ |
-| `package` | `string`                           | Transformer package name                               |
-| `config`  | `object`                           | Transformer-specific configuration                     |
-| `code`    | `object`                           | Inline code (`push`, `init`) with `$code:`             |
-| `next`    | `string \| Route[] \| RouteConfig` | Next transformer in the chain (conditional via `case`) |
+| Property  | Type                               | Description                                                                                   |
+| --------- | ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| `package` | `string`                           | Transformer package name                                                                      |
+| `config`  | `object`                           | Transformer-specific configuration                                                            |
+| `code`    | `object`                           | Inline code (`push`, `init`) with `$code:`                                                    |
+| `before`  | `string \| Route[] \| RouteConfig` | First transformer to run before this step's push (conditional via `case`)                     |
+| `next`    | `string \| Route[] \| RouteConfig` | Next transformer in the chain (conditional via `case`)                                        |
+| `cache`   | `object`                           | Cache config (dedup, halt). `cache.stop: true` halts the pipeline at pre-collector positions. |
+| `mapping` | `Mapping.Config`                   | Event-to-event mapping (same shape as `Destination.mapping`, different position semantic)     |
 
 `Route` shape: see [Destination Properties](#destination-properties) above.
 
-A transformer entry with no `code` and no `package` is a **path** — a named
-chain that just forwards events through its own `before` and `next` links.
-Useful for sharing a `before` chain across multiple destinations without
-duplicating arrays.
+A transformer entry with no `code` and no `package` is a **pass-through step**
+(short: **pass**): a single step within a path that the runtime synthesizes from
+its operative fields. Three variants ship:
+
+- **Chain-only:** only `before` / `next` set. A named hop that shares a chain
+  across multiple call sites.
+- **Cache-only:** only `cache` set. Dedup or pipeline halt.
+- **Mapping-only:** only `mapping` set. Declarative event-to-event mutation.
+
+`mapping` here uses the same `Mapping.Config` shape as on a destination, but the
+position semantic differs: on a destination it produces a vendor payload; on a
+transformer step it mutates the event itself. Only event-mutating fields apply
+(`policy`, `mapping[].policy`, `mapping[].name`, `mapping[].ignore`,
+`mapping[].consent`, `include`); vendor-payload fields (`data`,
+`mapping[].data`, `silent`) are ignored at this position with a one-time init
+warning. See
+[walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md) for
+full mapping syntax.
+
+Transformer step entries follow a **closed schema**: unknown top-level keys are
+validation errors, and a step must declare at least one of `code`, `package`,
+`before`, `next`, `cache`, or `mapping`.
 
 ### Transformer Chaining
 

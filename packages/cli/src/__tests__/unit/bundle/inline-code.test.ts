@@ -20,7 +20,7 @@ describe('Validation', () => {
     const explicitCodeImports = new Map<string, Set<string>>();
     expect(() =>
       buildSplitConfigObject(flowSettings, explicitCodeImports),
-    ).toThrow(/both package and code/i);
+    ).toThrow(/both .*code.* and .*package/i);
   });
 
   it('should error when neither package nor code are specified', () => {
@@ -36,7 +36,7 @@ describe('Validation', () => {
     const explicitCodeImports = new Map<string, Set<string>>();
     expect(() =>
       buildSplitConfigObject(flowSettings, explicitCodeImports),
-    ).toThrow(/package or code/i);
+    ).toThrow(/empty transformer entry/i);
   });
 });
 

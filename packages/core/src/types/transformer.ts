@@ -2,6 +2,7 @@
 import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn } from './lifecycle';
 import type { Ingest } from './ingest';
+import type { Config as MappingConfig } from './mapping';
 import type { MatchExpression } from './matcher';
 
 /**
@@ -107,6 +108,22 @@ export interface Config<T extends TypesGeneric = Types> {
   mock?: unknown;
   /** Path-specific mock values keyed by chain path (e.g., "destination.ga4.before"). Takes precedence over global mock. */
   chainMocks?: Record<string, unknown>;
+  /**
+   * Declarative event-to-event mapping applied when this transformer step
+   * has no `code`. Same field name as on `Destination.Config`, but the
+   * semantic differs by position: on a destination, `mapping` produces a
+   * vendor-shaped payload; on a transformer step, it mutates the event
+   * itself. The collector synthesizes a push that runs
+   * `processEventMapping` and returns the transformed event (or drops it
+   * when a rule has `ignore: true`).
+   *
+   * At the transformer position, only event-mutating fields apply:
+   * `policy`, `mapping[].policy`, `mapping[].name`, `mapping[].ignore`,
+   * `mapping[].consent`, `include`. Vendor-payload fields (`data`,
+   * `mapping[].data`, `silent`) are ignored at this position with a
+   * one-time warning.
+   */
+  mapping?: MappingConfig;
 }
 
 /**
@@ -138,10 +155,16 @@ export interface Result<E = WalkerOS.DeepPartialEvent> {
  * Result of running a transformer chain.
  * Returns the processed event (singular, fan-out array, or null if dropped)
  * alongside the potentially wrapped respond function.
+ *
+ * `stopped` signals pipeline-halt — when set, the caller MUST NOT propagate
+ * the event further downstream (no destinations, no subsequent chains).
+ * Used by `cache.stop: true` on pre-collector transformers so the documented
+ * "downstream transformers and destinations are skipped" semantic holds.
  */
 export interface ChainResult {
   event: WalkerOS.DeepPartialEvent | WalkerOS.DeepPartialEvent[] | null;
   respond?: import('../respond').RespondFn;
+  stopped?: true;
 }
 
 /**
@@ -203,14 +226,15 @@ export type Init<T extends TypesGeneric = Types> = (
  */
 export type InitTransformer<T extends TypesGeneric = Types> = {
   /**
-   * Initialization function. When omitted, the entry is a `path` —
-   * a code-less passthrough that the collector synthesizes as
-   * `(e) => ({ event: e })`. Paths exist so a `before` / `next` chain
-   * can be named and reused without inline code.
+   * Initialization function. When omitted, the entry is a pass-through step:
+   * - If `mapping` is present, the collector synthesizes a mapping-only
+   *   push using `processEventMapping`.
+   * - Otherwise it's a named hop that only hosts a `before` / `next` /
+   *   `cache` chain.
    *
-   * Validation: a path entry must declare at least one of
-   * `package`, `before`, `next`, or `cache`. An entry with none
-   * of those is rejected by `flow_validate`.
+   * Validation: an entry without `code` must declare at least one of
+   * `package`, `before`, `next`, `cache`, `mapping`. Enforced by
+   * `validateTransformerEntry` in `@walkeros/core`.
    */
   code?: Init<T>;
   config?: Partial<Config<T>>;
@@ -218,6 +242,7 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   before?: RouteSpec;
   next?: RouteSpec;
   cache?: import('./cache').Cache;
+  mapping?: MappingConfig;
   validate?: import('./validate').Validate;
 };
 

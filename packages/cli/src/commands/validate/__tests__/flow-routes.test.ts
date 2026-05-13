@@ -8,9 +8,9 @@
  * concrete downstream target IDs and only records a connection when both
  * endpoints expose `examples`.
  *
- * Also asserts the CLI-specific `EMPTY_TRANSFORMER` rule: a transformer entry
- * that declares none of code, package, before, next, or cache is rejected.
- * A "path" entry (only `before`) must pass that rule.
+ * Also asserts the CLI-specific closed-schema rules (`UNKNOWN_KEY`,
+ * `CONFLICT`) on transformer entries. Empty entries are accepted —
+ * pass-through is the default and a no-op step causes no harm.
  */
 
 import { validateFlow } from '../validators/flow.js';
@@ -65,10 +65,9 @@ describe('validateFlow — route flattening (flattenRouteTargets)', () => {
 
     const result = validateFlow(flow);
 
-    // No EMPTY_TRANSFORMER errors — both transformers declare `package`.
-    expect(result.errors.some((e) => e.code === 'EMPTY_TRANSFORMER')).toBe(
-      false,
-    );
+    // No closed-schema errors — both transformers declare `package`.
+    expect(result.errors.some((e) => e.code === 'UNKNOWN_KEY')).toBe(false);
+    expect(result.errors.some((e) => e.code === 'CONFLICT')).toBe(false);
 
     // Two connections enumerated, one per branch of the case.
     expect(result.details.connectionsChecked).toBe(2);
@@ -126,10 +125,10 @@ describe('validateFlow — route flattening (flattenRouteTargets)', () => {
   });
 });
 
-describe('validateFlow — EMPTY_TRANSFORMER rule', () => {
-  it('errors on a transformer entry that declares no operative field', () => {
-    // The `empty` transformer has none of code/package/before/next/cache.
-    // The CLI-specific rule must produce an EMPTY_TRANSFORMER error.
+describe('validateFlow — closed-schema rules', () => {
+  it('accepts an empty transformer entry (pass-through is the default)', () => {
+    // An entry with no fields is a no-op step. Causes no harm; not an error.
+    // The closed-schema check (UNKNOWN_KEY) is what catches real typos.
     const flow = {
       version: 4,
       flows: {
@@ -144,18 +143,57 @@ describe('validateFlow — EMPTY_TRANSFORMER rule', () => {
 
     const result = validateFlow(flow);
 
-    const emptyErrors = result.errors.filter(
-      (e) => e.code === 'EMPTY_TRANSFORMER',
-    );
-    expect(emptyErrors).toHaveLength(1);
-    expect(emptyErrors[0].path).toBe('flows.default.transformers.empty');
-    expect(result.valid).toBe(false);
+    expect(
+      result.errors.some((e) => e.path === 'flows.default.transformers.empty'),
+    ).toBe(false);
   });
 
-  it('accepts a path entry (only `before`) without EMPTY_TRANSFORMER', () => {
-    // A "path" entry is a routing-only transformer that declares only `before`
-    // (a downstream chain). It has no `code`/`package` of its own. The rule
-    // must NOT flag it as empty.
+  it('rejects misrouted cache keys at the top of a transformer step', () => {
+    // The author forgot the `cache:` wrapper and placed `rules`/`stop` at the
+    // top of the transformer entry. Closed schema must reject the unknown keys.
+    const flow = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' as const },
+          transformers: {
+            dedupe: { rules: [], stop: true },
+          },
+        },
+      },
+    };
+
+    const result = validateFlow(flow);
+
+    expect(result.errors.some((e) => e.code === 'UNKNOWN_KEY')).toBe(true);
+  });
+
+  it('rejects a transformer with both code and package', () => {
+    // `code` and `package` are mutually exclusive ways to provide a transformer
+    // implementation. The closed-schema check must surface a CONFLICT error.
+    const flow = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' as const },
+          transformers: {
+            confused: {
+              code: '$code:(e) => ({ event: e })',
+              package: '@walkeros/x',
+            },
+          },
+        },
+      },
+    };
+
+    const result = validateFlow(flow);
+
+    expect(result.errors.some((e) => e.code === 'CONFLICT')).toBe(true);
+  });
+
+  it('accepts a pass-through step with only `before`', () => {
+    // A pass-through step (no code/package) declares only `before` to name a
+    // shared chain. Closed-schema rule must not flag it.
     const flow = {
       version: 4,
       flows: {
@@ -175,8 +213,10 @@ describe('validateFlow — EMPTY_TRANSFORMER rule', () => {
 
     const result = validateFlow(flow);
 
-    expect(result.errors.some((e) => e.code === 'EMPTY_TRANSFORMER')).toBe(
-      false,
-    );
+    expect(
+      result.errors.some(
+        (e) => e.path === 'flows.default.transformers.chainHead',
+      ),
+    ).toBe(false);
   });
 });

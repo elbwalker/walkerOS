@@ -43,6 +43,8 @@ import {
   checkCache,
   storeCache,
   buildCacheContext,
+  validateTransformerEntry,
+  processEventMapping,
 } from '@walkeros/core';
 import { getCacheStore } from './cache';
 
@@ -183,18 +185,15 @@ export async function initTransformers(
   )) {
     const { code, env = {} } = transformerDef;
 
-    // Validate: a code-less entry must declare at least one of
-    // before / next / cache. An entry with none of those is empty
-    // and silently skipped (with a warning) at runtime. `package`
-    // belongs at the JSON-config layer, not the runtime layer.
-    if (
-      !code &&
-      !transformerDef.before &&
-      !transformerDef.next &&
-      !transformerDef.cache
-    ) {
+    // Validate the entry via the shared predicate. A code-less entry must
+    // declare at least one operative field (package, before, next, cache,
+    // mapping). Unknown keys and code+package conflicts are also rejected.
+    const validation = validateTransformerEntry(
+      transformerDef as unknown as Record<string, unknown>,
+    );
+    if (!validation.ok) {
       collector.logger.warn(
-        `Transformer ${transformerId} is empty — skipping.`,
+        `Transformer ${transformerId} invalid (${validation.code}): ${validation.reason}. Skipping.`,
       );
       continue;
     }
@@ -234,19 +233,98 @@ export async function initTransformers(
       env: env as Transformer.Env,
     };
 
-    // Synthesize a no-op passthrough instance when `code` is absent.
-    // This makes the entry a "path" — a named, code-less hop whose only
-    // purpose is to host a before / next / cache chain.
+    // Synthesize a passthrough instance when `code` is absent.
+    // This makes the entry a "pass" — a named, code-less hop. Two flavors:
+    //   1. mapping-aware: when `mapping` is declared, the synthesized push
+    //      runs `processEventMapping` and forwards the transformed event
+    //      (or drops it when a rule has `ignore: true`).
+    //   2. plain passthrough: when only `before` / `next` / `cache` are
+    //      declared, the push returns the event unchanged.
     const codeFn =
       code ??
-      ((ctx: Transformer.Context) => ({
-        type: 'path',
-        config: ctx.config,
-        push: (event: WalkerOS.DeepPartialEvent) => ({ event }),
-      }));
+      ((ctx: Transformer.Context) => {
+        const stepMapping = transformerDef.mapping;
+        if (stepMapping) {
+          // Warn once per init if vendor-payload fields are present at the
+          // transformer position. Only event-mutating fields apply here.
+          // Note: `MappingConfig` has no top-level `silent` field — that
+          // lives on `Rule` only, so the config-level check is `data` only.
+          const meaninglessFields: string[] = [];
+          if (stepMapping.data !== undefined) meaninglessFields.push('data');
+          // Walk rules for per-rule data/silent
+          if (stepMapping.mapping) {
+            for (const [entity, actions] of Object.entries(
+              stepMapping.mapping,
+            )) {
+              if (typeof actions !== 'object' || actions === null) continue;
+              for (const [action, rule] of Object.entries(
+                actions as Record<string, unknown>,
+              )) {
+                if (typeof rule !== 'object' || rule === null) continue;
+                const r = rule as Record<string, unknown>;
+                if (r.data !== undefined)
+                  meaninglessFields.push(`mapping[${entity}][${action}].data`);
+                if (r.silent !== undefined)
+                  meaninglessFields.push(
+                    `mapping[${entity}][${action}].silent`,
+                  );
+              }
+            }
+          }
+          if (meaninglessFields.length > 0) {
+            ctx.collector.logger.warn(
+              `Transformer ${transformerId}: \`${meaninglessFields.join(', ')}\` ignored at transformer position (only event-mutating fields apply).`,
+            );
+          }
+
+          return {
+            type: 'pass',
+            config: ctx.config,
+            push: async (event: WalkerOS.DeepPartialEvent) => {
+              const r = await processEventMapping(
+                event,
+                stepMapping,
+                ctx.collector,
+              );
+              if (r.ignore) return false;
+              return { event: r.event };
+            },
+          };
+        }
+        return {
+          type: 'pass',
+          config: ctx.config,
+          push: (event: WalkerOS.DeepPartialEvent) => ({ event }),
+        };
+      });
 
     // Initialize the transformer instance with context
     const instance = await codeFn(context);
+
+    // Bug 2 fix: propagate def-level before/next to instance.config when
+    // not already set by the code function. The recursive chain walker
+    // reads instance.config.before; for synthesized pass-throughs and
+    // well-behaved user code that returns a fresh config object, the
+    // def-level value needs to land on instance.config explicitly.
+    // User-supplied code that sets its own config.before is preserved.
+    if (
+      transformerDef.before !== undefined &&
+      instance.config?.before === undefined
+    ) {
+      instance.config = {
+        ...(instance.config ?? {}),
+        before: transformerDef.before,
+      };
+    }
+    if (
+      transformerDef.next !== undefined &&
+      instance.config?.next === undefined
+    ) {
+      instance.config = {
+        ...(instance.config ?? {}),
+        next: transformerDef.next,
+      };
+    }
 
     result[transformerId] = instance;
   }
@@ -483,7 +561,14 @@ export async function runTransformerChain(
       if (cacheResult?.status === 'HIT' && cacheResult.value) {
         processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
         if (compiledTCache.stop)
-          return { event: processedEvent, respond: currentRespond }; // stop=true → stop chain
+          // stop=true → stop chain AND halt pipeline at this position.
+          // Caller branches on `stopped` to skip downstream stages
+          // (collector.push, destinations); see push.ts and source.ts.
+          return {
+            event: processedEvent,
+            respond: currentRespond,
+            stopped: true,
+          };
         continue; // stop=false → next transformer
       }
 
@@ -520,6 +605,18 @@ export async function runTransformerChain(
             event: null,
             respond: beforeResult.respond ?? currentRespond,
           }; // Before chain stopped
+        // Propagate pipeline-halt from a nested `cache.stop: true` HIT in
+        // the before chain. The outer caller (push.ts / source.ts) drops
+        // the event before destinations see it.
+        if (beforeResult.stopped) {
+          return {
+            event: Array.isArray(beforeResult.event)
+              ? beforeResult.event[0]
+              : beforeResult.event,
+            respond: beforeResult.respond ?? currentRespond,
+            stopped: true,
+          };
+        }
         if (beforeResult.respond) currentRespond = beforeResult.respond;
         // Before chains use first result if fan-out occurred
         processedEvent = Array.isArray(beforeResult.event)
@@ -687,13 +784,15 @@ export async function runTransformerChain(
 
     // If transformer didn't return { next } but has a conditional config.next,
     // resolve it per-request. Static (string / string[]) chains are already
-    // wired statically via the next-map; only case / gate variants need this path.
+    // wired statically via the next-map; case / gate / sequence variants need
+    // this path (sequence may carry inner case/gate segments).
     const compiledConfigNext = transformer.config.next
       ? compileNext(transformer.config.next)
       : undefined;
     const isConditionalConfigNext =
       compiledConfigNext?.type === 'case' ||
-      compiledConfigNext?.type === 'gate';
+      compiledConfigNext?.type === 'gate' ||
+      compiledConfigNext?.type === 'sequence';
     if (
       (!result || (typeof result === 'object' && !result.next)) &&
       compiledConfigNext &&

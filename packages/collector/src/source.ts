@@ -142,6 +142,13 @@ export async function initSource(
       if (beforeResult.event === null) {
         return { ok: true } as Elb.PushResult;
       }
+      // Pipeline-halt signal from a `cache.stop: true` HIT inside the
+      // source.before chain. Do NOT invoke collector.push — drop the event
+      // before it enters the collector pipeline.
+      if (beforeResult.stopped) {
+        if (beforeResult.respond) currentRespond = beforeResult.respond;
+        return { ok: true } as Elb.PushResult;
+      }
       if (beforeResult.respond) currentRespond = beforeResult.respond;
       events = Array.isArray(beforeResult.event)
         ? beforeResult.event

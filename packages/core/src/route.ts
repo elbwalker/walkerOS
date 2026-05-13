@@ -11,15 +11,27 @@ export type CompiledNext =
   | { type: 'static'; value: string }
   | { type: 'chain'; value: string[] }
   | { type: 'case'; routes: CompiledRoute[] }
-  | { type: 'gate'; match: CompiledMatcher; next?: CompiledNext };
+  | { type: 'gate'; match: CompiledMatcher; next?: CompiledNext }
+  | { type: 'sequence'; value: CompiledNext[] };
 
+function isRouteConfigEntry(entry: unknown): boolean {
+  return (
+    typeof entry === 'object' &&
+    entry !== null &&
+    !Array.isArray(entry) &&
+    ('match' in entry || 'next' in entry || 'case' in entry)
+  );
+}
+
+/**
+ * Pure RouteConfig array — every element is a RouteConfig object.
+ * Used to detect the legacy first-match `case` shape.
+ */
 export function isRouteArray(next: Route): next is RouteConfig[] {
   return (
     Array.isArray(next) &&
     next.length > 0 &&
-    typeof next[0] === 'object' &&
-    next[0] !== null &&
-    ('match' in next[0] || 'next' in next[0] || 'case' in next[0])
+    next.every((entry) => isRouteConfigEntry(entry))
   );
 }
 
@@ -30,11 +42,22 @@ export function compileNext(next: Route | undefined): CompiledNext | undefined {
   if (Array.isArray(next)) {
     if (next.length === 0) return undefined;
     if (isRouteArray(next)) {
-      // Legacy first-match shape — treat as implicit { case: [...] }
+      // Pure RouteConfig[] — legacy first-match shape, treat as implicit { case: [...] }
       return compileNext({ case: next as RouteConfig[] });
     }
-    // string[] | nested Route[] — sequence form
-    return { type: 'chain', value: next as string[] };
+    if (next.every((entry) => typeof entry === 'string')) {
+      // Pure string[] — static chain
+      return { type: 'chain', value: next as string[] };
+    }
+    // Mixed array (strings + RouteConfig objects, possibly nested arrays) —
+    // sequence form: each segment resolves independently, results concatenated.
+    const segments: CompiledNext[] = [];
+    for (const entry of next) {
+      const compiled = compileNext(entry);
+      if (compiled !== undefined) segments.push(compiled);
+    }
+    if (segments.length === 0) return undefined;
+    return { type: 'sequence', value: segments };
   }
 
   // RouteConfig
@@ -92,6 +115,16 @@ export function resolveNext(
   if (compiled.type === 'gate') {
     if (!compiled.match(context)) return undefined; // gate failed → fall through
     return resolveNext(compiled.next, context);
+  }
+  if (compiled.type === 'sequence') {
+    const ids: string[] = [];
+    for (const segment of compiled.value) {
+      const resolved = resolveNext(segment, context);
+      if (resolved === undefined) continue;
+      if (Array.isArray(resolved)) ids.push(...resolved);
+      else ids.push(resolved);
+    }
+    return ids.length > 0 ? ids : undefined;
   }
   // case: first-match
   for (const route of compiled.routes) {

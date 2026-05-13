@@ -257,12 +257,23 @@ disjoint union: each config sets at most one of `next` or `case`, never both. An
 entry with no `match` always matches (use it as a fallback). If no entry
 matches, the event passes through unchanged.
 
-### Path passthroughs
+### Paths and pass-through steps
 
-A transformer entry with no `code` (and no `package`) is a **path** — a named
-chain that simply forwards events through its own `before` and `next` links. Use
-paths to share a `before` chain across multiple destinations without duplicating
-arrays:
+walkerOS uses two vocabulary terms for chain composition:
+
+- **Path:** the multi-step chain that an event walks through a flow's
+  `transformers` section.
+- **Pass-through step** (short: **pass**): a single step inside a path that
+  declares no `code` and no `package`. The runtime synthesizes the push, so the
+  step contributes structure without shipping executable code.
+
+A pass-through step ships in three variants. Each variant uses a different
+operative field; combine them on the same step when it helps.
+
+#### Variant 1: chain-only (before / next)
+
+A named hop that shares a chain across multiple call sites. Use it to avoid
+duplicating arrays in `before` / `next` references:
 
 ```json
 {
@@ -284,11 +295,95 @@ arrays:
 }
 ```
 
+#### Variant 2: cache-only
+
+A step that declares only a `cache` block. Useful for deduplication or
+short-circuit halts. `cache.stop: true` at a pre-collector position halts the
+pipeline (not just the local chain):
+
+```json
+{
+  "transformers": {
+    "dedup": {
+      "cache": {
+        "stop": true,
+        "rules": [{ "key": ["event.id"], "ttl": 60 }]
+      }
+    }
+  }
+}
+```
+
+#### Variant 3: mapping-only
+
+A step that declares only a `mapping: Mapping.Config`. The runtime synthesizes a
+push that calls `processEventMapping` and mutates the event in-flight:
+
+```json
+{
+  "transformers": {
+    "redactPII": {
+      "mapping": {
+        "policy": {
+          "user.email": { "value": "[redacted]" }
+        }
+      }
+    }
+  }
+}
+```
+
+See [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md)
+for the mapping primitives (`policy`, `data`, `mapping[].name`, etc.) and the
+"Mapping at the transformer position" section for the dual semantic.
+
+### Mapping at transformer position vs destination position
+
+`mapping` is the same field shape (`Mapping.Config`) in both positions, but the
+semantic is disambiguated by where the step sits:
+
+| Position    | What `mapping` produces                                   |
+| ----------- | --------------------------------------------------------- |
+| Destination | A vendor-shaped payload (the destination consumes `data`) |
+| Transformer | A mutated event that continues through the chain          |
+
+At the transformer position, only event-mutating fields apply: `policy`,
+`mapping[].policy`, `mapping[].name`, `mapping[].ignore`, `mapping[].consent`,
+and `include`. Vendor-payload fields (`data`, `mapping[].data`, `silent`) are
+ignored with a one-time init warning. `mapping[].ignore: true` drops the event
+from the chain (not "skip this destination", which is the destination-position
+semantic).
+
+### Closed schema (unknown keys are errors)
+
+Transformer step entries follow a **closed schema**. Known keys only: `code`,
+`package`, `config`, `before`, `next`, `cache`, `mapping`. Unknown keys at the
+top of a step are validation errors. This catches misrouted keys (e.g.
+`{ rules: [], stop: true }` placed at the top of a step instead of nested under
+`cache:`) at validate time instead of letting them silently pass through at
+runtime.
+
+A step must declare at least one operative field. An empty `{}` is rejected with
+`EMPTY_TRANSFORMER`. Declaring both `code` and `package` on the same step is
+rejected with `CONFLICT`.
+
 ### Chain resolution safety
 
 `walkChain()` uses a visited set to detect circular references. If a cycle is
 found, the loop is silently broken and the chain ends. If `next` points to a
 non-existent transformer, the chain also ends without error.
+
+### Composition principle
+
+A transformer owns its own chain. When a chain references a transformer by name,
+that transformer's own `before` chain runs before its push, and its `next` chain
+after, both are walked recursively, with cycle detection. Cache halt signals
+(`cache.stop: true`) at pre-collector positions propagate pipeline-wide;
+destinations do not see the dropped event. The grammar's recursive `Route` shape
+(`string | Route[] | RouteConfig`) compiles element-by-element, so sequences can
+mix transformer IDs and inline `case` / `next` routes
+(`next: ["dedup", { case: [...] }]` is valid). This is the model to default to
+when adding new chain primitives.
 
 See [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) for
 the full connection rules between sources, transformers, and destinations.

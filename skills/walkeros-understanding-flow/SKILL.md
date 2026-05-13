@@ -501,12 +501,21 @@ against ingest data:
 - See [packages/core/src/route.ts](../../packages/core/src/route.ts) for
   `compileNext()` and `resolveNext()`
 
-### Path passthroughs (code-less transformer entries)
+### Paths and pass-through steps (code-less transformer entries)
 
-A transformer entry with no `code` (and no `package`) is a **path** — a named
-chain that simply forwards events through its own `before` and `next` links.
-Paths let you share a `before` chain across multiple destinations without
-duplicating arrays:
+A **path** is the multi-step chain through a flow's `transformers` section. A
+**pass-through step** (short: **pass**) is a single step inside a path that
+declares no `code` and no `package`; the runtime synthesizes its push from the
+operative fields the step does declare.
+
+Pass-through steps come in three variants:
+
+- **Chain-only:** only `before` and/or `next` set. A named hop that shares a
+  chain across multiple call sites (avoids duplicating arrays).
+- **Cache-only:** only `cache` set. A dedup or short-circuit step.
+  `cache.stop: true` at a pre-collector position halts the pipeline.
+- **Mapping-only:** only `mapping: Mapping.Config` set. A declarative
+  event-to-event transform that mutates the event in-flight.
 
 ```json
 {
@@ -527,6 +536,16 @@ duplicating arrays:
   }
 }
 ```
+
+Transformer step entries follow a **closed schema**: unknown top-level keys are
+validation errors, and at least one operative field (`code` / `package` /
+`before` / `next` / `cache` / `mapping`) must be set.
+
+See
+[walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
+for full depth on the three variants, the closed-schema rule, and the dual
+semantic of `mapping` at the transformer position versus the destination
+position.
 
 ### Transformer sharing
 

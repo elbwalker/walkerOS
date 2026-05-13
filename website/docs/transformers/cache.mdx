@@ -70,6 +70,10 @@ Source cache intercepts requests before the pipeline runs. Sources default to `s
 
 Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment. With `stop: true`, the remaining chain stops on HIT and downstream transformers and destinations are skipped.
 
+:::note Halt scopes
+Pre-collector transformer caches with `stop: true` halt the entire pipeline on HIT, destinations do not see the event. Destination caches with `stop: true` halt only the per-destination delivery, sibling destinations still receive the event.
+:::
+
 ```json
 "transformers": {
   "enricher": {

@@ -22,7 +22,6 @@ import {
   isDefined,
   isFunction,
   isObject,
-  isRouteArray,
   processEventMapping,
   resolveNext,
   tryCatchAsync,
@@ -259,10 +258,12 @@ export async function pushToDestinations(
       let response: unknown;
       if (!destination.dlq) destination.dlq = [];
 
-      // Compile before chain once per destination batch (not per-event)
+      // Compile before chain once per destination batch (not per-event).
+      // Eagerly compile any array shape (pure case, pure chain, mixed sequence)
+      // so the per-event path only resolves, not recompiles.
       const before = destination.config.before;
       const compiledBefore =
-        before && isRouteArray(before) ? compileNext(before) : undefined;
+        before && Array.isArray(before) ? compileNext(before) : undefined;
       const postChain = resolveDestinationChain(
         before,
         compiledBefore,
@@ -270,10 +271,10 @@ export async function pushToDestinations(
         destIngest,
       );
 
-      // Compile next chain once per destination batch (not per-event)
+      // Compile next chain once per destination batch (not per-event).
       const nextConfig = destination.config.next;
       const compiledNext =
-        nextConfig && isRouteArray(nextConfig)
+        nextConfig && Array.isArray(nextConfig)
           ? compileNext(nextConfig)
           : undefined;
 

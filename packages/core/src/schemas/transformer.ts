@@ -3,6 +3,7 @@ import { Identifier } from './primitives';
 import { RouteSpecSchema } from './matcher';
 import { CacheSchema } from './cache';
 import { LoggerConfigSchema } from './logger';
+import { ConfigSchema as MappingConfigSchema } from './mapping';
 
 /**
  * Transformer Schemas
@@ -92,7 +93,11 @@ export const ConfigSchema = z
       .describe(
         'Path-specific mock values keyed by chain path. Takes precedence over global mock. Dev/testing only.',
       ),
+    mapping: MappingConfigSchema.optional().describe(
+      'Declarative event-to-event mapping applied when this transformer step has no code. At this position, only event-mutating fields apply (policy, mapping[].policy, mapping[].name, mapping[].ignore, mapping[].consent, include); vendor-payload fields are ignored.',
+    ),
   })
+  .strict()
   .meta({
     id: 'TransformerConfig',
     title: 'Transformer.Config',

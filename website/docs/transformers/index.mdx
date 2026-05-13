@@ -17,6 +17,13 @@ export const transformerConfig = omitSchemaProperties(
 
 Transformers are middleware for **validating**, **enriching**, and **redacting** events in the walkerOS pipeline. Together with [Mapping](/docs/mapping), they give you full control over how events are shaped before reaching destinations.
 
+A transformer step can either run custom logic (via `code` or `package`) or
+act as a **pass-through step**: a step with no `code` and no `package`, where
+the runtime synthesizes the push. Pass-through steps cover three patterns:
+chain-only hops (`before` / `next`), cache-only checks (`cache`), and
+mapping-only mutations (`mapping`). See [Create your own](./create-your-own#pass-through-steps)
+for the full vocabulary.
+
 <FlowMap
   sources={{ default: { label: 'Source', next: 'pre', highlight: false } }}
   preTransformers={{ pre: { label: 'Transformer(s)', highlight: true } }}
@@ -64,6 +71,23 @@ wrap the package-specific `settings` field, which is documented on each
 transformer's page.
 
 <PropertyTable schema={transformerConfig} />
+
+Beyond `code`, `package`, `before`, `next`, and `cache`, transformer entries
+also accept a `mapping` field that takes a `Mapping.Config` value.
+
+:::note Dual semantic of `mapping`
+The `mapping` field uses the same `Mapping.Config` shape on destinations and
+transformer steps, but the semantic differs by position. On a destination,
+`mapping` shapes the vendor payload. On a transformer step, it mutates the
+event itself. Vendor-payload fields (`data`, per-rule `data`, `silent`) are
+ignored at the transformer position with a one-time warning at init.
+:::
+
+:::note Closed schema
+Transformer entries use a **closed schema**: unknown top-level keys are
+errors. This catches typos like placing `rules` or `stop` at the top of a
+step (forgot the `cache:` wrapper).
+:::
 
 ## Next steps
 
