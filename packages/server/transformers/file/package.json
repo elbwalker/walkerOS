@@ -30,8 +30,7 @@
     "@walkeros/core": "4.0.2"
   },
   "devDependencies": {
-    "@walkeros/core": "4.0.2",
-    "@walkeros/store-memory": "4.0.2"
+    "@walkeros/core": "4.0.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

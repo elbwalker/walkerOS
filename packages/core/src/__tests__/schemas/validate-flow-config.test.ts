@@ -287,7 +287,7 @@ describe('validateFlowConfig', () => {
         flows: {
           a: {
             config: { platform: 'server' },
-            stores: { cache: { package: '@walkeros/store-memory' } },
+            stores: { cache: { package: '@walkeros/server-store-fs' } },
           },
           b: {
             config: { platform: 'server' },
@@ -454,7 +454,7 @@ describe('validateFlowConfig', () => {
             default: {
               config: { platform: 'server' },
               stores: {
-                cache: { package: '@walkeros/store-memory' },
+                cache: { package: '@walkeros/server-store-fs' },
                 files: { package: '@walkeros/server-store-fs' },
               },
               transformers: {

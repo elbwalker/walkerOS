@@ -22,12 +22,12 @@ complete event tracking architecture.
 │   HTTP Source ──▶ [Filter] ──▶ [Fingerprint] ──▶ Collector                  │
 │        │              │                          │                          │
 │        │ ingest:      │ env:                     ▼                          │
-│        │ IP, UA,      │ $store.cache      Meta Destination                  │
+│        │ IP, UA,      │ filter rules      Meta Destination                  │
 │        │ lang, ref,   │                   Demo Destination                  │
 │        │ anon-IP(fn)  │                                                     │
 │        └──────────────┘                                                     │
 │                                                                             │
-│   Store: cache (memory, 10MB, 1000 entries)                                 │
+│   Source cache: built-in tier (ttl 300s, on GET ingest.method+path)         │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -110,14 +110,13 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 
 #### Variables
 
-| Feature              | Location           | Example                                        |
-| -------------------- | ------------------ | ---------------------------------------------- |
-| Root-level variables | Root               | `"currency": "EUR"`                            |
-| Flow-level variables | server.variables   | `"metaPixelId": "$env.META_PIXEL_ID:..."`      |
-| Environment variable | Variables          | `"$env.GA4_MEASUREMENT_ID:G-DEMO123456"`       |
-| Env with default     | Variables          | `"$env.API_URL:http://localhost:8080/collect"` |
-| $var reference       | GA4 settings       | `"$var.ga4MeasurementId"`                      |
-| $store reference     | filter transformer | `"env": { "store": "$store.cache" }`           |
+| Feature              | Location         | Example                                        |
+| -------------------- | ---------------- | ---------------------------------------------- |
+| Root-level variables | Root             | `"currency": "EUR"`                            |
+| Flow-level variables | server.variables | `"metaPixelId": "$env.META_PIXEL_ID:..."`      |
+| Environment variable | Variables        | `"$env.GA4_MEASUREMENT_ID:G-DEMO123456"`       |
+| Env with default     | Variables        | `"$env.API_URL:http://localhost:8080/collect"` |
+| $var reference       | GA4 settings     | `"$var.ga4MeasurementId"`                      |
 
 #### Sources
 
@@ -174,12 +173,10 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 | Policy consent-gated  | Meta            | `"user_data.em"` with consent                                           |
 | Policy nested map     | Meta            | `"custom_data.request_meta": { "map": {...} }`                          |
 | Local package path    | server packages | `"path": "../../core"` (resolve from filesystem)                        |
-| Source cache          | http source     | `"cache": { "store": "cache", "rules": [...] }`                         |
+| Source cache          | http source     | `"cache": { "rules": [...] }` (built-in tier)                           |
 | Cache match rule      | http source     | `"match": { "key": "ingest.method", "operator": "eq", "value": "GET" }` |
 | Cache TTL             | http source     | `"ttl": 300` (seconds)                                                  |
 | Cache response update | http source     | `"update": { "headers.X-Cache": { "key": "cache.status" } }`            |
-| Store definition      | server stores   | `"cache": { "package": "@walkeros/store-memory", ... }`                 |
-| Store settings        | cache store     | `"maxSize": 10485760, "maxEntries": 1000`                               |
 
 #### Browser Source
 

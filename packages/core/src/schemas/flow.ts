@@ -19,7 +19,7 @@
 
 import { z, toJsonSchema } from './validation';
 import { RouteSpecSchema } from './matcher';
-import { CacheSchema } from './cache';
+import { EventCacheSchema, StoreCacheSchema } from './cache';
 
 // ========================================
 // Shared Type Schemas
@@ -337,7 +337,7 @@ export const SourceSchema = z
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
-    cache: CacheSchema.optional().describe(
+    cache: EventCacheSchema.optional().describe(
       'Cache configuration for this source (match → key → ttl rules)',
     ),
     validate: ValidateSchema.optional(),
@@ -398,7 +398,7 @@ export const TransformerSchema = z
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
-    cache: CacheSchema.optional().describe(
+    cache: EventCacheSchema.optional().describe(
       'Cache configuration for this transformer (match → key → ttl rules)',
     ),
     validate: ValidateSchema.optional(),
@@ -466,7 +466,7 @@ export const DestinationSchema = z
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
-    cache: CacheSchema.optional().describe(
+    cache: EventCacheSchema.optional().describe(
       'Cache configuration for this destination (match → key → ttl rules)',
     ),
     validate: ValidateSchema.optional(),
@@ -522,6 +522,9 @@ export const StoreSchema = z
       })
       .optional()
       .describe('Store environment configuration'),
+    cache: StoreCacheSchema.optional().describe(
+      'Cache configuration for this store (TTL-only rules, optional recursive `cache.store`)',
+    ),
     variables: VariablesSchema.optional().describe(
       'Store-level variables (highest priority in cascade)',
     ),
@@ -533,7 +536,7 @@ export const StoreSchema = z
     id: 'FlowStore',
     title: 'Flow.Store',
     description:
-      'Store package reference with configuration, env, and examples.',
+      'Store package reference with configuration, env, cache, and examples.',
   })
   .describe('Store package reference with configuration');
 

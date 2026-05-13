@@ -600,24 +600,12 @@
         "metaPixelId": "$env.META_PIXEL_ID:123456789012345",
         "metaAccessToken": "$env.META_ACCESS_TOKEN:demo_token"
       },
-      "stores": {
-        "cache": {
-          "package": "@walkeros/store-memory",
-          "config": {
-            "settings": {
-              "maxSize": 10485760,
-              "maxEntries": 1000
-            }
-          }
-        }
-      },
       "sources": {
         "http": {
           "package": "@walkeros/server-source-express",
           "primary": true,
           "next": ["filter"],
           "cache": {
-            "store": "cache",
             "rules": [
               {
                 "match": {
@@ -689,9 +677,6 @@
             "push": "$code:(event) => event.name.startsWith('internal_') || event.name.startsWith('debug_') ? false : event"
           },
           "next": "fingerprint",
-          "env": {
-            "store": "$store.cache"
-          },
           "config": {},
           "examples": {
             "passes-normal": {
@@ -932,10 +917,7 @@
             "@walkeros/server-source-express": {},
             "@walkeros/server-destination-meta": {},
             "@walkeros/destination-demo": {},
-            "@walkeros/server-transformer-fingerprint": {},
-            "@walkeros/store-memory": {
-              "path": "../../stores/memory"
-            }
+            "@walkeros/server-transformer-fingerprint": {}
           }
         }
       }

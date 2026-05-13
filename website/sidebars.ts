@@ -156,11 +156,6 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: 'doc',
-              id: 'stores/memory',
-              className: 'sidebar-badge-web',
-            },
-            {
-              type: 'doc',
               id: 'stores/server/fs',
               className: 'sidebar-badge-server',
             },

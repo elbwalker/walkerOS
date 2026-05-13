@@ -1,14 +1,30 @@
-import type { Transformer, WalkerOS } from '@walkeros/core';
+import type { Store, Transformer, WalkerOS } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
 import {
   createIngest,
   createMockContext,
   createMockLogger,
 } from '@walkeros/core';
-import { createMockStore } from '@walkeros/store-memory';
 import { transformerFile } from '../transformer';
 import type { Types } from '../types';
 import { examples } from '../dev';
+
+function createMockStore(): Store.Instance {
+  const data = new Map<string, unknown>();
+  return {
+    type: 'mock',
+    config: {},
+    get(key) {
+      return data.get(key);
+    },
+    set(key, value) {
+      data.set(key, value);
+    },
+    delete(key) {
+      data.delete(key);
+    },
+  };
+}
 
 describe('Step Examples', () => {
   const mockLogger = createMockLogger();

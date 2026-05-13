@@ -234,7 +234,7 @@ describe('extractFlowIntelliSenseContext — stores', () => {
           server: {
             config: { platform: 'server' },
             stores: {
-              cache: { package: '@walkeros/store-memory' },
+              cache: { package: '@walkeros/server-store-fs' },
               ttl: {},
             },
           },

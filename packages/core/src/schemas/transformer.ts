@@ -1,7 +1,7 @@
 import { z, toJsonSchema } from './validation';
 import { Identifier } from './primitives';
 import { RouteSpecSchema } from './matcher';
-import { CacheSchema } from './cache';
+import { EventCacheSchema } from './cache';
 import { LoggerConfigSchema } from './logger';
 import { ConfigSchema as MappingConfigSchema } from './mapping';
 
@@ -60,7 +60,7 @@ export const ConfigSchema = z
     next: RouteSpecSchema.optional().describe(
       'Graph wiring to the next transformer in the chain',
     ),
-    cache: CacheSchema.optional().describe(
+    cache: EventCacheSchema.optional().describe(
       'Step-level cache configuration for this transformer',
     ),
     init: z.boolean().describe('Whether to initialize immediately').optional(),

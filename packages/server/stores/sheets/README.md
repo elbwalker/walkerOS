@@ -66,25 +66,14 @@ the core `Cache` config, backed by a fast in-memory store:
               "id": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
               "sheet": "Customers"
             }
-          }
-        },
-        "lookupCache": {
-          "package": "@walkeros/store-memory",
-          "config": { "settings": {} }
+          },
+          "cache": { "rules": [{ "ttl": 60 }] }
         }
       },
       "transformers": {
         "enrich": {
           "package": "@walkeros/transformer-enrich",
-          "env": {
-            "store": "$store.crm",
-            "cache": "$store.lookupCache"
-          },
-          "config": {
-            "settings": {
-              "cache": { "ttl": 60000 }
-            }
-          }
+          "env": { "store": "$store.crm" }
         }
       }
     }

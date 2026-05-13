@@ -1,4 +1,11 @@
-import type { Collector, Elb, Ingest, Source, WalkerOS } from '@walkeros/core';
+import type {
+  Cache,
+  Collector,
+  Elb,
+  Ingest,
+  Source,
+  WalkerOS,
+} from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
 import {
   createIngest,
@@ -69,9 +76,17 @@ export async function initSource(
   // Track current respond function (set per-request by setRespond)
   let currentRespond: RespondFn | undefined = undefined;
 
-  // Compile source cache config (if configured)
-  const compiledSourceCache = cache
-    ? compileCache({ ...cache, stop: cache.stop ?? true })
+  // Compile source cache config (if configured).
+  // Source caches operate on events (request-scoped HIT/MISS keyed by event
+  // fields), so the rule shape is always EventCacheRule, not StoreCacheRule.
+  const sourceCacheConfig = cache as
+    | Cache.Cache<Cache.EventCacheRule>
+    | undefined;
+  const compiledSourceCache = sourceCacheConfig
+    ? compileCache({
+        ...sourceCacheConfig,
+        stop: sourceCacheConfig.stop ?? true,
+      })
     : undefined;
 
   // Resolve transformer chain for this source.

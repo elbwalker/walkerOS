@@ -123,7 +123,7 @@ describe('fetchCatalog', () => {
     mockFetch
       .mockResolvedValueOnce(
         npmSearchResponse([
-          { name: '@walkeros/store-memory', version: '3.0.0' },
+          { name: '@walkeros/server-store-fs', version: '3.0.0' },
         ]),
       )
       .mockResolvedValueOnce(
@@ -138,7 +138,7 @@ describe('fetchCatalog', () => {
     mockFetch
       .mockResolvedValueOnce(
         npmSearchResponse([
-          { name: '@walkeros/store-memory', version: '3.0.0' },
+          { name: '@walkeros/server-store-fs', version: '3.0.0' },
         ]),
       )
       .mockResolvedValueOnce(walkerOSJsonResponse({ type: 'store' }));
@@ -191,7 +191,7 @@ describe('fetchCatalog', () => {
     mockFetch
       .mockResolvedValueOnce(
         npmSearchResponse([
-          { name: '@walkeros/store-memory', version: '3.0.0' },
+          { name: '@walkeros/server-store-fs', version: '3.0.0' },
         ]),
       )
       .mockResolvedValueOnce(walkerOSJsonResponse({ type: 'store' }));

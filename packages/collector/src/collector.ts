@@ -1,4 +1,4 @@
-import type { Collector, Logger, Store, WalkerOS } from '@walkeros/core';
+import type { Collector, Logger, WalkerOS } from '@walkeros/core';
 import { assign, createLogger } from '@walkeros/core';
 import { commonHandleCommand } from './handle';
 import { initDestinations } from './destination';
@@ -7,6 +7,7 @@ import { createPush } from './push';
 import { createCommand } from './command';
 import { initSources } from './source';
 import { initStores, resolveStoreReferences } from './store';
+import { createCacheStore } from './cache-store';
 
 // Replaced at build time by tsup's `define` (see packages/config/tsup).
 declare const __VERSION__: string;
@@ -89,31 +90,11 @@ export async function collector(
   // these raw references with the actual Store.Instance objects.
   resolveStoreReferences(rawStores, collector.stores, initConfig);
 
-  // Create default cache store for steps that use cache without explicit store
+  // Create default cache store for steps that use cache without explicit store.
+  // Uses LRU + entry cap + batched eviction + active TTL sweep. See
+  // `cache-store.ts` for the full semantics.
   if (!collector.stores.__cache) {
-    const cache = new Map<string, { value: unknown; expires?: number }>();
-    collector.stores.__cache = {
-      type: 'memory',
-      config: {},
-      get: (key: string) => {
-        const entry = cache.get(key);
-        if (!entry) return undefined;
-        if (entry.expires && Date.now() > entry.expires) {
-          cache.delete(key);
-          return undefined;
-        }
-        return entry.value;
-      },
-      set: (key: string, value: unknown, ttl?: number) => {
-        cache.set(key, {
-          value,
-          expires: ttl ? Date.now() + ttl : undefined,
-        });
-      },
-      delete: (key: string) => {
-        cache.delete(key);
-      },
-    } as Store.Instance;
+    collector.stores.__cache = createCacheStore();
   }
 
   // Initialize destinations after collector is fully created

@@ -1,4 +1,5 @@
 import type {
+  Cache,
   Collector,
   WalkerOS,
   Elb,
@@ -278,8 +279,12 @@ export async function pushToDestinations(
           ? compileNext(nextConfig)
           : undefined;
 
-      // Compile destination cache once per batch (not per-event)
-      const destCacheConfig = destination.config?.cache;
+      // Compile destination cache once per batch (not per-event).
+      // Destination caches operate on events (HIT/MISS keyed by event fields),
+      // so the rule shape is always EventCacheRule, not StoreCacheRule.
+      const destCacheConfig = destination.config?.cache as
+        | Cache.Cache<Cache.EventCacheRule>
+        | undefined;
       const compiledDCache = destCacheConfig
         ? compileCache(destCacheConfig)
         : undefined;

@@ -3,20 +3,21 @@ import { MatchExpressionSchema } from './matcher';
 import { ValueSchema } from './mapping';
 
 // ========================================
-// Cache Rule Schema
+// Event Cache Rule Schema
 // ========================================
 
 /**
- * CacheRule — a single caching rule for a pipeline step.
+ * EventCacheRule — a single caching rule for an event-context pipeline step
+ * (sources, transformers, destinations).
  *
- * Mirrors: types/cache.ts → CacheRule
+ * Mirrors: types/cache.ts → EventCacheRule
  *
- * - match: MatchExpression or '*' wildcard
- * - key: array of dot-path strings used to build the cache key
- * - ttl: time-to-live in seconds (must be positive)
- * - update: optional record of response mutations applied on cache hit
+ * - match: MatchExpression — omit for always-match.
+ * - key: array of dot-path strings used to compose the cache key from event fields.
+ * - ttl: time-to-live in seconds (positive).
+ * - update: optional record of response mutations applied on cache hit.
  */
-export const CacheRuleSchema = z
+export const EventCacheRuleSchema = z
   .object({
     match: MatchExpressionSchema.optional().describe(
       'Optional match expression — omit for always-match.',
@@ -34,25 +35,22 @@ export const CacheRuleSchema = z
       ),
   })
   .meta({
-    id: 'CacheRule',
-    title: 'Cache.Rule',
+    id: 'EventCacheRule',
+    title: 'EventCache.Rule',
     description:
-      'Single caching rule: when it applies (match), what keys it keys off, TTL, and optional response mutations on hit.',
+      'Single event-cache rule: when it applies (match), what event fields it keys off, TTL, and optional response mutations on hit.',
   });
 
 // ========================================
-// Cache Schema
+// Event Cache Schema
 // ========================================
 
 /**
- * Cache — top-level cache configuration for a pipeline step.
+ * EventCache — top-level cache configuration for an event-context pipeline step.
  *
- * Mirrors: types/cache.ts → Cache
- *
- * - store: optional store ID for persistent caching ($store.storeId wiring)
- * - rules: at least one CacheRule is required
+ * Mirrors: types/cache.ts → Cache<EventCacheRule>
  */
-export const CacheSchema = z
+export const EventCacheSchema = z
   .object({
     stop: z
       .boolean()
@@ -73,13 +71,102 @@ export const CacheSchema = z
         'Optional key prefix. Omit to write keys directly to the store. Same store + same key + same namespace = same cache entry.',
       ),
     rules: z
-      .array(CacheRuleSchema)
+      .array(EventCacheRuleSchema)
       .min(1)
       .describe('Cache rules — at least one required'),
   })
   .meta({
-    id: 'CacheConfig',
-    title: 'Cache.Config',
+    id: 'EventCacheConfig',
+    title: 'EventCache.Config',
     description:
-      'Top-level cache configuration for a pipeline step (destination / transformer / source ref).',
+      'Top-level cache configuration for an event-context pipeline step (source / transformer / destination).',
   });
+
+// ========================================
+// Store Cache Rule Schema
+// ========================================
+
+/**
+ * StoreCacheRule — a single caching rule applied at the store boundary.
+ *
+ * Mirrors: types/cache.ts → StoreCacheRule
+ *
+ * The caller (store wrapper) provides the cache key, so `key` is not allowed
+ * here. There is no event to mutate, so `update` is rejected.
+ *
+ * - match: optional MatchExpression evaluated against `{ key, value? }`.
+ * - ttl: time-to-live in seconds (positive).
+ *
+ * `.strict()` rejects unknown keys so footguns surface at validation time.
+ */
+export const StoreCacheRuleSchema = z
+  .strictObject({
+    match: MatchExpressionSchema.optional().describe(
+      'Optional match expression evaluated against `{ key, value? }`. Omit for always-match.',
+    ),
+    ttl: z.number().positive().describe('Time-to-live in seconds'),
+  })
+  .meta({
+    id: 'StoreCacheRule',
+    title: 'StoreCache.Rule',
+    description:
+      'Single store-cache rule: optional match against `{ key, value? }` and a TTL. No `key` (caller provides it) and no `update` (no event to mutate).',
+  });
+
+// ========================================
+// Store Cache Schema
+// ========================================
+
+/**
+ * StoreCache — top-level cache configuration for a store wrapper.
+ *
+ * Mirrors: types/cache.ts → Cache<StoreCacheRule>
+ *
+ * Differences from EventCache:
+ * - No `stop` field (read-through always falls through on miss).
+ * - `namespace` rejects `""` (empty namespace collapses keys across stores
+ *   sharing `__cache` and re-introduces collisions).
+ * - Rules use StoreCacheRuleSchema (no `key`, no `update`).
+ */
+export const StoreCacheSchema = z
+  .strictObject({
+    store: z
+      .string()
+      .optional()
+      .describe(
+        'Store ID for persistent caching (references a configured store)',
+      ),
+    namespace: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Optional key prefix. Omit to default to the host store id. Empty string is rejected.',
+      ),
+    rules: z
+      .array(StoreCacheRuleSchema)
+      .min(1)
+      .describe('Cache rules — at least one required'),
+  })
+  .meta({
+    id: 'StoreCacheConfig',
+    title: 'StoreCache.Config',
+    description:
+      'Top-level cache configuration for a store wrapper. No `stop` (always falls through on miss); namespace defaults to the host store id.',
+  });
+
+// ========================================
+// Backwards-compatible aliases (deprecated)
+// ========================================
+
+/**
+ * @deprecated Use {@link EventCacheRuleSchema}. Kept for one cycle to avoid
+ * breaking external callers.
+ */
+export const CacheRuleSchema = EventCacheRuleSchema;
+
+/**
+ * @deprecated Use {@link EventCacheSchema}. Kept for one cycle to avoid
+ * breaking external callers.
+ */
+export const CacheSchema = EventCacheSchema;

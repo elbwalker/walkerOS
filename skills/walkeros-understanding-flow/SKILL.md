@@ -132,14 +132,16 @@ no `next`, no `before`; they sit alongside the pipeline rather than inside it.
   transformer, or destination starts, and outlive them on shutdown
 - **No chains** - stores don't participate in the event pipeline. Components
   access them through their `env`.
-- Implementations: `@walkeros/store-memory` (sync, LRU),
-  `@walkeros/server-store-fs` (async, filesystem), `@walkeros/server-store-s3`
-  (async, S3-compatible)
+- Implementations: `@walkeros/server-store-fs` (async, filesystem),
+  `@walkeros/server-store-s3` (async, S3-compatible),
+  `@walkeros/server-store-gcs`, `@walkeros/server-store-sheets`. The collector
+  ships a built-in in-memory cache tier — enable it on any store via
+  `Flow.Store.cache` instead of declaring a separate memory store.
 
 ```json
 {
   "stores": {
-    "data": { "package": "@walkeros/store-memory" }
+    "data": { "package": "@walkeros/server-store-fs" }
   },
   "transformers": {
     "fingerprint": {

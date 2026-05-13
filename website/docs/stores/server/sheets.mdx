@@ -83,9 +83,9 @@ Add to your `flow.json`:
 
 <Configuration type="store" data={data} />
 
-## Wiring with the core cache
+## Wiring with the built-in cache
 
-To absorb the Sheets quota, wire the consuming transformer or destination with the core `Cache` config, backed by a fast in-memory store (`@walkeros/store-memory`):
+To absorb the Sheets quota, wire the store with the built-in cache via `Flow.Store.cache`. The cache is on by default with an in-memory tier and requires no extra store declaration:
 
 <CodeSnippet
   code={`{
@@ -97,25 +97,14 @@ To absorb the Sheets quota, wire the consuming transformer or destination with t
           "id": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
           "sheet": "Customers"
         }
-      }
-    },
-    "lookupCache": {
-      "package": "@walkeros/store-memory",
-      "config": { "settings": {} }
+      },
+      "cache": { "rules": [{ "ttl": 60 }] }
     }
   },
   "transformers": {
     "enrich": {
       "package": "@walkeros/transformer-enrich",
-      "env": {
-        "store": "$store.crm",
-        "cache": "$store.lookupCache"
-      },
-      "config": {
-        "settings": {
-          "cache": { "ttl": 60000 }
-        }
-      }
+      "env": { "store": "$store.crm" }
     }
   }
 }`}

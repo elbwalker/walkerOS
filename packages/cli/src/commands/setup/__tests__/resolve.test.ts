@@ -13,7 +13,7 @@ const flow: Flow = {
     },
   },
   stores: {
-    cache: { package: '@walkeros/store-memory', config: {} },
+    cache: { package: '@walkeros/server-store-fs', config: {} },
   },
 };
 
@@ -35,7 +35,7 @@ describe('resolveComponent', () => {
       target: 'store.cache',
       kind: 'store',
       id: 'cache',
-      pkg: '@walkeros/store-memory',
+      pkg: '@walkeros/server-store-fs',
     },
   ])('finds $kind by <kind>.<name>', ({ target, kind, id, pkg }) => {
     const r = resolveComponent(flow, target);

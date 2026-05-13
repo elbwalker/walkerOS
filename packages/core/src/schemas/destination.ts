@@ -9,7 +9,7 @@ import {
 } from './mapping';
 import { Identifier } from './primitives';
 import { RouteSpecSchema } from './matcher';
-import { CacheSchema } from './cache';
+import { EventCacheSchema } from './cache';
 import { LoggerConfigSchema } from './logger';
 
 /**
@@ -122,7 +122,7 @@ export const ConfigSchema = z
     next: RouteSpecSchema.optional().describe(
       'Post-push transformer chain. Runs after destination push completes; push response is available at ingest._response',
     ),
-    cache: CacheSchema.optional().describe(
+    cache: EventCacheSchema.optional().describe(
       'Cache configuration for deduplication; skip push on cache HIT',
     ),
     disabled: z

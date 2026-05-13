@@ -1,4 +1,4 @@
-import type { Cache, CacheRule } from './types/cache';
+import type { Cache, EventCacheRule } from './types/cache';
 import type { Collector, Mapping, Store } from './types';
 import type { CompiledMatcher } from './types/matcher';
 import { compileMatcher } from './matcher';
@@ -9,7 +9,7 @@ interface CompiledCacheRule {
   match: CompiledMatcher;
   key: string[];
   ttl: number;
-  update?: CacheRule['update'];
+  update?: EventCacheRule['update'];
 }
 
 export interface CompiledCache {
@@ -43,7 +43,7 @@ export function buildCacheContext(
   return ctx;
 }
 
-export function compileCache(cache: Cache): CompiledCache {
+export function compileCache(cache: Cache<EventCacheRule>): CompiledCache {
   return {
     stop: cache.stop ?? false,
     storeId: cache.store,

@@ -38,6 +38,9 @@
  */
 
 import type { Collector } from '.';
+import type { Cache, EventCacheRule, StoreCacheRule } from './cache';
+import type { RouteSpec } from './transformer';
+import type { Validate, ValidateEvents, JsonSchema } from './validate';
 
 /**
  * Single flow configuration.
@@ -356,7 +359,7 @@ export namespace Flow {
      * (decode, validate, authenticate, normalize raw input).
      * Raw request data is available in context.ingest.
      */
-    before?: import('./transformer').RouteSpec;
+    before?: RouteSpec;
 
     /**
      * First transformer in pre-collector chain.
@@ -366,11 +369,11 @@ export namespace Flow {
      * If omitted, events route directly to the collector.
      * Can be an array for explicit chain control (bypasses transformer.next resolution).
      */
-    next?: import('./transformer').RouteSpec;
+    next?: RouteSpec;
 
     /** Cache configuration for this source. */
-    cache?: import('./cache').Cache;
-    validate?: import('./validate').Validate;
+    cache?: Cache<EventCacheRule>;
+    validate?: Validate;
 
     /**
      * Source-level variables (highest priority in cascade).
@@ -417,7 +420,7 @@ export namespace Flow {
      * If omitted, events are sent directly from the collector.
      * Can be an array for explicit chain control.
      */
-    before?: import('./transformer').RouteSpec;
+    before?: RouteSpec;
 
     /**
      * First transformer in post-push chain.
@@ -426,11 +429,11 @@ export namespace Flow {
      * at context.ingest._response. Consent is inherited from the destination
      * gate - no separate consent check needed.
      */
-    next?: import('./transformer').RouteSpec;
+    next?: RouteSpec;
 
     /** Cache configuration for this destination. */
-    cache?: import('./cache').Cache;
-    validate?: import('./validate').Validate;
+    cache?: Cache<EventCacheRule>;
+    validate?: Validate;
 
     /** Destination-level variables (highest priority in cascade). */
     variables?: Variables;
@@ -468,7 +471,7 @@ export namespace Flow {
      * Enables pre-processing or context loading before the main transform.
      * Uses the same chain resolution as source.next and destination.before.
      */
-    before?: import('./transformer').RouteSpec;
+    before?: RouteSpec;
 
     /**
      * Next transformer in chain.
@@ -480,11 +483,11 @@ export namespace Flow {
      * Array values define an explicit chain (no walking). Circular references
      * are safely detected at runtime by `walkChain()`.
      */
-    next?: import('./transformer').RouteSpec;
+    next?: RouteSpec;
 
     /** Cache configuration for this transformer. */
-    cache?: import('./cache').Cache;
-    validate?: import('./validate').Validate;
+    cache?: Cache<EventCacheRule>;
+    validate?: Validate;
 
     /** Transformer-level variables (highest priority in cascade). */
     variables?: Variables;
@@ -515,6 +518,15 @@ export namespace Flow {
 
     /** Store environment configuration. */
     env?: unknown;
+
+    /**
+     * Cache configuration for this store.
+     *
+     * When present, the collector wraps the bare store with a cache layer
+     * (read-through, write-through, single-flight). The cache layer may
+     * recursively delegate to another store via `cache.store`.
+     */
+    cache?: Cache<StoreCacheRule>;
 
     /** Store-level variables (highest priority in cascade). */
     variables?: Variables;
@@ -575,9 +587,9 @@ export namespace Flow {
     /** Human-readable note. */
     description?: string;
     /** Entity-action keyed JSON Schemas (wildcard fallback at runtime). */
-    events?: import('./validate').ValidateEvents;
+    events?: ValidateEvents;
     /** JSON Schema for the full event. */
-    schema?: import('./validate').JsonSchema;
+    schema?: JsonSchema;
   }
 
   /**

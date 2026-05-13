@@ -191,7 +191,7 @@ describe('createEntryPoint integration', () => {
             '@walkeros/collector': { imports: ['startFlow'] },
             '@walkeros/server-source-express': {},
             '@walkeros/server-transformer-fingerprint': {},
-            '@walkeros/store-memory': {},
+            '@walkeros/server-store-fs': {},
           },
         },
       },
@@ -213,9 +213,9 @@ describe('createEntryPoint integration', () => {
       },
       stores: {
         cache: {
-          package: '@walkeros/store-memory',
-          code: 'storeMemory',
-          config: { settings: { maxSize: 1000 } },
+          package: '@walkeros/server-store-fs',
+          code: 'storeFs',
+          config: { settings: { basePath: './data' } },
         },
       },
     } as Flow;
@@ -227,7 +227,7 @@ describe('createEntryPoint integration', () => {
         '@walkeros/collector': { imports: ['startFlow'] },
         '@walkeros/server-source-express': {},
         '@walkeros/server-transformer-fingerprint': {},
-        '@walkeros/store-memory': {},
+        '@walkeros/server-store-fs': {},
       },
       output: './dist/bundle.mjs',
       code: '',
@@ -474,9 +474,9 @@ describe('$store. prefix', () => {
       },
       stores: {
         cache: {
-          package: '@walkeros/store-memory',
-          code: 'storeMemory',
-          config: { settings: { maxSize: 1000 } },
+          package: '@walkeros/server-store-fs',
+          code: 'storeFs',
+          config: { settings: { basePath: './data' } },
         },
       },
     } as Flow;
@@ -486,14 +486,14 @@ describe('$store. prefix', () => {
         '@walkeros/server-transformer-fingerprint',
         new Set(['transformerFingerprint']),
       ],
-      ['@walkeros/store-memory', new Set(['storeMemory'])],
+      ['@walkeros/server-store-fs', new Set(['storeFs'])],
     ]);
 
     const result = buildSplitConfigObject(flowSettings, explicitCodeImports);
 
     // stores must be a separate declaration, not inside the config object
     expect(result.storesDeclaration).toContain('const stores = {');
-    expect(result.storesDeclaration).toContain('code: storeMemory');
+    expect(result.storesDeclaration).toContain('code: storeFs');
 
     // Code config object should reference stores via shorthand property
     expect(result.codeConfigObject).toMatch(/,\n\s+stores/);
@@ -501,7 +501,7 @@ describe('$store. prefix', () => {
     expect(result.codeConfigObject).toContain('stores.cache');
     // stores section should NOT be inlined in the config object
     expect(result.codeConfigObject).not.toMatch(
-      /stores:\s*\{[\s\S]*code: storeMemory/,
+      /stores:\s*\{[\s\S]*code: storeFs/,
     );
   });
 });
@@ -651,7 +651,7 @@ describe('buildSplitConfigObject', () => {
       destinations: {},
       stores: {
         memory: {
-          package: '@walkeros/store-memory',
+          package: '@walkeros/server-store-fs',
           config: { settings: { maxSize: 1000 } },
         },
       },

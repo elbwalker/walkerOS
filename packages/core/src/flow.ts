@@ -717,6 +717,7 @@ function resolveFlowSettings(
         package: store.package,
         config: processedConfig,
         env: processedEnv,
+        cache: store.cache,
         variables: store.variables,
         code: finalCode,
       } as Flow.Store;

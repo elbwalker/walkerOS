@@ -31,7 +31,13 @@
  * - Transformer returns void → continue with unchanged event
  * - Transformer returns event → continue with modified event
  */
-import type { Collector, Transformer, WalkerOS, Ingest } from '@walkeros/core';
+import type {
+  Cache,
+  Collector,
+  Transformer,
+  WalkerOS,
+  Ingest,
+} from '@walkeros/core';
 import {
   createIngest,
   isObject,
@@ -543,8 +549,12 @@ export async function runTransformerChain(
       continue;
     }
 
-    // Compile transformer cache once (reused for HIT check and MISS store)
-    const tCacheConfig = transformer.config?.cache;
+    // Compile transformer cache once (reused for HIT check and MISS store).
+    // Transformer caches operate on events (step-level HIT/MISS keyed by event
+    // fields), so the rule shape is always EventCacheRule, not StoreCacheRule.
+    const tCacheConfig = transformer.config?.cache as
+      | Cache.Cache<Cache.EventCacheRule>
+      | undefined;
     const compiledTCache = tCacheConfig
       ? compileCache(tCacheConfig)
       : undefined;

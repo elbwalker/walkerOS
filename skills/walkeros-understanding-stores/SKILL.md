@@ -102,8 +102,9 @@ Use `$store.storeId` in a component's `env` to inject a store instance:
 {
   "stores": {
     "data": {
-      "package": "@walkeros/store-memory",
-      "config": { "settings": { "maxSize": 10485760 } }
+      "package": "@walkeros/server-store-fs",
+      "config": { "settings": { "basePath": "./data" } },
+      "cache": { "rules": [{ "ttl": 60 }] }
     }
   },
   "transformers": {
@@ -120,20 +121,24 @@ are caught at build time. `walkeros validate` also catches typos at validation
 time, including unknown store names and the colon-instead-of-dot mistake (e.g.
 `$store:data` is flagged with the suggested form `$store.data`).
 
+The `cache` field enables the built-in in-memory cache tier (`__cache`) on top
+of any backing store. No separate memory store declaration is needed.
+
 ### Integrated mode (TypeScript)
 
 Pass store instances directly — no `$store.` prefix needed:
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
-import { storeMemoryInit } from '@walkeros/store-memory';
+import { storeFsInit } from '@walkeros/server-store-fs';
 import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';
 
 const { collector } = await startFlow({
   stores: {
     data: {
-      code: storeMemoryInit,
-      config: { settings: { maxSize: 10 * 1024 * 1024 } },
+      code: storeFsInit,
+      config: { settings: { basePath: './data' } },
+      cache: { rules: [{ ttl: 60 }] },
     },
   },
   transformers: {
@@ -150,27 +155,25 @@ than using the `$store.` string prefix (that's a bundler feature).
 
 ## Available stores
 
-### `@walkeros/store-memory` (in-memory)
+### Built-in cache tier (`__cache`)
 
-LRU cache with TTL support. Suitable for caching, session state, deduplication.
+The collector ships a built-in in-memory cache with LRU eviction, TTL, and
+entry/byte caps. Enable it on any store by setting `Flow.Store.cache`. No
+separate package import needed:
 
-```typescript
-import { storeMemoryInit } from '@walkeros/store-memory';
-// Or for direct programmatic usage (no Flow.Json context):
-import { createMemoryStore } from '@walkeros/store-memory';
+```json
+{
+  "stores": {
+    "files": {
+      "package": "@walkeros/server-store-fs",
+      "cache": { "rules": [{ "ttl": 60 }] }
+    }
+  }
+}
 ```
 
-**Settings:**
-
-| Setting      | Type     | Default | Purpose                    |
-| ------------ | -------- | ------- | -------------------------- |
-| `maxSize`    | `number` | 10 MB   | Maximum total size (bytes) |
-| `maxEntries` | `number` | —       | Maximum number of entries  |
-
-**Two entry points:**
-
-- `storeMemoryInit` — `Store.Init` wrapper for Flow.Json / `startFlow()`
-- `createMemoryStore()` — Direct factory for programmatic usage without context
+Use this for the common "cache in front of a slow backing store" pattern (API,
+GCS, Sheets, etc.).
 
 ### `@walkeros/server-store-fs` (filesystem)
 
@@ -248,22 +251,18 @@ import { storeSheetsInit } from '@walkeros/server-store-sheets';
 
 **Primary use case:** Demos and small prototypes where the spreadsheet is the
 operator-facing UI for tweaking lookup data. Quota: 60 reads/min and 60
-writes/min per project. Wire a fast cache (e.g., `@walkeros/store-memory`) in
-front via the core `Cache` config on the consuming transformer or destination,
-otherwise quota burns in seconds. **Not a production CRM substitute.** See
+writes/min per project. Enable the built-in cache via `Flow.Store.cache` on the
+store declaration to absorb the quota, otherwise quota burns in seconds. **Not a
+production CRM substitute.** See
 [Website: Sheets Store](../../website/docs/stores/server/sheets.mdx) for the
 cache-wiring example.
 
-## Stores vs direct construction
+## Stores in flow config
 
-| Approach                        | When to use                                                                    |
-| ------------------------------- | ------------------------------------------------------------------------------ |
-| `stores` section in flow config | Shared store consumed by multiple components via `$store.`                     |
-| Direct `createMemoryStore()`    | Single component, self-contained (e.g., cache transformer's internal fallback) |
-
-If only one transformer uses the store internally and doesn't expose it, the
-transformer can construct it directly. If multiple components need the same
-store instance, declare it in `stores` and wire via `$store.`.
+Declare any store consumed by one or more components in the `stores` section of
+the flow config and wire it via `$store.<id>` in component `env`. The built-in
+cache tier (`Flow.Store.cache`) covers the "fast in-memory cache in front of a
+slow backing store" pattern without a separate memory store.
 
 ## Accessing stores at runtime
 
@@ -271,13 +270,15 @@ After `startFlow()`, stores are available on the collector instance:
 
 ```typescript
 const { collector } = await startFlow({
-  stores: { cache: { code: storeMemoryInit } },
+  stores: {
+    files: { code: storeFsInit, config: { settings: { basePath: './data' } } },
+  },
 });
 
 // Read/write
-collector.stores.cache.set('key', 'value', 60000); // 60s TTL
-const value = collector.stores.cache.get('key');
-collector.stores.cache.delete('key');
+await collector.stores.files.set('key', 'value', 60000); // 60s TTL
+const value = await collector.stores.files.get('key');
+await collector.stores.files.delete('key');
 ```
 
 ## Hooks
@@ -299,7 +300,9 @@ Hooks fire on every store operation regardless of which component triggered it
 
 ```typescript
 const { collector } = await startFlow({
-  stores: { cache: { code: storeMemoryInit } },
+  stores: {
+    files: { code: storeFsInit, config: { settings: { basePath: './data' } } },
+  },
 });
 
 // Intercept all store reads
@@ -445,8 +448,6 @@ operator workflow.
   Store types
 - [packages/collector/src/store.ts](../../packages/collector/src/store.ts) -
   initStores implementation
-- [packages/stores/memory/src/](../../packages/stores/memory/src/) - Memory
-  store package
 - [packages/server/stores/fs/src/](../../packages/server/stores/fs/src/) -
   Filesystem store package
 - [packages/server/stores/s3/src/](../../packages/server/stores/s3/src/) - S3
@@ -465,8 +466,6 @@ operator workflow.
   documentation
 - [Website: FS Store](../../website/docs/stores/server/fs.mdx) - Filesystem
   store documentation
-- [Website: Memory Store](../../website/docs/stores/memory.mdx) - Memory store
-  documentation
 - [Website: GCS Store](../../website/docs/stores/server/gcs.mdx) - GCS store
   documentation
 - [Website: Sheets Store](../../website/docs/stores/server/sheets.mdx) - Google

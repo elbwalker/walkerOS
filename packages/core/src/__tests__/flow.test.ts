@@ -1719,7 +1719,7 @@ describe('Pattern Resolution', () => {
             config: { platform: 'server' },
             stores: {
               cache: {
-                package: '@walkeros/store-memory',
+                package: '@walkeros/server-store-fs',
                 config: {},
                 env: { region: '$var.region' },
               },
