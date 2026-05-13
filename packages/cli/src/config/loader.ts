@@ -7,12 +7,7 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import {
-  autoInjectValidators,
-  getFlowSettings,
-  getPlatform,
-  type Flow,
-} from '@walkeros/core';
+import { getFlowSettings, getPlatform, type Flow } from '@walkeros/core';
 import type { BuildOptions } from '../types/bundle.js';
 import {
   validateFlowConfig,
@@ -112,12 +107,6 @@ export function loadBundleConfig(
   }
 
   // Auto-inject validator transformers for any step-level `validate?:`
-  // declarations. This rewrites the resolved flow so downstream consumers
-  // (bundler package detection, runtime chain wiring) see the validators
-  // as ordinary transformers in `flow.transformers`. No-op when no step
-  // declares `validate?:`, so package-isolation tree-shaking is preserved.
-  flowSettings = autoInjectValidators(flowSettings);
-
   // Get static build defaults based on platform
   const buildDefaults = getBuildDefaults(platform);
 

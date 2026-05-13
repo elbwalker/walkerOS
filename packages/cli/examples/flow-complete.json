@@ -282,17 +282,7 @@
             "type": "enricher",
             "push": "$code:(event) => ({ ...event, context: { ...event.context, enrichedAt: Date.now() } })"
           },
-          "next": "dataLayerValidator",
           "config": {}
-        },
-        "dataLayerValidator": {
-          "package": "@walkeros/transformer-validator",
-          "config": {
-            "settings": {
-              "events": "$contract.default.events",
-              "schema": "$contract.default.schema"
-            }
-          }
         }
       },
       "destinations": {
@@ -303,9 +293,7 @@
               "order": {
                 "complete": {
                   "properties": {
-                    "data": {
-                      "required": ["id", "total"]
-                    }
+                    "data": { "required": ["id", "total"] }
                   }
                 }
               }
@@ -602,8 +590,7 @@
             "@walkeros/web-source-datalayer": {},
             "@walkeros/source-demo": {},
             "@walkeros/web-destination-gtag": {},
-            "@walkeros/web-destination-api": {},
-            "@walkeros/transformer-validator": {}
+            "@walkeros/web-destination-api": {}
           }
         }
       }
@@ -738,7 +725,6 @@
         },
         "fingerprint": {
           "package": "@walkeros/server-transformer-fingerprint",
-          "next": "serverValidator",
           "config": {
             "settings": {
               "fields": [
@@ -753,22 +739,12 @@
               "length": 16
             }
           }
-        },
-        "serverValidator": {
-          "package": "@walkeros/transformer-validator",
-          "config": {
-            "settings": {
-              "format": true,
-              "events": "$contract.default.events",
-              "schema": "$contract.default.schema"
-            }
-          }
         }
       },
       "destinations": {
         "meta": {
           "package": "@walkeros/server-destination-meta",
-          "before": ["fingerprint", "serverValidator"],
+          "before": "fingerprint",
           "config": {
             "settings": {
               "pixelId": "$var.metaPixelId",
@@ -956,7 +932,6 @@
             "@walkeros/server-source-express": {},
             "@walkeros/server-destination-meta": {},
             "@walkeros/destination-demo": {},
-            "@walkeros/transformer-validator": {},
             "@walkeros/server-transformer-fingerprint": {},
             "@walkeros/store-memory": {
               "path": "../../stores/memory"

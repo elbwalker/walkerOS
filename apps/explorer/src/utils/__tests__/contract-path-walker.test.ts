@@ -8,9 +8,14 @@ const sampleContract: Flow.Contract = {
   default: {
     tagging: 1,
     description: 'Base',
-    globals: {
+    schema: {
       type: 'object',
-      properties: { lang: { type: 'string' }, env: { type: 'string' } },
+      properties: {
+        globals: {
+          type: 'object',
+          properties: { lang: { type: 'string' }, env: { type: 'string' } },
+        },
+      },
     },
     events: {
       page: {
@@ -57,9 +62,9 @@ describe('getContractPathCompletions', () => {
   it('returns top-level keys for a named contract', () => {
     const result = getContractPathCompletions(sampleContract, ['web']);
     const keys = result.map((r) => r.key);
-    // After resolution, web inherits default's globals + events
+    // After resolution, web inherits default's schema + events
     expect(keys).toEqual(
-      expect.arrayContaining(['description', 'globals', 'events']),
+      expect.arrayContaining(['description', 'schema', 'events']),
     );
     // extends is stripped after resolution
     expect(keys).not.toContain('extends');
@@ -98,10 +103,13 @@ describe('getContractPathCompletions', () => {
     expect(keys).toEqual(expect.arrayContaining(['url', 'referrer']));
   });
 
-  it('returns section keys for globals', () => {
+  it('returns property keys deep inside schema', () => {
     const result = getContractPathCompletions(sampleContract, [
       'default',
+      'schema',
+      'properties',
       'globals',
+      'properties',
     ]);
     const keys = result.map((r) => r.key);
     expect(keys).toEqual(expect.arrayContaining(['lang', 'env']));

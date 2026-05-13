@@ -144,16 +144,12 @@ Here is a complete flow config with examples on a source, transformer, and desti
         }
       },
       "transformers": {
-        "validate": {
-          "package": "@walkeros/transformer-validator",
+        "fingerprint": {
+          "package": "@walkeros/transformer-fingerprint",
           "examples": {
-            "valid event": {
+            "enriched event": {
               "in": { "name": "page view", "data": { "title": "Home" } },
               "out": { "name": "page view", "data": { "title": "Home" } }
-            },
-            "invalid event": {
-              "in": { "name": "", "data": {} },
-              "out": false
             }
           }
         }

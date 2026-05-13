@@ -1,20 +1,16 @@
 ---
 '@walkeros/core': minor
-'@walkeros/cli': minor
-'@walkeros/transformer-validator': minor
 ---
 
-Add step-level `validate?` primitive on every walkerOS step. Declare validation
-inline on a source, transformer, or destination, and the CLI auto-injects the
-validator transformer at the correct chain position.
+Add step-level `validate?` primitive on every walkerOS step. `validate:` is a
+declarative description of validation intent, like `cache` or `consent`.
+Consumers decide how to enforce.
 
-Restructure validator settings and contract to a uniform
-`{ format, events, schema }` shape: a single agnostic JSON Schema replaces the
-typed section fields (`globals`, `context`, `custom`, `user`, `consent`).
+Restructure `Flow.ContractRule` to a uniform
+`{ extends?, tagging?, description?, events?, schema? }` shape. A single
+agnostic JSON Schema replaces the typed section fields (`globals`, `context`,
+`custom`, `user`, `consent`); standard event field names live inside
+`schema.properties.<name>`. `extends` resolves `schema` via additive deep-merge.
 
-Tree-shaking: flows without `validate:` continue to ship zero AJV bytes; the
-validator package only enters the dependency graph when the auto-injector adds
-it.
-
-`@walkeros/transformer-validator` is deprecated for direct imports but remains
-the runtime that powers `validate:`.
+Contracts are a description and governance concept: tooling, MCP, and humans
+read them. Runtime enforcement is the consumer's call.

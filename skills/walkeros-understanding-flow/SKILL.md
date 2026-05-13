@@ -167,11 +167,13 @@ for the full store interface and lifecycle.
 
 Every step (source, transformer, destination) supports a small set of inline
 primitives alongside its package wiring. `cache`, `mapping`, and `consent` are
-the long-established ones; `validate?` is the newest. Declare `validate:` on a
-step and the CLI bundler auto-injects a validator transformer at the correct
-chain position, so a failed check only skips that step. See
+the long-established ones; `validate?` is the newest. `validate:` declares
+validation intent (format check, per-event JSON Schemas, or a single generic
+schema) inline on a step, just like `cache` declares caching intent. It is a
+declarative description: consumers (CLI tooling, MCP, custom runners) decide how
+to enforce it. See
 [Website: Validate](../../website/docs/getting-started/flow/validate.mdx) for
-the full shape and lifecycle position.
+the full shape.
 
 ## Transformer Chains
 
@@ -223,10 +225,6 @@ transformers: {
   }
 }
 ```
-
-For validation, prefer the step-level `validate:` primitive over wiring a
-validator transformer by hand. The CLI auto-injects the validator at the right
-chain position.
 
 Note: In flow.json, `next` is at the reference level. The CLI bundler
 automatically moves it into `config.next` for runtime - you don't need to handle

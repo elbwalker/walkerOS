@@ -18,10 +18,10 @@ type Story = StoryObj<typeof FlowMap>;
 export const SimplePreTransformer: Story = {
   args: {
     sources: {
-      web: { label: 'Source', text: 'walker.js', next: 'validator' },
+      web: { label: 'Source', text: 'walker.js', next: 'filter' },
     },
     preTransformers: {
-      validator: { label: 'Validator', text: 'JSON Schema' },
+      filter: { label: 'Filter', text: 'Drop bots' },
     },
     collector: { label: 'Collector' },
     destinations: {
@@ -36,10 +36,10 @@ export const SimplePreTransformer: Story = {
 export const BothPreAndPostTransformers: Story = {
   args: {
     sources: {
-      web: { label: 'Source', text: 'walker.js', next: 'validator' },
+      web: { label: 'Source', text: 'walker.js', next: 'filter' },
     },
     preTransformers: {
-      validator: { label: 'Validator', next: 'enricher' },
+      filter: { label: 'Filter', next: 'enricher' },
       enricher: { label: 'Enricher' },
     },
     collector: { label: 'Collector' },
@@ -60,10 +60,10 @@ export const FullFlowWithContext: Story = {
   args: {
     stageBefore: { label: 'Browser', text: 'Click event' },
     sources: {
-      web: { label: 'Source', text: 'walker.js', next: 'validator' },
+      web: { label: 'Source', text: 'walker.js', next: 'filter' },
     },
     preTransformers: {
-      validator: { label: 'Validator' },
+      filter: { label: 'Filter' },
     },
     collector: { label: 'Collector' },
     postTransformers: {
@@ -79,17 +79,17 @@ export const FullFlowWithContext: Story = {
 /**
  * Combined test: skip connections on BOTH left and right sides.
  * Shows all 4 arrow cases: up/down on left, up/down on right.
- * - Left: Web→Validator (down), App→Enricher (up)
+ * - Left: Web→Filter (down), App→Enricher (up)
  * - Right: Consent→BigQuery (up), Redactor→GA4 (down)
  */
 export const AllArrowDirections: Story = {
   args: {
     sources: {
-      web: { label: 'Web', text: 'walker.js', next: 'validator' },
+      web: { label: 'Web', text: 'walker.js', next: 'filter' },
       app: { label: 'App', text: 'SDK', next: 'enricher' },
     },
     preTransformers: {
-      validator: { label: 'Validator', next: 'enricher' },
+      filter: { label: 'Filter', next: 'enricher' },
       enricher: { label: 'Enricher' },
     },
     collector: { label: 'Collector' },
@@ -110,12 +110,12 @@ export const AllArrowDirections: Story = {
 export const LongPreTransformerChain: Story = {
   args: {
     sources: {
-      web: { label: 'Source', next: 'validator' },
+      web: { label: 'Source', next: 'filter' },
     },
     preTransformers: {
-      validator: { label: 'Validator', next: 'enricher' },
-      enricher: { label: 'Enricher', next: 'filter' },
-      filter: { label: 'Filter' },
+      filter: { label: 'Filter', next: 'enricher' },
+      enricher: { label: 'Enricher', next: 'redactor' },
+      redactor: { label: 'Redactor' },
     },
     collector: { label: 'Collector' },
     destinations: {

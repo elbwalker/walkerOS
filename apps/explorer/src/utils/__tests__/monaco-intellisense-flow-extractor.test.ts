@@ -106,7 +106,7 @@ describe('extractFlowIntelliSenseContext', () => {
             ga4: { package: '@walkeros/web-destination-gtag' },
           },
           transformers: {
-            validate: { package: '@walkeros/transformer-validator' },
+            fingerprint: { package: '@walkeros/transformer-fingerprint' },
           },
         },
       },
@@ -126,8 +126,8 @@ describe('extractFlowIntelliSenseContext', () => {
         platform: 'web',
       },
       {
-        package: '@walkeros/transformer-validator',
-        shortName: 'validate',
+        package: '@walkeros/transformer-fingerprint',
+        shortName: 'fingerprint',
         type: 'transformer',
         platform: 'web',
       },

@@ -393,13 +393,13 @@ describe('detectStepPackages', () => {
       sources: {},
       destinations: {},
       transformers: {
-        fingerprint: {
+        fingerprintServer: {
           package: '@walkeros/server-transformer-fingerprint',
           code: 'transformerFingerprint',
           config: { settings: { output: 'user.hash' } },
         },
-        validate: {
-          package: '@walkeros/transformer-validator',
+        fingerprint: {
+          package: '@walkeros/transformer-fingerprint',
         },
       },
     };
@@ -409,7 +409,7 @@ describe('detectStepPackages', () => {
     expect(result).toEqual(
       new Set([
         '@walkeros/server-transformer-fingerprint',
-        '@walkeros/transformer-validator',
+        '@walkeros/transformer-fingerprint',
       ]),
     );
   });

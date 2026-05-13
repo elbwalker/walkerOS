@@ -39,33 +39,23 @@ Transformers are middleware for **validating**, **enriching**, and **redacting**
 
 ## Basic setup
 
+Add a transformer to the `transformers` block of your flow and wire it into the
+pipeline via a source's `next` or a destination's `before`.
+
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
+import { transformerFingerprint } from '@walkeros/transformer-fingerprint';
 
 await startFlow({
   transformers: {
-    validate: {
-      package: '@walkeros/transformer-validator',
-      config: {
-        settings: { format: true }
-      }
+    fingerprint: {
+      code: transformerFingerprint,
+      config: { settings: { /* ... */ } }
     }
   }
 });`}
   language="typescript"
 />
-
-## Available transformers
-
-### Validator
-
-Validates events using JSON Schema:
-
-* Format validation (WalkerOS.Event structure)
-* Contract validation (entity/action business rules)
-* Configurable logging for validation results
-
-[Learn more →](./validator)
 
 ## Configuration
 
@@ -77,5 +67,5 @@ transformer's page.
 
 ## Next steps
 
-* **[Validator](./validator)** - JSON Schema validation
+* **[Cache](./cache)** - Cache pure handler results
 * **[Create your own](./create-your-own)** - Custom transformer guide

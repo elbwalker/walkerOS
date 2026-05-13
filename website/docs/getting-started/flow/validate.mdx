@@ -6,7 +6,7 @@ sidebar_position: 3
 
 # Validate
 
-`validate:` is a step-level primitive that attaches validation rules directly to a source, transformer, or destination. The flow loader rewrites it into a validator transformer at the right position in the step's chain, so a failed check skips only that step.
+`validate:` is a step-level primitive that attaches validation rules directly to a source, transformer, or destination. It is a declarative description, like `cache` or `consent`: consumers (CLI, MCP, custom runners) decide how to enforce.
 
 ```json
 "destinations": {
@@ -39,11 +39,11 @@ Per-event rules go in `events`. Apply-to-every-event rules go in `schema`.
 
 ## Step-level usage
 
-`validate:` lives on the step it protects. Same shape on every step type, only the placement of the resulting validator in the chain differs (see [Lifecycle position](#lifecycle-position)).
+`validate:` lives on the step it protects. Same shape on every step type.
 
 ### On a destination
 
-Reject orders without a total before they reach GA4. Other destinations on the same flow still see the event.
+Declare that orders without a total should not reach GA4. Other destinations on the same flow are unaffected by this declaration.
 
 <CodeSnippet
   code={`"destinations": {
@@ -68,7 +68,7 @@ Reject orders without a total before they reach GA4. Other destinations on the s
 
 ### On a source
 
-Drop ingest payloads that miss a required field before they hit the collector.
+Declare ingest payloads that miss a required field as invalid before they hit the collector.
 
 <CodeSnippet
   code={`"sources": {
@@ -88,7 +88,7 @@ Drop ingest payloads that miss a required field before they hit the collector.
 
 ### On a transformer
 
-Validate before a transformer runs, for example to guarantee a downstream enrichment transformer never sees an event without a user id.
+Declare a precondition for a transformer, for example that a downstream enrichment transformer never sees an event without a user id.
 
 <CodeSnippet
   code={`"transformers": {
@@ -108,7 +108,7 @@ Validate before a transformer runs, for example to guarantee a downstream enrich
 
 ## Failure semantic
 
-A failed validation skips only the step it is attached to. Other destinations, transformers, and sources on the same flow continue to receive the event.
+`validate:` is declarative, runtime behavior depends on the consumer. The typical interpretation is local to the step: a failed validation skips the step it is attached to and other destinations, transformers, and sources on the same flow continue to receive the event. Treat this as the recommended convention, not a guaranteed runtime contract.
 
 ```
                          ┌──────────────────────────┐
@@ -120,13 +120,11 @@ event "order complete" ──┤   skipped                │
                          └──────────────────────────┘
 ```
 
-This is the key difference from a flow-level validator that drops events globally. Step-level `validate:` is local to the step.
+This local-to-the-step semantic is the key difference from a flow-level validator that drops events globally.
 
 ## Lifecycle position
 
-Validation runs after the step's `before` chain, before the step's main action. On a source the validator prepends to `next`. On a transformer or destination the validator appends to `before`. That positioning means the validator sees the event in the same shape the step itself would see.
-
-You write `validate:`, the flow loader rewrites it into an entry in `flow.transformers` named `__validate_<kind>_<stepName>` and wires it into the right chain. The `validate:` field is removed from the original step. Re-running the loader is idempotent.
+The recommended logical position is after the step's `before` chain and before the step's main action. On a source that places validation in front of the collector, on a transformer or destination it sits in front of the main push. The validator sees the event in the same shape the step itself would see.
 
 ## Wiring from a contract
 
@@ -162,10 +160,9 @@ See [Contract](/docs/getting-started/flow/contract) for the full contract shape,
 
 ## Format layer
 
-Setting `format: true` runs the full `WalkerOS.Event` structural check on the input. That covers required top-level fields (`name`, `source`, `timestamp`, `id`, ...), the entity-action `event name` pattern, `source.type` being one of the known kinds, and the basic shape of nested objects (`data`, `context`, `globals`, `user`, `consent`). Use it as a cheap sanity gate when the step receives data from arbitrary callers; skip it when the input is already a `WalkerOS.Event` produced by the collector.
+Setting `format: true` declares that the full `WalkerOS.Event` structural check should run on the input. That covers required top-level fields (`name`, `source`, `timestamp`, `id`, ...), the entity-action `event name` pattern, `source.type` being one of the known kinds, and the basic shape of nested objects (`data`, `context`, `globals`, `user`, `consent`). Use it as a cheap sanity gate when the step receives data from arbitrary callers, skip it when the input is already a `WalkerOS.Event` produced by the collector.
 
 ## Next steps
 
 - **[Contract](/docs/getting-started/flow/contract)**: named, inheritable schemas referenced via `$contract`
-- **[Validator](/docs/transformers/validator)**: the underlying transformer package (now deprecated in favor of step-level `validate:`)
 - **[Mapping](/docs/mapping)**: transform events between steps

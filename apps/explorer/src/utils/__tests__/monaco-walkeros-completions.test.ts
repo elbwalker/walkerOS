@@ -139,9 +139,14 @@ describe('getContractCompletions', () => {
   const contractRaw = {
     default: {
       tagging: 1,
-      globals: {
+      schema: {
         type: 'object',
-        properties: { lang: { type: 'string' } },
+        properties: {
+          globals: {
+            type: 'object',
+            properties: { lang: { type: 'string' } },
+          },
+        },
       },
       events: {
         page: {
@@ -169,7 +174,7 @@ describe('getContractCompletions', () => {
     const labels = items.map((i) => i.label);
     expect(labels).toEqual(
       expect.arrayContaining([
-        '$contract.default.globals',
+        '$contract.default.schema',
         '$contract.default.events',
       ]),
     );
@@ -191,13 +196,18 @@ describe('getContractCompletions', () => {
 describe('getMappingPathCompletions', () => {
   const contractRaw = {
     default: {
-      globals: {
+      schema: {
         type: 'object',
-        properties: { lang: { type: 'string' }, env: { type: 'string' } },
-      },
-      user: {
-        type: 'object',
-        properties: { email: { type: 'string' } },
+        properties: {
+          globals: {
+            type: 'object',
+            properties: { lang: { type: 'string' }, env: { type: 'string' } },
+          },
+          user: {
+            type: 'object',
+            properties: { email: { type: 'string' } },
+          },
+        },
       },
       events: {
         page: {

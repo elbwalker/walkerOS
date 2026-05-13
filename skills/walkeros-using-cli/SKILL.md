@@ -64,10 +64,6 @@ For detailed command reference, see
 6. Deploy: walkeros deploy start <flowId>
 ```
 
-The bundler auto-injects the validator transformer at the correct chain position
-whenever any step declares `validate:`, so flows without `validate:` stay free
-of AJV bytes.
-
 ### Multi-Flow Development
 
 ```bash

@@ -523,7 +523,7 @@ describe('validateFlow', () => {
           transformers: {
             enrich: {
               package: '@walkeros/transformer-enricher',
-              next: 'validate',
+              next: 'fingerprint',
               examples: {
                 event: {
                   in: { name: 'page view', data: {} },
@@ -531,8 +531,8 @@ describe('validateFlow', () => {
                 },
               },
             },
-            validate: {
-              package: '@walkeros/transformer-validator',
+            fingerprint: {
+              package: '@walkeros/transformer-fingerprint',
               examples: {
                 event: {
                   in: { name: 'page view', data: { enriched: true } },

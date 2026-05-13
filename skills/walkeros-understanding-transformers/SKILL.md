@@ -170,11 +170,6 @@ bundler to parse the following string as executable JavaScript:
 }
 ```
 
-For validation, prefer the step-level `validate:` primitive on the source,
-transformer, or destination instead of wiring a validator transformer
-explicitly. The CLI bundler auto-injects the validator at the correct chain
-position.
-
 ## Pipeline Integration
 
 Transformers run at two points in the pipeline:
@@ -216,8 +211,8 @@ Transformers link together via `next`:
 
 ```typescript
 transformers: {
-  validate: {
-    code: transformerValidator,
+  fingerprint: {
+    code: transformerFingerprint,
     config: { next: 'enrich' }  // Chain to next transformer
   },
   enrich: {
@@ -336,10 +331,9 @@ respond function is optional — only present when the source provides one.
 
 ## Transformer Paths
 
-| Path                               | Description           |
-| ---------------------------------- | --------------------- |
-| `packages/transformers/`           | Transformer packages  |
-| `packages/transformers/validator/` | Validator transformer |
+| Path                     | Description          |
+| ------------------------ | -------------------- |
+| `packages/transformers/` | Transformer packages |
 
 ## Related Skills
 
@@ -353,15 +347,8 @@ respond function is optional — only present when the source provides one.
 - [packages/core/src/types/transformer.ts](../../packages/core/src/types/transformer.ts) -
   Interface
 
-**Package READMEs:**
-
-- [packages/transformers/validator/README.md](../../packages/transformers/validator/README.md) -
-  Validator transformer
-
 **Documentation:**
 
 - [Website: Transformers](../../website/docs/transformers/index.mdx) - Overview
-- [Website: Validator](../../website/docs/transformers/validator.mdx) -
-  Validator docs
 - [Website: Create Your Own](../../website/docs/transformers/create-your-own.mdx) -
   Guide

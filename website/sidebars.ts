@@ -143,7 +143,6 @@ const sidebars: SidebarsConfig = {
             'transformers/cache',
             'transformers/file',
             'transformers/fingerprint',
-            'transformers/validator',
             'transformers/create-your-own',
           ],
         },
