@@ -23,11 +23,13 @@ describe('Validation', () => {
     ).toThrow(/both .*code.* and .*package/i);
   });
 
-  it('should error when neither package nor code are specified', () => {
+  it('accepts a transformer entry with neither package nor code (pass-through)', () => {
+    // Pass-through is the default for transformer steps. An entry with no
+    // operative field is a no-op step. The bundler must accept it.
     const flowSettings: Flow = {
       config: { platform: 'server' },
       transformers: {
-        invalid: {
+        passthrough: {
           config: {},
         },
       },
@@ -36,7 +38,7 @@ describe('Validation', () => {
     const explicitCodeImports = new Map<string, Set<string>>();
     expect(() =>
       buildSplitConfigObject(flowSettings, explicitCodeImports),
-    ).toThrow(/empty transformer entry/i);
+    ).not.toThrow();
   });
 });
 
