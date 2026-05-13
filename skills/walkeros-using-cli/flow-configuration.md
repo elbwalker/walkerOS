@@ -266,8 +266,8 @@ For mapping syntax, see
 ```json
 {
   "transformers": {
-    "validate": {
-      "package": "@walkeros/transformer-validate",
+    "fingerprint": {
+      "package": "@walkeros/transformer-fingerprint",
       "config": {},
       "next": "enrich"
     },
