@@ -5,7 +5,12 @@ import { sourceDemo } from '../index';
 
 describe('Demo Source', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    // `startFlow()` creates a default cache store whose TTL sweep runs on
+    // `setInterval`. Faking setInterval causes `runAllTimers()` to loop
+    // forever (the sweep self-reschedules every tick). The demo source
+    // only needs `setTimeout` faked for its event-delay mechanism, so
+    // leave setInterval on real timers.
+    jest.useFakeTimers({ doNotFake: ['setInterval'] });
   });
 
   afterEach(() => {
