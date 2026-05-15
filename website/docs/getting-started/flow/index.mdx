@@ -294,7 +294,7 @@ Sources and destinations support `require` to delay initialization until specifi
   },
   "destinations": {
     "ga4": {
-      "package": "@walkeros/web-destination-gtag-ga4",
+      "package": "@walkeros/web-destination-gtag",
       "config": {
         "require": ["consent"],
         "consent": { "marketing": true }
@@ -315,7 +315,7 @@ Transformers process events between sources and destinations. They validate, enr
   code={`{
   "transformers": {
     "fingerprint": {
-      "package": "@walkeros/transformer-fingerprint",
+      "package": "@walkeros/server-transformer-fingerprint",
       "config": {
         "settings": { "format": true }
       }
@@ -347,7 +347,7 @@ Link transformers together using `next`:
       "next": "fingerprint"
     },
     "fingerprint": {
-      "package": "@walkeros/transformer-fingerprint"
+      "package": "@walkeros/server-transformer-fingerprint"
     }
   }
 }`}
@@ -367,7 +367,7 @@ For explicit control over the transformer chain order, use an array instead of a
     }
   },
   "transformers": {
-    "fingerprint": { "package": "@walkeros/transformer-fingerprint" },
+    "fingerprint": { "package": "@walkeros/server-transformer-fingerprint" },
     "enrich": { "package": "@walkeros/transformer-enricher" },
     "redact": { "package": "@walkeros/transformer-redact" }
   }
@@ -398,7 +398,7 @@ For explicit control over the transformer chain order, use an array instead of a
   },
   "transformers": {
     "decoder": { "package": "@walkeros/transformer-decoder" },
-    "fingerprint": { "package": "@walkeros/transformer-fingerprint" },
+    "fingerprint": { "package": "@walkeros/server-transformer-fingerprint" },
     "redact": { "package": "@walkeros/transformer-redact" },
     "auditLog": { "package": "@walkeros/transformer-audit" }
   },
@@ -472,7 +472,7 @@ The same transformer can appear in both a pre-collector and a post-collector cha
   },
   "transformers": {
     "fingerprint": {
-      "package": "@walkeros/transformer-fingerprint"
+      "package": "@walkeros/server-transformer-fingerprint"
     },
     "enrich": {
       "package": "@walkeros/transformer-enricher"

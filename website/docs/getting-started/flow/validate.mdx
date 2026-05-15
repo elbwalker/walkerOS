@@ -11,7 +11,7 @@ sidebar_position: 3
 ```json
 "destinations": {
   "ga4": {
-    "package": "@walkeros/web-destination-gtag-ga4",
+    "package": "@walkeros/web-destination-gtag",
     "validate": {
       "events": {
         "order": {
@@ -48,7 +48,7 @@ Declare that orders without a total should not reach GA4. Other destinations on 
 <CodeSnippet
   code={`"destinations": {
   "ga4": {
-    "package": "@walkeros/web-destination-gtag-ga4",
+    "package": "@walkeros/web-destination-gtag",
     "config": { "settings": { "measurementId": "G-DEMO123456" } },
     "validate": {
       "events": {
@@ -144,7 +144,7 @@ The recommended logical position is after the step's `before` chain and before t
   "default": {
     "destinations": {
       "ga4": {
-        "package": "@walkeros/web-destination-gtag-ga4",
+        "package": "@walkeros/web-destination-gtag",
         "validate": {
           "schema":  "$contract.web.schema",
           "events":  "$contract.web.events"

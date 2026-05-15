@@ -145,7 +145,7 @@ Here is a complete flow config with examples on a source, transformer, and desti
       },
       "transformers": {
         "fingerprint": {
-          "package": "@walkeros/transformer-fingerprint",
+          "package": "@walkeros/server-transformer-fingerprint",
           "examples": {
             "enriched event": {
               "in": { "name": "page view", "data": { "title": "Home" } },
@@ -156,7 +156,7 @@ Here is a complete flow config with examples on a source, transformer, and desti
       },
       "destinations": {
         "ga4": {
-          "package": "@walkeros/web-destination-gtag-ga4",
+          "package": "@walkeros/web-destination-gtag",
           "config": {
             "settings": { "measurementId": "G-DEMO123456" }
           },
@@ -225,7 +225,7 @@ Extract examples from your flow config and use them as test fixtures:
 
 <CodeSnippet
   code={`import { readFileSync } from 'fs';
-import { push } from '@walkeros/web-destination-gtag-ga4';
+import { push } from '@walkeros/web-destination-gtag';
 
 const flow = JSON.parse(readFileSync('flow.json', 'utf-8'));
 const ga4Examples = flow.flows.default.destinations.ga4.examples;

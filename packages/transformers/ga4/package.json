@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/transformer-ga4",
   "description": "Decodes GA4 Measurement Protocol v2 (gtag /g/collect) into walkerOS events",
-  "version": "0.1.0",
+  "version": "4.0.2",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
