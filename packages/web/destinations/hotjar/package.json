@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@hotjar/browser": "^1.0.9",
+    "@walkeros/core": "4.0.2",
     "@walkeros/web-core": "4.0.2"
   },
   "devDependencies": {

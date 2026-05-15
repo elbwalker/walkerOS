@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@fullstory/browser": "^2.0.8",
+    "@walkeros/core": "4.0.2",
     "@walkeros/web-core": "4.0.2"
   },
   "devDependencies": {
