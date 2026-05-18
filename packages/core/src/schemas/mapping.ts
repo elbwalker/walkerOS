@@ -283,7 +283,6 @@ export const RuleSchema = z
       .describe(
         'Batch scheduling: bare number is the debounce wait window (legacy); object form supports wait/size/age.',
       ),
-    // Note: batchFn and batched are runtime functions, not serializable
     include: z
       .array(z.string())
       .optional()

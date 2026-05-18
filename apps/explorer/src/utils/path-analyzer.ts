@@ -65,14 +65,7 @@ export function isRule(value: unknown): boolean {
   const obj = value as Record<string, unknown>;
 
   // Rule has specific properties that ValueConfig doesn't have
-  const ruleOnlyProps = [
-    'name',
-    'batch',
-    'ignore',
-    'settings',
-    'batchFn',
-    'batched',
-  ];
+  const ruleOnlyProps = ['name', 'batch', 'ignore', 'settings'];
   const valueConfigOnlyProps = ['key', 'fn', 'loop', 'set', 'validate'];
 
   const hasRuleProps = ruleOnlyProps.some((p) => p in obj);

@@ -152,15 +152,11 @@ rules apply"
 
 ### Potential Gaps Identified
 
-1. **batchFn callback** - Mentioned in Rule Features but no example provided
-   - Severity: Low (advanced use case)
-   - Recommendation: Add to value-strategies.md if needed
-
-2. **settings usage** - Documented but no concrete example of consumption
+1. **settings usage** - Documented but no concrete example of consumption
    - Severity: Low (destination-specific)
    - Recommendation: Reference destination docs
 
-3. **Source-side mapping** - Less coverage than destination-side
+2. **Source-side mapping** - Less coverage than destination-side
    - Severity: Medium (mentioned in mapping-configuration skill)
    - Recommendation: Add cross-reference is sufficient
 

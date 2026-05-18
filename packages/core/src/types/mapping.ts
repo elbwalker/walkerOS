@@ -30,11 +30,6 @@ export interface Rule<Settings = unknown> {
    * destination-level for matched events.
    */
   batch?: number | Destination.BatchOptions;
-  batchFn?: (
-    destination: Destination.Instance,
-    collector: Collector.Instance,
-  ) => void;
-  batched?: Destination.Batch<Settings>; // Batch of events to be processed
   condition?: Condition; // Added condition
   consent?: WalkerOS.Consent; // Required consent states process the event
   settings?: Settings; // Arbitrary but protected configurations for custom event config
