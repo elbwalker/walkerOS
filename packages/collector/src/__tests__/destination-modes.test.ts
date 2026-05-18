@@ -33,10 +33,12 @@ describe('destination modes (disabled/mock)', () => {
         failed: 0,
         sources: {},
         destinations: {},
+        dropped: { queue: 0, queuePush: 0, dlq: 0 },
       },
       config: {
         globalsStatic: {},
         sessionStatic: {},
+        queueMax: 1_000,
       },
     } as unknown as Collector.Instance;
   }

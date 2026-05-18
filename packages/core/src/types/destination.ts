@@ -127,6 +127,16 @@ export interface Config<T extends TypesGeneric = Types> {
   disabled?: boolean;
   /** Return this value instead of calling push(). Uses !== undefined check to support falsy values. */
   mock?: unknown;
+  /**
+   * Maximum number of consent-denied events retained in `queuePush` for
+   * this destination. Overflow drops oldest (FIFO). Default 1000.
+   */
+  queueMax?: number;
+  /**
+   * Maximum number of failed-push entries retained in `dlq` for this
+   * destination. Overflow drops oldest (FIFO). Default 100.
+   */
+  dlqMax?: number;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<

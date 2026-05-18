@@ -330,7 +330,7 @@ export async function initSource(
                 collector.push(event, {
                   ...options,
                   id: sourceId,
-                  ingest: cloneIngest(currentIngest, `${sourceId}:${idx}`),
+                  ingest: cloneIngest(currentIngest, `${sourceId}.${idx}`),
                   respond: undefined,
                   mapping: config,
                   preChain: branchChain,

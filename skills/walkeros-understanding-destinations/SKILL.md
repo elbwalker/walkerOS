@@ -89,8 +89,18 @@ config: {
   policy: { /* processing rules */ },
   queue: boolean,  // queue events
   dryRun: boolean, // test mode
+  queueMax: number,  // consent-queued events cap (default 1000)
+  dlqMax: number,    // dead-letter queue cap (default 100)
 }
 ```
+
+## Buffer bounds
+
+Each destination keeps two internal buffers: `queuePush` (consent-denied events)
+and `dlq` (failed pushes). Both are size-bounded with FIFO drop-oldest eviction.
+Defaults: `queueMax: 1000`, `dlqMax: 100`. Set either on a destination's config
+to override per destination. Operators read drop counts from
+`collector.status.destinations[id].dropped.{queuePush,dlq}`.
 
 ## Require vs Consent
 

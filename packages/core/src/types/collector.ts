@@ -24,6 +24,11 @@ export interface Config {
   sessionStatic: Partial<SessionData>;
   /** Logger configuration */
   logger?: Logger.Config;
+  /**
+   * Maximum number of events retained in `collector.queue` for late-registered
+   * destination backfill. Overflow drops oldest (FIFO). Default 1000.
+   */
+  queueMax?: number;
 }
 
 /**
@@ -70,6 +75,12 @@ export interface Status {
   failed: number;
   sources: Record<string, SourceStatus>;
   destinations: Record<string, DestinationStatus>;
+  /** Monotonic counts of events dropped due to buffer caps. */
+  dropped: {
+    queue: number;
+    queuePush: number;
+    dlq: number;
+  };
 }
 
 export interface SourceStatus {
@@ -83,6 +94,15 @@ export interface DestinationStatus {
   failed: number;
   lastAt?: number;
   duration: number;
+  /** Current size of the destination's queuePush buffer (point-in-time). */
+  queuePushSize: number;
+  /** Current size of the destination's DLQ (point-in-time). */
+  dlqSize: number;
+  /** Monotonic counts of events dropped from per-destination buffer caps. */
+  dropped: {
+    queuePush: number;
+    dlq: number;
+  };
 }
 
 export interface Sources {

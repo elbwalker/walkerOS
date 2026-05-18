@@ -141,6 +141,18 @@ export const ConfigSchema = z
       .describe(
         'Return this value instead of calling push(). Dev/testing only.',
       ),
+    queueMax: z
+      .number()
+      .optional()
+      .describe(
+        'Maximum consent-denied events retained in queuePush for this destination. FIFO drop on overflow. Default 1000.',
+      ),
+    dlqMax: z
+      .number()
+      .optional()
+      .describe(
+        'Maximum failed-push entries retained in dlq for this destination. FIFO drop on overflow. Default 100.',
+      ),
   })
   .meta({
     id: 'DestinationConfig',

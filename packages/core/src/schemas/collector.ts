@@ -113,12 +113,18 @@ export const ConfigSchema = z
     logger: LoggerConfigSchema.optional().describe(
       'Logger configuration (level, handler)',
     ),
+    queueMax: z
+      .number()
+      .optional()
+      .describe(
+        'Maximum events retained in collector.queue (late-registration replay). FIFO drop on overflow. Default 1000.',
+      ),
   })
   .meta({
     id: 'CollectorConfig',
     title: 'Collector.Config',
     description:
-      'Core collector configuration (globals/session statics, logger).',
+      'Core collector configuration (globals/session statics, logger, buffer bounds).',
   })
   .describe('Core collector configuration');
 

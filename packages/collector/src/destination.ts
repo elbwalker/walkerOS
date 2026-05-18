@@ -34,6 +34,10 @@ import {
   extractChainProperty,
 } from './transformer';
 import { getCacheStore } from './cache';
+import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
+
+const DEFAULT_QUEUE_MAX = 1_000;
+const DEFAULT_DLQ_MAX = 100;
 
 /**
  * Resolves transformer chain for a destination.
@@ -162,9 +166,30 @@ export async function pushToDestinations(
   // Check if collector is allowed to push
   if (!allowed) return createPushResult({ ok: false });
 
-  // Add event to the collector queue
+  // Add event to the collector queue (bounded; FIFO drop-oldest on overflow)
   if (event) {
-    collector.queue.push(event);
+    const queueMax = collector.config.queueMax;
+    if (queueMax === undefined) {
+      throw new Error(
+        'Collector.Config.queueMax is undefined; defaults must be seeded by collector()',
+      );
+    }
+    const result = pushBounded(collector.queue, event, { max: queueMax });
+    if (result.dropped > 0) {
+      collector.status.dropped.queue += result.dropped;
+      warnOverflowOnce(
+        collector.queue,
+        collector.logger,
+        'collector.queue overflow; oldest events dropped',
+        {
+          buffer: 'queue',
+          cap: queueMax,
+          droppedCount: collector.status.dropped.queue,
+        },
+      );
+    } else if (collector.queue.length < queueMax) {
+      resetOverflowFlag(collector.queue);
+    }
     collector.status.in++;
   }
 
@@ -248,8 +273,49 @@ export async function pushToDestinations(
         return true; // Keep denied events in the queue
       });
 
-      // Add skipped events back to the queue
-      destination.queuePush.push(...skippedEvents);
+      // Add skipped (consent-denied) events back to the queue.
+      // Bounded; FIFO drop-oldest on overflow.
+      if (skippedEvents.length > 0) {
+        const queuePush = destination.queuePush;
+        const destId = destination.config.id || id;
+        const bound = {
+          max: destination.config.queueMax ?? DEFAULT_QUEUE_MAX,
+        };
+        let totalDropped = 0;
+        for (const skipped of skippedEvents) {
+          const r = pushBounded(queuePush, skipped, bound);
+          totalDropped += r.dropped;
+        }
+        if (totalDropped > 0) {
+          // Ensure status entry exists for early-overflow paths.
+          if (!collector.status.destinations[destId]) {
+            collector.status.destinations[destId] = {
+              count: 0,
+              failed: 0,
+              duration: 0,
+              queuePushSize: 0,
+              dlqSize: 0,
+              dropped: { queuePush: 0, dlq: 0 },
+            };
+          }
+          const destStatus = collector.status.destinations[destId];
+          destStatus.dropped.queuePush += totalDropped;
+          collector.status.dropped.queuePush += totalDropped;
+          warnOverflowOnce(
+            queuePush,
+            collector.logger.scope(destination.type || 'unknown'),
+            'destination.queuePush overflow; oldest events dropped',
+            {
+              buffer: 'queuePush',
+              destination: destId,
+              cap: bound.max,
+              droppedCount: destStatus.dropped.queuePush,
+            },
+          );
+        } else if (queuePush.length < bound.max) {
+          resetOverflowFlag(queuePush);
+        }
+      }
 
       // Execution shall not pass if no events are allowed
       if (!allowedEvents.length) {
@@ -392,8 +458,45 @@ export async function pushToDestinations(
             error = err; // oh no
             pushFailed = true;
 
-            // Add failed event to destinations DLQ
-            destination.dlq!.push([processedEvent!, err]);
+            // Add failed event to destinations DLQ (bounded; FIFO drop-oldest)
+            const dlq = destination.dlq!;
+            const destId = destination.config.id || id;
+            const dlqBound = {
+              max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX,
+            };
+            const dlqResult = pushBounded(
+              dlq,
+              [processedEvent!, err],
+              dlqBound,
+            );
+            if (dlqResult.dropped > 0) {
+              if (!collector.status.destinations[destId]) {
+                collector.status.destinations[destId] = {
+                  count: 0,
+                  failed: 0,
+                  duration: 0,
+                  queuePushSize: 0,
+                  dlqSize: 0,
+                  dropped: { queuePush: 0, dlq: 0 },
+                };
+              }
+              const destStatus = collector.status.destinations[destId];
+              destStatus.dropped.dlq += dlqResult.dropped;
+              collector.status.dropped.dlq += dlqResult.dropped;
+              warnOverflowOnce(
+                dlq,
+                collector.logger.scope(destination.type || 'unknown'),
+                'destination.dlq overflow; oldest entries dropped',
+                {
+                  buffer: 'dlq',
+                  destination: destId,
+                  cap: dlqBound.max,
+                  droppedCount: destStatus.dropped.dlq,
+                },
+              );
+            } else if (dlq.length < dlqBound.max) {
+              resetOverflowFlag(dlq);
+            }
 
             return undefined;
           })(
@@ -482,10 +585,17 @@ export async function pushToDestinations(
         count: 0,
         failed: 0,
         duration: 0,
+        queuePushSize: 0,
+        dlqSize: 0,
+        dropped: { queuePush: 0, dlq: 0 },
       };
     }
     const destStatus = collector.status.destinations[result.id];
     const now = Date.now();
+
+    // Refresh point-in-time buffer sizes after the destination's push pass.
+    destStatus.queuePushSize = destination.queuePush?.length ?? 0;
+    destStatus.dlqSize = destination.dlq?.length ?? 0;
 
     if (result.error) {
       ref.error = result.error;

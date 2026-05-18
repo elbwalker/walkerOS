@@ -19,6 +19,7 @@ export async function collector(
     globalsStatic: {},
     sessionStatic: {},
     run: true,
+    queueMax: 1_000,
   };
 
   const config: Collector.Config = assign(defaultConfig, initConfig, {
@@ -58,6 +59,7 @@ export async function collector(
       failed: 0,
       sources: {},
       destinations: {},
+      dropped: { queue: 0, queuePush: 0, dlq: 0 },
     },
     timing: Date.now(),
     user: initConfig.user || {},

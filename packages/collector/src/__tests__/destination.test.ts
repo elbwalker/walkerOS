@@ -27,6 +27,7 @@ describe('Destination', () => {
     return {
       globalsStatic: {},
       sessionStatic: {},
+      queueMax: 1_000,
       ...overrides,
     };
   }
@@ -62,6 +63,7 @@ describe('Destination', () => {
         failed: 0,
         sources: {},
         destinations: {},
+        dropped: { queue: 0, queuePush: 0, dlq: 0 },
       },
       ...args,
       config: args?.config ? createTestConfig(args.config) : defaultConfig,
