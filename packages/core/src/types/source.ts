@@ -8,7 +8,7 @@ import type {
   Context as BaseContext,
 } from './index';
 import type { DestroyFn, SetupFn } from './lifecycle';
-import type { RouteSpec } from './transformer';
+import type { Route } from './transformer';
 
 /**
  * Base Env interface for dependency injection into sources.
@@ -189,9 +189,10 @@ export type InitSource<T extends TypesGeneric = Types> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   primary?: boolean;
-  next?: RouteSpec;
-  before?: RouteSpec;
+  next?: Route;
+  before?: Route;
   cache?: import('./cache').Cache;
+  validate?: import('./validate').Validate;
 };
 
 /**

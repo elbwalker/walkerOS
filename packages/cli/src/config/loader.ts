@@ -106,6 +106,7 @@ export function loadBundleConfig(
     flowSettings = getFlowSettings(config, flowName);
   }
 
+  // Auto-inject validator transformers for any step-level `validate?:`
   // Get static build defaults based on platform
   const buildDefaults = getBuildDefaults(platform);
 

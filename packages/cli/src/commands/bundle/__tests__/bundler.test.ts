@@ -375,7 +375,7 @@ describe('buildSplitConfigObject string code references', () => {
         },
       },
       stores: {
-        cache: { package: '@walkeros/store-memory' },
+        cache: { package: '@walkeros/server-store-fs' },
       },
     } as unknown as Flow;
 
@@ -413,7 +413,7 @@ describe('buildSplitConfigObject string code references', () => {
         },
       },
       stores: {
-        cache: { package: '@walkeros/store-memory' },
+        cache: { package: '@walkeros/server-store-fs' },
       },
     } as unknown as Flow;
 

@@ -227,7 +227,7 @@ describe('chain branching', () => {
             match: { key: 'ingest.type', operator: 'eq', value: 'api' },
             next: 'api-handler',
           },
-          { match: '*', next: 'default-handler' },
+          { next: 'default-handler' },
         ],
       },
     );
@@ -273,7 +273,7 @@ describe('chain branching', () => {
             match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
             next: 'api',
           },
-          { match: '*', next: 'fallback' },
+          { next: 'fallback' },
         ],
       };
     });
@@ -321,5 +321,44 @@ describe('chain branching', () => {
 
     // Branch target not found → drop event (return null), not silent continue
     expect(result.event).toBeNull();
+  });
+
+  it('forkResult.next supports many fan-out (each branch produces its own event)', async () => {
+    // Each branch records the event it received at entry. Under SEQUENTIAL
+    // execution (the pre-Task-3.2 behavior, where `walkChain` treats a
+    // string[] as a single chain), `a` runs first, mutates the event with
+    // `{ data: { touchedBy: 'a' } }`, and `b` then sees that mutation. Under
+    // true fan-out, each branch starts from the parent event independently,
+    // so `b` must NOT see `a`'s mutation. This assertion fails under the old
+    // sequential walk and passes only when each fork branch dispatches as
+    // its own subchain with an isolated ingest.
+    const seenByA: WalkerOS.DeepPartialEvent[] = [];
+    const seenByB: WalkerOS.DeepPartialEvent[] = [];
+    const router = createTransformer(() => [
+      { event: { name: 'fanA' }, next: { many: ['a', 'b'] } },
+    ]);
+    const a = createTransformer((e) => {
+      seenByA.push(e);
+      return { event: { ...e, data: { touchedBy: 'a' } } };
+    });
+    const b = createTransformer((e) => {
+      seenByB.push(e);
+      return { event: e };
+    });
+    const transformers = { router, a, b };
+    await runTransformerChain(
+      createMockCollector(transformers),
+      transformers,
+      ['router'],
+      {},
+    );
+    // Both branches MUST run. Order is parallel — assert membership, not order.
+    expect(seenByA).toHaveLength(1);
+    expect(seenByB).toHaveLength(1);
+    // Fan-out semantic: b sees the parent event, NOT a's mutation. Under the
+    // old sequential walk this would fail because b would receive
+    // { name: 'fanA', data: { touchedBy: 'a' } }.
+    expect(seenByB[0]).toEqual({ name: 'fanA' });
+    expect(seenByA[0]).toEqual({ name: 'fanA' });
   });
 });

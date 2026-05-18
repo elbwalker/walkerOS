@@ -19,6 +19,8 @@ Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
 | [understanding-stores](./walkeros-understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle                |
 | [using-logger](./walkeros-using-logger/SKILL.md)                             | Logger access, DRY principles, API logging patterns       |
 | [using-step-examples](./walkeros-using-step-examples/SKILL.md)               | Step examples, Three Type Zones, in/out format            |
+| [using-store-cache](./walkeros-using-store-cache/SKILL.md)                   | Recipes for store-level cache, multi-tier composition     |
+| [using-transformer-ga4](./walkeros-using-transformer-ga4/SKILL.md)           | Wire `@walkeros/transformer-ga4`, override mappings       |
 
 ### Task Skills
 

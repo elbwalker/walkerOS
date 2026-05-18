@@ -95,7 +95,7 @@ describe('Source cache MISS race (collector)', () => {
             };
           },
           cache: {
-            // full: true is the default for sources. MISS with update rule
+            // stop: true is the default for sources. MISS with update rule
             // forces the async applyUpdate path inside the MISS wrapper.
             rules: [
               {

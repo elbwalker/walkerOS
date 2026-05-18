@@ -18,8 +18,8 @@
  */
 
 import { z, toJsonSchema } from './validation';
-import { RouteSpecSchema } from './matcher';
-import { CacheSchema } from './cache';
+import { RouteSchema, RouteWithoutManySchema } from './matcher';
+import { EventCacheSchema, StoreCacheSchema } from './cache';
 
 // ========================================
 // Shared Type Schemas
@@ -227,6 +227,46 @@ export const StepExamplesSchema = z
   .describe('Named step examples for testing and documentation');
 
 // ========================================
+// Validate Schemas (shared by step Init schemas and ContractRule)
+// ========================================
+
+/**
+ * JSON Schema fragment - structural JSON Schema object.
+ */
+export const JsonSchemaSchema = z.record(z.string(), z.unknown()).meta({
+  id: 'JsonSchema',
+  title: 'JsonSchema',
+  description: 'Structural JSON Schema fragment (Record<string, unknown>)',
+});
+
+/**
+ * Validate events map - entity → action → JSON Schema.
+ */
+export const ValidateEventsSchema = z
+  .record(z.string(), z.record(z.string(), JsonSchemaSchema))
+  .meta({
+    id: 'ValidateEvents',
+    title: 'ValidateEvents',
+    description: 'Entity-action keyed JSON Schemas',
+  })
+  .describe('Entity-action keyed JSON Schemas');
+
+/**
+ * Validate schema - step-level validation configuration.
+ */
+export const ValidateSchema = z
+  .object({
+    format: z.boolean().optional(),
+    events: ValidateEventsSchema.optional(),
+    schema: JsonSchemaSchema.optional(),
+  })
+  .meta({
+    id: 'Validate',
+    title: 'Validate',
+    description: 'Step-level validation: { format?, events?, schema? }',
+  });
+
+// ========================================
 // Source / Destination / Transformer / Store Schemas
 // ========================================
 
@@ -288,18 +328,19 @@ export const SourceSchema = z
     variables: VariablesSchema.optional().describe(
       'Source-level variables (highest priority in cascade)',
     ),
-    next: RouteSpecSchema.optional().describe(
+    next: RouteSchema.optional().describe(
       'Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.',
     ),
-    before: RouteSpecSchema.optional().describe(
+    before: RouteSchema.optional().describe(
       'Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.',
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
-    cache: CacheSchema.optional().describe(
+    cache: EventCacheSchema.optional().describe(
       'Cache configuration for this source (match → key → ttl rules)',
     ),
+    validate: ValidateSchema.optional(),
   })
   .meta({
     id: 'FlowSource',
@@ -345,10 +386,10 @@ export const TransformerSchema = z
       })
       .optional()
       .describe('Transformer environment configuration'),
-    before: RouteSpecSchema.optional().describe(
+    before: RouteSchema.optional().describe(
       'Pre-transformer chain. Runs before this transformer push function.',
     ),
-    next: RouteSpecSchema.optional().describe(
+    next: RouteSchema.optional().describe(
       'Next transformer in chain. String, string[], or Route[] for conditional routing.',
     ),
     variables: VariablesSchema.optional().describe(
@@ -357,9 +398,10 @@ export const TransformerSchema = z
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
-    cache: CacheSchema.optional().describe(
+    cache: EventCacheSchema.optional().describe(
       'Cache configuration for this transformer (match → key → ttl rules)',
     ),
+    validate: ValidateSchema.optional(),
   })
   .meta({
     id: 'FlowTransformer',
@@ -415,18 +457,19 @@ export const DestinationSchema = z
     variables: VariablesSchema.optional().describe(
       'Destination-level variables (highest priority in cascade)',
     ),
-    before: RouteSpecSchema.optional().describe(
-      'Post-collector transformer chain. String, string[], or Route[] for conditional routing.',
+    before: RouteWithoutManySchema.optional().describe(
+      'Post-collector transformer chain. String, string[], or Route[] for conditional routing. `many` is not valid here — use multiple destinations for post-collector fan-out.',
     ),
-    next: RouteSpecSchema.optional().describe(
-      'Post-push transformer chain. Push response available at context.ingest._response.',
+    next: RouteWithoutManySchema.optional().describe(
+      'Post-push transformer chain. Push response available at context.ingest._response. `many` is not valid here — use multiple destinations for post-collector fan-out.',
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
-    cache: CacheSchema.optional().describe(
+    cache: EventCacheSchema.optional().describe(
       'Cache configuration for this destination (match → key → ttl rules)',
     ),
+    validate: ValidateSchema.optional(),
   })
   .meta({
     id: 'FlowDestination',
@@ -479,6 +522,9 @@ export const StoreSchema = z
       })
       .optional()
       .describe('Store environment configuration'),
+    cache: StoreCacheSchema.optional().describe(
+      'Cache configuration for this store (TTL-only rules, optional recursive `cache.store`)',
+    ),
     variables: VariablesSchema.optional().describe(
       'Store-level variables (highest priority in cascade)',
     ),
@@ -490,7 +536,7 @@ export const StoreSchema = z
     id: 'FlowStore',
     title: 'Flow.Store',
     description:
-      'Store package reference with configuration, env, and examples.',
+      'Store package reference with configuration, env, cache, and examples.',
   })
   .describe('Store package reference with configuration');
 
@@ -543,39 +589,17 @@ export const ContractEventsSchema = z
  */
 export const ContractRuleSchema = z
   .object({
-    extends: z
-      .string()
-      .optional()
-      .describe('Inherit from another named contract'),
-    tagging: z
-      .number()
-      .optional()
-      .describe('Tagging level (used by validators / runtime tagging policy)'),
-    description: z.string().optional().describe('Human-readable description'),
-    globals: ContractSchemaEntry.optional().describe(
-      'JSON Schema for event.globals',
-    ),
-    context: ContractSchemaEntry.optional().describe(
-      'JSON Schema for event.context',
-    ),
-    custom: ContractSchemaEntry.optional().describe(
-      'JSON Schema for event.custom',
-    ),
-    user: ContractSchemaEntry.optional().describe('JSON Schema for event.user'),
-    consent: ContractSchemaEntry.optional().describe(
-      'JSON Schema for event.consent',
-    ),
-    events: ContractEventsSchema.optional().describe(
-      'Entity-action event schemas',
-    ),
+    extends: z.string().optional(),
+    tagging: z.number().optional(),
+    description: z.string().optional(),
+    events: ValidateEventsSchema.optional(),
+    schema: JsonSchemaSchema.optional(),
   })
   .meta({
-    id: 'FlowContractRule',
+    id: 'ContractRule',
     title: 'Flow.ContractRule',
-    description:
-      'Named contract rule with optional sections (globals/context/custom/user/consent) and event schemas.',
-  })
-  .describe('Named contract rule with optional sections and events');
+    description: 'Named contract entry',
+  });
 
 /**
  * Named contract map.

@@ -32,6 +32,7 @@
     "@google-cloud/bigquery": "^8.1.1",
     "@google-cloud/bigquery-storage": "^5.1.0",
     "@google-cloud/pubsub": "^5.3.0",
+    "@walkeros/core": "4.0.2",
     "@walkeros/server-core": "4.0.2"
   },
   "devDependencies": {},

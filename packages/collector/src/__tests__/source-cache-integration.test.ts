@@ -296,7 +296,7 @@ describe('Source cache integration', () => {
     expect(transformerCalls).toEqual(['enrich']); // No new transformer call
   });
 
-  it('should continue pipeline on HIT when full=false', async () => {
+  it('should continue pipeline on HIT when stop=false', async () => {
     const destinationCalls: string[] = [];
 
     const { collector } = await startFlow({
@@ -315,7 +315,7 @@ describe('Source cache integration', () => {
             };
           },
           cache: {
-            full: false,
+            stop: false,
             rules: [
               {
                 match: {
@@ -349,7 +349,7 @@ describe('Source cache integration', () => {
     });
     expect(destinationCalls).toHaveLength(1);
 
-    // Second request: HIT with full=false — pipeline still runs (source step skipped)
+    // Second request: HIT with stop=false — pipeline still runs (source step skipped)
     await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/data',

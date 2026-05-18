@@ -2,32 +2,62 @@
 import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn } from './lifecycle';
 import type { Ingest } from './ingest';
+import type { Config as MappingConfig } from './mapping';
+import type { MatchExpression } from './matcher';
 
 /**
- * A single conditional routing rule. Pairs a `match` expression (or `'*'`
- * wildcard) against ingest metadata with a `next` step to follow when the
- * match fires. Used inside `Route[]` arrays on `Flow.Source.next`,
- * `Flow.Source.before`, `Flow.Transformer.next/before`, and
- * `Flow.Destination.next/before`. Routes are evaluated in order, first match
- * wins, no match falls through unchanged. The `next` field of a Route
- * mirrors the outer-position `next` semantics: it points to whatever comes
- * downstream when this rule fires.
+ * Unified route grammar for Flow v4. A `Route` is one of:
+ * - a transformer ID string (`"redact"`)
+ * - a sequence of routes (`["a", "b", "c"]` — sugar for chained `.next`)
+ * - a `RouteConfig` — a gated / dispatching node.
+ *
+ * `RouteConfig` is a disjoint union — set exactly one of `next`, `one`,
+ * `many`, or neither (pure gate). The disjointness is enforced by `never`
+ * sibling properties at the type level and `z.strictObject` at the schema
+ * level.
+ *
+ * Operators:
+ * - `next`: single continuation.
+ * - `one`: first-match dispatch (walk entries, first whose match passes wins).
+ * - `many`: all-match terminal fan-out (every matching entry spawns an
+ *   independent flow; main chain terminates here). Restricted to
+ *   pre-collector positions (source.next, transformer.next, transformer.before).
  */
-export interface Route {
-  match: import('./matcher').MatchExpression | '*';
-  next: RouteSpec;
+export type Route = string | Route[] | RouteConfig;
+
+export type RouteConfig =
+  | RouteNextConfig
+  | RouteOneConfig
+  | RouteManyConfig
+  | RouteGateConfig;
+
+export interface RouteNextConfig {
+  match?: MatchExpression;
+  next: Route;
+  one?: never;
+  many?: never;
 }
 
-/**
- * The union accepted at every chain-routing boundary. A plain `string`
- * targets one step by ID; `string[]` declares an explicit sequence ignoring
- * per-step `next`; `Route[]` enables conditional routing on ingest metadata.
- * At runtime, `compileNext()` collapses any RouteSpec into a `CompiledNext`
- * (static, chain, or routes form) for hot-path evaluation. Surfaces via
- * `Flow.Source.before/next`, `Flow.Transformer.before/next`,
- * `Flow.Destination.before/next`.
- */
-export type RouteSpec = string | string[] | Route[];
+export interface RouteOneConfig {
+  match?: MatchExpression;
+  one: Route[];
+  next?: never;
+  many?: never;
+}
+
+export interface RouteManyConfig {
+  match?: MatchExpression;
+  many: Route[];
+  next?: never;
+  one?: never;
+}
+
+export interface RouteGateConfig {
+  match: MatchExpression;
+  next?: never;
+  one?: never;
+  many?: never;
+}
 
 /**
  * Base environment interface for walkerOS transformers.
@@ -83,8 +113,8 @@ export interface Config<T extends TypesGeneric = Types> {
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
-  before?: RouteSpec; // Pre-transformer chain (runs before push)
-  next?: RouteSpec; // Graph wiring to next transformer
+  before?: Route; // Pre-transformer chain (runs before push)
+  next?: Route; // Graph wiring to next transformer
   cache?: import('./cache').Cache; // Step-level cache config
   init?: boolean; // Track init state (like Destination)
   disabled?: boolean; // Completely skip this transformer in chains
@@ -92,6 +122,22 @@ export interface Config<T extends TypesGeneric = Types> {
   mock?: unknown;
   /** Path-specific mock values keyed by chain path (e.g., "destination.ga4.before"). Takes precedence over global mock. */
   chainMocks?: Record<string, unknown>;
+  /**
+   * Declarative event-to-event mapping applied when this transformer step
+   * has no `code`. Same field name as on `Destination.Config`, but the
+   * semantic differs by position: on a destination, `mapping` produces a
+   * vendor-shaped payload; on a transformer step, it mutates the event
+   * itself. The collector synthesizes a push that runs
+   * `processEventMapping` and returns the transformed event (or drops it
+   * when a rule has `ignore: true`).
+   *
+   * At the transformer position, only event-mutating fields apply:
+   * `policy`, `mapping[].policy`, `mapping[].name`, `mapping[].ignore`,
+   * `mapping[].consent`, `include`. Vendor-payload fields (`data`,
+   * `mapping[].data`, `silent`) are ignored at this position with a
+   * one-time warning.
+   */
+  mapping?: MappingConfig;
 }
 
 /**
@@ -116,17 +162,23 @@ export interface Context<
 export interface Result<E = WalkerOS.DeepPartialEvent> {
   event?: E;
   respond?: import('../respond').RespondFn;
-  next?: RouteSpec;
+  next?: Route;
 }
 
 /**
  * Result of running a transformer chain.
  * Returns the processed event (singular, fan-out array, or null if dropped)
  * alongside the potentially wrapped respond function.
+ *
+ * `stopped` signals pipeline-halt — when set, the caller MUST NOT propagate
+ * the event further downstream (no destinations, no subsequent chains).
+ * Used by `cache.stop: true` on pre-collector transformers so the documented
+ * "downstream transformers and destinations are skipped" semantic holds.
  */
 export interface ChainResult {
   event: WalkerOS.DeepPartialEvent | WalkerOS.DeepPartialEvent[] | null;
   respond?: import('../respond').RespondFn;
+  stopped?: true;
 }
 
 /**
@@ -187,12 +239,25 @@ export type Init<T extends TypesGeneric = Types> = (
  * Used in collector registration.
  */
 export type InitTransformer<T extends TypesGeneric = Types> = {
-  code: Init<T>;
+  /**
+   * Initialization function. When omitted, the entry is a pass-through step:
+   * - If `mapping` is present, the collector synthesizes a mapping-only
+   *   push using `processEventMapping`.
+   * - Otherwise it's a named hop that only hosts a `before` / `next` /
+   *   `cache` chain.
+   *
+   * Validation: an entry without `code` must declare at least one of
+   * `package`, `before`, `next`, `cache`, `mapping`. Enforced by
+   * `validateTransformerEntry` in `@walkeros/core`.
+   */
+  code?: Init<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
-  before?: RouteSpec;
-  next?: RouteSpec;
+  before?: Route;
+  next?: Route;
   cache?: import('./cache').Cache;
+  mapping?: MappingConfig;
+  validate?: import('./validate').Validate;
 };
 
 /**

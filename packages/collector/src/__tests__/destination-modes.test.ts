@@ -283,7 +283,7 @@ describe('destination modes (disabled/mock)', () => {
               },
             },
             cache: {
-              rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+              rules: [{ key: ['event.name'], ttl: 60 }],
             },
           },
         },
@@ -317,7 +317,7 @@ describe('destination modes (disabled/mock)', () => {
               },
             },
             cache: {
-              rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+              rules: [{ key: ['event.name'], ttl: 60 }],
             },
           },
         },

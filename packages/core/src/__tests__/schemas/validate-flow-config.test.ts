@@ -287,7 +287,7 @@ describe('validateFlowConfig', () => {
         flows: {
           a: {
             config: { platform: 'server' },
-            stores: { cache: { package: '@walkeros/store-memory' } },
+            stores: { cache: { package: '@walkeros/server-store-fs' } },
           },
           b: {
             config: { platform: 'server' },
@@ -318,12 +318,12 @@ describe('validateFlowConfig', () => {
               express: {
                 package: '@walkeros/server-source-express',
                 before: 'decoder',
-                next: 'validate',
+                next: 'fingerprint',
               },
             },
             transformers: {
               decoder: { package: '@walkeros/transformer-decoder' },
-              validate: { package: '@walkeros/transformer-validate' },
+              fingerprint: { package: '@walkeros/transformer-fingerprint' },
             },
           },
         },
@@ -347,10 +347,10 @@ describe('validateFlowConfig', () => {
               enrich: {
                 package: '@walkeros/transformer-enricher',
                 before: 'lookup',
-                next: 'validate',
+                next: 'fingerprint',
               },
               lookup: { package: '@walkeros/transformer-lookup' },
-              validate: { package: '@walkeros/transformer-validate' },
+              fingerprint: { package: '@walkeros/transformer-fingerprint' },
             },
           },
         },
@@ -454,7 +454,7 @@ describe('validateFlowConfig', () => {
             default: {
               config: { platform: 'server' },
               stores: {
-                cache: { package: '@walkeros/store-memory' },
+                cache: { package: '@walkeros/server-store-fs' },
                 files: { package: '@walkeros/server-store-fs' },
               },
               transformers: {

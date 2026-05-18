@@ -37,6 +37,7 @@
     "@rjsf/validator-ajv8": "^6.1.2",
     "@walkeros/collector": "4.0.2",
     "@walkeros/core": "4.0.2",
+    "@walkeros/web-core": "4.0.2",
     "@walkeros/web-source-browser": "4.0.2",
     "clsx": "^2.1.1",
     "monaco-editor": "^0.55.1",

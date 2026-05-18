@@ -1,10 +1,10 @@
 import type {
+  Cache,
   Collector,
   WalkerOS,
   Elb,
   Destination,
   Transformer,
-  CompiledNext,
   Ingest,
 } from '@walkeros/core';
 import {
@@ -14,17 +14,15 @@ import {
   compileCache,
   checkCache,
   storeCache,
-  compileNext,
   createIngest,
   debounce,
   getId,
   getGrantedConsent,
+  getNextSteps,
   isDefined,
   isFunction,
   isObject,
-  isRouteArray,
   processEventMapping,
-  resolveNext,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
@@ -39,30 +37,47 @@ import { getCacheStore } from './cache';
 
 /**
  * Resolves transformer chain for a destination.
- * For conditional routing (Route[]), compiledBefore must be provided (compiled at init).
- * For static routing (string | string[]), resolution is direct.
+ *
+ * `getNextSteps` returns the immediate next-step ids for the given Route in
+ * the supplied context. `walkChain` then follows static `.next` links from
+ * each entry to produce the full ordered chain. The WeakMap inside
+ * `getNextSteps` caches the compiled form, so we don't re-compile per event.
+ *
+ * post-collector destination.before disallows `many` (enforced at the schema
+ * layer via `RouteWithoutManySchema`), so we never see more than one id here
+ * unless a user passes an explicit string[] chain — in which case we want to
+ * treat it as the explicit chain (no further walking).
  *
  * `transformerNextMap` is computed once per `pushToDestinations` call (it depends
  * only on `collector.transformers`) and passed in to avoid rebuilding it for
  * every destination's before and next chain resolution.
  */
 function resolveDestinationChain(
-  before: Transformer.RouteSpec | undefined,
-  compiledBefore: CompiledNext | undefined,
+  before: Transformer.Route | undefined,
   transformerNextMap: ReturnType<typeof extractTransformerNextMap>,
   ingest?: Ingest,
 ): string[] {
   if (!before) return [];
-
-  if (compiledBefore) {
-    const resolved = resolveNext(compiledBefore, buildCacheContext(ingest));
-    if (!resolved) return [];
-    return walkChain(resolved, transformerNextMap);
+  // Static string[] chains pass through unchanged — they are explicit and
+  // suppress `.next` walking. Static single-string starts are walked.
+  if (
+    Array.isArray(before) &&
+    before.every((entry) => typeof entry === 'string')
+  ) {
+    return walkChain(before, transformerNextMap);
   }
-
-  // Without compiledBefore, before is static (string | string[]); skip Route[] case.
-  if (isRouteArray(before)) return [];
-  return walkChain(before, transformerNextMap);
+  if (typeof before === 'string') {
+    return walkChain(before, transformerNextMap);
+  }
+  // Conditional shape — resolve per-event, walk single-id result.
+  const ids = getNextSteps(before, buildCacheContext(ingest));
+  if (ids.length === 0) return [];
+  if (ids.length === 1) return walkChain(ids[0], transformerNextMap);
+  // Multiple ids from a conditional shape: treat as explicit chain.
+  // (destination.before disallows `many`; this path is reached only if a
+  // RouteConfig.next resolves to a string[], which is then the user's
+  // declared chain.)
+  return walkChain(ids, transformerNextMap);
 }
 
 /**
@@ -264,26 +279,24 @@ export async function pushToDestinations(
       let response: unknown;
       if (!destination.dlq) destination.dlq = [];
 
-      // Compile before chain once per destination batch (not per-event)
+      // Resolve the before chain once per destination batch (the per-event
+      // resolution inside getNextSteps is WeakMap-cached, so this is cheap).
       const before = destination.config.before;
-      const compiledBefore =
-        before && isRouteArray(before) ? compileNext(before) : undefined;
       const postChain = resolveDestinationChain(
         before,
-        compiledBefore,
         transformerNextMap,
         destIngest,
       );
 
-      // Compile next chain once per destination batch (not per-event)
+      // Capture the next chain config; resolution happens per-event below.
       const nextConfig = destination.config.next;
-      const compiledNext =
-        nextConfig && isRouteArray(nextConfig)
-          ? compileNext(nextConfig)
-          : undefined;
 
-      // Compile destination cache once per batch (not per-event)
-      const destCacheConfig = destination.config?.cache;
+      // Compile destination cache once per batch (not per-event).
+      // Destination caches operate on events (HIT/MISS keyed by event fields),
+      // so the rule shape is always EventCacheRule, not StoreCacheRule.
+      const destCacheConfig = destination.config?.cache as
+        | Cache.Cache<Cache.EventCacheRule>
+        | undefined;
       const compiledDCache = destCacheConfig
         ? compileCache(destCacheConfig)
         : undefined;
@@ -301,13 +314,12 @@ export async function pushToDestinations(
 
           // Full cache check: before the before chain (skips everything on HIT)
           let cacheMiss: { key: string; ttl: number } | undefined;
-          if (compiledDCache?.full && dCacheStore) {
+          if (compiledDCache?.stop && dCacheStore) {
             const cacheContext = buildCacheContext(destIngest, event);
             const cacheResult = checkCache(
               compiledDCache,
               dCacheStore,
               cacheContext,
-              `d:${id}`,
             );
             if (cacheResult?.status === 'HIT') {
               return event; // Skip before chain + push
@@ -353,13 +365,12 @@ export async function pushToDestinations(
           }
 
           // Step-level cache check: after before chain, skip only push on HIT
-          if (compiledDCache && !compiledDCache.full && dCacheStore) {
+          if (compiledDCache && !compiledDCache.stop && dCacheStore) {
             const cacheContext = buildCacheContext(destIngest, processedEvent);
             const cacheResult = checkCache(
               compiledDCache,
               dCacheStore,
               cacheContext,
-              `d:${id}`,
             );
             if (cacheResult?.status === 'HIT') {
               return event; // Skip push — deduplicated
@@ -421,7 +432,6 @@ export async function pushToDestinations(
 
             const nextChain = resolveDestinationChain(
               nextConfig,
-              compiledNext,
               transformerNextMap,
               destIngest,
             );

@@ -46,11 +46,11 @@ export function getSchemaPropertyCompletions(
  *
  * Path examples:
  * - [] → contract names ("default", "web")
- * - ["web"] → top-level keys ("globals", "events", "tagging", ...)
+ * - ["web"] → top-level keys ("schema", "events", "tagging", ...)
  * - ["web", "events"] → entity names ("page", "product")
  * - ["web", "events", "page"] → action names ("view", "read")
  * - ["web", "events", "page", "view"] → schema properties ("title", "url")
- * - ["web", "globals"] → globals schema properties ("lang", "env")
+ * - ["web", "schema", "properties", "globals", "properties"] → keys inside globals
  */
 export function getContractPathCompletions(
   raw: Flow.Contract,
@@ -80,15 +80,7 @@ export function getContractPathCompletions(
       keys.push({ key: 'tagging', type: 'number' });
     if (entry.description !== undefined)
       keys.push({ key: 'description', type: 'string' });
-    for (const section of [
-      'globals',
-      'context',
-      'custom',
-      'user',
-      'consent',
-    ] as const) {
-      if (entry[section]) keys.push({ key: section, detail: 'schema' });
-    }
+    if (entry.schema) keys.push({ key: 'schema', detail: 'JSON Schema' });
     if (entry.events) keys.push({ key: 'events', detail: 'entity map' });
     return keys;
   }
@@ -96,15 +88,11 @@ export function getContractPathCompletions(
   // Level 2+: walk into the entry
   const firstKey = rest[0];
 
-  // Section schemas (globals, context, custom, user, consent)
-  const sectionKeys = ['globals', 'context', 'custom', 'user', 'consent'];
-  if (sectionKeys.includes(firstKey)) {
-    const schema = entry[firstKey as keyof Flow.ContractRule];
+  // Schema (whole-event JSON Schema)
+  if (firstKey === 'schema') {
+    const schema = entry.schema;
     if (!schema || typeof schema !== 'object') return [];
-    if (rest.length === 1) {
-      return getSchemaPropertyCompletions(schema as Record<string, unknown>);
-    }
-    return walkSchemaPath(schema as Record<string, unknown>, rest.slice(1));
+    return walkJsonSchema(schema as Record<string, unknown>, rest.slice(1));
   }
 
   // Events path
@@ -146,7 +134,8 @@ export function getContractPathCompletions(
 }
 
 /**
- * Walk into nested JSON Schema properties by path segments.
+ * Walk into nested JSON Schema properties by path segments (implicit
+ * `.properties` walk between segments). Used for event-level schemas.
  */
 function walkSchemaPath(
   schema: Record<string, unknown>,
@@ -161,6 +150,31 @@ function walkSchemaPath(
     current = props[seg];
   }
   return getSchemaPropertyCompletions(current);
+}
+
+/**
+ * Walk a literal path through a JSON Schema object. Segments traverse keys
+ * exactly as written (including `properties`), so paths like
+ * `schema.properties.globals.properties` work as autocompletion expects.
+ * At the end, if the current node has `properties`, return its keys; otherwise
+ * return the node's own keys.
+ */
+function walkJsonSchema(
+  schema: Record<string, unknown>,
+  segments: string[],
+): PathCompletion[] {
+  let current = schema;
+  for (const seg of segments) {
+    const next = current[seg];
+    if (!next || typeof next !== 'object') return [];
+    current = next as Record<string, unknown>;
+  }
+  if (current.properties && typeof current.properties === 'object') {
+    return getSchemaPropertyCompletions(current);
+  }
+  return Object.keys(current)
+    .filter((k) => k !== '__proto__')
+    .map((key) => ({ key }));
 }
 
 /**

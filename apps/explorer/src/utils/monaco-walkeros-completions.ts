@@ -261,26 +261,25 @@ export function getMappingPathCompletions(
 
   if (!contractRaw || Object.keys(contractRaw).length === 0) return [];
 
-  const sectionMap: Record<string, string> = {
-    data: 'events',
-    globals: 'globals',
-    context: 'context',
-    custom: 'custom',
-    user: 'user',
-    consent: 'consent',
-  };
-
-  const section = sectionMap[prefix];
-  if (!section) return [];
+  const sectionNames = new Set([
+    'globals',
+    'context',
+    'custom',
+    'user',
+    'consent',
+  ]);
+  const isEvents = prefix === 'data';
+  if (!isEvents && !sectionNames.has(prefix)) return [];
 
   const allCompletions: CompletionEntry[] = [];
   const seen = new Set<string>();
 
   for (const contractName of Object.keys(contractRaw)) {
-    const pathSegments =
-      section === 'events'
-        ? [contractName, 'events', entity, action]
-        : [contractName, section];
+    // `data.` reads from events[entity][action]; section prefixes
+    // (`globals.`, `consent.`, ...) read from schema.properties.<section>.
+    const pathSegments = isEvents
+      ? [contractName, 'events', entity, action]
+      : [contractName, 'schema', 'properties', prefix, 'properties'];
 
     const completions = getContractPathCompletions(
       contractRaw as Record<string, Record<string, unknown>>,

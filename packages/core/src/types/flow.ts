@@ -38,6 +38,9 @@
  */
 
 import type { Collector } from '.';
+import type { Cache, EventCacheRule, StoreCacheRule } from './cache';
+import type { Route } from './transformer';
+import type { Validate, ValidateEvents, JsonSchema } from './validate';
 
 /**
  * Single flow configuration.
@@ -356,7 +359,7 @@ export namespace Flow {
      * (decode, validate, authenticate, normalize raw input).
      * Raw request data is available in context.ingest.
      */
-    before?: import('./transformer').RouteSpec;
+    before?: Route;
 
     /**
      * First transformer in pre-collector chain.
@@ -366,10 +369,11 @@ export namespace Flow {
      * If omitted, events route directly to the collector.
      * Can be an array for explicit chain control (bypasses transformer.next resolution).
      */
-    next?: import('./transformer').RouteSpec;
+    next?: Route;
 
     /** Cache configuration for this source. */
-    cache?: import('./cache').Cache;
+    cache?: Cache<EventCacheRule>;
+    validate?: Validate;
 
     /**
      * Source-level variables (highest priority in cascade).
@@ -416,7 +420,7 @@ export namespace Flow {
      * If omitted, events are sent directly from the collector.
      * Can be an array for explicit chain control.
      */
-    before?: import('./transformer').RouteSpec;
+    before?: Route;
 
     /**
      * First transformer in post-push chain.
@@ -425,10 +429,11 @@ export namespace Flow {
      * at context.ingest._response. Consent is inherited from the destination
      * gate - no separate consent check needed.
      */
-    next?: import('./transformer').RouteSpec;
+    next?: Route;
 
     /** Cache configuration for this destination. */
-    cache?: import('./cache').Cache;
+    cache?: Cache<EventCacheRule>;
+    validate?: Validate;
 
     /** Destination-level variables (highest priority in cascade). */
     variables?: Variables;
@@ -466,7 +471,7 @@ export namespace Flow {
      * Enables pre-processing or context loading before the main transform.
      * Uses the same chain resolution as source.next and destination.before.
      */
-    before?: import('./transformer').RouteSpec;
+    before?: Route;
 
     /**
      * Next transformer in chain.
@@ -478,10 +483,11 @@ export namespace Flow {
      * Array values define an explicit chain (no walking). Circular references
      * are safely detected at runtime by `walkChain()`.
      */
-    next?: import('./transformer').RouteSpec;
+    next?: Route;
 
     /** Cache configuration for this transformer. */
-    cache?: import('./cache').Cache;
+    cache?: Cache<EventCacheRule>;
+    validate?: Validate;
 
     /** Transformer-level variables (highest priority in cascade). */
     variables?: Variables;
@@ -513,6 +519,15 @@ export namespace Flow {
     /** Store environment configuration. */
     env?: unknown;
 
+    /**
+     * Cache configuration for this store.
+     *
+     * When present, the collector wraps the bare store with a cache layer
+     * (read-through, write-through, single-flight). The cache layer may
+     * recursively delegate to another store via `cache.store`.
+     */
+    cache?: Cache<StoreCacheRule>;
+
     /** Store-level variables (highest priority in cascade). */
     variables?: Variables;
 
@@ -522,6 +537,23 @@ export namespace Flow {
      */
     examples?: StepExamples;
   }
+
+  /**
+   * Discriminator for the four step kinds in a Flow.
+   *
+   * Single source of truth for code that branches on step kind (bundler
+   * codegen, validators, CLI helpers).
+   */
+  export type StepKind = 'Source' | 'Transformer' | 'Destination' | 'Store';
+
+  /**
+   * Union of the four step interfaces.
+   *
+   * Use this where a function accepts "any step in a flow" — e.g. a
+   * shared `validateReference` that branches on `StepKind` without
+   * narrowing to one specific shape.
+   */
+  export type Step = Source | Transformer | Destination | Store;
 
   /**
    * Named contract map.
@@ -548,32 +580,16 @@ export namespace Flow {
    * Use `extends` to inherit from another named contract (additive merge).
    */
   export interface ContractRule {
-    /** Inherit from another named contract (additive merge). */
+    /** Inherit from another named contract entry. */
     extends?: string;
-
-    /** Tagging level (used by validators / runtime tagging policy). */
+    /** Contract revision marker. */
     tagging?: number;
-
-    /** Human-readable description of the contract. */
+    /** Human-readable note. */
     description?: string;
-
-    /** JSON Schema for event.globals. */
-    globals?: ContractSchema;
-
-    /** JSON Schema for event.context. */
-    context?: ContractSchema;
-
-    /** JSON Schema for event.custom. */
-    custom?: ContractSchema;
-
-    /** JSON Schema for event.user. */
-    user?: ContractSchema;
-
-    /** JSON Schema for event.consent. */
-    consent?: ContractSchema;
-
-    /** Entity-action event schemas. */
-    events?: ContractEvents;
+    /** Entity-action keyed JSON Schemas (wildcard fallback at runtime). */
+    events?: ValidateEvents;
+    /** JSON Schema for the full event. */
+    schema?: JsonSchema;
   }
 
   /**

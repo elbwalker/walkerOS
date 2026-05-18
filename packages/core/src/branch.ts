@@ -6,7 +6,7 @@ import type { Transformer, WalkerOS } from './types';
  */
 export function branch(
   event: WalkerOS.DeepPartialEvent,
-  next: Transformer.RouteSpec,
+  next: Transformer.Route,
 ): Transformer.Result {
   return { event, next };
 }

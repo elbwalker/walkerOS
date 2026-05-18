@@ -270,7 +270,7 @@ describe('Source Transformer Chains (source.next)', () => {
                 },
                 next: 'gtag-parser',
               },
-              { match: '*', next: 'default-parser' },
+              { next: 'default-parser' },
             ],
             config: {
               ingest: {

@@ -1,9 +1,6 @@
-import {
-  MatchExpressionSchema,
-  RouteSchema,
-  RouteSpecSchema,
-} from '../../schemas/matcher';
+import { MatchExpressionSchema, RouteSchema } from '../../schemas/matcher';
 import { safeParseConfig } from '../../schemas/flow';
+import { toJsonSchema } from '../../schemas/validation';
 
 describe('MatchExpressionSchema', () => {
   it('validates a simple condition', () => {
@@ -26,9 +23,14 @@ describe('MatchExpressionSchema', () => {
     ).toBe(true);
   });
 
-  it('validates wildcard string', () => {
-    const result = RouteSchema.safeParse({ match: '*', next: 'default' });
+  it('accepts a RouteConfig with omitted match (always-match)', () => {
+    const result = RouteSchema.safeParse({ next: 'default' });
     expect(result.success).toBe(true);
+  });
+
+  it('rejects the legacy wildcard literal "*" as a match value', () => {
+    const result = RouteSchema.safeParse({ match: '*', next: 'default' });
+    expect(result.success).toBe(false);
   });
 
   it('rejects invalid operator', () => {
@@ -42,30 +44,30 @@ describe('MatchExpressionSchema', () => {
   });
 });
 
-describe('RouteSpecSchema', () => {
+describe('RouteSchema — basic shapes', () => {
   it('validates a string', () => {
-    expect(RouteSpecSchema.safeParse('enricher').success).toBe(true);
+    expect(RouteSchema.safeParse('enricher').success).toBe(true);
   });
 
   it('validates a string array', () => {
-    expect(RouteSpecSchema.safeParse(['a', 'b']).success).toBe(true);
+    expect(RouteSchema.safeParse(['a', 'b']).success).toBe(true);
   });
 
   it('validates a Route array', () => {
     expect(
-      RouteSpecSchema.safeParse([
+      RouteSchema.safeParse([
         {
           match: { key: 'path', operator: 'prefix', value: '/api' },
           next: 'handler',
         },
-        { match: '*', next: 'default' },
+        { next: 'default' },
       ]).success,
     ).toBe(true);
   });
 
   it('validates nested routes', () => {
     expect(
-      RouteSpecSchema.safeParse([
+      RouteSchema.safeParse([
         {
           match: { key: 'path', operator: 'prefix', value: '/api' },
           next: [
@@ -73,11 +75,34 @@ describe('RouteSpecSchema', () => {
               match: { key: 'method', operator: 'eq', value: 'POST' },
               next: 'writer',
             },
-            { match: '*', next: 'reader' },
+            { next: 'reader' },
           ],
         },
       ]).success,
     ).toBe(true);
+  });
+});
+
+describe('RouteSchema disjoint union', () => {
+  it('rejects a RouteConfig with both next and one set', () => {
+    const result = RouteSchema.safeParse({ next: 'a', one: ['b'] });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a bare gate RouteConfig with only match', () => {
+    const result = RouteSchema.safeParse({
+      match: { key: 'event.name', operator: 'eq', value: 'order complete' },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('emits a JSON Schema containing the disjoint union (anyOf)', () => {
+    // Zod 4's toJSONSchema emits z.union(...) as `anyOf` (not `oneOf`).
+    // The RouteConfig three-way union therefore appears in the emitted
+    // JSON Schema as a nested `anyOf` somewhere in the tree.
+    const json = toJsonSchema(RouteSchema) as Record<string, unknown>;
+    const serialized = JSON.stringify(json);
+    expect(serialized.includes('anyOf')).toBe(true);
   });
 });
 
@@ -96,7 +121,7 @@ describe('Flow config with Route[] in source.next', () => {
                   match: { key: 'path', operator: 'prefix', value: '/gtag' },
                   next: 'gtag-parser',
                 },
-                { match: '*', next: 'default' },
+                { next: 'default' },
               ],
             },
           },
@@ -105,5 +130,35 @@ describe('Flow config with Route[] in source.next', () => {
     };
     const result = safeParseConfig(config);
     expect(result.success).toBe(true);
+  });
+});
+
+describe('RouteSchema — one/many operators', () => {
+  it('accepts { one: [...] } and rejects { case: [...] }', () => {
+    expect(RouteSchema.safeParse({ one: ['a'] }).success).toBe(true);
+    expect(RouteSchema.safeParse({ case: ['a'] }).success).toBe(false);
+  });
+
+  it('accepts { many: [...] }', () => {
+    expect(RouteSchema.safeParse({ many: ['a', 'b'] }).success).toBe(true);
+  });
+
+  it('rejects both `next` and `one` set on the same RouteConfig', () => {
+    expect(RouteSchema.safeParse({ next: 'a', one: ['b'] }).success).toBe(
+      false,
+    );
+  });
+
+  it('accepts empty many: [] (lint surfaces the warning, schema does not)', () => {
+    expect(RouteSchema.safeParse({ many: [] }).success).toBe(true);
+  });
+
+  it('accepts nested `many` inside a gated entry', () => {
+    expect(
+      RouteSchema.safeParse({
+        match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
+        many: ['audit', 'process'],
+      }).success,
+    ).toBe(true);
   });
 });

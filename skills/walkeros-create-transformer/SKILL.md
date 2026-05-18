@@ -75,7 +75,7 @@ This skill includes reference files you can copy:
 
 ```bash
 # Reference implementation
-ls packages/transformers/validator/
+ls packages/transformers/fingerprint/
 
 # Transformer types
 cat packages/core/src/types/transformer.ts
@@ -152,10 +152,10 @@ export * as examples from './examples';
 
 ## Phase 3: Scaffold
 
-**Template transformer:** `packages/transformers/validator/`
+**Template transformer:** `packages/transformers/fingerprint/`
 
 ```bash
-cp -r packages/transformers/validator packages/transformers/[name]
+cp -r packages/transformers/fingerprint packages/transformers/[name]
 cd packages/transformers/[name]
 
 # Update package.json: name, description, repository.directory
@@ -370,7 +370,7 @@ requirements (build, test, lint, no `any`):
 
 | What           | Where                                    |
 | -------------- | ---------------------------------------- |
-| Template       | `packages/transformers/validator/`       |
+| Template       | `packages/transformers/fingerprint/`     |
 | Types          | `packages/core/src/types/transformer.ts` |
 | Chaining logic | `packages/collector/src/transformer.ts`  |
 

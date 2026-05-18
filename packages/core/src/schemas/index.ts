@@ -63,12 +63,20 @@ export {
 // Cache schemas (used by flow schemas for caching)
 import * as CacheSchemas from './cache';
 export { CacheSchemas };
-export { CacheSchema, CacheRuleSchema } from './cache';
+export {
+  EventCacheSchema,
+  EventCacheRuleSchema,
+  StoreCacheSchema,
+  StoreCacheRuleSchema,
+  // Deprecated aliases — remove once external callers migrate.
+  CacheSchema,
+  CacheRuleSchema,
+} from './cache';
 
 // Matcher schemas (used by flow schemas for routing)
 import * as MatcherSchemas from './matcher';
 export { MatcherSchemas };
-export { MatchExpressionSchema, RouteSpecSchema, RouteSchema } from './matcher';
+export { MatchExpressionSchema, RouteSchema } from './matcher';
 
 // Hint schemas (direct export - flat record, no namespace needed)
 export { CodeSchema, HintSchema, HintsSchema } from './hint';

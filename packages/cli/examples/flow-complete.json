@@ -42,24 +42,29 @@
   "contract": {
     "default": {
       "description": "Web shop tracking contract",
-      "globals": {
+      "schema": {
         "type": "object",
         "properties": {
-          "environment": {
-            "type": "string"
+          "globals": {
+            "type": "object",
+            "properties": {
+              "environment": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            }
           },
-          "version": {
-            "type": "string"
-          }
-        }
-      },
-      "consent": {
-        "type": "object",
-        "required": ["functional"],
-        "properties": {
-          "functional": {
-            "type": "boolean",
-            "const": true
+          "consent": {
+            "type": "object",
+            "required": ["functional"],
+            "properties": {
+              "functional": {
+                "type": "boolean",
+                "const": true
+              }
+            }
           }
         }
       },
@@ -277,22 +282,23 @@
             "type": "enricher",
             "push": "$code:(event) => ({ ...event, context: { ...event.context, enrichedAt: Date.now() } })"
           },
-          "next": "dataLayerValidator",
           "config": {}
-        },
-        "dataLayerValidator": {
-          "package": "@walkeros/transformer-validator",
-          "config": {
-            "settings": {
-              "events": "$contract.default.events",
-              "globals": "$contract.default.globals"
-            }
-          }
         }
       },
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
+          "validate": {
+            "events": {
+              "order": {
+                "complete": {
+                  "properties": {
+                    "data": { "required": ["id", "total"] }
+                  }
+                }
+              }
+            }
+          },
           "config": {
             "require": ["consent", "user"],
             "consent": {
@@ -584,8 +590,7 @@
             "@walkeros/web-source-datalayer": {},
             "@walkeros/source-demo": {},
             "@walkeros/web-destination-gtag": {},
-            "@walkeros/web-destination-api": {},
-            "@walkeros/transformer-validator": {}
+            "@walkeros/web-destination-api": {}
           }
         }
       }
@@ -595,24 +600,12 @@
         "metaPixelId": "$env.META_PIXEL_ID:123456789012345",
         "metaAccessToken": "$env.META_ACCESS_TOKEN:demo_token"
       },
-      "stores": {
-        "cache": {
-          "package": "@walkeros/store-memory",
-          "config": {
-            "settings": {
-              "maxSize": 10485760,
-              "maxEntries": 1000
-            }
-          }
-        }
-      },
       "sources": {
         "http": {
           "package": "@walkeros/server-source-express",
           "primary": true,
           "next": ["filter"],
           "cache": {
-            "store": "cache",
             "rules": [
               {
                 "match": {
@@ -684,9 +677,6 @@
             "push": "$code:(event) => event.name.startsWith('internal_') || event.name.startsWith('debug_') ? false : event"
           },
           "next": "fingerprint",
-          "env": {
-            "store": "$store.cache"
-          },
           "config": {},
           "examples": {
             "passes-normal": {
@@ -720,7 +710,6 @@
         },
         "fingerprint": {
           "package": "@walkeros/server-transformer-fingerprint",
-          "next": "serverValidator",
           "config": {
             "settings": {
               "fields": [
@@ -735,23 +724,12 @@
               "length": 16
             }
           }
-        },
-        "serverValidator": {
-          "package": "@walkeros/transformer-validator",
-          "config": {
-            "settings": {
-              "format": true,
-              "events": "$contract.default.events",
-              "globals": "$contract.default.globals",
-              "consent": "$contract.default.consent"
-            }
-          }
         }
       },
       "destinations": {
         "meta": {
           "package": "@walkeros/server-destination-meta",
-          "before": ["fingerprint", "serverValidator"],
+          "before": "fingerprint",
           "config": {
             "settings": {
               "pixelId": "$var.metaPixelId",
@@ -939,11 +917,7 @@
             "@walkeros/server-source-express": {},
             "@walkeros/server-destination-meta": {},
             "@walkeros/destination-demo": {},
-            "@walkeros/transformer-validator": {},
-            "@walkeros/server-transformer-fingerprint": {},
-            "@walkeros/store-memory": {
-              "path": "../../stores/memory"
-            }
+            "@walkeros/server-transformer-fingerprint": {}
           }
         }
       }

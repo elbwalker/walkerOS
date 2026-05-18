@@ -1,9 +1,29 @@
-import type { Transformer, WalkerOS } from '@walkeros/core';
+import type { Store, Transformer, WalkerOS } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
-import { createIngest, createMockContext, createMockLogger } from '@walkeros/core';
-import { createMockStore } from '@walkeros/store-memory';
+import {
+  createIngest,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
 import { transformerFile } from '../transformer';
 import type { FileSettings, Types } from '../types';
+
+function createMockStore(): Store.Instance {
+  const data = new Map<string, unknown>();
+  return {
+    type: 'mock',
+    config: {},
+    get(key) {
+      return data.get(key);
+    },
+    set(key, value) {
+      data.set(key, value);
+    },
+    delete(key) {
+      data.delete(key);
+    },
+  };
+}
 
 describe('Transformer File', () => {
   const mockLogger = createMockLogger();
@@ -28,7 +48,11 @@ describe('Transformer File', () => {
       env: respond ? { respond } : {},
       logger: mockLogger,
       id: 'test-file',
-      ingest: { ...createIngest('test'), ...ingestData, _meta: createIngest('test')._meta },
+      ingest: {
+        ...createIngest('test'),
+        ...ingestData,
+        _meta: createIngest('test')._meta,
+      },
     });
 
   const baseEvent: WalkerOS.DeepPartialEvent = { name: 'page view' };

@@ -192,26 +192,52 @@ globs both work, resolved against the install root (where pacote put files):
 
 ### Destination Properties
 
-| Property  | Type                            | Description                                                           |
-| --------- | ------------------------------- | --------------------------------------------------------------------- |
-| `package` | `string`                        | NPM package or local package name                                     |
-| `config`  | `object`                        | Destination-specific configuration                                    |
-| `mapping` | `object`                        | Event transformation rules                                            |
-| `consent` | `object`                        | Required consent levels                                               |
-| `before`  | `string \| string[] \| Route[]` | First transformer in post-collector chain (conditional via `Route[]`) |
+| Property  | Type                               | Description                                                       |
+| --------- | ---------------------------------- | ----------------------------------------------------------------- |
+| `package` | `string`                           | NPM package or local package name                                 |
+| `config`  | `object`                           | Destination-specific configuration                                |
+| `mapping` | `object`                           | Event transformation rules                                        |
+| `consent` | `object`                           | Required consent levels                                           |
+| `before`  | `string \| Route[] \| RouteConfig` | First transformer in post-collector chain (conditional via `one`) |
 
-**Route shape** (used wherever the type column shows `Route[]`):
+**Route shape** (used wherever the type column shows `Route[]` or
+`RouteConfig`). A `RouteConfig` is a **disjoint union**: set at most one of
+`next` (gated link), `one` (first-match dispatch), or `many` (all-match
+dispatch), never more than one:
 
 ```json
-{
-  "match": "*" | { "key": "<ingest path>", "operator": "eq|contains|prefix|suffix|regex|gt|lt|exists", "value": "<expected>" },
-  "next": "<transformerId>" | ["<id1>", "<id2>"]
+// Sequence form (chained, no dispatch):
+"before": ["validate", "enrich"]
+
+// Gated link:
+"before": {
+  "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" },
+  "next": "api-handler"
+}
+
+// First-match dispatch (one):
+"before": {
+  "one": [
+    { "match": { "key": "ingest.method", "operator": "eq", "value": "POST" }, "next": "post-chain" },
+    { "next": "default" }
+  ]
+}
+
+// All-match dispatch (many, pre-collector only):
+"next": {
+  "many": [
+    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "granted" }, "next": "ga4-pipeline" },
+    { "next": "audit-log" }
+  ]
 }
 ```
 
-Routes evaluate in order, first match wins. `"*"` is the wildcard. The match
-object reads from ingest metadata (e.g. `ingest.path`, `ingest.method`). No
-match plus no wildcard means the event passes through unchanged.
+`one` entries evaluate in order, first match wins. An entry with no `match`
+always matches (use it as a fallback). The match object reads from ingest
+metadata (e.g. `ingest.path`, `ingest.method`). No matching entry means the
+event passes through unchanged. `many` runs every matching branch in parallel
+and terminates the main chain, useful for audit-while-process patterns
+pre-collector.
 
 For mapping syntax, see
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
@@ -236,13 +262,13 @@ For mapping syntax, see
 
 ### Source Properties
 
-| Property  | Type                            | Description                                                          |
-| --------- | ------------------------------- | -------------------------------------------------------------------- |
-| `package` | `string`                        | Source package name                                                  |
-| `config`  | `object`                        | Source-specific configuration                                        |
-| `next`    | `string \| string[] \| Route[]` | First transformer in pre-collector chain (conditional via `Route[]`) |
+| Property  | Type                               | Description                                                      |
+| --------- | ---------------------------------- | ---------------------------------------------------------------- |
+| `package` | `string`                           | Source package name                                              |
+| `config`  | `object`                           | Source-specific configuration                                    |
+| `next`    | `string \| Route[] \| RouteConfig` | First transformer in pre-collector chain (conditional via `one`) |
 
-`Route[]` shape: see [Destination Properties](#destination-properties) above.
+`Route` shape: see [Destination Properties](#destination-properties) above.
 
 ---
 
@@ -251,8 +277,8 @@ For mapping syntax, see
 ```json
 {
   "transformers": {
-    "validate": {
-      "package": "@walkeros/transformer-validate",
+    "fingerprint": {
+      "package": "@walkeros/transformer-fingerprint",
       "config": {},
       "next": "enrich"
     },
@@ -266,14 +292,40 @@ For mapping syntax, see
 
 ### Transformer Properties
 
-| Property  | Type                            | Description                                               |
-| --------- | ------------------------------- | --------------------------------------------------------- |
-| `package` | `string`                        | Transformer package name                                  |
-| `config`  | `object`                        | Transformer-specific configuration                        |
-| `code`    | `object`                        | Inline code (`push`, `init`) with `$code:`                |
-| `next`    | `string \| string[] \| Route[]` | Next transformer in the chain (conditional via `Route[]`) |
+| Property  | Type                               | Description                                                                                   |
+| --------- | ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| `package` | `string`                           | Transformer package name                                                                      |
+| `config`  | `object`                           | Transformer-specific configuration                                                            |
+| `code`    | `object`                           | Inline code (`push`, `init`) with `$code:`                                                    |
+| `before`  | `string \| Route[] \| RouteConfig` | First transformer to run before this step's push (conditional via `one`)                      |
+| `next`    | `string \| Route[] \| RouteConfig` | Next transformer in the chain (conditional via `one`)                                         |
+| `cache`   | `object`                           | Cache config (dedup, halt). `cache.stop: true` halts the pipeline at pre-collector positions. |
+| `mapping` | `Mapping.Config`                   | Event-to-event mapping (same shape as `Destination.mapping`, different position semantic)     |
 
-`Route[]` shape: see [Destination Properties](#destination-properties) above.
+`Route` shape: see [Destination Properties](#destination-properties) above.
+
+A transformer entry with no `code` and no `package` is a **pass-through step**
+(short: **pass**): a single step within a path that the runtime synthesizes from
+its operative fields. Three variants ship:
+
+- **Chain-only:** only `before` / `next` set. A named hop that shares a chain
+  across multiple call sites.
+- **Cache-only:** only `cache` set. Dedup or pipeline halt.
+- **Mapping-only:** only `mapping` set. Declarative event-to-event mutation.
+
+`mapping` here uses the same `Mapping.Config` shape as on a destination, but the
+position semantic differs: on a destination it produces a vendor payload; on a
+transformer step it mutates the event itself. Only event-mutating fields apply
+(`policy`, `mapping[].policy`, `mapping[].name`, `mapping[].ignore`,
+`mapping[].consent`, `include`); vendor-payload fields (`data`,
+`mapping[].data`, `silent`) are ignored at this position with a one-time init
+warning. See
+[walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md) for
+full mapping syntax.
+
+Transformer step entries follow a **closed schema**: unknown top-level keys are
+validation errors, and a step must declare at least one of `code`, `package`,
+`before`, `next`, `cache`, or `mapping`.
 
 ### Transformer Chaining
 

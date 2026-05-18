@@ -1,0 +1,190 @@
+---
+title: Cache
+description: Cache reads and writes on any walkerOS store with the built-in tier, compose multi-tier chains, deduplicate concurrent reads.
+sidebar_position: 5
+---
+
+# Store-level cache
+
+Store-level cache wraps any `Flow.Store` with a read-through, write-through cache tier. It absorbs round-trips to slow backings (Google Sheets, HTTP APIs, S3) without changing how components call the store.
+
+The wrapping is transparent: a transformer wired to `$store.crm` does not know whether reads hit a memory cache, a Redis tier, or the underlying API. The wrapper is a `Store.Instance` itself, so all the rules from [Stores](./index.mdx) still apply.
+
+:::tip
+Store-level cache is different from the [event-level Cache](../transformers/cache.mdx) configured on sources, transformers, and destinations. Event cache short-circuits the pipeline on hit. Store cache memoizes `get`/`set`/`delete` calls on a single store. Both can be used in the same flow.
+:::
+
+## Minimal example
+
+Enable the built-in in-memory tier (`__cache`) on any store by setting `cache` on the store declaration. No extra store needed:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "sessions": {
+      "package": "@walkeros/server-store-sheets",
+      "config": { "settings": { "id": "1AbC...", "sheet": "Sessions" } },
+      "cache": { "rules": [{ "ttl": 300 }] }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Every `sessions.get(K)` now checks the in-memory tier first. On miss, it reads from Sheets and populates the tier with a 300-second TTL. The next 300 seconds of identical reads hit memory and skip the Sheets API entirely.
+
+The same rule applies to writes: `sessions.set(K, V)` writes to Sheets first, then to the tier on a best-effort basis (see [Write-through error policy](#write-through-error-policy) below).
+
+## Cache rule shape
+
+Store cache rules use a stricter subset of the rule shape used by event caches:
+
+| Field   | Type              | Notes                                                        |
+| ------- | ----------------- | ------------------------------------------------------------ |
+| `ttl`   | `number`          | **Required.** Time-to-live in seconds.                       |
+| `match` | `MatchExpression` | Optional. Matches against `{ key, value? }`, not event data. |
+
+Store rules **never** accept `key` or `update`. The cache key comes from the caller (`store.get(K)`); there is no event to transform. Rules can match on the store key or value via `match`:
+
+<CodeSnippet
+  code={`"cache": {
+  "rules": [
+    { "match": { "key": "key", "operator": "prefix", "value": "session:" }, "ttl": 300 },
+    { "ttl": 60 }
+  ]
+}`}
+  language="json"
+/>
+
+First rule caches only keys starting with `session:` for five minutes. The second catches everything else for one minute. Rules evaluate top-down, first match wins.
+
+## Multi-tier composition
+
+`cache.store` references another store in the same flow. That store can have its own `cache`, and so on. The wrapper hierarchy is transparent: consumers wire to the top-level store and the wrapping resolves automatically.
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "redis": {
+      "package": "@walkeros/server-store-redis",
+      "config": { "settings": { "url": "$env.REDIS_URL" } },
+      "cache": { "rules": [{ "ttl": 300 }] }
+    },
+    "api": {
+      "package": "@walkeros/server-store-api",
+      "config": { "settings": { "endpoint": "$env.API_URL" } },
+      "cache": {
+        "store": "redis",
+        "rules": [{ "ttl": 86400 }]
+      }
+    }
+  },
+  "transformers": {
+    "enrich": {
+      "package": "@walkeros/transformer-enrich",
+      "env": { "store": "$store.api" }
+    }
+  }
+}`}
+  language="json"
+/>
+
+The lookup chain on `api.get(K)`:
+
+1. Check the `api` wrapper's tier (Redis). HIT, return.
+2. On Redis MISS, fall through to the next layer. The Redis wrapper's own tier (the built-in memory `__cache`) is checked first. HIT, return and **populate Redis**.
+3. On both MISS, call the underlying API.
+4. The value flows back up. Each traversed tier is populated on the unwind: memory `__cache`, then Redis, then the `api` tier.
+
+Subsequent reads hit the topmost tier that has a fresh value.
+
+Omitting `cache.store` falls back to the collector's built-in `__cache` tier. There is no separate memory-store package to install.
+
+## Built-in `__cache` tier
+
+The collector ships a single shared `__cache` instance used as the default cache tier when `cache.store` is omitted. It is an in-memory LRU map:
+
+- **Entry cap:** `maxEntries: 10000` (fixed in v1).
+- **LRU access ordering:** reads reorder entries; least-recently-used drop first when full.
+- **Batched eviction:** on overflow, evict down to 80% (`8000`) in one pass.
+- **Active TTL sweep:** a periodic sweeper drops expired entries every 60 seconds.
+
+Each wrapped store gets an automatic namespace prefix (the store id by default) so multiple stores sharing `__cache` do not collide. Override with `cache.namespace: "myns"` for an explicit prefix. The collector logs the resolved namespace at startup, one line per wrapped store.
+
+## Coherence model
+
+Read this section before relying on the cache for anything correctness-sensitive.
+
+- **Read-your-writes (in-process):** yes. `wrapped.set(K, V)` populates the local cache on success, so a subsequent `wrapped.get(K)` in the same process sees `V`.
+- **Cross-process consistency:** eventual, bounded by the longest TTL in the chain. If memory TTL is 60s and Redis TTL is 300s, a value changed in the backing by another writer is served stale from memory for up to 60s, from Redis for up to 300s. There is no invalidation channel.
+- **Tier-skipping repopulation:** a MISS in tier N that HITs in tier N+1 repopulates tier N on the unwind. Subsequent reads hit tier N.
+
+Set TTLs accordingly. Use short TTLs (1-60s) for mostly-static lookups behind a fast backing; use long TTLs (minutes-hours) for cold, expensive lookups where staleness is tolerable.
+
+## Write-through error policy
+
+`wrapped.set(K, V)` runs two steps with explicit failure handling:
+
+1. **Backing first.** Await `backing.set(K, V)`. If this throws, the wrapper throws. The cache is not touched.
+2. **Cache best-effort.** If the backing succeeded and a rule matches, attempt `cache.store.set(...)`. If this throws, the wrapper logs a warning and returns success.
+
+Backing is the source of truth. A failed cache write degrades performance (next read misses) but does not corrupt correctness. A failed backing write is real failure and surfaces to the caller.
+
+`wrapped.delete(K)` follows the same shape: backing first (throws on failure), then best-effort cache delete (logs on failure). A failed cache delete leaves a poisoned entry that serves stale data until TTL; the warning lets operators react.
+
+## Single-flight deduplication
+
+Multiple concurrent `wrapped.get(K)` calls on a cold cache produce **exactly one** backing call. The wrapper holds an in-flight promise registry keyed by the namespaced key: subsequent callers receive the same promise until the first resolves.
+
+This eliminates the thundering-herd failure mode that motivates store-level cache in the first place: 50 simultaneous events looking up the same `session:abc` key against a Sheets backend trigger one Sheets read, not 50.
+
+## Observability
+
+Each wrapped store exposes counters via the collector telemetry channel. Per-store keys are `walkeros.store_cache.<store_id>.<counter>`:
+
+| Counter             | Meaning                                         |
+| ------------------- | ----------------------------------------------- |
+| `hits`              | Reads served by the cache tier                  |
+| `misses`            | Reads that fell through to the backing          |
+| `populates`         | Cache writes triggered by successful backing reads |
+| `writes`            | Successful `set` calls                          |
+| `deletes`           | Successful `delete` calls                       |
+| `evictions_entries` | Entries evicted because the tier hit `maxEntries` |
+| `evictions_ttl`     | Entries evicted by the active TTL sweep         |
+| `inflight_dedups`   | Concurrent calls dedup-merged into one inflight |
+
+Counters surface through the same telemetry hook the collector uses for flow events. Wire your own logger or telemetry destination to consume them.
+
+For interactive debugging, the wrapped store instance exposes a `counters` accessor:
+
+<CodeSnippet
+  code={`const { collector } = await startFlow({ /* ... */ });
+const snapshot = collector.stores.sessions.counters;
+console.log(snapshot);
+// { hits: 412, misses: 18, populates: 18, writes: 0, deletes: 0,
+//   evictions_entries: 0, evictions_ttl: 0, inflight_dedups: 7 }`}
+  language="typescript"
+/>
+
+## Known limitations
+
+- **No negative caching.** A `get(K)` that returns `undefined` from the backing is not populated. Every subsequent call for that key re-hits the backing until the value exists. Workaround: write a sentinel value on the first miss, treat it as "not present" in your transformer logic.
+- **No cross-process invalidation.** Writes from one process do not invalidate caches in other processes. TTL is the only mechanism.
+- **No `stop` field on store cache.** `stop` is an event-cache concept (halt the pipeline on hit). Store reads always fall through on miss; the field is rejected by the schema.
+- **No `update` field on store cache.** `update` mutates events on hit. Stores have no event to mutate.
+- **Renaming a store is a breaking change** to anything caching through it (`cache.store: "X"` references break). Document and migrate explicitly.
+
+## Migration from `@walkeros/store-memory`
+
+The dedicated `@walkeros/store-memory` package was removed once the built-in `__cache` reached feature parity. Migration is one-line per occurrence:
+
+- If a memory store was used **only** as a cache target (`cache.store: "memory"`): omit `cache.store`. The wrapper falls back to the built-in `__cache` automatically.
+- If the memory store was wired into a component's `env` for non-cache use: replace with a small inline `Map` inside the component, or use one of the persistent stores in [Stores](./index.mdx).
+
+`flow_validate` rejects `package: "@walkeros/store-memory"` with the replacement instruction.
+
+## Related
+
+- [Stores](./index.mdx) — store interface, `$store.` wiring, lifecycle.
+- [Transformers: Cache](../transformers/cache.mdx) — event-level cache on sources, transformers, destinations.
+- [Reference Syntax](../guides/reference-syntax.mdx) — `$store.`, `$env.`, `$var.` references.

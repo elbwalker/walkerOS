@@ -11,24 +11,23 @@ complete event tracking architecture.
 │ WEB FLOW                                                                    │
 │                                                                             │
 │   Browser Source ─┐                                                         │
-│   DataLayer Source ──▶ [Enricher] ──▶ [Validator] ──▶ Collector ──▶ GA4     │
-│   Demo Source ────┘                                             ├──▶ API    │
-│                                                                 └──▶ Debug  │
+│   DataLayer Source ──▶ [Enricher] ──▶ Collector ──▶ GA4                     │
+│   Demo Source ────┘                              ├──▶ API                   │
+│                                                  └──▶ Debug                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ SERVER FLOW                                                                 │
 │                                                                             │
-│   HTTP Source ──▶ [Filter] ──▶ [Fingerprint] ──▶ [Validator] ──▶ Collector  │
-│        │              │                                          │          │
-│        │ ingest:      │ env:                    before:          ▼          │
-│        │ IP, UA,      │ $store.cache    [Fingerprint]+[Validator]           │
-│        │ lang, ref,   │                                          │          │
-│        │ anon-IP(fn)  │                                          ▼          │
-│        │              │                                   Meta Destination  │
-│        └──────────────┘                                   Demo Destination  │
+│   HTTP Source ──▶ [Filter] ──▶ [Fingerprint] ──▶ Collector                  │
+│        │              │                          │                          │
+│        │ ingest:      │ env:                     ▼                          │
+│        │ IP, UA,      │ filter rules      Meta Destination                  │
+│        │ lang, ref,   │                   Demo Destination                  │
+│        │ anon-IP(fn)  │                                                     │
+│        └──────────────┘                                                     │
 │                                                                             │
-│   Store: cache (memory, 10MB, 1000 entries)                                 │
+│   Source cache: built-in tier (ttl 300s, on GET ingest.method+path)         │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -111,15 +110,13 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 
 #### Variables
 
-| Feature              | Location           | Example                                        |
-| -------------------- | ------------------ | ---------------------------------------------- |
-| Root-level variables | Root               | `"currency": "EUR"`                            |
-| Flow-level variables | server.variables   | `"metaPixelId": "$env.META_PIXEL_ID:..."`      |
-| Environment variable | Variables          | `"$env.GA4_MEASUREMENT_ID:G-DEMO123456"`       |
-| Env with default     | Variables          | `"$env.API_URL:http://localhost:8080/collect"` |
-| $var reference       | GA4 settings       | `"$var.ga4MeasurementId"`                      |
-| $contract reference  | serverValidator    | `"$contract.default.events"`                   |
-| $store reference     | filter transformer | `"env": { "store": "$store.cache" }`           |
+| Feature              | Location         | Example                                        |
+| -------------------- | ---------------- | ---------------------------------------------- |
+| Root-level variables | Root             | `"currency": "EUR"`                            |
+| Flow-level variables | server.variables | `"metaPixelId": "$env.META_PIXEL_ID:..."`      |
+| Environment variable | Variables        | `"$env.GA4_MEASUREMENT_ID:G-DEMO123456"`       |
+| Env with default     | Variables        | `"$env.API_URL:http://localhost:8080/collect"` |
+| $var reference       | GA4 settings     | `"$var.ga4MeasurementId"`                      |
 
 #### Sources
 
@@ -135,26 +132,24 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 
 #### Transformers
 
-| Feature                 | Location           | Example                                        |
-| ----------------------- | ------------------ | ---------------------------------------------- |
-| Validator transformer   | dataLayerValidator | JSON Schema validation                         |
-| Fingerprint transformer | server             | Hash context fields to `user.hash`             |
-| Transformer chaining    | server             | `"next": "serverValidator"`                    |
-| Post-collector chain    | Meta               | `"before": ["fingerprint", "serverValidator"]` |
-| Contract validation     | serverValidator    | Entity/action schemas                          |
-| Format option           | serverValidator    | `"format": true`                               |
+| Feature                 | Location  | Example                            |
+| ----------------------- | --------- | ---------------------------------- |
+| Fingerprint transformer | server    | Hash context fields to `user.hash` |
+| Post-collector chain    | Meta      | `"before": "fingerprint"`          |
+| Pre-collector chain     | dataLayer | `"next": "enricher"`               |
 
 #### Destinations
 
-| Feature                 | Location         | Example                                 |
-| ----------------------- | ---------------- | --------------------------------------- |
-| Require (deferred init) | GA4              | `"require": ["consent", "user"]`        |
-| Destination consent     | GA4              | `"consent": { "marketing": true }`      |
-| Destination mapping     | All destinations | Entity/action to vendor events          |
-| Multiple destinations   | Both flows       | GA4 + API, Meta + Demo                  |
-| Batch option            | API              | `"batch": 5`                            |
-| Transform function      | API              | `"transform": "$code:(data) => ..."`    |
-| Empty consent (always)  | debug            | `"consent": {}` (fires without consent) |
+| Feature                 | Location         | Example                                     |
+| ----------------------- | ---------------- | ------------------------------------------- |
+| Require (deferred init) | GA4              | `"require": ["consent", "user"]`            |
+| Destination consent     | GA4              | `"consent": { "marketing": true }`          |
+| Destination mapping     | All destinations | Entity/action to vendor events              |
+| Multiple destinations   | Both flows       | GA4 + API, Meta + Demo                      |
+| Batch option            | API              | `"batch": 5`                                |
+| Transform function      | API              | `"transform": "$code:(data) => ..."`        |
+| Empty consent (always)  | debug            | `"consent": {}` (fires without consent)     |
+| Inline `validate:`      | GA4              | Step-level schema check on `order complete` |
 
 #### Collector
 
@@ -178,12 +173,10 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 | Policy consent-gated  | Meta            | `"user_data.em"` with consent                                           |
 | Policy nested map     | Meta            | `"custom_data.request_meta": { "map": {...} }`                          |
 | Local package path    | server packages | `"path": "../../core"` (resolve from filesystem)                        |
-| Source cache          | http source     | `"cache": { "store": "cache", "rules": [...] }`                         |
+| Source cache          | http source     | `"cache": { "rules": [...] }` (built-in tier)                           |
 | Cache match rule      | http source     | `"match": { "key": "ingest.method", "operator": "eq", "value": "GET" }` |
 | Cache TTL             | http source     | `"ttl": 300` (seconds)                                                  |
 | Cache response update | http source     | `"update": { "headers.X-Cache": { "key": "cache.status" } }`            |
-| Store definition      | server stores   | `"cache": { "package": "@walkeros/store-memory", ... }`                 |
-| Store settings        | cache store     | `"maxSize": 10485760, "maxEntries": 1000`                               |
 
 #### Browser Source
 
@@ -203,26 +196,24 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 These features are now fully supported in JSON via `$code:` prefix (and ARE used
 in this example):
 
-| Feature                     | Status                            |
-| --------------------------- | --------------------------------- |
-| `fn:` function              | ✅ Used via `$code:` in GA4 value |
-| `condition:`                | ✅ Used via `$code:` in variables |
-| Conditional mapping (array) | ✅ Used in serverValidator        |
-| Custom transformer code     | ✅ Used in enricher, filter       |
-| Custom destination code     | ✅ Used in debug logger           |
+| Feature                 | Status                            |
+| ----------------------- | --------------------------------- |
+| `fn:` function          | ✅ Used via `$code:` in GA4 value |
+| `condition:`            | ✅ Used via `$code:` in variables |
+| Custom transformer code | ✅ Used in enricher, filter       |
+| Custom destination code | ✅ Used in debug logger           |
 
 #### Omitted for Clarity (6)
 
 These features could be added but were omitted to keep the example focused:
 
-| Feature                   | Why Omitted                    |
-| ------------------------- | ------------------------------ |
-| Multiple named flows (3+) | Two flows sufficient for demo  |
-| Queue config              | Advanced batching scenario     |
-| Retry config              | Advanced error handling        |
-| Custom fetch options      | API destination advanced       |
-| Custom headers in API     | Would add complexity           |
-| `validate:` function      | Could add via $code: if needed |
+| Feature                   | Why Omitted                   |
+| ------------------------- | ----------------------------- |
+| Multiple named flows (3+) | Two flows sufficient for demo |
+| Queue config              | Advanced batching scenario    |
+| Retry config              | Advanced error handling       |
+| Custom fetch options      | API destination advanced      |
+| Custom headers in API     | Would add complexity          |
 
 ---
 
@@ -238,8 +229,7 @@ These features could be added but were omitted to keep the example focused:
    - `custom_data.server_processed` = `true`
    - `custom_data.request_meta` = `{ ip, ua }` from context
 3. **Fingerprint**: Hashes context fields to `user.hash`
-4. **Validator**: Checks products have `data.id`
-5. **Mapping**: Transforms to Meta format:
+4. **Mapping**: Transforms to Meta format:
    - `"name": "Purchase"`
    - `value`, `currency`, `order_id` extracted
    - `contents` via `$ref` to definition loop
@@ -248,7 +238,7 @@ These features could be added but were omitted to keep the example focused:
 
 1. **DataLayer Source**: Captures `add_to_cart` event
 2. **Source Mapping**: Transforms to `product add` with walkerOS structure
-3. **Validator**: Checks `id` and `name` present
+3. **Enricher**: Adds enrichedAt timestamp to context
 4. **Collector**: Adds globals, consent, user data
 5. **GA4 Mapping**: Transforms to `add_to_cart` with items array
 6. **API Destination**: Batches and sends to server (if batch size reached)

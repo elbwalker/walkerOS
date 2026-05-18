@@ -16,7 +16,7 @@ describe('destination cache integration', () => {
             },
           },
           cache: {
-            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+            rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
       },
@@ -88,7 +88,7 @@ describe('destination cache integration', () => {
             },
           },
           cache: {
-            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+            rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
         spy2: {
@@ -125,9 +125,7 @@ describe('destination cache integration', () => {
             },
           },
           cache: {
-            rules: [
-              { match: '*', key: ['event.name', 'event.data.id'], ttl: 60 },
-            ],
+            rules: [{ key: ['event.name', 'event.data.id'], ttl: 60 }],
           },
         },
       },
@@ -144,7 +142,7 @@ describe('destination cache integration', () => {
     ]);
   });
 
-  it('should skip before chain on HIT when full=true', async () => {
+  it('should skip before chain on HIT when stop=true', async () => {
     let transformerCalls = 0;
     let pushCount = 0;
 
@@ -176,8 +174,8 @@ describe('destination cache integration', () => {
             },
           },
           cache: {
-            full: true,
-            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+            stop: true,
+            rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
       },
@@ -188,13 +186,13 @@ describe('destination cache integration', () => {
     expect(transformerCalls).toBe(1);
     expect(pushCount).toBe(1);
 
-    // Second push: HIT with full=true — transformer skipped, push skipped
+    // Second push: HIT with stop=true — transformer skipped, push skipped
     await elb({ name: 'page view', data: {} });
     expect(transformerCalls).toBe(1); // NOT called again
     expect(pushCount).toBe(1); // NOT called again
   });
 
-  it('should still run before chain on HIT when full=false (default)', async () => {
+  it('should still run before chain on HIT when stop=false (default)', async () => {
     let transformerCalls = 0;
     let pushCount = 0;
 
@@ -224,7 +222,7 @@ describe('destination cache integration', () => {
             },
           },
           cache: {
-            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+            rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
       },
@@ -235,7 +233,7 @@ describe('destination cache integration', () => {
     expect(transformerCalls).toBe(1);
     expect(pushCount).toBe(1);
 
-    // Second push: HIT with full=false — push skipped but transformer still runs
+    // Second push: HIT with stop=false — push skipped but transformer still runs
     await elb({ name: 'page view', data: {} });
     expect(transformerCalls).toBe(2); // Still runs
     expect(pushCount).toBe(1); // Skipped — cached

@@ -15,6 +15,7 @@ jest.mock('@walkeros/cli/dev', () => ({
 
 jest.mock('@walkeros/cli', () => ({
   validate: jest.fn(),
+  loadJsonConfig: jest.fn(),
 }));
 
 jest.mock('@walkeros/core', () => ({
@@ -44,8 +45,9 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import { validate } from '@walkeros/cli';
+import { validate, loadJsonConfig } from '@walkeros/cli';
 const mockValidate = jest.mocked(validate);
+const mockLoadJsonConfig = jest.mocked(loadJsonConfig);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -234,5 +236,185 @@ describe('flow_validate tool', () => {
 
     expect(result.structuredContent.valid).toBe(true);
     expect(JSON.parse(result.content[0].text).valid).toBe(true);
+  });
+
+  describe('deprecated package detection: @walkeros/store-memory', () => {
+    it('rejects flow.json declaring @walkeros/store-memory in a store', async () => {
+      const flow = {
+        version: 4,
+        flows: {
+          default: {
+            config: { platform: 'server' },
+            stores: {
+              mem: { package: '@walkeros/store-memory', config: {} },
+            },
+          },
+        },
+      };
+      const mockResult: ValidateResult = {
+        valid: true,
+        type: 'flow',
+        errors: [],
+        warnings: [],
+        details: {},
+      };
+      mockValidate.mockResolvedValue(mockResult);
+      mockLoadJsonConfig.mockResolvedValue(flow);
+
+      const tool = server.getTool('flow_validate');
+      const result = await tool.handler({
+        type: 'flow',
+        input: JSON.stringify(flow),
+        flow: undefined,
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.valid).toBe(false);
+      expect(
+        parsed.errors.some((e: { message: string }) =>
+          /@walkeros\/store-memory/.test(e.message),
+        ),
+      ).toBe(true);
+      expect(
+        parsed.errors.some((e: { message: string }) =>
+          /omit cache\.store|built-in cache/.test(e.message),
+        ),
+      ).toBe(true);
+    });
+
+    it('detects @walkeros/store-memory across multiple flows and stores', async () => {
+      const flow = {
+        version: 4,
+        flows: {
+          a: {
+            config: { platform: 'server' },
+            stores: {
+              cache1: { package: '@walkeros/store-memory', config: {} },
+              other: { package: '@walkeros/server-store-fs', config: {} },
+            },
+          },
+          b: {
+            config: { platform: 'server' },
+            stores: {
+              cache2: { package: '@walkeros/store-memory', config: {} },
+            },
+          },
+        },
+      };
+      const mockResult: ValidateResult = {
+        valid: true,
+        type: 'flow',
+        errors: [],
+        warnings: [],
+        details: {},
+      };
+      mockValidate.mockResolvedValue(mockResult);
+      mockLoadJsonConfig.mockResolvedValue(flow);
+
+      const tool = server.getTool('flow_validate');
+      const result = await tool.handler({
+        type: 'flow',
+        input: JSON.stringify(flow),
+        flow: undefined,
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.valid).toBe(false);
+      const memoryErrors = parsed.errors.filter((e: { message: string }) =>
+        /@walkeros\/store-memory/.test(e.message),
+      );
+      expect(memoryErrors.length).toBe(2);
+      expect(
+        parsed.errors.some((e: { path: string }) =>
+          /flows\.a\.stores\.cache1/.test(e.path),
+        ),
+      ).toBe(true);
+      expect(
+        parsed.errors.some((e: { path: string }) =>
+          /flows\.b\.stores\.cache2/.test(e.path),
+        ),
+      ).toBe(true);
+    });
+
+    it('passes a flow.json with no @walkeros/store-memory references', async () => {
+      const flow = {
+        version: 4,
+        flows: {
+          default: {
+            config: { platform: 'server' },
+            stores: {
+              fs: { package: '@walkeros/server-store-fs', config: {} },
+            },
+          },
+        },
+      };
+      const mockResult: ValidateResult = {
+        valid: true,
+        type: 'flow',
+        errors: [],
+        warnings: [],
+        details: {},
+      };
+      mockValidate.mockResolvedValue(mockResult);
+      mockLoadJsonConfig.mockResolvedValue(flow);
+
+      const tool = server.getTool('flow_validate');
+      const result = await tool.handler({
+        type: 'flow',
+        input: JSON.stringify(flow),
+        flow: undefined,
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.valid).toBe(true);
+      expect(parsed.errors).toEqual([]);
+    });
+
+    it('skips deprecated-package check for non-flow validation types', async () => {
+      const mockResult: ValidateResult = {
+        valid: true,
+        type: 'event',
+        errors: [],
+        warnings: [],
+        details: {},
+      };
+      mockValidate.mockResolvedValue(mockResult);
+
+      const tool = server.getTool('flow_validate');
+      const result = await tool.handler({
+        type: 'event',
+        input: '{"name":"page view"}',
+        flow: undefined,
+      });
+
+      expect(mockLoadJsonConfig).not.toHaveBeenCalled();
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.valid).toBe(true);
+    });
+
+    it('skips deprecated-package check when input cannot be loaded', async () => {
+      const mockResult: ValidateResult = {
+        valid: false,
+        type: 'flow',
+        errors: [{ path: 'input', message: 'invalid json' }],
+        warnings: [],
+        details: {},
+      };
+      mockValidate.mockResolvedValue(mockResult);
+      mockLoadJsonConfig.mockRejectedValue(new Error('parse error'));
+
+      const tool = server.getTool('flow_validate');
+      const result = await tool.handler({
+        type: 'flow',
+        input: 'not json',
+        flow: undefined,
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      // existing errors preserved; no crash even though load failed
+      expect(parsed.errors).toHaveLength(1);
+      expect(parsed.errors[0].path).toBe('input');
+      expect(parsed.errors[0].message).toContain('invalid json');
+    });
   });
 });

@@ -37,6 +37,7 @@
     "@aws-sdk/client-firehose": "^3.952.0",
     "@aws-sdk/client-sns": "^3.952.0",
     "@aws-sdk/client-sts": "^3.952.0",
+    "@walkeros/core": "4.0.2",
     "@walkeros/server-core": "4.0.2"
   },
   "devDependencies": {},

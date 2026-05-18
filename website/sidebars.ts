@@ -45,7 +45,11 @@ const sidebars: SidebarsConfig = {
             type: 'doc',
             id: 'getting-started/flow/index',
           },
-          items: ['getting-started/flow/step-examples'],
+          items: [
+            'getting-started/flow/step-examples',
+            'getting-started/flow/contract',
+            'getting-started/flow/validate',
+          ],
         },
         'getting-started/event-model',
         'apps/mcp',
@@ -139,7 +143,6 @@ const sidebars: SidebarsConfig = {
             'transformers/cache',
             'transformers/file',
             'transformers/fingerprint',
-            'transformers/validator',
             'transformers/create-your-own',
           ],
         },
@@ -151,11 +154,7 @@ const sidebars: SidebarsConfig = {
             id: 'stores/index',
           },
           items: [
-            {
-              type: 'doc',
-              id: 'stores/memory',
-              className: 'sidebar-badge-web',
-            },
+            'stores/cache',
             {
               type: 'doc',
               id: 'stores/server/fs',

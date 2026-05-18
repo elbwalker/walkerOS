@@ -191,7 +191,7 @@ describe('createEntryPoint integration', () => {
             '@walkeros/collector': { imports: ['startFlow'] },
             '@walkeros/server-source-express': {},
             '@walkeros/server-transformer-fingerprint': {},
-            '@walkeros/store-memory': {},
+            '@walkeros/server-store-fs': {},
           },
         },
       },
@@ -207,16 +207,15 @@ describe('createEntryPoint integration', () => {
       transformers: {
         fp: {
           package: '@walkeros/server-transformer-fingerprint',
-          code: 'transformerFingerprint',
           config: {},
           env: { store: '$store.cache' },
         },
       },
       stores: {
         cache: {
-          package: '@walkeros/store-memory',
-          code: 'storeMemory',
-          config: { settings: { maxSize: 1000 } },
+          package: '@walkeros/server-store-fs',
+          code: 'storeFs',
+          config: { settings: { basePath: './data' } },
         },
       },
     } as Flow;
@@ -228,7 +227,7 @@ describe('createEntryPoint integration', () => {
         '@walkeros/collector': { imports: ['startFlow'] },
         '@walkeros/server-source-express': {},
         '@walkeros/server-transformer-fingerprint': {},
-        '@walkeros/store-memory': {},
+        '@walkeros/server-store-fs': {},
       },
       output: './dist/bundle.mjs',
       code: '',
@@ -393,13 +392,13 @@ describe('detectStepPackages', () => {
       sources: {},
       destinations: {},
       transformers: {
-        fingerprint: {
+        fingerprintServer: {
           package: '@walkeros/server-transformer-fingerprint',
           code: 'transformerFingerprint',
           config: { settings: { output: 'user.hash' } },
         },
-        validate: {
-          package: '@walkeros/transformer-validator',
+        fingerprint: {
+          package: '@walkeros/transformer-fingerprint',
         },
       },
     };
@@ -409,7 +408,7 @@ describe('detectStepPackages', () => {
     expect(result).toEqual(
       new Set([
         '@walkeros/server-transformer-fingerprint',
-        '@walkeros/transformer-validator',
+        '@walkeros/transformer-fingerprint',
       ]),
     );
   });
@@ -469,16 +468,15 @@ describe('$store. prefix', () => {
       transformers: {
         fp: {
           package: '@walkeros/server-transformer-fingerprint',
-          code: 'transformerFingerprint',
           config: {},
           env: { store: '$store.cache' },
         },
       },
       stores: {
         cache: {
-          package: '@walkeros/store-memory',
-          code: 'storeMemory',
-          config: { settings: { maxSize: 1000 } },
+          package: '@walkeros/server-store-fs',
+          code: 'storeFs',
+          config: { settings: { basePath: './data' } },
         },
       },
     } as Flow;
@@ -488,14 +486,14 @@ describe('$store. prefix', () => {
         '@walkeros/server-transformer-fingerprint',
         new Set(['transformerFingerprint']),
       ],
-      ['@walkeros/store-memory', new Set(['storeMemory'])],
+      ['@walkeros/server-store-fs', new Set(['storeFs'])],
     ]);
 
     const result = buildSplitConfigObject(flowSettings, explicitCodeImports);
 
     // stores must be a separate declaration, not inside the config object
     expect(result.storesDeclaration).toContain('const stores = {');
-    expect(result.storesDeclaration).toContain('code: storeMemory');
+    expect(result.storesDeclaration).toContain('code: storeFs');
 
     // Code config object should reference stores via shorthand property
     expect(result.codeConfigObject).toMatch(/,\n\s+stores/);
@@ -503,7 +501,7 @@ describe('$store. prefix', () => {
     expect(result.codeConfigObject).toContain('stores.cache');
     // stores section should NOT be inlined in the config object
     expect(result.codeConfigObject).not.toMatch(
-      /stores:\s*\{[\s\S]*code: storeMemory/,
+      /stores:\s*\{[\s\S]*code: storeFs/,
     );
   });
 });
@@ -653,7 +651,7 @@ describe('buildSplitConfigObject', () => {
       destinations: {},
       stores: {
         memory: {
-          package: '@walkeros/store-memory',
+          package: '@walkeros/server-store-fs',
           config: { settings: { maxSize: 1000 } },
         },
       },
@@ -729,7 +727,7 @@ describe('buildSplitConfigObject', () => {
           package: '@walkeros/server-source-express',
           config: {},
           next: ['validate', 'enrich'],
-          cache: { rules: [{ match: '*', key: ['entity'], ttl: 60 }] },
+          cache: { rules: [{ key: ['entity'], ttl: 60 }] },
           primary: true,
         },
       },

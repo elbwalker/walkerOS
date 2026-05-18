@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@optimizely/optimizely-sdk": "^6.0.0",
+    "@walkeros/core": "4.0.2",
     "@walkeros/web-core": "4.0.2"
   },
   "devDependencies": {

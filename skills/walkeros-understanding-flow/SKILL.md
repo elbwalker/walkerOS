@@ -132,14 +132,16 @@ no `next`, no `before`; they sit alongside the pipeline rather than inside it.
   transformer, or destination starts, and outlive them on shutdown
 - **No chains** - stores don't participate in the event pipeline. Components
   access them through their `env`.
-- Implementations: `@walkeros/store-memory` (sync, LRU),
-  `@walkeros/server-store-fs` (async, filesystem), `@walkeros/server-store-s3`
-  (async, S3-compatible)
+- Implementations: `@walkeros/server-store-fs` (async, filesystem),
+  `@walkeros/server-store-s3` (async, S3-compatible),
+  `@walkeros/server-store-gcs`, `@walkeros/server-store-sheets`. The collector
+  ships a built-in in-memory cache tier — enable it on any store via
+  `Flow.Store.cache` instead of declaring a separate memory store.
 
 ```json
 {
   "stores": {
-    "data": { "package": "@walkeros/store-memory" }
+    "data": { "package": "@walkeros/server-store-fs" }
   },
   "transformers": {
     "fingerprint": {
@@ -163,6 +165,18 @@ for the full store interface and lifecycle.
 | Transformation   | Mapping system | Raw push calls          |
 | Delivery         | Destinations   | Sources, Collector      |
 
+## Step-Level Primitives
+
+Every step (source, transformer, destination) supports a small set of inline
+primitives alongside its package wiring. `cache`, `mapping`, and `consent` are
+the long-established ones; `validate?` is the newest. `validate:` declares
+validation intent (format check, per-event JSON Schemas, or a single generic
+schema) inline on a step, just like `cache` declares caching intent. It is a
+declarative description: consumers (CLI tooling, MCP, custom runners) decide how
+to enforce it. See
+[Website: Validate](../../website/docs/getting-started/flow/validate.mdx) for
+the full shape.
+
 ## Transformer Chains
 
 Transformers run at two points in the pipeline, configured via `next` and
@@ -179,16 +193,16 @@ Runs after source captures event, before collector processing:
   "sources": {
     "browser": {
       "package": "@walkeros/web-source-browser",
-      "next": "validate"
+      "next": "enrich"
     }
   },
   "transformers": {
-    "validate": {
-      "package": "@walkeros/transformer-validator",
-      "next": "enrich"
-    },
     "enrich": {
-      "package": "@walkeros/transformer-enricher"
+      "package": "@walkeros/transformer-enricher",
+      "next": "redact"
+    },
+    "redact": {
+      "package": "@walkeros/transformer-redact"
     }
   }
 }
@@ -200,16 +214,16 @@ Runs after source captures event, before collector processing:
 sources: {
   browser: {
     code: sourceBrowser,
-    next: 'validate'
+    next: 'enrich'
   }
 },
 transformers: {
-  validate: {
-    code: transformerValidator,
-    config: { next: 'enrich' }
-  },
   enrich: {
-    code: transformerEnrich
+    code: transformerEnrich,
+    config: { next: 'redact' }
+  },
+  redact: {
+    code: transformerRedact
   }
 }
 ```
@@ -449,11 +463,12 @@ validating configurations, and rendering UI visualizations.
 - Multiple destinations can share the same transformer
 - No `before` = collector connects directly to destination
 
-### Chain resolution algorithm (`walkChain`)
+### Chain resolution algorithm (`getNextSteps`)
 
 See
 [packages/collector/src/transformer.ts](../../packages/collector/src/transformer.ts)
-for the implementation.
+for the implementation. `getNextSteps` is the public dispatch helper that
+replaces the previous `walkChain` entry point.
 
 - **String start:** walks `transformer.next` links until chain ends
 - **Array start:** uses array as-is (explicit chain, no walking)
@@ -462,27 +477,99 @@ for the implementation.
 - **Non-existent transformer ID:** chain ends (no error, event proceeds without
   transformation)
 
-### Conditional routing (Route[])
+Note: `getNextSteps` is deterministic for the supplied event context. Static
+analyzers without a real event can only enumerate reachability under "match may
+pass or fail" speculation.
 
-The `next` and `before` properties accept a `RouteSpec`
-(`string | string[] | Route[]`). A `Route` is one `{ match, next }` rule, and
-`Route[]` enables conditional routing evaluated against ingest data:
+### Conditional routing (`one` operator)
+
+The `next` and `before` properties accept a `Route`
+(`string | Route[] | RouteConfig`). A `RouteConfig` is a **disjoint union**:
+each config sets at most one of `next` (gated link), `one` (first-match
+dispatch), or `many` (all-match dispatch), never more than one. The `one`
+operator enables conditional routing evaluated against ingest data and picks the
+first entry whose `match` succeeds:
 
 ```json
-"next": [
-  { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
-  { "match": "*", "next": "default" }
-]
+"next": {
+  "one": [
+    { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
+    { "next": "default" }
+  ]
+}
 ```
 
-- Routes are evaluated in order - first match wins
-- No match and no wildcard = event passes through unchanged
+- `one` entries are evaluated in order, first match wins
+- An entry without `match` always matches, use it as the fallback
+- No matching entry means the event passes through unchanged
 - Works on all chain positions: `source.before`, `source.next`,
   `transformer.before`, `transformer.next`, `destination.before`, and
   `destination.next`
 - Routes are compiled to closures at init time for fast per-event evaluation
 - See [packages/core/src/route.ts](../../packages/core/src/route.ts) for
   `compileNext()` and `resolveNext()`
+
+### All-match dispatch (`many` operator)
+
+Use `many` when every matching entry should produce an independent parallel flow
+(audit-while-process, multi-decoder fan-out). `many` terminates the main chain,
+each branch runs to its own exit. Available only pre-collector. Post-collector
+fan-out uses the destinations map.
+
+```jsonc
+"next": {
+  "many": [
+    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "granted" }, "next": "ga4-pipeline" },
+    { "next": "audit-log" }
+  ]
+}
+```
+
+### Paths and pass-through steps (code-less transformer entries)
+
+A **path** is the multi-step chain through a flow's `transformers` section. A
+**pass-through step** (short: **pass**) is a single step inside a path that
+declares no `code` and no `package`; the runtime synthesizes its push from the
+operative fields the step does declare.
+
+Pass-through steps come in three variants:
+
+- **Chain-only:** only `before` and/or `next` set. A named hop that shares a
+  chain across multiple call sites (avoids duplicating arrays).
+- **Cache-only:** only `cache` set. A dedup or short-circuit step.
+  `cache.stop: true` at a pre-collector position halts the pipeline.
+- **Mapping-only:** only `mapping: Mapping.Config` set. A declarative
+  event-to-event transform that mutates the event in-flight.
+
+```json
+{
+  "transformers": {
+    "validateThenEnrich": {
+      "before": ["validate", "enrich"]
+    }
+  },
+  "destinations": {
+    "gtag": {
+      "package": "@walkeros/web-destination-gtag",
+      "before": "validateThenEnrich"
+    },
+    "meta": {
+      "package": "@walkeros/web-destination-meta",
+      "before": "validateThenEnrich"
+    }
+  }
+}
+```
+
+Transformer step entries follow a **closed schema**: unknown top-level keys are
+validation errors, and at least one operative field (`code` / `package` /
+`before` / `next` / `cache` / `mapping`) must be set.
+
+See
+[walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
+for full depth on the three variants, the closed-schema rule, and the dual
+semantic of `mapping` at the transformer position versus the destination
+position.
 
 ### Transformer sharing
 

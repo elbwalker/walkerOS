@@ -4,7 +4,12 @@ import { builtinModules } from 'module';
 import path from 'path';
 import fs from 'fs-extra';
 import type { Flow, Transformer } from '@walkeros/core';
-import { packageNameToVariable, ENV_MARKER_PREFIX } from '@walkeros/core';
+import {
+  packageNameToVariable,
+  ENV_MARKER_PREFIX,
+  validateTransformerEntry,
+  isPathTransformerEntry,
+} from '@walkeros/core';
 import {
   classifyStepProperties,
   containsCodeMarkers,
@@ -62,22 +67,26 @@ function hasCodeReference(code: unknown): boolean {
 }
 
 function validateReference(
-  type: string,
+  type: Flow.StepKind,
   name: string,
-  ref: { package?: string; code?: unknown },
+  ref: Flow.Step,
 ): void {
+  if (type === 'Transformer') {
+    const r = validateTransformerEntry({ ...ref });
+    if (!r.ok) {
+      throw new Error(`Transformer "${name}": ${r.reason ?? 'invalid entry.'}`);
+    }
+    return;
+  }
+  // Sources / Destinations / Stores keep their existing two-rule check
   const hasPackage = !!ref.package;
   const hasInlineCode = isInlineCode(ref.code);
   const hasCode = hasCodeReference(ref.code);
-
-  // Inline code object + package is invalid (ambiguous)
   if (hasPackage && hasInlineCode) {
     throw new Error(
       `${type} "${name}": Cannot specify both package and code. Use one or the other.`,
     );
   }
-  // String code + package is valid (named import from package)
-  // Neither package nor code is invalid
   if (!hasPackage && !hasCode) {
     throw new Error(`${type} "${name}": Must specify either package or code.`);
   }
@@ -99,7 +108,7 @@ function generateInlineCode(
   inline: Flow.Code,
   config: object,
   env?: object,
-  chains?: { before?: Transformer.RouteSpec; next?: Transformer.RouteSpec },
+  chains?: { before?: Transformer.Route; next?: Transformer.Route },
   isDestination?: boolean,
 ): string {
   const pushFn = inline.push.replace('$code:', '');
@@ -1579,11 +1588,33 @@ export function buildSplitConfigObject(
   const transformersEntries = Object.entries(transformers)
     .filter(
       ([, transformer]) =>
-        transformer.package || hasCodeReference(transformer.code),
+        transformer.package ||
+        hasCodeReference(transformer.code) ||
+        isPathTransformerEntry({ ...transformer }),
     )
     .map(([key, transformer]) => {
       if (isInlineCode(transformer.code)) {
         return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, { before: transformer.before, next: transformer.next })}`;
+      }
+      if (isPathTransformerEntry({ ...transformer })) {
+        // Path: code-less passthrough. Emit only wiring fields; the runtime
+        // synthesizes the push function.
+        const chainLines: string[] = [];
+        if (transformer.before !== undefined) {
+          chainLines.push(`before: ${JSON.stringify(transformer.before)}`);
+        }
+        if (transformer.next !== undefined) {
+          chainLines.push(`next: ${JSON.stringify(transformer.next)}`);
+        }
+        if (transformer.cache !== undefined) {
+          chainLines.push(`cache: ${JSON.stringify(transformer.cache)}`);
+        }
+        if (transformer.config !== undefined) {
+          chainLines.push(
+            `config: ${processConfigValue(transformer.config as object)}`,
+          );
+        }
+        return `    ${key}: {\n      ${chainLines.join(',\n      ')}\n    }`;
       }
       return buildSplitStepEntry('transformers', key, transformer);
     });

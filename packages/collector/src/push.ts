@@ -121,6 +121,16 @@ export function createPush<T extends Collector.Instance>(
               return createPushResult({ ok: true });
             }
 
+            // Pipeline-halt signal from a pre-collector `cache.stop: true`
+            // HIT. The event is intentionally NOT forwarded to destinations;
+            // duplicates are suppressed at the source.next boundary per the
+            // documented "downstream transformers and destinations are
+            // skipped" semantic in transformers/cache.mdx.
+            if (chainResult.stopped) {
+              if (chainResult.respond) respond = chainResult.respond;
+              return createPushResult({ ok: true });
+            }
+
             // Update respond if the chain produced a wrapped one
             if (chainResult.respond) respond = chainResult.respond;
 

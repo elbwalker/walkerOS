@@ -32,24 +32,27 @@ Add `cache` to any step in your flow config:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `match` | `MatchExpression \| '*'` | When to apply this cache rule |
+| `match` | `MatchExpression` | When to apply this cache rule |
 | `key` | `string[]` | Dot-paths to build the cache key from |
 | `ttl` | `number` | Time-to-live in seconds |
 | `update` | `Record<string, Value>` | Optional modifications applied on read |
+
+`match` is optional, omit it for an always-match rule.
 
 ### Cache Properties
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `full` | `boolean` | `false` (`true` for sources) | Stop flow on cache HIT and skip remaining steps, returning the cached value |
+| `stop` | `boolean` | `false` (`true` for sources) | Stop flow on cache HIT and skip remaining steps, returning the cached value |
 | `store` | `string` | Built-in memory | Reference to a store in `flow.stores` |
+| `namespace` | `string` | _(none)_ | Optional key prefix. Omit to write keys directly to the store. Same store + same key + same namespace = same cache entry. |
 | `rules` | `CacheRule[]` | Required | At least one cache rule |
 
 ## Behavior by Step Type
 
-### Source Cache (full by default)
+### Source Cache (stop by default)
 
-Source cache intercepts requests before the pipeline runs. Sources default to `full: true`. On cache HIT, the cached respond value is returned immediately and the pipeline is skipped. Set `full: false` to skip only the source step and let the pipeline continue.
+Source cache intercepts requests before the pipeline runs. Sources default to `stop: true`. On cache HIT, the cached respond value is returned immediately and the pipeline is skipped. Set `stop: false` to skip only the source step and let the pipeline continue.
 
 ```json
 "sources": {
@@ -65,7 +68,11 @@ Source cache intercepts requests before the pipeline runs. Sources default to `f
 
 ### Transformer Cache (step-level)
 
-Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment. With `full: true`, the remaining chain stops on HIT and downstream transformers and destinations are skipped.
+Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment. With `stop: true`, the remaining chain stops on HIT and downstream transformers and destinations are skipped.
+
+:::note Halt scopes
+Pre-collector transformer caches with `stop: true` halt the entire pipeline on HIT, destinations do not see the event. Destination caches with `stop: true` halt only the per-destination delivery, sibling destinations still receive the event.
+:::
 
 ```json
 "transformers": {
@@ -73,7 +80,7 @@ Transformer cache skips the transformer's execution on HIT but continues the cha
     "package": "@walkeros/server-transformer-enricher",
     "cache": {
       "rules": [
-        { "match": "*", "key": ["event.name"], "ttl": 60 }
+        { "key": ["event.name"], "ttl": 60 }
       ]
     }
   }
@@ -82,7 +89,7 @@ Transformer cache skips the transformer's execution on HIT but continues the cha
 
 ### Destination Cache (deduplication)
 
-Destination cache skips the push on HIT, preventing duplicate events from reaching the destination. Other destinations still receive the event. With `full: true`, the `before` transformer chain is also skipped on HIT.
+Destination cache skips the push on HIT, preventing duplicate events from reaching the destination. Other destinations still receive the event. With `stop: true`, the `before` transformer chain is also skipped on HIT.
 
 ```json
 "destinations": {
@@ -90,7 +97,7 @@ Destination cache skips the push on HIT, preventing duplicate events from reachi
     "package": "@walkeros/web-destination-ga4",
     "cache": {
       "rules": [
-        { "match": "*", "key": ["event.name", "event.data.id"], "ttl": 300 }
+        { "key": ["event.name", "event.data.id"], "ttl": 300 }
       ]
     }
   }
@@ -114,7 +121,6 @@ Use `update` to modify the result on both HIT and MISS:
 ```json
 "cache": {
   "rules": [{
-    "match": "*",
     "key": ["ingest.method", "ingest.path"],
     "ttl": 300,
     "update": {
@@ -147,3 +153,10 @@ By default, cache uses a shared in-memory store. Reference a custom store for pe
 }
 ```
 
+## Migration from prior v4 cache
+
+If you're upgrading from an earlier v4 build, three breaking changes apply:
+
+- **`cache.full` is now `cache.stop`.** Search-and-replace `"full"` for `"stop"` in every `cache` block. Default behavior unchanged (sources default to `stop: true`, transformers and destinations default to `stop: false`).
+- **`cache.match: "*"` is now omitted.** Drop the `"match": "*"` entry from rules. A rule with no `match` matches every event, the behavior is identical to the previous wildcard.
+- **Implicit per-step namespacing is gone.** Previous builds prefixed cache keys with `s:`, `t:`, or `d:` based on step type, so a source and a destination writing the same key never collided. That prefix is no longer applied. If you share a store across step types and need isolation, set `cache.namespace` explicitly (for example `"namespace": "source"`).

@@ -1,5 +1,5 @@
 import { startFlow } from '..';
-import type { Transformer, WalkerOS } from '@walkeros/core';
+import type { Elb, Source, Transformer, WalkerOS } from '@walkeros/core';
 
 describe('Destination Transformer Chains (destination.before)', () => {
   describe('chain execution', () => {
@@ -181,6 +181,54 @@ describe('Destination Transformer Chains (destination.before)', () => {
 
       expect(order).toEqual(['a', 'b']);
     });
+
+    it('synthesizes path passthrough for code-less transformer entries', async () => {
+      const filterCalls: string[] = [];
+      const destinationEvents: WalkerOS.Event[] = [];
+
+      const { elb } = await startFlow({
+        transformers: {
+          filterBots: {
+            code: async (): Promise<Transformer.Instance> => ({
+              type: 'filter',
+              config: {},
+              push: async (event) => {
+                filterCalls.push('filterBots');
+                return { event };
+              },
+            }),
+          },
+          // Code-less entry — synthesizes a passthrough whose only job is to
+          // host the `before: ['filterBots']` chain.
+          passthrough: {
+            before: ['filterBots'],
+          },
+        },
+        destinations: {
+          testDest: {
+            before: 'passthrough',
+            code: {
+              type: 'test',
+              config: {},
+              push: async (event) => {
+                destinationEvents.push(event);
+              },
+            },
+          },
+        },
+      });
+
+      const inputEvent = { name: 'page view', data: { title: 'Home' } };
+      await elb(inputEvent);
+
+      // filterBots ran via the code-less entry's `before` chain
+      expect(filterCalls).toEqual(['filterBots']);
+
+      // The destination received the event unchanged
+      expect(destinationEvents).toHaveLength(1);
+      expect(destinationEvents[0].name).toBe('page view');
+      expect(destinationEvents[0].data?.title).toBe('Home');
+    });
   });
 
   describe('destinations without before', () => {
@@ -265,17 +313,19 @@ describe('Destination Transformer Chains (destination.before)', () => {
                 order.push(`dest:${event.data?.enriched}`);
               },
             },
-            before: [
-              {
-                match: {
-                  key: 'ingest.entity',
-                  operator: 'eq',
-                  value: 'product',
+            before: {
+              one: [
+                {
+                  match: {
+                    key: 'ingest.entity',
+                    operator: 'eq',
+                    value: 'product',
+                  },
+                  next: 'product-enricher',
                 },
-                next: 'product-enricher',
-              },
-              { match: '*', next: 'default-enricher' },
-            ] as any,
+                { next: 'default-enricher' },
+              ],
+            },
           },
         },
       });
@@ -436,6 +486,71 @@ describe('Destination Transformer Chains (destination.before)', () => {
       await elb({ name: 'page view', data: {} });
 
       expect(order).toEqual(['first', 'second', 'third']);
+    });
+  });
+
+  describe('source.next with many (Phase 6 regression)', () => {
+    it('source.next with many fans out: N matching entries → N collector events', async () => {
+      const received: Array<{ tag: unknown; name: string }> = [];
+
+      const { collector } = await startFlow({
+        sources: {
+          in: {
+            code: async (context): Promise<Source.Instance> => {
+              const { env, config } = context;
+              return {
+                type: 'test',
+                config: config as Source.Config,
+                push: env.push as Elb.Fn,
+              };
+            },
+            next: { many: ['audit-tag', 'process-tag'] },
+          },
+        },
+        transformers: {
+          'audit-tag': {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'audit-tag',
+              config: context.config,
+              push: async (event) => ({
+                event: { ...event, data: { ...event.data, tag: 'audit' } },
+              }),
+            }),
+          },
+          'process-tag': {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'process-tag',
+              config: context.config,
+              push: async (event) => ({
+                event: { ...event, data: { ...event.data, tag: 'process' } },
+              }),
+            }),
+          },
+        },
+        destinations: {
+          spy: {
+            code: {
+              type: 'spy',
+              config: {},
+              push: async (event: WalkerOS.Event) => {
+                received.push({
+                  tag: event.data?.tag,
+                  name: event.name ?? '',
+                });
+              },
+            },
+          },
+        },
+      });
+
+      await collector.sources.in.push({ name: 'page view', data: {} });
+
+      // Both branches reach the destination as INDEPENDENT events, each
+      // carrying their own tag. If `many` collapsed into a sequential chain,
+      // we'd see a single event tagged 'process' (last writer wins).
+      expect(received).toHaveLength(2);
+      expect(received.find((r) => r.tag === 'audit')).toBeDefined();
+      expect(received.find((r) => r.tag === 'process')).toBeDefined();
     });
   });
 });

@@ -425,11 +425,72 @@ For full destination configuration examples (TypeScript + JSON), see
 
 ---
 
+## Mapping at the Transformer Position
+
+`Mapping.Config` accepts the same shape at three positions in the flow, but the
+semantic differs by position:
+
+| Position    | What the mapping produces                                 |
+| ----------- | --------------------------------------------------------- |
+| Source      | A walkerOS event from raw input                           |
+| Transformer | A mutated walkerOS event that continues through the chain |
+| Destination | A vendor-shaped payload that the destination consumes     |
+
+When a transformer step declares only a `mapping` (no `code`, no `package`), the
+collector synthesizes a push that runs `processEventMapping` against each event.
+Same keyword as the destination field, different semantic at this step position.
+See
+[walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
+for the pass-through-step model.
+
+### Which fields apply at the transformer position
+
+Only **event-mutating** fields run; vendor-payload fields are no-ops with a
+one-time init warning:
+
+| Field                    | Transformer position                                                              |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| `policy`                 | Applies, pre-processes the event before rule matching                             |
+| `include`                | Applies, flattens event sections into mapping context                             |
+| `mapping[].policy`       | Applies, per-event policy                                                         |
+| `mapping[].name`         | Applies, **renames** the event (mutation is observable downstream)                |
+| `mapping[].ignore`       | Applies, drops the event **from the chain entirely** (no downstream step sees it) |
+| `mapping[].consent`      | Applies, consent gate                                                             |
+| `data`, `mapping[].data` | Ignored at this position (event mutation does not produce a vendor payload)       |
+| `mapping[].silent`       | Ignored at this position (destination-only concept)                               |
+
+Note the `ignore: true` semantic shift: at a **destination** it skips delivery
+to that destination only; at a **transformer step** it drops the event from the
+chain so no downstream step (transformer or destination) sees it.
+
+```json
+{
+  "transformers": {
+    "redactPII": {
+      "mapping": {
+        "policy": {
+          "user.email": { "value": "[redacted]" }
+        },
+        "mapping": {
+          "test": {
+            "*": { "ignore": true }
+          },
+          "order": {
+            "complete": { "name": "purchase" }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
 ## Where Mapping Lives
 
 | Location                                   | Purpose                                   |
 | ------------------------------------------ | ----------------------------------------- |
 | Source config                              | Transform raw input → walkerOS events     |
+| Transformer step config                    | Mutate walkerOS events in-flight          |
 | Destination config                         | Transform walkerOS events → vendor format |
 | `packages/core/src/mapping.ts`             | Core mapping functions                    |
 | `packages/core/src/types/mapping.ts`       | Type definitions                          |
@@ -443,6 +504,8 @@ For full destination configuration examples (TypeScript + JSON), see
   Event structure
 - [walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
   Destination-side mapping
+- [walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md) -
+  Transformer-position mapping and pass-through-step variants
 - [walkeros-mapping-configuration](../walkeros-mapping-configuration/SKILL.md) -
   Recipes and patterns
 

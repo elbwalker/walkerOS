@@ -8,7 +8,7 @@ describe('Validation', () => {
       config: { platform: 'server' },
       transformers: {
         invalid: {
-          package: '@walkeros/transformer-validator',
+          package: '@walkeros/transformer-fingerprint',
           code: {
             type: 'inline',
             push: '$code:(e) => e',
@@ -20,14 +20,16 @@ describe('Validation', () => {
     const explicitCodeImports = new Map<string, Set<string>>();
     expect(() =>
       buildSplitConfigObject(flowSettings, explicitCodeImports),
-    ).toThrow(/both package and code/i);
+    ).toThrow(/both .*code.* and .*package/i);
   });
 
-  it('should error when neither package nor code are specified', () => {
+  it('accepts a transformer entry with neither package nor code (pass-through)', () => {
+    // Pass-through is the default for transformer steps. An entry with no
+    // operative field is a no-op step. The bundler must accept it.
     const flowSettings: Flow = {
       config: { platform: 'server' },
       transformers: {
-        invalid: {
+        passthrough: {
           config: {},
         },
       },
@@ -36,7 +38,7 @@ describe('Validation', () => {
     const explicitCodeImports = new Map<string, Set<string>>();
     expect(() =>
       buildSplitConfigObject(flowSettings, explicitCodeImports),
-    ).toThrow(/package or code/i);
+    ).not.toThrow();
   });
 });
 
@@ -79,7 +81,7 @@ describe('Inline Code Bundling', () => {
             code: {
               type: 'validator',
               push: '$code:(event) => event.data?.valid ? event : null',
-              init: '$code:() => console.log("Validator initialized")',
+              init: '$code:() => console.log("transformer initialized")',
             },
             config: { strict: true },
           },
@@ -164,8 +166,8 @@ describe('Integration', () => {
         bundle: {
           packages: {
             '@walkeros/collector': { imports: ['startFlow'] },
-            '@walkeros/transformer-validator': {
-              imports: ['transformerValidator'],
+            '@walkeros/transformer-fingerprint': {
+              imports: ['transformerFingerprint'],
             },
           },
         },
@@ -180,15 +182,15 @@ describe('Integration', () => {
         },
       },
       transformers: {
-        validate: {
-          package: '@walkeros/transformer-validator',
+        fingerprint: {
+          package: '@walkeros/transformer-fingerprint',
         },
         enrich: {
           code: {
             type: 'enricher',
             push: '$code:(event) => ({ ...event, data: { ...event.data, enriched: true } })',
           },
-          next: 'validate',
+          next: 'fingerprint',
           config: {},
         },
       },
@@ -210,8 +212,8 @@ describe('Integration', () => {
     );
 
     // Package-based transformer should reference the import variable
-    expect(result).toContain('validate');
-    expect(result).toContain('_walkerosTransformerValidator');
+    expect(result).toContain('fingerprint');
+    expect(result).toContain('_walkerosTransformerFingerprint');
 
     // Inline code should be present
     expect(result).toContain('manual');

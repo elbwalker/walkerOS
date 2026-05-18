@@ -1,8 +1,9 @@
 import { z, toJsonSchema } from './validation';
 import { Identifier } from './primitives';
-import { RouteSpecSchema } from './matcher';
-import { CacheSchema } from './cache';
+import { RouteSchema } from './matcher';
+import { EventCacheSchema } from './cache';
 import { LoggerConfigSchema } from './logger';
+import { ConfigSchema as MappingConfigSchema } from './mapping';
 
 /**
  * Transformer Schemas
@@ -53,13 +54,13 @@ export const ConfigSchema = z
     logger: LoggerConfigSchema.optional().describe(
       'Logger configuration (level, handler) to override the collector defaults',
     ),
-    before: RouteSpecSchema.optional().describe(
+    before: RouteSchema.optional().describe(
       'Pre-transformer chain that runs before this transformer pushes',
     ),
-    next: RouteSpecSchema.optional().describe(
+    next: RouteSchema.optional().describe(
       'Graph wiring to the next transformer in the chain',
     ),
-    cache: CacheSchema.optional().describe(
+    cache: EventCacheSchema.optional().describe(
       'Step-level cache configuration for this transformer',
     ),
     init: z.boolean().describe('Whether to initialize immediately').optional(),
@@ -92,7 +93,11 @@ export const ConfigSchema = z
       .describe(
         'Path-specific mock values keyed by chain path. Takes precedence over global mock. Dev/testing only.',
       ),
+    mapping: MappingConfigSchema.optional().describe(
+      'Declarative event-to-event mapping applied when this transformer step has no code. At this position, only event-mutating fields apply (policy, mapping[].policy, mapping[].name, mapping[].ignore, mapping[].consent, include); vendor-payload fields are ignored.',
+    ),
   })
+  .strict()
   .meta({
     id: 'TransformerConfig',
     title: 'Transformer.Config',

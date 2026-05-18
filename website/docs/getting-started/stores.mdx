@@ -30,30 +30,28 @@ Stores can be synchronous or asynchronous. The interface supports both.
 
 | Package | Environment | Storage | Features |
 |---------|-------------|---------|----------|
-| `@walkeros/store-memory` | Any | In-memory | LRU eviction, TTL, namespace utility |
 | `@walkeros/server-store-fs` | Node.js | Filesystem | Read/write files, directory listing |
 | `@walkeros/server-store-s3` | Node.js | S3-compatible | Object storage via AWS SDK |
+| `@walkeros/server-store-gcs` | Node.js | Google Cloud Storage | Object storage via GCS JSON API |
+| `@walkeros/server-store-sheets` | Node.js | Google Sheets | Row-per-key storage via Sheets API |
+
+The collector ships a built-in in-memory cache tier (`__cache`). Wire it on any store via `Flow.Store.cache` instead of declaring a separate memory store.
 
 ## Configuration
 
 ### Bundled mode (flow.json)
 
-Define stores in the `stores` section of a flow config:
+Define stores in the `stores` section of a flow config. Use `cache` to enable the built-in in-memory cache tier on top of the backing store:
 
 <CodeSnippet
   code={`{
   "stores": {
-    "cache": {
-      "package": "@walkeros/store-memory",
-      "config": {
-        "settings": { "maxSize": 10485760, "maxEntries": 1000 }
-      }
-    },
     "files": {
       "package": "@walkeros/server-store-fs",
       "config": {
         "settings": { "basePath": "./public" }
-      }
+      },
+      "cache": { "rules": [{ "ttl": 60 }] }
     }
   }
 }`}
@@ -64,20 +62,21 @@ Define stores in the `stores` section of a flow config:
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
-import { storeMemoryInit } from '@walkeros/store-memory';
+import { storeFsInit } from '@walkeros/server-store-fs';
 
 const { collector } = await startFlow({
   stores: {
-    cache: {
-      code: storeMemoryInit,
-      config: { settings: { maxSize: 10 * 1024 * 1024 } },
+    files: {
+      code: storeFsInit,
+      config: { settings: { basePath: './public' } },
+      cache: { rules: [{ ttl: 60 }] },
     },
   },
 });
 
 // Access stores on the collector
-collector.stores.cache.set('key', 'value');
-const val = collector.stores.cache.get('key');`}
+collector.stores.files.set('key', 'value');
+const val = await collector.stores.files.get('key');`}
   language="typescript"
 />
 
@@ -88,14 +87,14 @@ Use the `$store.` prefix in a component's `env` to inject a store instance at ru
 <CodeSnippet
   code={`{
   "stores": {
-    "cache": {
-      "package": "@walkeros/store-memory"
+    "files": {
+      "package": "@walkeros/server-store-fs"
     }
   },
   "transformers": {
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint",
-      "env": { "store": "$store.cache" }
+      "env": { "store": "$store.files" }
     }
   }
 }`}

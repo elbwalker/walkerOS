@@ -1719,7 +1719,7 @@ describe('Pattern Resolution', () => {
             config: { platform: 'server' },
             stores: {
               cache: {
-                package: '@walkeros/store-memory',
+                package: '@walkeros/server-store-fs',
                 config: {},
                 env: { region: '$var.region' },
               },
@@ -1964,8 +1964,13 @@ describe('$contract edge cases', () => {
       version: 4,
       contract: {
         web: {
-          globals: { required: ['country'] },
-          consent: { required: ['analytics'] },
+          schema: {
+            type: 'object',
+            properties: {
+              globals: { required: ['country'] },
+              consent: { required: ['analytics'] },
+            },
+          },
           events: {
             product: { view: { properties: { data: { required: ['id'] } } } },
           },
@@ -1980,8 +1985,8 @@ describe('$contract edge cases', () => {
           sources: {
             test: {
               config: {
-                globals: '$var.c.globals',
-                consent: '$var.c.consent',
+                globals: '$var.c.schema.properties.globals',
+                consent: '$var.c.schema.properties.consent',
               },
             },
           },
@@ -1999,14 +2004,21 @@ describe('$contract edge cases', () => {
     const setup: Flow.Json = {
       version: 4,
       contract: {
-        web: { consent: { required: ['analytics'] } },
+        web: {
+          schema: {
+            type: 'object',
+            properties: { consent: { required: ['analytics'] } },
+          },
+        },
       },
       flows: {
         default: {
           config: { platform: 'web' },
           destinations: {
             api: {
-              config: { consent: '$contract.web.consent' },
+              config: {
+                consent: '$contract.web.schema.properties.consent',
+              },
             },
           },
         },
@@ -2054,8 +2066,13 @@ describe('$contract reference resolution', () => {
       version: 4,
       contract: {
         web: {
-          globals: { required: ['country'] },
-          consent: { required: ['analytics'] },
+          schema: {
+            type: 'object',
+            properties: {
+              globals: { required: ['country'] },
+              consent: { required: ['analytics'] },
+            },
+          },
         },
       },
       flows: {
@@ -2063,7 +2080,9 @@ describe('$contract reference resolution', () => {
           config: { platform: 'web' },
           sources: {
             cmp: {
-              config: { consent: '$contract.web.consent' },
+              config: {
+                consent: '$contract.web.schema.properties.consent',
+              },
             },
           },
         },
@@ -2080,7 +2099,10 @@ describe('$contract reference resolution', () => {
       version: 4,
       contract: {
         web: {
-          globals: { required: ['country'] },
+          schema: {
+            type: 'object',
+            properties: { globals: { required: ['country'] } },
+          },
         },
       },
       flows: {
@@ -2094,7 +2116,12 @@ describe('$contract reference resolution', () => {
     };
     const config = getFlowSettings(setup);
     expect(config.sources?.test?.config).toEqual({
-      c: { globals: { required: ['country'] } },
+      c: {
+        schema: {
+          type: 'object',
+          properties: { globals: { required: ['country'] } },
+        },
+      },
     });
   });
 
@@ -2131,14 +2158,21 @@ describe('$contract reference resolution', () => {
     const setup: Flow.Json = {
       version: 4,
       contract: {
-        default: { consent: { required: ['analytics'] } },
+        default: {
+          schema: {
+            type: 'object',
+            properties: { consent: { required: ['analytics'] } },
+          },
+        },
         web: { extends: 'default', events: { product: { view: {} } } },
       },
       flows: {
         default: {
           config: { platform: 'web' },
           sources: {
-            cmp: { config: { consent: '$contract.web.consent' } },
+            cmp: {
+              config: { consent: '$contract.web.schema.properties.consent' },
+            },
           },
         },
       },

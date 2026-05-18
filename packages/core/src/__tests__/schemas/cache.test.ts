@@ -11,20 +11,28 @@ describe('CacheRuleSchema', () => {
     ).toBe(true);
   });
 
-  it('validates wildcard match', () => {
+  it('accepts rule without match (always-match)', () => {
     expect(
       CacheRuleSchema.safeParse({
-        match: '*',
         key: ['ingest.path'],
         ttl: 60,
       }).success,
     ).toBe(true);
   });
 
-  it('validates rule with update', () => {
+  it("rejects '*' literal match", () => {
     expect(
       CacheRuleSchema.safeParse({
         match: '*',
+        key: ['ingest.path'],
+        ttl: 60,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('validates rule with update', () => {
+    expect(
+      CacheRuleSchema.safeParse({
         key: ['ingest.path'],
         ttl: 60,
         update: { 'headers.X-Cache': { value: 'HIT' } },
@@ -35,7 +43,6 @@ describe('CacheRuleSchema', () => {
   it('rejects missing ttl', () => {
     expect(
       CacheRuleSchema.safeParse({
-        match: '*',
         key: ['ingest.path'],
       }).success,
     ).toBe(false);
@@ -44,7 +51,6 @@ describe('CacheRuleSchema', () => {
   it('rejects missing key', () => {
     expect(
       CacheRuleSchema.safeParse({
-        match: '*',
         ttl: 60,
       }).success,
     ).toBe(false);
@@ -55,7 +61,7 @@ describe('CacheSchema', () => {
   it('validates minimal cache config', () => {
     expect(
       CacheSchema.safeParse({
-        rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+        rules: [{ key: ['ingest.path'], ttl: 60 }],
       }).success,
     ).toBe(true);
   });
@@ -64,25 +70,34 @@ describe('CacheSchema', () => {
     expect(
       CacheSchema.safeParse({
         store: 'myCache',
-        rules: [{ match: '*', key: ['ingest.path'], ttl: 300 }],
+        rules: [{ key: ['ingest.path'], ttl: 300 }],
       }).success,
     ).toBe(true);
   });
 
-  it('validates with full flag', () => {
+  it('validates with stop flag', () => {
     expect(
       CacheSchema.safeParse({
-        full: true,
-        rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+        stop: true,
+        rules: [{ key: ['ingest.path'], ttl: 60 }],
       }).success,
     ).toBe(true);
   });
 
-  it('validates without full flag', () => {
+  it('validates without stop flag', () => {
     const result = CacheSchema.safeParse({
-      rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+      rules: [{ key: ['ingest.path'], ttl: 60 }],
     });
     expect(result.success).toBe(true);
+  });
+
+  it('accepts namespace', () => {
+    expect(
+      CacheSchema.safeParse({
+        namespace: 'cache-v1',
+        rules: [{ key: ['ingest.path'], ttl: 60 }],
+      }).success,
+    ).toBe(true);
   });
 
   it('rejects empty rules array', () => {

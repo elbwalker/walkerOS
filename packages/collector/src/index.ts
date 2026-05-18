@@ -10,8 +10,6 @@ export * from './handle';
 export * from './on';
 export * from './source';
 export {
-  walkChain,
-  extractTransformerNextMap,
   runTransformerChain,
   transformerPush,
   transformerInit,

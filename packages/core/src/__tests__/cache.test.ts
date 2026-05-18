@@ -42,24 +42,65 @@ describe('compileCache', () => {
   it('preserves store reference', () => {
     const compiled = compileCache({
       store: 'redis',
-      rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+      rules: [{ key: ['ingest.path'], ttl: 60 }],
     });
     expect(compiled.storeId).toBe('redis');
   });
 
-  it('defaults full to false', () => {
+  it('defaults stop to false', () => {
     const compiled = compileCache({
-      rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+      rules: [{ key: ['ingest.path'], ttl: 60 }],
     });
-    expect(compiled.full).toBe(false);
+    expect(compiled.stop).toBe(false);
   });
 
-  it('preserves full flag', () => {
+  it('preserves stop flag', () => {
     const compiled = compileCache({
-      full: true,
-      rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+      stop: true,
+      rules: [{ key: ['ingest.path'], ttl: 60 }],
     });
-    expect(compiled.full).toBe(true);
+    expect(compiled.stop).toBe(true);
+  });
+
+  it('uses configured namespace when present', () => {
+    const store = createMockStore();
+    const compiled = compileCache({
+      namespace: 'x',
+      rules: [{ key: ['ingest.path'], ttl: 60 }],
+    });
+    const result = checkCache(compiled, store, {
+      ingest: { path: '/api/data' },
+    });
+
+    expect(result).toBeDefined();
+    expect(result!.key).toBe('x:/api/data');
+  });
+
+  it('writes keys directly without prefix when namespace omitted and runtime namespace omitted', () => {
+    const store = createMockStore();
+    const compiled = compileCache({
+      rules: [{ key: ['ingest.path'], ttl: 60 }],
+    });
+    const result = checkCache(compiled, store, {
+      ingest: { path: '/api/data' },
+    });
+
+    expect(result).toBeDefined();
+    expect(result!.key).toBe('/api/data');
+  });
+
+  it('treats missing match as always-match', () => {
+    const store = createMockStore();
+    const compiled = compileCache({
+      rules: [{ key: ['ingest.path'], ttl: 60 }],
+    });
+    const result = checkCache(compiled, store, {
+      ingest: { path: '/api/data' },
+    });
+
+    expect(result).toBeDefined();
+    expect(result!.status).toBe('MISS');
+    expect(result!.key).toBe('/api/data');
   });
 });
 
@@ -67,7 +108,7 @@ describe('checkCache', () => {
   it('returns MISS when store has no entry', () => {
     const store = createMockStore();
     const compiled = compileCache({
-      rules: [{ match: '*', key: ['ingest.method', 'ingest.path'], ttl: 60 }],
+      rules: [{ key: ['ingest.method', 'ingest.path'], ttl: 60 }],
     });
     const result = checkCache(
       compiled,
@@ -75,20 +116,20 @@ describe('checkCache', () => {
       {
         ingest: { method: 'GET', path: '/api/data' },
       },
-      's:express',
+      'express',
     );
 
     expect(result).toBeDefined();
     expect(result!.status).toBe('MISS');
-    expect(result!.key).toBe('s:express:GET:/api/data');
+    expect(result!.key).toBe('express:GET:/api/data');
   });
 
   it('returns HIT when store has entry', () => {
     const store = createMockStore();
-    store._data.set('s:express:GET:/api/data', { body: 'cached' });
+    store._data.set('express:GET:/api/data', { body: 'cached' });
 
     const compiled = compileCache({
-      rules: [{ match: '*', key: ['ingest.method', 'ingest.path'], ttl: 60 }],
+      rules: [{ key: ['ingest.method', 'ingest.path'], ttl: 60 }],
     });
     const result = checkCache(
       compiled,
@@ -96,7 +137,7 @@ describe('checkCache', () => {
       {
         ingest: { method: 'GET', path: '/api/data' },
       },
-      's:express',
+      'express',
     );
 
     expect(result).toBeDefined();
@@ -130,7 +171,7 @@ describe('checkCache', () => {
   it('builds key from event fields', () => {
     const store = createMockStore();
     const compiled = compileCache({
-      rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+      rules: [{ key: ['event.name'], ttl: 60 }],
     });
     const result = checkCache(
       compiled,
@@ -148,7 +189,7 @@ describe('checkCache', () => {
   it('returns null when key resolves to empty', () => {
     const store = createMockStore();
     const compiled = compileCache({
-      rules: [{ match: '*', key: ['ingest.nonexistent'], ttl: 60 }],
+      rules: [{ key: ['ingest.nonexistent'], ttl: 60 }],
     });
     const result = checkCache(compiled, store, { ingest: {} }, 'test');
 
@@ -164,7 +205,7 @@ describe('checkCache', () => {
           key: ['ingest.path'],
           ttl: 300,
         },
-        { match: '*', key: ['ingest.method', 'ingest.path'], ttl: 60 },
+        { key: ['ingest.method', 'ingest.path'], ttl: 60 },
       ],
     });
     const result = checkCache(

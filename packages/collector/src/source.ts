@@ -1,12 +1,17 @@
-import type { Collector, Elb, Ingest, Source, WalkerOS } from '@walkeros/core';
+import type {
+  Cache,
+  Collector,
+  Elb,
+  Ingest,
+  Source,
+  WalkerOS,
+} from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
 import {
   createIngest,
   getMappingValue,
   tryCatchAsync,
-  compileNext,
-  resolveNext,
-  isRouteArray,
+  getNextSteps,
   compileCache,
   checkCache,
   storeCache,
@@ -17,7 +22,27 @@ import {
   walkChain,
   extractTransformerNextMap,
   runTransformerChain,
+  cloneIngest,
 } from './transformer';
+
+/**
+ * A Route is "static" when it's a transformer-ID string or an array of
+ * transformer-ID strings. Static routes can be resolved once at init and
+ * walked synchronously; conditional shapes (RouteConfig, mixed arrays)
+ * depend on per-event context and resolve via getNextSteps at dispatch.
+ */
+function isStaticRoute(
+  route: import('@walkeros/core').Transformer.Route | undefined,
+): route is string | string[] {
+  if (typeof route === 'string') return true;
+  if (
+    Array.isArray(route) &&
+    route.every((entry) => typeof entry === 'string')
+  ) {
+    return true;
+  }
+  return false;
+}
 import { getCacheStore } from './cache';
 
 /**
@@ -70,51 +95,61 @@ export async function initSource(
   // Track current respond function (set per-request by setRespond)
   let currentRespond: RespondFn | undefined = undefined;
 
-  // Compile source cache config (if configured)
-  const compiledSourceCache = cache
-    ? compileCache({ ...cache, full: cache.full ?? true })
+  // Compile source cache config (if configured).
+  // Source caches operate on events (request-scoped HIT/MISS keyed by event
+  // fields), so the rule shape is always EventCacheRule, not StoreCacheRule.
+  const sourceCacheConfig = cache as
+    | Cache.Cache<Cache.EventCacheRule>
+    | undefined;
+  const compiledSourceCache = sourceCacheConfig
+    ? compileCache({
+        ...sourceCacheConfig,
+        stop: sourceCacheConfig.stop ?? true,
+      })
     : undefined;
 
-  // Resolve transformer chain for this source
-  const compiledNext = compileNext(next);
-  const isConditional = Array.isArray(next) && isRouteArray(next);
-  // For static next, pre-walk at init (optimization)
-  const staticPreChain =
-    !isConditional && compiledNext
-      ? walkChain(
-          resolveNext(compiledNext)!,
-          extractTransformerNextMap(collector.transformers),
-        )
-      : undefined;
+  // Resolve transformer chain for this source.
+  // Static (string / string[]) chains pre-walk at init (optimization).
+  // Conditional shapes (case / gate) require per-request context — see wrappedPush.
+  const staticPreChain = isStaticRoute(next)
+    ? walkChain(next, extractTransformerNextMap(collector.transformers))
+    : undefined;
 
-  // Resolve before chain for this source (consent-exempt, pre-source preprocessing)
-  const compiledBefore = compileNext(before);
-  const isBeforeConditional = Array.isArray(before) && isRouteArray(before);
-  const staticBeforeChain =
-    !isBeforeConditional && compiledBefore
-      ? walkChain(
-          resolveNext(compiledBefore)!,
-          extractTransformerNextMap(collector.transformers),
-        )
-      : undefined;
+  // Resolve before chain for this source (consent-exempt, pre-source preprocessing).
+  const staticBeforeChain = isStaticRoute(before)
+    ? walkChain(before, extractTransformerNextMap(collector.transformers))
+    : undefined;
 
   // Create wrapped push that auto-applies source mapping config, preChain, and ingest
   const wrappedPush: Collector.PushFn = async (
     rawEvent: WalkerOS.DeepPartialEvent,
     options: Collector.PushOptions = {},
   ) => {
-    let event = rawEvent;
     let pendingRespond: Promise<void> | undefined;
 
-    // Resolve before chain (static or conditional)
+    // Resolve before chain (static or conditional).
+    // Single-id results walk static `.next` links; multi-id results are
+    // explicit chains (fan-out from `many` is handled by the engine).
     const beforeChain =
       staticBeforeChain ??
-      (compiledBefore
-        ? walkChain(
-            resolveNext(compiledBefore, buildCacheContext(currentIngest))!,
-            extractTransformerNextMap(collector.transformers),
-          )
+      (before !== undefined
+        ? (() => {
+            const ids = getNextSteps(before, buildCacheContext(currentIngest));
+            if (ids.length === 0) return [];
+            const start = ids.length === 1 ? ids[0] : ids;
+            return walkChain(
+              start,
+              extractTransformerNextMap(collector.transformers),
+            );
+          })()
         : []);
+
+    // The before chain may fan out (return an array of events). The cache
+    // check and destination push must run once per event so fan-out is
+    // preserved end-to-end. Cache logic is request-scoped (keyed by
+    // `currentIngest`), so it lives outside the loop. The actual pipeline
+    // (preChain + collector.push) runs inside the loop, once per event.
+    let events: WalkerOS.DeepPartialEvent[] = [rawEvent];
 
     // Run source.before chain (consent-exempt, pre-source preprocessing)
     if (
@@ -126,7 +161,7 @@ export async function initSource(
         collector,
         collector.transformers,
         beforeChain,
-        event,
+        rawEvent,
         currentIngest,
         currentRespond,
         `source.${sourceId}.before`,
@@ -134,11 +169,17 @@ export async function initSource(
       if (beforeResult.event === null) {
         return { ok: true } as Elb.PushResult;
       }
+      // Pipeline-halt signal from a `cache.stop: true` HIT inside the
+      // source.before chain. Do NOT invoke collector.push — drop the event
+      // before it enters the collector pipeline.
+      if (beforeResult.stopped) {
+        if (beforeResult.respond) currentRespond = beforeResult.respond;
+        return { ok: true } as Elb.PushResult;
+      }
       if (beforeResult.respond) currentRespond = beforeResult.respond;
-      // Before chains use first result if fan-out occurred
-      event = Array.isArray(beforeResult.event)
-        ? beforeResult.event[0]
-        : beforeResult.event;
+      events = Array.isArray(beforeResult.event)
+        ? beforeResult.event
+        : [beforeResult.event];
     }
 
     // Source cache check (full=true by default for sources)
@@ -150,13 +191,13 @@ export async function initSource(
           compiledSourceCache,
           cacheStore,
           cacheContext,
-          `s:${sourceId}`,
+          // no per-step prefix — cache keys honor user-provided namespace only
         );
 
         if (cacheResult) {
           if (cacheResult.status === 'HIT' && cacheResult.value !== undefined) {
-            if (compiledSourceCache.full) {
-              // full=true (default): respond with cached value, skip pipeline
+            if (compiledSourceCache.stop) {
+              // stop=true (default): respond with cached value, skip pipeline
               let respondValue: unknown = cacheResult.value;
               if (cacheResult.rule.update) {
                 respondValue = await applyUpdate(
@@ -169,15 +210,15 @@ export async function initSource(
               currentRespond?.(respondValue as Record<string, unknown>);
               return { ok: true } as Elb.PushResult;
             }
-            // full=false: cached value unused — HIT signals "seen before", pipeline continues
+            // stop=false: cached value unused — HIT signals "seen before", pipeline continues
           }
 
           if (
             cacheResult.status === 'MISS' &&
-            compiledSourceCache.full &&
+            compiledSourceCache.stop &&
             currentRespond
           ) {
-            // full=true MISS: wrap respond to intercept and cache the value.
+            // stop=true MISS: wrap respond to intercept and cache the value.
             // Store original in cache, then apply update rules with MISS
             // status before responding (mirrors HIT path which applies
             // with HIT status).
@@ -218,32 +259,104 @@ export async function initSource(
             currentRespond = missRespond;
           }
 
-          // full=false MISS: store sentinel so subsequent requests get a HIT
-          if (cacheResult.status === 'MISS' && !compiledSourceCache.full) {
+          // stop=false MISS: store sentinel so subsequent requests get a HIT
+          if (cacheResult.status === 'MISS' && !compiledSourceCache.stop) {
             storeCache(cacheStore, cacheResult.key, true, cacheResult.rule.ttl);
           }
         }
       }
     }
 
-    // Resolve chain: static (pre-computed) or conditional (per-event)
-    const preChain =
-      staticPreChain ??
-      (compiledNext
-        ? walkChain(
-            resolveNext(compiledNext, buildCacheContext(currentIngest)),
-            extractTransformerNextMap(collector.transformers),
-          )
-        : []);
+    // Resolve chain: static (pre-computed) or conditional (per-event).
+    // Three dispatch shapes from `getNextSteps`:
+    // - []          → no route matched; passthrough to collector with no
+    //                 pre-chain.
+    // - ['x']       → walk static `.next` links from x and run as a single
+    //                 sequential subchain inside `collector.push`.
+    // - ['a','b',…] → `many` fan-out. Each id is an INDEPENDENT terminal
+    //                 subchain dispatched via its own `collector.push` call
+    //                 with a per-branch cloned ingest and `respond` cleared
+    //                 (no-respond-across-many doctrine, Task 4.2). Error
+    //                 isolation per branch via tryCatchAsync (Task 4.1).
+    //
+    // Note: a plain `next: ['a','b','c']` is `isStaticRoute` → pre-walked
+    // by `staticPreChain` as the legacy explicit sequential chain. Only
+    // `{ many: [...] }` reaches the multi-id branch here.
+    type Dispatch =
+      | { kind: 'single'; preChain: string[] }
+      | { kind: 'many'; branches: string[][] };
 
-    const pushResult = await collector.push(event, {
-      ...options,
-      id: sourceId,
-      ingest: currentIngest,
-      respond: currentRespond,
-      mapping: config,
-      preChain,
-    });
+    const dispatch: Dispatch = staticPreChain
+      ? { kind: 'single', preChain: staticPreChain }
+      : next !== undefined
+        ? (() => {
+            const ids = getNextSteps(next, buildCacheContext(currentIngest));
+            if (ids.length === 0)
+              return { kind: 'single', preChain: [] } as Dispatch;
+            if (ids.length === 1)
+              return {
+                kind: 'single',
+                preChain: walkChain(
+                  ids[0],
+                  extractTransformerNextMap(collector.transformers),
+                ),
+              } as Dispatch;
+            return {
+              kind: 'many',
+              branches: ids.map((id) =>
+                walkChain(
+                  id,
+                  extractTransformerNextMap(collector.transformers),
+                ),
+              ),
+            } as Dispatch;
+          })()
+        : ({ kind: 'single', preChain: [] } as Dispatch);
+
+    // Push each event independently through the post-before pipeline.
+    // For non-fan-out (single event) this is a one-iteration loop and
+    // behaves exactly like the previous implementation.
+    let pushResult: Elb.PushResult = { ok: true } as Elb.PushResult;
+    for (const event of events) {
+      if (dispatch.kind === 'many') {
+        // `many` fan-out: each branch is an independent terminal flow.
+        // Per-branch ingest clone, no respond propagation, error isolation
+        // via tryCatchAsync. Branch results are awaited and discarded;
+        // currentRespond is NOT updated from any branch.
+        await Promise.all(
+          dispatch.branches.map((branchChain, idx) =>
+            tryCatchAsync(
+              async () =>
+                collector.push(event, {
+                  ...options,
+                  id: sourceId,
+                  ingest: cloneIngest(currentIngest, `${sourceId}:${idx}`),
+                  respond: undefined,
+                  mapping: config,
+                  preChain: branchChain,
+                }),
+              (err) => {
+                collector.logger
+                  .scope('source:many')
+                  .error(`many branch ${idx} failed`, { error: err });
+                return { ok: true } as Elb.PushResult;
+              },
+            )(),
+          ),
+        );
+        // `many` is fan-out, not enrichment — surface a generic OK.
+        pushResult = { ok: true } as Elb.PushResult;
+      } else {
+        pushResult = await collector.push(event, {
+          ...options,
+          id: sourceId,
+          ingest: currentIngest,
+          respond: currentRespond,
+          mapping: config,
+          preChain: dispatch.preChain,
+        });
+      }
+    }
 
     // Wait for any deferred MISS update work to land on the source's
     // respond sender before returning control to the source. This

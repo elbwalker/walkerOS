@@ -47,7 +47,7 @@ devcontainer.
 features
 
 **Features**: 51 features including variables, mapping (key, map, loop, set),
-transformers (validator, fingerprint), consent gating, wildcards, ingest
+transformers (enricher, fingerprint), consent gating, wildcards, ingest
 metadata, and more.
 
 **Architecture**: Two named flows (`web` and `server`) showing full event

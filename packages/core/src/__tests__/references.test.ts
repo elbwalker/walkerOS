@@ -65,6 +65,23 @@ describe('reference regex constants', () => {
     expect('$contract.default.events'.match(REF_CONTRACT)?.[1]).toBe('default');
     expect('prefix $contract.default'.match(REF_CONTRACT)).toBeNull();
   });
+  it('REF_CONTRACT captures name and shallow path generically', () => {
+    // After the contract restructure, the resolver walks the captured
+    // dot path generically into the resolved contract object. The regex
+    // must therefore expose the full path as a single capture, with no
+    // hardcoded section names.
+    const m = '$contract.web.schema'.match(REF_CONTRACT);
+    expect(m?.[1]).toBe('web');
+    expect(m?.[2]).toBe('schema');
+  });
+  it('REF_CONTRACT captures arbitrarily deep paths generically', () => {
+    // $contract.web.schema.properties.globals must capture the entire
+    // dotted path after the contract name so flow.ts can walk it via
+    // walkPath. No section-name awareness allowed.
+    const m = '$contract.web.schema.properties.globals'.match(REF_CONTRACT);
+    expect(m?.[1]).toBe('web');
+    expect(m?.[2]).toBe('schema.properties.globals');
+  });
   it('REF_CODE_PREFIX is literal', () => {
     expect('$code:(e) => e.x'.startsWith(REF_CODE_PREFIX)).toBe(true);
   });

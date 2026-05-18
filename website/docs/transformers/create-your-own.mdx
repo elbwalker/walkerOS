@@ -170,6 +170,64 @@ await startFlow({
   language="typescript"
 />
 
+## Pass-through steps
+
+A **path** is the multi-step chain through a flow's transformer section. A
+**pass-through step** (short: **pass**) is a single step within a path that
+has no `code` and no `package`. The runtime synthesizes its push function for
+you, so the step exists purely to wire chain hops, run a cache check, or
+apply a declarative mapping.
+
+Three variants exist:
+
+### 1. Before/next chain only
+
+A named hop in the chain. Useful for reusing a chain prefix across destinations.
+
+```json
+"enrichServer": { "before": ["filterBots", "sessionLookup"] }
+```
+
+### 2. Cache only
+
+A step that runs a cache check, often for dedup or response caching.
+
+```json
+"dedup": {
+  "cache": {
+    "stop": true,
+    "rules": [{ "key": ["event.id"], "ttl": 60 }]
+  }
+}
+```
+
+### 3. Mapping only
+
+A step that runs a declarative event-to-event mapping using `Mapping.Config`
+primitives (`policy`, per-rule `policy`, `mapping[].name`, `mapping[].ignore`).
+
+```json
+"redactPII": {
+  "mapping": {
+    "policy": { "user.email": { "value": "[redacted]" } }
+  }
+}
+```
+
+:::note Dual semantic of `mapping`
+The `mapping` field uses the same `Mapping.Config` shape on destinations and
+transformer steps, but the semantic differs by position. On a destination,
+`mapping` shapes the vendor payload. On a transformer step, it mutates the
+event itself. Vendor-payload fields (`data`, per-rule `data`, `silent`) are
+ignored at the transformer position with a one-time warning at init.
+:::
+
+:::note Closed schema
+Transformer entries use a **closed schema**: unknown top-level keys are
+errors. This catches typos like `{ "rules": [], "stop": true }` at the top
+of a step (forgot the `cache:` wrapper).
+:::
+
 ## Testing
 
 <CodeSnippet
@@ -265,6 +323,5 @@ Packages can export a `hints` record from `src/dev.ts` to provide lightweight, a
 
 ## Next steps
 
-* Review <Link to="/docs/transformers/validator">Validator</Link> source as reference
 * Learn about <Link to="/docs/sources/create-your-own">creating sources</Link>
 * Learn about <Link to="/docs/destinations/create-your-own">creating destinations</Link>

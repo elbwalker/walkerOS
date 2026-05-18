@@ -7,10 +7,16 @@ describe('Contract types', () => {
       contract: {
         default: {
           description: 'Base contract',
-          globals: {
-            required: ['country'],
+          schema: {
+            type: 'object',
             properties: {
-              country: { type: 'string' },
+              globals: {
+                type: 'object',
+                required: ['country'],
+                properties: {
+                  country: { type: 'string' },
+                },
+              },
             },
           },
           events: {
@@ -31,8 +37,14 @@ describe('Contract types', () => {
         },
         web: {
           extends: 'default',
-          consent: {
-            required: ['analytics'],
+          schema: {
+            type: 'object',
+            properties: {
+              consent: {
+                type: 'object',
+                required: ['analytics'],
+              },
+            },
           },
         },
       },
@@ -49,7 +61,12 @@ describe('Contract types', () => {
       web: { extends: 'default', events: { product: { view: {} } } },
       web_loggedin: {
         extends: 'web',
-        user: { required: ['id'] },
+        schema: {
+          type: 'object',
+          properties: {
+            user: { type: 'object', required: ['id'] },
+          },
+        },
       },
     };
     expect(Object.keys(contract)).toHaveLength(3);

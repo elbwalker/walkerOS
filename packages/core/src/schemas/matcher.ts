@@ -33,35 +33,71 @@ export const MatchExpressionSchema: z.ZodType = z
     description: 'Boolean expression tree of match conditions (leaf, and, or).',
   });
 
-const MatchOrWildcard = z.union([MatchExpressionSchema, z.literal('*')]);
+// Recursive Route grammar (Flow v4): string | Route[] | RouteConfig.
+// RouteConfig is a disjoint union enforcing exactly one of next/one/many/gate.
+const RouteNextConfigSchema = z.strictObject({
+  match: MatchExpressionSchema.optional(),
+  next: z.lazy(() => RouteSchema),
+});
 
-// Recursive: Route.next is itself a RouteSpec
-export const RouteSpecSchema: z.ZodType = z
-  .union([
-    z.string(),
-    z.array(z.string()),
-    z.array(
-      z.object({
-        match: MatchOrWildcard,
-        next: z.lazy(() => RouteSpecSchema),
-      }),
-    ),
-  ])
+const RouteOneConfigSchema = z.strictObject({
+  match: MatchExpressionSchema.optional(),
+  one: z.array(z.lazy(() => RouteSchema)),
+});
+
+const RouteManyConfigSchema = z.strictObject({
+  match: MatchExpressionSchema.optional(),
+  many: z.array(z.lazy(() => RouteSchema)),
+});
+
+const RouteGateConfigSchema = z.strictObject({
+  match: MatchExpressionSchema,
+});
+
+const RouteConfigSchema = z.union([
+  RouteNextConfigSchema,
+  RouteOneConfigSchema,
+  RouteManyConfigSchema,
+  RouteGateConfigSchema,
+]);
+
+export const RouteSchema: z.ZodType = z
+  .union([z.string(), z.array(z.lazy(() => RouteSchema)), RouteConfigSchema])
   .meta({
-    id: 'MatcherRouteSpec',
-    title: 'Matcher.RouteSpec',
+    id: 'Route',
+    title: 'Route',
     description:
-      'Routable next target: ID, ID list, or list of {match, next} rules.',
+      'Recursive route: string ID, sequence of routes, or a RouteConfig (next/one/many/gate).',
   });
 
-export const RouteSchema = z
-  .object({
-    match: MatchOrWildcard,
-    next: z.lazy(() => RouteSpecSchema),
-  })
+// Restricted Route grammar for post-collector positions (destination.before).
+// `many` is forbidden at any depth: post-collector fan-out is expressed by
+// configuring multiple destinations, not by branching the chain.
+const RouteNextConfigSchema_NoMany = z.strictObject({
+  match: MatchExpressionSchema.optional(),
+  next: z.lazy(() => RouteWithoutManySchema),
+});
+
+const RouteOneConfigSchema_NoMany = z.strictObject({
+  match: MatchExpressionSchema.optional(),
+  one: z.array(z.lazy(() => RouteWithoutManySchema)),
+});
+
+const RouteConfigSchema_NoMany = z.union([
+  RouteNextConfigSchema_NoMany,
+  RouteOneConfigSchema_NoMany,
+  RouteGateConfigSchema,
+]);
+
+export const RouteWithoutManySchema: z.ZodType = z
+  .union([
+    z.string(),
+    z.array(z.lazy(() => RouteWithoutManySchema)),
+    RouteConfigSchema_NoMany,
+  ])
   .meta({
-    id: 'MatcherRoute',
-    title: 'Matcher.Route',
+    id: 'RouteWithoutMany',
+    title: 'RouteWithoutMany',
     description:
-      'Single routing rule pairing a match expression with a next target.',
+      'Route variant for post-collector positions (destination.before). Excludes the many operator — post-collector fan-out uses the destinations map.',
   });

@@ -4,40 +4,80 @@ import type {
   Transformer,
   WalkerOS,
 } from '@walkeros/core';
-import { createIngest, createMockLogger } from '@walkeros/core';
+import { createIngest, createMockLogger, getNextSteps } from '@walkeros/core';
 import {
   destinationInit,
   destinationPush,
   transformerInit,
   transformerPush,
   runTransformerChain,
-  walkChain,
-  extractTransformerNextMap,
 } from '@walkeros/collector';
-import { isRouteArray } from '@walkeros/core';
 
 /**
- * Narrow a `RouteSpec` to the static form expected by `walkChain` in these
- * static-fixture tests. Throws if a future fixture accidentally uses
- * conditional routing, surfacing the mistake instead of silently casting.
+ * Local mirror of the collector's internal chain walker. The collector no
+ * longer exports `walkChain` from its public surface (Task 5.1 hard cut), so
+ * these fixture tests carry their own minimal walker for resolving before
+ * chains to ordered transformer-id arrays.
  */
-function staticChain(
-  spec: Transformer.RouteSpec | undefined,
-): string | string[] | undefined {
-  if (spec === undefined) return undefined;
-  if (isRouteArray(spec)) {
-    throw new Error(
-      'test fixture uses conditional routing, not supported here',
-    );
+function localWalkChain(
+  startId: string | string[] | undefined,
+  transformers: Transformer.Transformers,
+): string[] {
+  if (!startId) return [];
+  if (Array.isArray(startId)) return startId;
+
+  const chain: string[] = [];
+  const visited = new Set<string>();
+  let current: string | undefined = startId;
+
+  while (current && transformers[current]) {
+    if (visited.has(current)) break;
+    visited.add(current);
+    chain.push(current);
+
+    const next: Transformer.Route | undefined =
+      transformers[current].config?.next;
+    if (typeof next === 'string') {
+      current = next;
+      continue;
+    }
+    if (
+      Array.isArray(next) &&
+      next.every((entry) => typeof entry === 'string')
+    ) {
+      for (const id of next) chain.push(id);
+      break;
+    }
+    break;
   }
-  return spec;
+
+  return chain;
+}
+
+/**
+ * Resolve a Route to an ordered chain of transformer ids. Uses the public
+ * `getNextSteps` to compute entry points, then walks `.next` links.
+ */
+function resolveChain(
+  spec: Transformer.Route | undefined,
+  transformers: Transformer.Transformers,
+): string[] {
+  if (spec === undefined) return [];
+  if (typeof spec === 'string') return localWalkChain(spec, transformers);
+  if (Array.isArray(spec) && spec.every((entry) => typeof entry === 'string')) {
+    return localWalkChain(spec, transformers);
+  }
+  const ids = getNextSteps(spec);
+  if (ids.length === 0) return [];
+  if (ids.length === 1) return localWalkChain(ids[0], transformers);
+  return ids;
 }
 
 /**
  * Tests for before-chain execution in transformer simulation.
  *
- * Validates the pattern: resolve before chain -> run via runTransformerChain
- * -> then call transformerPush on the main transformer.
+ * Validates the pattern: resolve before chain (via `resolveChain`) -> run via
+ * runTransformerChain -> then call transformerPush on the main transformer.
  *
  * This mirrors the logic in simulateTransformer without requiring
  * a real ESM bundle.
@@ -116,10 +156,7 @@ describe('transformer simulation isolation — before chain', () => {
 
     // Step 1: Resolve before chain
     const before = transformer.config.before;
-    const beforeChainIds = walkChain(
-      staticChain(before),
-      extractTransformerNextMap(transformers),
-    );
+    const beforeChainIds = resolveChain(before, transformers);
     expect(beforeChainIds).toEqual(['enrich']);
 
     // Step 2: Run before chain
@@ -246,10 +283,7 @@ describe('transformer simulation isolation — before chain', () => {
 
     // Resolve before chain
     const before = transformer.config.before;
-    const beforeChainIds = walkChain(
-      staticChain(before),
-      extractTransformerNextMap(transformers),
-    );
+    const beforeChainIds = resolveChain(before, transformers);
     expect(beforeChainIds).toEqual(['gate']);
 
     // Run before chain — gate drops the event
@@ -317,10 +351,7 @@ describe('transformer simulation isolation — before chain', () => {
 
     // Resolve before chain — should follow validate -> enrich via next link
     const before = transformer.config.before;
-    const beforeChainIds = walkChain(
-      staticChain(before),
-      extractTransformerNextMap(transformers),
-    );
+    const beforeChainIds = resolveChain(before, transformers);
     expect(beforeChainIds).toEqual(['validate', 'enrich']);
 
     // Run before chain
@@ -492,10 +523,7 @@ describe('destination simulation with before chain', () => {
     const before = destination.config.before;
     let processedEvent: WalkerOS.Event = inputEvent;
     if (before && collector.transformers) {
-      const beforeChainIds = walkChain(
-        staticChain(before),
-        extractTransformerNextMap(collector.transformers),
-      );
+      const beforeChainIds = resolveChain(before, collector.transformers);
       expect(beforeChainIds).toEqual(['enrich']);
 
       const beforeResult = await runTransformerChain(
@@ -568,10 +596,7 @@ describe('destination simulation with before chain', () => {
 
     // Resolve and run before chain
     const before = destination.config.before;
-    const beforeChainIds = walkChain(
-      staticChain(before),
-      extractTransformerNextMap(collector.transformers!),
-    );
+    const beforeChainIds = resolveChain(before, collector.transformers!);
     expect(beforeChainIds).toEqual(['gate']);
 
     const beforeResult = await runTransformerChain(
