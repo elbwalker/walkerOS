@@ -1,6 +1,7 @@
 import type { Collector, WalkerOS, Elb, Ingest } from '@walkeros/core';
 import {
   createIngest,
+  FatalError,
   getGrantedConsent,
   processEventMapping,
   tryCatchAsync,
@@ -208,7 +209,14 @@ export function createPush<T extends Collector.Instance>(
 
           return result;
         },
-        () => {
+        (err: unknown) => {
+          if (err instanceof FatalError) throw err;
+          collector.status.failed++;
+          collector.logger.error('push failed', {
+            event,
+            ingest: options.ingest,
+            error: err,
+          });
           return createPushResult({ ok: false });
         },
       )();

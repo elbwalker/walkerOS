@@ -29,6 +29,7 @@ export * from './setup';
 export * from './throwError';
 export * from './trim';
 export * from './tryCatch';
+export * from './fatalError';
 export * from './useHooks';
 export * from './userAgent';
 export * from './wrapInlineCode';

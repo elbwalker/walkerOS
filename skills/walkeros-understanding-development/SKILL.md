@@ -121,6 +121,26 @@ compile-time drift guard at
 key sets diverge. The guard checks keys only; value types may differ (recursion,
 generic slots). Run `npm run verify:touched -- core` to verify.
 
+## Error visibility contract
+
+Top-level boundaries in the collector (`createPush` in `push.ts`,
+`createCommand` in `command.ts`) wrap their inner pipeline in `tryCatchAsync`.
+The `onError` callback MUST do two things:
+
+- log a structured error via `collector.logger.error(message, { ... })` with
+  enough context to reproduce (event/ingest for push, command/data for command),
+- increment `collector.status.failed`.
+
+An empty `onError` is a defect: it swallows the exception, returns
+`{ ok: false }` silently, and leaves the operator blind. Use
+`packages/collector/src/push.ts` and `packages/collector/src/command.ts` as the
+canonical pattern.
+
+For invariant violations or operator-initiated aborts that must crash the host
+process, throw `FatalError` (exported from `@walkeros/core`). `FatalError`
+bypasses the boundary catch so a supervisor can terminate cleanly. Standard
+`Error` is absorbed, logged, and counted.
+
 ## Testing
 
 **REQUIRED SKILL:** Use `testing-strategy` for detailed testing patterns.

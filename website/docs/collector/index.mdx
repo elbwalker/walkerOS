@@ -207,6 +207,54 @@ const avgMs = ga4.duration / (ga4.count + ga4.failed);`}
   language="typescript"
 />
 
+### What `failed` counts
+
+`collector.status.failed` is the single counter for any event that did not
+reach a destination cleanly. Two sites contribute:
+
+* a destination's `push` threw or returned an error,
+* an exception escaped the inner pipeline of `collector.push` or
+  `collector.command` (mapping callback throws, transformer init throws,
+  any uncaught error inside the boundary).
+
+In both cases the collector logs at error level:
+
+<CodeSnippet
+  code={`// destination-side failure
+logger.scope('<destination type>').error('Push failed', { error, event });
+
+// collector-side boundary failure
+logger.error('push failed', { event, ingest, error });
+logger.error('command failed', { command, data, error });`}
+  language="typescript"
+/>
+
+Alarm on the ratio of `status.failed` to `status.in`. The log message text
+plus structured fields are enough to filter destination vs boundary
+failures downstream.
+
+**PII note.** Boundary error logs include the full failing event payload so
+operators can reproduce. If your event payloads carry sensitive data,
+configure redaction at the logger layer; do not parse and rewrite at every
+call site.
+
+### Fatal errors
+
+Throw `FatalError` (exported from `@walkeros/core`) for invariant
+violations or operator-initiated aborts that must crash the host process.
+Standard `Error` is absorbed by the boundary catch, logged, and counted.
+`FatalError` bypasses the catch and propagates, so a supervisor (CLI
+runner, Express server, container orchestrator) can terminate cleanly.
+
+<CodeSnippet
+  code={`import { FatalError } from '@walkeros/core';
+
+if (!config.apiKey) {
+  throw new FatalError('apiKey missing — refusing to start');
+}`}
+  language="typescript"
+/>
+
 Queue sizes and DLQ sizes can be read directly from destination instances, or
 from the status snapshot:
 
