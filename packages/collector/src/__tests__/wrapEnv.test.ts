@@ -1,5 +1,16 @@
 import { wrapEnv } from '../wrapEnv';
 
+/**
+ * Narrow runtime shape of the `window` slot inside wrapEnv test fixtures.
+ * `wrapEnv` returns `wrappedEnv: Record<string, unknown>`, so call sites
+ * read `wrappedEnv.window` as `unknown`. Tests assert structurally via a
+ * typed local instead of widening through `unknown`/`any`.
+ */
+interface TestWindow {
+  gtag: (...args: unknown[]) => unknown;
+  dataLayer?: { push: (...args: unknown[]) => unknown };
+}
+
 describe('wrapEnv', () => {
   it('records calls to tracked function paths', () => {
     const env = {
@@ -8,7 +19,8 @@ describe('wrapEnv', () => {
     };
 
     const { wrappedEnv, calls } = wrapEnv(env);
-    (wrappedEnv.window as any).gtag('event', 'purchase', { value: 42 });
+    const win = wrappedEnv.window as TestWindow;
+    win.gtag('event', 'purchase', { value: 42 });
 
     expect(calls).toHaveLength(1);
     expect(calls[0].fn).toBe('window.gtag');
@@ -24,7 +36,10 @@ describe('wrapEnv', () => {
     };
 
     const { wrappedEnv, calls } = wrapEnv(env);
-    (wrappedEnv.window as any).dataLayer.push({ event: 'test' });
+    const win = wrappedEnv.window as {
+      dataLayer: { push: (v: unknown) => void };
+    };
+    win.dataLayer.push({ event: 'test' });
 
     expect(calls).toHaveLength(1);
     expect(calls[0].fn).toBe('window.dataLayer.push');
@@ -43,7 +58,8 @@ describe('wrapEnv', () => {
     };
 
     const { wrappedEnv } = wrapEnv(env);
-    (wrappedEnv.window as any).gtag();
+    const win = wrappedEnv.window as TestWindow;
+    win.gtag();
 
     expect(called).toBe(true);
   });
@@ -67,7 +83,8 @@ describe('wrapEnv', () => {
     };
 
     const { wrappedEnv } = wrapEnv(env);
-    expect((wrappedEnv.window as any).gtag).not.toBe(original);
+    const win = wrappedEnv.window as TestWindow;
+    expect(win.gtag).not.toBe(original);
     expect(env.window.gtag).toBe(original);
   });
 
@@ -78,7 +95,8 @@ describe('wrapEnv', () => {
     };
 
     const { wrappedEnv, calls } = wrapEnv(env);
-    (wrappedEnv.window as any).gtag();
+    const win = wrappedEnv.window as TestWindow;
+    win.gtag();
 
     expect(calls).toHaveLength(0);
   });
@@ -90,7 +108,8 @@ describe('wrapEnv', () => {
     };
 
     const { wrappedEnv, calls } = wrapEnv(env);
-    (wrappedEnv.window as any).gtag('test');
+    const win = wrappedEnv.window as TestWindow;
+    win.gtag('test');
 
     expect(calls).toHaveLength(1);
     expect(calls[0].fn).toBe('window.gtag');
