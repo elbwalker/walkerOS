@@ -9,8 +9,8 @@ import {
 } from '@google-cloud/pubsub';
 import { sourcePubSubPull } from '../index';
 import * as examples from '../examples';
-import { createMockContext } from '@walkeros/core';
-import type { Source } from '@walkeros/core';
+import { createIngest, createMockContext } from '@walkeros/core';
+import type { Ingest, Source } from '@walkeros/core';
 import type { Settings, SyntheticMessage, Types } from '../types';
 import { push as pushEnv } from '../examples/env';
 import { createTrigger } from '../examples/trigger';
@@ -47,8 +47,13 @@ function buildContext(
   return {
     ...base,
     id: 'pubsub',
-    setIngest: async () => undefined,
-    setRespond: () => undefined,
+    withScope: async (_r, respond, body) =>
+      body({
+        ...pushEnv,
+        push: pushEnv.push,
+        ingest: createIngest('pubsub') as Ingest,
+        respond,
+      } as never),
   };
 }
 
@@ -65,8 +70,13 @@ describe('Pub/Sub pull source', () => {
     const fullContext: Source.Context<Types> = {
       ...context,
       id: 'pubsub',
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('pubsub') as Ingest,
+          respond,
+        } as never),
     };
     await expect(sourcePubSubPull(fullContext)).rejects.toThrow(
       'Config settings projectId missing',
@@ -81,8 +91,13 @@ describe('Pub/Sub pull source', () => {
     const fullContext: Source.Context<Types> = {
       ...context,
       id: 'pubsub',
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('pubsub') as Ingest,
+          respond,
+        } as never),
     };
     await expect(sourcePubSubPull(fullContext)).rejects.toThrow(
       'Config settings subscription missing',

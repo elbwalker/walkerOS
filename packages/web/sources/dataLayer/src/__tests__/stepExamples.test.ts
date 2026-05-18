@@ -36,8 +36,7 @@ describe('Step Examples', () => {
       },
       id: 'test-datalayer',
       logger: createMockLogger(),
-      setIngest: async () => {},
-      setRespond: jest.fn(),
+      withScope: async (_r, _resp, body) => body({} as never),
     });
     // Mirror collector pass-2 init — installs the dataLayer.push interceptor.
     await source.init?.();

@@ -238,8 +238,7 @@ export function Preview({
               id: 'preview',
               collector: {} as Collector.Instance, // Not used when elb is provided directly
               logger: noopLogger,
-              setIngest: async () => {},
-              setRespond: () => {},
+              withScope: async (_r, _resp, body) => body({} as never),
               config,
               env,
             });

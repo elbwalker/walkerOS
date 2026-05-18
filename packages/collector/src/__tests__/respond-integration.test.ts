@@ -280,7 +280,7 @@ describe('env.respond', () => {
     });
   });
 
-  it('source setRespond flows to transformer env', async () => {
+  it('source withScope respond flows to transformer env', async () => {
     let capturedRespond: RespondFn | undefined;
     const sender = jest.fn();
     const respond = createRespond(sender);
@@ -293,9 +293,10 @@ describe('env.respond', () => {
               type: 'test',
               config: ctx.config,
               push: async () => {
-                // Source sets respond before pushing
-                ctx.setRespond(respond);
-                await ctx.env.push({ name: 'page view' });
+                // Bind respond for this scope and push from within it.
+                await ctx.withScope(undefined, respond, async (env) => {
+                  await env.push({ name: 'page view' });
+                });
               },
             };
           },

@@ -61,8 +61,7 @@ describe('Demo Source', () => {
       },
       id: 'test-source',
       logger: createMockLogger(),
-      setIngest: async () => {},
-      setRespond: jest.fn(),
+      withScope: async (_r, _resp, body) => body({} as never),
     });
 
     // Fast-forward to execute setTimeout(..., 0)
@@ -105,8 +104,7 @@ describe('Demo Source', () => {
       },
       id: 'test-source',
       logger: createMockLogger(),
-      setIngest: async () => {},
-      setRespond: jest.fn(),
+      withScope: async (_r, _resp, body) => body({} as never),
     });
 
     // Immediate event fires
@@ -157,8 +155,7 @@ describe('Demo Source', () => {
       },
       id: 'test-source',
       logger: createMockLogger(),
-      setIngest: async () => {},
-      setRespond: jest.fn(),
+      withScope: async (_r, _resp, body) => body({} as never),
     });
 
     jest.runAllTimers();

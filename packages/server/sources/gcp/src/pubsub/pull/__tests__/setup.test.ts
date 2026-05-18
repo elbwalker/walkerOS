@@ -8,8 +8,12 @@ import {
   __setTopicHarness,
 } from '@google-cloud/pubsub';
 import { sourcePubSubPull } from '../index';
-import { createMockContext, createMockLogger } from '@walkeros/core';
-import type { Source } from '@walkeros/core';
+import {
+  createIngest,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
+import type { Ingest, Source } from '@walkeros/core';
 import type { Types } from '../types';
 import { push as pushEnv } from '../examples/env';
 
@@ -31,8 +35,13 @@ function buildContext(
   return {
     ...base,
     id: 'pubsub',
-    setIngest: async () => undefined,
-    setRespond: () => undefined,
+    withScope: async (_r, respond, body) =>
+      body({
+        ...pushEnv,
+        push: pushEnv.push,
+        ingest: createIngest('pubsub') as Ingest,
+        respond,
+      } as never),
   };
 }
 

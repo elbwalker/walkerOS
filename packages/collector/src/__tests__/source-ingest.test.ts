@@ -1,8 +1,8 @@
 import { startFlow } from '..';
 import type { Source, Transformer, Elb, Ingest } from '@walkeros/core';
 
-describe('Source setIngest creates typed Ingest', () => {
-  it('creates Ingest with _meta from setIngest', async () => {
+describe('Source withScope ingest extraction', () => {
+  it('creates Ingest with _meta from config.ingest mapping', async () => {
     let capturedIngest: Ingest | undefined;
 
     const { collector } = await startFlow({
@@ -13,13 +13,14 @@ describe('Source setIngest creates typed Ingest', () => {
           },
           next: 'spy',
           code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest } = context;
+            const { config } = context;
             return {
               type: 'express',
               config: config as Source.Config,
               push: (async (rawData: unknown) => {
-                await setIngest(rawData);
-                await env.push({ name: 'page view', data: {} });
+                await context.withScope(rawData, undefined, async (env) => {
+                  await env.push({ name: 'page view', data: {} });
+                });
               }) as unknown as Elb.Fn,
             };
           },

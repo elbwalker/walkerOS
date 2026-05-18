@@ -11,8 +11,8 @@ import {
 } from '@aws-sdk/client-sqs';
 import { __resetSnsMockCalls } from '@aws-sdk/client-sns';
 import { sourceSqs } from '../index';
-import { createMockContext } from '@walkeros/core';
-import type { Source } from '@walkeros/core';
+import { createIngest, createMockContext } from '@walkeros/core';
+import type { Ingest, Source } from '@walkeros/core';
 import type { Settings, SyntheticMessage, Types } from '../types';
 import { push as pushEnv } from '../examples/env';
 
@@ -32,8 +32,15 @@ function buildContext(
   return {
     ...base,
     id: 'sqs',
-    setIngest: async () => undefined,
-    setRespond: () => undefined,
+    withScope: async (_raw, respond, body) => {
+      const ingest: Ingest = createIngest('sqs');
+      return body({
+        ...pushEnv,
+        push: pushEnv.push,
+        ingest,
+        respond,
+      });
+    },
   };
 }
 
@@ -76,8 +83,13 @@ describe('SQS source', () => {
     const ctx: Source.Context<Types> = {
       ...base,
       id: 'sqs',
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('sqs'),
+          respond,
+        } as never),
     };
     await expect(sourceSqs(ctx)).rejects.toThrow(/queueName/);
   });
@@ -173,8 +185,13 @@ describe('SQS source', () => {
       ...base,
       id: 'sqs',
       env,
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('sqs'),
+          respond,
+        } as never),
     };
     const instance = await sourceSqs(ctx);
     try {
@@ -221,8 +238,13 @@ describe('SQS source', () => {
       ...base,
       id: 'sqs',
       env,
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('sqs'),
+          respond,
+        } as never),
     };
     const instance = await sourceSqs(ctx);
     try {
@@ -266,8 +288,13 @@ describe('SQS source', () => {
       ...base,
       id: 'sqs',
       env,
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('sqs'),
+          respond,
+        } as never),
     };
     const instance = await sourceSqs(ctx);
     try {
@@ -359,8 +386,13 @@ describe('SQS source', () => {
       ...base,
       id: 'sqs',
       env,
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('sqs'),
+          respond,
+        } as never),
     };
     const instance = await sourceSqs(ctx);
     try {

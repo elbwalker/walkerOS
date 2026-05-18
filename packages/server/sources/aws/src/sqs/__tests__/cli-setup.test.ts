@@ -5,7 +5,8 @@ import { __resetMockCalls, __setQueueHarness } from '@aws-sdk/client-sqs';
 import { __resetSnsMockCalls } from '@aws-sdk/client-sns';
 import sourceSqs from '..';
 import { setup as setupFn } from '../setup';
-import { createMockContext } from '@walkeros/core';
+import { createIngest, createMockContext } from '@walkeros/core';
+import type { Ingest } from '@walkeros/core';
 import type { Source } from '@walkeros/core';
 import type { Types } from '../types';
 import { push as pushEnv } from '../examples/env';
@@ -31,8 +32,13 @@ describe('CLI setup wiring (sqs)', () => {
     const ctx: Source.Context<Types> = {
       ...base,
       id: 'sqs',
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('sqs') as Ingest,
+          respond,
+        } as never),
     };
     const instance = await sourceSqs(ctx);
     expect(instance.setup).toBe(setupFn);

@@ -90,11 +90,6 @@ export async function initSource(
     cache,
   } = sourceDefinition;
 
-  // Track current ingest metadata (set per-request by setIngest)
-  let currentIngest: Ingest = createIngest(sourceId);
-  // Track current respond function (set per-request by setRespond)
-  let currentRespond: RespondFn | undefined = undefined;
-
   // Compile source cache config (if configured).
   // Source caches operate on events (request-scoped HIT/MISS keyed by event
   // fields), so the rule shape is always EventCacheRule, not StoreCacheRule.
@@ -120,11 +115,31 @@ export async function initSource(
     ? walkChain(before, extractTransformerNextMap(collector.transformers))
     : undefined;
 
-  // Create wrapped push that auto-applies source mapping config, preChain, and ingest
-  const wrappedPush: Collector.PushFn = async (
+  // Terminal push: where the source pipeline ends. Defaults to
+  // `collector.push`. Tests (and rare advanced consumers) may override by
+  // passing `push` in the source's `env`; in that case the override
+  // replaces the collector and receives the raw event with no pipeline
+  // options. Per-scope ingest/respond is invisible to overriders by
+  // design: overriders are responsible for their own pipeline shape.
+  const userTerminalPush = (env as { push?: Collector.PushFn }).push;
+  const terminalPush: Collector.PushFn = userTerminalPush ?? collector.push;
+  const hasUserTerminalPush = Boolean(userTerminalPush);
+
+  /**
+   * Execute the source pipeline for a single push call. Operates ONLY on
+   * the per-call `scope` parameter — never reads source-factory closure
+   * variables for ingest/respond. The scope is the unit of cross-request
+   * isolation.
+   *
+   * The function may mutate `scope.respond` (cache MISS wraps it to
+   * intercept the cached value before forwarding). That mutation is
+   * scope-local: a concurrent call with its own scope is unaffected.
+   */
+  const executePush = async (
     rawEvent: WalkerOS.DeepPartialEvent,
-    options: Collector.PushOptions = {},
-  ) => {
+    options: Collector.PushOptions,
+    scope: { ingest: Ingest; respond: RespondFn | undefined },
+  ): Promise<Elb.PushResult> => {
     let pendingRespond: Promise<void> | undefined;
 
     // Resolve before chain (static or conditional).
@@ -134,7 +149,7 @@ export async function initSource(
       staticBeforeChain ??
       (before !== undefined
         ? (() => {
-            const ids = getNextSteps(before, buildCacheContext(currentIngest));
+            const ids = getNextSteps(before, buildCacheContext(scope.ingest));
             if (ids.length === 0) return [];
             const start = ids.length === 1 ? ids[0] : ids;
             return walkChain(
@@ -146,8 +161,8 @@ export async function initSource(
 
     // The before chain may fan out (return an array of events). The cache
     // check and destination push must run once per event so fan-out is
-    // preserved end-to-end. Cache logic is request-scoped (keyed by
-    // `currentIngest`), so it lives outside the loop. The actual pipeline
+    // preserved end-to-end. Cache logic is request-scoped (keyed by the
+    // scope's ingest), so it lives outside the loop. The actual pipeline
     // (preChain + collector.push) runs inside the loop, once per event.
     let events: WalkerOS.DeepPartialEvent[] = [rawEvent];
 
@@ -162,8 +177,8 @@ export async function initSource(
         collector.transformers,
         beforeChain,
         rawEvent,
-        currentIngest,
-        currentRespond,
+        scope.ingest,
+        scope.respond,
         `source.${sourceId}.before`,
       );
       if (beforeResult.event === null) {
@@ -173,10 +188,10 @@ export async function initSource(
       // source.before chain. Do NOT invoke collector.push — drop the event
       // before it enters the collector pipeline.
       if (beforeResult.stopped) {
-        if (beforeResult.respond) currentRespond = beforeResult.respond;
+        if (beforeResult.respond) scope.respond = beforeResult.respond;
         return { ok: true } as Elb.PushResult;
       }
-      if (beforeResult.respond) currentRespond = beforeResult.respond;
+      if (beforeResult.respond) scope.respond = beforeResult.respond;
       events = Array.isArray(beforeResult.event)
         ? beforeResult.event
         : [beforeResult.event];
@@ -186,7 +201,7 @@ export async function initSource(
     if (compiledSourceCache) {
       const cacheStore = getCacheStore(compiledSourceCache, collector);
       if (cacheStore) {
-        const cacheContext = buildCacheContext(currentIngest);
+        const cacheContext = buildCacheContext(scope.ingest);
         const cacheResult = await checkCache(
           compiledSourceCache,
           cacheStore,
@@ -207,7 +222,7 @@ export async function initSource(
                   collector,
                 );
               }
-              currentRespond?.(respondValue as Record<string, unknown>);
+              scope.respond?.(respondValue as Record<string, unknown>);
               return { ok: true } as Elb.PushResult;
             }
             // stop=false: cached value unused — HIT signals "seen before", pipeline continues
@@ -216,7 +231,7 @@ export async function initSource(
           if (
             cacheResult.status === 'MISS' &&
             compiledSourceCache.stop &&
-            currentRespond
+            scope.respond
           ) {
             // stop=true MISS: wrap respond to intercept and cache the value.
             // Store original in cache, then apply update rules with MISS
@@ -225,13 +240,13 @@ export async function initSource(
             //
             // When `update` is configured the update step is async, so
             // the wrapper captures its promise in `pendingRespond`.
-            // `wrappedPush` awaits that promise before returning, so
-            // any source fallback that runs after `await env.push(...)`
-            // (e.g. the express source's transparent-GIF default) sees
+            // `executePush` awaits that promise before returning, so any
+            // source fallback that runs after `await env.push(...)` (e.g.
+            // the express source's transparent-GIF default) sees
             // `createRespond`'s first-call-wins flag already set and
             // correctly no-ops. Without this, the fallback would win
             // the race and the real response would be lost.
-            const unwrappedRespond = currentRespond;
+            const unwrappedRespond = scope.respond;
             const missUpdate = cacheResult.rule.update;
             const missContext = { ...cacheContext, cache: { status: 'MISS' } };
             const missKey = cacheResult.key;
@@ -256,7 +271,7 @@ export async function initSource(
               })();
             };
 
-            currentRespond = missRespond;
+            scope.respond = missRespond;
           }
 
           // stop=false MISS: store sentinel so subsequent requests get a HIT
@@ -276,8 +291,8 @@ export async function initSource(
     // - ['a','b',…] → `many` fan-out. Each id is an INDEPENDENT terminal
     //                 subchain dispatched via its own `collector.push` call
     //                 with a per-branch cloned ingest and `respond` cleared
-    //                 (no-respond-across-many doctrine, Task 4.2). Error
-    //                 isolation per branch via tryCatchAsync (Task 4.1).
+    //                 (no-respond-across-many doctrine). Error isolation
+    //                 per branch via tryCatchAsync.
     //
     // Note: a plain `next: ['a','b','c']` is `isStaticRoute` → pre-walked
     // by `staticPreChain` as the legacy explicit sequential chain. Only
@@ -290,7 +305,7 @@ export async function initSource(
       ? { kind: 'single', preChain: staticPreChain }
       : next !== undefined
         ? (() => {
-            const ids = getNextSteps(next, buildCacheContext(currentIngest));
+            const ids = getNextSteps(next, buildCacheContext(scope.ingest));
             if (ids.length === 0)
               return { kind: 'single', preChain: [] } as Dispatch;
             if (ids.length === 1)
@@ -322,19 +337,21 @@ export async function initSource(
         // `many` fan-out: each branch is an independent terminal flow.
         // Per-branch ingest clone, no respond propagation, error isolation
         // via tryCatchAsync. Branch results are awaited and discarded;
-        // currentRespond is NOT updated from any branch.
+        // scope.respond is NOT updated from any branch.
         await Promise.all(
           dispatch.branches.map((branchChain, idx) =>
             tryCatchAsync(
               async () =>
-                collector.push(event, {
-                  ...options,
-                  id: sourceId,
-                  ingest: cloneIngest(currentIngest, `${sourceId}.${idx}`),
-                  respond: undefined,
-                  mapping: config,
-                  preChain: branchChain,
-                }),
+                hasUserTerminalPush
+                  ? terminalPush(event)
+                  : terminalPush(event, {
+                      ...options,
+                      id: sourceId,
+                      ingest: cloneIngest(scope.ingest, `${sourceId}.${idx}`),
+                      respond: undefined,
+                      mapping: config,
+                      preChain: branchChain,
+                    }),
               (err) => {
                 collector.logger
                   .scope('source:many')
@@ -346,12 +363,16 @@ export async function initSource(
         );
         // `many` is fan-out, not enrichment — surface a generic OK.
         pushResult = { ok: true } as Elb.PushResult;
+      } else if (hasUserTerminalPush) {
+        // User override: bypass the pipeline, deliver raw events. This
+        // preserves the `env.push: mockPush` test spy pattern.
+        pushResult = await terminalPush(event);
       } else {
-        pushResult = await collector.push(event, {
+        pushResult = await terminalPush(event, {
           ...options,
           id: sourceId,
-          ingest: currentIngest,
-          respond: currentRespond,
+          ingest: scope.ingest,
+          respond: scope.respond,
           mapping: config,
           preChain: dispatch.preChain,
         });
@@ -367,43 +388,82 @@ export async function initSource(
     return pushResult;
   };
 
+  /**
+   * Build a fresh per-scope `Ingest` from raw scope input by applying
+   * `config.ingest` mapping if present. Always produces a typed Ingest
+   * with valid `_meta`. Pure: returns a new object, never reads or
+   * writes source-factory state.
+   */
+  const extractIngest = async (rawScope: unknown): Promise<Ingest> => {
+    const fresh = createIngest(sourceId);
+    if (!config.ingest || rawScope === undefined) return fresh;
+    const extracted = await getMappingValue(rawScope, config.ingest, {
+      collector,
+    });
+    return {
+      ...fresh,
+      ...(extracted as Record<string, unknown>),
+      _meta: fresh._meta, // protect _meta from being overwritten
+    };
+  };
+
+  // Factory-default push: each call gets a fresh Ingest and no respond.
+  // Sources with a single logical scope (browser, dataLayer) call this
+  // directly via `env.push`. Server sources handling concurrent requests
+  // call `context.withScope(...)` instead, which threads a per-scope
+  // ingest/respond into the same pipeline.
+  const wrappedPush: Collector.PushFn = async (
+    rawEvent: WalkerOS.DeepPartialEvent,
+    options: Collector.PushOptions = {},
+  ) => {
+    const scope = {
+      ingest: createIngest(sourceId),
+      respond: undefined as RespondFn | undefined,
+    };
+    return executePush(rawEvent, options, scope);
+  };
+
   // Create initial logger scoped to sourceId (type will be added after init)
   const initialLogger = collector.logger.scope('source').scope(sourceId);
 
+  // Build cleanEnv. User-supplied env can override every field; we
+  // immediately overwrite `push` with the source-pipeline `wrappedPush`.
+  // Any user-supplied `env.push` was captured above as `terminalPush`
+  // (the pipeline's terminus, not the source's outward-facing push).
   const cleanEnv: Source.Env = {
-    push: wrappedPush,
     command: collector.command,
     sources: collector.sources,
     elb: collector.sources.elb.push,
     logger: initialLogger,
     ...env,
+    push: wrappedPush,
   };
 
   /**
-   * setIngest extracts metadata from raw request using config.ingest mapping.
-   * Always produces a typed Ingest with valid _meta.
+   * Bind ingest and respond to a single scope of work. Each invocation
+   * builds a fresh `Ingest`, captures the given `respond`, and runs the
+   * caller's `body` with a per-scope env whose `push` carries both. The
+   * scope is the unit of cross-call isolation — concurrent withScope
+   * invocations never share ingest or respond.
    */
-  const setIngest = async (value: unknown): Promise<void> => {
-    if (!config.ingest) {
-      currentIngest = createIngest(sourceId);
-      return;
-    }
-
-    const extracted = await getMappingValue(value, config.ingest, {
-      collector,
-    });
-
-    // Merge extracted values into a fresh Ingest
-    const fresh = createIngest(sourceId);
-    currentIngest = {
-      ...fresh,
-      ...(extracted as Record<string, unknown>),
-      _meta: fresh._meta, // Protect _meta from being overwritten by extracted data
+  const withScope: Source.Context['withScope'] = async (
+    rawScope,
+    respond,
+    body,
+  ) => {
+    const scope: { ingest: Ingest; respond: RespondFn | undefined } = {
+      ingest: await extractIngest(rawScope),
+      respond,
     };
-  };
-
-  const setRespond = (fn: import('@walkeros/core').RespondFn | undefined) => {
-    currentRespond = fn;
+    const scopePush: Collector.PushFn = (rawEvent, options = {}) =>
+      executePush(rawEvent, options, scope);
+    const scopeEnv: Source.ScopeEnv = {
+      ...cleanEnv,
+      push: scopePush,
+      ingest: scope.ingest,
+      respond: scope.respond,
+    };
+    return body(scopeEnv);
   };
 
   const sourceContext: Source.Context = {
@@ -412,8 +472,7 @@ export async function initSource(
     id: sourceId,
     config,
     env: cleanEnv,
-    setIngest,
-    setRespond,
+    withScope,
   };
 
   const sourceInstance = await tryCatchAsync(code)(sourceContext);

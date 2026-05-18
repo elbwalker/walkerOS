@@ -251,13 +251,14 @@ describe('Source Transformer Chains (source.next)', () => {
         sources: {
           testSource: {
             code: async (context): Promise<Source.Instance> => {
-              const { env, config, setIngest } = context;
+              const { config } = context;
               return {
                 type: 'test',
                 config: config as Source.Config,
                 push: (async (rawData: any) => {
-                  await setIngest(rawData);
-                  await env.push({});
+                  await context.withScope(rawData, undefined, async (env) => {
+                    await env.push({});
+                  });
                 }) as any,
               };
             },

@@ -68,16 +68,17 @@ describe('source cache with async backing store', () => {
       sources: {
         testSource: {
           code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
-            const { env, config, setIngest, setRespond } = context;
+            const { config } = context;
             return {
               type: 'test',
               config: config as Source.Config<TestSourceTypes>,
               push: async (rawData: RawIngest) => {
-                await setIngest(rawData);
-                setRespond((options?: RespondOptions) => {
+                const respond = (options?: RespondOptions) => {
                   if (options) allResponses.push(options);
+                };
+                await context.withScope(rawData, respond, async (env) => {
+                  await env.push({ name: 'page view', data: {} });
                 });
-                await env.push({ name: 'page view', data: {} });
               },
             };
           },
@@ -135,16 +136,17 @@ describe('source cache with async backing store', () => {
       sources: {
         testSource: {
           code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
-            const { env, config, setIngest, setRespond } = context;
+            const { config } = context;
             return {
               type: 'test',
               config: config as Source.Config<TestSourceTypes>,
               push: async (rawData: RawIngest) => {
-                await setIngest(rawData);
-                setRespond((options?: RespondOptions) => {
+                const respond = (options?: RespondOptions) => {
                   if (options) allResponses.push(options);
+                };
+                await context.withScope(rawData, respond, async (env) => {
+                  await env.push({ name: 'page view', data: {} });
                 });
-                await env.push({ name: 'page view', data: {} });
               },
             };
           },

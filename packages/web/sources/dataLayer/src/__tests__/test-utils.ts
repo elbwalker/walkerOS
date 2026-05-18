@@ -82,8 +82,7 @@ export async function createDataLayerSource(
     },
     id: 'test-datalayer',
     logger: createMockLogger(),
-    setIngest: async () => {},
-    setRespond: jest.fn(),
+    withScope: async (_r, _resp, body) => body({} as never),
   });
   // Pass 2: lifecycle init — installs the dataLayer.push interceptor and
   // snapshots pendingReplayCount.

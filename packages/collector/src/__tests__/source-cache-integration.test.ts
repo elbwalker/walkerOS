@@ -32,16 +32,17 @@ describe('Source cache integration', () => {
       sources: {
         testSource: {
           code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest, setRespond } = context;
+            const { config } = context;
             return {
               type: 'test',
               config: config as Source.Config,
               push: (async (rawData: unknown) => {
-                await setIngest(rawData);
-                setRespond(((options?: RespondOptions) => {
+                const respond: RespondFn = (options?: RespondOptions) => {
                   allResponses.push(options);
-                }) as RespondFn);
-                await env.push({ name: 'page view', data: {} });
+                };
+                await context.withScope(rawData, respond, async (env) => {
+                  await env.push({ name: 'page view', data: {} });
+                });
               }) as any,
             };
           },
@@ -98,13 +99,14 @@ describe('Source cache integration', () => {
       sources: {
         testSource: {
           code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest } = context;
+            const { config } = context;
             return {
               type: 'test',
               config: config as Source.Config,
               push: (async (rawData: unknown) => {
-                await setIngest(rawData);
-                await env.push({ name: 'page view', data: {} });
+                await context.withScope(rawData, undefined, async (env) => {
+                  await env.push({ name: 'page view', data: {} });
+                });
               }) as any,
             };
           },
@@ -153,14 +155,18 @@ describe('Source cache integration', () => {
       sources: {
         testSource: {
           code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest, setRespond } = context;
+            const { config } = context;
             return {
               type: 'test',
               config: config as Source.Config,
               push: (async (rawData: unknown) => {
-                await setIngest(rawData);
-                setRespond((() => {}) as RespondFn);
-                await env.push({ name: 'page view', data: {} });
+                await context.withScope(
+                  rawData,
+                  (() => {}) as RespondFn,
+                  async (env) => {
+                    await env.push({ name: 'page view', data: {} });
+                  },
+                );
               }) as any,
             };
           },
@@ -228,14 +234,18 @@ describe('Source cache integration', () => {
       sources: {
         testSource: {
           code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest, setRespond } = context;
+            const { config } = context;
             return {
               type: 'test',
               config: config as Source.Config,
               push: (async (rawData: unknown) => {
-                await setIngest(rawData);
-                setRespond((() => {}) as RespondFn);
-                await env.push({ name: 'page view', data: {} });
+                await context.withScope(
+                  rawData,
+                  (() => {}) as RespondFn,
+                  async (env) => {
+                    await env.push({ name: 'page view', data: {} });
+                  },
+                );
               }) as any,
             };
           },
@@ -303,14 +313,18 @@ describe('Source cache integration', () => {
       sources: {
         testSource: {
           code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest, setRespond } = context;
+            const { config } = context;
             return {
               type: 'test',
               config: config as Source.Config,
               push: (async (rawData: unknown) => {
-                await setIngest(rawData);
-                setRespond((() => {}) as RespondFn);
-                await env.push({ name: 'page view', data: {} });
+                await context.withScope(
+                  rawData,
+                  (() => {}) as RespondFn,
+                  async (env) => {
+                    await env.push({ name: 'page view', data: {} });
+                  },
+                );
               }) as any,
             };
           },
@@ -372,20 +386,21 @@ describe('Source cache integration', () => {
       sources: {
         testSource: {
           code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest, setRespond } = context;
+            const { config } = context;
             return {
               type: 'test',
               config: config as Source.Config,
               push: (async (rawData: any) => {
-                await setIngest(rawData);
                 const respondPromise = new Promise<void>((resolve) => {
                   respondResolve = resolve;
                 });
-                setRespond(((options?: any) => {
+                const respond: RespondFn = (options?: any) => {
                   respondPayloads.push(options);
                   respondResolve?.();
-                }) as RespondFn);
-                await env.push({ name: 'page view', data: {} });
+                };
+                await context.withScope(rawData, respond, async (env) => {
+                  await env.push({ name: 'page view', data: {} });
+                });
                 // Wait for respond to be called (may be async due to applyUpdate)
                 await respondPromise;
               }) as any,

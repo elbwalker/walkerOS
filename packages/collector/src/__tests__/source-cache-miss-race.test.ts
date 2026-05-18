@@ -61,37 +61,36 @@ describe('Source cache MISS race (collector)', () => {
       sources: {
         testSource: {
           code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest, setRespond } = context;
+            const { config } = context;
             return {
               type: 'test',
               config: config as Source.Config,
-              push: async (rawData: unknown) => {
-                await setIngest(rawData);
-
+              push: (async (rawData: unknown) => {
                 // Create an idempotent respond backed by a simple sender,
                 // exactly like a real HTTP source would.
                 const respond = createRespond((options) => {
                   senderCalls.push(options);
                 });
-                setRespond(respond);
 
-                // Dispatch into the collector pipeline. The responder
-                // destination calls respond(fileBody) via env.respond.
-                const pushResult = await env.push({
-                  name: 'page view',
-                  data: {},
+                return context.withScope(rawData, respond, async (env) => {
+                  // Dispatch into the collector pipeline. The responder
+                  // destination calls respond(fileBody) via env.respond.
+                  const pushResult = await env.push({
+                    name: 'page view',
+                    data: {},
+                  });
+
+                  // Source fallback: this mirrors the express source's
+                  // transparent-GIF default. It runs AFTER env.push
+                  // resolves and must not overwrite the responder's body.
+                  respond({
+                    body: 'FALLBACK',
+                    headers: { 'Content-Type': 'image/gif' },
+                  });
+
+                  return pushResult;
                 });
-
-                // Source fallback: this mirrors the express source's
-                // transparent-GIF default. It runs AFTER env.push
-                // resolves and must not overwrite the responder's body.
-                respond({
-                  body: 'FALLBACK',
-                  headers: { 'Content-Type': 'image/gif' },
-                });
-
-                return pushResult;
-              },
+              }) as Source.Instance['push'],
             };
           },
           cache: {
