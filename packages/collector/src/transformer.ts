@@ -586,7 +586,11 @@ export async function runTransformerChain(
     let cacheMiss: { key: string; ttl: number } | undefined;
     if (compiledTCache && tCacheStore) {
       const cacheContext = buildCacheContext(ingest, processedEvent);
-      const cacheResult = checkCache(compiledTCache, tCacheStore, cacheContext);
+      const cacheResult = await checkCache(
+        compiledTCache,
+        tCacheStore,
+        cacheContext,
+      );
 
       if (cacheResult?.status === 'HIT' && cacheResult.value) {
         processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;

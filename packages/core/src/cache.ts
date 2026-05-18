@@ -57,12 +57,12 @@ export function compileCache(cache: Cache<EventCacheRule>): CompiledCache {
   };
 }
 
-export function checkCache(
+export async function checkCache(
   compiled: CompiledCache,
   store: Store.Instance,
   context: Record<string, unknown>,
   namespace?: string,
-): CacheResult | null {
+): Promise<CacheResult | null> {
   const rule = compiled.rules.find((r) => r.match(context));
   if (!rule) return null;
 
@@ -76,7 +76,11 @@ export function checkCache(
   const ns = namespace ?? compiled.namespace;
   const namespacedKey = ns ? `${ns}:${keyValue}` : keyValue;
 
-  const cached = store.get(namespacedKey);
+  // `Store.GetFn` permits sync or async returns (`T | undefined |
+  // Promise<T | undefined>`). Always await so a Promise return from an
+  // async store (Redis, fs, the cache wrapper) never lands in the HIT
+  // path as the cached "value".
+  const cached = await store.get(namespacedKey);
 
   if (cached !== undefined) {
     return { status: 'HIT', key: namespacedKey, value: cached, rule };

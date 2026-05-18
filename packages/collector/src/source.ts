@@ -187,7 +187,7 @@ export async function initSource(
       const cacheStore = getCacheStore(compiledSourceCache, collector);
       if (cacheStore) {
         const cacheContext = buildCacheContext(currentIngest);
-        const cacheResult = checkCache(
+        const cacheResult = await checkCache(
           compiledSourceCache,
           cacheStore,
           cacheContext,

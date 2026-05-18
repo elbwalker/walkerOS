@@ -316,7 +316,7 @@ export async function pushToDestinations(
           let cacheMiss: { key: string; ttl: number } | undefined;
           if (compiledDCache?.stop && dCacheStore) {
             const cacheContext = buildCacheContext(destIngest, event);
-            const cacheResult = checkCache(
+            const cacheResult = await checkCache(
               compiledDCache,
               dCacheStore,
               cacheContext,
@@ -367,7 +367,7 @@ export async function pushToDestinations(
           // Step-level cache check: after before chain, skip only push on HIT
           if (compiledDCache && !compiledDCache.stop && dCacheStore) {
             const cacheContext = buildCacheContext(destIngest, processedEvent);
-            const cacheResult = checkCache(
+            const cacheResult = await checkCache(
               compiledDCache,
               dCacheStore,
               cacheContext,

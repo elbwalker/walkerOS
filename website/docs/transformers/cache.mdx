@@ -153,6 +153,8 @@ By default, cache uses a shared in-memory store. Reference a custom store for pe
 }
 ```
 
+Custom stores can be either synchronous (in-memory) or asynchronous (file system, Redis, HTTP, the cache wrapper). Cache lookups await the underlying `store.get` internally, so HIT/MISS semantics behave identically regardless of which backing you wire.
+
 ## Migration from prior v4 cache
 
 If you're upgrading from an earlier v4 build, three breaking changes apply:

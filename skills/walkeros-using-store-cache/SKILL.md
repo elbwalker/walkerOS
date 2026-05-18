@@ -153,6 +153,13 @@ Lookup chain on `api.get(K)`:
 TTL ordering: shortest at the top (memory 300s), longest at the cold end (API
 86400s). The bound on staleness is the longest TTL in the chain.
 
+**Async-safe by design.** Whether your cache store's `get` is synchronous (the
+built-in `__cache`, an in-memory store) or asynchronous
+(`@walkeros/server-store-fs`, Redis, the cache wrapper itself), the collector
+reads through with an `await` internally. You can mix sync and async stores
+freely in a multi-tier chain without any extra configuration — the same HIT/MISS
+semantics apply.
+
 ## Recipe: prevent thundering herd on a cold key
 
 Single-flight deduplication is on by default. 50 concurrent

@@ -1,4 +1,4 @@
-import type { Collector, Hooks, Logger, Elb } from '../../types';
+import type { Collector, Hooks, Logger, Elb, Store } from '../../types';
 
 /**
  * Build a typed `Collector.Instance` test double.
@@ -73,6 +73,56 @@ export function createMockLogger(
     scope: jest.fn(),
     ...overrides,
   } as Logger.Instance;
+}
+
+/**
+ * Build a sync, Map-backed `Store.Instance` test double. Exposed alongside
+ * `createAsyncMockStore` so tests can wire either shape without reinventing
+ * the boilerplate. The `_data` map is returned on the instance for tests
+ * that need to pre-seed entries or assert on raw state.
+ */
+export function createMockStore(): Store.Instance & {
+  _data: Map<string, unknown>;
+} {
+  const data = new Map<string, unknown>();
+  return {
+    type: 'mock',
+    config: {},
+    _data: data,
+    get: (key: string) => data.get(key),
+    set: (key: string, value: unknown) => {
+      data.set(key, value);
+    },
+    delete: (key: string) => {
+      data.delete(key);
+    },
+  };
+}
+
+/**
+ * Build an async, Map-backed `Store.Instance` test double. Mirrors
+ * `createMockStore` but every method returns a Promise, so consumers of
+ * `Store.GetFn`'s `T | undefined | Promise<T | undefined>` union are
+ * exercised on the async branch. Use this to verify that callers of
+ * `checkCache` (and any other code reading `store.get`) await the
+ * result instead of treating the returned Promise as a value.
+ */
+export function createAsyncMockStore(): Store.Instance & {
+  _data: Map<string, unknown>;
+} {
+  const data = new Map<string, unknown>();
+  return {
+    type: 'async-mock',
+    config: {},
+    _data: data,
+    get: async (key: string) => data.get(key),
+    set: async (key: string, value: unknown) => {
+      data.set(key, value);
+    },
+    delete: async (key: string) => {
+      data.delete(key);
+    },
+  };
 }
 
 /**
