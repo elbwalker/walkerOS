@@ -366,6 +366,23 @@ describe('Event API Source', () => {
   language="typescript"
 />
 
+### Reading a step back from the collector
+
+When an integration test needs to call a step's raw `push` directly through the collector (a source's `push(req, res)`, a destination's `push(event, ctx)`, etc.), the bag types (`collector.sources`, `collector.destinations`, `collector.transformers`, `collector.stores`) erase the per-step generic. The `push` signature collapses to `Elb.Fn` on read.
+
+Use the typed accessors from `@walkeros/core` to recover the narrow type without casts:
+
+<CodeSnippet
+  code={`import { Source } from '@walkeros/core';
+import type { Types as ExpressTypes } from '@walkeros/server-source-express';
+
+const expressSource = Source.getSource<ExpressTypes>(collector, 'express');
+await expressSource.push(req, res); // typed!`}
+  language="typescript"
+/>
+
+Symmetric helpers exist for every step kind: `Source.getSource`, `Destination.getDestination`, `Transformer.getTransformer`, `Store.getStore`. Each throws `<Kind> not found: <id>` when the id is unknown. The helpers are opt-in and have no runtime cost.
+
 ## Setup lifecycle (optional)
 
 Sources may implement an optional `setup()` lifecycle for one-time, operator-time provisioning, for example registering a webhook callback or creating a Pub/Sub subscription. Setup runs only when an operator explicitly invokes `walkeros setup source.<name>`; the runtime never auto-invokes it. Opt in via `config.setup` in the flow config (`true` or an object).

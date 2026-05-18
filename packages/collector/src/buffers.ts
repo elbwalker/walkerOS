@@ -14,7 +14,7 @@ import type { Logger } from '@walkeros/core';
  * reports drops back to the caller via the typed result + optional callback.
  *
  * Caller responsibility: increment the appropriate status counter
- * (`status.dropped.queue`, `status.destinations[id].dropped.queuePush`, etc.)
+ * under `status.dropped[stepId]` (see `stepId()` in @walkeros/core)
  * and emit the warn-once-on-transition log. The helper stays pure: no logger
  * coupling, no collector reference.
  */
@@ -90,7 +90,7 @@ const overflowState = new WeakMap<object, boolean>();
  * (the caller signals "below-cap again" by calling `resetOverflow`).
  *
  * The cumulative drop counter is still incremented on every drop by the
- * caller, so operators retain rate signal via `collector.status.dropped`.
+ * caller, so operators retain rate signal via `collector.status.dropped[stepId]`.
  */
 export function warnOverflowOnce(
   buffer: object,

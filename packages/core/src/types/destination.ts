@@ -295,3 +295,28 @@ export type Push = {
 };
 
 export type DLQ = Array<[WalkerOS.Event, unknown]>;
+
+/**
+ * Typed accessor for destinations registered on a collector.
+ *
+ * The collector's `destinations` bag indexes to `Destination.Instance`
+ * (defaults erase the generic). Use this helper at the call site to recover
+ * the narrow type without casts.
+ *
+ * @example
+ * type MyDestTypes = Destination.Types<MySettings, MyMapping>;
+ * const dest = getDestination<MyDestTypes>(collector, 'myDest');
+ * await dest.push(event, context);
+ *
+ * @throws Error with message `Destination not found: <id>` when the id is unknown.
+ */
+export function getDestination<T extends TypesGeneric = Types>(
+  collector: { destinations: { [id: string]: Instance<any> } },
+  id: string,
+): Instance<T> {
+  const destination = collector.destinations[id];
+  if (!destination) {
+    throw new Error(`Destination not found: ${id}`);
+  }
+  return destination as unknown as Instance<T>;
+}

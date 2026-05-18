@@ -33,7 +33,7 @@ describe('destination modes (disabled/mock)', () => {
         failed: 0,
         sources: {},
         destinations: {},
-        dropped: { queue: 0, queuePush: 0, dlq: 0 },
+        dropped: {},
       },
       config: {
         globalsStatic: {},

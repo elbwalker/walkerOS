@@ -1,6 +1,12 @@
 import { startFlow } from '../index';
-import { createRespond } from '@walkeros/core';
+import { createRespond, Source } from '@walkeros/core';
 import type { RespondFn } from '@walkeros/core';
+
+interface MySourcePushFn {
+  (): Promise<void>;
+}
+
+type MySourceTypes = Source.Types<unknown, unknown, MySourcePushFn>;
 
 describe('env.respond', () => {
   it('transformer receives respond on env', async () => {
@@ -318,7 +324,7 @@ describe('env.respond', () => {
     });
 
     // Trigger the source's push method directly
-    await (collector.sources.mySource as any).push();
+    await Source.getSource<MySourceTypes>(collector, 'mySource').push();
 
     expect(capturedRespond).toBe(respond);
   });

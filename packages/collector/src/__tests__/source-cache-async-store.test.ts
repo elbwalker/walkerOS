@@ -1,9 +1,9 @@
 import { startFlow } from '..';
+import { Source } from '@walkeros/core';
 import type {
   Destination,
   RespondFn,
   RespondOptions,
-  Source,
   Store,
   WalkerOS,
 } from '@walkeros/core';
@@ -110,12 +110,13 @@ describe('source cache with async backing store', () => {
       },
     });
 
-    const testSourcePush = collector.sources.testSource.push as (
-      rawData: RawIngest,
-    ) => Promise<unknown>;
+    const testSource = Source.getSource<TestSourceTypes>(
+      collector,
+      'testSource',
+    );
 
     // HIT path: pre-seeded key.
-    await testSourcePush({ method: 'GET', path: '/api/data' });
+    await testSource.push({ method: 'GET', path: '/api/data' });
 
     // The cached body must arrive in respond as a plain object, never
     // as a Promise. A Promise here is the regression we are guarding
@@ -176,11 +177,12 @@ describe('source cache with async backing store', () => {
       },
     });
 
-    const testSourcePush = collector.sources.testSource.push as (
-      rawData: RawIngest,
-    ) => Promise<unknown>;
+    const testSource = Source.getSource<TestSourceTypes>(
+      collector,
+      'testSource',
+    );
 
-    await testSourcePush({ method: 'GET', path: '/api/data' });
+    await testSource.push({ method: 'GET', path: '/api/data' });
 
     expect(allResponses).toHaveLength(1);
     expect(allResponses[0]).toEqual({ body: 'miss body', status: 200 });

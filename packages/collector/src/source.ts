@@ -9,6 +9,7 @@ import type {
 import type { RespondFn, RespondOptions } from '@walkeros/core';
 import {
   createIngest,
+  FatalError,
   getMappingValue,
   tryCatchAsync,
   getNextSteps,
@@ -50,16 +51,32 @@ import { getCacheStore } from './cache';
  * (config.init === true AND config.require is empty/absent). Idempotent:
  * the buffer is cleared before iteration, so re-entry from within an `on`
  * handler does not re-fire the same items.
+ *
+ * A throw inside `source.on` is treated as a pipeline failure: log via the
+ * scoped 'source' logger and increment `status.failed`. The flush itself
+ * is walkerOS-orchestrated startup; the throw represents the source's
+ * inability to consume a buffered state-change event.
  */
 export async function flushSourceQueueOn(
   collector: Collector.Instance,
   source: Source.Instance,
+  sourceId?: string,
 ): Promise<void> {
   if (!source.on || !source.queueOn?.length) return;
   const queue = source.queueOn;
   source.queueOn = [];
+  const id = sourceId || source.config?.id || 'unknown';
   for (const { type, data } of queue) {
-    await tryCatchAsync(source.on)(type, data);
+    await tryCatchAsync(source.on, (err: unknown): undefined => {
+      if (err instanceof FatalError) throw err;
+      collector.status.failed++;
+      collector.logger.scope('source').error('source on flush failed', {
+        sourceId: id,
+        type,
+        error: err,
+      });
+      return undefined;
+    })(type, data);
   }
 }
 
@@ -475,7 +492,18 @@ export async function initSource(
     withScope,
   };
 
-  const sourceInstance = await tryCatchAsync(code)(sourceContext);
+  const sourceInstance = await tryCatchAsync(
+    code,
+    (err: unknown): undefined => {
+      if (err instanceof FatalError) throw err;
+      collector.status.failed++;
+      collector.logger.scope('source').error('source factory failed', {
+        sourceId,
+        error: err,
+      });
+      return undefined;
+    },
+  )(sourceContext);
   if (!sourceInstance) return undefined;
 
   const sourceType = sourceInstance.type || 'unknown';
@@ -527,12 +555,27 @@ export async function initSources(
   // Pass 2: init each source. Side effects allowed here.
   for (const sourceId of Object.keys(result)) {
     const instance = collector.sources[sourceId];
+    let initFailed = false;
     if (instance.init) {
-      await tryCatchAsync(instance.init.bind(instance))();
+      await tryCatchAsync(instance.init.bind(instance), (err: unknown) => {
+        if (err instanceof FatalError) throw err;
+        initFailed = true;
+        collector.status.failed++;
+        collector.logger.scope('source').error('source init failed', {
+          sourceId,
+          error: err,
+        });
+      })();
     }
+    // Control-flow fix: a throw inside `init()` previously left the source
+    // marked `config.init = true` despite never having completed setup.
+    // Operators reading `source.config.init` would see a healthy source
+    // that was actually broken. Skip the rest of the loop on failure so
+    // the source stays in `config.init = false` and is visibly stuck.
+    if (initFailed) continue;
     instance.config.init = true;
     if (isSourceStarted(instance)) {
-      await flushSourceQueueOn(collector, instance);
+      await flushSourceQueueOn(collector, instance, sourceId);
     }
   }
 

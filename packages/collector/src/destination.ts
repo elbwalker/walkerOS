@@ -23,6 +23,7 @@ import {
   isFunction,
   isObject,
   processEventMapping,
+  stepId,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
@@ -85,10 +86,26 @@ function ensureDestStatus(
       duration: 0,
       queuePushSize: 0,
       dlqSize: 0,
-      dropped: { queuePush: 0, dlq: 0 },
     };
   }
   return collector.status.destinations[destId];
+}
+
+/**
+ * Bump a drop counter under `status.dropped[stepId][buffer]`. Lazily
+ * creates the per-step entry; returns the new counter value so callers
+ * can pass it straight into the warn-once log payload.
+ */
+function bumpDropped(
+  status: Collector.Status,
+  id: string,
+  buffer: 'queue' | 'dlq',
+  n: number,
+): number {
+  if (!status.dropped[id]) status.dropped[id] = {};
+  const entry = status.dropped[id];
+  entry[buffer] = (entry[buffer] ?? 0) + n;
+  return entry[buffer]!;
 }
 
 /**
@@ -228,7 +245,12 @@ export async function pushToDestinations(
     }
     const result = pushBounded(collector.queue, event, { max: queueMax });
     if (result.dropped > 0) {
-      collector.status.dropped.queue += result.dropped;
+      const droppedCount = bumpDropped(
+        collector.status,
+        stepId('collector'),
+        'queue',
+        result.dropped,
+      );
       warnOverflowOnce(
         collector.queue,
         collector.logger,
@@ -236,7 +258,7 @@ export async function pushToDestinations(
         {
           buffer: 'queue',
           cap: queueMax,
-          droppedCount: collector.status.dropped.queue,
+          droppedCount,
         },
       );
     } else if (collector.queue.length < queueMax) {
@@ -299,8 +321,9 @@ export async function pushToDestinations(
         try {
           isInitialized = await destinationInit(collector, destination, id);
         } catch (err) {
+          collector.status.failed++;
           const destType = destination.type || 'unknown';
-          collector.logger.scope(destType).error('Destination init threw', {
+          collector.logger.scope(destType).error('destination init failed', {
             error: err instanceof Error ? err.message : String(err),
           });
         }
@@ -340,19 +363,13 @@ export async function pushToDestinations(
         }
         if (totalDropped > 0) {
           // Ensure status entry exists for early-overflow paths.
-          if (!collector.status.destinations[destId]) {
-            collector.status.destinations[destId] = {
-              count: 0,
-              failed: 0,
-              duration: 0,
-              queuePushSize: 0,
-              dlqSize: 0,
-              dropped: { queuePush: 0, dlq: 0 },
-            };
-          }
-          const destStatus = collector.status.destinations[destId];
-          destStatus.dropped.queuePush += totalDropped;
-          collector.status.dropped.queuePush += totalDropped;
+          ensureDestStatus(collector, destId);
+          const droppedCount = bumpDropped(
+            collector.status,
+            stepId('destination', destId),
+            'queue',
+            totalDropped,
+          );
           warnOverflowOnce(
             queuePush,
             collector.logger.scope(destination.type || 'unknown'),
@@ -361,7 +378,7 @@ export async function pushToDestinations(
               buffer: 'queuePush',
               destination: destId,
               cap: bound.max,
-              droppedCount: destStatus.dropped.queuePush,
+              droppedCount,
             },
           );
         } else if (queuePush.length < bound.max) {
@@ -384,8 +401,9 @@ export async function pushToDestinations(
       try {
         isInitialized = await destinationInit(collector, destination, id);
       } catch (err) {
+        collector.status.failed++;
         const destType = destination.type || 'unknown';
-        collector.logger.scope(destType).error('Destination init threw', {
+        collector.logger.scope(destType).error('destination init failed', {
           error: err instanceof Error ? err.message : String(err),
         });
       }
@@ -526,19 +544,13 @@ export async function pushToDestinations(
               dlqBound,
             );
             if (dlqResult.dropped > 0) {
-              if (!collector.status.destinations[destId]) {
-                collector.status.destinations[destId] = {
-                  count: 0,
-                  failed: 0,
-                  duration: 0,
-                  queuePushSize: 0,
-                  dlqSize: 0,
-                  dropped: { queuePush: 0, dlq: 0 },
-                };
-              }
-              const destStatus = collector.status.destinations[destId];
-              destStatus.dropped.dlq += dlqResult.dropped;
-              collector.status.dropped.dlq += dlqResult.dropped;
+              ensureDestStatus(collector, destId);
+              const droppedCount = bumpDropped(
+                collector.status,
+                stepId('destination', destId),
+                'dlq',
+                dlqResult.dropped,
+              );
               warnOverflowOnce(
                 dlq,
                 collector.logger.scope(destination.type || 'unknown'),
@@ -547,7 +559,7 @@ export async function pushToDestinations(
                   buffer: 'dlq',
                   destination: destId,
                   cap: dlqBound.max,
-                  droppedCount: destStatus.dropped.dlq,
+                  droppedCount,
                 },
               );
             } else if (dlq.length < dlqBound.max) {
@@ -648,16 +660,7 @@ export async function pushToDestinations(
     };
 
     // Ensure destination status entry exists
-    if (!collector.status.destinations[result.id]) {
-      collector.status.destinations[result.id] = {
-        count: 0,
-        failed: 0,
-        duration: 0,
-        queuePushSize: 0,
-        dlqSize: 0,
-        dropped: { queuePush: 0, dlq: 0 },
-      };
-    }
+    ensureDestStatus(collector, result.id);
     const destStatus = collector.status.destinations[result.id];
     const now = Date.now();
 
@@ -912,8 +915,12 @@ export async function destinationPush<Destination extends Destination.Instance>(
               totalDropped += r.dropped;
             }
             if (totalDropped > 0) {
-              destStatus.dropped.dlq += totalDropped;
-              collector.status.dropped.dlq += totalDropped;
+              const droppedCount = bumpDropped(
+                collector.status,
+                stepId('destination', destIdResolved),
+                'dlq',
+                totalDropped,
+              );
               warnOverflowOnce(
                 dlq,
                 destLogger,
@@ -922,7 +929,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
                   buffer: 'dlq',
                   destination: destIdResolved,
                   cap: dlqBound.max,
-                  droppedCount: destStatus.dropped.dlq,
+                  droppedCount,
                 },
               );
             } else if (dlq.length < dlqBound.max) {

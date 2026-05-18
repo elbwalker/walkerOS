@@ -59,7 +59,7 @@ export async function collector(
       failed: 0,
       sources: {},
       destinations: {},
-      dropped: { queue: 0, queuePush: 0, dlq: 0 },
+      dropped: {},
     },
     timing: Date.now(),
     user: initConfig.user || {},

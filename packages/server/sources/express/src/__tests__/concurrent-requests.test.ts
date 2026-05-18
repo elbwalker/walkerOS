@@ -1,7 +1,9 @@
 import { startFlow } from '@walkeros/collector';
-import type { Destination, Ingest, Source, WalkerOS } from '@walkeros/core';
+import { Source } from '@walkeros/core';
+import type { Destination, Ingest, WalkerOS } from '@walkeros/core';
 import type { Request, Response } from 'express';
 import { sourceExpress } from '../index';
+import type { Types as ExpressTypes } from '../types';
 
 /**
  * Express concurrency regression — the named real-world scenario in the
@@ -11,12 +13,13 @@ import { sourceExpress } from '../index';
  * and HTTP responses.
  *
  * Uses plain-object mock req/res to exercise the express source's
- * `push(req, res)` handler directly. Real fetch would be ideal but the
- * existing `getByPath` `instanceof Object` check fails cross-realm on
- * Node's native IncomingMessage (separate concern, out of scope here).
- * Mock requests carry distinct headers and bodies; mock responses
- * capture status/body per request id. Any crosstalk would show up as a
- * mismatch between a request's id and the captured ingest/response.
+ * `push(req, res)` handler directly. Mock req/res keeps this test fast
+ * and deterministic. The previous `getByPath` cross-realm bug (silent
+ * undefined on Node IncomingMessage) is now fixed in `@walkeros/core`;
+ * a real-fetch variant can be added in a future test. Mock requests
+ * carry distinct headers and bodies; mock responses capture status/body
+ * per request id. Any crosstalk would show up as a mismatch between a
+ * request's id and the captured ingest/response.
  */
 describe('Express concurrent requests', () => {
   it('keeps ingest and respond isolated across concurrent inbound requests', async () => {
@@ -49,9 +52,7 @@ describe('Express concurrent requests', () => {
       },
     });
 
-    const expressSource = collector.sources.express as Source.Instance & {
-      push: (req: Request, res: Response) => Promise<void>;
-    };
+    const expressSource = Source.getSource<ExpressTypes>(collector, 'express');
 
     const mockRequest = (id: number): Request =>
       ({

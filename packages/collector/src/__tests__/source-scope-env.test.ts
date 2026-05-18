@@ -1,9 +1,9 @@
 import { startFlow } from '..';
+import { Source } from '@walkeros/core';
 import type {
   Ingest,
   RespondFn,
   RespondOptions,
-  Source,
   Transformer,
 } from '@walkeros/core';
 
@@ -28,6 +28,7 @@ describe('Source.Context.withScope per-scope binding', () => {
       scope: 'A' | 'B';
       value: string;
     }) => Promise<void>;
+    type TestSourceTypes = Source.Types<unknown, unknown, ScopePush>;
 
     const { collector } = await startFlow({
       sources: {
@@ -36,7 +37,7 @@ describe('Source.Context.withScope per-scope binding', () => {
             ingest: { map: { scope: 'scope', value: 'value' } },
           },
           next: 'spy',
-          code: async (context): Promise<Source.Instance> => {
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
             const scopePush: ScopePush = async (raw) => {
               const respond: RespondFn = (options = {}) => {
                 respondCallsByScope[raw.scope].push(options);
@@ -55,8 +56,8 @@ describe('Source.Context.withScope per-scope binding', () => {
 
             return {
               type: 'test',
-              config: context.config as Source.Config,
-              push: scopePush as unknown as Source.Instance['push'],
+              config: context.config as Source.Config<TestSourceTypes>,
+              push: scopePush,
             };
           },
         },
@@ -94,11 +95,15 @@ describe('Source.Context.withScope per-scope binding', () => {
       },
     });
 
-    const pushA = (collector.sources.testSource.push as unknown as ScopePush)({
+    const testSource = Source.getSource<TestSourceTypes>(
+      collector,
+      'testSource',
+    );
+    const pushA = testSource.push({
       scope: 'A',
       value: 'alpha',
     });
-    const pushB = (collector.sources.testSource.push as unknown as ScopePush)({
+    const pushB = testSource.push({
       scope: 'B',
       value: 'beta',
     });

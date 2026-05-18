@@ -1,5 +1,9 @@
 export * as Cache from './cache';
 export * as Collector from './collector';
+// Direct re-export so consumers can call `stepId('collector')` without
+// going through the `Collector` namespace.
+export { stepId } from './collector';
+export type { StepKind, DroppedCounters } from './collector';
 export * as Context from './context';
 export * as Destination from './destination';
 export * as Elb from './elb';

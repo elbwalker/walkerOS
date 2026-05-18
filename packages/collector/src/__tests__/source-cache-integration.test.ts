@@ -1,6 +1,15 @@
 import { startFlow } from '..';
-import type { Source, WalkerOS, Destination } from '@walkeros/core';
+import { Source } from '@walkeros/core';
+import type { WalkerOS, Destination } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
+
+type RawIngest = { method: string; path: string };
+
+interface TestPushFn {
+  (rawData: RawIngest): Promise<void>;
+}
+
+type TestSourceTypes = Source.Types<unknown, unknown, TestPushFn>;
 
 /**
  * Creates a destination that calls respond with a body.
@@ -31,19 +40,19 @@ describe('Source cache integration', () => {
     const { collector } = await startFlow({
       sources: {
         testSource: {
-          code: async (context): Promise<Source.Instance> => {
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
             const { config } = context;
             return {
               type: 'test',
-              config: config as Source.Config,
-              push: (async (rawData: unknown) => {
+              config: config as Source.Config<TestSourceTypes>,
+              push: async (rawData: RawIngest) => {
                 const respond: RespondFn = (options?: RespondOptions) => {
                   allResponses.push(options);
                 };
                 await context.withScope(rawData, respond, async (env) => {
                   await env.push({ name: 'page view', data: {} });
                 });
-              }) as any,
+              },
             };
           },
           cache: {
@@ -74,7 +83,7 @@ describe('Source cache integration', () => {
     });
 
     // First request: MISS — pipeline runs, destination calls respond (caches it)
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/data',
     });
@@ -83,7 +92,7 @@ describe('Source cache integration', () => {
     expect(allResponses[0]).toEqual({ body: 'response data', status: 200 });
 
     // Second request: HIT — pipeline skipped, respond called with cached value
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/data',
     });
@@ -98,16 +107,16 @@ describe('Source cache integration', () => {
     const { collector } = await startFlow({
       sources: {
         testSource: {
-          code: async (context): Promise<Source.Instance> => {
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
             const { config } = context;
             return {
               type: 'test',
-              config: config as Source.Config,
-              push: (async (rawData: unknown) => {
+              config: config as Source.Config<TestSourceTypes>,
+              push: async (rawData: RawIngest) => {
                 await context.withScope(rawData, undefined, async (env) => {
                   await env.push({ name: 'page view', data: {} });
                 });
-              }) as any,
+              },
             };
           },
           cache: {
@@ -137,11 +146,11 @@ describe('Source cache integration', () => {
       },
     });
 
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'POST',
       path: '/api/data',
     });
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'POST',
       path: '/api/data',
     });
@@ -154,12 +163,12 @@ describe('Source cache integration', () => {
     const { collector } = await startFlow({
       sources: {
         testSource: {
-          code: async (context): Promise<Source.Instance> => {
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
             const { config } = context;
             return {
               type: 'test',
-              config: config as Source.Config,
-              push: (async (rawData: unknown) => {
+              config: config as Source.Config<TestSourceTypes>,
+              push: async (rawData: RawIngest) => {
                 await context.withScope(
                   rawData,
                   (() => {}) as RespondFn,
@@ -167,7 +176,7 @@ describe('Source cache integration', () => {
                     await env.push({ name: 'page view', data: {} });
                   },
                 );
-              }) as any,
+              },
             };
           },
           cache: {
@@ -198,28 +207,28 @@ describe('Source cache integration', () => {
     });
 
     // Request to /api/users (MISS)
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/users',
     });
     expect(destinationCalls).toHaveLength(1);
 
     // Request to /api/data — different cache key (MISS)
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/data',
     });
     expect(destinationCalls).toHaveLength(2);
 
     // Repeat /api/users — should be HIT
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/users',
     });
     expect(destinationCalls).toHaveLength(2); // Served from cache
 
     // Repeat /api/data — should be HIT
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/data',
     });
@@ -233,12 +242,12 @@ describe('Source cache integration', () => {
     const { collector } = await startFlow({
       sources: {
         testSource: {
-          code: async (context): Promise<Source.Instance> => {
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
             const { config } = context;
             return {
               type: 'test',
-              config: config as Source.Config,
-              push: (async (rawData: unknown) => {
+              config: config as Source.Config<TestSourceTypes>,
+              push: async (rawData: RawIngest) => {
                 await context.withScope(
                   rawData,
                   (() => {}) as RespondFn,
@@ -246,7 +255,7 @@ describe('Source cache integration', () => {
                     await env.push({ name: 'page view', data: {} });
                   },
                 );
-              }) as any,
+              },
             };
           },
           next: 'enrich',
@@ -290,7 +299,7 @@ describe('Source cache integration', () => {
     });
 
     // MISS: transformer and destination run
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/data',
     });
@@ -298,7 +307,7 @@ describe('Source cache integration', () => {
     expect(transformerCalls).toEqual(['enrich']);
 
     // HIT: neither transformer nor destination should run
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/data',
     });
@@ -312,12 +321,12 @@ describe('Source cache integration', () => {
     const { collector } = await startFlow({
       sources: {
         testSource: {
-          code: async (context): Promise<Source.Instance> => {
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
             const { config } = context;
             return {
               type: 'test',
-              config: config as Source.Config,
-              push: (async (rawData: unknown) => {
+              config: config as Source.Config<TestSourceTypes>,
+              push: async (rawData: RawIngest) => {
                 await context.withScope(
                   rawData,
                   (() => {}) as RespondFn,
@@ -325,7 +334,7 @@ describe('Source cache integration', () => {
                     await env.push({ name: 'page view', data: {} });
                   },
                 );
-              }) as any,
+              },
             };
           },
           cache: {
@@ -357,21 +366,21 @@ describe('Source cache integration', () => {
     });
 
     // First request: MISS — pipeline runs
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/data',
     });
     expect(destinationCalls).toHaveLength(1);
 
     // Second request: HIT with stop=false — pipeline still runs (source step skipped)
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/data',
     });
     expect(destinationCalls).toHaveLength(2); // Destination still called
 
     // Third request: different path — MISS, also continues pipeline
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/other',
     });
@@ -379,22 +388,22 @@ describe('Source cache integration', () => {
   });
 
   it('should apply update rules on HIT and MISS', async () => {
-    const respondPayloads: any[] = [];
+    const respondPayloads: (RespondOptions | undefined)[] = [];
     let respondResolve: (() => void) | undefined;
 
     const { collector } = await startFlow({
       sources: {
         testSource: {
-          code: async (context): Promise<Source.Instance> => {
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
             const { config } = context;
             return {
               type: 'test',
-              config: config as Source.Config,
-              push: (async (rawData: any) => {
+              config: config as Source.Config<TestSourceTypes>,
+              push: async (rawData: RawIngest) => {
                 const respondPromise = new Promise<void>((resolve) => {
                   respondResolve = resolve;
                 });
-                const respond: RespondFn = (options?: any) => {
+                const respond: RespondFn = (options?: RespondOptions) => {
                   respondPayloads.push(options);
                   respondResolve?.();
                 };
@@ -403,7 +412,7 @@ describe('Source cache integration', () => {
                 });
                 // Wait for respond to be called (may be async due to applyUpdate)
                 await respondPromise;
-              }) as any,
+              },
             };
           },
           cache: {
@@ -433,7 +442,7 @@ describe('Source cache integration', () => {
     });
 
     // MISS: respond should have X-Cache: MISS
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/test',
     });
@@ -442,7 +451,7 @@ describe('Source cache integration', () => {
 
     // HIT: respond should have X-Cache: HIT
     respondPayloads.length = 0;
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       method: 'GET',
       path: '/api/test',
     });

@@ -250,3 +250,32 @@ export interface InitSources {
  * - 'codebox': Source uses a JSON/code editor (default)
  */
 export type Renderer = 'browser' | 'codebox';
+
+/**
+ * Typed accessor for sources registered on a collector.
+ *
+ * The collector's `sources` bag indexes to `Source.Instance` (defaults erase
+ * the generic), which collapses the source's declared `push` signature to
+ * `Elb.Fn`. Use this helper at the call site to recover the narrow type
+ * without casts.
+ *
+ * @example
+ * type TestSourceTypes = Source.Types<unknown, unknown, TestPushFn>;
+ * const src = getSource<TestSourceTypes>(collector, 'testSource');
+ * await src.push({ method: 'GET', path: '/api/data' }); // typed!
+ *
+ * @throws Error with message `Source not found: <id>` when the id is unknown.
+ */
+export function getSource<T extends TypesGeneric = Types>(
+  collector: { sources: { [id: string]: Instance<any> } },
+  id: string,
+): Instance<T> {
+  const source = collector.sources[id];
+  if (!source) {
+    throw new Error(`Source not found: ${id}`);
+  }
+  // Single, contained narrowing. The runtime instance was constructed with
+  // generic T at init time; the bag erased the parameter. We're restoring
+  // information that already exists at runtime.
+  return source as unknown as Instance<T>;
+}

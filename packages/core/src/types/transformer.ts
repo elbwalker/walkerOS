@@ -274,3 +274,28 @@ export interface InitTransformers {
 export interface Transformers {
   [transformerId: string]: Instance;
 }
+
+/**
+ * Typed accessor for transformers registered on a collector.
+ *
+ * The collector's `transformers` bag indexes to `Transformer.Instance`
+ * (defaults erase the generic). Use this helper at the call site to recover
+ * the narrow type without casts.
+ *
+ * @example
+ * type MyTransformerTypes = Transformer.Types<MySettings>;
+ * const tx = getTransformer<MyTransformerTypes>(collector, 'redact');
+ * await tx.push(event, context);
+ *
+ * @throws Error with message `Transformer not found: <id>` when the id is unknown.
+ */
+export function getTransformer<T extends TypesGeneric = Types>(
+  collector: { transformers: { [id: string]: Instance<any> } },
+  id: string,
+): Instance<T> {
+  const transformer = collector.transformers[id];
+  if (!transformer) {
+    throw new Error(`Transformer not found: ${id}`);
+  }
+  return transformer as unknown as Instance<T>;
+}

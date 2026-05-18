@@ -97,3 +97,28 @@ export interface InitStores {
 export interface Stores {
   [storeId: string]: Instance;
 }
+
+/**
+ * Typed accessor for stores registered on a collector.
+ *
+ * The collector's `stores` bag indexes to `Store.Instance` (defaults erase
+ * the generic). Use this helper at the call site to recover the narrow type
+ * without casts.
+ *
+ * @example
+ * type MyStoreTypes = Store.Types<MySettings>;
+ * const store = getStore<MyStoreTypes>(collector, 'cache');
+ * await store.set('key', 'value');
+ *
+ * @throws Error with message `Store not found: <id>` when the id is unknown.
+ */
+export function getStore<T extends TypesGeneric = Types>(
+  collector: { stores: { [id: string]: Instance<any> } },
+  id: string,
+): Instance<T> {
+  const store = collector.stores[id];
+  if (!store) {
+    throw new Error(`Store not found: ${id}`);
+  }
+  return store as unknown as Instance<T>;
+}

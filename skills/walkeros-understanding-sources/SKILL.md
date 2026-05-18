@@ -125,6 +125,12 @@ flag, and `Destination.Config.require` gates event delivery the same way. See
 http('handler', source.push);
 ```
 
+When a test or integration code needs to invoke a source's `push` through the
+collector bag, `collector.sources` erases the per-source generic on read. Use
+`Source.getSource<T>(collector, id)` to recover the narrow signature without a
+cast. See the testing-strategy skill for the full pattern (symmetric helpers
+exist for destinations, transformers, stores).
+
 ## Source Paths
 
 | Type   | Path                       | Examples           |

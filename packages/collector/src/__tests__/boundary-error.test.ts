@@ -65,7 +65,7 @@ function createTestCollector(): Collector.Instance {
       failed: 0,
       sources: {},
       destinations: {},
-      dropped: { queue: 0, queuePush: 0, dlq: 0 },
+      dropped: {},
     },
   } as unknown as Collector.Instance;
 }

@@ -56,7 +56,7 @@ describe('Status', () => {
         failed: 0,
         sources: {},
         destinations: {},
-        dropped: { queue: 0, queuePush: 0, dlq: 0 },
+        dropped: {},
       },
       ...args,
       config: args?.config ? createTestConfig(args.config) : createTestConfig(),

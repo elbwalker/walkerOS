@@ -49,7 +49,7 @@ describe('Transformer', () => {
         failed: 0,
         sources: {},
         destinations: {},
-        dropped: { queue: 0, queuePush: 0, dlq: 0 },
+        dropped: {},
       },
       ...overrides,
     } as unknown as Collector.Instance;

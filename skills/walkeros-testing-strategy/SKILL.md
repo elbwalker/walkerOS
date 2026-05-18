@@ -361,6 +361,28 @@ Avoid bare `npm run test` at root inside per-task steps. That is L4 (full suite,
 10-15 min) and is reserved for plan completion when the plan touched shared
 infra, or for explicit user request.
 
+## Reading a Step Back from the Collector
+
+When a test calls a step's raw push directly through the collector bag
+(`collector.sources.X.push`, `collector.destinations.X.push`, etc.), use the
+typed accessors from `@walkeros/core` instead of casting:
+
+```ts
+import { Source } from '@walkeros/core';
+
+const src = Source.getSource<TestSourceTypes>(collector, 'testSource');
+await src.push({ method: 'GET', path: '/api/data' });
+```
+
+Available helpers: `Source.getSource`, `Destination.getDestination`,
+`Transformer.getTransformer`, `Store.getStore`. Each accepts an optional type
+parameter to recover the per-step generic that the bag's index signature erases
+on read. Each throws `<Kind> not found: <id>` when the id is unknown.
+
+Do not write `collector.sources.X.push as any` or
+`collector.sources.X.push as (rawData: ...) => Promise<...>`. The accessor
+exists exactly to remove that boundary cast.
+
 ## Destination Test Duplication, Pending Cleanup
 
 As of 2026-04-29, web and server destination tests share substantial scaffolding

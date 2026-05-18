@@ -1,13 +1,20 @@
 import { startFlow } from '..';
+import { Source, createRespond } from '@walkeros/core';
 import type {
   Destination,
   Mapping,
   RespondFn,
   RespondOptions,
-  Source,
   WalkerOS,
 } from '@walkeros/core';
-import { createRespond } from '@walkeros/core';
+
+type RawIngest = { method: string; path: string };
+
+interface TestPushFn {
+  (rawData: RawIngest): Promise<unknown>;
+}
+
+type TestSourceTypes = Source.Types<unknown, unknown, TestPushFn>;
 
 /**
  * Simulates a file transformer on cache MISS: calls respond with the
@@ -60,12 +67,12 @@ describe('Source cache MISS race (collector)', () => {
     const { collector } = await startFlow({
       sources: {
         testSource: {
-          code: async (context): Promise<Source.Instance> => {
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
             const { config } = context;
             return {
               type: 'test',
-              config: config as Source.Config,
-              push: (async (rawData: unknown) => {
+              config: config as Source.Config<TestSourceTypes>,
+              push: async (rawData: RawIngest) => {
                 // Create an idempotent respond backed by a simple sender,
                 // exactly like a real HTTP source would.
                 const respond = createRespond((options) => {
@@ -90,7 +97,7 @@ describe('Source cache MISS race (collector)', () => {
 
                   return pushResult;
                 });
-              }) as Source.Instance['push'],
+              },
             };
           },
           cache: {
@@ -125,10 +132,11 @@ describe('Source cache MISS race (collector)', () => {
       },
     });
 
-    const testSourcePush = collector.sources.testSource.push as (
-      rawData: unknown,
-    ) => Promise<unknown>;
-    await testSourcePush({
+    const testSource = Source.getSource<TestSourceTypes>(
+      collector,
+      'testSource',
+    );
+    await testSource.push({
       method: 'GET',
       path: '/walker.js',
     });

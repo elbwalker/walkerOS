@@ -3,6 +3,7 @@ import { getByPath, setByPath } from './byPath';
 import { isArray, isDefined, isString, isObject } from './is';
 import { castToProperty } from './property';
 import { tryCatchAsync } from './tryCatch';
+import { FatalError } from './fatalError';
 import { getGrantedConsent } from './consent';
 import { assign } from './assign';
 import { flattenIncludeSections } from './include';
@@ -114,7 +115,18 @@ export async function getMappingValue(
 
   const mappings = isArray(data) ? data : [data];
   for (const mapping of mappings) {
-    const result = await tryCatchAsync(processMappingValue)(value, mapping, {
+    const result = await tryCatchAsync(
+      processMappingValue,
+      (err: unknown): undefined => {
+        if (err instanceof FatalError) throw err;
+        if (context.collector) context.collector.status.failed++;
+        baseContext.logger.error('mapping processing failed', {
+          event,
+          error: err,
+        });
+        return undefined;
+      },
+    )(value, mapping, {
       ...baseContext,
       mapping,
     });
@@ -156,7 +168,17 @@ async function processMappingValue(
       // Per-mapping context — `mapping` reflects the current item.
       const cbContext: Mapping.Context = { ...context, mapping: mappingItem };
 
-      if (condition && !(await tryCatchAsync(condition)(value, cbContext)))
+      if (
+        condition &&
+        !(await tryCatchAsync(condition, (err: unknown): boolean => {
+          if (err instanceof FatalError) throw err;
+          cbContext.logger.error('mapping condition failed', {
+            event: cbContext.event,
+            error: err,
+          });
+          return false; // Preserve "skip this rule" semantic on throw.
+        })(value, cbContext))
+      )
         return;
 
       if (consent && !getGrantedConsent(consent, cbContext.consent))
@@ -165,7 +187,14 @@ async function processMappingValue(
       let mappingValue: unknown = isDefined(staticValue) ? staticValue : value;
 
       if (fn) {
-        mappingValue = await tryCatchAsync(fn)(value, cbContext);
+        mappingValue = await tryCatchAsync(fn, (err: unknown): undefined => {
+          if (err instanceof FatalError) throw err;
+          cbContext.logger.error('mapping fn failed', {
+            event: cbContext.event,
+            error: err,
+          });
+          return undefined; // No transform on error.
+        })(value, cbContext);
       }
 
       if (key) {
@@ -202,7 +231,17 @@ async function processMappingValue(
         );
       }
 
-      if (validate && !(await tryCatchAsync(validate)(mappingValue, cbContext)))
+      if (
+        validate &&
+        !(await tryCatchAsync(validate, (err: unknown): boolean => {
+          if (err instanceof FatalError) throw err;
+          cbContext.logger.error('mapping validate failed', {
+            event: cbContext.event,
+            error: err,
+          });
+          return false; // Preserve "validation failed" semantic on throw.
+        })(mappingValue, cbContext))
+      )
         mappingValue = undefined;
 
       const property = castToProperty(mappingValue);

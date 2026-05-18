@@ -1,5 +1,5 @@
 import type { Collector, Destination, WalkerOS } from '@walkeros/core';
-import { createEvent, createMockLogger } from '@walkeros/core';
+import { createEvent, createMockLogger, stepId } from '@walkeros/core';
 import { addDestination, pushToDestinations, startFlow } from '..';
 
 describe('queue bounds', () => {
@@ -56,7 +56,7 @@ describe('queue bounds', () => {
         failed: 0,
         sources: {},
         destinations: {},
-        dropped: { queue: 0, queuePush: 0, dlq: 0 },
+        dropped: {},
       },
       config,
       push: jest.fn(),
@@ -76,7 +76,7 @@ describe('queue bounds', () => {
       }
 
       expect(collector.queue.length).toBe(5);
-      expect(collector.status.dropped.queue).toBe(0);
+      expect(collector.status.dropped[stepId('collector')]?.queue ?? 0).toBe(0);
     });
 
     test('cap enforced: drops oldest, retains newest', async () => {
@@ -87,7 +87,7 @@ describe('queue bounds', () => {
       }
 
       expect(collector.queue.length).toBe(3);
-      expect(collector.status.dropped.queue).toBe(2);
+      expect(collector.status.dropped[stepId('collector')]?.queue ?? 0).toBe(2);
       expect(collector.queue.map((e) => e.name)).toEqual([
         'event 2',
         'event 3',
@@ -169,7 +169,7 @@ describe('queue bounds', () => {
       // Three overflows but only the first transition logs.
       expect(queueWarns.length).toBe(1);
       // Drop counter still tracks every dropped event.
-      expect(collector.status.dropped.queue).toBe(3);
+      expect(collector.status.dropped[stepId('collector')]?.queue ?? 0).toBe(3);
     });
   });
 
@@ -195,7 +195,9 @@ describe('queue bounds', () => {
         'event 3',
         'event 4',
       ]);
-      expect(collector.status.destinations['dest'].dropped.queuePush).toBe(2);
+      expect(
+        collector.status.dropped[stepId('destination', 'dest')]?.queue ?? 0,
+      ).toBe(2);
       expect(collector.status.destinations['dest'].queuePushSize).toBe(3);
     });
 
@@ -257,8 +259,12 @@ describe('queue bounds', () => {
 
       expect(dest1.queuePush?.length).toBe(5);
       expect(dest2.queuePush?.length).toBe(3);
-      expect(collector.status.destinations['d1'].dropped.queuePush).toBe(2);
-      expect(collector.status.destinations['d2'].dropped.queuePush).toBe(4);
+      expect(
+        collector.status.dropped[stepId('destination', 'd1')]?.queue ?? 0,
+      ).toBe(2);
+      expect(
+        collector.status.dropped[stepId('destination', 'd2')]?.queue ?? 0,
+      ).toBe(4);
     });
   });
 
@@ -283,7 +289,9 @@ describe('queue bounds', () => {
       expect(destination.dlq?.length).toBe(3);
       const names = destination.dlq?.map(([evt]) => evt.name);
       expect(names).toEqual(['event 2', 'event 3', 'event 4']);
-      expect(collector.status.destinations['dest'].dropped.dlq).toBe(2);
+      expect(
+        collector.status.dropped[stepId('destination', 'dest')]?.dlq ?? 0,
+      ).toBe(2);
       expect(collector.status.destinations['dest'].dlqSize).toBe(3);
     });
 
@@ -336,8 +344,12 @@ describe('queue bounds', () => {
 
       expect(dest1.dlq?.length).toBe(5);
       expect(dest2.dlq?.length).toBe(2);
-      expect(collector.status.destinations['d1'].dropped.dlq).toBe(2);
-      expect(collector.status.destinations['d2'].dropped.dlq).toBe(5);
+      expect(
+        collector.status.dropped[stepId('destination', 'd1')]?.dlq ?? 0,
+      ).toBe(2);
+      expect(
+        collector.status.dropped[stepId('destination', 'd2')]?.dlq ?? 0,
+      ).toBe(5);
     });
   });
 
@@ -379,16 +391,20 @@ describe('queue bounds', () => {
       }
 
       // collector.queue capped at the default 1000; 5 events fit comfortably.
-      expect(collector.status.dropped.queue).toBe(0);
+      expect(collector.status.dropped[stepId('collector')]?.queue ?? 0).toBe(0);
 
       // Failing destination DLQ caps at 2, drops 3.
       expect(collector.destinations['failing'].dlq?.length).toBe(2);
-      expect(collector.status.destinations['failing'].dropped.dlq).toBe(3);
+      expect(
+        collector.status.dropped[stepId('destination', 'failing')]?.dlq ?? 0,
+      ).toBe(3);
       expect(collector.status.destinations['failing'].dlqSize).toBe(2);
 
       // Consent-denied destination queuePush caps at 2, drops 3.
       expect(collector.destinations['queued'].queuePush?.length).toBe(2);
-      expect(collector.status.destinations['queued'].dropped.queuePush).toBe(3);
+      expect(
+        collector.status.dropped[stepId('destination', 'queued')]?.queue ?? 0,
+      ).toBe(3);
       expect(collector.status.destinations['queued'].queuePushSize).toBe(2);
 
       // Healthy destination receives all events.

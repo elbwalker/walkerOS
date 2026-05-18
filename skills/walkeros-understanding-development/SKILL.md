@@ -136,10 +136,26 @@ An empty `onError` is a defect: it swallows the exception, returns
 `packages/collector/src/push.ts` and `packages/collector/src/command.ts` as the
 canonical pattern.
 
+Two categories of caught error:
+
+1. **Internal walkerOS pipeline failures** (push, command, mapping outer wrap in
+   `mapping.ts`, source factory / init / queueOn flush in `source.ts`,
+   transformer init in `transformer.ts`, destination init in `destination.ts`):
+   log AND `status.failed++`.
+2. **User-supplied callbacks** (mapping `condition` / `fn` / `validate`, `on`
+   subscriptions in `on.ts`): log only. `status.failed` stays a pipeline-health
+   signal; user-code visibility goes via logs.
+
 For invariant violations or operator-initiated aborts that must crash the host
 process, throw `FatalError` (exported from `@walkeros/core`). `FatalError`
-bypasses the boundary catch so a supervisor can terminate cleanly. Standard
-`Error` is absorbed, logged, and counted.
+bypasses every boundary catch in both categories so a supervisor can terminate
+cleanly. Standard `Error` is absorbed, logged, and (for category 1) counted.
+
+The log message verb identifies the site: `'mapping condition failed'`,
+`'source factory failed'`, `'transformer init failed'`, `'on callback failed'`,
+etc. Operators grep for the verb. No `kind` field is required except in `on.ts`,
+where seven sites share one verb and disambiguate via a typed `kind` field on
+the structured payload.
 
 ## Testing
 

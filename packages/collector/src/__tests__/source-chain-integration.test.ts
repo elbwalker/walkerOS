@@ -1,5 +1,14 @@
 import { startFlow } from '..';
-import type { Source, Transformer, WalkerOS, Elb } from '@walkeros/core';
+import { Source } from '@walkeros/core';
+import type { Transformer, WalkerOS, Elb } from '@walkeros/core';
+
+type ConditionalRawIngest = { path: string };
+
+interface ConditionalPushFn {
+  (rawData: ConditionalRawIngest): Promise<void>;
+}
+
+type ConditionalSourceTypes = Source.Types<unknown, unknown, ConditionalPushFn>;
 
 describe('Source Transformer Chains (source.next)', () => {
   describe('pre-collector chain execution', () => {
@@ -250,16 +259,18 @@ describe('Source Transformer Chains (source.next)', () => {
       const { collector } = await startFlow({
         sources: {
           testSource: {
-            code: async (context): Promise<Source.Instance> => {
+            code: async (
+              context,
+            ): Promise<Source.Instance<ConditionalSourceTypes>> => {
               const { config } = context;
               return {
                 type: 'test',
-                config: config as Source.Config,
-                push: (async (rawData: any) => {
+                config: config as Source.Config<ConditionalSourceTypes>,
+                push: async (rawData: ConditionalRawIngest) => {
                   await context.withScope(rawData, undefined, async (env) => {
                     await env.push({});
                   });
-                }) as any,
+                },
               };
             },
             next: [
@@ -315,8 +326,13 @@ describe('Source Transformer Chains (source.next)', () => {
         },
       });
 
+      const testSource = Source.getSource<ConditionalSourceTypes>(
+        collector,
+        'testSource',
+      );
+
       // Route to gtag-parser
-      await (collector.sources.testSource.push as any)({
+      await testSource.push({
         path: '/gtag/collect',
       });
       expect(order).toEqual(['gtag-parser', 'dest:gtag event']);
@@ -324,7 +340,7 @@ describe('Source Transformer Chains (source.next)', () => {
       order.length = 0;
 
       // Route to default-parser
-      await (collector.sources.testSource.push as any)({ path: '/other' });
+      await testSource.push({ path: '/other' });
       expect(order).toEqual(['default-parser', 'dest:default event']);
     });
 

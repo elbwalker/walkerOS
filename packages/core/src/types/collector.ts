@@ -12,6 +12,41 @@ import type {
 } from '.';
 import type { Ingest } from './ingest';
 
+/** Identifies which kind of step a stepId belongs to. */
+export type StepKind = 'collector' | 'source' | 'transformer' | 'destination';
+
+/**
+ * Build a stepId for use as a key in `Status.dropped` (and future
+ * status maps). The collector-level stepId is the literal "collector"
+ * (no id). Source/transformer/destination ids take the form
+ * `"<kind>.<id>"`, e.g. `"destination.ga4"`.
+ *
+ * The dot separator mirrors the vocabulary already used in collector
+ * log messages ("collector.queue overflow", "destination.dlq overflow").
+ */
+export function stepId(kind: 'collector'): 'collector';
+export function stepId(
+  kind: 'source' | 'transformer' | 'destination',
+  id: string,
+): string;
+export function stepId(kind: StepKind, id?: string): string {
+  if (kind === 'collector') return 'collector';
+  if (!id) {
+    throw new Error(`stepId(${kind}) requires an id`);
+  }
+  return `${kind}.${id}`;
+}
+
+/**
+ * Drop counters at a single step. Each buffer is optional: a step kind
+ * may have only `queue` (collector), only `dlq`, both (destinations
+ * today), or neither. Counts are monotonic.
+ */
+export interface DroppedCounters {
+  queue?: number;
+  dlq?: number;
+}
+
 /**
  * Core collector configuration interface
  */
@@ -75,12 +110,16 @@ export interface Status {
   failed: number;
   sources: Record<string, SourceStatus>;
   destinations: Record<string, DestinationStatus>;
-  /** Monotonic counts of events dropped due to buffer caps. */
-  dropped: {
-    queue: number;
-    queuePush: number;
-    dlq: number;
-  };
+  /**
+   * Monotonic counts of events dropped due to buffer caps, keyed by
+   * stepId. See `stepId()` for key construction.
+   *
+   * Examples:
+   *  - `dropped["collector"]?.queue`: collector replay buffer drops
+   *  - `dropped["destination.ga4"]?.queue`: ga4's consent-denied buffer drops
+   *  - `dropped["destination.ga4"]?.dlq`: ga4's dead-letter queue drops
+   */
+  dropped: Record<string, DroppedCounters>;
 }
 
 export interface SourceStatus {
@@ -105,11 +144,6 @@ export interface DestinationStatus {
    * to spot batches that never drain.
    */
   inFlightBatch?: number;
-  /** Monotonic counts of events dropped from per-destination buffer caps. */
-  dropped: {
-    queuePush: number;
-    dlq: number;
-  };
 }
 
 export interface Sources {

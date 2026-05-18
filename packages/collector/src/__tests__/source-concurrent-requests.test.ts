@@ -1,9 +1,9 @@
 import { startFlow } from '..';
+import { Source } from '@walkeros/core';
 import type {
   Ingest,
   RespondFn,
   RespondOptions,
-  Source,
   Transformer,
 } from '@walkeros/core';
 
@@ -27,6 +27,7 @@ describe('Source concurrent requests', () => {
 
     type RawRequest = { id: number };
     type ScopeSimulate = (raw: RawRequest) => Promise<void>;
+    type TestSourceTypes = Source.Types<unknown, unknown, ScopeSimulate>;
 
     const { collector } = await startFlow({
       sources: {
@@ -35,7 +36,7 @@ describe('Source concurrent requests', () => {
             ingest: { map: { requestId: 'id' } },
           },
           next: 'interleave',
-          code: async (context): Promise<Source.Instance> => {
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
             const simulate: ScopeSimulate = async (raw) => {
               const respond: RespondFn = (options = {}) => {
                 respondById[raw.id].push(options);
@@ -49,8 +50,8 @@ describe('Source concurrent requests', () => {
             };
             return {
               type: 'test',
-              config: context.config as Source.Config,
-              push: simulate as unknown as Source.Instance['push'],
+              config: context.config as Source.Config<TestSourceTypes>,
+              push: simulate,
             };
           },
         },
@@ -92,14 +93,17 @@ describe('Source concurrent requests', () => {
     // uses a real setTimeout inside the transformer for interleaving.
     jest.useRealTimers();
 
-    const simulate = collector.sources.testSource.push as unknown as (
-      raw: RawRequest,
-    ) => Promise<void>;
+    const testSource = Source.getSource<TestSourceTypes>(
+      collector,
+      'testSource',
+    );
 
     // Fire all 100 concurrently. Promise.all interleaves naturally via the
     // event loop; the transformer's microtask+macrotask split ensures every
     // scope must yield mid-pipeline.
-    await Promise.all(Array.from({ length: N }, (_, id) => simulate({ id })));
+    await Promise.all(
+      Array.from({ length: N }, (_, id) => testSource.push({ id })),
+    );
 
     // Every request observed its own ingest at the transformer hop.
     for (let id = 0; id < N; id++) {

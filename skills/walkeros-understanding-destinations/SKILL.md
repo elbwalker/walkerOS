@@ -100,7 +100,10 @@ Each destination keeps two internal buffers: `queuePush` (consent-denied events)
 and `dlq` (failed pushes). Both are size-bounded with FIFO drop-oldest eviction.
 Defaults: `queueMax: 1000`, `dlqMax: 100`. Set either on a destination's config
 to override per destination. Operators read drop counts from
-`collector.status.destinations[id].dropped.{queuePush,dlq}`.
+`collector.status.dropped[stepId('destination', id)]?.queue` (consent-denied
+evictions) and `?.dlq` (DLQ evictions). Build the key with `stepId()` from
+`@walkeros/core`. Point-in-time sizes stay on
+`collector.status.destinations[id].queuePushSize` / `dlqSize`.
 
 ## Batch scheduling
 
