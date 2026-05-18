@@ -288,9 +288,10 @@ describe('Server Destination BigQuery', () => {
 
       const events = [createEvent(), createEvent(), createEvent()];
       const data: Array<undefined> = events.map(() => undefined);
+      const entries = events.map((event) => ({ event }));
 
       destination.pushBatch(
-        { key: 'k', events, data },
+        { key: 'k', events, data, entries },
         createMockContext({
           config,
           env: testEnv,
@@ -325,11 +326,12 @@ describe('Server Destination BigQuery', () => {
       const logger = createMockLogger();
       const events = [createEvent(), createEvent(), createEvent()];
       const data: Array<undefined> = events.map(() => undefined);
+      const entries = events.map((event) => ({ event }));
 
       // Synchronous call must not throw.
       expect(() =>
         destination.pushBatch!(
-          { key: 'k', events, data },
+          { key: 'k', events, data, entries },
           createMockContext({
             config,
             env: testEnv,

@@ -21,7 +21,15 @@ export interface Rules<T = Rule> {
 }
 
 export interface Rule<Settings = unknown> {
-  batch?: number; // Bundle events for batch processing
+  /**
+   * Batch scheduling for this event mapping. A bare number is the
+   * debounce `wait` window (legacy form). Object form supports `wait`
+   * (debounce ms), `size` (count cap), and `age` (max ms since first
+   * entry). Destination-level `config.batch` provides upper bounds
+   * applied at scheduler creation; mapping-level values override
+   * destination-level for matched events.
+   */
+  batch?: number | Destination.BatchOptions;
   batchFn?: (
     destination: Destination.Instance,
     collector: Collector.Instance,

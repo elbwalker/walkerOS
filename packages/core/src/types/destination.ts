@@ -137,6 +137,30 @@ export interface Config<T extends TypesGeneric = Types> {
    * destination. Overflow drops oldest (FIFO). Default 100.
    */
   dlqMax?: number;
+  /**
+   * Per-destination batch upper bounds. Supplements the mapping-level
+   * `batch` setting on individual rules. A bare number is treated as
+   * the debounce `wait` window (legacy compat).
+   *
+   * - `wait`: debounce window in ms; the timer resets on every push.
+   * - `size`: hard count cap; flush immediately when entries reach this number. Default 1000 when batching is enabled.
+   * - `age`: time since the first entry of the current window. Forces a flush even if pushes keep arriving. Default 30000 (30s).
+   */
+  batch?: number | BatchOptions;
+}
+
+/**
+ * Batch scheduling options. Used at both the mapping-rule layer
+ * (`Mapping.Rule.batch`) and the destination-config layer
+ * (`Destination.Config.batch`). Same shape at both layers.
+ */
+export interface BatchOptions {
+  /** Debounce window in ms. Timer resets on every push. */
+  wait?: number;
+  /** Hard count cap. Flushes immediately at this size. */
+  size?: number;
+  /** Hard age cap in ms since first entry of current window. */
+  age?: number;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -218,9 +242,25 @@ export type PushEvent<Mapping = unknown> = {
 };
 export type PushEvents<Mapping = unknown> = Array<PushEvent<Mapping>>;
 
+export interface BatchEntry<Mapping = unknown> {
+  event: WalkerOS.Event;
+  ingest?: Ingest;
+  respond?: import('../respond').RespondFn;
+  rule?: WalkerOSMapping.Rule<Mapping>;
+  data?: Data;
+}
+
 export interface Batch<Mapping> {
   key: string;
+  /**
+   * Per-event entries carrying per-event ingest, respond, rule, and data.
+   * Destinations needing per-event metadata should read this instead of
+   * (or in addition to) `events` and `data`.
+   */
+  entries: BatchEntry<Mapping>[];
+  /** Derived view: events from `entries`. Kept for back-compat. */
   events: WalkerOS.Events;
+  /** Derived view: data from `entries`. Kept for back-compat. */
   data: Array<Data>;
   mapping?: WalkerOSMapping.Rule<Mapping>;
 }
@@ -229,6 +269,12 @@ export interface BatchRegistry<Mapping> {
   [mappingKey: string]: {
     batched: Batch<Mapping>;
     batchFn: () => void;
+    /**
+     * Force a flush of the current batch immediately. Used by shutdown
+     * drain and by tests for deterministic flushing without timer
+     * advancement. Resolves after the underlying `pushBatch` settles.
+     */
+    flush: () => Promise<void>;
   };
 }
 

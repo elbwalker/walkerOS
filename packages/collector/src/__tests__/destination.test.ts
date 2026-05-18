@@ -663,6 +663,23 @@ describe('Destination', () => {
       expect(eventNames).toContain('product click');
       expect(eventNames).toContain('button press');
 
+      // PROD-004: per-event entries should also be exposed. Each entry
+      // carries its own ingest (no first-event leakage across the batch).
+      const firstCall = mockPushBatch.mock.calls[0][0] as {
+        entries: Array<{
+          event: WalkerOS.Event;
+          ingest?: { _meta: { path: string[] } };
+        }>;
+      };
+      expect(firstCall.entries).toBeDefined();
+      expect(firstCall.entries).toHaveLength(3);
+      // Each entry carries its event in arrival order.
+      expect(firstCall.entries.map((e) => e.event.name)).toEqual([
+        'page view',
+        'product click',
+        'button press',
+      ]);
+
       // Individual push should NOT be called (batch handles it)
       expect(mockPush).not.toHaveBeenCalled();
     });

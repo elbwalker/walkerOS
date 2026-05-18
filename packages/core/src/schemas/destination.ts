@@ -153,6 +153,19 @@ export const ConfigSchema = z
       .describe(
         'Maximum failed-push entries retained in dlq for this destination. FIFO drop on overflow. Default 100.',
       ),
+    batch: z
+      .union([
+        z.number(),
+        z.object({
+          wait: z.number().optional(),
+          size: z.number().optional(),
+          age: z.number().optional(),
+        }),
+      ])
+      .optional()
+      .describe(
+        'Batch scheduling: bare number is the debounce wait window (legacy); object form supports wait (debounce ms), size (count cap, default 1000), age (max ms since first entry, default 30000).',
+      ),
   })
   .meta({
     id: 'DestinationConfig',

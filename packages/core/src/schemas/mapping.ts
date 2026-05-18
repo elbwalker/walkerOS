@@ -271,9 +271,18 @@ export const RuleSchema = z
       'Event-level policy overrides (applied after config-level policy)',
     ),
     batch: z
-      .number()
+      .union([
+        z.number(),
+        z.object({
+          wait: z.number().optional(),
+          size: z.number().optional(),
+          age: z.number().optional(),
+        }),
+      ])
       .optional()
-      .describe('Batch size: bundle N events for batch processing'),
+      .describe(
+        'Batch scheduling: bare number is the debounce wait window (legacy); object form supports wait/size/age.',
+      ),
     // Note: batchFn and batched are runtime functions, not serializable
     include: z
       .array(z.string())

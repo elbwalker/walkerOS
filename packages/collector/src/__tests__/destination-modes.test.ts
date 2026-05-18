@@ -267,6 +267,53 @@ describe('destination modes (disabled/mock)', () => {
       expect(mockPush).not.toHaveBeenCalled();
       expect(mockPushBatch).not.toHaveBeenCalled();
     });
+
+    it('routes throwing batch destination to DLQ without unhandled rejection', async () => {
+      // Catch any unhandled rejection that would crash the process.
+      const unhandled: unknown[] = [];
+      const onUnhandled = (err: unknown): void => {
+        unhandled.push(err);
+      };
+      process.on('unhandledRejection', onUnhandled);
+
+      try {
+        const mockPushBatch = jest.fn(() => {
+          throw new Error('batch destination boom');
+        });
+
+        const { elb, collector } = await startFlow({
+          destinations: {
+            throwingBatch: {
+              code: {
+                type: 'throwingBatch',
+                config: {
+                  mapping: {
+                    '*': { '*': { batch: 1 } }, // 1ms debounce
+                  },
+                },
+                push: jest.fn(),
+                pushBatch: mockPushBatch,
+              },
+            },
+          },
+        });
+
+        await elb('page view');
+        // Advance past the 1ms debounce window and let the await settle.
+        await jest.advanceTimersByTimeAsync(10);
+
+        // The whole batch must end up in DLQ; counter bumped.
+        const dest = collector.destinations['throwingBatch'];
+        expect(dest.dlq?.length).toBe(1);
+        expect(collector.status.destinations['throwingBatch'].failed).toBe(1);
+
+        // No unhandled rejection should have escaped.
+        await Promise.resolve();
+        expect(unhandled).toEqual([]);
+      } finally {
+        process.removeListener('unhandledRejection', onUnhandled);
+      }
+    });
   });
 
   describe('cache', () => {

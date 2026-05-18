@@ -124,11 +124,50 @@ Each code string has access to specific variables:
 - `batch.key` - The batch key (event name)
 - `batch.events` - Array of events in the batch
 - `batch.data` - Array of transformed data
+- `batch.entries` - Per-event entries, each carrying `{ event, ingest?,
+  respond?, rule?, data? }`. Read this when you need the per-event
+  `ingest` or `respond` (for HTTP responses, per-event request IDs, etc.).
+  `batch.events` and `batch.data` are derived views kept for backward
+  compatibility.
 - `context.collector` - The collector instance
 - `context.config` - Destination configuration
 - `context.env` - Environment variables
 - `context.logger` - Scoped logger instance
-- `context.mapping` - The event mapping rule
+- `context.mapping` - The event mapping rule (representative entry's rule)
+
+#### Batch scheduling
+
+A destination can cap how large or how old a batch may grow before it is
+flushed. Configure via `config.batch` (bare number = legacy debounce
+`wait` window):
+
+```ts
+{
+  config: {
+    batch: { wait: 1000, size: 1000, age: 30000 },
+    // ...
+  }
+}
+```
+
+- `wait` (ms) - Debounce window. The timer resets on every push.
+- `size` - Hard count cap. Flushes immediately at this many events.
+  Default `1000` when batching is enabled.
+- `age` (ms) - Hard age cap since the first entry of the current window.
+  Forces a flush even when pushes keep arriving. Default `30000`.
+
+Without `size`/`age` the batch can grow unbounded under sustained load
+(the debounce timer keeps resetting). Defaults are conservative; raise
+them only when you understand your destination's batch-size limits.
+
+#### Failure handling
+
+If `pushBatch` throws (or returns a rejected Promise), the entire batch
+is routed to the destination's `dlq` (dead-letter queue) and
+`status.destinations[id].failed` is incremented by the batch size.
+Per-item retry logic is the destination SDK's responsibility (BigQuery,
+Kafka, HubSpot each have their own backoff semantics). The collector
+never drops batch failures silently.
 
 ### on
 

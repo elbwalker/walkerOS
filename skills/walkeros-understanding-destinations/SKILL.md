@@ -102,6 +102,41 @@ Defaults: `queueMax: 1000`, `dlqMax: 100`. Set either on a destination's config
 to override per destination. Operators read drop counts from
 `collector.status.destinations[id].dropped.{queuePush,dlq}`.
 
+## Batch scheduling
+
+When a mapping rule sets `batch` and the destination implements `pushBatch`,
+events are buffered and delivered in groups. The configuration shape is
+`batch?: number | { wait?, size?, age? }` at both the mapping-rule layer and the
+destination-config layer.
+
+- `wait` (ms): debounce window. The timer resets on every push. Legacy form
+  `batch: 1000` is shorthand for `{ wait: 1000 }`.
+- `size`: hard count cap. Default `1000`. Flushes immediately when reached.
+- `age` (ms): hard age cap since the first entry of the current window. Default
+  `30000`. Prevents debounce starvation under sustained load.
+
+Mapping-level values override destination-level for matched events.
+
+### Per-event metadata
+
+`Batch.entries[]` carries per-event
+`{ event, ingest?, respond?, rule?, data? }`. Destinations that need per-event
+request IDs or HTTP responses (BigQuery, mParticle, HubSpot) should read
+`entries` instead of assuming all events in a batch share one `ingest`.
+`batch.events` and `batch.data` are derived views kept for backward
+compatibility.
+
+### Failure handling
+
+If `pushBatch` throws (or returns a rejected Promise), the entire batch is
+routed to the destination's `dlq` and `status.destinations[id].failed` is
+incremented by the batch size. Per-item retry is the destination SDK's
+responsibility (BigQuery, Kafka, HubSpot each have their own backoff semantics).
+Counters (`count`, `out`) are bumped only after a successful flush.
+
+Operators also see `status.destinations[id].inFlightBatch`: the number of events
+buffered but not yet delivered.
+
 ## Require vs Consent
 
 Two separate mechanisms control when destinations receive events:

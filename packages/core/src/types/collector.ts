@@ -98,6 +98,13 @@ export interface DestinationStatus {
   queuePushSize: number;
   /** Current size of the destination's DLQ (point-in-time). */
   dlqSize: number;
+  /**
+   * Number of events buffered in batch scheduler windows but not yet
+   * delivered to `pushBatch`. Incremented on enqueue, decremented on
+   * flush (whether the flush succeeds or fails). Operators read this
+   * to spot batches that never drain.
+   */
+  inFlightBatch?: number;
   /** Monotonic counts of events dropped from per-destination buffer caps. */
   dropped: {
     queuePush: number;
