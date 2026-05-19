@@ -238,6 +238,47 @@ describe('flow_validate tool', () => {
     expect(JSON.parse(result.content[0].text).valid).toBe(true);
   });
 
+  describe('step-entry error codes forward verbatim', () => {
+    const stepEntryCodes = [
+      'MISSING_PACKAGE',
+      'OBSOLETE_CODE_STRING',
+      'INVALID_IMPORT',
+      'INVALID_CODE_SHAPE',
+    ];
+
+    it.each(stepEntryCodes)(
+      'forwards %s code from CLI validator to MCP response',
+      async (code) => {
+        const mockResult: ValidateResult = {
+          valid: false,
+          type: 'flow',
+          errors: [
+            {
+              path: 'flows.default.transformers.bad',
+              message: `Invalid transformer entry (${code}).`,
+              code,
+            },
+          ],
+          warnings: [],
+          details: {},
+        };
+        mockValidate.mockResolvedValue(mockResult);
+
+        const tool = server.getTool('flow_validate');
+        const result = await tool.handler({
+          type: 'flow',
+          input: '/path/to/flow.json',
+          flow: undefined,
+        });
+
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.valid).toBe(false);
+        expect(parsed.errors).toHaveLength(1);
+        expect(parsed.errors[0].code).toBe(code);
+      },
+    );
+  });
+
   describe('deprecated package detection: @walkeros/store-memory', () => {
     it('rejects flow.json declaring @walkeros/store-memory in a store', async () => {
       const flow = {

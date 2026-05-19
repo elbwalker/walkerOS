@@ -1,11 +1,7 @@
 // walkerOS/packages/cli/src/commands/validate/validators/flow.ts
 
 import type { Flow } from '@walkeros/core';
-import {
-  getFlowSettings,
-  isObject,
-  validateTransformerEntry,
-} from '@walkeros/core';
+import { getFlowSettings, isObject, validateStepEntry } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import type {
   ValidateResult,
@@ -97,7 +93,7 @@ export function validateFlow(
         transformersValue,
       )) {
         if (!isObject(transformerValue)) continue;
-        const result = validateTransformerEntry(transformerValue);
+        const result = validateStepEntry(transformerValue, 'Transformer');
         if (!result.ok) {
           errors.push({
             path: `flows.${flowName}.transformers.${name}`,

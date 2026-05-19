@@ -5,7 +5,7 @@
       "sources": {
         "http": {
           "package": "@walkeros/server-source-express",
-          "code": "sourceExpress",
+          "import": "sourceExpress",
           "config": {
             "settings": {
               "path": "/collect",
@@ -19,7 +19,7 @@
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
-          "code": "destinationDemo",
+          "import": "destinationDemo",
           "config": {
             "settings": {
               "name": "Server Collection Demo",

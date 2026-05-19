@@ -400,3 +400,36 @@ For `walker destination`, pass the config through the Init object's
 `config` field instead of a third argument. For `walker run`, the
 `runState` partial is now optional (`elb('walker run')` with no second
 argument is valid).
+
+## Step shape: `import` replaces `code: "<name>"`
+
+Every step (source, transformer, destination, store) now accepts a new
+`import?: string` field. With `package`, `import` selects a named export
+from that package. Using `package` alone still loads the default export.
+Inline code stays object-only: `code: { push, type?, init? }`.
+
+The legacy string form `code: "<exportName>"` is no longer accepted.
+Rename it to `import: "<exportName>"`:
+
+```diff
+ "destinations": {
+   "bigquery": {
+     "package": "@walkeros/server-destination-gcp",
+-    "code": "destinationBigQuery",
++    "import": "destinationBigQuery",
+     "config": { "settings": { ... } }
+   }
+ }
+```
+
+Empty step entries (no `package`, `import`, `code`, or chain fields) are
+now valid no-ops in any of the four step kinds.
+
+Validation raises one of these error codes when a step shape is invalid:
+
+- `MISSING_PACKAGE`: `import` set without `package`.
+- `OBSOLETE_CODE_STRING`: legacy `code: "<name>"` form. Rename hint points
+  to `import`.
+- `INVALID_IMPORT`: `import` is not a non-empty string.
+- `INVALID_CODE_SHAPE`: `code` is not an object with a `push` function.
+- `UNKNOWN_KEY` and `CONFLICT` are retained from earlier validators.

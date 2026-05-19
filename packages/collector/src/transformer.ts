@@ -49,7 +49,7 @@ import {
   checkCache,
   storeCache,
   buildCacheContext,
-  validateTransformerEntry,
+  validateStepEntry,
   processEventMapping,
 } from '@walkeros/core';
 import { getCacheStore } from './cache';
@@ -202,8 +202,9 @@ export async function initTransformers(
     // Validate the entry via the shared predicate. A code-less entry must
     // declare at least one operative field (package, before, next, cache,
     // mapping). Unknown keys and code+package conflicts are also rejected.
-    const validation = validateTransformerEntry(
-      transformerDef as unknown as Record<string, unknown>,
+    const validation = validateStepEntry(
+      transformerDef as Record<string, unknown>,
+      'Transformer',
     );
     if (!validation.ok) {
       collector.logger.warn(

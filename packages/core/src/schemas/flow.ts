@@ -116,8 +116,10 @@ export const BundleSchema = z
  * Inline code schema for embedding JavaScript functions in JSON configs.
  *
  * @remarks
- * Enables custom sources, transformers, destinations, and stores without
- * npm packages. The `push` function is required; `type` and `init` are optional.
+ * Object-only inline code block. Enables custom sources, transformers,
+ * destinations, and stores without npm packages. The `push` function is
+ * required; `type` and `init` are optional. To select a named export from
+ * a package, use the step's `import` field instead.
  *
  * @example
  * ```json
@@ -152,9 +154,9 @@ export const CodeSchema = z
     id: 'FlowCode',
     title: 'Flow.Code',
     description:
-      'Inline code block for custom sources / transformers / destinations / stores.',
+      'Inline code block (object form) for custom sources / transformers / destinations / stores. Use `import` on the step to select a named export from a package.',
   })
-  .describe('Inline code for custom components');
+  .describe('Inline code for custom components (object form)');
 
 // ========================================
 // Step Example Schemas
@@ -287,11 +289,18 @@ export const SourceSchema = z
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/web-source-browser@2.0.0")',
       ),
-    code: z
-      .union([z.string(), CodeSchema])
+    code: CodeSchema.optional().describe(
+      'Inline code definition (object form). For a named export from a package, use `import` instead.',
+    ),
+    import: z
+      .string()
+      .regex(
+        /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+        'import must be a valid JavaScript identifier',
+      )
       .optional()
       .describe(
-        'Either a named export string (e.g., "sourceExpress") or an inline code object with push function',
+        "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
       ),
     config: z
       .looseObject({
@@ -362,11 +371,18 @@ export const TransformerSchema = z
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/transformer-enricher@1.0.0")',
       ),
-    code: z
-      .union([z.string(), CodeSchema])
+    code: CodeSchema.optional().describe(
+      'Inline code definition (object form). For a named export from a package, use `import` instead.',
+    ),
+    import: z
+      .string()
+      .regex(
+        /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+        'import must be a valid JavaScript identifier',
+      )
       .optional()
       .describe(
-        'Either a named export string (e.g., "transformerEnricher") or an inline code object with push function',
+        "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
       ),
     config: z
       .unknown()
@@ -423,11 +439,18 @@ export const DestinationSchema = z
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/web-destination-gtag@2.0.0")',
       ),
-    code: z
-      .union([z.string(), CodeSchema])
+    code: CodeSchema.optional().describe(
+      'Inline code definition (object form). For a named export from a package, use `import` instead.',
+    ),
+    import: z
+      .string()
+      .regex(
+        /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+        'import must be a valid JavaScript identifier',
+      )
       .optional()
       .describe(
-        'Either a named export string (e.g., "destinationAnalytics") or an inline code object with push function',
+        "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
       ),
     config: z
       .looseObject({
@@ -493,10 +516,19 @@ export const StoreSchema = z
       .min(1, 'Package name cannot be empty')
       .optional()
       .describe('Store package specifier with optional version'),
-    code: z
-      .union([z.string(), CodeSchema])
+    code: CodeSchema.optional().describe(
+      'Inline code definition (object form). For a named export from a package, use `import` instead.',
+    ),
+    import: z
+      .string()
+      .regex(
+        /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+        'import must be a valid JavaScript identifier',
+      )
       .optional()
-      .describe('Named export string or inline code definition'),
+      .describe(
+        "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+      ),
     config: z
       .looseObject({
         setup: z

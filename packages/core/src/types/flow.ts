@@ -321,13 +321,28 @@ export namespace Flow {
     package?: string;
 
     /**
-     * Resolved import variable name (string) or inline code definition (Code).
+     * Inline code definition (object form only).
      *
-     * - String: auto-resolved from packages[package].imports[0] during getFlowSettings(),
-     *   or provided explicitly for advanced use cases.
-     * - Code: object with type, push, and optional init for inline code definition.
+     * Object: `{push, type?, init?}` for inline code definition.
+     * For named-export selection from a package, use the `import` field with `package`.
      */
-    code?: string | Code;
+    code?: Code;
+
+    /**
+     * Named export from `package` to import as this source's implementation.
+     *
+     * Requires `package` to be set. Mutually exclusive with `code`.
+     *
+     * - Top-level identifier only: `/^[A-Za-z_$][A-Za-z0-9_$]*$/`. No dotted paths.
+     * - `package: "X"` alone (no `import`, no `code`) loads X's default export.
+     * - `package: "X"` + `import: "fooFactory"` loads named export `fooFactory` from X.
+     *
+     * @example
+     * ```json
+     * { "package": "@walkeros/web-source-browser", "import": "sourceBrowser" }
+     * ```
+     */
+    import?: string;
 
     /**
      * Source-specific configuration. Structure depends on the source package.
@@ -398,8 +413,24 @@ export namespace Flow {
     /** Package specifier with optional version. Optional when `code` is provided. */
     package?: string;
 
-    /** Resolved import variable name (string) or inline code definition (Code). */
-    code?: string | Code;
+    /**
+     * Inline code definition (object form only).
+     *
+     * Object: `{push, type?, init?}` for inline code definition.
+     * For named-export selection from a package, use the `import` field with `package`.
+     */
+    code?: Code;
+
+    /**
+     * Named export from `package` to import as this destination's implementation.
+     * See `Flow.Source.import` for full rules.
+     *
+     * @example
+     * ```json
+     * { "package": "@walkeros/web-destination-gtag", "import": "destinationGtag" }
+     * ```
+     */
+    import?: string;
 
     /**
      * Destination-specific configuration. Typically includes:
@@ -455,8 +486,24 @@ export namespace Flow {
     /** Package specifier with optional version. Optional when `code` is provided. */
     package?: string;
 
-    /** Resolved import variable name (string) or inline code definition (Code). */
-    code?: string | Code;
+    /**
+     * Inline code definition (object form only).
+     *
+     * Object: `{push, type?, init?}` for inline code definition.
+     * For named-export selection from a package, use the `import` field with `package`.
+     */
+    code?: Code;
+
+    /**
+     * Named export from `package` to import as this transformer's implementation.
+     * See `Flow.Source.import` for full rules.
+     *
+     * @example
+     * ```json
+     * { "package": "@walkeros/transformer-ga4", "import": "transformerGa4" }
+     * ```
+     */
+    import?: string;
 
     /** Transformer-specific configuration. Structure depends on the package. */
     config?: unknown;
@@ -510,8 +557,24 @@ export namespace Flow {
     /** Package specifier with optional version. Optional when `code` is provided. */
     package?: string;
 
-    /** Resolved import variable name (string) or inline code definition (Code). */
-    code?: string | Code;
+    /**
+     * Inline code definition (object form only).
+     *
+     * Object: `{push, type?, init?}` for inline code definition.
+     * For named-export selection from a package, use the `import` field with `package`.
+     */
+    code?: Code;
+
+    /**
+     * Named export from `package` to import as this store's implementation.
+     * See `Flow.Source.import` for full rules.
+     *
+     * @example
+     * ```json
+     * { "package": "@walkeros/server-store-fs", "import": "storeFs" }
+     * ```
+     */
+    import?: string;
 
     /** Store-specific configuration. */
     config?: unknown;

@@ -177,6 +177,22 @@ to enforce it. See
 [Website: Validate](../../website/docs/getting-started/flow/validate.mdx) for
 the full shape.
 
+### How a step references its implementation
+
+Every step picks exactly one of three forms to point at its implementation:
+
+- `package: "<npm-package>"` alone loads the package's default export. The
+  common case for sources and destinations.
+- `package: "<npm-package>"` plus `import: "<exportName>"` loads a specific
+  named export from that package. Use when a package ships multiple named
+  exports or has no default export.
+- `code: { push, type?, init? }` is inline implementation, no package wiring.
+  Useful for one-off custom logic in TypeScript flows.
+
+There is no string form of `code`. A bare step with no `package`, `import`, or
+`code` is a valid no-op for all four step kinds (handy as a chain-only or
+mapping-only transformer).
+
 ## Transformer Chains
 
 Transformers run at two points in the pipeline, configured via `next` and

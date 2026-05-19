@@ -1113,7 +1113,7 @@ describe('getFlowSettings', () => {
       expect(config.sources?.http.code).toBeUndefined();
     });
 
-    test('auto-generates code when not provided', () => {
+    test('does not auto-write code when only package is provided', () => {
       const setup: Flow.Json = {
         version: 4,
         flows: {
@@ -1138,10 +1138,15 @@ describe('getFlowSettings', () => {
         },
       };
       const config = getFlowSettings(setup);
-      expect(config.sources?.http.code).toBe('_walkerosServerSourceExpress');
+      // Default-import is handled by the bundler from `package` alone — no
+      // synthetic string is written into `code`.
+      expect(config.sources?.http.code).toBeUndefined();
+      expect(config.sources?.http.package).toBe(
+        '@walkeros/server-source-express',
+      );
     });
 
-    test('auto-generates code for multiple sources and destinations when not provided', () => {
+    test('does not auto-write code across multiple sources and destinations', () => {
       const setup: Flow.Json = {
         version: 4,
         flows: {
@@ -1176,11 +1181,9 @@ describe('getFlowSettings', () => {
         },
       };
       const config = getFlowSettings(setup);
-      expect(config.sources?.http.code).toBe('_walkerosServerSourceExpress');
-      expect(config.destinations?.demo.code).toBe('_walkerosDestinationDemo');
-      expect(config.destinations?.bigquery.code).toBe(
-        '_walkerosServerDestinationGcp',
-      );
+      expect(config.sources?.http.code).toBeUndefined();
+      expect(config.destinations?.demo.code).toBeUndefined();
+      expect(config.destinations?.bigquery.code).toBeUndefined();
     });
   });
 
@@ -1842,11 +1845,11 @@ describe('packageNameToVariable', () => {
 });
 
 // ========================================
-// resolveCodeFromPackage with default exports
+// Default-import behavior — no synthetic code write
 // ========================================
 
-describe('resolveCodeFromPackage - default export fallback', () => {
-  test('auto-generates code when not provided', () => {
+describe('package-only steps — no synthetic code write', () => {
+  test('does not auto-write code when only package is provided', () => {
     const setup: Flow.Json = {
       version: 4,
       flows: {
@@ -1869,10 +1872,12 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       },
     };
     const config = getFlowSettings(setup);
-    expect(config.destinations?.api.code).toBe('_walkerosServerDestinationApi');
+    // Default-import is handled at bundle time from `package` alone.
+    expect(config.destinations?.api.code).toBeUndefined();
   });
 
-  test('uses explicit code when provided', () => {
+  test('preserves explicit inline code when provided', () => {
+    const inlineCode = { push: '$code:(event) => event' };
     const setup: Flow.Json = {
       version: 4,
       flows: {
@@ -1888,7 +1893,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
           destinations: {
             api: {
               package: '@walkeros/server-destination-api',
-              code: 'myCustomCode', // Explicit code should be preserved
+              code: inlineCode, // Explicit inline code should be preserved
               config: {},
             },
           },
@@ -1896,10 +1901,11 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       },
     };
     const config = getFlowSettings(setup);
-    expect(config.destinations?.api.code).toBe('myCustomCode');
+    expect(config.destinations?.api.code).toEqual(inlineCode);
   });
 
-  test('uses explicit code for named exports', () => {
+  test('preserves explicit inline code for custom destinations', () => {
+    const inlineCode = { push: '$code:(event) => ({ ...event, bq: true })' };
     const setup: Flow.Json = {
       version: 4,
       flows: {
@@ -1915,7 +1921,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
           destinations: {
             bq: {
               package: '@walkeros/server-destination-gcp',
-              code: 'destinationBigQuery',
+              code: inlineCode,
               config: {},
             },
           },
@@ -1923,10 +1929,10 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       },
     };
     const config = getFlowSettings(setup);
-    expect(config.destinations?.bq.code).toBe('destinationBigQuery');
+    expect(config.destinations?.bq.code).toEqual(inlineCode);
   });
 
-  test('auto-generates code for multiple destinations with same package', () => {
+  test('does not auto-write code for multiple destinations with same package', () => {
     const setup: Flow.Json = {
       version: 4,
       flows: {
@@ -1953,8 +1959,8 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       },
     };
     const config = getFlowSettings(setup);
-    expect(config.destinations?.api1.code).toBe('_walkerosWebDestinationApi');
-    expect(config.destinations?.api2.code).toBe('_walkerosWebDestinationApi');
+    expect(config.destinations?.api1.code).toBeUndefined();
+    expect(config.destinations?.api2.code).toBeUndefined();
   });
 });
 

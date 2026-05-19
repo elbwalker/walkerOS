@@ -64,7 +64,7 @@ Add to your `flow.json` destinations:
   code={`"destinations": {
   "bigquery": {
     "package": "@walkeros/server-destination-gcp",
-    "code": "destinationBigQuery",
+    "import": "destinationBigQuery",
     "config": {
       "settings": {
         "projectId": "YOUR_PROJECT_ID",
@@ -322,7 +322,7 @@ await startFlow({
   "destinations": {
     "bigquery": {
       "package": "@walkeros/server-destination-gcp",
-      "code": "destinationBigQuery",
+      "import": "destinationBigQuery",
       "config": {
         "settings": {
           "projectId": "YOUR_PROJECT_ID",

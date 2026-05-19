@@ -248,7 +248,7 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
    *
    * Validation: an entry without `code` must declare at least one of
    * `package`, `before`, `next`, `cache`, `mapping`. Enforced by
-   * `validateTransformerEntry` in `@walkeros/core`.
+   * `validateStepEntry` in `@walkeros/core`.
    */
   code?: Init<T>;
   config?: Partial<Config<T>>;
