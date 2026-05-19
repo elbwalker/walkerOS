@@ -22,9 +22,9 @@ describe('sessionStart', () => {
   const mockSessionWindow = sessionWindow as jest.Mock;
 
   const createMockCollector = () => ({
-    command: jest.fn().mockImplementation((cmd, type, options) => {
-      if (cmd === 'on' && type === 'consent') {
-        consent = options;
+    command: jest.fn().mockImplementation((cmd, init) => {
+      if (cmd === 'on' && init?.type === 'consent') {
+        consent = init.rules;
       }
     }),
     push: jest.fn(),
@@ -62,8 +62,9 @@ describe('sessionStart', () => {
     sessionStart(config);
 
     expect(collector.command).toHaveBeenCalledTimes(1);
-    expect(collector.command).toHaveBeenCalledWith('on', 'consent', {
-      foo: expect.any(Function),
+    expect(collector.command).toHaveBeenCalledWith('on', {
+      type: 'consent',
+      rules: { foo: expect.any(Function) },
     });
 
     // Simulate granted consent call from collector
@@ -206,9 +207,12 @@ describe('sessionStart', () => {
   test('multiple consent keys', () => {
     const collector = createMockCollector() as unknown as Collector.Instance;
     sessionStart({ consent: ['foo', 'bar'], collector });
-    expect(collector.command).toHaveBeenCalledWith('on', 'consent', {
-      foo: expect.any(Function),
-      bar: expect.any(Function),
+    expect(collector.command).toHaveBeenCalledWith('on', {
+      type: 'consent',
+      rules: {
+        foo: expect.any(Function),
+        bar: expect.any(Function),
+      },
     });
   });
 

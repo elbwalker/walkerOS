@@ -159,7 +159,7 @@ describe('command boundary', () => {
     const command = createCommand(collector, throwingHandler);
 
     const data = { foo: 'bar' };
-    const result = await command('walker hook', data);
+    const result = await command('walker sentinel', data);
 
     expect(result.ok).toBe(false);
     expect(collector.status.failed).toBe(1);
@@ -170,7 +170,7 @@ describe('command boundary', () => {
     expect(errorMock).toHaveBeenCalledWith(
       'command failed',
       expect.objectContaining({
-        command: 'walker hook',
+        command: 'walker sentinel',
         data,
         error: expect.any(Error),
       }),
@@ -210,7 +210,7 @@ describe('command boundary', () => {
 
     const command = createCommand(collector, fatalHandler);
 
-    await expect(command('walker hook', undefined)).rejects.toBe(fatal);
+    await expect(command('walker sentinel', undefined)).rejects.toBe(fatal);
 
     expect(collector.status.failed).toBe(0);
 

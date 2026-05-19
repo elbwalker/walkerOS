@@ -78,11 +78,11 @@ Add event listeners to the collector. They get called when specific events occur
 like `run` or `consent` changes.
 
 <CodeSnippet
-  code={`elb('walker on', type, subscription);`}
+  code={`elb('walker on', { type, rules });`}
   language="javascript"
 />
 
-`subscription` depends on `type` and can also be an array for multiple listeners
+`rules` depends on `type` and can also be an array for multiple listeners
 at once. Every callback receives `(data, context)` where `context` exposes
 `collector` and `logger`.
 
@@ -110,8 +110,11 @@ With each `run`, the on-event will be called. Use `context.collector` to access
 the running instance.
 
 <CodeSnippet
-  code={`elb('walker on', 'run', function (_, context) {
+  code={`elb('walker on', {
+type: 'run',
+rules: function (_, context) {
 console.log('run with', { instance: context.collector });
+},
 });`}
   language="javascript"
 />
@@ -139,8 +142,10 @@ console.log('consent with', { consent, instance: context.collector });
 if (consent.marketing) context.collector.push('walker user', readFromStorage());
 }
 
-//   command      type        rule       function
-elb('walker on', 'consent', { marketing: onConsent });`}
+elb('walker on', {
+type: 'consent',
+rules: { marketing: onConsent },
+});`}
   language="javascript"
 />
 
@@ -221,7 +226,7 @@ default behavior.
 Add hooks to the collector to customize or enhance default processing.
 
 <CodeSnippet
-  code={`elb('walker hook', '<moment>', hookFn);`}
+  code={`elb('walker hook', { name: '<moment>', fn: hookFn });`}
   language="javascript"
 />
 
@@ -331,8 +336,11 @@ return params.fn(...args);
 });
 
 // Add hooks via command
-elb('walker hook', 'postPush', function (params, ...args) {
+elb('walker hook', {
+name: 'postPush',
+fn: function (params, ...args) {
 console.log('walker exec time', Date.now() - window.elbTimer);
+},
 });
 
 elb('entity action');

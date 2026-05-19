@@ -309,3 +309,94 @@ you're done.
 If validate reports an error, the message will name the exact path that
 still looks like v3, e.g., a stray top-level `bundle` or a `web` block
 left behind.
+
+## Walker commands take an Init object
+
+Three runtime `elb('walker ...')` commands changed shape in v4. The
+positional and shorthand forms are removed, every one of them now takes a
+single Init object. The `walker hook` command also has a real runtime
+handler now (in v3 it accepted arguments but never wired anything up).
+
+### `walker destination`
+
+Was: `elb('walker destination', destination, config?)`, or the
+`{ push }` shorthand, or `{ code }` plus a separate config argument.
+
+Now: a single Init object with `code` (the destination) and an optional
+`config`.
+
+```ts
+// v3
+elb('walker destination', destinationGtag, {
+  settings: { ga4: { measurementId: 'G-XXX' } },
+});
+
+// v4
+elb('walker destination', {
+  code: destinationGtag,
+  config: {
+    settings: {
+      ga4: { measurementId: 'G-XXX' },
+    },
+  },
+});
+```
+
+### `walker hook`
+
+Was: `elb('walker hook', name, fn)` (no-op at runtime, the dispatch
+silently dropped the call).
+
+Now: `elb('walker hook', { name, fn })`, and the hook actually runs.
+
+```ts
+// v3 (silently ignored)
+elb('walker hook', 'prePush', (params, ...args) => params.fn(...args));
+
+// v4
+elb('walker hook', {
+  name: 'prePush',
+  fn: (params, ...args) => params.fn(...args),
+});
+```
+
+### `walker on`
+
+Was: `elb('walker on', type, rules)`.
+
+Now: `elb('walker on', { type, rules })`.
+
+```ts
+// v3
+elb('walker on', 'consent', {
+  marketing: (consent, context) => {
+    // ...
+  },
+});
+
+// v4
+elb('walker on', {
+  type: 'consent',
+  rules: {
+    marketing: (consent, context) => {
+      // ...
+    },
+  },
+});
+```
+
+## Programmatic APIs drop the `options` argument
+
+If your code calls into the collector directly (rather than through
+`elb`), three signatures lost their third `options` parameter:
+
+- `collector.command(name, data)` (was `command(name, data, options)`)
+- `addDestination(collector, destination)` (was
+  `addDestination(collector, destination, config)`)
+- `commonHandleCommand(collector, name, data)` (was
+  `commonHandleCommand(collector, name, data, options)`)
+
+For `walker destination`, pass the config through the Init object's
+`config` field instead of a third argument. For `walker run`, the
+`runState` partial is now optional (`elb('walker run')` with no second
+argument is valid).

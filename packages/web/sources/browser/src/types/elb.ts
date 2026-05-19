@@ -6,30 +6,16 @@ export type Scope = Element | Document;
 export type Trigger = string;
 
 // Browser-specific push interface (can be more flexible)
-export interface BrowserPush<R = Promise<Elb.PushResult>> {
-  // Core collector interface
+export interface BrowserPush<
+  R = Promise<Elb.PushResult>,
+> extends Elb.WalkerCommands<R, Collector.Config> {
   (event: WalkerOS.DeepPartialEvent): R;
 
-  // Walker commands
-  (event: 'walker config', config: Partial<Collector.Config>): R;
-  (event: 'walker consent', consent: WalkerOS.Consent): R;
-  <K extends keyof import('@walkeros/core').Hooks.Functions>(
-    event: 'walker hook',
-    name: K,
-    hookFn: import('@walkeros/core').Hooks.Functions[K],
-  ): R;
-  (event: 'walker user', user: WalkerOS.User): R;
-
-  // Browser-specific commands
+  // Browser-specific commands (not in Elb.WalkerCommands)
   (event: 'walker init', scope: Scope | Scope[]): R;
-  (
-    event: 'walker destination',
-    destination: DestinationWeb.Destination | DestinationWeb.Init,
-    config?: DestinationWeb.Config,
-  ): R;
   (event: 'walker run', state?: Partial<Collector.Instance>): R;
 
-  // Flexible arguments
+  // Browser-flexible event form
   (
     event?: unknown,
     data?: BrowserPushData,
@@ -63,36 +49,10 @@ export type BrowserPushData =
   | IArguments; // Support for arguments object
 
 // Browser-specific options
-export type BrowserPushOptions =
-  | Trigger
-  | DestinationWeb.Config
-  | string
-  | object;
+export type BrowserPushOptions = Trigger | string | object;
 
 // Browser-specific context
 export type BrowserPushContext = WalkerOS.OrderedProperties | Element;
-
-// Browser-specific commands
-export type BrowserCommands<R = Promise<Elb.PushResult>> =
-  | CommandInit<R>
-  | CommandDestination<R>
-  | CommandRun<R>;
-
-export type CommandInit<R = Promise<Elb.PushResult>> = (
-  event: 'walker init',
-  scope: Scope | Scope[],
-) => R;
-
-export type CommandDestination<R = Promise<Elb.PushResult>> = (
-  event: 'walker destination',
-  destination: DestinationWeb.Destination | DestinationWeb.Init,
-  config?: DestinationWeb.Config,
-) => R;
-
-export type CommandRun<R = Promise<Elb.PushResult>> = (
-  event: 'walker run',
-  state?: Partial<Collector.Instance>,
-) => R;
 
 // Re-export core types
 export type PushResult = Elb.PushResult;

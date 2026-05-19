@@ -189,18 +189,10 @@ describe('Browser Source Integration Tests', () => {
 
       // Walker commands should go to collector.command (2 commands)
       expect(mockCommand).toHaveBeenCalledTimes(2);
-      expect(mockCommand).toHaveBeenNthCalledWith(
-        1,
-        'run',
-        { consent: { marketing: true } },
-        undefined,
-      );
-      expect(mockCommand).toHaveBeenNthCalledWith(
-        2,
-        'user',
-        { id: 'user123' },
-        undefined,
-      );
+      expect(mockCommand).toHaveBeenNthCalledWith(1, 'run', {
+        consent: { marketing: true },
+      });
+      expect(mockCommand).toHaveBeenNthCalledWith(2, 'user', { id: 'user123' });
 
       // Events should go to collector.push (1 event)
       expect(mockPush).toHaveBeenCalledTimes(1);

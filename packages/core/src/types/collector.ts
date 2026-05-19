@@ -210,18 +210,18 @@ export interface CommandFn {
   (command: 'consent', consent: WalkerOS.Consent): Promise<ElbTypes.PushResult>;
   <T extends Destination.Types>(
     command: 'destination',
-    destination: Destination.Init<T> | Destination.Instance<T>,
-    config?: Destination.Config<T>,
+    init: Destination.Init<T>,
   ): Promise<ElbTypes.PushResult>;
   <K extends keyof Hooks.Functions>(
     command: 'hook',
-    name: K,
-    hookFn: Hooks.Functions[K],
+    init: { name: K; fn: Hooks.Functions[K] },
   ): Promise<ElbTypes.PushResult>;
   (
     command: 'on',
-    type: On.Types,
-    rules: WalkerOS.SingleOrArray<On.Subscription>,
+    init: {
+      type: On.Types;
+      rules: WalkerOS.SingleOrArray<On.Subscription>;
+    },
   ): Promise<ElbTypes.PushResult>;
   (command: 'user', user: WalkerOS.User): Promise<ElbTypes.PushResult>;
   (
@@ -233,11 +233,7 @@ export interface CommandFn {
       custom?: WalkerOS.Properties;
     },
   ): Promise<ElbTypes.PushResult>;
-  (
-    command: string,
-    data?: unknown,
-    options?: unknown,
-  ): Promise<ElbTypes.PushResult>;
+  (command: string, data?: unknown): Promise<ElbTypes.PushResult>;
 }
 
 // Main Collector interface

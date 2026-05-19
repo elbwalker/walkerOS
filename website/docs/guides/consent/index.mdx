@@ -80,9 +80,12 @@ To start walker.js only after a consent choice, use the `on consent` command:
 
 <CodeSnippet
   code={`// Wait for functional consent to run
-elb('walker on', 'consent', {
+elb('walker on', {
+type: 'consent',
+rules: {
 functional: () => {
 elb('walker run');
+},
 },
 });
 
@@ -95,7 +98,9 @@ Another example of how to use the `on consent` command might be to update
 [Googles consent mode v2](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic):
 
 <CodeSnippet
-  code={`elb('walker on', 'consent', (consent, context) => {
+  code={`elb('walker on', {
+type: 'consent',
+rules: (consent, context) => {
 // Check if marketing consent is granted
 if (consent.marketing) {
 gtag('consent', 'update', {
@@ -105,6 +110,7 @@ ad_storage: 'granted',
 analytics_storage: 'granted',
 });
 }
+},
 });`}
   language="javascript"
 />

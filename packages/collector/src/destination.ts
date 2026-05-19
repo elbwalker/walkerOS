@@ -158,13 +158,11 @@ function resolveDestinationChain(
  *
  * @param collector - The walkerOS collector instance.
  * @param data - The destination's init data.
- * @param options - The destination's config.
  * @returns The result of the push operation.
  */
 export async function addDestination(
   collector: Collector.Instance,
   data: Destination.Init,
-  options?: Destination.Config,
 ): Promise<Elb.PushResult> {
   const { code, config: dataConfig = {}, env = {}, before, next, cache } = data;
 
@@ -181,7 +179,7 @@ export async function addDestination(
     });
   }
 
-  const baseConfig = options || dataConfig || { init: false };
+  const baseConfig = dataConfig || { init: false };
   // Merge before, next, and cache into config if provided at root level
   let config = before ? { ...baseConfig, before } : { ...baseConfig };
   if (next) config = { ...config, next };
