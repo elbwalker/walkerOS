@@ -1,3 +1,32 @@
+// The real @d8a-tech/wt package is ESM and can't be parsed by Jest's
+// default CommonJS transformer. Tests always wire their own mock via
+// `env.installD8a`, so the real module is never invoked — we stub the
+// import with a no-op installer to let Jest load the destination file.
+jest.mock(
+  '@d8a-tech/wt',
+  () => ({
+    __esModule: true,
+    installD8a: () => ({
+      dataLayerName: 'd8aLayer',
+      globalName: 'd8a',
+      consumer: {
+        start: () => {},
+        stop: () => {},
+        getState: () => ({}),
+        setOnEvent: () => {},
+        setOnConfig: () => {},
+      },
+      dispatcher: {
+        enqueueEvent: () => {},
+        flush: async () => ({ sent: 0 }),
+        flushNow: async () => ({ sent: 0 }),
+        attachLifecycleFlush: () => {},
+      },
+    }),
+  }),
+  { virtual: true },
+);
+
 import type { Destination, WalkerOS } from '@walkeros/core';
 import type { D8aFn, InstallD8aOptions, InstallD8aResult } from '@d8a-tech/wt';
 import { startFlow } from '@walkeros/collector';
@@ -112,7 +141,10 @@ describe('d8a web destination -- step examples', () => {
       ? { [event.entity]: { [event.action]: example.mapping } }
       : undefined;
 
-    await elb('walker destination', { ...dest, env }, { ...initIn, mapping });
+    elb('walker destination', {
+      code: { ...dest, env },
+      config: { ...initIn, mapping },
+    });
 
     if (example.command) {
       const cmd = `walker ${example.command}` as 'walker consent';

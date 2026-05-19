@@ -1,7 +1,8 @@
 import type { WalkerOS } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
-import type { D8aConfigParams, D8aFn, installD8a } from '@d8a-tech/wt';
+import type { D8aConfigParams, D8aFn } from '@d8a-tech/wt';
+import { installD8a } from '@d8a-tech/wt';
 import type { ConsentMapping, Destination, Settings } from './types';
 import { getData, normalizeEventName } from './mapping';
 
@@ -58,13 +59,7 @@ export const destinationD8a: Destination = {
     const { window } = getEnv(env);
     const globalName = settings.globalName || DEFAULT_GLOBAL_NAME;
     const dataLayerName = settings.dataLayerName || DEFAULT_DATA_LAYER_NAME;
-    const installD8aFn: typeof installD8a =
-      env?.installD8a ||
-      (
-        (await new Function('specifier', 'return import(specifier)')(
-          '@d8a-tech/wt',
-        )) as { installD8a: typeof installD8a }
-      ).installD8a;
+    const installD8aFn = env?.installD8a || installD8a;
 
     installD8aFn({
       windowRef: window,

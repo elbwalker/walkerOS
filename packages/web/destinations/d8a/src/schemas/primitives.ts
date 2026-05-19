@@ -16,7 +16,7 @@ export const SettingsSchema = z.object({
   como: ConsentModeSchema.describe(
     'Consent mode configuration: false (disabled), true (use defaults), or custom mapping',
   ).optional(),
-  data: z.any().describe('Custom data mapping configuration').optional(),
+  data: z.unknown().describe('Custom data mapping configuration').optional(),
   dataLayerName: z
     .string()
     .describe('Name of the d8a command queue (default: d8aLayer)')
