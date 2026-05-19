@@ -35,14 +35,13 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    await elb(
-      'walker destination',
-      { ...dest, env: testEnv },
-      {
+    await elb('walker destination', {
+      code: { ...dest, env: testEnv },
+      config: {
         settings: { accessToken: 's3cr3t', pixelCode: 'PIXEL_CODE' },
         mapping: mappingConfig,
       },
-    );
+    });
 
     await elb(event);
 

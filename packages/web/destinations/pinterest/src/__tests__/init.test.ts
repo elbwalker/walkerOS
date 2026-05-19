@@ -30,13 +30,12 @@ describe('pinterest destination — init', () => {
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow();
 
-    await elb(
-      'walker destination',
-      { ...dest, env },
-      {
+    await elb('walker destination', {
+      code: { ...dest, env },
+      config: {
         settings: { apiKey: '2612345678901' },
       },
-    );
+    });
     // Init fires lazily on first push, so trigger a no-op event.
     await elb('walker run');
 
@@ -50,16 +49,15 @@ describe('pinterest destination — init', () => {
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow();
 
-    await elb(
-      'walker destination',
-      { ...dest, env },
-      {
+    await elb('walker destination', {
+      code: { ...dest, env },
+      config: {
         settings: {
           apiKey: '2612345678901',
           pageview: false,
         },
       },
-    );
+    });
     await elb('walker run');
 
     expect(calls).toEqual([['load', '2612345678901']]);

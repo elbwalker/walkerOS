@@ -60,11 +60,10 @@ describe('linkedin destination — step examples', () => {
 
     if (example.command === 'consent') {
       // Not currently used by LinkedIn fixtures.
-      await elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        { settings: baseSettings, consent: { marketing: true } },
-      );
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: { settings: baseSettings, consent: { marketing: true } },
+      });
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
       const event = example.in as WalkerOS.Event;
@@ -73,14 +72,13 @@ describe('linkedin destination — step examples', () => {
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
 
-      await elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           settings: baseSettings,
           mapping: mappingConfig,
         },
-      );
+      });
       await elb(event);
     }
 

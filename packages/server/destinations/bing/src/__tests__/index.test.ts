@@ -175,10 +175,9 @@ describe('Server Destination Bing', () => {
       },
     });
 
-    elb(
-      'walker destination',
-      { ...dest, env: testEnv },
-      {
+    elb('walker destination', {
+      code: { ...dest, env: testEnv },
+      config: {
         settings: { accessToken, tagId },
         mapping: {
           page: {
@@ -188,7 +187,7 @@ describe('Server Destination Bing', () => {
           },
         },
       },
-    );
+    });
 
     await elb(event);
 
@@ -211,10 +210,9 @@ describe('Server Destination Bing', () => {
       },
     });
 
-    elb(
-      'walker destination',
-      { ...dest, env: testEnv },
-      {
+    elb('walker destination', {
+      code: { ...dest, env: testEnv },
+      config: {
         settings: { accessToken, tagId },
         mapping: {
           order: {
@@ -235,7 +233,7 @@ describe('Server Destination Bing', () => {
           },
         },
       },
-    );
+    });
 
     await elb(event);
 
@@ -422,13 +420,12 @@ describe('Server Destination Bing', () => {
       },
     });
 
-    elb(
-      'walker destination',
-      { ...dest, env: testEnv },
-      {
+    elb('walker destination', {
+      code: { ...dest, env: testEnv },
+      config: {
         settings: { accessToken, tagId },
       },
-    );
+    });
 
     await elb(event);
 

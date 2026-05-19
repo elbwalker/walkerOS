@@ -59,7 +59,7 @@ describe('destination plausible', () => {
       ...destination,
       env: initEnv,
     };
-    elb('walker destination', destinationWithEnv, {});
+    elb('walker destination', { code: destinationWithEnv, config: {} });
 
     await elb(event);
     // After init() is called, plausible should be defined
@@ -86,7 +86,10 @@ describe('destination plausible', () => {
       ...destination,
       env: simpleEnv,
     };
-    elb('walker destination', destinationWithEnv, { loadScript: true });
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: { loadScript: true },
+    });
 
     await elb(event);
 
@@ -123,9 +126,12 @@ describe('destination plausible', () => {
       ...destination,
       env: simpleEnv,
     };
-    elb('walker destination', destinationWithEnv, {
-      loadScript: true,
-      settings: { domain },
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: {
+        loadScript: true,
+        settings: { domain },
+      },
     });
 
     await elb(event);

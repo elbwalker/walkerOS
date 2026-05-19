@@ -46,14 +46,13 @@ describe('pinterest destination — step examples', () => {
     const { elb } = await startFlow();
 
     if (example.command === 'consent') {
-      await elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           consent: { marketing: true },
           settings: { apiKey: '2612345678901' },
         },
-      );
+      });
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
       const event = example.in as WalkerOS.Event;
@@ -62,14 +61,13 @@ describe('pinterest destination — step examples', () => {
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
 
-      await elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           settings: { apiKey: '2612345678901' },
           mapping: mappingConfig,
         },
-      );
+      });
       await elb(event);
     }
 

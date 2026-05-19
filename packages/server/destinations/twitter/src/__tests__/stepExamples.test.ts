@@ -37,10 +37,9 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    await elb(
-      'walker destination',
-      { ...dest, env: testEnv },
-      {
+    await elb('walker destination', {
+      code: { ...dest, env: testEnv },
+      config: {
         settings: {
           pixelId: 'o8z6j',
           eventId: 'tw-o8z6j-o8z21',
@@ -51,7 +50,7 @@ describe('Step Examples', () => {
         },
         mapping: mappingConfig,
       },
-    );
+    });
 
     await elb(event);
 

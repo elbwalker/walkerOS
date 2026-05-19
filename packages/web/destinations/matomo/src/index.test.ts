@@ -41,9 +41,12 @@ describe('Destination Matomo', () => {
 
   test('init with loadScript loads matomo.js and configures tracker', async () => {
     const destinationWithEnv = { ...destination, env: testEnv };
-    await elb('walker destination', destinationWithEnv, {
-      settings,
-      loadScript: true,
+    await elb('walker destination', {
+      code: destinationWithEnv,
+      config: {
+        settings,
+        loadScript: true,
+      },
     });
     // Trigger init via a push
     await elb(getEvent('page view'));
@@ -56,7 +59,10 @@ describe('Destination Matomo', () => {
   test('init with disableCookies calls disableCookies', async () => {
     settings.disableCookies = true;
     const destinationWithEnv = { ...destination, env: testEnv };
-    await elb('walker destination', destinationWithEnv, { settings });
+    await elb('walker destination', {
+      code: destinationWithEnv,
+      config: { settings },
+    });
     await elb(getEvent('page view'));
 
     expect(mockFn).toHaveBeenCalledWith(['disableCookies']);
@@ -65,7 +71,10 @@ describe('Destination Matomo', () => {
   test('init with enableHeartBeatTimer configures timer', async () => {
     settings.enableHeartBeatTimer = 30;
     const destinationWithEnv = { ...destination, env: testEnv };
-    await elb('walker destination', destinationWithEnv, { settings });
+    await elb('walker destination', {
+      code: destinationWithEnv,
+      config: { settings },
+    });
     await elb(getEvent('page view'));
 
     expect(mockFn).toHaveBeenCalledWith(['enableHeartBeatTimer', 30]);
@@ -74,7 +83,10 @@ describe('Destination Matomo', () => {
   test('pageview', async () => {
     const pageViewEvent = getEvent('page view');
     const destinationWithEnv = { ...destination, env: testEnv };
-    await elb('walker destination', destinationWithEnv, { settings });
+    await elb('walker destination', {
+      code: destinationWithEnv,
+      config: { settings },
+    });
 
     await elb(pageViewEvent);
     expect(mockFn).toHaveBeenCalledWith([

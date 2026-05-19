@@ -62,14 +62,13 @@ describe('optimizely destination -- step examples', () => {
     };
 
     if (example.command === 'consent') {
-      await elb(
-        'walker destination',
-        { ...dest, env },
-        {
+      await elb('walker destination', {
+        code: { ...dest, env },
+        config: {
           consent: { analytics: true },
           settings: baseSettings,
         },
-      );
+      });
       // Prime the destination so init runs and state.client exists before
       // consent revocation fires on('consent').
       await elb({
@@ -88,14 +87,13 @@ describe('optimizely destination -- step examples', () => {
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
 
-      await elb(
-        'walker destination',
-        { ...dest, env },
-        {
+      await elb('walker destination', {
+        code: { ...dest, env },
+        config: {
           settings: baseSettings,
           mapping: mappingConfig,
         },
-      );
+      });
       await elb(event);
     }
 

@@ -68,13 +68,12 @@ describe('fullstory destination -- step examples', () => {
     };
 
     if (example.command === 'consent') {
-      elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           settings: baseSettings,
         },
-      );
+      });
       // Trigger init by pushing a priming event before consent so the
       // destination's env is wired and on('consent') sees the spy env.
       await elb({
@@ -89,14 +88,13 @@ describe('fullstory destination -- step examples', () => {
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
 
-      elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           settings: baseSettings,
           mapping: mappingConfig,
         },
-      );
+      });
       await elb(event);
     }
 

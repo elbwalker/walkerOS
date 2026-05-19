@@ -141,7 +141,10 @@ describe('gtag web destination -- step examples', () => {
     // Command examples: route `in` through elb('walker <command>', in).
     if (example.command) {
       // Bootstrap with ga4 init so the tool is registered.
-      await elb('walker destination', { ...dest, env }, ga4InitIn);
+      await elb('walker destination', {
+        code: { ...dest, env },
+        config: ga4InitIn,
+      });
 
       const cmd = `walker ${example.command}` as 'walker consent';
       await elb(cmd, example.in as WalkerOS.Consent);
@@ -205,11 +208,10 @@ describe('gtag web destination -- step examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    await elb(
-      'walker destination',
-      { ...dest, env },
-      { ...bootstrapConfig, mapping: mappingConfig },
-    );
+    await elb('walker destination', {
+      code: { ...dest, env },
+      config: { ...bootstrapConfig, mapping: mappingConfig },
+    });
 
     await elb(event);
 

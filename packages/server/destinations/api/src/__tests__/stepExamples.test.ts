@@ -45,11 +45,10 @@ describe('Step Examples', () => {
     const settings: Record<string, unknown> = { url };
     if (headers) settings.headers = headers;
 
-    elb(
-      'walker destination',
-      { ...dest, env: testEnv },
-      { settings, mapping: mappingConfig },
-    );
+    elb('walker destination', {
+      code: { ...dest, env: testEnv },
+      config: { settings, mapping: mappingConfig },
+    });
 
     await elb(event);
 

@@ -424,7 +424,10 @@ describe('Server Destination Twitter', () => {
 
     const { elb: flowElb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
-    await flowElb('walker destination', destinationWithEnv, config);
+    await flowElb('walker destination', {
+      code: destinationWithEnv,
+      config: config,
+    });
     await flowElb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
@@ -452,7 +455,10 @@ describe('Server Destination Twitter', () => {
 
     const { elb: flowElb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
-    await flowElb('walker destination', destinationWithEnv, config);
+    await flowElb('walker destination', {
+      code: destinationWithEnv,
+      config: config,
+    });
     await flowElb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
@@ -479,7 +485,10 @@ describe('Server Destination Twitter', () => {
 
     const { elb: flowElb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
-    await flowElb('walker destination', destinationWithEnv, config);
+    await flowElb('walker destination', {
+      code: destinationWithEnv,
+      config: config,
+    });
     await flowElb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);

@@ -253,7 +253,10 @@ describe('Server Destination Pinterest', () => {
       ...destination,
       env: testEnv,
     };
-    await elb('walker destination', destinationWithEnv, config);
+    await elb('walker destination', {
+      code: destinationWithEnv,
+      config: config,
+    });
     await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
@@ -342,7 +345,10 @@ describe('Server Destination Pinterest', () => {
       ...destination,
       env: testEnv,
     };
-    await elb('walker destination', destinationWithEnv, config);
+    await elb('walker destination', {
+      code: destinationWithEnv,
+      config: config,
+    });
     const result = await elb(event);
 
     expect(result.done).toBeDefined();

@@ -58,10 +58,13 @@ describe('destination snowplow', () => {
       ...destination,
       env: testEnv as DestinationSnowplow.Env,
     };
-    elb('walker destination', destinationWithEnv, {
-      settings: {
-        collectorUrl: 'https://collector.example.com',
-        appId: 'test-app',
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          appId: 'test-app',
+        },
       },
     });
 
@@ -82,16 +85,19 @@ describe('destination snowplow', () => {
       ...destination,
       env: testEnv as DestinationSnowplow.Env,
     };
-    elb('walker destination', destinationWithEnv, {
-      settings: {
-        collectorUrl: 'https://collector.example.com',
-        appId: 'test-app',
-        discoverRootDomain: true,
-        cookieSameSite: 'Lax',
-        appVersion: '1.0.0',
-        contexts: {
-          webPage: true,
-          session: true,
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          appId: 'test-app',
+          discoverRootDomain: true,
+          cookieSameSite: 'Lax',
+          appVersion: '1.0.0',
+          contexts: {
+            webPage: true,
+            session: true,
+          },
         },
       },
     });
@@ -122,8 +128,11 @@ describe('destination snowplow', () => {
       ...destination,
       env: testEnv as DestinationSnowplow.Env,
     };
-    elb('walker destination', destinationWithEnv, {
-      settings: {}, // No collectorUrl
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: {
+        settings: {}, // No collectorUrl
+      },
     });
 
     await elb(getEvent());
@@ -169,11 +178,14 @@ describe('destination snowplow', () => {
         ...destination,
         env: scriptEnv as unknown as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        loadScript: true,
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          scriptUrl: customScriptUrl,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          loadScript: true,
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            scriptUrl: customScriptUrl,
+          },
         },
       });
 
@@ -205,10 +217,13 @@ describe('destination snowplow', () => {
         ...destination,
         env: scriptEnv as unknown as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        loadScript: true,
-        settings: {
-          collectorUrl: 'https://collector.example.com',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          loadScript: true,
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
         },
       });
 
@@ -227,11 +242,14 @@ describe('destination snowplow', () => {
       ...destination,
       env: testEnv as DestinationSnowplow.Env,
     };
-    elb('walker destination', destinationWithEnv, {
-      settings: {
-        collectorUrl: 'https://collector.example.com',
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: mappingConfig,
       },
-      mapping: mappingConfig,
     });
 
     await elb(event);
@@ -247,15 +265,18 @@ describe('destination snowplow', () => {
       ...destination,
       env: testEnv as DestinationSnowplow.Env,
     };
-    elb('walker destination', destinationWithEnv, {
-      settings: {
-        collectorUrl: 'https://collector.example.com',
-      },
-      mapping: {
-        custom: {
-          event: {
-            // Mapping exists but no action specified
-            data: { map: { id: 'data.id' } },
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          custom: {
+            event: {
+              // Mapping exists but no action specified
+              data: { map: { id: 'data.id' } },
+            },
           },
         },
       },
@@ -277,12 +298,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          page: { type: 'globals.page_type' },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            page: { type: 'globals.page_type' },
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       await elb(
@@ -302,12 +326,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          page: { type: 'globals.page_type' },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            page: { type: 'globals.page_type' },
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       // First event with page_type
@@ -334,12 +361,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          page: { type: 'globals.page_type' },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            page: { type: 'globals.page_type' },
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       // First event with page_type 'product'
@@ -368,12 +398,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          page: { type: 'globals.page_type' }, // Will be undefined if not in globals
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            page: { type: 'globals.page_type' }, // Will be undefined if not in globals
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       // Event without globals.page_type
@@ -388,12 +421,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          page: { type: { value: 'homepage' } },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            page: { type: { value: 'homepage' } },
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -409,16 +445,19 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          page: {
-            type: 'globals.page_type',
-            language: 'globals.language',
-            locale: { value: 'en-US' },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            page: {
+              type: 'globals.page_type',
+              language: 'globals.language',
+              locale: { value: 'en-US' },
+            },
           },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       await elb(
@@ -441,16 +480,19 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          page: {
-            type: 'globals.page_type',
-            language: 'globals.language', // Will be undefined
-            locale: 'globals.locale', // Will be undefined
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            page: {
+              type: 'globals.page_type',
+              language: 'globals.language', // Will be undefined
+              locale: 'globals.locale', // Will be undefined
+            },
           },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       await elb(
@@ -473,15 +515,18 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          activityTracking: {
-            minimumVisitLength: 10,
-            heartbeatDelay: 30,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            activityTracking: {
+              minimumVisitLength: 10,
+              heartbeatDelay: 30,
+            },
           },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -501,16 +546,19 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          activityTracking: {
-            minimumVisitLength: 10,
-            heartbeatDelay: 30,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            activityTracking: {
+              minimumVisitLength: 10,
+              heartbeatDelay: 30,
+            },
+            pageViewEvent: 'page view',
           },
-          pageViewEvent: 'page view',
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -530,11 +578,14 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -552,10 +603,13 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          pageViewEvent: 'screen view',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            pageViewEvent: 'screen view',
+          },
         },
       });
 
@@ -570,10 +624,13 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          // No pageViewEvent specified - should NOT call trackPageView
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            // No pageViewEvent specified - should NOT call trackPageView
+          },
         },
       });
 
@@ -590,15 +647,18 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          plugins: [
-            {
-              url: 'https://cdn.example.com/link-click.js',
-              name: ['snowplowLinkClickTracking', 'LinkClickTrackingPlugin'],
-            },
-          ],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            plugins: [
+              {
+                url: 'https://cdn.example.com/link-click.js',
+                name: ['snowplowLinkClickTracking', 'LinkClickTrackingPlugin'],
+              },
+            ],
+          },
         },
       });
 
@@ -620,16 +680,19 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          plugins: [
-            {
-              url: 'https://cdn.example.com/link-click.js',
-              name: ['snowplowLinkClickTracking', 'LinkClickTrackingPlugin'],
-              options: { trackContent: true },
-            },
-          ],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            plugins: [
+              {
+                url: 'https://cdn.example.com/link-click.js',
+                name: ['snowplowLinkClickTracking', 'LinkClickTrackingPlugin'],
+                options: { trackContent: true },
+              },
+            ],
+          },
         },
       });
 
@@ -647,17 +710,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          plugins: [
-            {
-              url: 'https://cdn.example.com/custom.js',
-              name: ['customPlugin', 'CustomPlugin'],
-              enableMethod: 'activateCustomPlugin',
-              options: { enabled: true },
-            },
-          ],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            plugins: [
+              {
+                url: 'https://cdn.example.com/custom.js',
+                name: ['customPlugin', 'CustomPlugin'],
+                enableMethod: 'activateCustomPlugin',
+                options: { enabled: true },
+              },
+            ],
+          },
         },
       });
 
@@ -676,10 +742,13 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          anonymousTracking: true,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            anonymousTracking: true,
+          },
         },
       });
 
@@ -700,11 +769,14 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          anonymousTracking: {
-            withServerAnonymisation: true,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            anonymousTracking: {
+              withServerAnonymisation: true,
+            },
           },
         },
       });
@@ -728,12 +800,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          anonymousTracking: {
-            withServerAnonymisation: true,
-            withSessionTracking: true,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            anonymousTracking: {
+              withServerAnonymisation: true,
+              withSessionTracking: true,
+            },
           },
         },
       });
@@ -758,9 +833,12 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
         },
       });
 
@@ -784,11 +862,14 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          contexts: {
-            session: true,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            contexts: {
+              session: true,
+            },
           },
         },
       });
@@ -814,11 +895,14 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          contexts: {
-            browser: true,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            contexts: {
+              browser: true,
+            },
           },
         },
       });
@@ -842,13 +926,16 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          contexts: {
-            webPage: true,
-            session: true,
-            browser: true,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            contexts: {
+              webPage: true,
+              session: true,
+              browser: true,
+            },
           },
         },
       });
@@ -876,12 +963,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          userId: 'user.id',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            userId: 'user.id',
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       // First event with user
@@ -909,12 +999,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          userId: 'user.id',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            userId: 'user.id',
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       // Event without user.id (explicitly set user to empty object)
@@ -933,12 +1026,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          userId: 'user.id',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            userId: 'user.id',
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       // First event - no user.id
@@ -966,12 +1062,15 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          // No userId setting
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            // No userId setting
+          },
+          mapping: mappingConfig,
         },
-        mapping: mappingConfig,
       });
 
       await elb(
@@ -1042,15 +1141,18 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          globalContexts: [
-            {
-              schema: 'iglu:com.example/app_info/jsonschema/1-0-0',
-              data: { version: '1.0.0', environment: 'production' },
-            },
-          ],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            globalContexts: [
+              {
+                schema: 'iglu:com.example/app_info/jsonschema/1-0-0',
+                data: { version: '1.0.0', environment: 'production' },
+              },
+            ],
+          },
         },
       });
 
@@ -1076,10 +1178,13 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          globalContexts: [contextGenerator],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            globalContexts: [contextGenerator],
+          },
         },
       });
 
@@ -1098,9 +1203,12 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
         },
       });
 
@@ -1132,44 +1240,47 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          order: {
-            complete: {
-              name: 'transaction',
-              settings: {
-                context: [
-                  // Non-loop: single transaction entity
-                  {
-                    schema:
-                      'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
-                    data: {
-                      transaction_id: 'data.id',
-                      revenue: 'data.total',
-                      currency: 'data.currency',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            order: {
+              complete: {
+                name: 'transaction',
+                settings: {
+                  context: [
+                    // Non-loop: single transaction entity
+                    {
+                      schema:
+                        'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
+                      data: {
+                        transaction_id: 'data.id',
+                        revenue: 'data.total',
+                        currency: 'data.currency',
+                      },
                     },
-                  },
-                  // Loop: multiple product entities
-                  {
-                    schema:
-                      'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-                    data: {
-                      loop: [
-                        'nested',
-                        {
-                          map: {
-                            id: 'data.id',
-                            name: 'data.name',
-                            price: 'data.price',
+                    // Loop: multiple product entities
+                    {
+                      schema:
+                        'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+                      data: {
+                        loop: [
+                          'nested',
+                          {
+                            map: {
+                              id: 'data.id',
+                              name: 'data.name',
+                              price: 'data.price',
+                            },
                           },
-                        },
-                      ],
+                        ],
+                      },
                     },
-                  },
-                ],
+                  ],
+                },
               },
             },
           },
@@ -1217,24 +1328,27 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          order: {
-            complete: {
-              name: 'transaction',
-              settings: {
-                context: [
-                  {
-                    schema:
-                      'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-                    data: {
-                      loop: ['nested', { map: { id: 'data.id' } }],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            order: {
+              complete: {
+                name: 'transaction',
+                settings: {
+                  context: [
+                    {
+                      schema:
+                        'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+                      data: {
+                        loop: ['nested', { map: { id: 'data.id' } }],
+                      },
                     },
-                  },
-                ],
+                  ],
+                },
               },
             },
           },
@@ -1485,17 +1599,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: { value: 'ui' },
-                  action: { value: 'click' },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: { value: 'ui' },
+                    action: { value: 'click' },
+                  },
                 },
               },
             },
@@ -1522,20 +1639,23 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: { value: 'ui' },
-                  action: { value: 'click' },
-                  label: 'data.button_name',
-                  property: 'data.section',
-                  value: 'data.position',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: { value: 'ui' },
+                    action: { value: 'click' },
+                    label: 'data.button_name',
+                    property: 'data.section',
+                    value: 'data.position',
+                  },
                 },
               },
             },
@@ -1569,18 +1689,21 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: { value: 'ui' },
-                  action: { value: 'click' },
-                  value: 'data.count',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: { value: 'ui' },
+                    action: { value: 'click' },
+                    value: 'data.count',
+                  },
                 },
               },
             },
@@ -1608,17 +1731,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: 'data.category', // Will be undefined
-                  action: { value: 'click' },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: 'data.category', // Will be undefined
+                    action: { value: 'click' },
+                  },
                 },
               },
             },
@@ -1640,17 +1766,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: { value: 'ui' },
-                  action: 'data.action', // Will be undefined
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: { value: 'ui' },
+                    action: 'data.action', // Will be undefined
+                  },
                 },
               },
             },
@@ -1672,18 +1801,21 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              name: 'product_view', // Would trigger self-describing if struct wasn't present
-              settings: {
-                struct: {
-                  category: { value: 'ui' },
-                  action: { value: 'click' },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                name: 'product_view', // Would trigger self-describing if struct wasn't present
+                settings: {
+                  struct: {
+                    category: { value: 'ui' },
+                    action: { value: 'click' },
+                  },
                 },
               },
             },
@@ -1708,17 +1840,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          interaction: {
-            track: {
-              settings: {
-                struct: {
-                  category: 'data.event_category',
-                  action: 'data.event_action',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            interaction: {
+              track: {
+                settings: {
+                  struct: {
+                    category: 'data.event_category',
+                    action: 'data.event_action',
+                  },
                 },
               },
             },
@@ -1750,17 +1885,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: 'data.category', // Will be undefined
-                  action: { value: 'click' },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: 'data.category', // Will be undefined
+                    action: { value: 'click' },
+                  },
                 },
               },
             },
@@ -1785,17 +1923,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: 'data.category', // Will be a number
-                  action: { value: 'click' },
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: 'data.category', // Will be a number
+                    action: { value: 'click' },
+                  },
                 },
               },
             },
@@ -1820,17 +1961,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: { value: 'ui' },
-                  action: 'data.action', // Will be undefined
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: { value: 'ui' },
+                    action: 'data.action', // Will be undefined
+                  },
                 },
               },
             },
@@ -1855,17 +1999,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: { value: 'ui' },
-                  action: 'data.action', // Will be an object
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: { value: 'ui' },
+                    action: 'data.action', // Will be an object
+                  },
                 },
               },
             },
@@ -1890,21 +2037,24 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          custom: {
-            event: {
-              // Has context but no name - should skip
-              settings: {
-                context: [
-                  {
-                    schema: 'iglu:com.example/context/jsonschema/1-0-0',
-                    data: { id: 'data.id' },
-                  },
-                ],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            custom: {
+              event: {
+                // Has context but no name - should skip
+                settings: {
+                  context: [
+                    {
+                      schema: 'iglu:com.example/context/jsonschema/1-0-0',
+                      data: { id: 'data.id' },
+                    },
+                  ],
+                },
               },
             },
           },
@@ -1936,9 +2086,12 @@ describe('destination snowplow', () => {
       };
 
       // Try to add destination - init should fail
-      elb('walker destination', uninitializedDestination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
+      elb('walker destination', {
+        code: uninitializedDestination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
         },
       });
 
@@ -1953,26 +2106,29 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          product: {
-            view: {
-              name: 'product_view',
-              settings: {
-                context: [
-                  // Entry without schema - should be skipped
-                  {
-                    data: { id: 'data.id' },
-                  } as unknown as DestinationSnowplow.ContextEntity,
-                  // Valid entry - should be included
-                  {
-                    schema: 'iglu:com.example/product/jsonschema/1-0-0',
-                    data: { name: { value: 'Test Product' } },
-                  },
-                ],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            product: {
+              view: {
+                name: 'product_view',
+                settings: {
+                  context: [
+                    // Entry without schema - should be skipped
+                    {
+                      data: { id: 'data.id' },
+                    } as unknown as DestinationSnowplow.ContextEntity,
+                    // Valid entry - should be included
+                    {
+                      schema: 'iglu:com.example/product/jsonschema/1-0-0',
+                      data: { name: { value: 'Test Product' } },
+                    },
+                  ],
+                },
               },
             },
           },
@@ -2002,26 +2158,29 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          product: {
-            view: {
-              name: 'product_view',
-              settings: {
-                context: [
-                  // Non-object entries - should be skipped
-                  null as unknown as DestinationSnowplow.ContextEntity,
-                  'string entry' as unknown as DestinationSnowplow.ContextEntity,
-                  123 as unknown as DestinationSnowplow.ContextEntity,
-                  // Valid entry - should be included
-                  {
-                    schema: 'iglu:com.example/product/jsonschema/1-0-0',
-                    data: { name: { value: 'Test Product' } },
-                  },
-                ],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            product: {
+              view: {
+                name: 'product_view',
+                settings: {
+                  context: [
+                    // Non-object entries - should be skipped
+                    null as unknown as DestinationSnowplow.ContextEntity,
+                    'string entry' as unknown as DestinationSnowplow.ContextEntity,
+                    123 as unknown as DestinationSnowplow.ContextEntity,
+                    // Valid entry - should be included
+                    {
+                      schema: 'iglu:com.example/product/jsonschema/1-0-0',
+                      data: { name: { value: 'Test Product' } },
+                    },
+                  ],
+                },
               },
             },
           },
@@ -2299,10 +2458,13 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          plugins: [{ code: mockPlugin }],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            plugins: [{ code: mockPlugin }],
+          },
         },
       });
 
@@ -2325,10 +2487,13 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          plugins: [{ code: mockPluginFactory, config: { option: true } }],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            plugins: [{ code: mockPluginFactory, config: { option: true } }],
+          },
         },
       });
 
@@ -2354,10 +2519,13 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          plugins: [{ code: mockPluginFunction }], // No config
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            plugins: [{ code: mockPluginFunction }], // No config
+          },
         },
       });
 
@@ -2387,10 +2555,13 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          plugins: [{ code: mockPlugin1 }, { code: mockPlugin2 }],
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            plugins: [{ code: mockPlugin1 }, { code: mockPlugin2 }],
+          },
         },
       });
 
@@ -2414,17 +2585,20 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          video: {
-            play: {
-              name: 'play', // actionName
-              settings: {
-                snowplow: {
-                  actionSchema: MEDIA_SCHEMAS.PLAY,
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            video: {
+              play: {
+                name: 'play', // actionName
+                settings: {
+                  snowplow: {
+                    actionSchema: MEDIA_SCHEMAS.PLAY,
+                  },
                 },
               },
             },
@@ -2453,23 +2627,26 @@ describe('destination snowplow', () => {
         ...destination,
         env: testEnv as DestinationSnowplow.Env,
       };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          video: {
-            progress: {
-              name: 'percent_progress',
-              settings: {
-                // data.map is checked by push.ts to build event data
-                data: {
-                  map: {
-                    percentProgress: 'data.progress',
+      elb('walker destination', {
+        code: destinationWithEnv,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+          },
+          mapping: {
+            video: {
+              progress: {
+                name: 'percent_progress',
+                settings: {
+                  // data.map is checked by push.ts to build event data
+                  data: {
+                    map: {
+                      percentProgress: 'data.progress',
+                    },
                   },
-                },
-                snowplow: {
-                  actionSchema: MEDIA_SCHEMAS.PERCENT_PROGRESS,
+                  snowplow: {
+                    actionSchema: MEDIA_SCHEMAS.PERCENT_PROGRESS,
+                  },
                 },
               },
             },
@@ -2517,13 +2694,16 @@ describe('destination snowplow', () => {
     });
 
     test('initializes tracker with TrackerFunctions', async () => {
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          appId: 'test-app',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            appId: 'test-app',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            },
           },
         },
       });
@@ -2540,18 +2720,21 @@ describe('destination snowplow', () => {
     });
 
     test('tracks events using adapter in browser-tracker mode', async () => {
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            },
           },
-        },
-        mapping: {
-          product: {
-            view: {
-              name: 'product_view',
+          mapping: {
+            product: {
+              view: {
+                name: 'product_view',
+              },
             },
           },
         },
@@ -2569,17 +2752,20 @@ describe('destination snowplow', () => {
     });
 
     test('enables activity tracking via adapter', async () => {
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-            enableActivityTracking: mockEnableActivityTracking,
-          },
-          activityTracking: {
-            minimumVisitLength: 10,
-            heartbeatDelay: 30,
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+              enableActivityTracking: mockEnableActivityTracking,
+            },
+            activityTracking: {
+              minimumVisitLength: 10,
+              heartbeatDelay: 30,
+            },
           },
         },
       });
@@ -2597,15 +2783,18 @@ describe('destination snowplow', () => {
         name: 'TestPlugin',
       } as unknown as DestinationSnowplow.BrowserPlugin;
 
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-            addPlugin: mockAddPlugin,
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+              addPlugin: mockAddPlugin,
+            },
+            plugins: [{ code: mockPlugin }],
           },
-          plugins: [{ code: mockPlugin }],
         },
       });
 
@@ -2620,15 +2809,18 @@ describe('destination snowplow', () => {
         data: { key: 'value' },
       };
 
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-            addGlobalContexts: mockAddGlobalContexts,
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+              addGlobalContexts: mockAddGlobalContexts,
+            },
+            globalContexts: [globalContext],
           },
-          globalContexts: [globalContext],
         },
       });
 
@@ -2638,20 +2830,23 @@ describe('destination snowplow', () => {
     });
 
     test('sets userId via adapter', async () => {
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-            setUserId: mockSetUserId,
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+              setUserId: mockSetUserId,
+            },
+            userId: 'user.id',
           },
-          userId: 'user.id',
-        },
-        mapping: {
-          product: {
-            view: {
-              name: 'product_view',
+          mapping: {
+            product: {
+              view: {
+                name: 'product_view',
+              },
             },
           },
         },
@@ -2667,15 +2862,18 @@ describe('destination snowplow', () => {
     });
 
     test('tracks page view via adapter when trackPageView is true', async () => {
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-            trackPageView: mockTrackPageView,
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+              trackPageView: mockTrackPageView,
+            },
+            trackPageView: true,
           },
-          trackPageView: true,
         },
       });
 
@@ -2685,22 +2883,25 @@ describe('destination snowplow', () => {
     });
 
     test('tracks struct events via adapter', async () => {
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-            trackStructEvent: mockTrackStructEvent,
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+              trackStructEvent: mockTrackStructEvent,
+            },
           },
-        },
-        mapping: {
-          button: {
-            click: {
-              settings: {
-                struct: {
-                  category: { value: 'ui' },
-                  action: { value: 'click' },
+          mapping: {
+            button: {
+              click: {
+                settings: {
+                  struct: {
+                    category: { value: 'ui' },
+                    action: { value: 'click' },
+                  },
                 },
               },
             },
@@ -2719,13 +2920,16 @@ describe('destination snowplow', () => {
     test('logs error when newTracker is missing', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            // Missing newTracker - should fail
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-          } as unknown as DestinationSnowplow.Settings['tracker'],
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              // Missing newTracker - should fail
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            } as unknown as DestinationSnowplow.Settings['tracker'],
+          },
         },
       });
 
@@ -2741,13 +2945,16 @@ describe('destination snowplow', () => {
     test('logs error when trackSelfDescribingEvent is missing', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            // Missing trackSelfDescribingEvent - should fail
-          } as unknown as DestinationSnowplow.Settings['tracker'],
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              // Missing trackSelfDescribingEvent - should fail
+            } as unknown as DestinationSnowplow.Settings['tracker'],
+          },
         },
       });
 
@@ -2762,20 +2969,23 @@ describe('destination snowplow', () => {
 
     test('gracefully handles missing optional functions', async () => {
       // Only provide required functions
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-            // No trackPageView, trackStructEvent, etc.
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+              // No trackPageView, trackStructEvent, etc.
+            },
+            trackPageView: true, // Should silently skip if function not provided
           },
-          trackPageView: true, // Should silently skip if function not provided
-        },
-        mapping: {
-          product: {
-            view: {
-              name: 'product_view',
+          mapping: {
+            product: {
+              view: {
+                name: 'product_view',
+              },
             },
           },
         },
@@ -2792,20 +3002,23 @@ describe('destination snowplow', () => {
         .fn()
         .mockReturnValue({ name: 'ConfiguredPlugin' });
 
-      elb('walker destination', destination, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          tracker: {
-            newTracker: mockNewTracker,
-            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-            addPlugin: mockAddPlugin,
-          },
-          plugins: [
-            {
-              code: mockPluginFactory,
-              config: { option: 'value' },
+      elb('walker destination', {
+        code: destination,
+        config: {
+          settings: {
+            collectorUrl: 'https://collector.example.com',
+            tracker: {
+              newTracker: mockNewTracker,
+              trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+              addPlugin: mockAddPlugin,
             },
-          ],
+            plugins: [
+              {
+                code: mockPluginFactory,
+                config: { option: 'value' },
+              },
+            ],
+          },
         },
       });
 

@@ -94,15 +94,14 @@ describe('posthog destination — step examples', () => {
     if (example.command === 'consent') {
       // Consent examples need config.consent declared so the destination's
       // on() handler knows which walkerOS consent key to check.
-      elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           consent: { analytics: true },
           include: example.configInclude,
           settings: baseSettings,
         },
-      );
+      });
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
       const event = example.in as WalkerOS.Event;
@@ -111,15 +110,14 @@ describe('posthog destination — step examples', () => {
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
 
-      elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           include: example.configInclude,
           settings: baseSettings,
           mapping: mappingConfig,
         },
-      );
+      });
       await elb(event);
     }
 

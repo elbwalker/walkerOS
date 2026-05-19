@@ -139,14 +139,13 @@ describe('redis server destination -- step examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
-      'walker destination',
-      { ...dest, env },
-      {
+    elb('walker destination', {
+      code: { ...dest, env },
+      config: {
         settings: baseSettings,
         mapping: mappingConfig,
       },
-    );
+    });
 
     await elb(event);
 
