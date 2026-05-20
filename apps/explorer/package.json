@@ -17,7 +17,8 @@
     "./styles": "./dist/styles.css"
   },
   "files": [
-    "dist/**"
+    "dist/**",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup --silent",
