@@ -1,8 +1,17 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/server-destination-klaviyo
 
-Server-side Klaviyo destination for
-[walkerOS](https://github.com/elbwalker/walkerOS). Forwards events to Klaviyo
-via the official `klaviyo-api` SDK with event tracking and profile management.
+Server-side event delivery to Klaviyo for email and SMS marketing automation.
+
+[Documentation](https://www.walkeros.io/docs/destinations/server/klaviyo) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-klaviyo)
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/destinations/klaviyo)
 
 ## Installation
 
@@ -10,18 +19,18 @@ via the official `klaviyo-api` SDK with event tracking and profile management.
 npm install @walkeros/server-destination-klaviyo
 ```
 
-## Quick Start
+## Quick start
 
 ```json
 {
-  "destinations": {
-    "klaviyo": {
-      "package": "@walkeros/server-destination-klaviyo",
-      "config": {
-        "settings": {
-          "apiKey": "$KLAVIYO_API_KEY",
-          "email": "user.email",
-          "externalId": "user.id"
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "destinations": {
+        "klaviyo": {
+          "package": "@walkeros/server-destination-klaviyo",
+          "config": {}
         }
       }
     }
@@ -29,45 +38,18 @@ npm install @walkeros/server-destination-klaviyo
 }
 ```
 
-## Settings
+## Documentation
 
-| Setting       | Type         | Required | Default        | Description                                              |
-| ------------- | ------------ | -------- | -------------- | -------------------------------------------------------- |
-| `apiKey`      | string       | Yes      | --             | Klaviyo private API key (starts with `pk_`)              |
-| `email`       | string       | No       | `'user.email'` | Mapping path to resolve email from events                |
-| `externalId`  | string       | No       | `'user.id'`    | Mapping path to resolve external ID from events          |
-| `phoneNumber` | string       | No       | --             | Mapping path to resolve phone number (E.164) from events |
-| `identify`    | MappingValue | No       | --             | Destination-level profile upsert mapping                 |
-| `currency`    | string       | No       | --             | Default ISO 4217 currency code for revenue events        |
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/server/klaviyo**
 
-## Mapping Settings
+## Contribute
 
-Per-event mapping settings control additional behavior:
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-| Setting    | Effect                                     | Use with `silent: true`      |
-| ---------- | ------------------------------------------ | ---------------------------- |
-| `identify` | Calls `createOrUpdateProfile()`            | Yes, for login/signup events |
-| `value`    | Sets revenue value + currency on the event | No                           |
+## License
 
-## Identity
-
-Klaviyo requires at least one profile identifier per event: `email`,
-`phoneNumber`, or `externalId`. The destination resolves these from each
-walkerOS event using the configured mapping paths. Events without any identifier
-are skipped with a warning.
-
-## Revenue Tracking
-
-Map `settings.value` to a numeric event property. The destination sets the
-Klaviyo `value` property and `valueCurrency` (from `settings.currency`).
-
-## Ecommerce
-
-Use `mapping.name` to map walkerOS event names to Klaviyo's expected metric
-names:
-
-| walkerOS Event   | Klaviyo Metric   | Unlocks                |
-| ---------------- | ---------------- | ---------------------- |
-| `product view`   | `Viewed Product` | Product analytics      |
-| `product add`    | `Added to Cart`  | Cart abandonment flows |
-| `order complete` | `Placed Order`   | Revenue reporting, CLV |
+MIT

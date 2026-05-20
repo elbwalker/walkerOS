@@ -1,9 +1,20 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/web-source-cmp-cookiefirst
 
-CookieFirst consent management source for walkerOS.
+Integrates CookieFirst consent management with walkerOS by listening for
+CookieFirst events and translating consent categories to walkerOS consent
+groups.
 
-This source listens to [CookieFirst](https://cookiefirst.com/) CMP events and
-translates consent states to walkerOS consent commands.
+[Documentation](https://www.walkeros.io/docs/sources/web/cmps/cookiefirst)
+&bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/web-source-cmp-cookiefirst)
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/cmps/cookiefirst)
 
 ## Installation
 
@@ -11,9 +22,9 @@ translates consent states to walkerOS consent commands.
 npm install @walkeros/web-source-cmp-cookiefirst
 ```
 
-## Usage
+## Quick start
 
-```typescript
+```ts
 import { startFlow } from '@walkeros/collector';
 import { sourceCookieFirst } from '@walkeros/web-source-cmp-cookiefirst';
 
@@ -23,84 +34,20 @@ await startFlow({
       code: sourceCookieFirst,
     },
   },
-  destinations: {
-    gtag: {
-      code: destinationGtag,
-      config: {
-        consent: { analytics: true }, // Requires analytics consent
-      },
-    },
-  },
 });
 ```
 
-## Configuration
+## Documentation
 
-### Settings
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/sources/web/cmps/cookiefirst**
 
-| Setting        | Type                     | Default         | Description                                            |
-| -------------- | ------------------------ | --------------- | ------------------------------------------------------ |
-| `categoryMap`  | `Record<string, string>` | See below       | Maps CookieFirst categories to walkerOS consent groups |
-| `explicitOnly` | `boolean`                | `true`          | Only process explicit consent (user made a choice)     |
-| `globalName`   | `string`                 | `'CookieFirst'` | Custom name for `window.CookieFirst` object            |
+## Contribute
 
-### Default Category Mapping
-
-```typescript
-{
-  necessary: 'functional',
-  functional: 'functional',
-  performance: 'analytics',
-  advertising: 'marketing',
-}
-```
-
-When multiple CookieFirst categories map to the same walkerOS group (e.g., both
-`necessary` and `functional` → `functional`), the source uses OR logic: if ANY
-source category is `true`, the target group is `true`.
-
-### Custom Mapping Example
-
-```typescript
-await startFlow({
-  sources: {
-    consent: {
-      code: sourceCookieFirst,
-      config: {
-        settings: {
-          categoryMap: {
-            performance: 'statistics', // Use 'statistics' instead of 'analytics'
-          },
-          explicitOnly: true,
-        },
-      },
-    },
-  },
-});
-```
-
-## How It Works
-
-1. **Initialization**: When the source loads, it checks if CookieFirst is
-   already initialized and processes any existing consent state.
-
-2. **cf_init Event**: Listens for the `cf_init` event fired when CookieFirst
-   banner initializes.
-
-3. **cf_consent Event**: Listens for the `cf_consent` event fired when user
-   changes their consent preferences.
-
-4. **Consent Mapping**: Translates CookieFirst categories to walkerOS consent
-   groups and calls `elb('walker consent', state)`.
-
-## CookieFirst API Reference
-
-- [CookieFirst Public API Documentation](https://support.cookiefirst.com/hc/en-us/articles/360011568738-Cookie-Banner-Public-API-documentation)
-
-## Related
-
-- [Consent management guide](https://www.walkeros.io/docs/guides/consent)
-- [CookieFirst documentation](https://www.walkeros.io/docs/sources/web/cmps/cookiefirst)
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
 ## License
 

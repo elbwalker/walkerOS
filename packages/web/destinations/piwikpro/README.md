@@ -4,66 +4,46 @@
   </a>
 </p>
 
-# Piwik PRO Destination for walkerOS
+# @walkeros/web-destination-piwikpro
 
-[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/piwikpro)
-&bull;
+Privacy-focused web analytics and visitor data platform.
+
+[Documentation](https://www.walkeros.io/docs/destinations/web/piwikpro) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-piwikpro)
-
-This package provides a [Piwik PRO](https://piwik.pro/) destination for
-walkerOS. Piwik PRO is a European, privacy-focused web analytics and marketing
-platform that helps businesses track website traffic and user behavior.
-
-walkerOS follows a **source → collector → destination** architecture. This Piwik
-PRO destination receives processed events from the walkerOS collector and
-transforms them into Piwik PRO's analytics format, providing privacy-compliant
-analytics with GDPR compliance and data ownership control.
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/piwikpro)
 
 ## Installation
 
-```sh
+```bash
 npm install @walkeros/web-destination-piwikpro
 ```
 
-## Usage
+## Quick start
 
-Here's a basic example of how to use the Piwik PRO destination:
-
-```typescript
-import { startFlow } from '@walkeros/collector';
-import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
-
-await startFlow({
-  destinations: {
-    piwikpro: {
-      code: destinationPiwikPro,
-      config: {
-        settings: {
-          appId: 'XXX-XXX-XXX-XXX-XXX', // Required
-          url: 'https://your_account_name.piwik.pro/', // Required
-        },
+```json
+{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "web"
       },
-    },
-  },
-});
+      "destinations": {
+        "piwikpro": {
+          "package": "@walkeros/web-destination-piwikpro",
+          "config": {}
+        }
+      }
+    }
+  }
+}
 ```
 
-## Configuration
+## Documentation
 
-| Name           | Type      | Description                                    | Required | Example                                  |
-| -------------- | --------- | ---------------------------------------------- | -------- | ---------------------------------------- |
-| `appId`        | `string`  | ID of the Piwik PRO site                       | Yes      | `'XXX-XXX-XXX-XXX-XXX'`                  |
-| `url`          | `string`  | URL of your Piwik PRO account                  | Yes      | `'https://your_account_name.piwik.pro/'` |
-| `linkTracking` | `boolean` | Enables/Disables download and outlink tracking | No       | `false`                                  |
-
-### Event Mapping
-
-For custom event mapping (`mapping.entity.action.settings`):
-
-| Name        | Type     | Description                           | Required | Example        |
-| ----------- | -------- | ------------------------------------- | -------- | -------------- |
-| `goalId`    | `string` | ID to count the event as a goal       | No       | `'1'`          |
-| `goalValue` | `string` | Property to be used as the goal value | No       | `'data.value'` |
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/web/piwikpro**
 
 ## Contribute
 
@@ -74,4 +54,4 @@ Feel free to contribute by submitting an
 
 ## License
 
-This project is licensed under the MIT License.
+MIT

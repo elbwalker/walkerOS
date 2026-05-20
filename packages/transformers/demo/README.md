@@ -4,32 +4,33 @@
   </a>
 </p>
 
-# @walkeros/server-destination-gcp
+# @walkeros/transformer-demo
 
-Stream events to Google BigQuery via the Storage Write API for analytics and
-machine learning workloads.
+Logs events and passes them through, for testing and demonstrations without
+external dependencies.
 
-[Documentation](https://www.walkeros.io/docs/destinations/server/gcp) &bull;
-[NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-gcp)
-&bull;
-[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/destinations/gcp)
+[Documentation](https://www.walkeros.io/docs/transformers) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/transformer-demo) &bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/transformers/demo)
 
 ## Installation
 
 ```bash
-npm install @walkeros/server-destination-gcp
+npm install @walkeros/transformer-demo
 ```
 
 ## Quick start
+
+Add the transformer to a flow's `transformers` block and wire it into a source's
+chain:
 
 ```json
 {
   "version": 4,
   "flows": {
     "default": {
-      "config": { "platform": "server" },
-      "destinations": {
-        "gcp": { "package": "@walkeros/server-destination-gcp", "config": {} }
+      "transformers": {
+        "demo": { "package": "@walkeros/transformer-demo" }
       }
     }
   }
@@ -39,7 +40,7 @@ npm install @walkeros/server-destination-gcp
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:
-**https://www.walkeros.io/docs/destinations/server/gcp**
+**https://www.walkeros.io/docs/transformers**
 
 ## Contribute
 

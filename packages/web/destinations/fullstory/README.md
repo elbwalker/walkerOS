@@ -1,8 +1,17 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/web-destination-fullstory
 
-FullStory web destination for [walkerOS](https://github.com/elbwalker/walkerOS).
-Forwards events to FullStory via the official `@fullstory/browser` SDK v2 with
-support for custom events, user/page properties, identity, and consent.
+Session replay, custom events, and user and page properties.
+
+[Documentation](https://www.walkeros.io/docs/destinations/web/fullstory) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-fullstory)
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/fullstory)
 
 ## Installation
 
@@ -10,17 +19,20 @@ support for custom events, user/page properties, identity, and consent.
 npm install @walkeros/web-destination-fullstory
 ```
 
-## Quick Start
+## Quick start
 
 ```json
 {
-  "destinations": {
-    "fullstory": {
-      "package": "@walkeros/web-destination-fullstory",
+  "version": 4,
+  "flows": {
+    "default": {
       "config": {
-        "consent": { "analytics": true },
-        "settings": {
-          "orgId": "o-XXXXXX-na1"
+        "platform": "web"
+      },
+      "destinations": {
+        "fullstory": {
+          "package": "@walkeros/web-destination-fullstory",
+          "config": {}
         }
       }
     }
@@ -28,47 +40,18 @@ npm install @walkeros/web-destination-fullstory
 }
 ```
 
-## Settings
+## Documentation
 
-| Setting                    | Type         | Required | Description                                      |
-| -------------------------- | ------------ | -------- | ------------------------------------------------ |
-| `orgId`                    | string       | Yes      | FullStory organization ID                        |
-| `host`                     | string       | No       | Recording server host (proxy support)            |
-| `script`                   | string       | No       | Custom script CDN host                           |
-| `cookieDomain`             | string       | No       | Cookie domain override                           |
-| `debug`                    | boolean      | No       | Browser console debug logging                    |
-| `devMode`                  | boolean      | No       | Disable recording (dev environments)             |
-| `startCaptureManually`     | boolean      | No       | Delay capture until consent                      |
-| `namespace`                | string       | No       | Global FS identifier override                    |
-| `recordCrossDomainIFrames` | boolean      | No       | Cross-domain iframe recording                    |
-| `identify`                 | MappingValue | No       | Destination-level identity mapping               |
-| `consent`                  | Record       | No       | walkerOS consent key to FullStory action mapping |
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/web/fullstory**
 
-## Mapping Settings
+## Contribute
 
-Per-event mapping settings control which FullStory methods are called:
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-| Setting    | Effect                                      | Description                          |
-| ---------- | ------------------------------------------- | ------------------------------------ |
-| `identify` | Calls `setIdentity({ uid, properties })`    | Overrides destination-level identify |
-| `set`      | Calls `setProperties({ type, properties })` | User or page properties              |
-| `setType`  | Controls property scope                     | `'user'` (default) or `'page'`       |
+## License
 
-## Consent
-
-For GDPR compliance, use `startCaptureManually: true` and map consent:
-
-```json
-{
-  "settings": {
-    "orgId": "o-XXXXXX-na1",
-    "startCaptureManually": true,
-    "consent": {
-      "analytics": "capture"
-    }
-  }
-}
-```
-
-- `"capture"` controls `start`/`shutdown` (recording on/off)
-- `"consent"` controls `setIdentity({ consent })` flag
+MIT

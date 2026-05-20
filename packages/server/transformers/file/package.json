@@ -15,7 +15,8 @@
     "./walkerOS.json": "./dist/walkerOS.json"
   },
   "files": [
-    "dist/**"
+    "dist/**",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup --silent",

@@ -1,9 +1,20 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/server-destination-rudderstack
 
-Server-side RudderStack CDP destination for
-[walkerOS](https://github.com/elbwalker/walkerOS). Forwards events to
-RudderStack via the official `@rudderstack/rudder-sdk-node` SDK with full
-Segment Spec support (Track, Identify, Group, Page, Screen, Alias).
+Server-side event delivery to RudderStack via the official rudder-sdk-node SDK,
+implementing the full Segment Spec surface with automatic identity
+deduplication.
+
+[Documentation](https://www.walkeros.io/docs/destinations/server/rudderstack)
+&bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-rudderstack)
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/destinations/rudderstack)
 
 ## Installation
 
@@ -11,19 +22,18 @@ Segment Spec support (Track, Identify, Group, Page, Screen, Alias).
 npm install @walkeros/server-destination-rudderstack
 ```
 
-## Quick Start
+## Quick start
 
 ```json
 {
-  "destinations": {
-    "rudderstack": {
-      "package": "@walkeros/server-destination-rudderstack",
-      "config": {
-        "settings": {
-          "writeKey": "YOUR_RUDDERSTACK_WRITE_KEY",
-          "dataPlaneUrl": "https://your-data-plane.rudderstack.com",
-          "userId": "user.id",
-          "anonymousId": "user.session"
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "destinations": {
+        "rudderstack": {
+          "package": "@walkeros/server-destination-rudderstack",
+          "config": {}
         }
       }
     }
@@ -31,46 +41,18 @@ npm install @walkeros/server-destination-rudderstack
 }
 ```
 
-## Settings
+## Documentation
 
-| Setting         | Type         | Required | Default          | Description                                     |
-| --------------- | ------------ | -------- | ---------------- | ----------------------------------------------- |
-| `writeKey`      | string       | Yes      | --               | RudderStack source write key                    |
-| `dataPlaneUrl`  | string       | Yes      | --               | RudderStack data plane URL                      |
-| `userId`        | string       | No       | `'user.id'`      | Mapping path to resolve userId from events      |
-| `anonymousId`   | string       | No       | `'user.session'` | Mapping path to resolve anonymousId from events |
-| `identify`      | MappingValue | No       | --               | Destination-level identity mapping              |
-| `group`         | MappingValue | No       | --               | Destination-level group mapping                 |
-| `flushAt`       | number       | No       | `20`             | Events to enqueue before flushing               |
-| `flushInterval` | number       | No       | `10000`          | Max ms before auto-flush                        |
-| `retryCount`    | number       | No       | `3`              | Retry attempts for failed batches               |
-| `gzip`          | boolean      | No       | `true`           | Enable gzip compression                         |
-| `integrations`  | Record       | No       | --               | Downstream destination filtering                |
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/server/rudderstack**
 
-## Mapping Settings
+## Contribute
 
-Per-event mapping settings control which RudderStack methods are called:
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-| Setting    | Effect                       | Use with `silent: true`  |
-| ---------- | ---------------------------- | ------------------------ |
-| `identify` | Calls `analytics.identify()` | Yes, for login events    |
-| `group`    | Calls `analytics.group()`    | Yes, for company events  |
-| `page`     | Calls `analytics.page()`     | Yes, for page views      |
-| `screen`   | Calls `analytics.screen()`   | Yes, for mobile screens  |
-| `alias`    | Calls `analytics.alias()`    | Yes, for identity merges |
+## License
 
-## Identity
-
-Server-side RudderStack requires identity on every call. The destination
-resolves `userId` and `anonymousId` from each event via the configured mapping
-paths and attaches them to every SDK call.
-
-## Alias
-
-RudderStack supports `alias()` for linking anonymous and identified user
-profiles. Configure via `mapping.settings.alias` with a `previousId` field.
-
-## Shutdown
-
-The destination implements `destroy()` calling `analytics.flush()` to ensure
-buffered events are sent before process exit.
+MIT

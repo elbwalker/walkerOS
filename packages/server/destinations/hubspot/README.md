@@ -1,8 +1,17 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/server-destination-hubspot
 
-Server-side HubSpot CRM destination for
-[walkerOS](https://github.com/elbwalker/walkerOS). Sends custom events and
-upserts contacts via the official `@hubspot/api-client` SDK.
+Server-side event delivery to HubSpot CRM with custom events and contact upsert.
+
+[Documentation](https://www.walkeros.io/docs/destinations/server/hubspot) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-hubspot)
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/destinations/hubspot)
 
 ## Installation
 
@@ -10,22 +19,18 @@ upserts contacts via the official `@hubspot/api-client` SDK.
 npm install @walkeros/server-destination-hubspot
 ```
 
-## Quick Start
+## Quick start
 
 ```json
 {
-  "destinations": {
-    "hubspot": {
-      "package": "@walkeros/server-destination-hubspot",
-      "config": {
-        "consent": { "marketing": true },
-        "settings": {
-          "accessToken": "$env:HUBSPOT_ACCESS_TOKEN",
-          "eventNamePrefix": "pe12345678_",
-          "email": "user.email",
-          "defaultProperties": {
-            "hs_touchpoint_source": "walkerOS"
-          }
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "destinations": {
+        "hubspot": {
+          "package": "@walkeros/server-destination-hubspot",
+          "config": {}
         }
       }
     }
@@ -33,49 +38,18 @@ npm install @walkeros/server-destination-hubspot
 }
 ```
 
-## Settings
+## Documentation
 
-| Setting             | Type         | Required | Default        | Description                              |
-| ------------------- | ------------ | -------- | -------------- | ---------------------------------------- |
-| `accessToken`       | string       | Yes      | --             | HubSpot private app access token         |
-| `eventNamePrefix`   | string       | Yes      | --             | Fully qualified prefix: `pe{HubID}_`     |
-| `email`             | string       | No       | `'user.email'` | Mapping path to resolve contact email    |
-| `objectId`          | string       | No       | --             | Mapping path to resolve CRM objectId     |
-| `identify`          | MappingValue | No       | --             | Destination-level contact upsert mapping |
-| `defaultProperties` | Record       | No       | --             | Static properties added to every event   |
-| `batch`             | boolean      | No       | `false`        | Use batch API for events                 |
-| `batchSize`         | number       | No       | `50`           | Events before auto-flush (max 500)       |
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/server/hubspot**
 
-## Mapping Settings
+## Contribute
 
-Per-event mapping settings control behavior per rule:
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-| Setting      | Effect                                                       | Use with `silent: true` |
-| ------------ | ------------------------------------------------------------ | ----------------------- |
-| `eventName`  | Overrides auto-generated event name (prefix still prepended) | No                      |
-| `identify`   | Upserts contact via CRM API                                  | Yes, for login events   |
-| `properties` | Maps event data to HubSpot event properties                  | No                      |
+## License
 
-## Identity
-
-HubSpot requires every event to be associated with a contact via `email` or
-`objectId`. Events where neither resolves are skipped with a warning.
-
-## Contact Upsert
-
-The `identify` setting (destination-level or per-rule) resolves to
-`{ email, properties }` and calls `crm.contacts.basicApi.update()` with
-`idProperty: 'email'`. State-based dedup prevents redundant API calls when
-identity has not changed.
-
-## Batch Mode
-
-Set `batch: true` to accumulate events and flush via
-`events.send.batchApi.send()` when the queue reaches `batchSize`. Remaining
-events are flushed on `destroy()`.
-
-## Prerequisites
-
-- HubSpot Marketing Hub Professional+ (required for custom events)
-- Private app with `analytics.behavioral_events.send` scope
-- Custom events must be pre-defined in HubSpot before sending occurrences
+MIT

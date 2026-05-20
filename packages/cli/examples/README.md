@@ -279,16 +279,13 @@ Flow configs use the `Flow.Config` format:
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "default": {
-      "web": {},
-      "packages": {
-        "<package_name>": { "imports": ["<function_name>"] }
-      },
+      "config": { "platform": "web" },
       "sources": {
         "<source_name>": {
-          "code": "<imported_function_name>",
+          "package": "@walkeros/<package-name>",
           "config": {
             "settings": {
               /* source config */
@@ -298,7 +295,7 @@ Flow configs use the `Flow.Config` format:
       },
       "destinations": {
         "<destination_name>": {
-          "code": "<imported_function_name>",
+          "package": "@walkeros/<package-name>",
           "config": {
             "settings": {
               /* destination config */
@@ -322,7 +319,8 @@ Flow configs use the `Flow.Config` format:
 
 **Key points:**
 
-- Platform via `web: {}` or `server: {}` key (not `platform: "web"`)
+- Platform is set via `config: { "platform": "web" }` (or `"server"`)
+- Each step references its npm package directly via `package`
 - Output path is convention-based: `./dist/walker.js` (web) or
   `./dist/bundle.mjs` (server)
 

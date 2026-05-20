@@ -39,7 +39,12 @@ const EXAMPLE_LINK_PATTERNS = [
   /path\/to\//, // Example path
   /\.\.\/skill\//, // Template skill reference
   /\.\.\./, // Ellipsis in path (template placeholder like /docs/...)
+  /\[[^\]]+\]/, // Square-bracket placeholder (template like /docs/[path])
 ];
+
+// walkerOS docs links are absolute (READMEs publish to npm where relative
+// links break) but still resolve to local website/docs source files.
+const WALKEROS_DOCS_RE = /^https:\/\/(?:www\.)?walkeros\.io\/docs\//;
 
 // Extract markdown links from content
 function extractLinks(content: string): Array<{ link: string; line: number }> {
@@ -52,10 +57,13 @@ function extractLinks(content: string): Array<{ link: string; line: number }> {
     let match;
     while ((match = regex.exec(line)) !== null) {
       const link = match[2];
-      // Skip external URLs, anchors only, mailto, and example patterns
+      const isExternal =
+        link.startsWith('http://') || link.startsWith('https://');
+      const isWalkerosDocs = WALKEROS_DOCS_RE.test(link);
+      // Validate internal links and walkerOS docs links; skip other external
+      // URLs, anchors, mailto, and example/template patterns.
       if (
-        !link.startsWith('http://') &&
-        !link.startsWith('https://') &&
+        (!isExternal || isWalkerosDocs) &&
         !link.startsWith('#') &&
         !link.startsWith('mailto:') &&
         !EXAMPLE_LINK_PATTERNS.some((pattern) => pattern.test(link))
@@ -75,13 +83,20 @@ function validateLink(
   line: number,
 ): LinkError | null {
   // Remove anchor
-  const [path] = link.split('#');
+  let [path] = link.split('#');
   if (!path) return null; // Anchor only
+
+  // Map absolute walkerOS docs URLs to their root-relative docs path, then
+  // strip any trailing slash so directory pages resolve via /index.mdx below.
+  if (WALKEROS_DOCS_RE.test(path)) {
+    path = path.replace(/^https:\/\/(?:www\.)?walkeros\.io/, '');
+  }
+  path = path.replace(/\/$/, '') || path;
 
   let resolvedPath: string;
 
-  // Handle Docusaurus root-relative links (/docs/...)
-  if (path.startsWith('/docs/')) {
+  // Handle Docusaurus root-relative links (/docs and /docs/...)
+  if (path === '/docs' || path.startsWith('/docs/')) {
     // /docs/sources/ -> website/docs/sources/
     resolvedPath = resolve(ROOT, 'website', path.slice(1));
   } else if (path.startsWith('/')) {

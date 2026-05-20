@@ -1,22 +1,17 @@
-<div align="center">
+<p align="left">
   <a href="https://www.walkeros.io">
-    <img alt="elbwalker" src="https://www.walkeros.io/img/elbwalker-logo.png" height="40px" />
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
   </a>
-</div>
+</p>
 
-# walkerOS Destination Demo
+# @walkeros/destination-demo
 
-A demo destination that logs walkerOS events to console with optional field
-filtering - perfect for debugging, testing, and demonstrations.
+A demo destination that logs walkerOS events to the console with optional field
+filtering, for debugging, testing, and demonstrations.
 
-> Learn more at [walkeros.io/docs](https://www.walkeros.io/docs/destinations/)
-
-## What It Does
-
-- Logs events to console with JSON formatting
-- Supports field filtering using dot notation
-- Zero external dependencies - ideal for demos and debugging
-- Simple destination interface compatible with walkerOS architecture
+[Documentation](https://www.walkeros.io/docs/destinations) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/destination-demo) &bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/destinations/demo)
 
 ## Installation
 
@@ -24,9 +19,9 @@ filtering - perfect for debugging, testing, and demonstrations.
 npm install @walkeros/destination-demo
 ```
 
-## Quick Start
+## Quick start
 
-```typescript
+```ts
 import { startFlow } from '@walkeros/collector';
 import { destinationDemo } from '@walkeros/destination-demo';
 
@@ -37,88 +32,19 @@ const { collector } = await startFlow({
 });
 
 await collector.push('page view', { title: 'Home' });
-// Console output: [demo] { "name": "page view", "data": { "title": "Home" }, ... }
 ```
 
-## Configuration
+## Documentation
 
-| Name   | Type            | Description                                      | Required |
-| ------ | --------------- | ------------------------------------------------ | -------- |
-| name   | `string`        | Custom prefix for log messages (default: "demo") | No       |
-| values | `Array<string>` | Dot notation paths to extract specific fields    | No       |
-
-## Example
-
-Complete example showing filtered field logging:
-
-```typescript
-import { startFlow } from '@walkeros/collector';
-import { sourceDemo } from '@walkeros/source-demo';
-import { destinationDemo } from '@walkeros/destination-demo';
-
-const { collector } = await startFlow({
-  sources: {
-    demo: {
-      code: sourceDemo,
-      config: {
-        settings: {
-          events: [
-            {
-              name: 'product view',
-              data: { id: 'P123', name: 'Laptop', price: 999 },
-            },
-          ],
-        },
-      },
-    },
-  },
-  destinations: {
-    demo: {
-      ...destinationDemo,
-      config: {
-        settings: {
-          name: 'MyApp',
-          values: ['name', 'data.id', 'data.name', 'timestamp'],
-        },
-      },
-    },
-  },
-});
-
-// Console output: [MyApp] {
-//   "name": "product view",
-//   "data.id": "P123",
-//   "data.name": "Laptop",
-//   "timestamp": 1647261462000
-// }
-```
-
-### Without Field Filtering
-
-Omit the `values` setting to log the complete event object:
-
-```typescript
-const { collector } = await startFlow({
-  destinations: {
-    demo: {
-      ...destinationDemo,
-      config: {
-        settings: {
-          name: 'Debug',
-        },
-      },
-    },
-  },
-});
-
-// Console output: [Debug] { "name": "page view", "data": {...}, "context": {...}, ... }
-```
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations**
 
 ## Contribute
 
-We welcome contributions! Please see our
-[contribution guidelines](https://github.com/elbwalker/walkerOS) for more
-information.
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
 ## License
 

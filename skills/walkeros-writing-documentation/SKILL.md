@@ -340,39 +340,35 @@ Note: `hints` is a direct export (not `* as`), because it's already a
 
 ## Templates
 
-### Package README Template
+### Package README Template (thin pointer)
+
+READMEs are **thin pointers** to the website docs, which are the single source
+of truth. A README carries only: logo, title, one-line description, install, ONE
+current `version: 4` Quick Start, and a prominent link to the package's docs
+page. No `## Features`, no `## Configuration Reference`, no inline API
+reference, no `## Examples` block. All reference content lives on the website so
+it can never drift in two places.
+
+The docs link MUST be an absolute `https://www.walkeros.io/docs/...` URL, never
+a relative path: packages publish to npm individually and relative links break
+on npmjs.com. These absolute docs links are validated by
+`npm run validate:links` (it maps the URL to the `website/docs/` source file and
+asserts it exists).
 
 ````markdown
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/[package-name]
 
-[1-sentence description]
+[one-sentence description, adapted from the docs page intro]
 
-[Source Code](link) | [NPM](link) | [Documentation](link)
-
-## Quick Start
-
-```json
-{
-  "version": 4,
-  "flows": {
-    "default": {
-      "config": { "platform": "web" },
-      "[sources|destinations]": {
-        "[name]": {
-          "package": "@walkeros/[package-name]",
-          "config": { ... }
-        }
-      }
-    }
-  }
-}
-```
-````
-
-## Features
-
-- **Feature 1**: Brief description
-- **Feature 2**: Brief description
+[Documentation](https://www.walkeros.io/docs/[path]) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/[package-name]) &bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/[path])
 
 ## Installation
 
@@ -380,33 +376,45 @@ Note: `hints` is a direct export (not `* as`), because it's already a
 npm install @walkeros/[package-name]
 ```
 
-## Configuration Reference
+## Quick start
 
-| Name | Type | Description | Required | Default |
-| ---- | ---- | ----------- | -------- | ------- |
+```json
+{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "[web|server]" },
+      "[sources|destinations]": {
+        "[name]": {
+          "package": "@walkeros/[package-name]",
+          "config": {}
+        }
+      }
+    }
+  }
+}
+```
 
-## Examples
+## Documentation
 
-### Basic
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/[path]**
 
-[Simple example]
+## Contribute
 
-<details>
-<summary>Advanced: Custom Mapping</summary>
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-[Complex example]
+## License
 
-</details>
-
-## Type Definitions
-
-See [src/types.ts](./src/types.ts) for TypeScript interfaces.
-
-## Related
-
-- [Documentation](website/docs/...)
-
+MIT
 ````
+
+Verify the Quick Start against `apps/quickstart/` and the package's real export
+name before publishing. Platform-agnostic packages (core, collector) show their
+most representative current usage instead of a `config.platform` flow.
 
 ### walkerOS.json
 
@@ -423,9 +431,11 @@ the package's role in the walkerOS ecosystem.
 
 ### Website Doc Template (MDX)
 
-Website docs fold features into the intro paragraph (no `## Features` heading). READMEs keep `## Features` — this template is website-only.
+Website docs fold features into the intro paragraph (no `## Features` heading).
+Thin-pointer READMEs also have no `## Features` heading; key capabilities go
+into the one-line description. This template is website-only.
 
-```mdx
+````mdx
 ---
 title: [Title]
 description: [SEO description]
@@ -439,12 +449,14 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 <PackageLink package="@walkeros/[package]" />
 
-[1-sentence description that folds in key features as prose — no separate `## Features` heading on website docs.]
+[1-sentence description that folds in key features as prose — no separate `##
+Features` heading on website docs.]
 
 ## Quick start
 
 ```json
 // Flow config example (<15 lines)
+```
 ````
 
 ## Installation

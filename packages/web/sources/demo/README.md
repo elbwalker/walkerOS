@@ -1,22 +1,17 @@
-<div align="center">
+<p align="left">
   <a href="https://www.walkeros.io">
-    <img alt="elbwalker" src="https://www.walkeros.io/img/elbwalker-logo.png" height="40px" />
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
   </a>
-</div>
+</p>
 
-# walkerOS Source Demo
+# @walkeros/source-demo
 
-A demo source that generates walkerOS events from configuration - perfect for
-testing, demonstrations, and examples.
+Generates walkerOS events from a configuration array for testing,
+demonstrations, and examples. Zero external dependencies.
 
-> Learn more at [walkeros.io/docs](https://www.walkeros.io/docs/sources/)
-
-## What It Does
-
-- Generates walkerOS events from a configuration array
-- Supports delayed event execution for testing scenarios
-- Zero external dependencies - ideal for demos and testing
-- Simple push interface compatible with walkerOS architecture
+[Documentation](https://www.walkeros.io/docs) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/source-demo) &bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/demo)
 
 ## Installation
 
@@ -24,84 +19,33 @@ testing, demonstrations, and examples.
 npm install @walkeros/source-demo
 ```
 
-## Quick Start
+## Quick start
 
-```typescript
-import { startFlow } from '@walkeros/collector';
-import { sourceDemo } from '@walkeros/source-demo';
-
-const { collector } = await startFlow({
-  sources: {
-    demo: {
-      code: sourceDemo,
-      config: {
-        settings: {
-          events: [
-            { name: 'page view', data: { title: 'Home' } },
-            { name: 'product view', data: { id: 'P123' }, delay: 1000 },
-          ],
-        },
-      },
-    },
-  },
-});
+```json
+{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "web" },
+      "sources": {
+        "demo": { "package": "@walkeros/source-demo", "config": {} }
+      }
+    }
+  }
+}
 ```
 
-## Configuration
+## Documentation
 
-| Name   | Type                  | Description                    | Required |
-| ------ | --------------------- | ------------------------------ | -------- |
-| events | `Array<PartialEvent>` | Array of events to generate    | Yes      |
-| delay  | `number` (per event)  | Optional delay in milliseconds | No       |
-
-## Example
-
-Complete example showing the demo source with a destination:
-
-```typescript
-import { startFlow } from '@walkeros/collector';
-import { sourceDemo } from '@walkeros/source-demo';
-import { destinationDemo } from '@walkeros/destination-demo';
-
-const { collector } = await startFlow({
-  sources: {
-    demo: {
-      code: sourceDemo,
-      config: {
-        settings: {
-          events: [
-            {
-              name: 'page view',
-              data: { title: 'Home Page', path: '/' },
-            },
-            {
-              name: 'product view',
-              data: { id: 'P123', name: 'Laptop', price: 999 },
-              delay: 1000, // Wait 1 second before firing
-            },
-            {
-              name: 'order complete',
-              data: { id: 'O456', value: 999 },
-              delay: 2000, // Wait 2 seconds before firing
-            },
-          ],
-        },
-      },
-    },
-  },
-  destinations: {
-    demo: destinationDemo,
-  },
-});
-
-// Events will be generated automatically with specified delays
-```
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs**
 
 ## Contribute
 
-We welcome contributions! Please see our
-[contribution guidelines](https://github.com/elbwalker/walkerOS) for more
-information.
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
 ## License
 
