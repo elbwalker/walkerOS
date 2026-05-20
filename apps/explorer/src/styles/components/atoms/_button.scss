@@ -30,3 +30,34 @@
   padding: var(--spacing-button-group);
   border: 1px solid var(--border-button-group);
 }
+
+// Tabs variant — flat header tabs matching the step-detail modal tab style.
+// No track fill or outer border; the active tab is a filled, top-rounded
+// surface that reads as connected to the content below.
+.elb-explorer-button-group.elb-explorer-button-group--tabs {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 2px;
+
+  .elb-explorer-btn {
+    padding: 3px 10px;
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-button);
+    background: transparent;
+    border-radius: var(--radius-button) var(--radius-button) 0 0;
+
+    &:hover {
+      background: transparent;
+      color: var(--color-text-button-hover);
+    }
+
+    &.active {
+      background: var(--bg-button-active);
+      color: var(--color-text-button-active);
+      box-shadow: none;
+    }
+  }
+}

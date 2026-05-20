@@ -29,6 +29,11 @@ export interface PreviewProps {
  * When elb is provided, initializes walkerOS browser source in iframe
  * that pushes events to the parent collector.
  *
+ * Load semantics mirror a real browser: `load` triggers (and pageview) fire
+ * once on the initial load and again only when the user clicks Reload. Editing
+ * the HTML/CSS re-renders the preview and keeps click capture working but does
+ * NOT re-fire load; toggling highlights only flips body classes.
+ *
  * @example
  * // Read-only preview
  * <Preview html={html} css={css} label="Preview" />
@@ -46,12 +51,20 @@ export function Preview({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const elbRef = useRef(elb);
+  const htmlRef = useRef(html);
+  const cssRef = useRef(css);
+  const highlightsRef = useRef(highlights);
   const sourceRef = useRef<SourceHandle | null>(null);
+  // `load` triggers (and pageview) fire only on the first load and on explicit
+  // Reload — never on edits or highlight toggles. This ref gates the initial fire.
+  const hasFiredInitialLoadRef = useRef(false);
 
-  // Keep elbRef in sync
-  useEffect(() => {
-    elbRef.current = elb;
-  }, [elb]);
+  // Mirror latest props/state into refs so the stable render routine and the
+  // Reload handler always read current values without re-subscribing effects.
+  elbRef.current = elb;
+  htmlRef.current = html;
+  cssRef.current = css;
+  highlightsRef.current = highlights;
 
   const toggleHighlight = (type: string) => {
     setHighlights((prev) => {
@@ -81,17 +94,16 @@ export function Preview({
     [],
   );
 
-  useEffect(() => {
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-
-    updateTimeoutRef.current = setTimeout(() => {
+  // Render the iframe document and (re)attach the browser source. init() wires
+  // click/submit listeners; on('run') (which fires load triggers + pageview)
+  // runs only when fireLoad is set or the initial load hasn't fired yet.
+  const renderPreview = useCallback(
+    async ({ fireLoad }: { fireLoad: boolean }) => {
       const iframe = iframeRef.current;
       if (!iframe || !iframe.contentDocument) return;
 
       const doc = iframe.contentDocument;
-      const highlightClasses = Array.from(highlights)
+      const highlightClasses = Array.from(highlightsRef.current)
         .map((type) => `highlight-${type}`)
         .join(' ');
 
@@ -119,7 +131,7 @@ export function Preview({
               }
 
               /* User CSS */
-              ${css}
+              ${cssRef.current}
 
               /* Highlight CSS - imported from highlight styles */
               :root {
@@ -128,6 +140,10 @@ export function Preview({
                 --highlight-entity: #00ca4ecc;
                 --highlight-property: #ff605ccc;
                 --highlight-action: #9900ffcc;
+              }
+
+              body.elb-highlight.highlight-globals [data-elbglobals] {
+                box-shadow: 0 0 0 2px var(--highlight-globals);
               }
 
               body.elb-highlight.highlight-entity [data-elb] {
@@ -161,7 +177,7 @@ export function Preview({
             </style>
           </head>
           <body class="elb-highlight ${highlightClasses}">
-            ${html}
+            ${htmlRef.current}
           </body>
         </html>
       `);
@@ -169,111 +185,173 @@ export function Preview({
 
       autoMarkProperties(doc);
 
-      // Initialize browser source in iframe with parent's elb
-      if (elbRef.current && iframe.contentWindow && iframe.contentDocument) {
-        setTimeout(async () => {
-          // Cleanup previous source instance
-          if (sourceRef.current) {
-            try {
-              await sourceRef.current.instance.destroy?.(
-                sourceRef.current.destroyContext,
-              );
-            } catch {
-              // Ignore cleanup errors
-            }
-          }
-
-          try {
-            if (
-              !iframe.contentWindow ||
-              !iframe.contentDocument ||
-              !elbRef.current
-            ) {
-              return;
-            }
-
-            // Create a noop logger that satisfies the Logger.Instance interface
-            const createNoopLogger = (): Logger.Instance => ({
-              error: () => {},
-              warn: () => {},
-              info: () => {},
-              debug: () => {},
-              json: () => {},
-              throw: (msg: string | Error): never => {
-                throw msg instanceof Error ? msg : new Error(msg);
-              },
-              scope: () => createNoopLogger(),
-            });
-            const noopLogger = createNoopLogger();
-
-            // Create a noop push function for env
-            const noopPush: Collector.PushFn = async () => ({
-              ok: true,
-              destination: {},
-            });
-
-            // Initialize browser source directly with parent's elb
-            // This connects the iframe's DOM events to the parent collector
-            const config: SourceBrowser.Config = {
-              settings: {
-                pageview: false,
-                prefix: 'data-elb',
-                elb: 'elb',
-                elbLayer: 'elbLayer',
-                // Use body as scope - trigger.ts compares `scope !== document` against
-                // main page's document, so iframe.contentDocument fails the Element cast
-                scope: iframe.contentDocument.body,
-              },
-            };
-            const env: SourceBrowser.Env = {
-              elb: elbRef.current,
-              push: noopPush,
-              command: async () => ({ ok: true, destination: {} }),
-              logger: noopLogger,
-              window: iframe.contentWindow as Window & typeof globalThis,
-              document: iframe.contentDocument,
-            };
-
-            const instance = await sourceBrowser({
-              id: 'preview',
-              collector: {} as Collector.Instance, // Not used when elb is provided directly
-              logger: noopLogger,
-              withScope: async (_r, _resp, body) => body({} as never),
-              config,
-              env,
-            });
-
-            sourceRef.current = {
-              instance,
-              destroyContext: {
-                id: 'preview',
-                config,
-                env,
-                logger: noopLogger,
-              },
-            };
-          } catch {
-            // sourceBrowser init failed - events won't be captured
-          }
-        }, 50);
+      // Tear down any previous source bound to the old document
+      if (sourceRef.current) {
+        try {
+          await sourceRef.current.instance.destroy?.(
+            sourceRef.current.destroyContext,
+          );
+        } catch {
+          // Ignore cleanup errors
+        }
+        sourceRef.current = null;
       }
+
+      if (!elbRef.current || !iframe.contentWindow || !iframe.contentDocument) {
+        return;
+      }
+
+      // Let the freshly written document settle before binding listeners
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      if (!iframe.contentWindow || !iframe.contentDocument || !elbRef.current) {
+        return;
+      }
+
+      try {
+        // Create a noop logger that satisfies the Logger.Instance interface
+        const createNoopLogger = (): Logger.Instance => ({
+          error: () => {},
+          warn: () => {},
+          info: () => {},
+          debug: () => {},
+          json: () => {},
+          throw: (msg: string | Error): never => {
+            throw msg instanceof Error ? msg : new Error(msg);
+          },
+          scope: () => createNoopLogger(),
+        });
+        const noopLogger = createNoopLogger();
+
+        // Create a noop push function for env
+        const noopPush: Collector.PushFn = async () => ({
+          ok: true,
+          destination: {},
+        });
+
+        // Initialize browser source directly with parent's elb
+        // This connects the iframe's DOM events to the parent collector
+        const config: SourceBrowser.Config = {
+          settings: {
+            pageview: false,
+            prefix: 'data-elb',
+            elb: 'elb',
+            elbLayer: 'elbLayer',
+            // Use body as scope - trigger.ts compares `scope !== document` against
+            // main page's document, so iframe.contentDocument fails the Element cast
+            scope: iframe.contentDocument.body,
+          },
+        };
+        const env: SourceBrowser.Env = {
+          elb: elbRef.current,
+          push: noopPush,
+          command: async () => ({ ok: true, destination: {} }),
+          logger: noopLogger,
+          window: iframe.contentWindow as Window & typeof globalThis,
+          document: iframe.contentDocument,
+        };
+
+        const instance = await sourceBrowser({
+          id: 'preview',
+          collector: {} as Collector.Instance, // Not used when elb is provided directly
+          logger: noopLogger,
+          withScope: async (_r, _resp, body) => body({} as never),
+          config,
+          env,
+        });
+
+        // init() attaches click/submit listeners. on('run') processes load
+        // triggers (e.g. data-elbaction="load:view") and pageview — fire it only
+        // on the first load or an explicit Reload, not on every edit.
+        await instance.init?.();
+        if (fireLoad || !hasFiredInitialLoadRef.current) {
+          await instance.on?.('run');
+          hasFiredInitialLoadRef.current = true;
+        }
+
+        sourceRef.current = {
+          instance,
+          destroyContext: {
+            id: 'preview',
+            config,
+            env,
+            logger: noopLogger,
+          },
+        };
+      } catch {
+        // sourceBrowser init failed - events won't be captured
+      }
+    },
+    [autoMarkProperties],
+  );
+
+  // Re-render the preview and rebind the source on content/elb changes
+  // (debounced). Edits never re-fire load (except the gated initial load).
+  useEffect(() => {
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+
+    updateTimeoutRef.current = setTimeout(() => {
+      void renderPreview({ fireLoad: false });
     }, 200);
 
     return () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
-
-      // Cleanup source
       if (sourceRef.current) {
         sourceRef.current.instance.destroy?.(sourceRef.current.destroyContext);
+        sourceRef.current = null;
       }
     };
-  }, [html, css, highlights, autoMarkProperties, elb]);
+  }, [html, css, elb, renderPreview]);
+
+  // Highlight toggles only flip body classes on the live document — no
+  // re-render and no source rebind, so they never re-fire load triggers.
+  useEffect(() => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc?.body) return;
+    const highlightClasses = Array.from(highlights)
+      .map((type) => `highlight-${type}`)
+      .join(' ');
+    doc.body.className = `elb-highlight ${highlightClasses}`.trim();
+  }, [highlights]);
+
+  // Reload acts like a browser reload: re-render and re-fire the load lifecycle.
+  const handleReload = useCallback(() => {
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+    void renderPreview({ fireLoad: true });
+  }, [renderPreview]);
 
   return (
     <Box
       header={label}
+      headerActions={
+        <button
+          type="button"
+          className="elb-explorer-btn"
+          onClick={handleReload}
+          title="Reload preview"
+          aria-label="Reload preview"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="23 4 23 10 17 10" />
+            <polyline points="1 20 1 14 7 14" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+        </button>
+      }
       footer={
         <PreviewFooter highlights={highlights} onToggle={toggleHighlight} />
       }

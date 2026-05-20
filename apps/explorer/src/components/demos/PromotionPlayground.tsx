@@ -72,7 +72,8 @@ const defaultHtml = `<div
       </button>
     </div>
   </div>
-</div>`;
+</div>
+<span data-elbglobals="language:en"></span>`;
 
 const defaultCss = `* {
   box-sizing: border-box;
@@ -245,9 +246,20 @@ const defaultMapping = `{
       "name": "view_item",
       "data": {
         "map": {
-          "event": "name",
-          "price": "data.price",
-          "stage": "context.stage.0"
+          "currency": { "value": "EUR" },
+          "value": "data.price",
+          "items": {
+            "set": [
+              {
+                "map": {
+                  "item_name": "data.name",
+                  "item_variant": "data.taste",
+                  "price": "data.price",
+                  "quantity": { "value": 1 }
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -255,23 +267,41 @@ const defaultMapping = `{
       "name": "add_to_cart",
       "data": {
         "map": {
-          "event": "event",
-          "price": "data.price",
-          "user": {
-            "consent": { "marketing": true },
-            "key": "user.session"
-          },
-          "isSale": {
-            "fn": "(e) => !!e.data.old_price"
+          "currency": { "value": "EUR" },
+          "value": "data.price",
+          "items": {
+            "set": [
+              {
+                "map": {
+                  "item_name": "data.name",
+                  "item_variant": "data.taste",
+                  "price": "data.price",
+                  "quantity": { "value": 1 }
+                }
+              }
+            ]
           }
         }
       }
     },
     "save": {
+      "name": "add_to_wishlist",
       "data": {
         "map": {
-          "event": "event",
-          "data": "data"
+          "currency": { "value": "EUR" },
+          "value": "data.price",
+          "items": {
+            "set": [
+              {
+                "map": {
+                  "item_name": "data.name",
+                  "item_variant": "data.taste",
+                  "price": "data.price",
+                  "quantity": { "value": 1 }
+                }
+              }
+            ]
+          }
         }
       }
     }
@@ -453,6 +483,8 @@ export function PromotionPlayground({
         onChange={handleMappingChange}
         language="json"
         wordWrap
+        folding
+        sticky
       />
 
       {/* Column 5: Result - transformed destination output */}

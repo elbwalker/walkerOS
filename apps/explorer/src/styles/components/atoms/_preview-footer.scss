@@ -1,13 +1,16 @@
 .elb-preview-footer {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  // One equal-width column per button, whatever the count — never wrap to a
+  // second (clipped) row. Hardcoding a column count breaks when buttons change.
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   flex: 1;
   align-self: stretch;
   background: var(--bg-footer);
 }
 
 .elb-preview-btn {
-  padding: 6px 8px;
+  padding: 6px 6px;
   font-size: var(--font-size-toggle);
   font-weight: 600;
   color: var(--color-text-button);
@@ -19,6 +22,8 @@
   text-align: center;
   margin: 0;
   height: 100%;
+  min-width: 0;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -226,7 +226,44 @@ export type JSONSchema = Record<string, unknown>;
  * @returns JSON Schema Draft 7 object
  */
 export function zodToSchema(schema: zod.ZodTypeAny): JSONSchema {
-  return z.toJSONSchema(schema, {
+  const json = z.toJSONSchema(schema, {
     target: 'draft-7',
   }) as JSONSchema;
+  normalizeGeneratedSchema(json);
+  return json;
+}
+
+// Post-process the generated JSON Schema so it documents real usage:
+//
+// 1. Title: give every inline nested object a `title` derived from its property
+//    key when it has none. Anonymous nested objects (sub-settings like `ga4`,
+//    `ads`) would otherwise render as a bare "object". An explicit title from
+//    `.meta({ title })` always wins and is never overwritten.
+//
+// 2. Required: drop any field that carries a `default` from its object's
+//    `required` list. Zod marks default-ed fields as required because the
+//    output type always has them, but a caller may omit them, so they are not
+//    required from a documentation standpoint.
+function normalizeGeneratedSchema(node: JSONSchema): void {
+  const properties = node.properties as Record<string, JSONSchema> | undefined;
+  if (!properties || typeof properties !== 'object') return;
+
+  if (Array.isArray(node.required)) {
+    node.required = (node.required as string[]).filter((name) => {
+      const child = properties[name];
+      return !(child && typeof child === 'object' && 'default' in child);
+    });
+  }
+
+  for (const [key, child] of Object.entries(properties)) {
+    if (!child || typeof child !== 'object') continue;
+    if (
+      child.type === 'object' &&
+      child.properties &&
+      typeof child.title !== 'string'
+    ) {
+      child.title = key;
+    }
+    normalizeGeneratedSchema(child);
+  }
 }
