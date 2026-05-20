@@ -213,6 +213,15 @@ See [Workload Identity documentation](https://cloud.google.com/iam/docs/workload
   </TabItem>
 </Tabs>
 
+:::tip Inline credentials
+Instead of relying on `GOOGLE_APPLICATION_CREDENTIALS`, you can pass auth
+options inline via `settings.bigquery` (for example `keyFilename` or
+`credentials`). These apply to both the control plane (setup, metadata) and the
+data plane (Storage Write API ingestion). A pre-built `settings.client`
+authenticates the control plane only; supply `settings.bigquery` for the data
+plane to use non-ADC credentials.
+:::
+
 ## Environment variables
 
 | Variable | Description | Default |

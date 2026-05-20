@@ -26,6 +26,7 @@ export const destinationBigQuery: Destination = {
           projectId: config.settings.projectId,
           datasetId: config.settings.datasetId,
           tableId: config.settings.tableId,
+          bigquery: config.settings.bigquery,
         },
         logger,
       );

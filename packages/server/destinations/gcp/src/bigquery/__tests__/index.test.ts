@@ -76,6 +76,22 @@ describe('Server Destination BigQuery', () => {
     ]);
   });
 
+  test('init forwards settings.bigquery auth to the Storage Write client', async () => {
+    await callInit({
+      projectId,
+      datasetId,
+      tableId,
+      bigquery: { keyFilename: './init-sa.json' },
+    });
+    const ctorCall = __getMockCalls().find(
+      (c) => c.method === 'WriterClient.ctor',
+    );
+    expect(ctorCall?.args[0]).toEqual({
+      projectId,
+      keyFilename: './init-sa.json',
+    });
+  });
+
   test('init defaults datasetId to walkerOS and tableId to events', async () => {
     const result = await callInit({ projectId });
 

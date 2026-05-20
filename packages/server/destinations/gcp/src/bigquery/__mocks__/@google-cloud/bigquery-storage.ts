@@ -31,7 +31,12 @@ class MockJSONWriter {
 }
 
 class MockWriterClient {
-  constructor(args: { projectId?: string }) {
+  constructor(args: {
+    projectId?: string;
+    keyFilename?: string;
+    credentials?: unknown;
+    scopes?: string | string[];
+  }) {
     calls.push({ method: 'WriterClient.ctor', args: [args] });
   }
   async createStreamConnection(args: {

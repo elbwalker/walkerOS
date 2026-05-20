@@ -122,6 +122,17 @@ The destination uses BigQuery's Storage Write API for data ingestion.
 Note: the upstream `@google-cloud/bigquery-storage` package self-marks as
 `EXPERIMENTAL` (subject to change). Pinned at `^5.1.0`.
 
+### Authentication
+
+Both the control plane (setup, metadata) and the data plane (Storage Write API
+ingestion) authenticate from `settings.bigquery`. To use a service account key
+instead of ADC, pass it once:
+
+`settings: { projectId, bigquery: { keyFilename: './sa.json' } }`
+
+A pre-built `settings.client` authenticates only the control plane. For the data
+plane to use non-ADC credentials, supply `settings.bigquery`.
+
 ## Batching
 
 `pushBatch` is implemented. Set the collector's `batch: <ms>` mapping setting to
