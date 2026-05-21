@@ -1,5 +1,194 @@
 # @walkeros/core
 
+## 4.1.0
+
+### Minor Changes
+
+- e155ff8: Cache reads through `checkCache` are now correct against async stores
+  (filesystem, Redis, any store with an async `get`). Previously a custom async
+  store could silently miss the cache.
+
+  `checkCache` returns a Promise. External callers must add `await`.
+
+- e155ff8: Collector and destination buffers are now size-bounded with FIFO
+  drop-oldest eviction. Defaults: collector `queueMax: 1000`, destination
+  `queueMax: 1000`, destination `dlqMax: 100`. Set either knob to override per
+  scope. Drop counts surface in `collector.status.dropped` and
+  `collector.status.destinations[id]`.
+- b276173: **Breaking:** `code: "<exportName>"` is no longer accepted on any
+  step. Replace with `import: "<exportName>"` alongside `package`.
+
+  **New:** Every step (source, transformer, destination, store) accepts
+  `import?: string`. With `package`, it selects a named export. `package` alone
+  still loads the default export. Inline code stays
+  `code: { push, type?, init? }`. Empty steps are valid no-ops. `flow_validate`
+  and the CLI bundler raise `OBSOLETE_CODE_STRING` on the legacy shape with a
+  precise rename hint.
+
+- dd9f5ad: Pass-through transformer steps + closed-schema validation.
+
+  **Validation:** `validateTransformerEntry` in `@walkeros/core` is now the
+  single source of truth. Bundler, `flow_validate`, and collector runtime all
+  delegate. Closed schema: unknown top-level keys are errors. `code` + `package`
+  together is a `CONFLICT`.
+
+  **Pass-through steps:** A transformer entry with no `code` and no `package` is
+  valid; the collector synthesizes its push. Three variants:
+  - before/next chain only (named hop)
+  - cache only (e.g. dedup)
+  - mapping only (event-to-event transform via `Mapping.Config`)
+
+  **Mapping at the transformer position:** new `mapping?: Mapping.Config` field
+  on `Transformer.Config` / `InitTransformer`. Same shape as
+  `Destination.Config.mapping`, event-to-event semantic. `data` / `silent` are
+  ignored at the transformer position with a one-time warning.
+
+  **Engine tag:** synthesized instance now uses `type: 'pass'` (was `'path'`).
+  Hard cut.
+
+  **Runtime fixes:**
+  - `compileNext` handles mixed-shape `next` arrays (`["a", { case }]`) via a
+    new `'sequence'` variant.
+  - A destination's `before` referencing a pass-through transformer now walks
+    that transformer's own `before` / `next`.
+  - `cache.stop: true` at a pre-collector transformer halts the pipeline
+    (matches `cache.mdx`).
+
+  **Migration:** Typo keys on a step now fail validation.
+  `instance.type === 'path'` consumers must read `'pass'`. `runTransformerChain`
+  consumers should branch on the new `stopped` flag.
+
+- adeebea: Route grammar: rename `case` to `one` (first-match dispatch) and add
+  `many` (all-match parallel fan-out, pre-collector only). `many` terminates the
+  main chain and is rejected at post-collector positions (`destination.before`,
+  `destination.next`); use multiple destinations for post-collector fan-out.
+  `RouteCaseConfig` is renamed to `RouteOneConfig`; no aliases.
+- 13aaeaa: `Source.Context` no longer exposes `setIngest` or `setRespond`.
+  Server sources handling concurrent inbound requests must call
+  `context.withScope(rawScope, respond, body)` to bind per-request ingest and
+  respond. Browser and other single-scope sources keep working without changes.
+- e800974: `Status.dropped` is now keyed by stepId, so operators can see at a
+  glance which step dropped events. Read with
+  `status.dropped["collector"]?.queue` or
+  `status.dropped["destination.<id>"]?.queue` / `.dlq`, or build the key with
+  the new `stepId()` helper exported from `@walkeros/core`. Breaking change: the
+  previous flat shape (`status.dropped.queue` / `.queuePush` / `.dlq`) and the
+  per-destination `dropped` field on `DestinationStatus` are removed.
+- adeebea: Add `Flow.Store.cache` for store-level caching: read-through +
+  write-through wrapper with single-flight dedup, recursive composition via
+  `cache.store`, and per-wrapper counters. `CacheRule` is now a discriminated
+  union (`EventCacheRule | StoreCacheRule`); schema rejects inert fields in
+  store contexts.
+
+  Built-in `__cache` upgraded with LRU, `maxEntries: 10000`, batched eviction,
+  and active TTL sweep.
+
+  **Breaking:** `@walkeros/store-memory` is removed. Its logic is absorbed into
+  `__cache`. Migration: drop the store declaration, or omit `cache.store` to use
+  the built-in tier. `flow_validate` flags legacy references.
+
+- 058f7ed: Add `validateJsonSchema` / `validateEventsJsonSchema` exports for
+  step-level validation config, promote the validate and no-`many` route schemas
+  to direct exports, and add optional `nodeType` / `subPath` cursor fields to
+  `IntelliSenseContext` for context-scoped autocomplete.
+- 28a8ac2: Add step-level `validate?` primitive on every walkerOS step.
+  `validate:` is a declarative description of validation intent, like `cache` or
+  `consent`. Consumers decide how to enforce.
+
+  Restructure `Flow.ContractRule` to a uniform
+  `{ extends?, tagging?, description?, events?, schema? }` shape. A single
+  agnostic JSON Schema replaces the typed section fields (`globals`, `context`,
+  `custom`, `user`, `consent`); standard event field names live inside
+  `schema.properties.<name>`. `extends` resolves `schema` via additive
+  deep-merge.
+
+  Contracts are a description and governance concept: tooling, MCP, and humans
+  read them. Runtime enforcement is the consumer's call.
+
+- fd6076e: Walker commands `destination`, `hook`, and `on` now take a single
+  Init object: `elb('walker destination', { code, config })`,
+  `elb('walker hook', { name, fn })`, `elb('walker on', { type, rules })`. The
+  previous positional forms and the `{ push }` shorthand are removed; the
+  `options` argument is gone from `collector.command`, `addDestination`, and
+  `commonHandleCommand`.
+
+### Patch Changes
+
+- e800974: Fix `getByPath` silently returning undefined for objects created in a
+  different realm (Node `http.IncomingMessage`, `vm` contexts, worker threads,
+  iframes). The internal `instanceof Object` guard is replaced with a
+  cross-realm-safe check, so dot-notation paths now extract fields from native
+  request objects and other cross-realm sources.
+- 1a8f2d7: Fix `resolveContracts` so a child contract that uses `extends`
+  inherits the parent's `tagging` when it does not redeclare it. Previously the
+  parent's `tagging` was silently dropped, which corrupted contract version
+  tracking for anyone building on a base contract.
+- 1a8f2d7: Flow v4 routing & cache cleanup.
+
+  **Cache:**
+  - `cache.full` is renamed to `cache.stop`. Search-and-replace.
+  - `cacheRule.match` is now optional. Omitted means always-match. The literal
+    `'*'` is dropped from the schema and the TypeScript types; `compileMatcher`
+    still tolerates the string at runtime for migration.
+  - New `cache.namespace?: string` field. Omit to write keys directly to the
+    store. Same store + same key + same namespace = same cache entry.
+  - Implicit per-step namespace prefixes (`s:`, `t:`, `d:`) are removed. If you
+    relied on them to separate same-keyed caches across
+    sources/transformers/destinations using the same store, set
+    `cache.namespace` explicitly.
+
+  **Routing:**
+  - Unified recursive `Route` type. A Route is `string | Route[] | RouteConfig`.
+  - New `case` operator replaces the legacy `Route[]` first-match shape. The
+    legacy shape is compiled as an implicit `{ case: [...] }` for runtime
+    compatibility, but new configs should use `case` explicitly.
+  - `RouteConfig` is a disjoint union enforced at the TypeScript type level via
+    `never` fields: a single RouteConfig sets at most one of `next` / `case`. A
+    bare `{ match }` is a gate (pass-through when the match fires, fall-through
+    when it fails). JSON Schema validation currently emits `anyOf` and does not
+    enforce disjointness at runtime — see follow-up notes.
+  - Sequence sugar (`next: [A, B, C]`) is preserved.
+
+  **Path:**
+  - A transformer entry with no `code` is a `path` — a code-less passthrough.
+    The engine synthesizes `(e) => ({ event: e })`. Use paths to name and share
+    `before` chains across destinations. Validation: a path must declare at
+    least one of `package`, `before`, `next`, or `cache`.
+
+  **Schema & tooling:**
+  - Updated Zod schemas (cache, route, matcher).
+  - Updated MCP tool descriptions and resource references.
+  - Updated `flow_validate` to enforce the new constraints (`EMPTY_TRANSFORMER`
+    error code added).
+
+  **Migration:** Hard cut at the schema/type level. Configs using `cache.full`
+  will fail validation — rename to `stop`. Configs using `match: "*"` will fail
+  validation — omit `match`. Configs using `Route[]` first-match still work at
+  runtime (compiled as implicit `case`) but new configs should use `case`
+  explicitly.
+
+  `$schema: "v4"` is preserved. No version bump.
+
+- c60ef35: Remove unused legacy fields `batchFn` and `batched` from
+  `Mapping.Rule`. Batch state lives on the destination via `BatchRegistry`,
+  never on mapping rules. No runtime impact.
+- e800974: Internal pipeline failures in mapping, source startup, transformer
+  init, and destination init now log via the scoped logger and increment
+  `collector.status.failed`. Previously silent. User-supplied callbacks (mapping
+  `condition`/`fn`/`validate`, `on` subscriptions) log on throw but do not
+  affect `status.failed`. A source whose `init()` throws now stays
+  `config.init === false` instead of being marked initialized.
+- e800974: Add typed accessors `Source.getSource`, `Destination.getDestination`,
+  `Transformer.getTransformer`, `Store.getStore`. Each takes a collector and a
+  step id and returns the registered instance with its declared generic
+  recovered, replacing the `Elb.Fn`-collapsed shape that the bag's index
+  signature exposes on read.
+
+  Callers (mainly tests and integrations that invoke a step's raw `push` through
+  the collector) no longer need `as any` / `as (rawData: X) => ...` casts at
+  this boundary. Each helper throws `<Kind> not found: <id>` for unknown ids. No
+  runtime behavior change.
+
 ## 4.0.2
 
 ### Patch Changes

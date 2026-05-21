@@ -1,5 +1,128 @@
 # @walkeros/cli
 
+## 4.1.0
+
+### Minor Changes
+
+- b276173: **Breaking:** `code: "<exportName>"` is no longer accepted on any
+  step. Replace with `import: "<exportName>"` alongside `package`.
+
+  **New:** Every step (source, transformer, destination, store) accepts
+  `import?: string`. With `package`, it selects a named export. `package` alone
+  still loads the default export. Inline code stays
+  `code: { push, type?, init? }`. Empty steps are valid no-ops. `flow_validate`
+  and the CLI bundler raise `OBSOLETE_CODE_STRING` on the legacy shape with a
+  precise rename hint.
+
+- dd9f5ad: Pass-through transformer steps + closed-schema validation.
+
+  **Validation:** `validateTransformerEntry` in `@walkeros/core` is now the
+  single source of truth. Bundler, `flow_validate`, and collector runtime all
+  delegate. Closed schema: unknown top-level keys are errors. `code` + `package`
+  together is a `CONFLICT`.
+
+  **Pass-through steps:** A transformer entry with no `code` and no `package` is
+  valid; the collector synthesizes its push. Three variants:
+  - before/next chain only (named hop)
+  - cache only (e.g. dedup)
+  - mapping only (event-to-event transform via `Mapping.Config`)
+
+  **Mapping at the transformer position:** new `mapping?: Mapping.Config` field
+  on `Transformer.Config` / `InitTransformer`. Same shape as
+  `Destination.Config.mapping`, event-to-event semantic. `data` / `silent` are
+  ignored at the transformer position with a one-time warning.
+
+  **Engine tag:** synthesized instance now uses `type: 'pass'` (was `'path'`).
+  Hard cut.
+
+  **Runtime fixes:**
+  - `compileNext` handles mixed-shape `next` arrays (`["a", { case }]`) via a
+    new `'sequence'` variant.
+  - A destination's `before` referencing a pass-through transformer now walks
+    that transformer's own `before` / `next`.
+  - `cache.stop: true` at a pre-collector transformer halts the pipeline
+    (matches `cache.mdx`).
+
+  **Migration:** Typo keys on a step now fail validation.
+  `instance.type === 'path'` consumers must read `'pass'`. `runTransformerChain`
+  consumers should branch on the new `stopped` flag.
+
+### Patch Changes
+
+- 1a8f2d7: Flow v4 routing & cache cleanup.
+
+  **Cache:**
+  - `cache.full` is renamed to `cache.stop`. Search-and-replace.
+  - `cacheRule.match` is now optional. Omitted means always-match. The literal
+    `'*'` is dropped from the schema and the TypeScript types; `compileMatcher`
+    still tolerates the string at runtime for migration.
+  - New `cache.namespace?: string` field. Omit to write keys directly to the
+    store. Same store + same key + same namespace = same cache entry.
+  - Implicit per-step namespace prefixes (`s:`, `t:`, `d:`) are removed. If you
+    relied on them to separate same-keyed caches across
+    sources/transformers/destinations using the same store, set
+    `cache.namespace` explicitly.
+
+  **Routing:**
+  - Unified recursive `Route` type. A Route is `string | Route[] | RouteConfig`.
+  - New `case` operator replaces the legacy `Route[]` first-match shape. The
+    legacy shape is compiled as an implicit `{ case: [...] }` for runtime
+    compatibility, but new configs should use `case` explicitly.
+  - `RouteConfig` is a disjoint union enforced at the TypeScript type level via
+    `never` fields: a single RouteConfig sets at most one of `next` / `case`. A
+    bare `{ match }` is a gate (pass-through when the match fires, fall-through
+    when it fails). JSON Schema validation currently emits `anyOf` and does not
+    enforce disjointness at runtime — see follow-up notes.
+  - Sequence sugar (`next: [A, B, C]`) is preserved.
+
+  **Path:**
+  - A transformer entry with no `code` is a `path` — a code-less passthrough.
+    The engine synthesizes `(e) => ({ event: e })`. Use paths to name and share
+    `before` chains across destinations. Validation: a path must declare at
+    least one of `package`, `before`, `next`, or `cache`.
+
+  **Schema & tooling:**
+  - Updated Zod schemas (cache, route, matcher).
+  - Updated MCP tool descriptions and resource references.
+  - Updated `flow_validate` to enforce the new constraints (`EMPTY_TRANSFORMER`
+    error code added).
+
+  **Migration:** Hard cut at the schema/type level. Configs using `cache.full`
+  will fail validation — rename to `stop`. Configs using `match: "*"` will fail
+  validation — omit `match`. Configs using `Route[]` first-match still work at
+  runtime (compiled as implicit `case`) but new configs should use `case`
+  explicitly.
+
+  `$schema: "v4"` is preserved. No version bump.
+
+- adeebea: Route grammar: rename `case` to `one` (first-match dispatch) and add
+  `many` (all-match parallel fan-out, pre-collector only). `many` terminates the
+  main chain and is rejected at post-collector positions (`destination.before`,
+  `destination.next`); use multiple destinations for post-collector fan-out.
+  `RouteCaseConfig` is renamed to `RouteOneConfig`; no aliases.
+- Updated dependencies [e155ff8]
+- Updated dependencies [e800974]
+- Updated dependencies [e155ff8]
+- Updated dependencies [1a8f2d7]
+- Updated dependencies [1a8f2d7]
+- Updated dependencies [b276173]
+- Updated dependencies [dd9f5ad]
+- Updated dependencies [c60ef35]
+- Updated dependencies [adeebea]
+- Updated dependencies [13aaeaa]
+- Updated dependencies [e800974]
+- Updated dependencies [adeebea]
+- Updated dependencies [6cdc362]
+- Updated dependencies [e800974]
+- Updated dependencies [e800974]
+- Updated dependencies [058f7ed]
+- Updated dependencies [28a8ac2]
+- Updated dependencies [fd6076e]
+  - @walkeros/core@4.1.0
+  - @walkeros/collector@4.1.0
+  - @walkeros/server-core@4.1.0
+  - @walkeros/server-destination-api@4.1.0
+
 ## 4.0.2
 
 ### Patch Changes

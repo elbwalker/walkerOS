@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-store-sheets",
   "description": "Google Sheets store for walkerOS server flows",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -33,7 +33,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.0.2"
+    "@walkeros/core": "4.1.0"
   },
   "devDependencies": {},
   "repository": {

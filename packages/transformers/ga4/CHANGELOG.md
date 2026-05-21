@@ -1,8 +1,17 @@
-# @walkeros/server-store-sheets
+# @walkeros/transformer-ga4
 
 ## 4.1.0
 
 ### Patch Changes
+
+- 6cdc362: Add `@walkeros/transformer-ga4`: GA4 Measurement Protocol v2 decoder
+  transformer with default mappings for 33 standard events. Server-side use via
+  `source-express` in the `before` chain.
+
+  Also: fix collector to preserve fan-out in `source.before` chains. Previously,
+  when a before-transformer returned an array of events, only the first
+  survived. This enables vendor-protocol decoders (GA4, Segment, Snowplow, etc.)
+  to fan a batched request into N walkerOS events.
 
 - Updated dependencies [e155ff8]
 - Updated dependencies [e800974]
@@ -22,19 +31,3 @@
 - Updated dependencies [28a8ac2]
 - Updated dependencies [fd6076e]
   - @walkeros/core@4.1.0
-
-## 4.0.2
-
-### Patch Changes
-
-- Updated dependencies [a6a0ea7]
-  - @walkeros/core@4.0.2
-
-## 4.0.1
-
-### Patch Changes
-
-- Updated dependencies [381dfe7]
-- Updated dependencies [1524275]
-- Updated dependencies [03d7055]
-  - @walkeros/core@4.0.1
