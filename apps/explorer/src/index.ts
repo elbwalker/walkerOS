@@ -47,7 +47,7 @@ export type {
   DropdownDividerProps,
 } from './components/molecules/dropdown';
 
-export { Preview } from './components/molecules/preview';
+export { Preview, DEFAULT_FALLBACK_HTML } from './components/molecules/preview';
 export type { PreviewProps } from './components/molecules/preview';
 
 // Atoms

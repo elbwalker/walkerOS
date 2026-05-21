@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import type { Elb, Source, Logger, Collector, Lifecycle } from '@walkeros/core';
 import {
   sourceBrowser,
@@ -14,12 +20,36 @@ interface SourceHandle {
 }
 import { Box } from '../atoms/box';
 import { PreviewFooter } from '../atoms/preview-footer';
+import { ButtonGroup } from '../atoms/button-group';
+import { Code } from '../atoms/code';
+
+/**
+ * Minimal "product add" example shown when a browser-source step provides no
+ * HTML of its own. Demonstrates an entity with a click:add action.
+ */
+export const DEFAULT_FALLBACK_HTML =
+  '<div data-elb="product" data-elbaction="click:add"><button data-elb-product="name:Example;price:9.99">Add to cart</button></div>';
 
 export interface PreviewProps {
-  html: string;
+  html?: string;
   css?: string;
+  js?: string;
   elb?: Elb.Fn;
   label?: string;
+  /**
+   * Opt-in editor tabs. When true, the header shows a `tabs` ButtonGroup to
+   * switch between the live Preview and editable HTML/CSS/JS (matching the
+   * playground BrowserBox). When false (default), only the static preview
+   * renders so existing plain `Preview` usage is unaffected.
+   */
+  editable?: boolean;
+  /** Tab selected first when `editable` is true. Defaults to `preview`. */
+  initialTab?: 'preview' | 'html' | 'css' | 'js';
+  onHtmlChange?: (value: string) => void;
+  onCssChange?: (value: string) => void;
+  onJsChange?: (value: string) => void;
+  lineNumbers?: boolean;
+  wordWrap?: boolean;
 }
 
 /**
@@ -44,9 +74,21 @@ export interface PreviewProps {
 export function Preview({
   html,
   css = '',
+  js = '',
   elb,
   label = 'Preview',
+  editable = false,
+  initialTab = 'preview',
+  onHtmlChange,
+  onCssChange,
+  onJsChange,
+  lineNumbers = false,
+  wordWrap = false,
 }: PreviewProps) {
+  // Fall back to a minimal product/click:add example when no HTML is provided.
+  const resolvedHtml =
+    html && html.trim().length > 0 ? html : DEFAULT_FALLBACK_HTML;
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [highlights, setHighlights] = useState<Set<string>>(new Set());
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -62,7 +104,7 @@ export function Preview({
   // Mirror latest props/state into refs so the stable render routine and the
   // Reload handler always read current values without re-subscribing effects.
   elbRef.current = elb;
-  htmlRef.current = html;
+  htmlRef.current = resolvedHtml;
   cssRef.current = css;
   highlightsRef.current = highlights;
 
@@ -304,7 +346,7 @@ export function Preview({
         sourceRef.current = null;
       }
     };
-  }, [html, css, elb, renderPreview]);
+  }, [resolvedHtml, css, elb, renderPreview]);
 
   // Highlight toggles only flip body classes on the live document — no
   // re-render and no source rebind, so they never re-fire load triggers.
@@ -325,44 +367,118 @@ export function Preview({
     void renderPreview({ fireLoad: true });
   }, [renderPreview]);
 
+  const isPreviewTab = !editable || activeTab === 'preview';
+
+  // Reuse the playground BrowserBox tab pattern: a `tabs` ButtonGroup to switch
+  // between the live preview and editable HTML/CSS/JS.
+  const tabs = useMemo(
+    () => [
+      { label: 'Preview', value: 'preview' },
+      { label: 'HTML', value: 'html' },
+      { label: 'CSS', value: 'css' },
+      { label: 'JS', value: 'js' },
+    ],
+    [],
+  );
+
+  const reloadButton = (
+    <button
+      type="button"
+      className="elb-explorer-btn"
+      onClick={handleReload}
+      title="Reload preview"
+      aria-label="Reload preview"
+    >
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="23 4 23 10 17 10" />
+        <polyline points="1 20 1 14 7 14" />
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      </svg>
+    </button>
+  );
+
+  const tabBar = (
+    <ButtonGroup
+      buttons={tabs.map((tab) => ({
+        label: tab.label,
+        value: tab.value,
+        active: activeTab === tab.value,
+      }))}
+      onButtonClick={setActiveTab}
+      variant="tabs"
+    />
+  );
+
   return (
     <Box
       header={label}
       headerActions={
-        <button
-          type="button"
-          className="elb-explorer-btn"
-          onClick={handleReload}
-          title="Reload preview"
-          aria-label="Reload preview"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="23 4 23 10 17 10" />
-            <polyline points="1 20 1 14 7 14" />
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-          </svg>
-        </button>
+        editable ? (
+          <>
+            {tabBar}
+            {isPreviewTab ? reloadButton : null}
+          </>
+        ) : (
+          reloadButton
+        )
       }
       footer={
-        <PreviewFooter highlights={highlights} onToggle={toggleHighlight} />
+        isPreviewTab ? (
+          <PreviewFooter highlights={highlights} onToggle={toggleHighlight} />
+        ) : null
       }
     >
-      <div className="elb-preview-content">
+      {/* The iframe stays mounted to preserve the live source binding; editor
+          tabs sit on top and the preview is hidden, not unmounted. */}
+      <div
+        className="elb-preview-content"
+        style={isPreviewTab ? undefined : { display: 'none' }}
+      >
         <iframe
           ref={iframeRef}
           className="elb-preview-iframe"
           title="HTML Preview"
         />
       </div>
+      {editable && activeTab === 'html' ? (
+        <Code
+          code={resolvedHtml}
+          language="html"
+          onChange={onHtmlChange}
+          disabled={!onHtmlChange}
+          lineNumbers={lineNumbers}
+          wordWrap={wordWrap}
+        />
+      ) : null}
+      {editable && activeTab === 'css' ? (
+        <Code
+          code={css}
+          language="css"
+          onChange={onCssChange}
+          disabled={!onCssChange}
+          lineNumbers={lineNumbers}
+          wordWrap={wordWrap}
+        />
+      ) : null}
+      {editable && activeTab === 'js' ? (
+        <Code
+          code={js}
+          language="javascript"
+          onChange={onJsChange}
+          disabled={!onJsChange}
+          lineNumbers={lineNumbers}
+          wordWrap={wordWrap}
+        />
+      ) : null}
     </Box>
   );
 }

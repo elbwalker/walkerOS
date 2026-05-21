@@ -258,9 +258,16 @@ export const ValidateEventsSchema = z
  */
 export const ValidateSchema = z
   .object({
-    format: z.boolean().optional(),
-    events: ValidateEventsSchema.optional(),
-    schema: JsonSchemaSchema.optional(),
+    format: z
+      .boolean()
+      .optional()
+      .describe('Validate event structure against the standard event format'),
+    events: ValidateEventsSchema.optional().describe(
+      'Per entity-action JSON Schemas to validate matching events against',
+    ),
+    schema: JsonSchemaSchema.optional().describe(
+      'A single JSON Schema applied to every event this step handles',
+    ),
   })
   .meta({
     id: 'Validate',
@@ -911,3 +918,17 @@ export const contractRuleJsonSchema = toJsonSchema(
  * JSON Schema for the named Contract map (Flow.Contract).
  */
 export const contractJsonSchema = toJsonSchema(ContractSchema, 'Contract');
+
+/**
+ * JSON Schema for the step-level Validate config (Flow.Validate).
+ */
+export const validateJsonSchema = toJsonSchema(ValidateSchema, 'Validate');
+
+/**
+ * JSON Schema for the entity-action keyed Validate events map
+ * (Flow.ValidateEvents). Shares its shape with Contract `events`.
+ */
+export const validateEventsJsonSchema = toJsonSchema(
+  ValidateEventsSchema,
+  'ValidateEvents',
+);
