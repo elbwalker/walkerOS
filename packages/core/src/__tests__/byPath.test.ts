@@ -1,4 +1,5 @@
 import { createEvent, getByPath, setByPath } from '..';
+import { deleteByPath } from '../byPath';
 
 describe('byPath', () => {
   test('getByPath', () => {
@@ -63,6 +64,25 @@ describe('byPath', () => {
     // Modified event should have the new field
     expect(modifiedEvent.data).toHaveProperty('newField', 'newValue');
     expect(modifiedEvent).not.toBe(originalEvent);
+  });
+
+  describe('deleteByPath', () => {
+    it('removes a top-level key, returning a new object', () => {
+      const input = { a: 1, b: 2 };
+      expect(deleteByPath(input, 'b')).toEqual({ a: 1 });
+      expect(input).toEqual({ a: 1, b: 2 });
+    });
+    it('removes a nested key via dotted path', () => {
+      expect(
+        deleteByPath({ data: { id: 1, currency: 'EUR' } }, 'data.currency'),
+      ).toEqual({ data: { id: 1 } });
+    });
+    it('is a no-op when the path does not exist', () => {
+      expect(deleteByPath({ a: 1 }, 'b.c')).toEqual({ a: 1 });
+    });
+    it('returns the value unchanged when it is not an object', () => {
+      expect(deleteByPath<string>('scalar', 'a')).toBe('scalar');
+    });
   });
 
   describe('getByPath cross-realm', () => {

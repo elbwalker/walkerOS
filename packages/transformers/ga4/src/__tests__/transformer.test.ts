@@ -282,4 +282,51 @@ describe('transformerGa4', () => {
       expect(logger.error).not.toHaveBeenCalled();
     });
   });
+
+  describe('mapping extend/remove', () => {
+    it('extend adds a new data.map field while inheriting the default fields', async () => {
+      const ctx = makeContext({
+        settings: {
+          mapping: {
+            purchase: {
+              extend: {
+                data: { map: { affiliation: 'params.ep.affiliation' } },
+              },
+            },
+          },
+        },
+        url: 'https://x/g/collect?v=2&tid=G-X&en=purchase&ep.transaction_id=T-1&epn.value=10&ep.currency=EUR&ep.affiliation=partner-1',
+      });
+      const instance = await transformerGa4(ctx);
+      const result = await instance.push(emptyEvent, ctx);
+      expect(result).toEqual({
+        event: expect.objectContaining({
+          data: expect.objectContaining({
+            id: 'T-1',
+            currency: 'EUR',
+            total: 10,
+            affiliation: 'partner-1',
+          }),
+        }),
+      });
+    });
+
+    it('remove strips a field from the produced data', async () => {
+      const ctx = makeContext({
+        settings: {
+          mapping: { purchase: { remove: ['currency'] } },
+        },
+        url: 'https://x/g/collect?v=2&tid=G-X&en=purchase&ep.transaction_id=T-1&epn.value=10&ep.currency=EUR',
+      });
+      const instance = await transformerGa4(ctx);
+      const result = await instance.push(emptyEvent, ctx);
+      expect(result).toEqual({
+        event: expect.objectContaining({
+          data: expect.objectContaining({ id: 'T-1', total: 10 }),
+        }),
+      });
+      const event = (result as { event: WalkerOS.DeepPartialEvent }).event;
+      expect(event.data).not.toHaveProperty('currency');
+    });
+  });
 });

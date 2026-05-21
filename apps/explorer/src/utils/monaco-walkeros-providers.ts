@@ -20,6 +20,7 @@ import {
   type CompletionEntry,
 } from './monaco-walkeros-completions';
 import { getJsonPathAtOffset } from './monaco-json-path';
+import { allowedRefKinds } from './allowed-ref-kinds';
 import { detectMappingContext } from './mapping-context-detector';
 import {
   detectChainRefContext,
@@ -186,12 +187,23 @@ export function registerWalkerOSProviders(
           textBeforeCursor.endsWith('"$') ||
           textBeforeCursor.endsWith('"')
         ) {
-          entries.push(...getVariableCompletions(context.variables));
-          entries.push(...getSecretCompletions(context.secrets));
-          entries.push(...getStoreCompletions(context.stores));
-          entries.push(...getFlowCompletions(context.flows));
-          entries.push(...getEnvCompletions(context.envNames));
-          entries.push(...getContractCompletions(context.contractRaw, []));
+          // Gate the open `$` fallback by the same pure scope rule the Form
+          // fields use: derive the subPath at the cursor, then offer only the
+          // ref kinds allowed at that location.
+          const subPath = getJsonPathAtOffset(fullText, offset);
+          const kinds = allowedRefKinds(context.nodeType, subPath);
+          if (kinds.includes('var'))
+            entries.push(...getVariableCompletions(context.variables));
+          if (kinds.includes('secret'))
+            entries.push(...getSecretCompletions(context.secrets));
+          if (kinds.includes('store'))
+            entries.push(...getStoreCompletions(context.stores));
+          if (kinds.includes('flow'))
+            entries.push(...getFlowCompletions(context.flows));
+          if (kinds.includes('env'))
+            entries.push(...getEnvCompletions(context.envNames));
+          if (kinds.includes('contract'))
+            entries.push(...getContractCompletions(context.contractRaw, []));
         }
 
         // Mapping value path completions (data., globals., user., etc.)

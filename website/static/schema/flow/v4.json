@@ -16,114 +16,62 @@
       "title": "Flow.Variables",
       "description": "Reusable values referenced via $var.name (with optional deep paths). Whole-string refs preserve native type; inline interpolation requires scalars."
     },
-    "FlowContractSchemaEntry": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {},
-      "title": "Flow.ContractSchemaEntry",
-      "description": "JSON Schema object for event validation with description/examples annotations."
-    },
-    "FlowContractActions": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "description": "JSON Schema object for event validation with description/examples annotations",
-        "allOf": [
-          {
-            "$ref": "#/definitions/FlowContractSchemaEntry"
-          }
-        ]
-      },
-      "title": "Flow.ContractActions",
-      "description": "Action-level contract entries keyed by action name."
-    },
-    "FlowContractEvents": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "description": "Action-level contract entries",
-        "allOf": [
-          {
-            "$ref": "#/definitions/FlowContractActions"
-          }
-        ]
-      },
-      "title": "Flow.ContractEvents",
-      "description": "Entity-action event schemas (entity → action → schema)."
-    },
-    "FlowContractRule": {
+    "ContractRule": {
       "type": "object",
       "properties": {
-        "extends": {
-          "description": "Inherit from another named contract",
+        "extend": {
           "type": "string"
         },
         "tagging": {
-          "description": "Tagging level (used by validators / runtime tagging policy)",
           "type": "number"
         },
         "description": {
-          "description": "Human-readable description",
           "type": "string"
         },
-        "globals": {
-          "description": "JSON Schema for event.globals",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowContractSchemaEntry"
-            }
-          ]
-        },
-        "context": {
-          "description": "JSON Schema for event.context",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowContractSchemaEntry"
-            }
-          ]
-        },
-        "custom": {
-          "description": "JSON Schema for event.custom",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowContractSchemaEntry"
-            }
-          ]
-        },
-        "user": {
-          "description": "JSON Schema for event.user",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowContractSchemaEntry"
-            }
-          ]
-        },
-        "consent": {
-          "description": "JSON Schema for event.consent",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowContractSchemaEntry"
-            }
-          ]
-        },
         "events": {
-          "description": "Entity-action event schemas",
           "allOf": [
             {
-              "$ref": "#/definitions/FlowContractEvents"
+              "$ref": "#/definitions/ValidateEvents"
+            }
+          ]
+        },
+        "schema": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/JsonSchema"
             }
           ]
         }
       },
       "additionalProperties": false,
       "title": "Flow.ContractRule",
-      "description": "Named contract rule with optional sections (globals/context/custom/user/consent) and event schemas."
+      "description": "Named contract entry"
+    },
+    "JsonSchema": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {},
+      "title": "JsonSchema",
+      "description": "Structural JSON Schema fragment (Record<string, unknown>)"
+    },
+    "ValidateEvents": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "$ref": "#/definitions/JsonSchema"
+        }
+      },
+      "title": "ValidateEvents",
+      "description": "Entity-action keyed JSON Schemas"
     },
     "FlowContract": {
       "type": "object",
@@ -131,15 +79,10 @@
         "type": "string"
       },
       "additionalProperties": {
-        "description": "Named contract rule with optional sections and events",
-        "allOf": [
-          {
-            "$ref": "#/definitions/FlowContractRule"
-          }
-        ]
+        "$ref": "#/definitions/ContractRule"
       },
       "title": "Flow.Contract",
-      "description": "Named contracts map with optional extends inheritance."
+      "description": "Named contracts map with optional extend inheritance."
     },
     "FlowSettings": {
       "type": "object",
@@ -263,7 +206,7 @@
       "required": ["push"],
       "additionalProperties": false,
       "title": "Flow.Code",
-      "description": "Inline code block for custom sources / transformers / destinations / stores."
+      "description": "Inline code block (object form) for custom sources / transformers / destinations / stores. Use `import` on the step to select a named export from a package."
     },
     "FlowSourceConfig": {
       "type": "object",
@@ -292,7 +235,7 @@
       "title": "Source.BaseEnv",
       "description": "Source environment configuration (Source.BaseEnv overrides)."
     },
-    "MatcherRouteSpec": {
+    "Route": {
       "anyOf": [
         {
           "type": "string"
@@ -300,40 +243,99 @@
         {
           "type": "array",
           "items": {
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/definitions/Route"
+              }
+            ]
           }
         },
         {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "match": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/MatcherExpression"
-                  },
-                  {
-                    "type": "string",
-                    "const": "*"
-                  }
-                ]
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "match": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/MatcherExpression"
+                    }
+                  ]
+                },
+                "next": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/Route"
+                    }
+                  ]
+                }
               },
-              "next": {
-                "allOf": [
-                  {
-                    "$ref": "#/definitions/MatcherRouteSpec"
-                  }
-                ]
-              }
+              "required": ["next"],
+              "additionalProperties": false
             },
-            "required": ["match", "next"],
-            "additionalProperties": false
-          }
+            {
+              "type": "object",
+              "properties": {
+                "match": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/MatcherExpression"
+                    }
+                  ]
+                },
+                "one": {
+                  "type": "array",
+                  "items": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/Route"
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": ["one"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "match": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/MatcherExpression"
+                    }
+                  ]
+                },
+                "many": {
+                  "type": "array",
+                  "items": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/Route"
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": ["many"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "match": {
+                  "$ref": "#/definitions/MatcherExpression"
+                }
+              },
+              "required": ["match"],
+              "additionalProperties": false
+            }
+          ]
         }
       ],
-      "title": "Matcher.RouteSpec",
-      "description": "Routable next target: ID, ID list, or list of {match, next} rules."
+      "title": "Route",
+      "description": "Recursive route: string ID, sequence of routes, or a RouteConfig (next/one/many/gate)."
     },
     "MatcherExpression": {
       "anyOf": [
@@ -487,45 +489,45 @@
       "title": "Flow.StepExamples",
       "description": "Named step examples keyed by scenario name."
     },
-    "CacheConfig": {
+    "EventCacheConfig": {
       "type": "object",
       "properties": {
-        "full": {
-          "description": "Stop flow on cache HIT (default: false). When true, skip remaining steps and return cached value.",
+        "stop": {
+          "description": "Stop the chain on cache HIT (default: false). When true, skip remaining steps and return cached value.",
           "type": "boolean"
         },
         "store": {
           "description": "Store ID for persistent caching (references a configured store)",
           "type": "string"
         },
+        "namespace": {
+          "description": "Optional key prefix. Omit to write keys directly to the store. Same store + same key + same namespace = same cache entry.",
+          "type": "string"
+        },
         "rules": {
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/definitions/CacheRule"
+            "$ref": "#/definitions/EventCacheRule"
           },
           "description": "Cache rules — at least one required"
         }
       },
       "required": ["rules"],
       "additionalProperties": false,
-      "title": "Cache.Config",
-      "description": "Top-level cache configuration for a pipeline step (destination / transformer / source ref)."
+      "title": "EventCache.Config",
+      "description": "Top-level cache configuration for an event-context pipeline step (source / transformer / destination)."
     },
-    "CacheRule": {
+    "EventCacheRule": {
       "type": "object",
       "properties": {
         "match": {
-          "anyOf": [
+          "description": "Optional match expression — omit for always-match.",
+          "allOf": [
             {
               "$ref": "#/definitions/MatcherExpression"
-            },
-            {
-              "type": "string",
-              "const": "*"
             }
-          ],
-          "description": "Match expression or wildcard to determine when this rule applies"
+          ]
         },
         "key": {
           "minItems": 1,
@@ -538,7 +540,7 @@
         "ttl": {
           "type": "number",
           "exclusiveMinimum": 0,
-          "description": "Time-to-live in seconds for cached entries"
+          "description": "Time-to-live in seconds"
         },
         "update": {
           "description": "Response mutations applied on cache hit (key → Value mapping)",
@@ -551,10 +553,10 @@
           }
         }
       },
-      "required": ["match", "key", "ttl"],
+      "required": ["key", "ttl"],
       "additionalProperties": false,
-      "title": "Cache.Rule",
-      "description": "Single caching rule: when it applies (match), what keys it keys off, TTL, and optional response mutations on hit."
+      "title": "EventCache.Rule",
+      "description": "Single event-cache rule: when it applies (match), what event fields it keys off, TTL, and optional response mutations on hit."
     },
     "MappingValue": {
       "title": "Mapping.Value",
@@ -702,6 +704,34 @@
       "title": "Mapping.ValueConfig",
       "description": "Object-form value transformation with map/loop/set/condition/consent etc."
     },
+    "Validate": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "description": "Validate event structure against the standard event format",
+          "type": "boolean"
+        },
+        "events": {
+          "description": "Per entity-action JSON Schemas to validate matching events against",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ValidateEvents"
+            }
+          ]
+        },
+        "schema": {
+          "description": "A single JSON Schema applied to every event this step handles",
+          "allOf": [
+            {
+              "$ref": "#/definitions/JsonSchema"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "title": "Validate",
+      "description": "Step-level validation: { format?, events?, schema? }"
+    },
     "FlowSource": {
       "type": "object",
       "properties": {
@@ -711,20 +741,17 @@
           "minLength": 1
         },
         "code": {
-          "description": "Either a named export string (e.g., \"sourceExpress\") or an inline code object with push function",
-          "anyOf": [
+          "description": "Inline code definition (object form). For a named export from a package, use `import` instead.",
+          "allOf": [
             {
-              "type": "string"
-            },
-            {
-              "description": "Inline code for custom components",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/FlowCode"
-                }
-              ]
+              "$ref": "#/definitions/FlowCode"
             }
           ]
+        },
+        "import": {
+          "description": "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+          "type": "string",
+          "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
         },
         "config": {
           "description": "Source-specific configuration object",
@@ -758,7 +785,7 @@
           "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.",
           "allOf": [
             {
-              "$ref": "#/definitions/MatcherRouteSpec"
+              "$ref": "#/definitions/Route"
             }
           ]
         },
@@ -766,7 +793,7 @@
           "description": "Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.",
           "allOf": [
             {
-              "$ref": "#/definitions/MatcherRouteSpec"
+              "$ref": "#/definitions/Route"
             }
           ]
         },
@@ -782,7 +809,14 @@
           "description": "Cache configuration for this source (match → key → ttl rules)",
           "allOf": [
             {
-              "$ref": "#/definitions/CacheConfig"
+              "$ref": "#/definitions/EventCacheConfig"
+            }
+          ]
+        },
+        "validate": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/Validate"
             }
           ]
         }
@@ -818,6 +852,84 @@
       "title": "Destination.Env",
       "description": "Destination environment configuration."
     },
+    "RouteWithoutMany": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/RouteWithoutMany"
+              }
+            ]
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "match": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/MatcherExpression"
+                    }
+                  ]
+                },
+                "next": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/RouteWithoutMany"
+                    }
+                  ]
+                }
+              },
+              "required": ["next"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "match": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/MatcherExpression"
+                    }
+                  ]
+                },
+                "one": {
+                  "type": "array",
+                  "items": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/RouteWithoutMany"
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": ["one"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "match": {
+                  "$ref": "#/definitions/MatcherExpression"
+                }
+              },
+              "required": ["match"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      ],
+      "title": "RouteWithoutMany",
+      "description": "Route variant for post-collector positions (destination.before). Excludes the many operator — post-collector fan-out uses the destinations map."
+    },
     "FlowDestination": {
       "type": "object",
       "properties": {
@@ -827,20 +939,17 @@
           "minLength": 1
         },
         "code": {
-          "description": "Either a named export string (e.g., \"destinationAnalytics\") or an inline code object with push function",
-          "anyOf": [
+          "description": "Inline code definition (object form). For a named export from a package, use `import` instead.",
+          "allOf": [
             {
-              "type": "string"
-            },
-            {
-              "description": "Inline code for custom components",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/FlowCode"
-                }
-              ]
+              "$ref": "#/definitions/FlowCode"
             }
           ]
+        },
+        "import": {
+          "description": "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+          "type": "string",
+          "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
         },
         "config": {
           "description": "Destination-specific configuration object",
@@ -867,18 +976,18 @@
           ]
         },
         "before": {
-          "description": "Post-collector transformer chain. String, string[], or Route[] for conditional routing.",
+          "description": "Post-collector transformer chain. String, string[], or Route[] for conditional routing. `many` is not valid here — use multiple destinations for post-collector fan-out.",
           "allOf": [
             {
-              "$ref": "#/definitions/MatcherRouteSpec"
+              "$ref": "#/definitions/RouteWithoutMany"
             }
           ]
         },
         "next": {
-          "description": "Post-push transformer chain. Push response available at context.ingest._response.",
+          "description": "Post-push transformer chain. Push response available at context.ingest._response. `many` is not valid here — use multiple destinations for post-collector fan-out.",
           "allOf": [
             {
-              "$ref": "#/definitions/MatcherRouteSpec"
+              "$ref": "#/definitions/RouteWithoutMany"
             }
           ]
         },
@@ -894,7 +1003,14 @@
           "description": "Cache configuration for this destination (match → key → ttl rules)",
           "allOf": [
             {
-              "$ref": "#/definitions/CacheConfig"
+              "$ref": "#/definitions/EventCacheConfig"
+            }
+          ]
+        },
+        "validate": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/Validate"
             }
           ]
         }
@@ -920,20 +1036,17 @@
           "minLength": 1
         },
         "code": {
-          "description": "Either a named export string (e.g., \"transformerEnricher\") or an inline code object with push function",
-          "anyOf": [
+          "description": "Inline code definition (object form). For a named export from a package, use `import` instead.",
+          "allOf": [
             {
-              "type": "string"
-            },
-            {
-              "description": "Inline code for custom components",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/FlowCode"
-                }
-              ]
+              "$ref": "#/definitions/FlowCode"
             }
           ]
+        },
+        "import": {
+          "description": "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+          "type": "string",
+          "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
         },
         "config": {
           "description": "Transformer-specific configuration object",
@@ -955,7 +1068,7 @@
           "description": "Pre-transformer chain. Runs before this transformer push function.",
           "allOf": [
             {
-              "$ref": "#/definitions/MatcherRouteSpec"
+              "$ref": "#/definitions/Route"
             }
           ]
         },
@@ -963,7 +1076,7 @@
           "description": "Next transformer in chain. String, string[], or Route[] for conditional routing.",
           "allOf": [
             {
-              "$ref": "#/definitions/MatcherRouteSpec"
+              "$ref": "#/definitions/Route"
             }
           ]
         },
@@ -987,7 +1100,14 @@
           "description": "Cache configuration for this transformer (match → key → ttl rules)",
           "allOf": [
             {
-              "$ref": "#/definitions/CacheConfig"
+              "$ref": "#/definitions/EventCacheConfig"
+            }
+          ]
+        },
+        "validate": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/Validate"
             }
           ]
         }
@@ -1023,6 +1143,54 @@
       "title": "Store.Env",
       "description": "Store environment configuration."
     },
+    "StoreCacheConfig": {
+      "type": "object",
+      "properties": {
+        "store": {
+          "description": "Store ID for persistent caching (references a configured store)",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional key prefix. Omit to default to the host store id. Empty string is rejected.",
+          "type": "string",
+          "minLength": 1
+        },
+        "rules": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StoreCacheRule"
+          },
+          "description": "Cache rules — at least one required"
+        }
+      },
+      "required": ["rules"],
+      "additionalProperties": false,
+      "title": "StoreCache.Config",
+      "description": "Top-level cache configuration for a store wrapper. No `stop` (always falls through on miss); namespace defaults to the host store id."
+    },
+    "StoreCacheRule": {
+      "type": "object",
+      "properties": {
+        "match": {
+          "description": "Optional match expression evaluated against `{ key, value? }`. Omit for always-match.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/MatcherExpression"
+            }
+          ]
+        },
+        "ttl": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Time-to-live in seconds"
+        }
+      },
+      "required": ["ttl"],
+      "additionalProperties": false,
+      "title": "StoreCache.Rule",
+      "description": "Single store-cache rule: optional match against `{ key, value? }` and a TTL. No `key` (caller provides it) and no `update` (no event to mutate)."
+    },
     "FlowStore": {
       "type": "object",
       "properties": {
@@ -1032,20 +1200,17 @@
           "minLength": 1
         },
         "code": {
-          "description": "Named export string or inline code definition",
-          "anyOf": [
+          "description": "Inline code definition (object form). For a named export from a package, use `import` instead.",
+          "allOf": [
             {
-              "type": "string"
-            },
-            {
-              "description": "Inline code for custom components",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/FlowCode"
-                }
-              ]
+              "$ref": "#/definitions/FlowCode"
             }
           ]
+        },
+        "import": {
+          "description": "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+          "type": "string",
+          "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
         },
         "config": {
           "description": "Store-specific configuration object",
@@ -1060,6 +1225,14 @@
           "allOf": [
             {
               "$ref": "#/definitions/FlowStoreEnv"
+            }
+          ]
+        },
+        "cache": {
+          "description": "Cache configuration for this store (TTL-only rules, optional recursive `cache.store`)",
+          "allOf": [
+            {
+              "$ref": "#/definitions/StoreCacheConfig"
             }
           ]
         },
@@ -1082,7 +1255,7 @@
       },
       "additionalProperties": false,
       "title": "Flow.Store",
-      "description": "Store package reference with configuration, env, and examples."
+      "description": "Store package reference with configuration, env, cache, and examples."
     },
     "FlowCollector": {
       "title": "Collector.InitConfig",
@@ -1209,7 +1382,7 @@
           ]
         },
         "contract": {
-          "description": "Named contracts with extends inheritance and dot-path references",
+          "description": "Named contracts with extend inheritance and dot-path references",
           "allOf": [
             {
               "$ref": "#/definitions/FlowContract"

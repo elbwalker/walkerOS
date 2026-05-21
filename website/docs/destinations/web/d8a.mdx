@@ -1,0 +1,138 @@
+---
+title: d8a
+description: GA4-compatible, warehouse-native analytics
+path: /docs/destinations/web/d8a
+sidebar_position: 6
+package: '@walkeros/web-destination-d8a'
+---
+
+import data from '@walkeros/web-destination-d8a/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# d8a
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/d8a"
+  npm="@walkeros/web-destination-d8a"
+/>
+
+[d8a](https://d8a.tech/) is a GA4-compatible, warehouse-native analytics
+platform. The destination sends walkerOS events to the d8a web tracker using the
+GA4 gtag-style `d8a()` API, so existing GA4 mappings translate directly.
+
+<WhereThisFits
+  pre={<>d8a is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'd8a', highlight: true } },
+  }}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-d8a`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationD8a } from '@walkeros/web-destination-d8a';
+
+await startFlow({
+  destinations: {
+    d8a: {
+      code: destinationD8a,
+      config: {
+        settings: {
+          property_id: '80e1d6d0-560d-419f-ac2a-fe9281e93386',
+          server_container_url:
+            'https://global.t.d8a.tech/80e1d6d0-560d-419f-ac2a-fe9281e93386/d/c',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "d8a": {
+    "package": "@walkeros/web-destination-d8a",
+    "config": {
+      "settings": {
+        "property_id": "80e1d6d0-560d-419f-ac2a-fe9281e93386",
+        "server_container_url": "https://global.t.d8a.tech/80e1d6d0-560d-419f-ac2a-fe9281e93386/d/c"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Event Mapping
+
+By default, walkerOS event names are converted to snake_case and sent with the
+configured property ID as `send_to`. Override the name and shape per event the
+same way you would for GA4:
+
+<CodeSnippet
+  code={`mapping: {
+  order: {
+    complete: {
+      name: 'purchase',
+      data: {
+        map: {
+          transaction_id: 'data.id',
+          value: 'data.total',
+          currency: { key: 'data.currency', value: 'EUR' },
+        },
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+This produces:
+
+<CodeSnippet
+  code={`d8a('event', 'purchase', {
+  transaction_id: '0rd3r1d',
+  value: 555,
+  currency: 'EUR',
+  send_to: '80e1d6d0-560d-419f-ac2a-fe9281e93386',
+});`}
+  language="typescript"
+/>
+
+## Consent Mode
+
+The destination supports d8a's gtag-compatible consent mode. By default,
+walkerOS consent keys map to d8a consent fields:
+
+| walkerOS consent key | d8a consent fields                                 |
+| -------------------- | -------------------------------------------------- |
+| `marketing`          | `ad_storage`, `ad_user_data`, `ad_personalization` |
+| `functional`         | `analytics_storage`                                |
+
+Disable consent mode with `como: false`, or provide a custom mapping via the
+`como` setting.
+
+<Configuration type="destination" data={data} />

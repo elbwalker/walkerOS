@@ -4,7 +4,8 @@ description:
   Use when wiring `@walkeros/transformer-ga4` into a server flow, overriding
   default GA4 event mappings, dropping events, adding custom event keys, or
   troubleshooting GA4 Measurement Protocol decoding. Covers the `before`-chain
-  wiring contract, configuration recipes, and v1 limitations.
+  wiring contract, configuration recipes, and per-field patching with
+  extend/remove.
 ---
 
 # Using `@walkeros/transformer-ga4`
@@ -17,9 +18,8 @@ source's `before` chain, reads the raw HTTP request via `ctx.ingest`, and
 returns one walkerOS event per GA4 event in the hit (one hit can carry many
 events).
 
-This is the v1 release at `0.1.0`. Boundaries are explicit: server-side decoding
-via `source-express`, GA4 v2 only, replace-not-merge mapping semantics, `G-`
-tids only by default.
+Boundaries: server-side decoding via `source-express`, GA4 v2 only, `G-` tids
+only by default. Per-field patching via `extend`/`remove` is supported.
 
 ## When to use this skill
 
@@ -73,10 +73,13 @@ tids only by default.
 
 ## Configuration recipes
 
-### Override one field in a default mapping
+### Patch one field in a default mapping (extend + remove)
 
-User config **replaces** the matching default rule. Copy any fields you want to
-keep:
+Use `extend` to add or override individual fields of a shipped default rule
+without replacing it in full. Use `remove` to strip fields from the output.
+
+The `purchase` default ships `id`, `currency`, `total`, `tax`, `shipping`, and
+`coupon`. To add `affiliation` from a GA4 event parameter and drop `currency`:
 
 ```json
 "transformers": {
@@ -86,15 +89,10 @@ keep:
       "settings": {
         "mapping": {
           "purchase": {
-            "name": "order complete",
-            "data": {
-              "map": {
-                "id": "params.ep.transaction_id",
-                "total": "params.epn.value",
-                "currency": "params.ep.currency",
-                "coupon": "params.ep.promo_code"
-              }
-            }
+            "extend": {
+              "data": { "map": { "affiliation": "params.ep.affiliation" } }
+            },
+            "remove": ["currency"]
           }
         }
       }
@@ -103,8 +101,32 @@ keep:
 }
 ```
 
-There is no additive per-field merge in v1. Replace the full rule, or leave it
-alone.
+`extend.data.map` is deep-merged onto the default `data.map`, leaving `id`,
+`total`, `tax`, `shipping`, and `coupon` intact. `remove: ["currency"]` strips
+that field from the final payload. A `null` value in `extend` clears an
+inherited field entirely (e.g. `"extend": { "name": null }`).
+
+**Full replace:** if you need to rewrite a rule from scratch (no merge), omit
+`extend` and `remove` and supply the complete rule directly. A rule with neither
+keyword keeps the existing replace behavior.
+
+```json
+"settings": {
+  "mapping": {
+    "purchase": {
+      "name": "order complete",
+      "data": {
+        "map": {
+          "id": "params.ep.transaction_id",
+          "total": "params.epn.value",
+          "currency": "params.ep.currency",
+          "coupon": "params.ep.promo_code"
+        }
+      }
+    }
+  }
+}
+```
 
 ### Drop an event
 
@@ -206,8 +228,8 @@ the `params` namespace.
 1. Check the path syntax: `params.ep.X`, not `ep.X`.
 2. Verify the GA4 hit actually carries the parameter. Use a debug destination to
    log the decoded `params` object.
-3. Remember replace semantics: if you override an event, your `data.map` is the
-   entire rule. Missing fields stay missing.
+3. If you used a full-replace rule (no `extend`), your `data.map` is the entire
+   rule. Use `extend` to inherit the defaults and add only the fields you need.
 
 ### Batched POST drops events after the first
 
@@ -221,14 +243,13 @@ v1 decodes basic `gcs` (`G1XX` → `marketing` / `analytics` booleans) only.
 Functional/preferences flags and the newer `gcd` parameter are not decoded.
 Override the consent path manually if you need richer mapping.
 
-## Limitations of v1
+## Limitations
 
-- **Replace semantics only.** No per-field additive merge inside `data.map`.
 - **GA4 v2 only.** v1 Measurement Protocol is out of scope.
 - **`G-` tids only by default.** Override `tidPattern` for Ads/DC.
 - **Basic `gcs` only.** No `gcd`, no functional/preferences flags.
 - **Raw text body required.** Pre-parsed JSON bodies will not decode.
-- **Server-side only.** Web ingest via interception sources is roadmap, not v1.
+- **Server-side only.** Web ingest via interception sources is not supported.
 
 See the [website docs](https://www.walkeros.io/docs/transformers/ga4) for the
 authoritative reference and the

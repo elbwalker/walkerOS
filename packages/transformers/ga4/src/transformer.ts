@@ -2,6 +2,7 @@ import type { Ingest, Transformer } from '@walkeros/core';
 import { parseRequest } from './parse';
 import { mapHitToEvents } from './map';
 import { defaultMapping } from './defaults';
+import { mergeGa4Mapping } from './merge';
 import type { GA4Request, GA4Settings } from './types';
 
 /**
@@ -32,7 +33,7 @@ export const transformerGa4: Transformer.Init<
   const { config } = context;
   const settings = config.settings ?? {};
   const tidPattern = new RegExp(settings.tidPattern ?? '^G-');
-  const mapping = { ...defaultMapping, ...(settings.mapping ?? {}) };
+  const mapping = mergeGa4Mapping(defaultMapping, settings.mapping ?? {});
 
   return {
     type: 'ga4',

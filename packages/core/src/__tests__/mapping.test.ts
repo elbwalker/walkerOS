@@ -990,4 +990,30 @@ describe('processEventMapping', () => {
       expect(result.silent).toBe(true);
     });
   });
+
+  test('remove strips paths from produced data after evaluation', async () => {
+    const event = {
+      name: 'order complete',
+      data: { total: 42, currency: 'EUR' },
+    };
+    const config = {
+      mapping: {
+        order: {
+          complete: {
+            data: {
+              map: {
+                value: 'data.total',
+                currency: 'data.currency',
+              },
+            },
+            remove: ['currency'],
+          },
+        },
+      },
+    };
+
+    const result = await processEventMapping(event, config, mockCollector);
+
+    expect(result.data).toEqual({ value: 42 });
+  });
 });

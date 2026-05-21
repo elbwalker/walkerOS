@@ -628,7 +628,7 @@ export const ContractEventsSchema = z
  */
 export const ContractRuleSchema = z
   .object({
-    extends: z.string().optional(),
+    extend: z.string().optional(),
     tagging: z.number().optional(),
     description: z.string().optional(),
     events: ValidateEventsSchema.optional(),
@@ -648,9 +648,9 @@ export const ContractSchema = z
   .meta({
     id: 'FlowContract',
     title: 'Flow.Contract',
-    description: 'Named contracts map with optional extends inheritance.',
+    description: 'Named contracts map with optional extend inheritance.',
   })
-  .describe('Named contracts with optional extends inheritance');
+  .describe('Named contracts with optional extend inheritance');
 
 // ========================================
 // Per-flow Config block + Single Flow
@@ -783,7 +783,7 @@ export const JsonSchema = z
       'Shared variables for interpolation across all flows (use $var.name syntax, deep paths supported)',
     ),
     contract: ContractSchema.optional().describe(
-      'Named contracts with extends inheritance and dot-path references',
+      'Named contracts with extend inheritance and dot-path references',
     ),
     flows: z
       .record(z.string(), FlowSchema)

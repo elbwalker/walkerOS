@@ -522,7 +522,7 @@ function resolveFlowSettings(
   // Deep clone to avoid mutations
   const result = JSON.parse(JSON.stringify(settings)) as Flow;
 
-  // Pre-process contracts: resolve $var/$env inside contracts, then extends + wildcards
+  // Pre-process contracts: resolve $var/$env inside contracts, then extend + wildcards
   let resolvedContracts: Record<string, Flow.ContractRule> | undefined;
   if (config.contract) {
     // Two-pass: resolve $var/$env inside contract first

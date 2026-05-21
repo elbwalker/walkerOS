@@ -2160,7 +2160,7 @@ describe('$contract reference resolution', () => {
     });
   });
 
-  test('resolves extends before path resolution', () => {
+  test('resolves extend before path resolution', () => {
     const setup: Flow.Json = {
       version: 4,
       contract: {
@@ -2170,7 +2170,7 @@ describe('$contract reference resolution', () => {
             properties: { consent: { required: ['analytics'] } },
           },
         },
-        web: { extends: 'default', events: { product: { view: {} } } },
+        web: { extend: 'default', events: { product: { view: {} } } },
       },
       flows: {
         default: {

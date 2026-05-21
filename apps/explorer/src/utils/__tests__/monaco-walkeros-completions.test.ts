@@ -157,7 +157,7 @@ describe('getContractCompletions', () => {
         },
       },
     },
-    web: { extends: 'default' },
+    web: { extend: 'default' },
   };
 
   it('returns contract names for empty path', () => {

@@ -14,15 +14,18 @@ for core concepts.
 
 ## Quick Reference
 
-| I want to...         | Use this pattern                                      |
-| -------------------- | ----------------------------------------------------- |
-| Rename event         | `{ name: 'new_name' }`                                |
-| Extract nested value | `'data.nested.value'`                                 |
-| Set static value     | `{ value: 'USD' }`                                    |
-| Transform value      | `{ fn: (e) => transform(e) }`                         |
-| Build object         | `{ map: { key: 'source' } }`                          |
-| Process array        | `{ loop: ['source', { map: {...} }] }`                |
-| Gate by consent      | `{ key: 'data.email', consent: { marketing: true } }` |
+| I want to...                   | Use this pattern                                      |
+| ------------------------------ | ----------------------------------------------------- |
+| Rename event                   | `{ name: 'new_name' }`                                |
+| Extract nested value           | `'data.nested.value'`                                 |
+| Set static value               | `{ value: 'USD' }`                                    |
+| Transform value                | `{ fn: (e) => transform(e) }`                         |
+| Build object                   | `{ map: { key: 'source' } }`                          |
+| Process array                  | `{ loop: ['source', { map: {...} }] }`                |
+| Gate by consent                | `{ key: 'data.email', consent: { marketing: true } }` |
+| First defined value (fallback) | `[{ key: 'data.sku' }, { key: 'data.id' }]`           |
+| Add a field to a default rule  | `{ extend: { data: { map: { x: 'path' } } } }`        |
+| Drop a field from output       | `{ remove: ['field.path'] }`                          |
 
 ## Common Recipes
 
@@ -182,6 +185,55 @@ order: {
   ],
 }
 ```
+
+### Patching Package-Shipped Rules (`extend` / `remove`)
+
+Some packages (such as `@walkeros/transformer-ga4`) ship default mapping rules.
+Normally a user rule at the same key replaces the default in full. Use `extend`
+or `remove` to patch instead.
+
+Two layers, two keywords:
+
+- **`extend`** runs at init (config layer): deep-merges a partial rule onto the
+  shipped default. A `null` value clears an inherited field.
+- **`remove`** runs after evaluation (output layer): strips dotted paths from
+  the final data payload. Applied last, always wins.
+
+A rule with neither keyword keeps the existing replace behavior.
+
+```json
+{
+  "purchase": {
+    "extend": {
+      "data": { "map": { "affiliation": "params.ep.affiliation" } }
+    },
+    "remove": ["currency"]
+  }
+}
+```
+
+This keeps all fields the package ships for `purchase`, adds `affiliation`, and
+strips `currency` from the output.
+
+For the full reference and the two-layer model, see
+[Mapping.Rule docs](/docs/mapping/rule#patching-package-shipped-rules).
+
+### Value[] Fallback Chains
+
+At any value position, an array of values is a fallback chain: the first entry
+that resolves to a defined value wins.
+
+```json
+{
+  "item_id": [
+    { "key": "data.sku" },
+    { "key": "data.id" },
+    { "value": "unknown" }
+  ]
+}
+```
+
+Use this to try multiple source fields before falling back to a constant.
 
 ### Consent-Gated Fields
 

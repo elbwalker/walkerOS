@@ -33,7 +33,7 @@ const sampleContract: Flow.Contract = {
     },
   },
   web: {
-    extends: 'default',
+    extend: 'default',
     events: {
       page: {
         view: {
@@ -66,8 +66,8 @@ describe('getContractPathCompletions', () => {
     expect(keys).toEqual(
       expect.arrayContaining(['description', 'schema', 'events']),
     );
-    // extends is stripped after resolution
-    expect(keys).not.toContain('extends');
+    // extend is stripped after resolution
+    expect(keys).not.toContain('extend');
   });
 
   it('returns entity names under events', () => {

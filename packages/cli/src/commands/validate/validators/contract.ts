@@ -6,7 +6,7 @@ import type {
 
 const SECTION_KEYS = ['globals', 'context', 'custom', 'user', 'consent'];
 const KNOWN_KEYS = new Set([
-  'extends',
+  'extend',
   'description',
   'events',
   ...SECTION_KEYS,
@@ -43,19 +43,19 @@ export function validateContract(input: unknown): ValidateResult {
 
     const obj = entry as Record<string, unknown>;
 
-    // Validate extends
-    if (obj.extends !== undefined) {
-      if (typeof obj.extends !== 'string') {
+    // Validate extend
+    if (obj.extend !== undefined) {
+      if (typeof obj.extend !== 'string') {
         errors.push({
-          path: `${name}.extends`,
-          message: 'extends must be a string',
+          path: `${name}.extend`,
+          message: 'extend must be a string',
           code: 'INVALID_EXTENDS',
         });
-      } else if (!contractNames.includes(obj.extends)) {
+      } else if (!contractNames.includes(obj.extend)) {
         errors.push({
-          path: `${name}.extends`,
-          message: `extends references non-existent contract "${obj.extends}"`,
-          value: obj.extends,
+          path: `${name}.extend`,
+          message: `extend references non-existent contract "${obj.extend}"`,
+          value: obj.extend,
           code: 'INVALID_EXTENDS',
         });
       }
@@ -93,22 +93,22 @@ export function validateContract(input: unknown): ValidateResult {
     }
   }
 
-  // Check for circular extends
+  // Check for circular extend
   for (const name of contractNames) {
     const visited = new Set<string>();
     let current = name;
     while (current) {
       if (visited.has(current)) {
         errors.push({
-          path: `${name}.extends`,
-          message: `Circular extends chain: ${[...visited, current].join(' → ')}`,
+          path: `${name}.extend`,
+          message: `Circular extend chain: ${[...visited, current].join(' → ')}`,
           code: 'CIRCULAR_EXTENDS',
         });
         break;
       }
       visited.add(current);
       const entry = contracts[current] as Record<string, unknown> | undefined;
-      current = (entry?.extends as string) || '';
+      current = (entry?.extend as string) || '';
     }
   }
 

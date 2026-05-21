@@ -9,7 +9,7 @@ describe('validateContract', () => {
         consent: { required: ['analytics'] },
       },
       web: {
-        extends: 'default',
+        extend: 'default',
         events: {
           product: {
             add: { properties: { data: { required: ['id'] } } },
@@ -36,26 +36,26 @@ describe('validateContract', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('should report error for extends referencing non-existent contract', () => {
+  it('should report error for extend referencing non-existent contract', () => {
     const result = validateContract({
-      web: { extends: 'nonExistent' },
+      web: { extend: 'nonExistent' },
     });
     expect(result.valid).toBe(false);
     expect(result.errors[0].code).toBe('INVALID_EXTENDS');
   });
 
-  it('should report error for circular extends', () => {
+  it('should report error for circular extend', () => {
     const result = validateContract({
-      a: { extends: 'b' },
-      b: { extends: 'a' },
+      a: { extend: 'b' },
+      b: { extend: 'a' },
     });
     expect(result.valid).toBe(false);
     expect(result.errors[0].code).toBe('CIRCULAR_EXTENDS');
   });
 
-  it('should report error for self-referencing extends', () => {
+  it('should report error for self-referencing extend', () => {
     const result = validateContract({
-      web: { extends: 'web' },
+      web: { extend: 'web' },
     });
     expect(result.valid).toBe(false);
     expect(result.errors[0].code).toBe('CIRCULAR_EXTENDS');
@@ -135,11 +135,11 @@ describe('validateContract', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('should validate deep extends chain', () => {
+  it('should validate deep extend chain', () => {
     const result = validateContract({
       default: { consent: { required: ['analytics'] } },
-      web: { extends: 'default', events: { product: { view: {} } } },
-      web_loggedin: { extends: 'web', user: { required: ['id'] } },
+      web: { extend: 'default', events: { product: { view: {} } } },
+      web_loggedin: { extend: 'web', user: { required: ['id'] } },
     });
     expect(result.valid).toBe(true);
     expect(result.details.contractCount).toBe(3);

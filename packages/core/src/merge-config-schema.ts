@@ -59,7 +59,7 @@ export function mergeConfigSchema(
  *   - Draft-2020 form: `{ $ref: '#/$defs/X', $defs: {...} }`
  * Unwrap one level if needed so callers can mutate `properties` directly.
  */
-function resolveBaseSchema(
+export function resolveBaseSchema(
   baseSchema: Record<string, unknown> | undefined,
 ): Record<string, unknown> | undefined {
   if (!baseSchema) return baseSchema;
