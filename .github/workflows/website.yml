@@ -29,10 +29,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24.15.0'
           cache: 'npm'
-
-      - run: corepack enable
       - run: npm ci
 
       - name: Build website (production)
