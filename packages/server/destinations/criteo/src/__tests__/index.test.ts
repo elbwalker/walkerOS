@@ -364,10 +364,9 @@ describe('Server Destination Criteo', () => {
       },
     });
 
-    elb(
-      'walker destination',
-      { ...dest, env: testEnv },
-      {
+    elb('walker destination', {
+      code: { ...dest, env: testEnv },
+      config: {
         settings: { partnerId, callerId },
         mapping: {
           order: {
@@ -382,7 +381,7 @@ describe('Server Destination Criteo', () => {
           },
         },
       },
-    );
+    });
 
     await elb(event);
 

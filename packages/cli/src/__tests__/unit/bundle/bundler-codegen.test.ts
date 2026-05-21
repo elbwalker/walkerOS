@@ -13,7 +13,7 @@ import {
   buildSplitConfigObject,
   createEntryPoint,
   detectStepPackages,
-  detectExplicitCodeImports,
+  detectNamedImports,
   serializeWithCode,
   generateSplitWireConfigModule,
   generateWebEntry,
@@ -87,7 +87,7 @@ describe('createEntryPoint integration', () => {
       sources: {
         custom: {
           package: '@some/no-default-pkg',
-          code: 'namedSource', // Explicit code
+          import: 'namedSource', // Explicit named import
         },
       },
       destinations: {},
@@ -133,14 +133,14 @@ describe('createEntryPoint integration', () => {
       sources: {
         http: {
           package: '@walkeros/server-source-express',
-          code: 'sourceExpress',
+          import: 'sourceExpress',
           config: { settings: { port: 8080 } },
         },
       },
       destinations: {
         demo: {
           package: '@walkeros/destination-demo',
-          code: 'destinationDemo',
+          import: 'destinationDemo',
           config: { settings: { name: 'Test' } },
         },
       },
@@ -198,7 +198,7 @@ describe('createEntryPoint integration', () => {
       sources: {
         http: {
           package: '@walkeros/server-source-express',
-          code: 'sourceExpress',
+          import: 'sourceExpress',
           config: { settings: { port: 8080 } },
           next: 'fp',
         },
@@ -214,11 +214,11 @@ describe('createEntryPoint integration', () => {
       stores: {
         cache: {
           package: '@walkeros/server-store-fs',
-          code: 'storeFs',
+          import: 'storeFs',
           config: { settings: { basePath: './data' } },
         },
       },
-    } as Flow;
+    };
 
     const buildOptions = {
       platform: 'node',
@@ -394,7 +394,7 @@ describe('detectStepPackages', () => {
       transformers: {
         fingerprintServer: {
           package: '@walkeros/server-transformer-fingerprint',
-          code: 'transformerFingerprint',
+          import: 'transformerFingerprint',
           config: { settings: { output: 'user.hash' } },
         },
         fingerprint: {
@@ -426,8 +426,8 @@ describe('detectStepPackages', () => {
   });
 });
 
-describe('detectExplicitCodeImports', () => {
-  it('detects explicit code imports from transformers', () => {
+describe('detectNamedImports', () => {
+  it('detects named imports from transformers', () => {
     const flowSettings: Flow = {
       config: { platform: 'server' },
       sources: {},
@@ -435,13 +435,13 @@ describe('detectExplicitCodeImports', () => {
       transformers: {
         fingerprint: {
           package: '@walkeros/server-transformer-fingerprint',
-          code: 'transformerFingerprint',
+          import: 'transformerFingerprint',
           config: {},
         },
       },
     };
 
-    const result = detectExplicitCodeImports(flowSettings);
+    const result = detectNamedImports(flowSettings);
 
     expect(result.get('@walkeros/server-transformer-fingerprint')).toEqual(
       new Set(['transformerFingerprint']),
@@ -475,13 +475,13 @@ describe('$store. prefix', () => {
       stores: {
         cache: {
           package: '@walkeros/server-store-fs',
-          code: 'storeFs',
+          import: 'storeFs',
           config: { settings: { basePath: './data' } },
         },
       },
-    } as Flow;
+    };
 
-    const explicitCodeImports = new Map([
+    const namedImports = new Map([
       [
         '@walkeros/server-transformer-fingerprint',
         new Set(['transformerFingerprint']),
@@ -489,7 +489,7 @@ describe('$store. prefix', () => {
       ['@walkeros/server-store-fs', new Set(['storeFs'])],
     ]);
 
-    const result = buildSplitConfigObject(flowSettings, explicitCodeImports);
+    const result = buildSplitConfigObject(flowSettings, namedImports);
 
     // stores must be a separate declaration, not inside the config object
     expect(result.storesDeclaration).toContain('const stores = {');
@@ -694,26 +694,26 @@ describe('buildSplitConfigObject', () => {
     expect(result.codeConfigObject).not.toContain('__data.collector');
   });
 
-  it('handles explicit code imports', () => {
-    const flowSettings = {
+  it('handles named imports', () => {
+    const flowSettings: Flow = {
       config: { platform: 'server' },
       sources: {
         http: {
           package: '@walkeros/server-source-express',
-          code: 'sourceExpress',
+          import: 'sourceExpress',
           config: { settings: { port: 8080 } },
         },
       },
       destinations: {},
-    } as Flow;
+    };
 
-    const explicitCodeImports = new Map([
+    const namedImports = new Map([
       ['@walkeros/server-source-express', new Set(['sourceExpress'])],
     ]);
 
-    const result = buildSplitConfigObject(flowSettings, explicitCodeImports);
+    const result = buildSplitConfigObject(flowSettings, namedImports);
 
-    // Should use explicit code name
+    // Should use the named-import identifier
     expect(result.codeConfigObject).toContain('code: sourceExpress');
     // Config still goes to data
     expect(result.dataPayload).toContain('8080');

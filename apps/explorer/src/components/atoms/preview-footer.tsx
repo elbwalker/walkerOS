@@ -13,6 +13,7 @@ export interface PreviewFooterProps {
 }
 
 const defaultButtons: PreviewFooterButton[] = [
+  { type: 'globals', label: 'Globals', highlightClass: 'highlight-globals' },
   { type: 'context', label: 'Context', highlightClass: 'highlight-context' },
   { type: 'entity', label: 'Entity', highlightClass: 'highlight-entity' },
   { type: 'property', label: 'Property', highlightClass: 'highlight-property' },

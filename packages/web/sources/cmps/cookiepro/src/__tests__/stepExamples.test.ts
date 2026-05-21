@@ -57,8 +57,7 @@ describe('Step Examples', () => {
       },
       id: 'test-cookiepro',
       logger: createMockLogger(),
-      setIngest: async () => {},
-      setRespond: jest.fn(),
+      withScope: async (_r, _resp, body) => body({} as never),
     });
 
     // Source pushes via detached elb chain — yield for it

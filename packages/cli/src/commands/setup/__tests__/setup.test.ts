@@ -52,7 +52,7 @@ jest.mock(
 
 // Multi-export package fixture used to exercise the export-name resolver.
 // Default export simulates the package's "primary" component (componentA);
-// componentB is only reachable via the explicit `code` field or via
+// componentB is only reachable via the explicit `import` field or via
 // bundle.packages.imports[0].
 const multiExportSetupCalls: { name: string; ctx: unknown }[] = [];
 
@@ -238,14 +238,14 @@ describe('setupCommand', () => {
       multiExportSetupCalls.length = 0;
     });
 
-    test('routes to componentA when destinations.X.code = "componentA"', async () => {
+    test('routes to componentA when destinations.X.import = "componentA"', async () => {
       mockedLoadFlowConfig.mockResolvedValue({
         flowSettings: {
           config: { platform: 'server' },
           destinations: {
             x: {
               package: '@walkeros/__test-multi-export',
-              code: 'componentA',
+              import: 'componentA',
               config: { setup: true },
             },
           },
@@ -270,14 +270,14 @@ describe('setupCommand', () => {
       expect(multiExportSetupCalls[0].name).toBe('componentA');
     });
 
-    test('routes to componentB via explicit code field', async () => {
+    test('routes to componentB via explicit import field', async () => {
       mockedLoadFlowConfig.mockResolvedValue({
         flowSettings: {
           config: { platform: 'server' },
           destinations: {
             x: {
               package: '@walkeros/__test-multi-export',
-              code: 'componentB',
+              import: 'componentB',
               config: { setup: true },
             },
           },
@@ -302,7 +302,7 @@ describe('setupCommand', () => {
       expect(multiExportSetupCalls[0].name).toBe('componentB');
     });
 
-    test('routes to componentB via bundle.packages.imports[0] when code is unset', async () => {
+    test('routes to componentB via bundle.packages.imports[0] when import is unset', async () => {
       mockedLoadFlowConfig.mockResolvedValue({
         flowSettings: {
           config: {
@@ -373,14 +373,14 @@ describe('setupCommand', () => {
       expect(multiExportSetupCalls[0].name).toBe('default');
     });
 
-    test('throws actionable error when explicit code names a missing export', async () => {
+    test('throws actionable error when explicit import names a missing export', async () => {
       mockedLoadFlowConfig.mockResolvedValue({
         flowSettings: {
           config: { platform: 'server' },
           destinations: {
             x: {
               package: '@walkeros/__test-multi-export',
-              code: 'componentZ',
+              import: 'componentZ',
               config: { setup: true },
             },
           },

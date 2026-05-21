@@ -1,3 +1,4 @@
+import type { Destination, Source, Transformer } from '@walkeros/core';
 import { startFlow } from '..';
 
 describe('shutdown command', () => {
@@ -5,12 +6,13 @@ describe('shutdown command', () => {
     const destroyFn = jest.fn();
     const { collector, elb } = await startFlow({});
 
-    collector.destinations['test'] = {
+    const dest: Destination.Instance = {
       config: { settings: { key: 'value' } },
       push: jest.fn(),
       type: 'test-dest',
       destroy: destroyFn,
-    } as any;
+    };
+    collector.destinations['test'] = dest;
 
     await elb('walker shutdown');
 
@@ -28,12 +30,13 @@ describe('shutdown command', () => {
     const destroyFn = jest.fn();
     const { collector, elb } = await startFlow({});
 
-    collector.sources['express'] = {
+    const src: Source.Instance = {
       type: 'express',
       config: {},
       push: jest.fn(),
       destroy: destroyFn,
-    } as any;
+    };
+    collector.sources['express'] = src;
 
     await elb('walker shutdown');
 
@@ -50,12 +53,13 @@ describe('shutdown command', () => {
     const destroyFn = jest.fn();
     const { collector, elb } = await startFlow({});
 
-    collector.transformers['enrich'] = {
+    const xfm: Transformer.Instance = {
       type: 'enricher',
       config: {},
       push: jest.fn(),
       destroy: destroyFn,
-    } as any;
+    };
+    collector.transformers['enrich'] = xfm;
 
     await elb('walker shutdown');
 
@@ -67,18 +71,20 @@ describe('shutdown command', () => {
     const okDestroy = jest.fn();
     const { collector, elb } = await startFlow({});
 
-    collector.destinations['fail'] = {
+    const failDest: Destination.Instance = {
       config: {},
       push: jest.fn(),
       type: 'fail',
       destroy: failDestroy,
-    } as any;
-    collector.destinations['ok'] = {
+    };
+    const okDest: Destination.Instance = {
       config: {},
       push: jest.fn(),
       type: 'ok',
       destroy: okDestroy,
-    } as any;
+    };
+    collector.destinations['fail'] = failDest;
+    collector.destinations['ok'] = okDest;
 
     await elb('walker shutdown');
 
@@ -89,11 +95,12 @@ describe('shutdown command', () => {
   it('skips steps without destroy', async () => {
     const { collector, elb } = await startFlow({});
 
-    collector.destinations['nodestroy'] = {
+    const dest: Destination.Instance = {
       config: {},
       push: jest.fn(),
       type: 'simple',
-    } as any;
+    };
+    collector.destinations['nodestroy'] = dest;
 
     await elb('walker shutdown');
   });
@@ -102,30 +109,33 @@ describe('shutdown command', () => {
     const order: string[] = [];
     const { collector, elb } = await startFlow({});
 
-    collector.sources['http'] = {
+    const http: Source.Instance = {
       type: 'express',
       config: {},
       push: jest.fn(),
       destroy: jest.fn().mockImplementation(() => {
         order.push('source');
       }),
-    } as any;
-    collector.destinations['db'] = {
+    };
+    const db: Destination.Instance = {
       config: {},
       push: jest.fn(),
       type: 'bigquery',
       destroy: jest.fn().mockImplementation(() => {
         order.push('destination');
       }),
-    } as any;
-    collector.transformers['enrich'] = {
+    };
+    const enrich: Transformer.Instance = {
       type: 'enricher',
       config: {},
       push: jest.fn(),
       destroy: jest.fn().mockImplementation(() => {
         order.push('transformer');
       }),
-    } as any;
+    };
+    collector.sources['http'] = http;
+    collector.destinations['db'] = db;
+    collector.transformers['enrich'] = enrich;
 
     await elb('walker shutdown');
 

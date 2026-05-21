@@ -1,13 +1,14 @@
 {
   "name": "@walkeros/collector",
   "description": "Unified platform-agnostic collector for walkerOS",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "license": "MIT",
   "files": [
-    "dist/**"
+    "dist/**",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {
@@ -31,7 +32,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "devDependencies": {
-    "@walkeros/core": "4.0.2"
+    "@walkeros/core": "4.1.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
@@ -60,6 +61,6 @@
     }
   ],
   "dependencies": {
-    "@walkeros/core": "4.0.2"
+    "@walkeros/core": "4.1.0"
   }
 }

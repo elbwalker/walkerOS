@@ -10,8 +10,6 @@ const mockContext = (port: number) =>
       logger: { info: jest.fn(), error: jest.fn(), debug: jest.fn() },
     },
     id: 'test',
-    setIngest: jest.fn(),
-    setRespond: jest.fn(),
   }) as any;
 
 const mockDestroyContext = () =>
@@ -49,8 +47,6 @@ describe('Express source destroy', () => {
         logger: { info: jest.fn(), error: jest.fn(), debug: jest.fn() },
       },
       id: 'test',
-      setIngest: jest.fn(),
-      setRespond: jest.fn(),
     } as any);
     expect(source.server).toBeUndefined();
     expect(source.destroy).toBeDefined();

@@ -1,13 +1,20 @@
 import { startFlow } from '..';
+import { Source, createRespond } from '@walkeros/core';
 import type {
   Destination,
   Mapping,
   RespondFn,
   RespondOptions,
-  Source,
   WalkerOS,
 } from '@walkeros/core';
-import { createRespond } from '@walkeros/core';
+
+type RawIngest = { method: string; path: string };
+
+interface TestPushFn {
+  (rawData: RawIngest): Promise<unknown>;
+}
+
+type TestSourceTypes = Source.Types<unknown, unknown, TestPushFn>;
 
 /**
  * Simulates a file transformer on cache MISS: calls respond with the
@@ -60,37 +67,36 @@ describe('Source cache MISS race (collector)', () => {
     const { collector } = await startFlow({
       sources: {
         testSource: {
-          code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest, setRespond } = context;
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
+            const { config } = context;
             return {
               type: 'test',
-              config: config as Source.Config,
-              push: async (rawData: unknown) => {
-                await setIngest(rawData);
-
+              config: config as Source.Config<TestSourceTypes>,
+              push: async (rawData: RawIngest) => {
                 // Create an idempotent respond backed by a simple sender,
                 // exactly like a real HTTP source would.
                 const respond = createRespond((options) => {
                   senderCalls.push(options);
                 });
-                setRespond(respond);
 
-                // Dispatch into the collector pipeline. The responder
-                // destination calls respond(fileBody) via env.respond.
-                const pushResult = await env.push({
-                  name: 'page view',
-                  data: {},
+                return context.withScope(rawData, respond, async (env) => {
+                  // Dispatch into the collector pipeline. The responder
+                  // destination calls respond(fileBody) via env.respond.
+                  const pushResult = await env.push({
+                    name: 'page view',
+                    data: {},
+                  });
+
+                  // Source fallback: this mirrors the express source's
+                  // transparent-GIF default. It runs AFTER env.push
+                  // resolves and must not overwrite the responder's body.
+                  respond({
+                    body: 'FALLBACK',
+                    headers: { 'Content-Type': 'image/gif' },
+                  });
+
+                  return pushResult;
                 });
-
-                // Source fallback: this mirrors the express source's
-                // transparent-GIF default. It runs AFTER env.push
-                // resolves and must not overwrite the responder's body.
-                respond({
-                  body: 'FALLBACK',
-                  headers: { 'Content-Type': 'image/gif' },
-                });
-
-                return pushResult;
               },
             };
           },
@@ -126,10 +132,11 @@ describe('Source cache MISS race (collector)', () => {
       },
     });
 
-    const testSourcePush = collector.sources.testSource.push as (
-      rawData: unknown,
-    ) => Promise<unknown>;
-    await testSourcePush({
+    const testSource = Source.getSource<TestSourceTypes>(
+      collector,
+      'testSource',
+    );
+    await testSource.push({
       method: 'GET',
       path: '/walker.js',
     });

@@ -18,9 +18,11 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: npm-publish
     permissions:
       contents: write
       pull-requests: write
+      id-token: write
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
@@ -30,10 +32,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Node 24 LTS bundles npm 11.x. Trusted Publishing (OIDC) needs npm >= 11.5.1,
+      # so we take it from the runtime rather than self-upgrading a running npm
+      # in place (which is fragile). Pin the version; bump it deliberately.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24.15.0'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
@@ -92,9 +97,6 @@ jobs:
           echo "packages<<EOF" >> $GITHUB_OUTPUT
           echo "$PACKAGES_FORMATTED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          echo "packages_raw<<EOF" >> $GITHUB_OUTPUT
-          echo "$PACKAGES_RAW" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
           echo "release_needed=$RELEASE_NEEDED" >> $GITHUB_OUTPUT
 
       - name: Version packages (stable)
@@ -123,45 +125,17 @@ jobs:
       - name: Rebuild packages with bumped versions
         run: npx turbo run build --filter='!@walkeros/website'
 
-      - name: Publish to npm
+      # Trusted Publishing: npm exchanges the GitHub OIDC token at publish time.
+      # No NPM_TOKEN. Provenance attestations are generated automatically.
+      # Requires a Trusted Publisher configured per package on npmjs.com
+      # (org elbwalker, repo walkerOS, workflow release.yml, env npm-publish).
+      - name: Publish to npm (Trusted Publishing via OIDC)
         run: |
           if [ "${{ inputs.release_type }}" = "pre-release (next)" ]; then
             npx changeset publish --tag next
           else
             npx changeset publish
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Deprecate prior next versions for this stable
-        if: inputs.release_type == 'stable release'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          PACKAGES_RAW: ${{ steps.changesets.outputs.packages_raw }}
-        run: |
-          while IFS= read -r pkg; do
-            [ -z "$pkg" ] && continue
-            stable_version=$(npm view "$pkg" version 2>/dev/null) || continue
-            [ -z "$stable_version" ] && continue
-            next_versions=$(npm view "$pkg" versions --json 2>/dev/null | \
-              STABLE="$stable_version" node -e "
-                const versions = JSON.parse(require('fs').readFileSync(0, 'utf8'));
-                const stable = process.env.STABLE;
-                const re = new RegExp('^' + stable.replace(/[.]/g, '\\\\.') + '-next[.\\\\-]');
-                versions
-                  .filter(v => re.test(v))
-                  .forEach(v => console.log(v));
-              " || true)
-            if [ -z "$next_versions" ]; then
-              echo "$pkg: no next versions matching ${stable_version}-next*"
-              continue
-            fi
-            while IFS= read -r v; do
-              echo "Deprecating $pkg@$v"
-              npm deprecate "$pkg@$v" "Superseded by $pkg@$stable_version" \
-                || echo "  (deprecate failed for $pkg@$v)"
-            done <<< "$next_versions"
-          done <<< "$PACKAGES_RAW"
 
       - name: Commit version changes (stable only)
         if: inputs.release_type == 'stable release'
@@ -233,7 +207,9 @@ jobs:
           fi
 
       - name: Login to Docker Hub
-        if: steps.check-flow.outputs.exists == 'false' || steps.check-cli.outputs.exists == 'false'
+        if:
+          steps.check-flow.outputs.exists == 'false' ||
+          steps.check-cli.outputs.exists == 'false'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}

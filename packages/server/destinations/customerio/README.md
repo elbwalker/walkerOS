@@ -1,9 +1,19 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/server-destination-customerio
 
-Server-side Customer.io destination for
-[walkerOS](https://github.com/elbwalker/walkerOS). Forwards events to
-Customer.io via the official `customerio-node` SDK with support for Track,
-Identify, Page View, Transactional Messaging, and Customer Lifecycle management.
+Server-side event delivery to Customer.io for email, SMS, push, and in-app
+messaging automation.
+
+[Documentation](https://www.walkeros.io/docs/destinations/server/customerio)
+&bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-customerio)
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/destinations/customerio)
 
 ## Installation
 
@@ -11,19 +21,18 @@ Identify, Page View, Transactional Messaging, and Customer Lifecycle management.
 npm install @walkeros/server-destination-customerio
 ```
 
-## Quick Start
+## Quick start
 
 ```json
 {
-  "destinations": {
-    "customerio": {
-      "package": "@walkeros/server-destination-customerio",
-      "config": {
-        "settings": {
-          "siteId": "YOUR_SITE_ID",
-          "apiKey": "YOUR_API_KEY",
-          "customerId": "user.id",
-          "anonymousId": "user.session"
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "destinations": {
+        "customerio": {
+          "package": "@walkeros/server-destination-customerio",
+          "config": {}
         }
       }
     }
@@ -31,43 +40,18 @@ npm install @walkeros/server-destination-customerio
 }
 ```
 
-## Settings
+## Documentation
 
-| Setting       | Type             | Required | Default          | Description                                                  |
-| ------------- | ---------------- | -------- | ---------------- | ------------------------------------------------------------ |
-| `siteId`      | string           | Yes      | --               | Customer.io Site ID                                          |
-| `apiKey`      | string           | Yes      | --               | Customer.io API Key                                          |
-| `appApiKey`   | string           | No       | --               | App API Key for transactional messaging (sendEmail/sendPush) |
-| `region`      | `'us'` \| `'eu'` | No       | `'us'`           | Data center region                                           |
-| `timeout`     | number           | No       | `10000`          | HTTP request timeout in ms                                   |
-| `customerId`  | string           | No       | `'user.id'`      | Mapping path to resolve customerId from events               |
-| `anonymousId` | string           | No       | `'user.session'` | Mapping path to resolve anonymousId from events              |
-| `identify`    | MappingValue     | No       | --               | Destination-level identity mapping                           |
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/server/customerio**
 
-## Mapping Settings
+## Contribute
 
-Per-event mapping settings control which Customer.io methods are called:
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-| Setting        | Effect                                         | Use with `silent: true` |
-| -------------- | ---------------------------------------------- | ----------------------- |
-| `identify`     | Calls `identify()` with attributes             | Yes, for login events   |
-| `page`         | Calls `trackPageView()` with url               | Yes, for page views     |
-| `destroy`      | Permanently deletes person                     | Yes                     |
-| `suppress`     | Stops messaging (keeps data)                   | Yes                     |
-| `unsuppress`   | Resumes messaging                              | Yes                     |
-| `addDevice`    | Registers push device                          | Yes                     |
-| `deleteDevice` | Removes push device                            | Yes                     |
-| `merge`        | Merges duplicate profiles                      | Yes                     |
-| `sendEmail`    | Sends transactional email (requires appApiKey) | Yes                     |
-| `sendPush`     | Sends transactional push (requires appApiKey)  | Yes                     |
+## License
 
-## Identity
-
-Customer.io uses `customerId` as the primary identifier. When `customerId`
-cannot be resolved but `anonymousId` is available, the destination automatically
-falls back to `trackAnonymous()` for data preservation.
-
-## Shutdown
-
-The destination implements `destroy()` by clearing SDK client references. No
-flush is needed since `customerio-node` does not batch internally.
+MIT

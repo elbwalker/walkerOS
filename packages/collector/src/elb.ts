@@ -20,7 +20,6 @@ export function createElbSource(
     push: async (
       eventOrCommand?: unknown,
       data?: unknown,
-      options?: unknown,
       context?: unknown,
       nested?: WalkerOS.Entities,
       custom?: WalkerOS.Properties,
@@ -31,7 +30,7 @@ export function createElbSource(
         eventOrCommand.startsWith('walker ')
       ) {
         const command = eventOrCommand.replace('walker ', '');
-        return collector.command(command, data, options);
+        return collector.command(command, data);
       }
 
       // Build event object

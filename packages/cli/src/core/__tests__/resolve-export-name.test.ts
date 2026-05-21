@@ -2,13 +2,13 @@ import type { Flow } from '@walkeros/core';
 import { resolveExportName } from '../resolve-export-name.js';
 
 describe('resolveExportName', () => {
-  test('returns explicit code field when not auto-generated', () => {
+  test('returns explicit import field on the step', () => {
     const flow: Flow = {
       config: { platform: 'server' },
       destinations: {
         pubsub: {
           package: '@walkeros/server-destination-gcp',
-          code: 'destinationPubSub',
+          import: 'destinationPubSub',
           config: {},
         },
       },
@@ -17,29 +17,11 @@ describe('resolveExportName', () => {
     const result = resolveExportName(flow, 'destination', 'pubsub');
     expect(result).toEqual({
       exportName: 'destinationPubSub',
-      source: 'code',
+      source: 'import',
     });
   });
 
-  test('treats auto-generated code (matches packageNameToVariable) as no explicit code', () => {
-    // packageNameToVariable('@walkeros/server-destination-gcp')
-    //   => '_walkerosServerDestinationGcp'
-    const flow: Flow = {
-      config: { platform: 'server' },
-      destinations: {
-        gcp: {
-          package: '@walkeros/server-destination-gcp',
-          code: '_walkerosServerDestinationGcp',
-          config: {},
-        },
-      },
-    };
-
-    const result = resolveExportName(flow, 'destination', 'gcp');
-    expect(result).toEqual({ exportName: undefined, source: 'default' });
-  });
-
-  test('falls back to bundle.packages.imports[0] when code is unset', () => {
+  test('falls back to bundle.packages.imports[0] when import is unset', () => {
     const flow: Flow = {
       config: {
         platform: 'server',
@@ -66,35 +48,7 @@ describe('resolveExportName', () => {
     });
   });
 
-  test('falls back to bundle.packages.imports[0] when code matches auto-generated variable', () => {
-    const flow: Flow = {
-      config: {
-        platform: 'server',
-        bundle: {
-          packages: {
-            '@walkeros/server-destination-gcp': {
-              imports: ['destinationPubSub'],
-            },
-          },
-        },
-      },
-      destinations: {
-        pubsub: {
-          package: '@walkeros/server-destination-gcp',
-          code: '_walkerosServerDestinationGcp',
-          config: {},
-        },
-      },
-    };
-
-    const result = resolveExportName(flow, 'destination', 'pubsub');
-    expect(result).toEqual({
-      exportName: 'destinationPubSub',
-      source: 'imports',
-    });
-  });
-
-  test('explicit code takes precedence over imports[0]', () => {
+  test('explicit import takes precedence over imports[0]', () => {
     const flow: Flow = {
       config: {
         platform: 'server',
@@ -109,7 +63,7 @@ describe('resolveExportName', () => {
       destinations: {
         pubsub: {
           package: '@walkeros/server-destination-gcp',
-          code: 'destinationPubSub',
+          import: 'destinationPubSub',
           config: {},
         },
       },
@@ -118,11 +72,11 @@ describe('resolveExportName', () => {
     const result = resolveExportName(flow, 'destination', 'pubsub');
     expect(result).toEqual({
       exportName: 'destinationPubSub',
-      source: 'code',
+      source: 'import',
     });
   });
 
-  test('returns default source when neither code nor imports set', () => {
+  test('returns default source when neither import nor imports set', () => {
     const flow: Flow = {
       config: { platform: 'server' },
       destinations: {
@@ -184,14 +138,14 @@ describe('resolveExportName', () => {
       sources: {
         http: {
           package: '@walkeros/server-source-express',
-          code: 'sourceExpress',
+          import: 'sourceExpress',
           config: {},
         },
       },
     };
 
     const result = resolveExportName(flow, 'source', 'http');
-    expect(result).toEqual({ exportName: 'sourceExpress', source: 'code' });
+    expect(result).toEqual({ exportName: 'sourceExpress', source: 'import' });
   });
 
   test('resolves store kind', () => {
@@ -200,14 +154,14 @@ describe('resolveExportName', () => {
       stores: {
         kv: {
           package: '@walkeros/server-store-fs',
-          code: 'storeFs',
+          import: 'storeFs',
           config: {},
         },
       },
     };
 
     const result = resolveExportName(flow, 'store', 'kv');
-    expect(result).toEqual({ exportName: 'storeFs', source: 'code' });
+    expect(result).toEqual({ exportName: 'storeFs', source: 'import' });
   });
 
   test('returns default source when component not in flow', () => {

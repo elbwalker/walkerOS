@@ -66,14 +66,13 @@ describe('clarity destination — step examples', () => {
     if (example.command === 'consent') {
       // Command examples: route `in` through elb('walker <command>', in)
       // rather than pushing it as an event.
-      elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           include: example.configInclude,
           settings: baseSettings,
         },
-      );
+      });
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
       // Standard event example.
@@ -83,15 +82,14 @@ describe('clarity destination — step examples', () => {
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
 
-      elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           include: example.configInclude,
           settings: baseSettings,
           mapping: mappingConfig,
         },
-      );
+      });
       await elb(event);
     }
 

@@ -58,8 +58,8 @@ describe('Destination', () => {
     // No init function
     const mockPushNoInit = jest.fn();
     await elb('walker destination', {
+      code: { config: {}, push: mockPushNoInit },
       config: {},
-      push: mockPushNoInit,
     });
 
     jest.clearAllMocks();
@@ -68,15 +68,14 @@ describe('Destination', () => {
 
     // Init set to true and should not be called
     const mockInitSkip = jest.fn();
-    await elb(
-      'walker destination',
-      {
+    await elb('walker destination', {
+      code: {
         config: { init: true },
         init: mockInitSkip,
         push: mockPush,
       },
-      { init: true },
-    );
+      config: { init: true },
+    });
     await elb(mockEvent);
     expect(mockInitSkip).toHaveBeenCalledTimes(0);
 
@@ -86,18 +85,20 @@ describe('Destination', () => {
     });
     const mockPushFalse = jest.fn();
     await elb('walker destination', {
+      code: { config: {}, init: mockInitFalse, push: mockPushFalse },
       config: {},
-      init: mockInitFalse,
-      push: mockPushFalse,
     });
 
     // Save config automatically
     const addResult = await elb('walker destination', {
+      code: {
+        config: {},
+        init: jest.fn().mockImplementation(() => {
+          return { foo: 'bar' };
+        }),
+        push: mockPush,
+      },
       config: {},
-      init: jest.fn().mockImplementation(() => {
-        return { foo: 'bar' };
-      }),
-      push: mockPush,
     });
     const destId = Object.keys(addResult.done!)[0];
     const destinationSave = collector.destinations[destId];
@@ -159,7 +160,10 @@ describe('Destination', () => {
     const mapping = { entity: { action: eventMapping } };
 
     const { elb, collector } = await getCollector({});
-    await elb('walker destination', mockDestination, { mapping });
+    await elb('walker destination', {
+      code: mockDestination,
+      config: { mapping },
+    });
     result = await elb(mockEvent);
 
     expect(mockDestination.push).toHaveBeenCalledTimes(1);
@@ -177,11 +181,10 @@ describe('Destination', () => {
     const { elb } = await getCollector({});
 
     const eventMapping = { data: { value: 'bar' } };
-    elb(
-      'walker destination',
-      { push: mockPush, config: {} },
-      { mapping: { entity: { action: eventMapping } } },
-    );
+    elb('walker destination', {
+      code: { push: mockPush, config: {} },
+      config: { mapping: { entity: { action: eventMapping } } },
+    });
 
     result = await elb(mockEvent);
     expect(mockPush).toHaveBeenCalledWith(
@@ -197,14 +200,13 @@ describe('Destination', () => {
     const { elb } = await getCollector({});
 
     const eventMapping = { data: { map: { foo: { value: 'bar' } } } };
-    elb(
-      'walker destination',
-      { push: mockPush, config: {} },
-      {
+    elb('walker destination', {
+      code: { push: mockPush, config: {} },
+      config: {
         data: { map: { foo: { value: 'unknown' }, bar: { value: 'baz' } } },
         mapping: { entity: { action: eventMapping } },
       },
-    );
+    });
 
     result = await elb(mockEvent);
     expect(mockPush).toHaveBeenCalledWith(
@@ -297,7 +299,10 @@ describe('Destination', () => {
     collector.user = { id: 'us3r' };
     collector.globals = { foo: 'bar' };
 
-    result = await elb('walker destination', mockDestination, { id: 'later' });
+    result = await elb('walker destination', {
+      code: mockDestination,
+      config: { id: 'later' },
+    });
     expect(result.done).toBeDefined();
     expect(result.done!['later']).toBeDefined();
     expect(mockPush).toHaveBeenCalledTimes(1);

@@ -9,7 +9,7 @@ import {
 } from './utils';
 
 export const sourceFetch: Source.Init<Types> = async (context) => {
-  const { config = {}, env, setIngest } = context;
+  const { config = {}, env } = context;
   const userSettings = config.settings || {};
   const settings = {
     ...userSettings,
@@ -24,6 +24,7 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
 
   const push = async (request: Request): Promise<Response> => {
     const startTime = Date.now();
+    void startTime;
 
     try {
       const url = new URL(request.url);
@@ -68,81 +69,153 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
         );
       }
 
-      // Extract ingest metadata from request (if config.ingest is defined)
-      await setIngest(request);
+      // Per-request scope: each fetch invocation gets its own ingest.
+      // Fetch sources return a Response directly, not via async respond.
+      return await context.withScope(request, undefined, async (scopeEnv) => {
+        const envPush = scopeEnv.push;
 
-      // GET (pixel tracking - no logging, routine)
-      if (method === 'GET') {
-        const parsedData = requestToData(url.search);
-        if (parsedData && isObject(parsedData)) {
-          await env.push(parsedData);
+        // GET (pixel tracking - no logging, routine)
+        if (method === 'GET') {
+          const parsedData = requestToData(url.search);
+          if (parsedData && isObject(parsedData)) {
+            await envPush(parsedData);
+          }
+          return createPixelResponse(corsHeaders);
         }
-        return createPixelResponse(corsHeaders);
-      }
 
-      // POST
-      if (method === 'POST') {
-        // Check request size
-        const contentLength = request.headers.get('Content-Length');
-        if (contentLength) {
-          const size = parseInt(contentLength, 10);
-          if (size > settings.maxRequestSize) {
-            logger.error('Request too large', {
-              size,
-              limit: settings.maxRequestSize,
-            });
+        // POST
+        if (method === 'POST') {
+          // Check request size
+          const contentLength = request.headers.get('Content-Length');
+          if (contentLength) {
+            const size = parseInt(contentLength, 10);
+            if (size > settings.maxRequestSize) {
+              logger.error('Request too large', {
+                size,
+                limit: settings.maxRequestSize,
+              });
+              return createJsonResponse(
+                {
+                  success: false,
+                  error: `Request too large. Maximum size: ${settings.maxRequestSize} bytes`,
+                },
+                413,
+                corsHeaders,
+              );
+            }
+          }
+
+          let eventData: unknown;
+          let bodyText: string;
+          let rawBody = false;
+
+          try {
+            bodyText = await request.text();
+
+            // Check actual body size
+            if (bodyText.length > settings.maxRequestSize) {
+              logger.error('Request body too large', {
+                size: bodyText.length,
+                limit: settings.maxRequestSize,
+              });
+              return createJsonResponse(
+                {
+                  success: false,
+                  error: `Request too large. Maximum size: ${settings.maxRequestSize} bytes`,
+                },
+                413,
+                corsHeaders,
+              );
+            }
+
+            eventData = JSON.parse(bodyText);
+          } catch {
+            // Non-JSON body: push empty event for source.before transformers
+            eventData = {};
+            rawBody = true;
+          }
+
+          if (!isDefined(eventData) || !isObject(eventData)) {
+            // Non-object body: push empty event for source.before transformers
+            eventData = {};
+            rawBody = true;
+          }
+
+          // Raw body: push empty event directly, skip validation
+          if (rawBody) {
+            const result = await processEvent(
+              eventData as WalkerOS.DeepPartialEvent,
+              envPush,
+            );
+            if (result.error) {
+              logger.error('Event processing failed', { error: result.error });
+              return createJsonResponse(
+                { success: false, error: result.error },
+                400,
+                corsHeaders,
+              );
+            }
+
             return createJsonResponse(
-              {
-                success: false,
-                error: `Request too large. Maximum size: ${settings.maxRequestSize} bytes`,
-              },
-              413,
+              { success: true, id: result.id, timestamp: Date.now() },
+              200,
               corsHeaders,
             );
           }
-        }
 
-        let eventData: unknown;
-        let bodyText: string;
-        let rawBody = false;
+          // Check for batch (eventData is a validated object at this point)
+          const validData = eventData as Record<string, unknown>;
+          const isBatch =
+            'batch' in validData && Array.isArray(validData.batch);
 
-        try {
-          bodyText = await request.text();
+          if (isBatch) {
+            const batch = validData.batch as unknown[];
 
-          // Check actual body size
-          if (bodyText.length > settings.maxRequestSize) {
-            logger.error('Request body too large', {
-              size: bodyText.length,
-              limit: settings.maxRequestSize,
-            });
+            if (batch.length > settings.maxBatchSize) {
+              logger.error('Batch too large', {
+                size: batch.length,
+                limit: settings.maxBatchSize,
+              });
+              return createJsonResponse(
+                {
+                  success: false,
+                  error: `Batch too large. Maximum size: ${settings.maxBatchSize} events`,
+                },
+                400,
+                corsHeaders,
+              );
+            }
+
+            const results = await processBatch(batch, envPush, logger);
+
+            if (results.failed > 0) {
+              return createJsonResponse(
+                {
+                  success: false,
+                  processed: results.successful,
+                  failed: results.failed,
+                  errors: results.errors,
+                },
+                207,
+                corsHeaders,
+              );
+            }
+
             return createJsonResponse(
               {
-                success: false,
-                error: `Request too large. Maximum size: ${settings.maxRequestSize} bytes`,
+                success: true,
+                processed: results.successful,
+                ids: results.ids,
               },
-              413,
+              200,
               corsHeaders,
             );
           }
 
-          eventData = JSON.parse(bodyText);
-        } catch {
-          // Non-JSON body: push empty event for source.before transformers
-          eventData = {};
-          rawBody = true;
-        }
-
-        if (!isDefined(eventData) || !isObject(eventData)) {
-          // Non-object body: push empty event for source.before transformers
-          eventData = {};
-          rawBody = true;
-        }
-
-        // Raw body: push empty event directly, skip validation
-        if (rawBody) {
+          // Forward event directly — validation is not the source's responsibility.
           const result = await processEvent(
             eventData as WalkerOS.DeepPartialEvent,
-            env.push,
+            envPush,
           );
           if (result.error) {
             logger.error('Event processing failed', { error: result.error });
@@ -160,80 +233,12 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
           );
         }
 
-        // Check for batch (eventData is a validated object at this point)
-        const validData = eventData as Record<string, unknown>;
-        const isBatch = 'batch' in validData && Array.isArray(validData.batch);
-
-        if (isBatch) {
-          const batch = validData.batch as unknown[];
-
-          if (batch.length > settings.maxBatchSize) {
-            logger.error('Batch too large', {
-              size: batch.length,
-              limit: settings.maxBatchSize,
-            });
-            return createJsonResponse(
-              {
-                success: false,
-                error: `Batch too large. Maximum size: ${settings.maxBatchSize} events`,
-              },
-              400,
-              corsHeaders,
-            );
-          }
-
-          const results = await processBatch(batch, env.push, logger);
-
-          if (results.failed > 0) {
-            return createJsonResponse(
-              {
-                success: false,
-                processed: results.successful,
-                failed: results.failed,
-                errors: results.errors,
-              },
-              207,
-              corsHeaders,
-            );
-          }
-
-          return createJsonResponse(
-            {
-              success: true,
-              processed: results.successful,
-              ids: results.ids,
-            },
-            200,
-            corsHeaders,
-          );
-        }
-
-        // Forward event directly — validation is not the source's responsibility.
-        const result = await processEvent(
-          eventData as WalkerOS.DeepPartialEvent,
-          env.push,
-        );
-        if (result.error) {
-          logger.error('Event processing failed', { error: result.error });
-          return createJsonResponse(
-            { success: false, error: result.error },
-            400,
-            corsHeaders,
-          );
-        }
-
         return createJsonResponse(
-          { success: true, id: result.id, timestamp: Date.now() },
-          200,
+          { success: false, error: 'Method not allowed' },
+          405,
           corsHeaders,
         );
-      }
-
-      return createJsonResponse(
-        { success: false, error: 'Method not allowed' },
-        405,
-        corsHeaders,
-      );
+      });
     } catch (error) {
       logger.error('Internal server error', error);
       const corsHeaders = createCorsHeaders(settings.cors);

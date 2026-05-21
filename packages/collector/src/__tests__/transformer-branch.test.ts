@@ -31,15 +31,46 @@ describe('TransformerResult branching', () => {
   });
 });
 
-// Helper to create a mock collector
+// Helper to create a complete Collector.Instance for transformer chain tests.
+// All required fields are present so the assignment to Collector.Instance does
+// not need an intermediate `unknown` cast.
 function createMockCollector(
   transformers: Transformer.Transformers,
 ): Collector.Instance {
-  return {
+  const noopPush: Collector.PushFn = async () => ({ ok: true });
+  const noopCommand: Collector.CommandFn = async () => ({ ok: true });
+  const instance: Collector.Instance = {
+    push: noopPush,
+    command: noopCommand,
+    allowed: true,
+    config: { globalsStatic: {}, sessionStatic: {} },
+    consent: {},
+    custom: {},
+    sources: {},
+    destinations: {},
     transformers,
-    logger: createMockLogger(),
+    stores: {},
+    globals: {},
     hooks: {},
-  } as unknown as Collector.Instance;
+    logger: createMockLogger(),
+    on: {},
+    queue: [],
+    round: 0,
+    session: undefined,
+    status: {
+      startedAt: 0,
+      in: 0,
+      out: 0,
+      failed: 0,
+      sources: {},
+      destinations: {},
+      dropped: {},
+    },
+    timing: 0,
+    user: {},
+    pending: { destinations: {} },
+  };
+  return instance;
 }
 
 // Helper to create a simple transformer
@@ -121,10 +152,12 @@ describe('chain branching', () => {
   });
 
   it('should pass ingest through branched chains', async () => {
+    // Typed body so accessing `body.en` in the parser is fully type-checked.
+    const body = { en: 'purchase' };
     const ingestData = {
       _meta: { hops: 0, path: [] },
       path: '/gtag',
-      body: { en: 'purchase' },
+      body,
     };
 
     const router = createTransformer((event, context) => {
@@ -134,7 +167,7 @@ describe('chain branching', () => {
 
     const parser = createTransformer((event, context) => {
       expect(context.ingest).toBe(ingestData);
-      const body = (context.ingest as any).body;
+      // context.ingest is the same object reference, so reuse the typed body.
       return { event: { name: `page ${body.en}`, data: body } };
     });
 

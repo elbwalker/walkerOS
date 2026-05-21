@@ -118,6 +118,23 @@ information:
   language="typescript"
 />
 
+### Boundary error logs
+
+When an exception escapes the inner pipeline of `collector.push` or
+`collector.command`, the collector emits a structured error log and
+increments `collector.status.failed`. The messages are `'push failed'`
+and `'command failed'` respectively, with the full event/ingest or
+command/data context as structured fields. See
+[Status — What `failed` counts](./#what-failed-counts) for details and
+PII implications.
+
+Internal pipeline failures from mapping, source startup, transformer
+init, and destination init are scoped under `'source'`,
+`'transformer:<type>'`, or the destination type. User-callback throws
+from `on` subscriptions are scoped under `'on'`. The full list of error
+verbs and scopes is documented in
+[Status — What `failed` counts](./#what-failed-counts).
+
 ### Throwing errors
 
 Use `logger.throw()` to log an error and throw in a single call:

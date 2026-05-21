@@ -489,14 +489,13 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
-      'walker destination',
-      { ...dest, env },
-      {
+    elb('walker destination', {
+      code: { ...dest, env },
+      config: {
         settings: { pixelId: '1234567890' },
         mapping: mappingConfig,
       },
-    );
+    });
 
     await elb(event);
     expect(mockFn).toHaveBeenLastCalledWith(...(example.out as unknown[]));

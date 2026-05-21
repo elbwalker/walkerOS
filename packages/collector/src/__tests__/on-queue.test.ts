@@ -1,6 +1,23 @@
 import type { Destination, On } from '@walkeros/core';
 import { startFlow } from '..';
 
+describe('walker on command (Init form)', () => {
+  test('walker on registers subscription via { type, rules }', async () => {
+    const { elb, collector } = await startFlow();
+    const callback = jest.fn();
+
+    await elb('walker on', {
+      type: 'consent',
+      rules: { marketing: callback },
+    } as never);
+
+    expect(collector.on.consent).toHaveLength(1);
+
+    await elb('walker consent', { marketing: true });
+    expect(callback).toHaveBeenCalled();
+  });
+});
+
 describe('on() event queuing', () => {
   it('queues on(consent) until init completes', async () => {
     const callOrder: string[] = [];

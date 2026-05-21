@@ -99,6 +99,6 @@ export async function createCmpSource(
     },
     id: 'test-cmp-source',
     logger: createMockLogger(),
-    setIngest: async () => {},
+    withScope: async (_r, _resp, body) => body({} as never),
   });
 }

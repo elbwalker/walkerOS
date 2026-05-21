@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-cmp-cookiefirst",
   "description": "CookieFirst consent management source for walkerOS",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "license": "MIT",
   "walkerOS": {
     "type": "source",
@@ -33,7 +33,8 @@
     "./walkerOS.json": "./dist/walkerOS.json"
   },
   "files": [
-    "dist/**"
+    "dist/**",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup --silent",
@@ -45,8 +46,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.0.2",
-    "@walkeros/collector": "4.0.2"
+    "@walkeros/core": "4.1.0",
+    "@walkeros/collector": "4.1.0"
   },
   "devDependencies": {},
   "repository": {

@@ -1,9 +1,18 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/server-destination-slack
 
-Server-side Slack destination for
-[walkerOS](https://github.com/elbwalker/walkerOS). Posts events to Slack as
-formatted notifications via either an Incoming Webhook or the official
-`@slack/web-api` SDK.
+Send walkerOS events to Slack as formatted messages via Incoming Webhooks or the
+Web API, with multi-channel routing, threading, DMs, and Block Kit support.
+
+[Documentation](https://www.walkeros.io/docs/destinations/server/slack) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-slack)
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/destinations/slack)
 
 ## Installation
 
@@ -11,44 +20,18 @@ formatted notifications via either an Incoming Webhook or the official
 npm install @walkeros/server-destination-slack
 ```
 
-## Modes
-
-The destination has two modes, selected by which auth setting you provide:
-
-| Setting      | Mode    | Capabilities                                                |
-| ------------ | ------- | ----------------------------------------------------------- |
-| `webhookUrl` | Webhook | Single channel, simple text + Block Kit                     |
-| `token`      | Web API | Multi-channel, threading, DMs, ephemeral, structured errors |
-
-## Quick Start (Web API mode)
+## Quick start
 
 ```json
 {
-  "destinations": {
-    "slack": {
-      "package": "@walkeros/server-destination-slack",
-      "config": {
-        "settings": {
-          "token": "$SLACK_BOT_TOKEN",
-          "channel": "#alerts"
-        },
-        "mapping": {
-          "order": {
-            "complete": {
-              "settings": {
-                "channel": "#sales",
-                "text": ":moneybag: New order: ${data.id} - ${data.total} ${data.currency}"
-              }
-            }
-          },
-          "error": {
-            "*": {
-              "settings": {
-                "channel": "#engineering-alerts",
-                "text": ":rotating_light: ${data.severity}: ${data.message}"
-              }
-            }
-          }
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "destinations": {
+        "slack": {
+          "package": "@walkeros/server-destination-slack",
+          "config": {}
         }
       }
     }
@@ -56,77 +39,18 @@ The destination has two modes, selected by which auth setting you provide:
 }
 ```
 
-## Quick Start (Webhook mode)
+## Documentation
 
-```json
-{
-  "destinations": {
-    "slack-deploys": {
-      "package": "@walkeros/server-destination-slack",
-      "config": {
-        "settings": {
-          "webhookUrl": "$SLACK_WEBHOOK_URL"
-        },
-        "mapping": {
-          "deploy": {
-            "complete": {
-              "settings": {
-                "text": ":rocket: Deployed ${data.version} to ${data.environment}"
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/server/slack**
 
-## Settings
+## Contribute
 
-| Setting         | Type    | Required | Default     | Description                                           |
-| --------------- | ------- | -------- | ----------- | ----------------------------------------------------- |
-| `token`         | string  | One of   | --          | Bot token (`xoxb-...`). Enables Web API mode          |
-| `webhookUrl`    | string  | One of   | --          | Incoming Webhook URL. Enables webhook mode            |
-| `channel`       | string  | Web API  | --          | Default channel ID or name                            |
-| `text`          | string  | No       | --          | Default text template (`${data.field}` interpolation) |
-| `blocks`        | array   | No       | --          | Default Block Kit blocks                              |
-| `includeHeader` | boolean | No       | `true`      | Auto-add event-name header in default blocks          |
-| `unfurlLinks`   | boolean | No       | `false`     | Enable link unfurling                                 |
-| `unfurlMedia`   | boolean | No       | `false`     | Enable media unfurling                                |
-| `mrkdwn`        | boolean | No       | `true`      | Use mrkdwn formatting                                 |
-| `retryConfig`   | enum    | No       | `'default'` | Retry policy passed to WebClient                      |
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-## Mapping Settings
+## License
 
-Per-event mapping settings override destination defaults and unlock advanced
-features.
-
-| Setting              | Effect                                                  | Mode    |
-| -------------------- | ------------------------------------------------------- | ------- |
-| `channel`            | Override channel for this rule                          | Web API |
-| `text`               | Override text template                                  | Both    |
-| `blocks`             | Override Block Kit blocks                               | Both    |
-| `threadTs`           | Post as a thread reply                                  | Web API |
-| `replyBroadcast`     | Broadcast threaded reply to channel                     | Web API |
-| `ephemeral` + `user` | Post via `chat.postEphemeral`                           | Web API |
-| `dm` + `user`        | DM the user (`conversations.open` + `chat.postMessage`) | Web API |
-
-## Required Slack App Scopes (Web API mode)
-
-- `chat:write` -- post messages to channels the bot is in
-- `chat:write.public` -- post to any public channel without joining
-- `im:write` -- open DM conversations (only needed for `dm: true`)
-
-## Rate Limiting
-
-- **Web API mode**: the SDK handles 429 with `Retry-After` automatically
-  (default: 10 retries over ~30 min). Configure via `retryConfig`.
-- **Webhook mode**: no automatic retry. Use Web API mode if you need retry on
-  rate limit.
-
-## Volume Notes
-
-Slack is a notification channel, not an analytics warehouse. Use mapping
-`condition` to filter important events; route different events to different
-channels to spread the load.
+MIT

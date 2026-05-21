@@ -51,7 +51,10 @@ describe('Destination PiwikPro', () => {
       env: testEnv,
     };
 
-    elb('walker destination', destinationWithEnv, { settings });
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: { settings },
+    });
 
     expect(true).toBeTruthy(); // @TODO: Add tests
   });
@@ -68,9 +71,15 @@ describe('Destination PiwikPro', () => {
       config: {},
     };
 
-    elb('walker destination', destinationWithEnv, { settings });
-    elb('walker destination', ignoreDestination, {
-      mapping: { page: { view: { ignore: true } } },
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: { settings },
+    });
+    elb('walker destination', {
+      code: ignoreDestination,
+      config: {
+        mapping: { page: { view: { ignore: true } } },
+      },
     });
 
     await elb(page_view);

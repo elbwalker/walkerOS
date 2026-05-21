@@ -35,7 +35,10 @@ describe('Destination Meta Pixel', () => {
       ...destination,
       env: initEnv,
     };
-    elb('walker destination', destinationWithEnv, { settings: { pixelId } });
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: { settings: { pixelId } },
+    });
 
     await elb(event);
     expect(initEnv?.window.fbq).toBeDefined();
@@ -46,7 +49,10 @@ describe('Destination Meta Pixel', () => {
       ...destination,
       env: testEnv,
     };
-    elb('walker destination', destinationWithEnv, { settings: { pixelId } });
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: { settings: { pixelId } },
+    });
 
     await elb(event);
 
@@ -73,9 +79,12 @@ describe('Destination Meta Pixel', () => {
       ...destination,
       env: scriptEnv,
     };
-    elb('walker destination', destinationWithEnv, {
-      settings: { pixelId },
-      loadScript: true,
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: {
+        settings: { pixelId },
+        loadScript: true,
+      },
     });
 
     await elb(event);
@@ -89,7 +98,10 @@ describe('Destination Meta Pixel', () => {
       ...destination,
       env: testEnv,
     };
-    elb('walker destination', destinationWithEnv, { settings: { pixelId } });
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: { settings: { pixelId } },
+    });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(
       'track',
@@ -104,10 +116,13 @@ describe('Destination Meta Pixel', () => {
       ...destination,
       env: testEnv,
     };
-    elb('walker destination', destinationWithEnv, {
-      settings: { pixelId },
-      mapping: {
-        entity: { action: { settings: { trackCustom: 'foo' } } },
+    elb('walker destination', {
+      code: destinationWithEnv,
+      config: {
+        settings: { pixelId },
+        mapping: {
+          entity: { action: { settings: { trackCustom: 'foo' } } },
+        },
       },
     });
     await elb(event);

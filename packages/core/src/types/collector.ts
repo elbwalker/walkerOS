@@ -12,6 +12,41 @@ import type {
 } from '.';
 import type { Ingest } from './ingest';
 
+/** Identifies which kind of step a stepId belongs to. */
+export type StepKind = 'collector' | 'source' | 'transformer' | 'destination';
+
+/**
+ * Build a stepId for use as a key in `Status.dropped` (and future
+ * status maps). The collector-level stepId is the literal "collector"
+ * (no id). Source/transformer/destination ids take the form
+ * `"<kind>.<id>"`, e.g. `"destination.ga4"`.
+ *
+ * The dot separator mirrors the vocabulary already used in collector
+ * log messages ("collector.queue overflow", "destination.dlq overflow").
+ */
+export function stepId(kind: 'collector'): 'collector';
+export function stepId(
+  kind: 'source' | 'transformer' | 'destination',
+  id: string,
+): string;
+export function stepId(kind: StepKind, id?: string): string {
+  if (kind === 'collector') return 'collector';
+  if (!id) {
+    throw new Error(`stepId(${kind}) requires an id`);
+  }
+  return `${kind}.${id}`;
+}
+
+/**
+ * Drop counters at a single step. Each buffer is optional: a step kind
+ * may have only `queue` (collector), only `dlq`, both (destinations
+ * today), or neither. Counts are monotonic.
+ */
+export interface DroppedCounters {
+  queue?: number;
+  dlq?: number;
+}
+
 /**
  * Core collector configuration interface
  */
@@ -24,6 +59,11 @@ export interface Config {
   sessionStatic: Partial<SessionData>;
   /** Logger configuration */
   logger?: Logger.Config;
+  /**
+   * Maximum number of events retained in `collector.queue` for late-registered
+   * destination backfill. Overflow drops oldest (FIFO). Default 1000.
+   */
+  queueMax?: number;
 }
 
 /**
@@ -70,6 +110,16 @@ export interface Status {
   failed: number;
   sources: Record<string, SourceStatus>;
   destinations: Record<string, DestinationStatus>;
+  /**
+   * Monotonic counts of events dropped due to buffer caps, keyed by
+   * stepId. See `stepId()` for key construction.
+   *
+   * Examples:
+   *  - `dropped["collector"]?.queue`: collector replay buffer drops
+   *  - `dropped["destination.ga4"]?.queue`: ga4's consent-denied buffer drops
+   *  - `dropped["destination.ga4"]?.dlq`: ga4's dead-letter queue drops
+   */
+  dropped: Record<string, DroppedCounters>;
 }
 
 export interface SourceStatus {
@@ -83,6 +133,17 @@ export interface DestinationStatus {
   failed: number;
   lastAt?: number;
   duration: number;
+  /** Current size of the destination's queuePush buffer (point-in-time). */
+  queuePushSize: number;
+  /** Current size of the destination's DLQ (point-in-time). */
+  dlqSize: number;
+  /**
+   * Number of events buffered in batch scheduler windows but not yet
+   * delivered to `pushBatch`. Incremented on enqueue, decremented on
+   * flush (whether the flush succeeds or fails). Operators read this
+   * to spot batches that never drain.
+   */
+  inFlightBatch?: number;
 }
 
 export interface Sources {
@@ -149,18 +210,18 @@ export interface CommandFn {
   (command: 'consent', consent: WalkerOS.Consent): Promise<ElbTypes.PushResult>;
   <T extends Destination.Types>(
     command: 'destination',
-    destination: Destination.Init<T> | Destination.Instance<T>,
-    config?: Destination.Config<T>,
+    init: Destination.Init<T>,
   ): Promise<ElbTypes.PushResult>;
   <K extends keyof Hooks.Functions>(
     command: 'hook',
-    name: K,
-    hookFn: Hooks.Functions[K],
+    init: { name: K; fn: Hooks.Functions[K] },
   ): Promise<ElbTypes.PushResult>;
   (
     command: 'on',
-    type: On.Types,
-    rules: WalkerOS.SingleOrArray<On.Subscription>,
+    init: {
+      type: On.Types;
+      rules: WalkerOS.SingleOrArray<On.Subscription>;
+    },
   ): Promise<ElbTypes.PushResult>;
   (command: 'user', user: WalkerOS.User): Promise<ElbTypes.PushResult>;
   (
@@ -172,11 +233,7 @@ export interface CommandFn {
       custom?: WalkerOS.Properties;
     },
   ): Promise<ElbTypes.PushResult>;
-  (
-    command: string,
-    data?: unknown,
-    options?: unknown,
-  ): Promise<ElbTypes.PushResult>;
+  (command: string, data?: unknown): Promise<ElbTypes.PushResult>;
 }
 
 // Main Collector interface

@@ -31,7 +31,11 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
     const mockLogger = createMockLogger();
     return {
       allowed: true,
-      config: { globalsStatic: {}, sessionStatic: {} },
+      config: {
+        globalsStatic: {},
+        sessionStatic: {},
+        queueMax: 1_000,
+      },
       consent: {},
       custom: {},
       destinations: {},
@@ -56,6 +60,7 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
         failed: 0,
         sources: {},
         destinations: {},
+        dropped: {},
       },
       ...overrides,
     } as unknown as Collector.Instance;

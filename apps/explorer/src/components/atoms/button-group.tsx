@@ -9,21 +9,30 @@ export interface ButtonGroupProps {
   }>;
   onButtonClick: (value: string) => void;
   className?: string;
+  /**
+   * Visual style. `segmented` is the bordered pill (default, used in footers
+   * and grids). `tabs` renders flat header tabs with a filled active state,
+   * matching the step-detail modal tab style for use in box headers.
+   */
+  variant?: 'segmented' | 'tabs';
 }
 
 /**
- * ButtonGroup - Segmented control for headers
+ * ButtonGroup - Segmented control or header tabs
  *
- * Displays multiple buttons in a grouped segmented control style.
- * Commonly used for tab switching (HTML/CSS/JS, etc.)
+ * Displays multiple buttons for switching between views (HTML/CSS/JS, etc.).
+ * `variant="tabs"` renders them as flat header tabs instead of a pill.
  */
 export function ButtonGroup({
   buttons,
   onButtonClick,
   className = '',
+  variant = 'segmented',
 }: ButtonGroupProps) {
+  const variantClass =
+    variant === 'tabs' ? ' elb-explorer-button-group--tabs' : '';
   return (
-    <div className={`elb-explorer-button-group ${className}`}>
+    <div className={`elb-explorer-button-group${variantClass} ${className}`}>
       {buttons.map((button) => (
         <Button
           key={button.value}

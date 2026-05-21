@@ -241,24 +241,6 @@ export const BaseContextConfig = z
   .partial();
 
 // ========================================
-// Batch Patterns
-// ========================================
-
-/**
- * BatchConfig - Batch processing configuration
- * Used in: Mapping.Rule
- */
-export const BatchConfig = z
-  .object({
-    batch: z
-      .number()
-      .optional()
-      .describe('Batch size: bundle N events for batch processing'),
-    batched: z.unknown().optional().describe('Batch of events to be processed'),
-  })
-  .partial();
-
-// ========================================
 // Processing Patterns
 // ========================================
 

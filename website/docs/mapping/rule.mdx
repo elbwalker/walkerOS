@@ -75,6 +75,22 @@ Once a rule matches, the collector runs `policy` (event-level), resolves `data`,
 checks `consent` and `condition`, then hands the result to the destination's
 `push` (or buffers it when `batch` is set).
 
+### Batch scheduling
+
+`batch` accepts a number (debounce `wait` window in ms, legacy form) or an
+object `{ wait?, size?, age? }` for finer control:
+
+- `wait` (ms): debounce window. The timer resets on every push.
+- `size`: hard count cap. Flushes immediately at this many events.
+- `age` (ms): hard age cap since the first entry of the current window.
+
+Per-destination upper bounds (`config.batch` on the destination) apply
+when the mapping rule omits a field; mapping-level values override
+destination-level for matched events. Defaults when batching is enabled:
+`size: 1000`, `age: 30000`. `wait` is a hint, not a hard delay: when
+events keep arriving faster than `wait`, the `size` and `age` caps are
+what force the flush.
+
 ## Conditional rules
 
 Use an array with conditions to branch by event contents; the first matching

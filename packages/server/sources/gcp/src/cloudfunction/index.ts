@@ -23,8 +23,7 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 export const sourceCloudFunction: Source.Init<Types> = async (context) => {
-  const { config = {}, env, setIngest } = context;
-  const { push: envPush } = env;
+  const { config = {} } = context;
 
   const settings: Settings = {
     ...DEFAULT_SETTINGS,
@@ -45,57 +44,61 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
         return;
       }
 
-      // Extract ingest metadata from request (if config.ingest is defined)
-      await setIngest(req);
+      // Per-invocation scope: each request gets its own ingest. Cloud
+      // Function returns the response directly via res, not via async
+      // respond, so no respond fn is wired here.
+      await context.withScope(req, undefined, async (scopeEnv) => {
+        const envPush = scopeEnv.push;
 
-      if (req.method !== 'POST') {
-        res.status(405).json({
-          success: false,
-          error: 'Method not allowed. Use POST.',
-        });
-        return;
-      }
-
-      // navigator.sendBeacon forces Content-Type: text/plain;charset=UTF-8 even
-      // for JSON payloads. Functions Framework parses text/plain bodies as
-      // strings, so attempt JSON.parse before falling through to the empty-event
-      // branch. Mirrors the AWS Lambda parseBody() pattern.
-      let body: unknown = req.body;
-      if (typeof body === 'string') {
-        try {
-          body = JSON.parse(body);
-        } catch {
-          // Leave as string; falls through to empty-event branch below.
-        }
-      }
-
-      if (
-        body &&
-        typeof body === 'object' &&
-        isEventRequest(body as RequestBody)
-      ) {
-        const result = await processEvent(body as RequestBody, envPush);
-
-        if (result.error) {
-          res.status(400).json({
+        if (req.method !== 'POST') {
+          res.status(405).json({
             success: false,
-            error: result.error,
-          } as EventResponse);
+            error: 'Method not allowed. Use POST.',
+          });
+          return;
+        }
+
+        // navigator.sendBeacon forces Content-Type: text/plain;charset=UTF-8 even
+        // for JSON payloads. Functions Framework parses text/plain bodies as
+        // strings, so attempt JSON.parse before falling through to the empty-event
+        // branch. Mirrors the AWS Lambda parseBody() pattern.
+        let body: unknown = req.body;
+        if (typeof body === 'string') {
+          try {
+            body = JSON.parse(body);
+          } catch {
+            // Leave as string; falls through to empty-event branch below.
+          }
+        }
+
+        if (
+          body &&
+          typeof body === 'object' &&
+          isEventRequest(body as RequestBody)
+        ) {
+          const result = await processEvent(body as RequestBody, envPush);
+
+          if (result.error) {
+            res.status(400).json({
+              success: false,
+              error: result.error,
+            } as EventResponse);
+          } else {
+            res.status(200).json({
+              success: true,
+              id: result.id,
+            } as EventResponse);
+          }
         } else {
+          // Push empty event for non-event bodies (enables source.before transformers to process raw input)
+          const result = await envPush({});
+
           res.status(200).json({
             success: true,
-            id: result.id,
+            id: result?.event?.id,
           } as EventResponse);
         }
-      } else {
-        // Push empty event for non-event bodies (enables source.before transformers to process raw input)
-        const result = await envPush({});
-
-        res.status(200).json({
-          success: true,
-          id: result?.event?.id,
-        } as EventResponse);
-      }
+      });
     } catch (error) {
       res.status(500).json({
         success: false,

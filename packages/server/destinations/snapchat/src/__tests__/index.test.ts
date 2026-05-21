@@ -174,10 +174,9 @@ describe('Server Destination Snapchat', () => {
       },
     });
 
-    elb(
-      'walker destination',
-      { ...dest, env: testEnv },
-      {
+    elb('walker destination', {
+      code: { ...dest, env: testEnv },
+      config: {
         settings: { accessToken, pixelId },
         mapping: {
           order: {
@@ -198,7 +197,7 @@ describe('Server Destination Snapchat', () => {
           },
         },
       },
-    );
+    });
 
     await elb(event);
 
@@ -384,13 +383,12 @@ describe('Server Destination Snapchat', () => {
       },
     });
 
-    elb(
-      'walker destination',
-      { ...dest, env: testEnv },
-      {
+    elb('walker destination', {
+      code: { ...dest, env: testEnv },
+      config: {
         settings: { accessToken, pixelId },
       },
-    );
+    });
 
     await elb(event);
 

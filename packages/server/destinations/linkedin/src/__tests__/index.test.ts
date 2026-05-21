@@ -302,7 +302,10 @@ describe('Server Destination LinkedIn', () => {
 
     const { elb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
-    await elb('walker destination', destinationWithEnv, config);
+    await elb('walker destination', {
+      code: destinationWithEnv,
+      config: config,
+    });
     await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
@@ -336,7 +339,10 @@ describe('Server Destination LinkedIn', () => {
 
     const { elb } = await startFlow();
     const destinationWithEnv = { ...destination, env: testEnv };
-    await elb('walker destination', destinationWithEnv, config);
+    await elb('walker destination', {
+      code: destinationWithEnv,
+      config: config,
+    });
     await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);

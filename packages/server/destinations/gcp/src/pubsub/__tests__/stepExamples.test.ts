@@ -84,17 +84,16 @@ describe('Pub/Sub Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
-      'walker destination',
-      { ...dest },
-      {
+    elb('walker destination', {
+      code: { ...dest },
+      config: {
         settings: {
           projectId: 'test-project',
           topic: 'events',
         },
         mapping: mappingConfig,
       },
-    );
+    });
 
     await elb(event);
 

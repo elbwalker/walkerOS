@@ -190,3 +190,32 @@ export const Default: Story = {
     css: sampleCss,
   },
 };
+
+/**
+ * Editable preview with HTML/CSS/JS tabs.
+ *
+ * Opt-in via `editable`. The header shows a `tabs` ButtonGroup to switch
+ * between the live preview and the HTML/CSS/JS editors, matching the
+ * playground BrowserBox pattern.
+ */
+export const Editable: Story = {
+  args: {
+    label: 'Preview',
+    html: sampleHtml,
+    css: sampleCss,
+    editable: true,
+    initialTab: 'html',
+  },
+};
+
+/**
+ * Fallback example used when a browser-source step provides no HTML.
+ *
+ * A minimal product entity with a `click:add` action renders by default.
+ */
+export const FallbackExample: Story = {
+  args: {
+    label: 'Preview',
+    editable: true,
+  },
+};

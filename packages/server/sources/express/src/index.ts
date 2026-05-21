@@ -56,18 +56,19 @@ export const sourceExpress = async (
   /**
    * Request handler - transforms HTTP requests into walker events
    * Supports POST (JSON body), GET (query params), and OPTIONS (CORS preflight)
+   *
+   * Each inbound request gets its own `withScope` invocation. The per-scope
+   * env carries this request's `ingest` and `respond` end to end, so
+   * concurrent requests never crosstalk through source-factory state.
    */
   const push = async (req: Request, res: Response): Promise<void> => {
     try {
-      // Handle OPTIONS for CORS preflight
+      // Handle OPTIONS for CORS preflight (no scope needed: no event, no ingest)
       if (req.method === 'OPTIONS') {
         setCorsHeaders(res, settings.cors);
         res.status(204).send();
         return;
       }
-
-      // Extract ingest metadata from request (if config.ingest is defined)
-      await context.setIngest(req);
 
       // Create per-request respond — first call wins (idempotent)
       const respond = createRespond((options) => {
@@ -84,44 +85,45 @@ export const sourceExpress = async (
           res.json(options.body);
         }
       });
-      context.setRespond(respond);
 
-      // Handle GET requests (pixel tracking)
-      if (req.method === 'GET') {
-        // Parse query parameters to event data using requestToData
-        const parsedData = requestToData(req.url);
+      await context.withScope(req, respond, async (env) => {
+        // Handle GET requests (pixel tracking)
+        if (req.method === 'GET') {
+          // Parse query parameters to event data using requestToData
+          const parsedData = requestToData(req.url);
 
-        // Send to collector
-        if (parsedData && typeof parsedData === 'object') {
-          await env.push(parsedData);
+          // Send to collector
+          if (parsedData && typeof parsedData === 'object') {
+            await env.push(parsedData);
+          }
+
+          // Default: 1x1 GIF (skipped if a step already called respond)
+          respond({
+            body: TRANSPARENT_GIF,
+            headers: {
+              'Content-Type': 'image/gif',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+            },
+          });
+          return;
         }
 
-        // Default: 1x1 GIF (skipped if a step already called respond)
-        respond({
-          body: TRANSPARENT_GIF,
-          headers: {
-            'Content-Type': 'image/gif',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-          },
+        // Handle POST requests (standard event ingestion)
+        if (req.method === 'POST') {
+          const eventData =
+            req.body && typeof req.body === 'object' ? req.body : {};
+
+          await env.push(eventData);
+
+          respond({ body: { success: true, timestamp: Date.now() } });
+          return;
+        }
+
+        // Unsupported method
+        res.status(405).json({
+          success: false,
+          error: 'Method not allowed. Use POST, GET, or OPTIONS.',
         });
-        return;
-      }
-
-      // Handle POST requests (standard event ingestion)
-      if (req.method === 'POST') {
-        const eventData =
-          req.body && typeof req.body === 'object' ? req.body : {};
-
-        await env.push(eventData);
-
-        respond({ body: { success: true, timestamp: Date.now() } });
-        return;
-      }
-
-      // Unsupported method
-      res.status(405).json({
-        success: false,
-        error: 'Method not allowed. Use POST, GET, or OPTIONS.',
       });
     } catch (error) {
       res.status(500).json({

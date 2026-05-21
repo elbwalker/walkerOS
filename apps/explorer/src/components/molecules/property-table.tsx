@@ -22,13 +22,14 @@ interface TypeRef {
 }
 
 interface Property {
-  name: string;
+  name: string; // dotted path for nested properties (e.g. "ga4.measurementId")
   type: string;
   typeRefs?: TypeRef[]; // if set, renderer shows links instead of plain type
   description: string;
   default?: string;
   required?: boolean;
   example?: string;
+  depth: number; // nesting level; 0 for top-level, used for indentation
 }
 
 type SchemaNode = Record<string, unknown>;
@@ -157,8 +158,7 @@ interface PropertyModalProps {
   onClose: () => void;
 }
 
-function schemaToProperties(schema: RJSFSchema): Property[] {
-  const properties: Property[] = [];
+export function schemaToProperties(schema: RJSFSchema): Property[] {
   const root = schema as SchemaNode;
 
   // Resolve top-level indirection: allOf: [ { $ref: ... } ] should be
@@ -174,16 +174,31 @@ function schemaToProperties(schema: RJSFSchema): Property[] {
     if (resolved) target = resolved;
   }
 
+  const properties: Property[] = [];
+  collectProperties(target, root, 0, '', properties);
+  return properties;
+}
+
+// Walk a schema object's `properties`, appending one Property per field.
+// Inline nested objects (a `type: object` with its own `properties`, and no
+// $ref) are expanded recursively: the parent row is emitted, then each child
+// follows immediately with an incremented depth and a dotted path name.
+function collectProperties(
+  target: SchemaNode,
+  root: SchemaNode,
+  depth: number,
+  prefix: string,
+  out: Property[],
+): void {
   const required = (target.required as string[]) || [];
 
-  if (!target.properties) {
-    return properties;
-  }
+  if (!target.properties) return;
 
   for (const [name, prop] of Object.entries(
     target.properties as Record<string, unknown>,
   )) {
     const property = prop as SchemaNode;
+    const path = prefix ? `${prefix}.${name}` : name;
 
     // $ref-aware type detection first
     const refInfo = detectTypeRefs(property, root);
@@ -242,8 +257,19 @@ function schemaToProperties(schema: RJSFSchema): Property[] {
       type = 'function';
     }
 
-    properties.push({
-      name,
+    // Inline nested objects carry a `title` (from .meta or derived from the
+    // key during schema generation). Show it instead of a bare "object".
+    const isInlineObject =
+      !refInfo &&
+      property.type === 'object' &&
+      property.properties &&
+      typeof property.properties === 'object';
+    if (isInlineObject && typeof property.title === 'string') {
+      type = property.title;
+    }
+
+    out.push({
+      name: path,
       type,
       typeRefs,
       description,
@@ -251,10 +277,30 @@ function schemaToProperties(schema: RJSFSchema): Property[] {
       default:
         property.default !== undefined ? String(property.default) : undefined,
       example,
+      depth,
     });
-  }
 
-  return properties;
+    // Expand inline nested objects so readers see the full shape.
+    if (isInlineObject) {
+      collectProperties(property, root, depth + 1, path, out);
+    }
+  }
+}
+
+// Filter properties for display given a set of collapsed parent paths. A row is
+// hidden when any of its ancestors (by dotted path) is collapsed.
+export function getVisibleProperties(
+  properties: Property[],
+  collapsed: Set<string>,
+): Property[] {
+  if (collapsed.size === 0) return properties;
+  return properties.filter((property) => {
+    const parts = property.name.split('.');
+    for (let i = 1; i < parts.length; i++) {
+      if (collapsed.has(parts.slice(0, i).join('.'))) return false;
+    }
+    return true;
+  });
 }
 
 function PropertyModal({ property, isOpen, onClose }: PropertyModalProps) {
@@ -384,8 +430,28 @@ export function PropertyTable({
     null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Paths of nested groups the user has collapsed. Empty = all expanded.
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const properties = schemaToProperties(schema);
+
+  // A property is a collapsible group when another property nests under it.
+  const groupPaths = new Set<string>();
+  for (const property of properties) {
+    const dot = property.name.lastIndexOf('.');
+    if (dot > 0) groupPaths.add(property.name.slice(0, dot));
+  }
+
+  const visibleProperties = getVisibleProperties(properties, collapsed);
+
+  const toggleCollapsed = (path: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
 
   if (properties.length === 0) {
     return (
@@ -434,75 +500,126 @@ export function PropertyTable({
             </tr>
           </thead>
           <tbody>
-            {properties.map((property: Property, index: number) => (
-              <tr key={index}>
-                <td
-                  className="elb-property-table__property-cell"
-                  data-label="Property"
+            {visibleProperties.map((property: Property, index: number) => {
+              const isGroup = groupPaths.has(property.name);
+              const isCollapsed = collapsed.has(property.name);
+              const leafName =
+                property.depth > 0
+                  ? property.name.slice(property.name.lastIndexOf('.') + 1)
+                  : property.name;
+              return (
+                <tr
+                  key={property.name || index}
+                  className={
+                    property.depth > 0
+                      ? 'elb-property-table__row--nested'
+                      : undefined
+                  }
                 >
-                  <code className="elb-property-table__property-name">
-                    {property.name}
-                    {property.required && (
-                      <span className="elb-property-table__required-icon">
-                        *
-                      </span>
-                    )}
-                  </code>
-                </td>
-                <td className="elb-property-table__type-cell" data-label="Type">
-                  {property.typeRefs && property.typeRefs.length > 0 ? (
-                    <code className="elb-property-table__property-type">
-                      {renderTypeWithRefs(property.type, property.typeRefs)}
-                    </code>
-                  ) : isTruncated(property.type) ? (
-                    <button
-                      className="elb-property-table__type-button"
-                      onClick={() => openModal(property)}
-                      aria-label={`View full type for ${property.name}`}
-                    >
-                      <code className="elb-property-table__property-type elb-property-table__property-type--truncated">
-                        {truncateType(property.type)}
-                      </code>
-                    </button>
-                  ) : (
-                    <code className="elb-property-table__property-type">
-                      {property.type}
-                    </code>
-                  )}
-                </td>
-                <td
-                  className="elb-property-table__description"
-                  data-label="Description"
-                >
-                  {property.description}
-                </td>
-                <td
-                  className="elb-property-table__action-cell"
-                  data-label="More"
-                >
-                  <button
-                    className="elb-property-table__more-button"
-                    onClick={() => openModal(property)}
-                    aria-label={`More info about ${property.name}`}
+                  <td
+                    className="elb-property-table__property-cell"
+                    data-label="Property"
+                    style={
+                      property.depth > 0
+                        ? { paddingLeft: `${0.75 + property.depth * 1.25}rem` }
+                        : undefined
+                    }
                   >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                    {isGroup && (
+                      <button
+                        type="button"
+                        className="elb-property-table__group-toggle"
+                        onClick={() => toggleCollapsed(property.name)}
+                        aria-expanded={!isCollapsed}
+                        aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${leafName}`}
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{
+                            transform: isCollapsed
+                              ? 'rotate(-90deg)'
+                              : 'rotate(0deg)',
+                            transition: 'transform 0.15s ease',
+                          }}
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                    )}
+                    <code className="elb-property-table__property-name">
+                      {leafName}
+                      {property.required && (
+                        <span className="elb-property-table__required-icon">
+                          *
+                        </span>
+                      )}
+                    </code>
+                  </td>
+                  <td
+                    className="elb-property-table__type-cell"
+                    data-label="Type"
+                  >
+                    {property.typeRefs && property.typeRefs.length > 0 ? (
+                      <code className="elb-property-table__property-type">
+                        {renderTypeWithRefs(property.type, property.typeRefs)}
+                      </code>
+                    ) : isTruncated(property.type) ? (
+                      <button
+                        className="elb-property-table__type-button"
+                        onClick={() => openModal(property)}
+                        aria-label={`View full type for ${property.name}`}
+                      >
+                        <code className="elb-property-table__property-type elb-property-table__property-type--truncated">
+                          {truncateType(property.type)}
+                        </code>
+                      </button>
+                    ) : (
+                      <code className="elb-property-table__property-type">
+                        {property.type}
+                      </code>
+                    )}
+                  </td>
+                  <td
+                    className="elb-property-table__description"
+                    data-label="Description"
+                  >
+                    {property.description}
+                  </td>
+                  <td
+                    className="elb-property-table__action-cell"
+                    data-label="More"
+                  >
+                    <button
+                      className="elb-property-table__more-button"
+                      onClick={() => openModal(property)}
+                      aria-label={`More info about ${property.name}`}
                     >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="16" x2="12" y2="12" />
-                      <line x1="12" y1="8" x2="12.01" y2="8" />
-                    </svg>
-                  </button>
-                </td>
-              </tr>
-            ))}
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="16" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

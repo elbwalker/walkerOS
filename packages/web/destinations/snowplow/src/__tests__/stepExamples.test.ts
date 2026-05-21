@@ -78,7 +78,10 @@ describe('snowplow destination — step examples', () => {
     const { elb } = await startFlow();
 
     if (example.command === 'consent') {
-      await elb('walker destination', { ...dest, env: spiedEnv }, initConfig);
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: initConfig,
+      });
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
       const event = example.in as WalkerOS.Event;
@@ -87,11 +90,10 @@ describe('snowplow destination — step examples', () => {
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
 
-      await elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        { ...initConfig, mapping: mappingConfig },
-      );
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: { ...initConfig, mapping: mappingConfig },
+      });
       await elb(event);
     }
 

@@ -37,7 +37,7 @@ export function sessionStart(
     );
     // Register consent handlers with the collector
     if (collector) {
-      collector.command('on', 'consent', consentConfig);
+      collector.command('on', { type: 'consent', rules: consentConfig });
     }
     // No fallback - session source always provides collector
   } else {

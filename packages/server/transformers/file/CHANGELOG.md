@@ -1,5 +1,41 @@
 # @walkeros/server-transformer-file
 
+## 4.1.0
+
+### Patch Changes
+
+- adeebea: Add `Flow.Store.cache` for store-level caching: read-through +
+  write-through wrapper with single-flight dedup, recursive composition via
+  `cache.store`, and per-wrapper counters. `CacheRule` is now a discriminated
+  union (`EventCacheRule | StoreCacheRule`); schema rejects inert fields in
+  store contexts.
+
+  Built-in `__cache` upgraded with LRU, `maxEntries: 10000`, batched eviction,
+  and active TTL sweep.
+
+  **Breaking:** `@walkeros/store-memory` is removed. Its logic is absorbed into
+  `__cache`. Migration: drop the store declaration, or omit `cache.store` to use
+  the built-in tier. `flow_validate` flags legacy references.
+
+- Updated dependencies [e155ff8]
+- Updated dependencies [e800974]
+- Updated dependencies [e155ff8]
+- Updated dependencies [1a8f2d7]
+- Updated dependencies [1a8f2d7]
+- Updated dependencies [b276173]
+- Updated dependencies [dd9f5ad]
+- Updated dependencies [c60ef35]
+- Updated dependencies [adeebea]
+- Updated dependencies [13aaeaa]
+- Updated dependencies [e800974]
+- Updated dependencies [adeebea]
+- Updated dependencies [e800974]
+- Updated dependencies [e800974]
+- Updated dependencies [058f7ed]
+- Updated dependencies [28a8ac2]
+- Updated dependencies [fd6076e]
+  - @walkeros/core@4.1.0
+
 ## 4.0.2
 
 ### Patch Changes

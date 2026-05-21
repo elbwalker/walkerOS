@@ -93,14 +93,13 @@ describe('hubspot server destination -- step examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    await elb(
-      'walker destination',
-      { ...dest, env },
-      {
+    await elb('walker destination', {
+      code: { ...dest, env },
+      config: {
         settings: baseSettings,
         mapping: mappingConfig,
       },
-    );
+    });
 
     await elb(event);
 

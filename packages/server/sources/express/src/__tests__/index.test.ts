@@ -1,7 +1,7 @@
 import { sourceExpress } from '../index';
 import type { EventRequest, Types } from '../types';
-import type { WalkerOS, Source, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { Ingest, WalkerOS, Source, Collector } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
 import type { Request, Response } from 'express';
 import { examples } from '../dev';
 
@@ -10,14 +10,24 @@ function createSourceContext(
   config: Partial<Source.Config<Types>> = {},
   env: Partial<Types['env']> = {},
 ): Source.Context<Types> {
+  const baseEnv = env as Types['env'];
   return {
     config,
-    env: env as Types['env'],
+    env: baseEnv,
     logger: env.logger || createMockLogger(),
     id: 'test-express',
     collector: {} as Collector.Instance,
-    setIngest: jest.fn().mockResolvedValue(undefined),
-    setRespond: jest.fn(),
+    // Minimal withScope stub: forwards body with a scope env that delegates
+    // push back to env.push so the test's mockPush still captures the call.
+    withScope: async (_raw, respond, body) => {
+      const ingest: Ingest = createIngest('test-express');
+      return body({
+        ...baseEnv,
+        push: baseEnv.push,
+        ingest,
+        respond,
+      });
+    },
   };
 }
 

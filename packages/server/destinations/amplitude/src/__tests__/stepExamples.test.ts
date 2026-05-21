@@ -188,15 +188,14 @@ describe('amplitude server destination -- step examples', () => {
     };
 
     if (example.command === 'consent') {
-      await elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           consent: { analytics: true },
           include: example.configInclude,
           settings: baseSettings,
         },
-      );
+      });
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
       const event = example.in as WalkerOS.Event;
@@ -205,15 +204,14 @@ describe('amplitude server destination -- step examples', () => {
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
 
-      await elb(
-        'walker destination',
-        { ...dest, env: spiedEnv },
-        {
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
           include: example.configInclude,
           settings: baseSettings,
           mapping: mappingConfig,
         },
-      );
+      });
       await elb(event);
     }
 

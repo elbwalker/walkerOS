@@ -65,14 +65,13 @@ describe('hotjar destination -- step examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
-      'walker destination',
-      { ...dest, env: spiedEnv },
-      {
+    elb('walker destination', {
+      code: { ...dest, env: spiedEnv },
+      config: {
         settings: baseSettings,
         mapping: mappingConfig,
       },
-    );
+    });
     await elb(event);
 
     // Drop the init call -- every example triggers init once, it is not part

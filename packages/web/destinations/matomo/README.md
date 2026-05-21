@@ -1,9 +1,17 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/web-destination-matomo
 
-Matomo web destination for [walkerOS](https://github.com/elbwalker/walkerOS).
-Forwards browser events to a self-hosted or cloud Matomo instance via the
-`_paq.push()` command queue with support for page views, custom events,
-ecommerce, goals, site search, content tracking, and custom dimensions.
+Self-hosted or cloud privacy-first web analytics, a GA alternative.
+
+[Documentation](https://www.walkeros.io/docs/destinations/web/matomo) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-matomo)
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/matomo)
 
 ## Installation
 
@@ -11,18 +19,20 @@ ecommerce, goals, site search, content tracking, and custom dimensions.
 npm install @walkeros/web-destination-matomo
 ```
 
-## Quick Start
+## Quick start
 
 ```json
 {
-  "destinations": {
-    "matomo": {
-      "package": "@walkeros/web-destination-matomo",
+  "version": 4,
+  "flows": {
+    "default": {
       "config": {
-        "loadScript": true,
-        "settings": {
-          "siteId": "1",
-          "url": "https://analytics.example.com/"
+        "platform": "web"
+      },
+      "destinations": {
+        "matomo": {
+          "package": "@walkeros/web-destination-matomo",
+          "config": {}
         }
       }
     }
@@ -30,37 +40,18 @@ npm install @walkeros/web-destination-matomo
 }
 ```
 
-## Settings
+## Documentation
 
-| Setting                | Type    | Required | Default | Description                                         |
-| ---------------------- | ------- | -------- | ------- | --------------------------------------------------- |
-| `siteId`               | string  | Yes      | --      | Matomo Site ID                                      |
-| `url`                  | string  | Yes      | --      | Base URL of your Matomo instance                    |
-| `disableCookies`       | boolean | No       | `false` | Disable tracking cookies for cookie-free analytics  |
-| `enableLinkTracking`   | boolean | No       | `true`  | Auto-track outlinks and downloads                   |
-| `enableHeartBeatTimer` | number  | No       | --      | Heart beat timer interval in seconds                |
-| `customDimensions`     | Record  | No       | --      | Visit-scope custom dimensions (ID to property path) |
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/web/matomo**
 
-## Mapping Settings
+## Contribute
 
-Per-event mapping settings control specialized tracking methods:
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-| Setting              | Type    | Effect                                        |
-| -------------------- | ------- | --------------------------------------------- |
-| `goalId`             | string  | Fire `trackGoal` alongside the event          |
-| `goalValue`          | string  | Property path for goal revenue value          |
-| `siteSearch`         | boolean | Use `trackSiteSearch` instead of `trackEvent` |
-| `contentImpression`  | boolean | Use `trackContentImpression`                  |
-| `contentInteraction` | boolean | Use `trackContentInteraction`                 |
-| `customDimensions`   | Record  | Action-scope custom dimensions per event      |
+## License
 
-## Event Mapping
-
-| walkerOS Event   | Matomo Method                | Notes                                               |
-| ---------------- | ---------------------------- | --------------------------------------------------- |
-| `page view`      | `trackPageView`              | Default, no mapping needed                          |
-| Any event        | `trackEvent`                 | Default for non-page-view events via `mapping.name` |
-| `order complete` | `trackEcommerceOrder`        | Via `mapping.name`                                  |
-| `cart *`         | `trackEcommerceCartUpdate`   | Via `mapping.name`                                  |
-| `product view`   | `ecommerceProductDetailView` | Via `mapping.name`                                  |
-| `search *`       | `trackSiteSearch`            | Via `mapping.settings.siteSearch`                   |
+MIT

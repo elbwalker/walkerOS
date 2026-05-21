@@ -35,6 +35,26 @@ describe('openWriter', () => {
     ]);
   });
 
+  test('forwards settings.bigquery auth options to the WriterClient', async () => {
+    const logger = createMockLogger();
+    await openWriter(
+      {
+        projectId: 'p',
+        datasetId: 'd',
+        tableId: 't',
+        bigquery: { keyFilename: './sa.json' },
+      },
+      logger,
+    );
+    const ctorCall = __getMockCalls().find(
+      (c) => c.method === 'WriterClient.ctor',
+    );
+    expect(ctorCall?.args[0]).toEqual({
+      projectId: 'p',
+      keyFilename: './sa.json',
+    });
+  });
+
   test('closeWriter calls close on writer and writeClient', async () => {
     const logger = createMockLogger();
     const { writer, writeClient } = await openWriter(

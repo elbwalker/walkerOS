@@ -10,7 +10,8 @@
       },
       "destinations": {
         "demo": {
-          "code": "destinationDemo"
+          "package": "@walkeros/destination-demo",
+          "import": "destinationDemo"
         }
       },
       "config": {

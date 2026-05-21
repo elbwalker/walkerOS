@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/config",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "type": "module",
   "description": "Shared development configuration for walkerOS packages (TypeScript, ESLint, Jest, tsup)",
   "license": "MIT",
@@ -9,7 +9,8 @@
     "eslint/**/*.mjs",
     "jest/**/*.mjs",
     "tsup/**/*.mjs",
-    "tsup/**/*.d.ts"
+    "tsup/**/*.d.ts",
+    "CHANGELOG.md"
   ],
   "exports": {
     "./tsconfig/base.json": "./tsconfig/base.json",

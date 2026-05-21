@@ -46,7 +46,10 @@ describe('push', () => {
     config: Config,
   ): Promise<void> {
     const { elb } = await startFlow();
-    await elb('walker destination', { ...destination, env: testEnv }, config);
+    await elb('walker destination', {
+      code: { ...destination, env: testEnv },
+      config: config,
+    });
     await elb(event);
   }
 

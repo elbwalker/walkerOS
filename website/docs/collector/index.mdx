@@ -193,8 +193,17 @@ console.log(collector.status);
 //     browser: { count: 100, lastAt: 1707580900000, duration: 1200 }
 //   },
 //   destinations: {
-//     ga4: { count: 95, failed: 0, lastAt: 1707580900000, duration: 800 },
-//     meta: { count: 0, failed: 5, lastAt: 1707580850000, duration: 400 }
+//     ga4:  { count: 95, failed: 0, lastAt: 1707580900000, duration: 800,
+//             queuePushSize: 0, dlqSize: 0 },
+//     meta: { count: 0, failed: 5, lastAt: 1707580850000, duration: 400,
+//             queuePushSize: 0, dlqSize: 5 }
+//   },
+//   // Process-wide drop counters keyed by stepId. See \`stepId()\` in
+//   // \`@walkeros/core\`. Entries are created lazily on first drop.
+//   dropped: {
+//     // "collector" is the reserved stepId for the collector-level buffer.
+//     // "destination.<id>" keys each destination's drop counters.
+//     // Each entry exposes optional { queue?, dlq? } counts.
 //   }
 // }
 
@@ -204,12 +213,158 @@ const avgMs = ga4.duration / (ga4.count + ga4.failed);`}
   language="typescript"
 />
 
-Queue sizes and DLQ sizes can be read directly from destination instances:
+### What `failed` counts
+
+`collector.status.failed` is the single counter for any walkerOS-internal
+pipeline failure. Contributing sites:
+
+* a destination's `push` threw or returned an error,
+* an exception escaped the inner pipeline of `collector.push` or
+  `collector.command` (any uncaught error inside the boundary),
+* mapping outer-wrap failures (an internal throw inside
+  `processMappingValue`),
+* source startup failures (`code()` threw, `init()` threw, queued-on
+  flush threw),
+* transformer init failures,
+* destination init failures.
+
+User-supplied callback throws are visibility-only: they log at error
+level but do NOT increment `status.failed`. This keeps the counter a
+clean pipeline-health signal. Sites in this group:
+
+* `on` subscriptions (`destination.on`, `source.on`, consent rules,
+  `ready`, `run`, `session`, generic),
+* mapping `condition`, `fn`, and `validate` callbacks.
+
+In both cases the collector logs at error level:
+
+<CodeSnippet
+  code={`// destination-side failure
+logger.scope('<destination type>').error('Push failed', { error, event });
+
+// collector-side boundary failure
+logger.error('push failed', { event, ingest, error });
+logger.error('command failed', { command, data, error });
+
+// pipeline-internal failures (counted)
+logger.error('mapping processing failed', { event, error });
+logger.scope('source').error('source factory failed', { sourceId, error });
+logger.scope('source').error('source init failed', { sourceId, error });
+logger.scope('source').error('source on flush failed', { sourceId, type, error });
+logger.scope('transformer:<type>').error('transformer init failed', { transformer, error });
+logger.scope('<destination type>').error('destination init failed', { error });
+
+// user-callback failures (logged, NOT counted)
+logger.error('mapping condition failed', { event, error });
+logger.error('mapping fn failed',        { event, error });
+logger.error('mapping validate failed',  { event, error });
+logger.scope('on').error('on callback failed', { kind, error });`}
+  language="typescript"
+/>
+
+A source whose `init()` throws stays with `config.init === false`
+instead of being marked initialized. Operators reading
+`source.config.init` see the source visibly stuck, not falsely healthy.
+
+Alarm on the ratio of `status.failed` to `status.in`. The log message text
+plus structured fields are enough to filter destination vs boundary
+failures downstream.
+
+**PII note.** Boundary error logs include the full failing event payload so
+operators can reproduce. If your event payloads carry sensitive data,
+configure redaction at the logger layer; do not parse and rewrite at every
+call site.
+
+### Fatal errors
+
+Throw `FatalError` (exported from `@walkeros/core`) for invariant
+violations or operator-initiated aborts that must crash the host process.
+Standard `Error` is absorbed by the boundary catch, logged, and counted.
+`FatalError` bypasses the catch and propagates, so a supervisor (CLI
+runner, Express server, container orchestrator) can terminate cleanly.
+
+<CodeSnippet
+  code={`import { FatalError } from '@walkeros/core';
+
+if (!config.apiKey) {
+  throw new FatalError('apiKey missing — refusing to start');
+}`}
+  language="typescript"
+/>
+
+Queue sizes and DLQ sizes can be read directly from destination instances, or
+from the status snapshot:
 
 <CodeSnippet
   code={`const dest = collector.destinations['meta'];
 const queueSize = dest.queuePush?.length || 0;
-const dlqSize = dest.dlq?.length || 0;`}
+const dlqSize = dest.dlq?.length || 0;
+
+// Or from status (point-in-time snapshots refreshed after each push pass):
+const metaStatus = collector.status.destinations['meta'];
+metaStatus.queuePushSize;   // events waiting for consent
+metaStatus.dlqSize;         // failed pushes retained for triage
+
+// Drop counts live on the process-wide \`status.dropped\` map, keyed by
+// stepId (use \`stepId()\` from \`@walkeros/core\`):
+import { stepId } from '@walkeros/core';
+const metaDrops = collector.status.dropped[stepId('destination', 'meta')];
+metaDrops?.queue ?? 0; // monotonic count of evicted consent-queued events
+metaDrops?.dlq ?? 0;   // monotonic count of evicted DLQ entries`}
+  language="typescript"
+/>
+
+## Buffer bounds
+
+The collector keeps three internal buffers per process. Each is size-bounded
+with a configurable cap; on overflow the oldest entries are evicted (FIFO),
+the corresponding `dropped` counter is incremented, and a warning is logged
+once per overflow window.
+
+| Buffer                  | Purpose                                              | Default cap | Config                              |
+| ----------------------- | ---------------------------------------------------- | ----------- | ----------------------------------- |
+| `collector.queue`       | Replay buffer for late-registered destinations       | 1000        | `Collector.Config.queueMax`         |
+| `destination.queuePush` | Per-destination consent-denied buffer                | 1000        | `Destination.Config.queueMax`       |
+| `destination.dlq`       | Per-destination dead-letter queue of failed pushes   | 100         | `Destination.Config.dlqMax`         |
+
+Each step has its own knob; no cascade. Set the collector cap on the collector,
+and per-destination caps on each destination:
+
+<CodeSnippet
+  code={`const { collector } = await startFlow({
+  // Collector replay buffer cap
+  queueMax: 5_000,
+  destinations: {
+    bigquery: {
+      code: bigqueryDestination,
+      config: {
+        // Keep more failed rows for triage on this destination
+        dlqMax: 1_000,
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+Operators alarm on the `dropped` counters to detect sustained overflow.
+Counters live on `collector.status.dropped`, keyed by stepId (build the
+key with `stepId()` from `@walkeros/core`):
+
+<CodeSnippet
+  code={`import { stepId } from '@walkeros/core';
+
+// Collector replay buffer drops: traffic bursts outrunning destination
+// registration.
+const collectorDrops =
+  collector.status.dropped[stepId('collector')]?.queue ?? 0;
+
+// Destination drops by buffer:
+//  - queue: consent-denied events evicted from the destination's queuePush
+//  - dlq:   failed-push entries evicted from the destination's DLQ
+const ga4Drops = collector.status.dropped[stepId('destination', 'ga4')];
+ga4Drops?.queue ?? 0;
+ga4Drops?.dlq ?? 0;   // sustained non-zero rate signals destination outage`}
   language="typescript"
 />
 

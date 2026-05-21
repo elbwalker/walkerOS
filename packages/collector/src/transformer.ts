@@ -40,6 +40,7 @@ import type {
 } from '@walkeros/core';
 import {
   createIngest,
+  FatalError,
   isObject,
   tryCatchAsync,
   useHooks,
@@ -48,7 +49,7 @@ import {
   checkCache,
   storeCache,
   buildCacheContext,
-  validateTransformerEntry,
+  validateStepEntry,
   processEventMapping,
 } from '@walkeros/core';
 import { getCacheStore } from './cache';
@@ -201,8 +202,9 @@ export async function initTransformers(
     // Validate the entry via the shared predicate. A code-less entry must
     // declare at least one operative field (package, before, next, cache,
     // mapping). Unknown keys and code+package conflicts are also rejected.
-    const validation = validateTransformerEntry(
-      transformerDef as unknown as Record<string, unknown>,
+    const validation = validateStepEntry(
+      transformerDef as Record<string, unknown>,
+      'Transformer',
     );
     if (!validation.ok) {
       collector.logger.warn(
@@ -530,16 +532,32 @@ export async function runTransformerChain(
       ingest._meta.path.push(transformerName);
     }
 
-    // Initialize transformer if needed
-    const isInitialized = await tryCatchAsync(transformerInit)(
-      collector,
-      transformer,
-      transformerName,
-    );
+    // Initialize transformer if needed. The wrap surfaces a thrown init
+    // (misconfiguration, missing env, etc.) with full cause via the scoped
+    // logger and counts it on `status.failed`. A non-throw `false` return
+    // from transformerInit itself flows through the same early-return below
+    // (handled by the destination's own log; counter remains untouched on
+    // the deliberate-false path).
+    const isInitialized = await tryCatchAsync(
+      transformerInit,
+      (err: unknown): boolean => {
+        if (err instanceof FatalError) throw err;
+        collector.status.failed++;
+        collector.logger
+          .scope(`transformer:${transformer.type || 'unknown'}`)
+          .error('transformer init failed', {
+            transformer: transformerName,
+            error: err,
+          });
+        return false;
+      },
+    )(collector, transformer, transformerName);
 
     if (!isInitialized) {
-      collector.logger.error(`Transformer init failed: ${transformerName}`);
-      return { event: null, respond: currentRespond }; // Stop chain on init failure
+      // Stop chain on init failure. Thrown cases were already logged with
+      // full cause via the onError above; deliberate-false returns leave
+      // the chain stop signal intact without extra noise.
+      return { event: null, respond: currentRespond };
     }
 
     // Path-specific mock check (takes precedence)
@@ -586,7 +604,11 @@ export async function runTransformerChain(
     let cacheMiss: { key: string; ttl: number } | undefined;
     if (compiledTCache && tCacheStore) {
       const cacheContext = buildCacheContext(ingest, processedEvent);
-      const cacheResult = checkCache(compiledTCache, tCacheStore, cacheContext);
+      const cacheResult = await checkCache(
+        compiledTCache,
+        tCacheStore,
+        cacheContext,
+      );
 
       if (cacheResult?.status === 'HIT' && cacheResult.value) {
         processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;

@@ -196,8 +196,8 @@ export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
   if (!isComponentDefault(pickedExport)) {
     if (exportName !== undefined) {
       const origin =
-        resolveSource === 'code'
-          ? `${component.kind}.${component.id}.code`
+        resolveSource === 'import'
+          ? `${component.kind}.${component.id}.import`
           : `bundle.packages["${component.packageName}"].imports[0]`;
       throw new Error(
         `Package ${component.packageName} has no export "${exportName}" ` +

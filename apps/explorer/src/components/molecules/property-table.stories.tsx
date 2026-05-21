@@ -90,3 +90,106 @@ export const Default: Story = {
     schema: exampleSchema,
   },
 };
+
+/**
+ * Nested object settings, modeled on the gtag destination
+ *
+ * The gtag `settings` schema groups configuration into specialized nested
+ * objects (`ga4`, `ads`, `gtm`), each with their own properties and required
+ * fields. Readers need to see the shape of each group, not just that it is an
+ * "object".
+ */
+const nestedSettingsSchema: RJSFSchema = {
+  type: 'object',
+  properties: {
+    ga4: {
+      type: 'object',
+      title: 'ga4',
+      description: 'GA4-specific configuration settings',
+      required: ['measurementId'],
+      additionalProperties: false,
+      properties: {
+        measurementId: {
+          type: 'string',
+          pattern: '^G-[A-Z0-9]+$',
+          description: 'GA4 measurement ID (like G-XXXXXXXXXX)',
+        },
+        debug: {
+          type: 'boolean',
+          description: 'Enable GA4 debug mode',
+          default: 'false',
+        },
+        pageview: {
+          type: 'boolean',
+          description: 'Send pageview events automatically',
+          default: 'true',
+        },
+        server_container_url: {
+          type: 'string',
+          description: 'Server-side GTM container URL for first-party tracking',
+        },
+        snakeCase: {
+          type: 'boolean',
+          description: 'Convert event and property keys to snake_case',
+        },
+      },
+    },
+    ads: {
+      type: 'object',
+      title: 'ads',
+      description: 'Google Ads specific configuration settings',
+      required: ['conversionId'],
+      additionalProperties: false,
+      properties: {
+        conversionId: {
+          type: 'string',
+          pattern: '^AW-[0-9]+$',
+          description: 'Google Ads conversion ID (like AW-XXXXXXXXX)',
+        },
+        currency: {
+          type: 'string',
+          minLength: 3,
+          maxLength: 3,
+          description: 'Default currency code (like EUR)',
+          default: 'EUR',
+        },
+      },
+    },
+    gtm: {
+      type: 'object',
+      title: 'gtm',
+      description: 'Google Tag Manager specific configuration settings',
+      required: ['containerId'],
+      additionalProperties: false,
+      properties: {
+        containerId: {
+          type: 'string',
+          pattern: '^GTM-[A-Z0-9]+$',
+          description: 'GTM container ID (like GTM-XXXXXXX)',
+        },
+        dataLayer: {
+          type: 'string',
+          description: 'Custom dataLayer variable name',
+          default: 'dataLayer',
+        },
+        domain: {
+          type: 'string',
+          description: 'Custom GTM domain for first-party serving',
+        },
+      },
+    },
+  },
+};
+
+/**
+ * Nested object settings (ga4, ads, gtm), modeled on the gtag destination.
+ *
+ * Each top-level key is an object with its own properties and required fields.
+ * The table should expand these nested objects so readers can see every field,
+ * not just the "object" type label.
+ */
+export const NestedObjects: Story = {
+  args: {
+    schema: nestedSettingsSchema,
+  },
+};

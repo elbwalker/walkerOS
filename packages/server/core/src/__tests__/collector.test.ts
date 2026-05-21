@@ -55,7 +55,10 @@ describe('Server Collector', () => {
   test('add destination', async () => {
     const { elb, collector: instance } = await getCollector({});
     expect(instance.destinations).toEqual({});
-    await elb('walker destination', mockDestination, { id: 'mock' });
+    await elb('walker destination', {
+      code: mockDestination,
+      config: { id: 'mock' },
+    });
     expect(instance.destinations).toEqual({
       mock: {
         config: { id: 'mock' },

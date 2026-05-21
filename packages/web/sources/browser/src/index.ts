@@ -5,6 +5,7 @@ import type {
   BrowserPushOptions,
   BrowserPushContext,
   BrowserPush,
+  BrowserArguments,
 } from './types/elb';
 import { isString } from '@walkeros/core';
 import { initTriggers, processLoadTriggers, ready } from './trigger';
@@ -142,7 +143,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     }
   };
 
-  const push: BrowserPush = ((...args: Parameters<BrowserPush>) => {
+  const push: BrowserPush = ((...args: Parameters<BrowserArguments>) => {
     const [event, data, options, context, nested, custom] = args;
     return translateToCoreCollector(
       translationContext,

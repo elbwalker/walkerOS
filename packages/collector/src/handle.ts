@@ -1,4 +1,11 @@
-import type { Collector, WalkerOS, Destination, Elb, On } from '@walkeros/core';
+import type {
+  Collector,
+  WalkerOS,
+  Destination,
+  Elb,
+  Hooks,
+  On,
+} from '@walkeros/core';
 import { Const } from './constants';
 import {
   addDestination,
@@ -18,14 +25,12 @@ import type { RunState } from './types/collector';
  * @param collector The walkerOS collector instance.
  * @param action The action to handle.
  * @param data The data to handle.
- * @param options The options to handle.
  * @returns A promise that resolves with the push result or undefined.
  */
 export async function commonHandleCommand(
   collector: Collector.Instance,
   action: string,
   data?: unknown,
-  options?: unknown,
 ): Promise<Elb.PushResult> {
   let result: Elb.PushResult | undefined;
   let onData: unknown;
@@ -62,23 +67,12 @@ export async function commonHandleCommand(
       break;
 
     case Const.Commands.Destination:
-      if (isObject(data)) {
-        // Support both { code, before } format and legacy { push } format
-        if ('code' in data && isObject((data as Destination.Init).code)) {
-          // New format: { code, before?, config?, env? }
-          result = await addDestination(
-            collector,
-            data as Destination.Init,
-            options as Destination.Config,
-          );
-        } else if (isFunction(data.push)) {
-          // Legacy format: direct destination instance
-          result = await addDestination(
-            collector,
-            { code: data as unknown as Destination.Instance },
-            options as Destination.Config,
-          );
-        }
+      if (
+        isObject(data) &&
+        'code' in data &&
+        isObject((data as Destination.Init).code)
+      ) {
+        result = await addDestination(collector, data as Destination.Init);
       }
       break;
 
@@ -93,14 +87,29 @@ export async function commonHandleCommand(
       }
       break;
 
+    case Const.Commands.Hook:
+      if (
+        isObject(data) &&
+        isString((data as { name?: unknown }).name) &&
+        isFunction((data as { fn?: unknown }).fn)
+      ) {
+        const { name, fn } = data as {
+          name: string;
+          fn: WalkerOS.AnyFunction;
+        };
+        collector.hooks[name as keyof Hooks.Functions] = fn;
+        onData = data;
+        shouldNotify = true;
+      }
+      break;
+
     case Const.Commands.On:
-      if (isString(data)) {
-        await on(
-          collector,
-          data as On.Types,
-          options as WalkerOS.SingleOrArray<On.Subscription>,
-        );
-        // on() handles its own onApply (fires only new callbacks)
+      if (isObject(data) && isString((data as { type?: unknown }).type)) {
+        const { type, rules } = data as {
+          type: On.Types;
+          rules: WalkerOS.SingleOrArray<On.Subscription>;
+        };
+        await on(collector, type, rules);
       }
       break;
 

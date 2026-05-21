@@ -173,13 +173,12 @@ describe('queue state refresh', () => {
     collector.user = { id: 'new-user' };
 
     // Add destination — queued event should get merged state
-    await elb(
-      'walker destination',
-      { push: mockPush, config: {} },
-      {
+    await elb('walker destination', {
+      code: { push: mockPush, config: {} },
+      config: {
         id: 'late',
       },
-    );
+    });
 
     expect(mockPush).toHaveBeenCalledTimes(1);
     // consent: merge (collector as base, event overrides)

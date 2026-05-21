@@ -236,7 +236,7 @@ describe('validateFlow — closed-schema rules', () => {
           config: { platform: 'web' as const },
           transformers: {
             confused: {
-              code: '$code:(e) => ({ event: e })',
+              code: { push: '$code:(e) => ({ event: e })' },
               package: '@walkeros/x',
             },
           },

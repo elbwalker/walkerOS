@@ -5,24 +5,11 @@ import {
   applyUpdate,
   buildCacheContext,
 } from '../cache';
-import type { Store } from '../types';
-import { createMockCollector } from './helpers/mocks';
-
-function createMockStore(): Store.Instance & { _data: Map<string, unknown> } {
-  const data = new Map<string, unknown>();
-  return {
-    type: 'mock',
-    config: {},
-    _data: data,
-    get: (key: string) => data.get(key),
-    set: (key: string, value: unknown, ttl?: number) => {
-      data.set(key, value);
-    },
-    delete: (key: string) => {
-      data.delete(key);
-    },
-  };
-}
+import {
+  createMockCollector,
+  createMockStore,
+  createAsyncMockStore,
+} from './helpers/mocks';
 
 describe('compileCache', () => {
   it('compiles cache rules with matchers', () => {
@@ -62,13 +49,13 @@ describe('compileCache', () => {
     expect(compiled.stop).toBe(true);
   });
 
-  it('uses configured namespace when present', () => {
+  it('uses configured namespace when present', async () => {
     const store = createMockStore();
     const compiled = compileCache({
       namespace: 'x',
       rules: [{ key: ['ingest.path'], ttl: 60 }],
     });
-    const result = checkCache(compiled, store, {
+    const result = await checkCache(compiled, store, {
       ingest: { path: '/api/data' },
     });
 
@@ -76,12 +63,12 @@ describe('compileCache', () => {
     expect(result!.key).toBe('x:/api/data');
   });
 
-  it('writes keys directly without prefix when namespace omitted and runtime namespace omitted', () => {
+  it('writes keys directly without prefix when namespace omitted and runtime namespace omitted', async () => {
     const store = createMockStore();
     const compiled = compileCache({
       rules: [{ key: ['ingest.path'], ttl: 60 }],
     });
-    const result = checkCache(compiled, store, {
+    const result = await checkCache(compiled, store, {
       ingest: { path: '/api/data' },
     });
 
@@ -89,12 +76,12 @@ describe('compileCache', () => {
     expect(result!.key).toBe('/api/data');
   });
 
-  it('treats missing match as always-match', () => {
+  it('treats missing match as always-match', async () => {
     const store = createMockStore();
     const compiled = compileCache({
       rules: [{ key: ['ingest.path'], ttl: 60 }],
     });
-    const result = checkCache(compiled, store, {
+    const result = await checkCache(compiled, store, {
       ingest: { path: '/api/data' },
     });
 
@@ -105,12 +92,12 @@ describe('compileCache', () => {
 });
 
 describe('checkCache', () => {
-  it('returns MISS when store has no entry', () => {
+  it('returns MISS when store has no entry', async () => {
     const store = createMockStore();
     const compiled = compileCache({
       rules: [{ key: ['ingest.method', 'ingest.path'], ttl: 60 }],
     });
-    const result = checkCache(
+    const result = await checkCache(
       compiled,
       store,
       {
@@ -124,14 +111,14 @@ describe('checkCache', () => {
     expect(result!.key).toBe('express:GET:/api/data');
   });
 
-  it('returns HIT when store has entry', () => {
+  it('returns HIT when store has entry', async () => {
     const store = createMockStore();
     store._data.set('express:GET:/api/data', { body: 'cached' });
 
     const compiled = compileCache({
       rules: [{ key: ['ingest.method', 'ingest.path'], ttl: 60 }],
     });
-    const result = checkCache(
+    const result = await checkCache(
       compiled,
       store,
       {
@@ -145,7 +132,7 @@ describe('checkCache', () => {
     expect(result!.value).toEqual({ body: 'cached' });
   });
 
-  it('returns null when no rule matches', () => {
+  it('returns null when no rule matches', async () => {
     const store = createMockStore();
     const compiled = compileCache({
       rules: [
@@ -156,7 +143,7 @@ describe('checkCache', () => {
         },
       ],
     });
-    const result = checkCache(
+    const result = await checkCache(
       compiled,
       store,
       {
@@ -168,12 +155,12 @@ describe('checkCache', () => {
     expect(result).toBeNull();
   });
 
-  it('builds key from event fields', () => {
+  it('builds key from event fields', async () => {
     const store = createMockStore();
     const compiled = compileCache({
       rules: [{ key: ['event.name'], ttl: 60 }],
     });
-    const result = checkCache(
+    const result = await checkCache(
       compiled,
       store,
       {
@@ -186,17 +173,17 @@ describe('checkCache', () => {
     expect(result!.key).toBe('d:ga4:page view');
   });
 
-  it('returns null when key resolves to empty', () => {
+  it('returns null when key resolves to empty', async () => {
     const store = createMockStore();
     const compiled = compileCache({
       rules: [{ key: ['ingest.nonexistent'], ttl: 60 }],
     });
-    const result = checkCache(compiled, store, { ingest: {} }, 'test');
+    const result = await checkCache(compiled, store, { ingest: {} }, 'test');
 
     expect(result).toBeNull();
   });
 
-  it('uses first matching rule', () => {
+  it('uses first matching rule', async () => {
     const store = createMockStore();
     const compiled = compileCache({
       rules: [
@@ -208,7 +195,7 @@ describe('checkCache', () => {
         { key: ['ingest.method', 'ingest.path'], ttl: 60 },
       ],
     });
-    const result = checkCache(
+    const result = await checkCache(
       compiled,
       store,
       {
@@ -219,6 +206,43 @@ describe('checkCache', () => {
 
     // First rule matches — key uses only path (not method)
     expect(result!.key).toBe('test:/api/data');
+  });
+
+  it('awaits async store.get for HIT path', async () => {
+    const store = createAsyncMockStore();
+    store._data.set('express:GET:/api/data', { body: 'cached' });
+
+    const compiled = compileCache({
+      rules: [{ key: ['ingest.method', 'ingest.path'], ttl: 60 }],
+    });
+    const result = await checkCache(
+      compiled,
+      store,
+      { ingest: { method: 'GET', path: '/api/data' } },
+      'express',
+    );
+
+    expect(result).toBeDefined();
+    expect(result!.status).toBe('HIT');
+    // Critical: value is the resolved object, not a Promise
+    expect(result!.value).toEqual({ body: 'cached' });
+  });
+
+  it('awaits async store.get for MISS path', async () => {
+    const store = createAsyncMockStore();
+
+    const compiled = compileCache({
+      rules: [{ key: ['ingest.method', 'ingest.path'], ttl: 60 }],
+    });
+    const result = await checkCache(
+      compiled,
+      store,
+      { ingest: { method: 'GET', path: '/api/data' } },
+      'express',
+    );
+
+    expect(result).toBeDefined();
+    expect(result!.status).toBe('MISS');
   });
 });
 

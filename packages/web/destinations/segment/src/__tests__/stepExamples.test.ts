@@ -154,15 +154,14 @@ describe('segment destination — step examples', () => {
       // on('consent') handler defers load() until the first grant. Because
       // load() is deferred, no init-time effect is captured — the load()
       // fired by consent IS the feature under test.
-      await elb(
-        'walker destination',
-        { ...dest, env },
-        {
+      await elb('walker destination', {
+        code: { ...dest, env },
+        config: {
           consent: { analytics: true },
           include: example.configInclude,
           settings: baseSettings,
         },
-      );
+      });
       await elb('walker consent', example.in as WalkerOS.Consent);
 
       const expected = (example.out ?? []).map((call) =>
@@ -179,15 +178,14 @@ describe('segment destination — step examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    await elb(
-      'walker destination',
-      { ...dest, env },
-      {
+    await elb('walker destination', {
+      code: { ...dest, env },
+      config: {
         include: example.configInclude,
         settings: baseSettings,
         mapping: mappingConfig,
       },
-    );
+    });
     await elb(event);
 
     const expected = (example.out ?? []).map((call) =>

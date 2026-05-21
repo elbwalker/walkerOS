@@ -1,5 +1,11 @@
 import { startFlow } from '..';
-import type { Source, Transformer, WalkerOS, Elb } from '@walkeros/core';
+import type {
+  Ingest,
+  Source,
+  Transformer,
+  WalkerOS,
+  Elb,
+} from '@walkeros/core';
 
 describe('Transformer fan-out (Result[])', () => {
   it('splits one event into multiple via Result[]', async () => {
@@ -33,20 +39,28 @@ describe('Transformer fan-out (Result[])', () => {
           code: {
             type: 'test',
             config: {},
-            push: async (event) => { destinationEvents.push(event); },
+            push: async (event) => {
+              destinationEvents.push(event);
+            },
           },
         },
       },
     });
 
-    await collector.sources.testSource.push({ name: 'page view', data: { url: '/home' } });
+    await collector.sources.testSource.push({
+      name: 'page view',
+      data: { url: '/home' },
+    });
 
     expect(destinationEvents.length).toBe(2);
-    expect(destinationEvents.map((e) => e.name).sort()).toEqual(['page view', 'session start']);
+    expect(destinationEvents.map((e) => e.name).sort()).toEqual([
+      'page view',
+      'session start',
+    ]);
   });
 
   it('each fork gets its own ingest clone', async () => {
-    const ingestSnapshots: Record<string, unknown> = {};
+    const ingestSnapshots: Record<string, Ingest> = {};
 
     const { collector } = await startFlow({
       sources: {
@@ -94,7 +108,7 @@ describe('Transformer fan-out (Result[])', () => {
     // Each fork should have independent ingest
     expect(ingestSnapshots.A).toBeDefined();
     expect(ingestSnapshots.B).toBeDefined();
-    expect((ingestSnapshots.A as any).tag).toBe('A');
-    expect((ingestSnapshots.B as any).tag).toBe('B');
+    expect(ingestSnapshots.A.tag).toBe('A');
+    expect(ingestSnapshots.B.tag).toBe('B');
   });
 });

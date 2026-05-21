@@ -4,54 +4,46 @@
   </a>
 </p>
 
-# Plausible Destination for walkerOS
+# @walkeros/web-destination-plausible
 
-[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/plausible)
-&bull;
+Simple, privacy-friendly and lightweight analytics.
+
+[Documentation](https://www.walkeros.io/docs/destinations/web/plausible) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-plausible)
-
-This package provides a [Plausible Analytics](https://plausible.io/) destination
-for walkerOS. Plausible is a simple, and privacy-friendly Google Analytics
-Alternative.
-
-walkerOS follows a **source → collector → destination** architecture. This
-Plausible destination receives processed events from the walkerOS collector and
-transforms them into Plausible Analytics format, providing lightweight,
-privacy-focused web analytics without cookies or personal data collection.
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/plausible)
 
 ## Installation
 
-```sh
+```bash
 npm install @walkeros/web-destination-plausible
 ```
 
-## Usage
+## Quick start
 
-Here's a basic example of how to use the Plausible destination:
-
-```typescript
-import { startFlow } from '@walkeros/collector';
-import { destinationPlausible } from '@walkeros/web-destination-plausible';
-
-await startFlow({
-  destinations: {
-    plausible: {
-      code: destinationPlausible,
-      config: {
-        settings: {
-          domain: 'walkeros.io', // Optional, domain of your site as registered
-        },
+```json
+{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "web"
       },
-    },
-  },
-});
+      "destinations": {
+        "plausible": {
+          "package": "@walkeros/web-destination-plausible",
+          "config": {}
+        }
+      }
+    }
+  }
+}
 ```
 
-## Configuration
+## Documentation
 
-| Name     | Type     | Description                                        | Required | Example         |
-| -------- | -------- | -------------------------------------------------- | -------- | --------------- |
-| `domain` | `string` | The domain of your site as registered in Plausible | No       | `'walkeros.io'` |
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/web/plausible**
 
 ## Contribute
 
@@ -62,4 +54,4 @@ Feel free to contribute by submitting an
 
 ## License
 
-This project is licensed under the MIT License.
+MIT

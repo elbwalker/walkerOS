@@ -18,8 +18,7 @@ export * as SourceLambda from './types';
 export * as examples from './examples';
 
 export const sourceLambda: Source.Init<Types> = async (context) => {
-  const { config = {}, env, setIngest } = context;
-  const { push: envPush } = env;
+  const { config = {}, env } = context;
 
   const userSettings = config.settings || {};
   const settings = {
@@ -35,8 +34,8 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
     settings,
   };
 
-  const push: Types['push'] = async (event, context) => {
-    const requestId = context.awsRequestId;
+  const push: Types['push'] = async (event, lambdaContext) => {
+    const requestId = lambdaContext.awsRequestId;
     let parsed;
 
     try {
@@ -64,91 +63,95 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
         return createResponse(204, '', corsHeaders, requestId);
       }
 
-      // Extract ingest metadata from Lambda event (if config.ingest is defined)
-      await setIngest(event);
+      // Per-invocation scope: each Lambda invocation gets its own ingest.
+      // No respond fn — Lambda returns the response directly from this
+      // handler, not via async respond.
+      return await context.withScope(event, undefined, async (scopeEnv) => {
+        const envPush = scopeEnv.push;
 
-      // Handle GET for pixel tracking
-      if (parsed.method === 'GET') {
-        if (!settings.enablePixelTracking) {
-          return createResponse(
-            405,
-            { success: false, error: 'GET not allowed', requestId },
-            corsHeaders,
-            requestId,
-          );
-        }
-        if (parsed.queryString) {
-          const parsedData = requestToData(parsed.queryString);
-          if (parsedData && typeof parsedData === 'object') {
-            await envPush(parsedData);
+        // Handle GET for pixel tracking
+        if (parsed!.method === 'GET') {
+          if (!settings.enablePixelTracking) {
+            return createResponse(
+              405,
+              { success: false, error: 'GET not allowed', requestId },
+              corsHeaders,
+              requestId,
+            );
           }
-        }
-        return createPixelResponse(corsHeaders, requestId);
-      }
-
-      // Handle POST for event data
-      if (parsed.method === 'POST') {
-        if (!parsed.body) {
-          return createResponse(
-            400,
-            { success: false, error: 'Request body is required', requestId },
-            corsHeaders,
-            requestId,
-          );
+          if (parsed!.queryString) {
+            const parsedData = requestToData(parsed!.queryString);
+            if (parsedData && typeof parsedData === 'object') {
+              await envPush(parsedData);
+            }
+          }
+          return createPixelResponse(corsHeaders, requestId);
         }
 
-        const body = parseBody(parsed.body, parsed.isBase64Encoded);
-
-        // If body is not a valid object, push {} to let source.before transformers handle raw input via ingest
-        if (!body || typeof body !== 'object') {
-          await envPush({});
-          return createResponse(
-            200,
-            { success: true, requestId },
-            corsHeaders,
-            requestId,
-          );
-        }
-
-        if (isEventRequest(body)) {
-          const result = await processEvent(
-            body as EventRequest,
-            envPush,
-            env.logger,
-            requestId,
-          );
-
-          if (result.error) {
+        // Handle POST for event data
+        if (parsed!.method === 'POST') {
+          if (!parsed!.body) {
             return createResponse(
               400,
-              { success: false, error: result.error, requestId },
+              { success: false, error: 'Request body is required', requestId },
+              corsHeaders,
+              requestId,
+            );
+          }
+
+          const body = parseBody(parsed!.body, parsed!.isBase64Encoded);
+
+          // If body is not a valid object, push {} to let source.before transformers handle raw input via ingest
+          if (!body || typeof body !== 'object') {
+            await envPush({});
+            return createResponse(
+              200,
+              { success: true, requestId },
+              corsHeaders,
+              requestId,
+            );
+          }
+
+          if (isEventRequest(body)) {
+            const result = await processEvent(
+              body as EventRequest,
+              envPush,
+              env.logger,
+              requestId,
+            );
+
+            if (result.error) {
+              return createResponse(
+                400,
+                { success: false, error: result.error, requestId },
+                corsHeaders,
+                requestId,
+              );
+            }
+
+            return createResponse(
+              200,
+              { success: true, id: result.id, requestId },
               corsHeaders,
               requestId,
             );
           }
 
           return createResponse(
-            200,
-            { success: true, id: result.id, requestId },
+            400,
+            { success: false, error: 'Invalid request format', requestId },
             corsHeaders,
             requestId,
           );
         }
 
         return createResponse(
-          400,
-          { success: false, error: 'Invalid request format', requestId },
+          405,
+          { success: false, error: 'Method not allowed', requestId },
           corsHeaders,
           requestId,
         );
-      }
-
-      return createResponse(
-        405,
-        { success: false, error: 'Method not allowed', requestId },
-        corsHeaders,
-        requestId,
-      );
+      });
     } catch (error) {
       // Log handler errors with context - per using-logger skill
       env.logger?.error('Lambda handler error', {

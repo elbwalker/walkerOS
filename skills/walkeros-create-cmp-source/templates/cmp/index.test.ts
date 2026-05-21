@@ -298,7 +298,7 @@ describe('[CmpName] Source', () => {
             return this;
           },
         },
-        setIngest: async () => {},
+        withScope: async (_r, _resp, body) => body({} as never),
       });
 
       expect(source.type).toBe('cmp-name'); // TODO: Your CMP type

@@ -113,7 +113,11 @@ export function BrowserBox({
       header={label}
       headerActions={
         availableTabs.length > 1 ? (
-          <ButtonGroup buttons={buttons} onButtonClick={setActiveTab} />
+          <ButtonGroup
+            buttons={buttons}
+            onButtonClick={setActiveTab}
+            variant="tabs"
+          />
         ) : null
       }
       className={className}

@@ -168,22 +168,21 @@ Use `imports` when you need specific utility functions from a package:
   language="json"
 />
 
-### Explicit code (advanced)
+### Named-export selection with `import`
 
-For packages without a default export, specify both `imports` and `code`:
+For packages without a default export, or to pick a specific named export, set `import` on the step alongside `package`. The bundler adds the name to the `imports` list automatically.
 
 <CodeSnippet
-  code={`"packages": {
-  "@my/custom-package": { "imports": ["namedExport"] }
-},
-"sources": {
+  code={`"sources": {
   "custom": {
     "package": "@my/custom-package",
-    "code": "namedExport"     // Explicitly use the named export
+    "import": "namedExport"
   }
 }`}
   language="json"
 />
+
+The legacy `code: "namedExport"` form is no longer accepted. Validation raises `OBSOLETE_CODE_STRING` with a rename hint pointing to `import`.
 
 ## Local packages
 

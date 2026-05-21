@@ -1,6 +1,6 @@
 import { sourceFetch } from '../index';
-import { createMockLogger } from '@walkeros/core';
-import type { Source, Collector } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
+import type { Ingest, Source, Collector } from '@walkeros/core';
 import type { Types } from '../types';
 
 // Helper to create source context
@@ -8,14 +8,22 @@ function createSourceContext(
   config: Partial<Source.Config<Types>> = {},
   env: Partial<Types['env']> = {},
 ): Source.Context<Types> {
+  const baseEnv = env as Types['env'];
   return {
     config,
-    env: env as Types['env'],
+    env: baseEnv,
     logger: env.logger || createMockLogger(),
     id: 'test-fetch',
     collector: {} as Collector.Instance,
-    setIngest: jest.fn().mockResolvedValue(undefined),
-    setRespond: jest.fn(),
+    withScope: async (_raw, respond, body) => {
+      const ingest: Ingest = createIngest('test-fetch');
+      return body({
+        ...baseEnv,
+        push: baseEnv.push,
+        ingest,
+        respond,
+      });
+    },
   };
 }
 

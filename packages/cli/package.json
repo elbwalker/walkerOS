@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/cli",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
@@ -50,10 +50,10 @@
   },
   "dependencies": {
     "@vercel/nft": "1.5.0",
-    "@walkeros/collector": "4.0.2",
-    "@walkeros/core": "4.0.2",
-    "@walkeros/server-core": "4.0.2",
-    "@walkeros/server-destination-api": "4.0.2",
+    "@walkeros/collector": "4.1.0",
+    "@walkeros/core": "4.1.0",
+    "@walkeros/server-core": "4.1.0",
+    "@walkeros/server-destination-api": "4.1.0",
     "ajv": "^8.17.1",
     "chalk": "^5.6.2",
     "ci-info": "^4.4.0",
@@ -79,8 +79,8 @@
     "@types/pacote": "^11.1.8",
     "@types/picomatch": "4.0.3",
     "@types/semver": "^7.7.1",
-    "@walkeros/config": "4.0.2",
-    "@walkeros/core": "4.0.2",
+    "@walkeros/config": "4.1.0",
+    "@walkeros/core": "4.1.0",
     "msw": "^2.12.10",
     "openapi-typescript": "^7.13.0",
     "tsx": "^4.21.0"

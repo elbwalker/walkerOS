@@ -1,6 +1,6 @@
 import type { Collector, Elb } from '@walkeros/core';
 import type { HandleCommandFn } from './types/collector';
-import { useHooks, tryCatchAsync } from '@walkeros/core';
+import { FatalError, useHooks, tryCatchAsync } from '@walkeros/core';
 import { createPushResult } from './destination';
 
 /**
@@ -25,7 +25,14 @@ export function createCommand<T extends Collector.Instance>(
         async (): Promise<Elb.PushResult> => {
           return await handleCommand(collector, command, data, options);
         },
-        () => {
+        (err: unknown) => {
+          if (err instanceof FatalError) throw err;
+          collector.status.failed++;
+          collector.logger.error('command failed', {
+            command,
+            data,
+            error: err,
+          });
           return createPushResult({ ok: false });
         },
       )();

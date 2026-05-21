@@ -98,6 +98,32 @@ The `context` parameter contains everything your source needs:
 
 The collector provides `env.push` (formerly `env.elb`). You provide other dependencies (like `window`, `document`, custom APIs) when configuring the source.
 
+## Per-scope context (server sources)
+
+A single source factory instance handles many concurrent invocations: an Express server processes overlapping requests, a Lambda may be reused across invocations, a queue consumer processes batches. Each logical unit of work, an HTTP request, a queue message, a websocket frame, is a **scope**. To keep ingest metadata and response delegates isolated between concurrent scopes, server sources wrap each invocation with `context.withScope`:
+
+<CodeSnippet
+  code={`const push = async (req: Request, res: Response): Promise<void> => {
+  const respond = createRespond((options) => {
+    // wire options into res.send / res.json
+  });
+
+  // Each call to withScope builds a fresh Ingest from \`req\` via
+  // \`config.ingest\` mapping, captures \`respond\`, and runs the body
+  // with a per-scope env. Concurrent scopes never crosstalk.
+  await context.withScope(req, respond, async (env) => {
+    const eventData = req.body && typeof req.body === 'object' ? req.body : {};
+    await env.push(eventData);
+    respond({ body: { success: true } });
+  });
+};`}
+  language="typescript"
+/>
+
+Inside the body, `env.push` carries the scope's ingest and respond all the way to destinations. Transformers and destinations read `env.respond` to delegate the HTTP response; `context.ingest` for source-extracted metadata. The scope ends when the body resolves.
+
+**Browser sources (and other single-scope sources) skip `withScope`.** A browser tab is a single logical scope for its entire lifetime; calling `env.push` directly on the factory env is correct. Only server sources handling concurrent inbound work need `withScope`.
+
 ## Minimal example
 
 <CodeSnippet
@@ -339,6 +365,23 @@ describe('Event API Source', () => {
 });`}
   language="typescript"
 />
+
+### Reading a step back from the collector
+
+When an integration test needs to call a step's raw `push` directly through the collector (a source's `push(req, res)`, a destination's `push(event, ctx)`, etc.), the bag types (`collector.sources`, `collector.destinations`, `collector.transformers`, `collector.stores`) erase the per-step generic. The `push` signature collapses to `Elb.Fn` on read.
+
+Use the typed accessors from `@walkeros/core` to recover the narrow type without casts:
+
+<CodeSnippet
+  code={`import { Source } from '@walkeros/core';
+import type { Types as ExpressTypes } from '@walkeros/server-source-express';
+
+const expressSource = Source.getSource<ExpressTypes>(collector, 'express');
+await expressSource.push(req, res); // typed!`}
+  language="typescript"
+/>
+
+Symmetric helpers exist for every step kind: `Source.getSource`, `Destination.getDestination`, `Transformer.getTransformer`, `Store.getStore`. Each throws `<Kind> not found: <id>` when the id is unknown. The helpers are opt-in and have no runtime cost.
 
 ## Setup lifecycle (optional)
 

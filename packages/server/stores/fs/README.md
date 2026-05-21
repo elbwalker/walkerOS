@@ -1,70 +1,17 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/server-store-fs
 
 Local filesystem store for walkerOS server flows. Reads and writes files
 relative to a base directory with path traversal protection.
 
+[Documentation](https://www.walkeros.io/docs/stores/server/fs) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/server-store-fs) &bull;
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/stores/fs)
-| [NPM](https://www.npmjs.com/package/@walkeros/server-store-fs) |
-[Documentation](https://www.walkeros.io/docs/stores/server/fs)
-
-## Quick start (bundled mode)
-
-```json
-{
-  "version": 3,
-  "flows": {
-    "default": {
-      "server": {},
-      "stores": {
-        "assets": {
-          "package": "@walkeros/server-store-fs",
-          "config": {
-            "settings": {
-              "basePath": "./public"
-            }
-          }
-        }
-      },
-      "transformers": {
-        "file": {
-          "package": "@walkeros/server-transformer-file",
-          "config": { "settings": { "prefix": "/static" } },
-          "env": { "store": "$store.assets" }
-        }
-      }
-    }
-  }
-}
-```
-
-## Integrated mode
-
-```typescript
-import { startFlow } from '@walkeros/collector';
-import { storeFsInit } from '@walkeros/server-store-fs';
-
-await startFlow({
-  stores: {
-    assets: {
-      code: storeFsInit,
-      config: {
-        settings: {
-          basePath: './public',
-        },
-      },
-    },
-  },
-});
-```
-
-## Features
-
-- **Path traversal protection**: Rejects `..`, absolute paths, and backslash
-  traversal
-- **Base path scoping**: All operations restricted to the configured directory
-- **Auto-create directories**: `set()` creates intermediate directories
-  automatically
-- **Buffer output**: `get()` returns `Buffer` for file transformer compatibility
 
 ## Installation
 
@@ -72,42 +19,34 @@ await startFlow({
 npm install @walkeros/server-store-fs
 ```
 
-## Configuration
+## Quick start
 
-| Setting    | Type     | Required | Default | Description                        |
-| ---------- | -------- | -------- | ------- | ---------------------------------- |
-| `basePath` | `string` | Yes      | —       | Root directory for file operations |
-
-## API
-
-```typescript
-const file = await store.get('walker.js'); // Buffer | undefined
-await store.set('data.json', Buffer.from('{}')); // void
-await store.delete('old-file.txt'); // void
+```json
+{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "stores": {
+        "assets": { "package": "@walkeros/server-store-fs", "config": {} }
+      }
+    }
+  }
+}
 ```
 
-## Security
+## Documentation
 
-All keys are validated against path traversal attacks:
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/stores/server/fs**
 
-- `..` segments are rejected
-- Absolute paths (`/etc/passwd`) are rejected
-- Backslash traversal (`..\\`) is rejected
-- Resolved paths must stay within `basePath`
+## Contribute
 
-Rejected operations log a warning and return `undefined` (get) or no-op
-(set/delete).
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-## Behavior notes
+## License
 
-- **Async operations** — all methods return Promises (filesystem I/O)
-- **Auto-creates directories** — `set` creates intermediate dirs via `mkdir -p`
-- **Missing files** — `get` returns `undefined`, `delete` is a no-op
-- **Buffer values** — `get` returns `Buffer`, `set` expects `Buffer`
-
-## Related
-
-- [Documentation](https://www.walkeros.io/docs/stores/server/fs)
-- [Stores overview](https://www.walkeros.io/docs/stores)
-- [S3 store](https://www.walkeros.io/docs/stores/server/s3) — for cloud
-  deployments
+MIT

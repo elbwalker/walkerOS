@@ -74,11 +74,10 @@ describe('piwikpro web destination -- step examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    await elb(
-      'walker destination',
-      { ...dest, env },
-      { ...initConfig, mapping: mappingConfig },
-    );
+    await elb('walker destination', {
+      code: { ...dest, env },
+      config: { ...initConfig, mapping: mappingConfig },
+    });
 
     await elb(event);
 

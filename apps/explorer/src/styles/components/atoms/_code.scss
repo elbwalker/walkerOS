@@ -45,5 +45,12 @@
       outline: none !important;
       box-shadow: none !important;
     }
+
+    // Fold chevrons appear on gutter hover (Monaco's 'mouseover' default).
+    // Kill the opacity transition so they show instantly on hover instead of
+    // fading in.
+    .margin-view-overlays .codicon[class*='codicon-folding'] {
+      transition: none !important;
+    }
   }
 }

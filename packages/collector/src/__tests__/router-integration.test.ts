@@ -1,5 +1,20 @@
 import { startFlow } from '..';
-import type { Source, Transformer, WalkerOS, Elb } from '@walkeros/core';
+import { Source } from '@walkeros/core';
+import type { Transformer, WalkerOS, Elb } from '@walkeros/core';
+
+type RawIngest = {
+  path: string;
+  method: string;
+  body?: { en?: string; value?: string };
+};
+
+interface TestPushFn {
+  (rawData: RawIngest): Promise<void>;
+}
+
+type TestSourceTypes = Source.Types<unknown, unknown, TestPushFn>;
+
+type GtagIngestBody = { en?: string; value?: string };
 
 describe('native next routing', () => {
   it('should route events through conditional source.next', async () => {
@@ -11,7 +26,7 @@ describe('native next routing', () => {
       config: context.config,
       push(event, context) {
         order.push('gtag-parser');
-        const body = (context.ingest as any)?.body || {};
+        const body = (context.ingest.body as GtagIngestBody | undefined) || {};
         return {
           event: {
             name: `page ${body.en || 'unknown'}`,
@@ -24,15 +39,16 @@ describe('native next routing', () => {
     const { collector } = await startFlow({
       sources: {
         testSource: {
-          code: async (context): Promise<Source.Instance> => {
-            const { env, config, setIngest } = context;
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
+            const { config } = context;
             return {
               type: 'test',
-              config: config as Source.Config,
-              push: (async (rawData: any) => {
-                await setIngest(rawData);
-                await env.push({});
-              }) as any,
+              config: config as Source.Config<TestSourceTypes>,
+              push: async (rawData: RawIngest) => {
+                await context.withScope(rawData, undefined, async (env) => {
+                  await env.push({});
+                });
+              },
             };
           },
           next: [
@@ -70,7 +86,7 @@ describe('native next routing', () => {
       },
     });
 
-    await (collector.sources.testSource.push as any)({
+    await Source.getSource<TestSourceTypes>(collector, 'testSource').push({
       path: '/gtag/collect',
       method: 'GET',
       body: { en: 'purchase', value: '99.9' },

@@ -190,6 +190,7 @@ describe('Destination API', () => {
         key: 'product view',
         events,
         data: [],
+        entries: events.map((event) => ({ event })),
       };
 
       destination.pushBatch!(
@@ -215,6 +216,7 @@ describe('Destination API', () => {
         key: 'product view',
         events,
         data: mappedData,
+        entries: events.map((event) => ({ event })),
       };
 
       destination.pushBatch!(
@@ -238,6 +240,7 @@ describe('Destination API', () => {
         key: 'product view',
         events,
         data: [],
+        entries: events.map((event) => ({ event })),
       };
 
       const transform = jest.fn((data) =>

@@ -67,13 +67,12 @@ describe('@walkeros/server-destination-file step examples', () => {
     // FileSettingsJson is the serialisable view of Settings;
     // walkerOS resolves `$code:` fn strings at flow start.
     // `elb(...)` accepts a generic Config whose settings is `unknown`.
-    elb(
-      'walker destination',
-      { ...dest, env },
-      {
+    elb('walker destination', {
+      code: { ...dest, env },
+      config: {
         settings: example.settings,
       },
-    );
+    });
 
     await elb(example.in as WalkerOS.Event);
 

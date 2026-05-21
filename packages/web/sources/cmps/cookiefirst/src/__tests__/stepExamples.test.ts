@@ -50,8 +50,7 @@ describe('Step Examples', () => {
       },
       id: 'test-cookiefirst',
       logger: createMockLogger(),
-      setIngest: async () => {},
-      setRespond: jest.fn(),
+      withScope: async (_r, _resp, body) => body({} as never),
     });
 
     // Source already processed existing consent during init via

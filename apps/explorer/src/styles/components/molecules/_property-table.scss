@@ -56,6 +56,34 @@
   font-size: calc(var(--font-size-base) - 2px);
 }
 
+// Nested rows: subtle tint plus a left guide line so the grouping reads as a
+// nested type rather than a flat list of unrelated properties.
+.elb-property-table__row--nested {
+  background: var(--bg-header);
+
+  .elb-property-table__property-cell {
+    border-left: 2px solid var(--border-box);
+  }
+}
+
+// Collapse/expand toggle on a group (parent) row.
+.elb-property-table__group-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-label);
+  vertical-align: baseline;
+
+  &:hover {
+    color: var(--color-button-primary);
+  }
+}
+
 .elb-property-table__property-type {
   color: var(--color-text);
   font-family: var(--font-mono);

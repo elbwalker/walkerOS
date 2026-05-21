@@ -394,27 +394,6 @@ export function packageNameToVariable(packageName: string): string {
 }
 
 /**
- * Resolve code from package reference.
- * Preserves explicit code fields, or auto-generates from package name.
- */
-function resolveCodeFromPackage(
-  packageName: string | undefined,
-  existingCode: string | Flow.Code | undefined,
-  packages: Record<string, Flow.BundlePackage> | undefined,
-): string | Flow.Code | undefined {
-  // Preserve explicit code first (including InlineCode objects)
-  if (existingCode) return existingCode;
-
-  // Auto-generate code from package name if package exists
-  if (!packageName || !packages) return undefined;
-
-  const pkgConfig = packages[packageName];
-  if (!pkgConfig) return undefined;
-
-  return packageNameToVariable(packageName);
-}
-
-/**
  * Get resolved flow for a named flow.
  *
  * Resolution pass order:
@@ -597,21 +576,9 @@ function resolveFlowSettings(
         resolveFlow,
       );
 
-      // Resolve code from package reference
-      const resolvedCode = resolveCodeFromPackage(
-        source.package,
-        source.code,
-        result.config?.bundle?.packages,
-      );
-
-      // Exclude deprecated code: true, only keep valid string or InlineCode
-      const validCode =
-        typeof source.code === 'string' || typeof source.code === 'object'
-          ? source.code
-          : undefined;
-      const finalCode = resolvedCode || validCode;
       result.sources[name] = {
         package: source.package,
+        import: source.import,
         config: processedConfig,
         env: processedEnv,
         primary: source.primary,
@@ -620,7 +587,7 @@ function resolveFlowSettings(
         next: source.next,
         cache: source.cache,
         validate: source.validate,
-        code: finalCode,
+        code: source.code,
       } as Flow.Source;
     }
   }
@@ -650,21 +617,9 @@ function resolveFlowSettings(
         resolveFlow,
       );
 
-      // Resolve code from package reference
-      const resolvedCode = resolveCodeFromPackage(
-        dest.package,
-        dest.code,
-        result.config?.bundle?.packages,
-      );
-
-      // Exclude deprecated code: true, only keep valid string or InlineCode
-      const validCode =
-        typeof dest.code === 'string' || typeof dest.code === 'object'
-          ? dest.code
-          : undefined;
-      const finalCode = resolvedCode || validCode;
       result.destinations[name] = {
         package: dest.package,
+        import: dest.import,
         config: processedConfig,
         env: processedEnv,
         variables: dest.variables,
@@ -672,7 +627,7 @@ function resolveFlowSettings(
         next: dest.next,
         cache: dest.cache,
         validate: dest.validate,
-        code: finalCode,
+        code: dest.code,
       } as Flow.Destination;
     }
   }
@@ -702,24 +657,14 @@ function resolveFlowSettings(
         resolveFlow,
       );
 
-      const resolvedCode = resolveCodeFromPackage(
-        store.package,
-        store.code,
-        result.config?.bundle?.packages,
-      );
-
-      const validCode =
-        typeof store.code === 'string' || typeof store.code === 'object'
-          ? store.code
-          : undefined;
-      const finalCode = resolvedCode || validCode;
       result.stores[name] = {
         package: store.package,
+        import: store.import,
         config: processedConfig,
         env: processedEnv,
         cache: store.cache,
         variables: store.variables,
-        code: finalCode,
+        code: store.code,
       } as Flow.Store;
     }
   }
@@ -749,20 +694,9 @@ function resolveFlowSettings(
         resolveFlow,
       );
 
-      const resolvedCode = resolveCodeFromPackage(
-        transformer.package,
-        transformer.code,
-        result.config?.bundle?.packages,
-      );
-
-      const validCode =
-        typeof transformer.code === 'string' ||
-        typeof transformer.code === 'object'
-          ? transformer.code
-          : undefined;
-      const finalCode = resolvedCode || validCode;
       result.transformers[name] = {
         package: transformer.package,
+        import: transformer.import,
         config: processedConfig,
         env: processedEnv,
         variables: transformer.variables,
@@ -770,7 +704,7 @@ function resolveFlowSettings(
         next: transformer.next,
         cache: transformer.cache,
         validate: transformer.validate,
-        code: finalCode,
+        code: transformer.code,
       } as Flow.Transformer;
     }
   }

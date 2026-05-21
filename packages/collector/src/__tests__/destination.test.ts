@@ -27,6 +27,7 @@ describe('Destination', () => {
     return {
       globalsStatic: {},
       sessionStatic: {},
+      queueMax: 1_000,
       ...overrides,
     };
   }
@@ -62,6 +63,7 @@ describe('Destination', () => {
         failed: 0,
         sources: {},
         destinations: {},
+        dropped: {},
       },
       ...args,
       config: args?.config ? createTestConfig(args.config) : defaultConfig,
@@ -133,7 +135,7 @@ describe('Destination', () => {
     expect(destination.config.init).toBeFalsy();
   });
 
-  test('logs an ERROR when destination init throws', async () => {
+  test('logs an ERROR and counts when destination init throws', async () => {
     // Simulate init throwing an arbitrary error (mirrors a real init failure
     // such as a misconfigured destination connecting to an external API).
     mockInit.mockImplementation(() => {
@@ -148,17 +150,19 @@ describe('Destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(0);
 
-    // The collector must surface the failure at ERROR on the scoped logger.
+    // The collector must surface the failure at ERROR on the scoped logger
+    // AND increment status.failed (Category A - internal pipeline failure).
     expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
     const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
       .value;
     expect(scopedLogger.error).toHaveBeenCalledWith(
-      'Destination init threw',
+      'destination init failed',
       expect.objectContaining({ error: 'boom' }),
     );
+    expect(collector.status.failed).toBe(1);
   });
 
-  test('logs an ERROR when destination init rejects', async () => {
+  test('logs an ERROR and counts when destination init rejects', async () => {
     // Mirrors the sync-throw test above but uses Promise rejection (async init
     // pattern). Both shapes hit the same await + catch in destination.ts; this
     // test guards against a future refactor that drops the await or switches
@@ -173,17 +177,17 @@ describe('Destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(0);
 
-    // The collector must surface the failure at ERROR on the scoped logger.
     expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
     const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
       .value;
     expect(scopedLogger.error).toHaveBeenCalledWith(
-      'Destination init threw',
+      'destination init failed',
       expect.objectContaining({ error: 'boom' }),
     );
+    expect(collector.status.failed).toBe(1);
   });
 
-  test('logs an ERROR when queueOn-only init throws', async () => {
+  test('logs an ERROR and counts when queueOn-only init throws', async () => {
     // Mirrors the init-throw test above but exercises the alternate code path
     // at destination.ts:190 (no push events, only queueOn events). That branch
     // previously used tryCatchAsync(destinationInit) without an onError, which
@@ -208,12 +212,13 @@ describe('Destination', () => {
     const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
       .value;
     expect(scopedLogger.error).toHaveBeenCalledWith(
-      'Destination init threw',
+      'destination init failed',
       expect.objectContaining({ error: 'boom' }),
     );
+    expect(collector.status.failed).toBe(1);
   });
 
-  test('logs an ERROR when queueOn-only init rejects', async () => {
+  test('logs an ERROR and counts when queueOn-only init rejects', async () => {
     // Async-rejection variant of the queueOn-only init throw test. Guards
     // against future refactors that drop the await on the queueOn-only branch.
     mockInit.mockRejectedValue(new Error('boom'));
@@ -231,9 +236,10 @@ describe('Destination', () => {
     const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
       .value;
     expect(scopedLogger.error).toHaveBeenCalledWith(
-      'Destination init threw',
+      'destination init failed',
       expect.objectContaining({ error: 'boom' }),
     );
+    expect(collector.status.failed).toBe(1);
   });
 
   test('logs init lifecycle', async () => {
@@ -660,6 +666,23 @@ describe('Destination', () => {
       expect(eventNames).toContain('page view');
       expect(eventNames).toContain('product click');
       expect(eventNames).toContain('button press');
+
+      // PROD-004: per-event entries should also be exposed. Each entry
+      // carries its own ingest (no first-event leakage across the batch).
+      const firstCall = mockPushBatch.mock.calls[0][0] as {
+        entries: Array<{
+          event: WalkerOS.Event;
+          ingest?: { _meta: { path: string[] } };
+        }>;
+      };
+      expect(firstCall.entries).toBeDefined();
+      expect(firstCall.entries).toHaveLength(3);
+      // Each entry carries its event in arrival order.
+      expect(firstCall.entries.map((e) => e.event.name)).toEqual([
+        'page view',
+        'product click',
+        'button press',
+      ]);
 
       // Individual push should NOT be called (batch handles it)
       expect(mockPush).not.toHaveBeenCalled();

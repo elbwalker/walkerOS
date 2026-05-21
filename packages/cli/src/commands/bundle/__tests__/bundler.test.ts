@@ -297,31 +297,43 @@ describe('collectAllStepPackages', () => {
   });
 });
 
-describe('buildSplitConfigObject string code references', () => {
-  it('accepts a destination with string code (named import)', () => {
+describe('buildSplitConfigObject named-import references', () => {
+  it('accepts a destination with package + import (named import)', () => {
     const flowSettings = {
       destinations: {
-        ga4: { code: 'destinationGa4Web', config: {} },
+        ga4: {
+          package: '@walkeros/web-destination-ga4',
+          import: 'destinationGa4Web',
+          config: {},
+        },
       },
     } as unknown as Flow;
 
     expect(() => buildSplitConfigObject(flowSettings, new Map())).not.toThrow();
   });
 
-  it('accepts a source with string code (named import)', () => {
+  it('accepts a source with package + import (named import)', () => {
     const flowSettings = {
       sources: {
-        cmp: { code: 'sourceCmpCustom', config: {} },
+        cmp: {
+          package: '@walkeros/web-source-cmp',
+          import: 'sourceCmpCustom',
+          config: {},
+        },
       },
     } as unknown as Flow;
 
     expect(() => buildSplitConfigObject(flowSettings, new Map())).not.toThrow();
   });
 
-  it('accepts a transformer with string code (named import)', () => {
+  it('accepts a transformer with package + import (named import)', () => {
     const flowSettings = {
       transformers: {
-        decoder: { code: 'transformerBase64Decoder', config: {} },
+        decoder: {
+          package: '@walkeros/transformer-base64',
+          import: 'transformerBase64Decoder',
+          config: {},
+        },
       },
     } as unknown as Flow;
 

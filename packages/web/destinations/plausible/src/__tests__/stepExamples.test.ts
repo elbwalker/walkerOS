@@ -113,11 +113,10 @@ describe('plausible destination — step examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    await elb(
-      'walker destination',
-      { ...dest, env: spiedEnv },
-      { ...initConfig, mapping: mappingConfig },
-    );
+    await elb('walker destination', {
+      code: { ...dest, env: spiedEnv },
+      config: { ...initConfig, mapping: mappingConfig },
+    });
     await elb(event);
 
     const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;

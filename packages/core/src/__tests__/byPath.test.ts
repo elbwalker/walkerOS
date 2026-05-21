@@ -64,4 +64,43 @@ describe('byPath', () => {
     expect(modifiedEvent.data).toHaveProperty('newField', 'newValue');
     expect(modifiedEvent).not.toBe(originalEvent);
   });
+
+  describe('getByPath cross-realm', () => {
+    test('traverses null-prototype objects (portable)', () => {
+      const nullProto: { foo?: { bar: number } } = Object.create(null);
+      nullProto.foo = { bar: 42 };
+
+      // Sanity: proves the old instanceof Object guard fails for this shape.
+      expect(nullProto instanceof Object).toBe(false);
+
+      expect(getByPath(nullProto, 'foo.bar')).toBe(42);
+    });
+
+    test('traverses objects from a different V8 realm (vm)', () => {
+      let vm: typeof import('node:vm');
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        vm = require('node:vm');
+      } catch {
+        // node:vm unavailable in this jest project; nothing to verify here.
+        return;
+      }
+
+      const crossRealm = vm.runInNewContext(
+        '({ headers: { "x-test": "hit" } })',
+      );
+
+      // Sanity: cross-realm objects fail the old instanceof Object check.
+      expect(crossRealm instanceof Object).toBe(false);
+
+      expect(getByPath(crossRealm, 'headers.x-test')).toBe('hit');
+    });
+
+    test('does not traverse exotic builtins (Date, Map)', () => {
+      // These were never functional traversal targets; assert non-traversal
+      // so the new guard's narrowing stays intentional.
+      expect(getByPath(new Date(), 'toISOString')).toBe(undefined);
+      expect(getByPath(new Map([['k', 'v']]), 'size')).toBe(undefined);
+    });
+  });
 });

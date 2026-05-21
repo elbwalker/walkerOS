@@ -116,8 +116,10 @@ export const BundleSchema = z
  * Inline code schema for embedding JavaScript functions in JSON configs.
  *
  * @remarks
- * Enables custom sources, transformers, destinations, and stores without
- * npm packages. The `push` function is required; `type` and `init` are optional.
+ * Object-only inline code block. Enables custom sources, transformers,
+ * destinations, and stores without npm packages. The `push` function is
+ * required; `type` and `init` are optional. To select a named export from
+ * a package, use the step's `import` field instead.
  *
  * @example
  * ```json
@@ -152,9 +154,9 @@ export const CodeSchema = z
     id: 'FlowCode',
     title: 'Flow.Code',
     description:
-      'Inline code block for custom sources / transformers / destinations / stores.',
+      'Inline code block (object form) for custom sources / transformers / destinations / stores. Use `import` on the step to select a named export from a package.',
   })
-  .describe('Inline code for custom components');
+  .describe('Inline code for custom components (object form)');
 
 // ========================================
 // Step Example Schemas
@@ -256,9 +258,16 @@ export const ValidateEventsSchema = z
  */
 export const ValidateSchema = z
   .object({
-    format: z.boolean().optional(),
-    events: ValidateEventsSchema.optional(),
-    schema: JsonSchemaSchema.optional(),
+    format: z
+      .boolean()
+      .optional()
+      .describe('Validate event structure against the standard event format'),
+    events: ValidateEventsSchema.optional().describe(
+      'Per entity-action JSON Schemas to validate matching events against',
+    ),
+    schema: JsonSchemaSchema.optional().describe(
+      'A single JSON Schema applied to every event this step handles',
+    ),
   })
   .meta({
     id: 'Validate',
@@ -287,11 +296,18 @@ export const SourceSchema = z
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/web-source-browser@2.0.0")',
       ),
-    code: z
-      .union([z.string(), CodeSchema])
+    code: CodeSchema.optional().describe(
+      'Inline code definition (object form). For a named export from a package, use `import` instead.',
+    ),
+    import: z
+      .string()
+      .regex(
+        /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+        'import must be a valid JavaScript identifier',
+      )
       .optional()
       .describe(
-        'Either a named export string (e.g., "sourceExpress") or an inline code object with push function',
+        "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
       ),
     config: z
       .looseObject({
@@ -362,11 +378,18 @@ export const TransformerSchema = z
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/transformer-enricher@1.0.0")',
       ),
-    code: z
-      .union([z.string(), CodeSchema])
+    code: CodeSchema.optional().describe(
+      'Inline code definition (object form). For a named export from a package, use `import` instead.',
+    ),
+    import: z
+      .string()
+      .regex(
+        /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+        'import must be a valid JavaScript identifier',
+      )
       .optional()
       .describe(
-        'Either a named export string (e.g., "transformerEnricher") or an inline code object with push function',
+        "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
       ),
     config: z
       .unknown()
@@ -423,11 +446,18 @@ export const DestinationSchema = z
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/web-destination-gtag@2.0.0")',
       ),
-    code: z
-      .union([z.string(), CodeSchema])
+    code: CodeSchema.optional().describe(
+      'Inline code definition (object form). For a named export from a package, use `import` instead.',
+    ),
+    import: z
+      .string()
+      .regex(
+        /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+        'import must be a valid JavaScript identifier',
+      )
       .optional()
       .describe(
-        'Either a named export string (e.g., "destinationAnalytics") or an inline code object with push function',
+        "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
       ),
     config: z
       .looseObject({
@@ -493,10 +523,19 @@ export const StoreSchema = z
       .min(1, 'Package name cannot be empty')
       .optional()
       .describe('Store package specifier with optional version'),
-    code: z
-      .union([z.string(), CodeSchema])
+    code: CodeSchema.optional().describe(
+      'Inline code definition (object form). For a named export from a package, use `import` instead.',
+    ),
+    import: z
+      .string()
+      .regex(
+        /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+        'import must be a valid JavaScript identifier',
+      )
       .optional()
-      .describe('Named export string or inline code definition'),
+      .describe(
+        "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+      ),
     config: z
       .looseObject({
         setup: z
@@ -879,3 +918,17 @@ export const contractRuleJsonSchema = toJsonSchema(
  * JSON Schema for the named Contract map (Flow.Contract).
  */
 export const contractJsonSchema = toJsonSchema(ContractSchema, 'Contract');
+
+/**
+ * JSON Schema for the step-level Validate config (Flow.Validate).
+ */
+export const validateJsonSchema = toJsonSchema(ValidateSchema, 'Validate');
+
+/**
+ * JSON Schema for the entity-action keyed Validate events map
+ * (Flow.ValidateEvents). Shares its shape with Contract `events`.
+ */
+export const validateEventsJsonSchema = toJsonSchema(
+  ValidateEventsSchema,
+  'ValidateEvents',
+);

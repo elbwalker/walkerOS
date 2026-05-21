@@ -1,7 +1,7 @@
 import { sourcePubSubPush } from '../index';
 import * as examples from '../examples';
-import { createMockContext } from '@walkeros/core';
-import type { Source } from '@walkeros/core';
+import { createIngest, createMockContext } from '@walkeros/core';
+import type { Ingest, Source } from '@walkeros/core';
 import type { Env, Request, Response, Types } from '../types';
 import { createTrigger } from '../examples/trigger';
 import { push as pushEnv } from '../examples/env';
@@ -22,8 +22,13 @@ function buildContext(
   return {
     ...base,
     id: 'pubsub',
-    setIngest: async () => undefined,
-    setRespond: () => undefined,
+    withScope: async (_r, respond, body) =>
+      body({
+        ...(envOverride ?? pushEnv),
+        push: (envOverride ?? pushEnv).push,
+        ingest: createIngest('pubsub') as Ingest,
+        respond,
+      } as never),
   };
 }
 

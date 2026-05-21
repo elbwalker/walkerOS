@@ -16,7 +16,10 @@ describe('on() helper — recursion and contract tests', () => {
     };
 
     const cb = jest.fn();
-    await collector.command('on', 'consent', { marketing: cb });
+    await collector.command('on', {
+      type: 'consent',
+      rules: { marketing: cb },
+    });
 
     // The bug: on() currently calls onApply() which iterates sources and
     // re-invokes source.on(). After the fix, on() should only fire the
@@ -29,7 +32,10 @@ describe('on() helper — recursion and contract tests', () => {
     collector.consent = { marketing: true };
 
     const cb = jest.fn();
-    await collector.command('on', 'consent', { marketing: cb });
+    await collector.command('on', {
+      type: 'consent',
+      rules: { marketing: cb },
+    });
 
     // Late-subscriber catch-up: if consent was already granted, cb must fire now
     expect(cb).toHaveBeenCalledTimes(1);
@@ -54,10 +60,16 @@ describe('on() helper — recursion and contract tests', () => {
       // Re-register itself, mirrors the sessionStart.ts:40 pattern
       // Fire-and-forget: the command is async but we don't await it to
       // avoid deepening the synchronous recursion stack further.
-      void ctx.collector.command('on', 'consent', { marketing: handler });
+      void ctx.collector.command('on', {
+        type: 'consent',
+        rules: { marketing: handler },
+      });
     };
 
-    await collector.command('on', 'consent', { marketing: handler });
+    await collector.command('on', {
+      type: 'consent',
+      rules: { marketing: handler },
+    });
     // Drain pending microtasks. Cannot use setTimeout here — jest fake timers
     // (see config/jest/web.setup.mjs) stub it and it never fires.
     await Promise.resolve();
@@ -75,12 +87,12 @@ describe('on() helper — recursion and contract tests', () => {
 
     const cbBlocked = jest.fn();
     collector.allowed = false;
-    await collector.command('on', 'ready', cbBlocked);
+    await collector.command('on', { type: 'ready', rules: cbBlocked });
     expect(cbBlocked).not.toHaveBeenCalled();
 
     const cbAllowed = jest.fn();
     collector.allowed = true;
-    await collector.command('on', 'ready', cbAllowed);
+    await collector.command('on', { type: 'ready', rules: cbAllowed });
     expect(cbAllowed).toHaveBeenCalledTimes(1);
   });
 });

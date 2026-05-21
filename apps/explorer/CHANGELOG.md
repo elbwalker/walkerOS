@@ -1,5 +1,42 @@
 # @walkeros/explorer
 
+## 4.1.0
+
+### Minor Changes
+
+- 058f7ed: Add `validateJsonSchema` / `validateEventsJsonSchema` exports for
+  step-level validation config, promote the validate and no-`many` route schemas
+  to direct exports, and add optional `nodeType` / `subPath` cursor fields to
+  `IntelliSenseContext` for context-scoped autocomplete.
+
+### Patch Changes
+
+- c60ef35: Remove unused legacy fields `batchFn` and `batched` from
+  `Mapping.Rule`. Batch state lives on the destination via `BatchRegistry`,
+  never on mapping rules. No runtime impact.
+- Updated dependencies [e155ff8]
+- Updated dependencies [e800974]
+- Updated dependencies [e155ff8]
+- Updated dependencies [1a8f2d7]
+- Updated dependencies [1a8f2d7]
+- Updated dependencies [b276173]
+- Updated dependencies [dd9f5ad]
+- Updated dependencies [c60ef35]
+- Updated dependencies [adeebea]
+- Updated dependencies [13aaeaa]
+- Updated dependencies [e800974]
+- Updated dependencies [adeebea]
+- Updated dependencies [6cdc362]
+- Updated dependencies [e800974]
+- Updated dependencies [e800974]
+- Updated dependencies [058f7ed]
+- Updated dependencies [28a8ac2]
+- Updated dependencies [fd6076e]
+  - @walkeros/core@4.1.0
+  - @walkeros/collector@4.1.0
+  - @walkeros/web-source-browser@4.1.0
+  - @walkeros/web-core@4.1.0
+
 ## 4.0.2
 
 ### Patch Changes

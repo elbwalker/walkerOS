@@ -1,10 +1,44 @@
 import type { Collector, On, WalkerOS, Destination } from '@walkeros/core';
-import { isArray } from '@walkeros/core';
+import { isArray, FatalError } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
 import { mergeEnvironments } from './destination';
 import { activatePending } from './pending';
 import { flushSourceQueueOn, isSourceStarted } from './source';
+
+type OnCallbackKind =
+  | 'destination'
+  | 'generic'
+  | 'source'
+  | 'consent'
+  | 'ready'
+  | 'run'
+  | 'session';
+
+/**
+ * Log a thrown error from a user-supplied `on` callback.
+ *
+ * Category B (user code): visibility via the scoped 'on' logger only.
+ * `status.failed` is reserved for pipeline failures and stays untouched
+ * here so it remains a clean health signal.
+ *
+ * Rethrows `FatalError` to let runtime supervisors fail fast on explicit
+ * abort signals. Both `tryCatch` and `tryCatchAsync` propagate throws
+ * raised inside onError, so this rethrow surfaces at the caller.
+ */
+function logOnCallbackError(
+  collector: Collector.Instance,
+  kind: OnCallbackKind,
+  error: unknown,
+  extra?: Record<string, unknown>,
+): void {
+  if (error instanceof FatalError) throw error;
+  collector.logger.scope('on').error('on callback failed', {
+    kind,
+    ...extra,
+    error,
+  });
+}
 
 /**
  * Build the unified On.Context passed to every subscription callback.
@@ -72,7 +106,9 @@ export function callDestinationOn(
     env: mergeEnvironments(destination.env, destination.config.env),
   };
 
-  tryCatch(destination.on)(type, context);
+  tryCatch(destination.on, (err) =>
+    logOnCallbackError(collector, 'destination', err, { destId, type }),
+  )(type, context);
 }
 
 /**
@@ -144,7 +180,9 @@ function fireCallbacks(
       const ctx = buildOnContext(collector, type);
       options.forEach((func) => {
         if (typeof func === 'function') {
-          tryCatch(func as On.GenericFn)(contextData, ctx);
+          tryCatch(func as On.GenericFn, (err) =>
+            logOnCallbackError(collector, 'generic', err, { type }),
+          )(contextData, ctx);
         }
       });
       break;
@@ -208,7 +246,7 @@ export async function onApply(
   // Sources are not "started" until config.init === true AND config.require is empty.
   // Unstarted sources have their on() events queued in instance.queueOn
   // and replayed once they start.
-  for (const source of Object.values(collector.sources)) {
+  for (const [sourceId, source] of Object.entries(collector.sources)) {
     if (source.config.require?.length) {
       const idx = source.config.require.indexOf(type);
       if (idx !== -1) source.config.require.splice(idx, 1);
@@ -217,7 +255,9 @@ export async function onApply(
     if (!source.on) continue;
 
     if (isSourceStarted(source)) {
-      const result = await tryCatchAsync(source.on)(type, contextData);
+      const result = await tryCatchAsync(source.on, (err) =>
+        logOnCallbackError(collector, 'source', err, { sourceId, type }),
+      )(type, contextData);
       if (result === false) vetoed = true;
     } else {
       source.queueOn = source.queueOn || [];
@@ -240,9 +280,9 @@ export async function onApply(
   // Sources whose require was just emptied AND init has run: flush their
   // queueOn now (the require-completing event was queued in the gated
   // branch above, so flushing here delivers it without losing ordering).
-  for (const source of Object.values(collector.sources)) {
+  for (const [sourceId, source] of Object.entries(collector.sources)) {
     if (isSourceStarted(source) && source.queueOn?.length) {
-      await flushSourceQueueOn(collector, source);
+      await flushSourceQueueOn(collector, source, sourceId);
     }
   }
 
@@ -271,7 +311,9 @@ function onConsent(
     Object.keys(consentState)
       .filter((key) => key in rule)
       .forEach((key) => {
-        tryCatch(rule[key])(consentState, ctx);
+        tryCatch(rule[key], (err) =>
+          logOnCallbackError(collector, 'consent', err, { key }),
+        )(consentState, ctx);
       });
   });
 }
@@ -283,7 +325,10 @@ function onReady(
   if (!collector.allowed) return;
   const ctx = buildOnContext(collector, Const.Commands.Ready);
   onConfig.forEach((func) => {
-    tryCatch(func)(undefined, ctx);
+    tryCatch(func, (err) => logOnCallbackError(collector, 'ready', err))(
+      undefined,
+      ctx,
+    );
   });
 }
 
@@ -291,7 +336,10 @@ function onRun(collector: Collector.Instance, onConfig: Array<On.RunFn>): void {
   if (!collector.allowed) return;
   const ctx = buildOnContext(collector, Const.Commands.Run);
   onConfig.forEach((func) => {
-    tryCatch(func)(undefined, ctx);
+    tryCatch(func, (err) => logOnCallbackError(collector, 'run', err))(
+      undefined,
+      ctx,
+    );
   });
 }
 
@@ -302,6 +350,9 @@ function onSession(
   if (!collector.session) return;
   const ctx = buildOnContext(collector, Const.Commands.Session);
   onConfig.forEach((func) => {
-    tryCatch(func)(collector.session, ctx);
+    tryCatch(func, (err) => logOnCallbackError(collector, 'session', err))(
+      collector.session,
+      ctx,
+    );
   });
 }

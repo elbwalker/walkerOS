@@ -19,23 +19,23 @@ export interface WalkerCommands<R = Promise<PushResult>, Config = unknown> {
   (event: 'walker consent', consent: WalkerOS.Consent): R;
   <T extends Destination.Types>(
     event: 'walker destination',
-    destination: Destination.Init<T> | Destination.Instance<T>,
-    config?: Destination.Config<T>,
+    init: Destination.Init<T>,
   ): R;
   <K extends keyof Hooks.Functions>(
     event: 'walker hook',
-    name: K,
-    hookFn: Hooks.Functions[K],
+    init: { name: K; fn: Hooks.Functions[K] },
   ): R;
   (
     event: 'walker on',
-    type: On.Types,
-    rules: WalkerOS.SingleOrArray<On.Subscription>,
+    init: {
+      type: On.Types;
+      rules: WalkerOS.SingleOrArray<On.Subscription>;
+    },
   ): R;
   (event: 'walker user', user: WalkerOS.User): R;
   (
     event: 'walker run',
-    runState: {
+    runState?: {
       consent?: WalkerOS.Consent;
       user?: WalkerOS.User;
       globals?: WalkerOS.Properties;

@@ -212,15 +212,14 @@ describe('mixpanel server destination — step examples', () => {
         }
       : undefined;
 
-    await elb(
-      'walker destination',
-      { ...dest, env: spiedEnv },
-      {
+    await elb('walker destination', {
+      code: { ...dest, env: spiedEnv },
+      config: {
         include: example.configInclude,
         settings: baseSettings,
         mapping: mappingConfig,
       },
-    );
+    });
     await elb(event);
 
     // Filter out init-time call — every example triggers Mixpanel.init once

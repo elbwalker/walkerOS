@@ -38,7 +38,9 @@ export function getByPath(
     }
 
     values =
-      values instanceof Object ? values[k as keyof typeof values] : undefined;
+      isObject(values) || isArray(values)
+        ? values[k as keyof typeof values]
+        : undefined;
 
     if (values === undefined) break;
   }

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-datalayer",
   "description": "DataLayer source for walkerOS",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -25,7 +25,8 @@
     "./walkerOS.json": "./dist/walkerOS.json"
   },
   "files": [
-    "dist/**"
+    "dist/**",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup --silent",
@@ -37,8 +38,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.0.2",
-    "@walkeros/collector": "4.0.2"
+    "@walkeros/core": "4.1.0",
+    "@walkeros/collector": "4.1.0"
   },
   "devDependencies": {
     "@types/gtag.js": "^0.0.20"

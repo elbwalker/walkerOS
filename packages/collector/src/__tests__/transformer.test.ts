@@ -20,7 +20,11 @@ describe('Transformer', () => {
 
     return {
       allowed: true,
-      config: { globalsStatic: {}, sessionStatic: {} },
+      config: {
+        globalsStatic: {},
+        sessionStatic: {},
+        queueMax: 1_000,
+      },
       consent: {},
       custom: {},
       destinations: {},
@@ -45,6 +49,7 @@ describe('Transformer', () => {
         failed: 0,
         sources: {},
         destinations: {},
+        dropped: {},
       },
       ...overrides,
     } as unknown as Collector.Instance;

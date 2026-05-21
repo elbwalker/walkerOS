@@ -40,8 +40,7 @@ describe('Step Examples', () => {
       },
       id: 'test-usercentrics',
       logger: createMockLogger(),
-      setIngest: async () => {},
-      setRespond: jest.fn(),
+      withScope: async (_r, _resp, body) => body({} as never),
     });
 
     // Dispatch CMP event — source listener catches it

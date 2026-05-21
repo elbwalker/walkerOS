@@ -10,8 +10,8 @@ import {
 import { __resetSnsMockCalls, __getSnsMockCalls } from '@aws-sdk/client-sns';
 import { sourceSqs } from '../index';
 import { setup as setupFn } from '../setup';
-import { createMockContext } from '@walkeros/core';
-import type { Source } from '@walkeros/core';
+import { createIngest, createMockContext } from '@walkeros/core';
+import type { Ingest, Source } from '@walkeros/core';
 import type { Config, Setup, Types } from '../types';
 import { push as pushEnv } from '../examples/env';
 
@@ -47,8 +47,13 @@ function buildContext(override: Partial<Config> = {}): Source.Context<Types> {
   return {
     ...base,
     id: 'sqs',
-    setIngest: async () => undefined,
-    setRespond: () => undefined,
+    withScope: async (_r, respond, body) =>
+      body({
+        ...pushEnv,
+        push: pushEnv.push,
+        ingest: createIngest('sqs') as Ingest,
+        respond,
+      } as never),
   };
 }
 
@@ -275,8 +280,13 @@ describe('SQS source setup', () => {
     const ctx: Source.Context<Types> = {
       ...base,
       id: 'sqs',
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('sqs') as Ingest,
+          respond,
+        } as never),
     };
     // Init itself throws because queueName is required.
     await expect(sourceSqs(ctx)).rejects.toThrow(/queueName/);
@@ -306,8 +316,13 @@ describe('SQS source setup', () => {
     const ctx: Source.Context<Types> = {
       ...base,
       id: 'sqs',
-      setIngest: async () => undefined,
-      setRespond: () => undefined,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('sqs') as Ingest,
+          respond,
+        } as never),
     };
     const instance = await sourceSqs(ctx);
     if (!instance.setup) throw new Error('setup not defined');

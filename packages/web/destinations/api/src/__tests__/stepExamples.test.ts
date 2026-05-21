@@ -31,14 +31,13 @@ describe('Step Examples', () => {
       ? { [event.entity]: { [event.action]: mapping } }
       : undefined;
 
-    elb(
-      'walker destination',
-      { ...dest, env },
-      {
+    elb('walker destination', {
+      code: { ...dest, env },
+      config: {
         settings: { url: 'https://api.example.com/events' },
         mapping: mappingConfig,
       },
-    );
+    });
     await elb(event);
 
     const captured: Captured[] = mockSendWeb.mock.calls.map(

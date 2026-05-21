@@ -1,13 +1,14 @@
 {
   "name": "@walkeros/server-source-gcp",
   "description": "Google Cloud Platform server sources for walkerOS (Cloud Functions, Pub/Sub)",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist/**"
+    "dist/**",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup --silent",
@@ -20,8 +21,8 @@
   },
   "dependencies": {
     "@google-cloud/pubsub": "^5.3.0",
-    "@walkeros/collector": "4.0.2",
-    "@walkeros/core": "4.0.2"
+    "@walkeros/collector": "4.1.0",
+    "@walkeros/core": "4.1.0"
   },
   "peerDependencies": {
     "@google-cloud/functions-framework": "^3.0.0"

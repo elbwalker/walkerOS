@@ -131,7 +131,6 @@ export async function createCookieProSource(
     },
     id: 'test-cookiepro',
     logger: createMockLogger(),
-    setIngest: async () => {},
-    setRespond: jest.fn(),
+    withScope: async (_r, _resp, body) => body({} as never),
   });
 }

@@ -1,5 +1,5 @@
-import type { Source, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { Ingest, Source, Collector } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
 import { sourceBrowser } from '../index';
 import type { Types } from '../types';
 
@@ -41,8 +41,12 @@ export async function createBrowserSource(
     env,
     id: 'test-browser',
     logger: createMockLogger(),
-    setIngest: async () => {},
-    setRespond: jest.fn(),
+    // Browser sources don't actually call withScope (single tab scope).
+    // Stub provided only to satisfy the Source.Context contract.
+    withScope: async (_raw, respond, body) => {
+      const ingest: Ingest = createIngest('test-browser');
+      return body({ ...env, push: env.push, ingest, respond });
+    },
   });
 
   // Mirror collector pass-2 init — the factory body is side-effect-free; init

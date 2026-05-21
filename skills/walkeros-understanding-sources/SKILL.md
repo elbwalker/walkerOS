@@ -36,15 +36,14 @@ export const sourceMySource: Source.Init<Types> = async (context) => {
 
 **Context contains:**
 
-| Property     | Type                 | Purpose                          |
-| ------------ | -------------------- | -------------------------------- |
-| `config`     | `Source.Config<T>`   | Settings, mapping, options       |
-| `env`        | `Types['env']`       | Environment (push, logger)       |
-| `logger`     | `Logger`             | Logging functions                |
-| `id`         | `string`             | Source identifier                |
-| `collector`  | `Collector.Instance` | Reference to collector           |
-| `setIngest`  | `(value) => void`    | Set ingest metadata per request  |
-| `setRespond` | `(fn) => void`       | Set respond function per request |
+| Property    | Type                                 | Purpose                                                  |
+| ----------- | ------------------------------------ | -------------------------------------------------------- |
+| `config`    | `Source.Config<T>`                   | Settings, mapping, options                               |
+| `env`       | `Types['env']`                       | Environment (push, logger)                               |
+| `logger`    | `Logger`                             | Logging functions                                        |
+| `id`        | `string`                             | Source identifier                                        |
+| `collector` | `Collector.Instance`                 | Reference to collector                                   |
+| `withScope` | `(raw, respond, body) => Promise<R>` | Bind ingest + respond to a single scope (server sources) |
 
 ### Push Method
 
@@ -125,6 +124,12 @@ flag, and `Destination.Config.require` gates event delivery the same way. See
 // Direct deployment
 http('handler', source.push);
 ```
+
+When a test or integration code needs to invoke a source's `push` through the
+collector bag, `collector.sources` erases the per-source generic on read. Use
+`Source.getSource<T>(collector, id)` to recover the narrow signature without a
+cast. See the testing-strategy skill for the full pattern (symmetric helpers
+exist for destinations, transformers, stores).
 
 ## Source Paths
 
@@ -244,16 +249,40 @@ The transformer chain runs before events reach the collector. See
 [understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
 for chain details.
 
+## Per-Scope Context (server sources)
+
+A single source factory instance handles many concurrent invocations: Express
+processes overlapping requests, Lambda reuses one handler across calls, queue
+consumers loop over messages. Each logical unit of work is a **scope**. Server
+sources MUST wrap each invocation with
+`context.withScope(rawScope, respond, body)`:
+
+```typescript
+const push = async (req, res) => {
+  const respond = createRespond((options) => {
+    /* wire options into res */
+  });
+
+  await context.withScope(req, respond, async (env) => {
+    await env.push(parsedData);
+  });
+};
+```
+
+Inside `body`, `env.push` carries that scope's `ingest` (extracted from
+`rawScope` via `config.ingest` mapping) and `respond` end to end through the
+pipeline. Concurrent scopes never share ingest or respond.
+
+**Browser sources skip `withScope`.** A browser tab is a single logical scope
+for its lifetime; calling `env.push` directly is correct.
+
 ## Response Delegation (env.respond)
 
-Server sources can delegate HTTP response handling to downstream steps via
-`setRespond`. Call `createRespond(sender)` to create an idempotent respond
-function, then pass it via `context.setRespond(respond)` before pushing events.
-
-Any transformer or destination in the pipeline can call
-`env.respond?.({ body, status?, headers? })` to customize the response. First
-call wins — the source's default response is a no-op if a step already
-responded.
+When a server source passes a `respond` to `withScope`, every transformer and
+destination in the pipeline can call
+`env.respond?.({ body, status?, headers? })` to customize the HTTP response.
+First call wins (`createRespond` is idempotent), so the source's default
+response is a no-op if a step already responded.
 
 See `@walkeros/server-source-express` for the reference implementation.
 

@@ -1,9 +1,19 @@
+<p align="left">
+  <a href="https://www.walkeros.io">
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
+  </a>
+</p>
+
 # @walkeros/server-destination-redis
 
-Server-side Redis Streams destination for
-[walkerOS](https://github.com/elbwalker/walkerOS). Appends events to a Redis
-Stream via `ioredis` XADD, with optional MAXLEN trimming, JSON or flat
-serialization, and graceful shutdown.
+Server-side event streaming to Redis Streams via the ioredis client, with
+configurable XADD streams, optional MAXLEN trimming, JSON or flat serialization,
+and graceful shutdown.
+
+[Documentation](https://www.walkeros.io/docs/destinations/server/redis) &bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-redis)
+&bull;
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/destinations/redis)
 
 ## Installation
 
@@ -11,19 +21,18 @@ serialization, and graceful shutdown.
 npm install @walkeros/server-destination-redis
 ```
 
-## Quick Start
+## Quick start
 
 ```json
 {
-  "destinations": {
-    "redis": {
-      "package": "@walkeros/server-destination-redis",
-      "config": {
-        "settings": {
-          "redis": {
-            "streamKey": "walkeros:events",
-            "url": "redis://localhost:6379"
-          }
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "destinations": {
+        "redis": {
+          "package": "@walkeros/server-destination-redis",
+          "config": {}
         }
       }
     }
@@ -31,37 +40,18 @@ npm install @walkeros/server-destination-redis
 }
 ```
 
-## Settings
+## Documentation
 
-| Setting               | Type                 | Required | Default  | Description                                                     |
-| --------------------- | -------------------- | -------- | -------- | --------------------------------------------------------------- |
-| `redis.streamKey`     | `string`             | Yes      | --       | Redis stream key name                                           |
-| `redis.url`           | `string`             | No       | --       | Redis connection URL (`redis://` or `rediss://`)                |
-| `redis.options`       | `RedisClientOptions` | No       | --       | ioredis connection options (host, port, password, db, tls, ...) |
-| `redis.maxLen`        | `number`             | No       | --       | Max stream length (approximate MAXLEN trimming)                 |
-| `redis.exactTrimming` | `boolean`            | No       | `false`  | Use exact MAXLEN instead of approximate                         |
-| `redis.serialization` | `'json' \| 'flat'`   | No       | `'json'` | Event serialization mode                                        |
+Full configuration, mapping, and examples live in the docs:
+**https://www.walkeros.io/docs/destinations/server/redis**
 
-## Per-rule mapping overrides
+## Contribute
 
-| Setting                      | Type     | Description                       |
-| ---------------------------- | -------- | --------------------------------- |
-| `mapping.settings.streamKey` | `string` | Override stream key for this rule |
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
-## Serialization Modes
+## License
 
-- **`json`** (default): Stores the full event as a single `event` field with a
-  JSON string value. Preserves nested structure, easy to deserialize downstream.
-- **`flat`**: Stores top-level event fields as separate stream entry fields.
-  Nested objects are JSON-encoded. Useful for XREAD filtering on specific
-  fields.
-
-## Shutdown
-
-The destination calls `quit()` on the Redis client during `destroy()`, ensuring
-all in-flight XADD commands complete. User-provided clients are not closed.
-
-## Providers
-
-Works with any Redis 5.0+ server supporting Streams: Redis Cloud, Upstash,
-ElastiCache, MemoryDB, Azure Cache, Memorystore, self-hosted.
+MIT

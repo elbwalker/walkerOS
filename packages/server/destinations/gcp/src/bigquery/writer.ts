@@ -1,10 +1,14 @@
 import type { Logger } from '@walkeros/core';
+import type { BigQueryOptions } from '@google-cloud/bigquery';
 import { managedwriter, adapt, protos } from '@google-cloud/bigquery-storage';
 
 export interface OpenWriterArgs {
   projectId: string;
   datasetId: string;
   tableId: string;
+  // Auth forwarded from settings.bigquery so the data-plane WriterClient
+  // authenticates like the control plane instead of falling back to ADC.
+  bigquery?: BigQueryOptions;
 }
 
 export interface WriterHandles {
@@ -27,14 +31,17 @@ export async function openWriter(
   args: OpenWriterArgs,
   logger: Logger.Instance,
 ): Promise<WriterHandles> {
-  const { projectId, datasetId, tableId } = args;
+  const { projectId, datasetId, tableId, bigquery } = args;
   const destinationTable = `projects/${projectId}/datasets/${datasetId}/tables/${tableId}`;
 
   logger.debug('Opening BigQuery Storage Write API writer', {
     destinationTable,
   });
 
-  const writeClient = new managedwriter.WriterClient({ projectId });
+  const writeClient = new managedwriter.WriterClient({
+    projectId,
+    ...bigquery,
+  });
   try {
     // Use streamId (not streamType) so the SDK resolves to the table's
     // implicit `_default` stream without calling CreateWriteStream. Passing

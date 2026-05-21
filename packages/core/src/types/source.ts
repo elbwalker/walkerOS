@@ -7,7 +7,9 @@ import type {
   Collector,
   Context as BaseContext,
 } from './index';
+import type { Ingest } from './ingest';
 import type { DestroyFn, SetupFn } from './lifecycle';
+import type { RespondFn } from '../respond';
 import type { Route } from './transformer';
 
 /**
@@ -161,6 +163,25 @@ export interface Instance<T extends TypesGeneric = Types> {
 }
 
 /**
+ * Per-scope environment passed to the body of `Source.Context.withScope`.
+ *
+ * Each call to `withScope` builds a fresh `ScopeEnv` whose `push` captures
+ * the per-scope `ingest` and `respond`. Concurrent scopes cannot crosstalk:
+ * each one carries its own ingest and respond all the way through the
+ * pipeline. Server sources MUST use `withScope` per inbound request; sources
+ * with a single logical scope (browser tab lifetime, dataLayer) may skip it
+ * and use the factory-scope `env.push` directly.
+ */
+export type ScopeEnv<T extends TypesGeneric = Types> = Env<T> & {
+  /** Per-scope push: captures the scope's ingest and respond for this call. */
+  push: Collector.PushFn;
+  /** Ingest metadata extracted from the raw scope input (if config.ingest is set). */
+  ingest: Ingest;
+  /** Respond function bound to this scope (undefined for scopes without a response). */
+  respond?: RespondFn;
+};
+
+/**
  * Context provided to source init function.
  * Extends base context with source-specific properties.
  */
@@ -169,15 +190,35 @@ export interface Context<
 > extends BaseContext.Base<Partial<Config<T>>, Env<T>> {
   id: string;
   /**
-   * Sets ingest metadata for the current request.
-   * Extracts values from the raw request using config.ingest mapping.
-   * The extracted data is passed through to transformers and destinations.
+   * Bind ingest and respond to a single scope of work (e.g. one inbound
+   * HTTP request, one queue message). Builds a fresh `Ingest` from the
+   * raw input via `config.ingest` mapping, wires the per-scope `respond`,
+   * and invokes `body(scopeEnv)` with a push function that captures both.
    *
-   * @param value - Raw request object (Express req, Lambda event, etc.)
+   * Server sources call this once per inbound request:
+   *
+   * ```ts
+   * await context.withScope(req, createRespond(sender), async (env) => {
+   *   await env.push(parsedData);
+   * });
+   * ```
+   *
+   * Browser sources with a single tab-lifetime scope may skip `withScope`
+   * and use `env.push` directly.
+   *
+   * @param rawScope - Raw input for `config.ingest` mapping (Express req,
+   *   Lambda event, fetch Request, etc.). Pass `undefined` if no ingest
+   *   mapping applies.
+   * @param respond - Per-scope respond function, or `undefined` if the
+   *   scope produces no response.
+   * @param body - Async callback receiving the per-scope env.
+   * @returns The body's return value.
    */
-  setIngest: (value: unknown) => Promise<void>;
-  /** Sets respond function for the current request. Called by source per-request. */
-  setRespond: (fn: import('../respond').RespondFn | undefined) => void;
+  withScope: <R>(
+    rawScope: unknown,
+    respond: RespondFn | undefined,
+    body: (env: ScopeEnv<T>) => Promise<R>,
+  ) => Promise<R>;
 }
 
 export type Init<T extends TypesGeneric = Types> = (
@@ -209,3 +250,32 @@ export interface InitSources {
  * - 'codebox': Source uses a JSON/code editor (default)
  */
 export type Renderer = 'browser' | 'codebox';
+
+/**
+ * Typed accessor for sources registered on a collector.
+ *
+ * The collector's `sources` bag indexes to `Source.Instance` (defaults erase
+ * the generic), which collapses the source's declared `push` signature to
+ * `Elb.Fn`. Use this helper at the call site to recover the narrow type
+ * without casts.
+ *
+ * @example
+ * type TestSourceTypes = Source.Types<unknown, unknown, TestPushFn>;
+ * const src = getSource<TestSourceTypes>(collector, 'testSource');
+ * await src.push({ method: 'GET', path: '/api/data' }); // typed!
+ *
+ * @throws Error with message `Source not found: <id>` when the id is unknown.
+ */
+export function getSource<T extends TypesGeneric = Types>(
+  collector: { sources: { [id: string]: Instance<any> } },
+  id: string,
+): Instance<T> {
+  const source = collector.sources[id];
+  if (!source) {
+    throw new Error(`Source not found: ${id}`);
+  }
+  // Single, contained narrowing. The runtime instance was constructed with
+  // generic T at init time; the bag erased the parameter. We're restoring
+  // information that already exists at runtime.
+  return source as unknown as Instance<T>;
+}

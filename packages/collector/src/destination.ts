@@ -23,6 +23,7 @@ import {
   isFunction,
   isObject,
   processEventMapping,
+  stepId,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
@@ -34,6 +35,78 @@ import {
   extractChainProperty,
 } from './transformer';
 import { getCacheStore } from './cache';
+import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
+
+const DEFAULT_QUEUE_MAX = 1_000;
+const DEFAULT_DLQ_MAX = 100;
+/** Default upper-bound on entries per batch. Caps unbounded growth under sustained load. */
+const DEFAULT_BATCH_SIZE = 1_000;
+/** Default upper-bound on batch age in ms. Forces flush even if debounce keeps resetting. */
+const DEFAULT_BATCH_AGE = 30_000;
+
+/**
+ * Sentinel returned by {@link destinationPush} when an event was enqueued
+ * into a batch (not delivered synchronously). The aggregation pass in
+ * {@link pushToDestinations} reads this to skip the per-event `count`
+ * increment; counters are bumped by the flush callback instead, after
+ * `pushBatch` resolves. Per PROD-004 plan Q9: increment on successful
+ * flush per entry, not on enqueue.
+ */
+const BATCHED_RESULT: { batched: true } = Object.freeze({ batched: true });
+
+function isBatchedResult(value: unknown): boolean {
+  return value === BATCHED_RESULT;
+}
+
+/**
+ * Normalize a batch config value to the canonical `{ wait?, size?, age? }`
+ * shape. A bare number is treated as `wait` (legacy form). `undefined`
+ * normalizes to an empty object so callers can chain `??` lookups.
+ */
+function normalizeBatchOptions(
+  value: number | Destination.BatchOptions | undefined,
+): { wait?: number; size?: number; age?: number } {
+  if (value === undefined) return {};
+  if (typeof value === 'number') return { wait: value };
+  return { wait: value.wait, size: value.size, age: value.age };
+}
+
+/**
+ * Ensure a per-destination status entry exists and return it.
+ * Mirrors the shape used elsewhere in this file.
+ */
+function ensureDestStatus(
+  collector: Collector.Instance,
+  destId: string,
+): Collector.DestinationStatus {
+  if (!collector.status.destinations[destId]) {
+    collector.status.destinations[destId] = {
+      count: 0,
+      failed: 0,
+      duration: 0,
+      queuePushSize: 0,
+      dlqSize: 0,
+    };
+  }
+  return collector.status.destinations[destId];
+}
+
+/**
+ * Bump a drop counter under `status.dropped[stepId][buffer]`. Lazily
+ * creates the per-step entry; returns the new counter value so callers
+ * can pass it straight into the warn-once log payload.
+ */
+function bumpDropped(
+  status: Collector.Status,
+  id: string,
+  buffer: 'queue' | 'dlq',
+  n: number,
+): number {
+  if (!status.dropped[id]) status.dropped[id] = {};
+  const entry = status.dropped[id];
+  entry[buffer] = (entry[buffer] ?? 0) + n;
+  return entry[buffer]!;
+}
 
 /**
  * Resolves transformer chain for a destination.
@@ -85,13 +158,11 @@ function resolveDestinationChain(
  *
  * @param collector - The walkerOS collector instance.
  * @param data - The destination's init data.
- * @param options - The destination's config.
  * @returns The result of the push operation.
  */
 export async function addDestination(
   collector: Collector.Instance,
   data: Destination.Init,
-  options?: Destination.Config,
 ): Promise<Elb.PushResult> {
   const { code, config: dataConfig = {}, env = {}, before, next, cache } = data;
 
@@ -108,7 +179,7 @@ export async function addDestination(
     });
   }
 
-  const baseConfig = options || dataConfig || { init: false };
+  const baseConfig = dataConfig || { init: false };
   // Merge before, next, and cache into config if provided at root level
   let config = before ? { ...baseConfig, before } : { ...baseConfig };
   if (next) config = { ...config, next };
@@ -162,9 +233,35 @@ export async function pushToDestinations(
   // Check if collector is allowed to push
   if (!allowed) return createPushResult({ ok: false });
 
-  // Add event to the collector queue
+  // Add event to the collector queue (bounded; FIFO drop-oldest on overflow)
   if (event) {
-    collector.queue.push(event);
+    const queueMax = collector.config.queueMax;
+    if (queueMax === undefined) {
+      throw new Error(
+        'Collector.Config.queueMax is undefined; defaults must be seeded by collector()',
+      );
+    }
+    const result = pushBounded(collector.queue, event, { max: queueMax });
+    if (result.dropped > 0) {
+      const droppedCount = bumpDropped(
+        collector.status,
+        stepId('collector'),
+        'queue',
+        result.dropped,
+      );
+      warnOverflowOnce(
+        collector.queue,
+        collector.logger,
+        'collector.queue overflow; oldest events dropped',
+        {
+          buffer: 'queue',
+          cap: queueMax,
+          droppedCount,
+        },
+      );
+    } else if (collector.queue.length < queueMax) {
+      resetOverflowFlag(collector.queue);
+    }
     collector.status.in++;
   }
 
@@ -222,8 +319,9 @@ export async function pushToDestinations(
         try {
           isInitialized = await destinationInit(collector, destination, id);
         } catch (err) {
+          collector.status.failed++;
           const destType = destination.type || 'unknown';
-          collector.logger.scope(destType).error('Destination init threw', {
+          collector.logger.scope(destType).error('destination init failed', {
             error: err instanceof Error ? err.message : String(err),
           });
         }
@@ -248,8 +346,43 @@ export async function pushToDestinations(
         return true; // Keep denied events in the queue
       });
 
-      // Add skipped events back to the queue
-      destination.queuePush.push(...skippedEvents);
+      // Add skipped (consent-denied) events back to the queue.
+      // Bounded; FIFO drop-oldest on overflow.
+      if (skippedEvents.length > 0) {
+        const queuePush = destination.queuePush;
+        const destId = destination.config.id || id;
+        const bound = {
+          max: destination.config.queueMax ?? DEFAULT_QUEUE_MAX,
+        };
+        let totalDropped = 0;
+        for (const skipped of skippedEvents) {
+          const r = pushBounded(queuePush, skipped, bound);
+          totalDropped += r.dropped;
+        }
+        if (totalDropped > 0) {
+          // Ensure status entry exists for early-overflow paths.
+          ensureDestStatus(collector, destId);
+          const droppedCount = bumpDropped(
+            collector.status,
+            stepId('destination', destId),
+            'queue',
+            totalDropped,
+          );
+          warnOverflowOnce(
+            queuePush,
+            collector.logger.scope(destination.type || 'unknown'),
+            'destination.queuePush overflow; oldest events dropped',
+            {
+              buffer: 'queuePush',
+              destination: destId,
+              cap: bound.max,
+              droppedCount,
+            },
+          );
+        } else if (queuePush.length < bound.max) {
+          resetOverflowFlag(queuePush);
+        }
+      }
 
       // Execution shall not pass if no events are allowed
       if (!allowedEvents.length) {
@@ -266,8 +399,9 @@ export async function pushToDestinations(
       try {
         isInitialized = await destinationInit(collector, destination, id);
       } catch (err) {
+        collector.status.failed++;
         const destType = destination.type || 'unknown';
-        collector.logger.scope(destType).error('Destination init threw', {
+        collector.logger.scope(destType).error('destination init failed', {
           error: err instanceof Error ? err.message : String(err),
         });
       }
@@ -306,6 +440,10 @@ export async function pushToDestinations(
 
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
       let totalDuration = 0;
+      // Count of events enqueued into a batch in this pass; the aggregation
+      // below uses this to skip the synchronous `count++` for batched events
+      // (counters move to the flush callback per PROD-004 plan Q9).
+      let batchedCount = 0;
       await Promise.all(
         allowedEvents.map(async (event) => {
           // Merge collector state into event (collector as base, event overrides)
@@ -316,7 +454,7 @@ export async function pushToDestinations(
           let cacheMiss: { key: string; ttl: number } | undefined;
           if (compiledDCache?.stop && dCacheStore) {
             const cacheContext = buildCacheContext(destIngest, event);
-            const cacheResult = checkCache(
+            const cacheResult = await checkCache(
               compiledDCache,
               dCacheStore,
               cacheContext,
@@ -367,7 +505,7 @@ export async function pushToDestinations(
           // Step-level cache check: after before chain, skip only push on HIT
           if (compiledDCache && !compiledDCache.stop && dCacheStore) {
             const cacheContext = buildCacheContext(destIngest, processedEvent);
-            const cacheResult = checkCache(
+            const cacheResult = await checkCache(
               compiledDCache,
               dCacheStore,
               cacheContext,
@@ -392,8 +530,39 @@ export async function pushToDestinations(
             error = err; // oh no
             pushFailed = true;
 
-            // Add failed event to destinations DLQ
-            destination.dlq!.push([processedEvent!, err]);
+            // Add failed event to destinations DLQ (bounded; FIFO drop-oldest)
+            const dlq = destination.dlq!;
+            const destId = destination.config.id || id;
+            const dlqBound = {
+              max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX,
+            };
+            const dlqResult = pushBounded(
+              dlq,
+              [processedEvent!, err],
+              dlqBound,
+            );
+            if (dlqResult.dropped > 0) {
+              ensureDestStatus(collector, destId);
+              const droppedCount = bumpDropped(
+                collector.status,
+                stepId('destination', destId),
+                'dlq',
+                dlqResult.dropped,
+              );
+              warnOverflowOnce(
+                dlq,
+                collector.logger.scope(destination.type || 'unknown'),
+                'destination.dlq overflow; oldest entries dropped',
+                {
+                  buffer: 'dlq',
+                  destination: destId,
+                  cap: dlqBound.max,
+                  droppedCount,
+                },
+              );
+            } else if (dlq.length < dlqBound.max) {
+              resetOverflowFlag(dlq);
+            }
 
             return undefined;
           })(
@@ -420,8 +589,12 @@ export async function pushToDestinations(
             );
           }
 
-          // Capture the last response (for single event pushes)
-          if (result !== undefined) response = result;
+          // Capture the last response (for single event pushes).
+          // Batched-enqueue sentinel is NOT a real response; don't surface it.
+          if (result !== undefined && !isBatchedResult(result)) {
+            response = result;
+          }
+          if (isBatchedResult(result)) batchedCount++;
 
           // Run destination.next chain after successful push
           if (!pushFailed && nextConfig) {
@@ -458,7 +631,15 @@ export async function pushToDestinations(
         }),
       );
 
-      return { id, destination, error, response, totalDuration };
+      return {
+        id,
+        destination,
+        error,
+        response,
+        totalDuration,
+        batchedCount,
+        allowedCount: allowedEvents.length,
+      };
     }),
   );
 
@@ -477,15 +658,13 @@ export async function pushToDestinations(
     };
 
     // Ensure destination status entry exists
-    if (!collector.status.destinations[result.id]) {
-      collector.status.destinations[result.id] = {
-        count: 0,
-        failed: 0,
-        duration: 0,
-      };
-    }
+    ensureDestStatus(collector, result.id);
     const destStatus = collector.status.destinations[result.id];
     const now = Date.now();
+
+    // Refresh point-in-time buffer sizes after the destination's push pass.
+    destStatus.queuePushSize = destination.queuePush?.length ?? 0;
+    destStatus.dlqSize = destination.dlq?.length ?? 0;
 
     if (result.error) {
       ref.error = result.error;
@@ -498,11 +677,24 @@ export async function pushToDestinations(
       // Events already re-queued at destination.queuePush via skippedEvents push
       queued[result.id] = ref;
     } else {
-      done[result.id] = ref;
-      destStatus.count++;
-      destStatus.lastAt = now;
-      destStatus.duration += result.totalDuration || 0;
-      collector.status.out++;
+      // If every allowed event was enqueued into a batch, success counters
+      // belong to the flush callback (PROD-004 plan Q9): don't increment
+      // here and don't mark `done`. The flush bumps `count` and `out` when
+      // pushBatch resolves. If only some events were batched, count the
+      // synchronously-delivered ones.
+      const batchedCount = result.batchedCount ?? 0;
+      const allowedCount = result.allowedCount ?? 0;
+      const syncDelivered = Math.max(0, allowedCount - batchedCount);
+      if (syncDelivered > 0 || allowedCount === 0) {
+        done[result.id] = ref;
+        // For non-batched destinations preserve the historical semantics
+        // (one bump per pushToDestinations call, regardless of allowed
+        // events count, since the original code only bumped once).
+        destStatus.count++;
+        destStatus.lastAt = now;
+        destStatus.duration += result.totalDuration || 0;
+        collector.status.out++;
+      }
     }
   }
 
@@ -641,58 +833,172 @@ export async function destinationPush<Destination extends Destination.Instance>(
     if (!destination.batches[mappingKey]) {
       const batched: Destination.Batch<unknown> = {
         key: mappingKey,
+        entries: [],
         events: [],
         data: [],
       };
 
-      destination.batches[mappingKey] = {
-        batched,
-        batchFn: debounce(() => {
-          const batchState = destination.batches![mappingKey];
-          const currentBatched = batchState.batched;
+      // Resolve scheduling options: mapping-level overrides destination-level.
+      // Mapping rule `batch` (number form = wait; object = wait/size/age).
+      // Destination config `batch` (number = wait; object = wait/size/age).
+      const ruleOpts = normalizeBatchOptions(eventMapping.batch);
+      const destOpts = normalizeBatchOptions(config.batch);
+      const wait =
+        ruleOpts.wait ??
+        destOpts.wait ??
+        // No wait at either layer means "rely on size/age only"; pick a
+        // long debounce so wait is effectively never the trigger.
+        DEFAULT_BATCH_AGE;
+      const size = ruleOpts.size ?? destOpts.size ?? DEFAULT_BATCH_SIZE;
+      const age = ruleOpts.age ?? destOpts.age ?? DEFAULT_BATCH_AGE;
 
-          const batchContext: Destination.PushBatchContext = {
-            collector,
-            logger: destLogger,
-            id: destId,
-            config,
-            // Note: batch.data contains all transformed data; context.data is for single events
-            data: undefined,
-            rule: eventMapping, // Renamed from mapping to rule
-            ingest: ingest!, // Mutable shared context
-            env: {
-              ...mergeEnvironments(destination.env, config.env),
-              ...(respond ? { respond } : {}),
-            },
-          };
+      // Capture references the flush closure needs. ingest, respond, and
+      // per-event eventMapping are read from `entries`, NOT from this scope,
+      // so the closure does NOT leak the first event's context.
+      const baseEnv = mergeEnvironments(destination.env, config.env);
 
-          destLogger.debug('push batch', {
-            events: currentBatched.events.length,
-          });
+      const flushBatch = async (): Promise<void> => {
+        const batchState = destination.batches![mappingKey];
+        const currentBatched = batchState.batched;
+        if (currentBatched.entries.length === 0) return;
 
+        const snapshot: Destination.Batch<unknown> = {
+          key: currentBatched.key,
+          entries: currentBatched.entries,
+          events: currentBatched.events,
+          data: currentBatched.data,
+        };
+        currentBatched.entries = [];
+        currentBatched.events = [];
+        currentBatched.data = [];
+
+        const rep = snapshot.entries[0];
+        const batchContext: Destination.PushBatchContext = {
+          collector,
+          logger: destLogger,
+          id: destId,
+          config,
+          data: undefined,
+          rule: rep.rule,
+          ingest: rep.ingest!,
+          env: {
+            ...baseEnv,
+            ...(rep.respond ? { respond: rep.respond } : {}),
+          },
+        };
+
+        destLogger.debug('push batch', { events: snapshot.entries.length });
+
+        const destIdResolved = destination.config.id || destId;
+        const destStatus = ensureDestStatus(collector, destIdResolved);
+
+        let succeeded = true;
+        await tryCatchAsync(
           useHooks(
             destination.pushBatch!,
             'DestinationPushBatch',
             collector.hooks,
             collector.logger,
-          )(currentBatched, batchContext);
+          ),
+          (err) => {
+            succeeded = false;
+            // Defect 2 fix: route the entire batch to DLQ on failure.
+            const dlq = (destination.dlq = destination.dlq || []);
+            const dlqBound = {
+              max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX,
+            };
+            let totalDropped = 0;
+            for (const entry of snapshot.entries) {
+              const r = pushBounded(dlq, [entry.event, err], dlqBound);
+              totalDropped += r.dropped;
+            }
+            if (totalDropped > 0) {
+              const droppedCount = bumpDropped(
+                collector.status,
+                stepId('destination', destIdResolved),
+                'dlq',
+                totalDropped,
+              );
+              warnOverflowOnce(
+                dlq,
+                destLogger,
+                'destination.dlq overflow; oldest entries dropped',
+                {
+                  buffer: 'dlq',
+                  destination: destIdResolved,
+                  cap: dlqBound.max,
+                  droppedCount,
+                },
+              );
+            } else if (dlq.length < dlqBound.max) {
+              resetOverflowFlag(dlq);
+            }
+            destStatus.failed += snapshot.entries.length;
+            destStatus.dlqSize = dlq.length;
+            collector.status.failed += snapshot.entries.length;
+            destLogger.error('Push batch failed', {
+              error: err instanceof Error ? err.message : String(err),
+              entries: snapshot.entries.length,
+            });
+            return undefined;
+          },
+        )(snapshot, batchContext);
 
-          destLogger.debug('push batch done');
+        destLogger.debug('push batch done');
 
-          // Reset batch
-          currentBatched.events = [];
-          currentBatched.data = [];
-        }, eventMapping.batch),
+        // Decrement in-flight regardless of outcome.
+        destStatus.inFlightBatch = Math.max(
+          0,
+          (destStatus.inFlightBatch ?? 0) - snapshot.entries.length,
+        );
+
+        if (succeeded) {
+          destStatus.count += snapshot.entries.length;
+          destStatus.lastAt = Date.now();
+          collector.status.out += snapshot.entries.length;
+        }
+      };
+
+      const scheduler = debounce(flushBatch, {
+        wait,
+        size,
+        age,
+      });
+
+      destination.batches[mappingKey] = {
+        batched,
+        batchFn: () => {
+          void scheduler();
+        },
+        flush: async () => {
+          await scheduler.flush();
+        },
       };
     }
 
-    // Add event to batch
+    // Add per-event entry into the batch.
     const batchState = destination.batches[mappingKey];
+    batchState.batched.entries.push({
+      event: processed.event,
+      ingest,
+      respond,
+      rule: eventMapping,
+      data: processed.data,
+    });
     batchState.batched.events.push(processed.event);
     if (isDefined(processed.data)) batchState.batched.data.push(processed.data);
 
-    // Trigger debounced batch
+    // In-flight bookkeeping for operational visibility.
+    const destIdResolved = destination.config.id || destId;
+    const destStatus = ensureDestStatus(collector, destIdResolved);
+    destStatus.inFlightBatch = (destStatus.inFlightBatch ?? 0) + 1;
+
+    // Trigger debounced batch (also handles size/age caps internally).
     batchState.batchFn();
+
+    // Signal "enqueued to batch, not delivered" so the aggregation pass
+    // in pushToDestinations skips the synchronous `count` increment.
+    return BATCHED_RESULT;
   } else {
     destLogger.debug('push', { event: processed.event.name });
 
@@ -708,8 +1014,6 @@ export async function destinationPush<Destination extends Destination.Instance>(
 
     return response;
   }
-
-  return true;
 }
 
 /**

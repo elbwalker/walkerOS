@@ -29,6 +29,7 @@ export * from './setup';
 export * from './throwError';
 export * from './trim';
 export * from './tryCatch';
+export * from './fatalError';
 export * from './useHooks';
 export * from './userAgent';
 export * from './wrapInlineCode';
@@ -42,7 +43,7 @@ export * from './matcher';
 // (importable from `./route` inside core, not from the public package).
 export { getNextSteps } from './route';
 export * from './cache';
-export * from './transformer-entry';
+export * from './step-entry';
 export * from './examples/formatOut';
 export {
   REF_VAR_FULL,

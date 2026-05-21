@@ -4,6 +4,12 @@
 .elb-code-box {
   display: flex;
   flex-direction: column;
+
+  // Keep scroll contained: reaching the editor's scroll edge must not chain to
+  // the page and trigger the browser's swipe back/forward history gesture.
+  .monaco-scrollable-element {
+    overscroll-behavior: contain;
+  }
 }
 
 .elb-codebox-settings {

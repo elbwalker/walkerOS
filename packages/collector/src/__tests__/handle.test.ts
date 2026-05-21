@@ -54,8 +54,11 @@ describe('Handle Commands', () => {
         },
       };
 
-      // Add destination using new format: { code: destination }
-      await elb('walker destination', { code: mockDestination }, customConfig);
+      // Add destination using new format: Init with config folded inside
+      await elb('walker destination', {
+        code: mockDestination,
+        config: customConfig,
+      });
 
       // Destination should be added with custom id and config
       expect(Object.keys(collector.destinations)).toEqual(['my-custom-id']);
@@ -73,8 +76,11 @@ describe('Handle Commands', () => {
         settings: { apiKey: 'test-key' },
       };
 
-      // Add destination using new format: { code: destination }
-      await elb('walker destination', { code: mockDestination }, customConfig);
+      // Add destination using new format: Init with config folded inside
+      await elb('walker destination', {
+        code: mockDestination,
+        config: customConfig,
+      });
 
       // Destination should be added with custom config
       expect(collector.destinations['test-destination']).toBeDefined();
@@ -91,17 +97,29 @@ describe('Handle Commands', () => {
         settings: { foo: 'bar' },
       };
 
-      // Call commonHandleCommand directly using new format: { code: destination }
-      await commonHandleCommand(
-        collector,
-        'destination',
-        { code: mockDestination },
-        customConfig,
-      );
+      // Call commonHandleCommand directly using new format: Init with config
+      await commonHandleCommand(collector, 'destination', {
+        code: mockDestination,
+        config: customConfig,
+      });
 
       // Destination should be added with config
       expect(collector.destinations['cmd-test']).toBeDefined();
       expect(collector.destinations['cmd-test'].config).toEqual(customConfig);
+    });
+
+    test('rejects the legacy { push } shorthand (no code field)', async () => {
+      const { elb, collector } = await startFlow();
+      await elb('walker destination', { push: jest.fn() } as never);
+      expect(Object.values(collector.destinations)).toHaveLength(0);
+    });
+
+    test('rejects the legacy 2-positional form with config as 3rd arg', async () => {
+      const { elb, collector } = await startFlow();
+      const destination = { type: 'spy', config: {}, push: jest.fn() };
+      // @ts-expect-error — legacy 3-arg shape is removed from the types in A1/A2
+      await elb('walker destination', destination, { settings: { x: 1 } });
+      expect(Object.values(collector.destinations)).toHaveLength(0);
     });
   });
 
@@ -272,6 +290,34 @@ describe('Handle Commands', () => {
       expect(normalOn).toHaveBeenCalledWith('consent', { marketing: true });
 
       // Veto doesn't prevent notification - it signals to the before mechanism (future)
+    });
+  });
+
+  describe('walker hook command', () => {
+    test('registers a hook by { name, fn } and the hook fires on next push', async () => {
+      const { elb, collector } = await startFlow();
+      const prePush = jest.fn((..._args: unknown[]) => undefined);
+
+      await elb('walker hook', {
+        name: 'prePush',
+        fn: prePush,
+      } as never);
+
+      expect(collector.hooks.prePush).toBe(prePush);
+
+      await elb('page view', { title: 'Home' });
+      expect(prePush).toHaveBeenCalled();
+    });
+
+    test('ignores { name, fn } with missing or wrong-typed fields', async () => {
+      const { elb, collector } = await startFlow();
+      const hooksBefore = { ...collector.hooks };
+
+      await elb('walker hook', { name: 'prePush' } as never);
+      await elb('walker hook', { fn: jest.fn() } as never);
+      await elb('walker hook', 'not-an-object' as never);
+
+      expect(collector.hooks).toEqual(hooksBefore);
     });
   });
 });
