@@ -1,8 +1,13 @@
 import baseConfig from '@walkeros/config/jest/node.config';
 
 const config = {
-  maxWorkers: 1,
-  forceExit: true,    // Required: stdin PIPEWRAP handle from process.stdin access keeps Jest alive
+  // 3 workers: CLI bundling suites spawn esbuild's own thread pool, so 4+ oversubscribes.
+  // forceExit removed: no current suite leaves the live stdin pipe open (stdin tests mock/restore
+  // process.stdin; the only live-pipe consumer is the e2e suite, which runs in a child process and
+  // is excluded from the default `test` script). If the PIPEWRAP hang ever returns, fix it at the
+  // source (process.stdin.destroy()/unref() in src/core/stdin.ts, or inject the stream) rather than
+  // forceExit, and keep --detectOpenHandles in CI as a guard.
+  maxWorkers: 3,
   testTimeout: 30000,
   // Transform ESM packages: jsdom 27+ and its dependencies are pure ESM,
   // p-limit 4+ is also pure-ESM and pulls in yocto-queue.

@@ -29,7 +29,10 @@ function getModuleMapper() {
       if (existsSync(pkgJsonPath)) {
         const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
 
-        if (pkg.name?.startsWith('@walkeros/') && existsSync(path.join(fullPath, 'src'))) {
+        if (
+          pkg.name?.startsWith('@walkeros/') &&
+          existsSync(path.join(fullPath, 'src'))
+        ) {
           // Map root export: @walkeros/core → packages/core/src/
           mapper[`^${escapeRegex(pkg.name)}$`] = path.join(fullPath, 'src/');
 
@@ -44,7 +47,8 @@ function getModuleMapper() {
                 existsSync(srcFile + '.tsx') ||
                 existsSync(path.join(srcFile, 'index.ts'))
               ) {
-                mapper[`^${escapeRegex(pkg.name)}/${escapeRegex(subName)}$`] = srcFile;
+                mapper[`^${escapeRegex(pkg.name)}/${escapeRegex(subName)}$`] =
+                  srcFile;
               }
             }
           }
@@ -61,11 +65,11 @@ function getModuleMapper() {
   if (Object.keys(mapper).length === 0) {
     throw new Error(
       `[jest-config] moduleNameMapper is empty — no @walkeros/* packages found.\n` +
-      `  packagesDir: ${packagesDir}\n` +
-      `  scanDir: ${scanDir}\n` +
-      `  scanDir exists: ${existsSync(scanDir)}\n` +
-      `This usually means a stale @walkeros/config copy was loaded from node_modules ` +
-      `instead of the workspace version. Run: npm dedupe @walkeros/config`,
+        `  packagesDir: ${packagesDir}\n` +
+        `  scanDir: ${scanDir}\n` +
+        `  scanDir exists: ${existsSync(scanDir)}\n` +
+        `This usually means a stale @walkeros/config copy was loaded from node_modules ` +
+        `instead of the workspace version. Run: npm dedupe @walkeros/config`,
     );
   }
 
@@ -80,7 +84,10 @@ function getGlobals() {
     const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
     version = pkg.version || '0.0.0';
   } catch (error) {
-    console.warn('Could not read package.json for version injection in tests:', error.message);
+    console.warn(
+      'Could not read package.json for version injection in tests:',
+      error.message,
+    );
   }
 
   return {
@@ -110,17 +117,22 @@ const config = {
   testMatch: ['<rootDir>/**/*.test.(ts|tsx|js|jsx)'],
   moduleFileExtensions: ['js', 'ts', 'tsx', 'mjs', 'json'],
   rootDir: '.',
-  moduleDirectories: ['node_modules', 'src', path.join(packagesDir, 'node_modules')],
+  moduleDirectories: [
+    'node_modules',
+    'src',
+    path.join(packagesDir, 'node_modules'),
+  ],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: getModuleMapper(),
   globals: getGlobals(),
-  
-  // Performance settings - reduced for devcontainer memory constraints
-  maxWorkers: 2,
+
+  // 4 workers (~90MB/worker), memory-bounded. CLI overrides to 3
+  maxWorkers: 4,
+  workerIdleMemoryLimit: '512MB',
   testTimeout: 30000,
   clearMocks: true,
   restoreMocks: true,
-  
+
   // Exclude from module resolution (prevents Haste collisions with cached packages)
   modulePathIgnorePatterns: ['<rootDir>/.tmp', '/dist/'],
 
