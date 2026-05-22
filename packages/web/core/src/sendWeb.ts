@@ -17,7 +17,10 @@ export interface SendWebOptions {
 export interface SendWebOptionsFetch extends SendWebOptions {
   credentials?: 'omit' | 'same-origin' | 'include'; // Add credentials option
   noCors?: boolean; // Add noCors option for fetch transport
+  timeout?: number; // Abort the request after this many ms (default 10000)
 }
+
+const DEFAULT_FETCH_TIMEOUT = 10000;
 
 type SendWebOptionsDynamic<T extends SendWebTransport> = T extends 'fetch'
   ? SendWebOptionsFetch
@@ -54,27 +57,36 @@ export async function sendWebAsFetch(
 ): Promise<SendResponse> {
   const headers = getHeaders(options.headers);
   const body = transformData(data);
+  const timeout = options.timeout ?? DEFAULT_FETCH_TIMEOUT;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   return tryCatchAsync(
     async () => {
-      const response = await fetch(url, {
-        method: options.method || 'POST',
-        headers,
-        keepalive: true,
-        credentials: options.credentials || 'same-origin',
-        mode: options.noCors ? 'no-cors' : 'cors',
-        body,
-      });
+      try {
+        const response = await fetch(url, {
+          method: options.method || 'POST',
+          headers,
+          keepalive: true,
+          credentials: options.credentials || 'same-origin',
+          mode: options.noCors ? 'no-cors' : 'cors',
+          body,
+          signal: controller.signal,
+        });
 
-      const responseData = options.noCors ? '' : await response.text();
+        const responseData = options.noCors ? '' : await response.text();
 
-      return {
-        ok: response.ok,
-        data: responseData,
-        error: response.ok ? undefined : response.statusText,
-      };
+        return {
+          ok: response.ok,
+          data: responseData,
+          error: response.ok ? undefined : response.statusText,
+        };
+      } finally {
+        clearTimeout(timeoutId);
+      }
     },
     (error) => {
+      clearTimeout(timeoutId);
       return {
         ok: false,
         error: (error as Error).message,

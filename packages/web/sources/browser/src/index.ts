@@ -8,7 +8,12 @@ import type {
   BrowserArguments,
 } from './types/elb';
 import { isString } from '@walkeros/core';
-import { initTriggers, processLoadTriggers, ready } from './trigger';
+import {
+  initTriggers,
+  processLoadTriggers,
+  ready,
+  destroyTriggers,
+} from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer, drainNonWalkerEvents } from './elbLayer';
 import { translateToCoreCollector } from './translation';
@@ -164,6 +169,8 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     on: handleEvent,
     init,
     destroy: async () => {
+      // Remove all DOM trigger listeners registered via AbortController
+      destroyTriggers(settings);
       // Cleanup visibility tracking and other resources
       if (actualDocument) {
         destroyVisibilityTracking(

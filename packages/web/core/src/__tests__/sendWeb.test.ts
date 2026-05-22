@@ -157,4 +157,70 @@ describe('sendWeb', () => {
       error: undefined,
     });
   });
+
+  describe('fetch timeout', () => {
+    test('fetch rejects with timeout error when request exceeds timeout', async () => {
+      // Never resolves on its own; rejects only when the signal aborts.
+      const abortingFetch = jest.fn(
+        (_input: URL | RequestInfo, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            signal?.addEventListener('abort', () => {
+              reject(new Error('The operation was aborted.'));
+            });
+          }),
+      );
+      window.fetch = abortingFetch;
+
+      const promise = sendWeb(url, data, {
+        transport: 'fetch',
+        timeout: 50,
+      });
+
+      // Advance fake timers so the AbortController's setTimeout fires.
+      jest.advanceTimersByTime(50);
+
+      const response = await promise;
+
+      expect(response.ok).toBe(false);
+      expect(response.error).toBeDefined();
+    });
+
+    test('fetch uses default timeout when none specified', async () => {
+      const okFetch = jest.fn(
+        () =>
+          Promise.resolve({
+            text: () => Promise.resolve(''),
+            ok: true,
+          }) as Promise<Response>,
+      );
+      window.fetch = okFetch;
+
+      await sendWeb(url, data, { transport: 'fetch' });
+
+      expect(okFetch).toHaveBeenCalledWith(
+        url,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+
+    test('fetch succeeds within timeout', async () => {
+      const okFetch = jest.fn(
+        () =>
+          Promise.resolve({
+            text: () => Promise.resolve(dataStringified),
+            ok: true,
+          }) as Promise<Response>,
+      );
+      window.fetch = okFetch;
+
+      const response = await sendWeb(url, data, {
+        transport: 'fetch',
+        timeout: 5000,
+      });
+
+      expect(response.ok).toBe(true);
+      expect(response.data).toBe(dataStringified);
+    });
+  });
 });

@@ -20,6 +20,9 @@ import { translateToCoreCollector } from './translation';
 
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
+let globalAbortController: AbortController | undefined;
+let pulseIntervals: ReturnType<typeof setInterval>[] = [];
+let waitTimeouts: ReturnType<typeof setTimeout>[] = [];
 
 // Reset function for testing
 export function resetScrollListener() {
@@ -60,7 +63,10 @@ export async function ready(
   };
 
   const scope = settings.scope;
-  if (!scope) { readyFn(); return; }
+  if (!scope) {
+    readyFn();
+    return;
+  }
   const doc = (scope as Element).ownerDocument || (scope as Document);
   if (doc.readyState !== 'loading') {
     readyFn();
@@ -88,18 +94,40 @@ export function initGlobalTrigger(context: Context, settings: Settings): void {
 
   if (!scope) return;
 
+  // Abort any previously registered listeners before re-registering
+  if (globalAbortController) globalAbortController.abort();
+  globalAbortController = new AbortController();
+  const { signal } = globalAbortController;
+
   scope.addEventListener(
     'click',
     tryCatch(function (this: Scope, ev: unknown) {
       triggerClick.call(this, context, ev as MouseEvent);
     }) as EventListener,
+    { signal },
   );
   scope.addEventListener(
     'submit',
     tryCatch(function (this: Scope, ev: unknown) {
       triggerSubmit.call(this, context, ev as SubmitEvent);
     }) as EventListener,
+    { signal },
   );
+}
+
+// Removes all listeners registered via the global AbortController and
+// resets module-level scroll state. Safe to call before any init.
+export function destroyTriggers(settings: Settings): void {
+  if (globalAbortController) {
+    globalAbortController.abort();
+    globalAbortController = undefined;
+  }
+  scrollListener = undefined;
+  scrollElements = [];
+  pulseIntervals.forEach((id) => clearInterval(id));
+  pulseIntervals = [];
+  waitTimeouts.forEach((id) => clearTimeout(id));
+  waitTimeouts = [];
 }
 
 export function initScopeTrigger(context: Context, settings: Settings) {
@@ -203,7 +231,8 @@ function handleActionElem(
 function getComposedTarget(ev: Event): Element | undefined {
   const path = ev.composedPath?.();
   const target = path?.length ? path[0] : ev.target;
-  if (!target || typeof target !== 'object' || !('tagName' in target)) return undefined;
+  if (!target || typeof target !== 'object' || !('tagName' in target))
+    return undefined;
   return target as Element;
 }
 
@@ -219,6 +248,9 @@ function triggerHover(context: Context, elem: HTMLElement) {
       const target = getComposedTarget(ev);
       if (target) handleTrigger(context, target, Triggers.Hover);
     }),
+    globalAbortController
+      ? { signal: globalAbortController.signal }
+      : undefined,
   );
 }
 
@@ -232,13 +264,14 @@ function triggerPulse(
   triggerParams: string = '',
 ) {
   const doc = elem.ownerDocument;
-  setInterval(
+  const intervalId = setInterval(
     () => {
       // Only trigger when tab is active
       if (!doc.hidden) handleTrigger(context, elem, Triggers.Pulse);
     },
     parseInt(triggerParams || '') || 15000,
   );
+  pulseIntervals.push(intervalId);
 }
 
 function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
@@ -261,10 +294,11 @@ function triggerWait(
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
-  setTimeout(
+  const timeoutId = setTimeout(
     () => handleTrigger(context, elem, Triggers.Wait),
     parseInt(triggerParams || '') || 15000,
   );
+  waitTimeouts.push(timeoutId);
 }
 
 function scroll(context: Context, scope: Scope, settings: Settings) {
@@ -312,6 +346,12 @@ function scroll(context: Context, scope: Scope, settings: Settings) {
       scrollElements = scrolling.call(scope, scrollElements, context);
     });
 
-    scope.addEventListener('scroll', scrollListener);
+    scope.addEventListener(
+      'scroll',
+      scrollListener,
+      globalAbortController
+        ? { signal: globalAbortController.signal }
+        : undefined,
+    );
   }
 }
