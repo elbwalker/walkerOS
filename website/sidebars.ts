@@ -121,7 +121,7 @@ const sidebars: SidebarsConfig = {
             type: 'doc',
             id: 'collector/index',
           },
-          items: ['collector/commands'],
+          items: ['collector/commands', 'collector/cache'],
         },
         {
           type: 'category',
@@ -140,7 +140,7 @@ const sidebars: SidebarsConfig = {
               },
               items: ['mapping/value', 'mapping/rule'],
             },
-            'transformers/cache',
+            'transformers/bot',
             'transformers/file',
             'transformers/fingerprint',
             'transformers/create-your-own',
