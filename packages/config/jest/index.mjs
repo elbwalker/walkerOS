@@ -126,8 +126,11 @@ const config = {
   moduleNameMapper: getModuleMapper(),
   globals: getGlobals(),
 
-  // 4 workers (~90MB/worker), memory-bounded. CLI overrides to 3
-  maxWorkers: 4,
+  // Adaptive worker count: 50% of host CPUs so it scales to the machine
+  // (8-core devcontainer -> 4 workers, 2-core CI runner -> 1 worker) instead of
+  // a hardcoded number that oversubscribes small CI runners. Memory-bounded so a
+  // bloated worker is recycled (~90MB/worker measured). CLI overrides to 3.
+  maxWorkers: '50%',
   workerIdleMemoryLimit: '512MB',
   testTimeout: 30000,
   clearMocks: true,
