@@ -1,0 +1,99 @@
+---
+title: Bot detection
+description: Server-side bot and AI-agent annotation
+sidebar_position: 6
+package: '@walkeros/server-transformer-bot'
+---
+
+import data from '@walkeros/server-transformer-bot/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+# Bot detection
+
+<PackageLink
+  env="server"
+  github="packages/server/transformers/bot"
+  npm="@walkeros/server-transformer-bot"
+/>
+
+Annotates events with `user.botScore` (0-99, higher = more bot) and `user.agentScore` (0-99, higher = more AI agent). Optionally writes `user.agentProduct` (matched UA substring). Never drops events — destinations filter via mapping.
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-transformer-bot`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { transformerBot } from '@walkeros/server-transformer-bot';
+
+await startFlow({
+  transformers: {
+    bot: { code: transformerBot },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+<CodeSnippet
+  code={`"transformers": {
+  "bot": {
+    "package": "@walkeros/server-transformer-bot"
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="transformer" data={data} />
+
+## Source prerequisite
+
+The transformer reads `userAgent` from `ctx.ingest` (default path `ingest.userAgent`). The upstream server source must populate it via `config.ingest`. Without it, every event scores 70 (missing-UA baseline).
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "express": {
+      "package": "@walkeros/server-source-express",
+      "config": {
+        "ingest": {
+          "userAgent": "req.headers.user-agent"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Detection layers (v1)
+
+- **isbot** — catches curl, wget, python-requests, headless Chrome defaults, well-known crawlers.
+- **Curated AI agent map** — vendor self-declared UAs across OpenAI (GPTBot, ChatGPT-User, ChatGPT-Agent, OAI-SearchBot), Anthropic (ClaudeBot, Claude-User, Claude-SearchBot, Claude-Code, legacy anthropic-ai), Perplexity, Mistral, Meta (Meta-ExternalAgent, Meta-ExternalFetcher), Google (Google-CloudVertexBot, Google-Extended), Apple (Applebot-Extended), Amazon (Amazonbot), DuckDuckGo (DuckAssistBot), ByteDance (Bytespider), Common Crawl (CCBot).
+
+## Destination filtering recipes
+
+Drop all bots: `event.user.botScore > 50`
+
+Drop crawlers, keep user-action AI: `event.user.botScore > 50 AND event.user.agentProduct NOT LIKE '%-User'`
+
+AI traffic report: `event.user.agentScore > 50`, grouped by `event.user.agentProduct`
+
+## Not in v1
+
+Header consistency heuristics (Sec-Fetch / Sec-CH-UA / Accept-Language), ASN / datacenter-IP, reverse DNS verification, web-side runtime checks, behavioral signals, TLS / JA4. See the README's "Not in v1" section for the full roadmap.
+
+## Limits
+
+Will not catch residential-proxy + stealth Chrome, CAPTCHA-solver farms, or real-browser-as-a-service. For that threat model use a commercial vendor (Cloudflare Bot Management, DataDome, HUMAN).

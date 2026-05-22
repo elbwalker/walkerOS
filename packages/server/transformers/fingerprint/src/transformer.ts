@@ -28,7 +28,7 @@ export const transformerFingerprint: Transformer.Init<
   Transformer.Types<FingerprintSettings>
 > = (context) => {
   const { config } = context;
-  const settings = (config.settings || {}) as Partial<FingerprintSettings>;
+  const settings: Partial<FingerprintSettings> = config.settings ?? {};
   const fields: Mapping.Value[] = settings.fields || [];
   const output: string = settings.output || 'user.hash';
   const length: number | undefined = settings.length;

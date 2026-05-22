@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
-    "@walkeros/config": "^3.0.2",
+    "@walkeros/config": "4.1.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
