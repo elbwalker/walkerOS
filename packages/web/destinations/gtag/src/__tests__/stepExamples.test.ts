@@ -127,7 +127,7 @@ describe('gtag web destination -- step examples', () => {
     ([name]) => !initNames.has(name),
   );
 
-  it.each(stepEntries)('%s', async (_name, example) => {
+  it.each(stepEntries)('%s', async (name, example) => {
     const mapping = example.mapping as Record<string, unknown> | undefined;
     const mappingSettings = (mapping?.settings || {}) as Record<
       string,
@@ -187,8 +187,33 @@ describe('gtag web destination -- step examples', () => {
         bootstrapOut = ga4InitOut;
       }
     } else if (mappingSettings.ads && !mappingSettings.gtm) {
-      bootstrapConfig = adsInitIn;
-      bootstrapOut = adsInitOut;
+      if (name.startsWith('adsEnhancedConversions')) {
+        // Enhanced conversions examples need enhancedConversions on the Ads
+        // settings, which also changes the init config call to carry
+        // { allow_enhanced_conversions: true }.
+        bootstrapConfig = {
+          settings: {
+            ads: {
+              conversionId: 'AW-123456789',
+              currency: 'EUR',
+              enhancedConversions: {
+                email: 'data.customerEmail',
+                phone_number: 'data.customerPhone',
+              },
+            },
+          },
+        };
+        const ecConfigCall: CallRecord = [
+          'gtag',
+          'config',
+          'AW-123456789',
+          { allow_enhanced_conversions: true },
+        ];
+        bootstrapOut = [adsInitOut[0], ecConfigCall];
+      } else {
+        bootstrapConfig = adsInitIn;
+        bootstrapOut = adsInitOut;
+      }
     } else if (mappingSettings.gtm && !mappingSettings.ads) {
       bootstrapConfig = gtmInitIn;
       bootstrapOut = gtmInitOut;

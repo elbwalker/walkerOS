@@ -27,5 +27,9 @@ export function initAds(
   gtag('js', new Date());
 
   // gtag init call
-  gtag('config', conversionId);
+  if (settings.enhancedConversions) {
+    gtag('config', conversionId, { allow_enhanced_conversions: true });
+  } else {
+    gtag('config', conversionId);
+  }
 }

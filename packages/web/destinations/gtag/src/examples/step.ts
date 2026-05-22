@@ -224,6 +224,62 @@ export const googleAdsConversion: Flow.StepExample = {
 };
 
 /**
+ * Google Ads conversion with Enhanced Conversions.
+ * enhancedConversions maps event fields to Google's user_data. The destination
+ * resolves each mapping value and calls gtag('set', 'user_data', {...}) before
+ * gtag('event', 'conversion', {...}).
+ */
+export const adsEnhancedConversions: Flow.StepExample = {
+  title: 'Enhanced conversions',
+  description:
+    'enhancedConversions maps event fields into a gtag set user_data call sent immediately before the conversion event.',
+  in: getEvent('order complete', {
+    timestamp: 1700000109,
+    data: {
+      id: '0rd3r1d',
+      currency: 'EUR',
+      shipping: 5.22,
+      taxes: 73.76,
+      total: 555,
+      customerEmail: 'buyer@shop.com',
+      customerPhone: '+1234567890',
+    },
+  }),
+  mapping: {
+    name: 'PURCHASE_EC2',
+    settings: {
+      ads: { label: 'PURCHASE_EC2' },
+    },
+    data: {
+      map: {
+        value: 'data.total',
+      },
+    },
+  },
+  out: [
+    [
+      'gtag',
+      'set',
+      'user_data',
+      {
+        email: 'buyer@shop.com',
+        phone_number: '+1234567890',
+      },
+    ],
+    [
+      'gtag',
+      'event',
+      'conversion',
+      {
+        send_to: 'AW-123456789/PURCHASE_EC2',
+        currency: 'EUR',
+        value: 555,
+      },
+    ],
+  ],
+};
+
+/**
  * GTM dataLayer push.
  * Shows how settings.gtm triggers a window.dataLayer.push() call
  * with { event: mappedName, ...mappedData }.

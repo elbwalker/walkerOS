@@ -61,3 +61,40 @@ const { elb } = await startFlow({
 />
 
 <Configuration type="destination" data={data} />
+
+## Enhanced conversions
+
+[Enhanced conversions](https://support.google.com/google-ads/answer/9888656)
+improve measurement accuracy by sending first-party customer data (email,
+phone, address) alongside a conversion. The destination calls
+`gtag('set', 'user_data', {...})` immediately before the conversion event, and
+passes `allow_enhanced_conversions: true` at init. Google hashes the data, the
+destination sends it in plain form.
+
+Set `enhancedConversions` on the `ads` settings. It maps event fields to
+Google's `user_data`. Each value is a standard mapping value, so you can pull
+from `event.user`, `event.data`, or anywhere a mapping reaches.
+
+<CodeSnippet
+  code={`{
+  settings: {
+    ads: {
+      conversionId: 'AW-XXXXXXXXX',
+      currency: 'EUR',
+      enhancedConversions: {
+        email: 'data.customerEmail',
+        phone_number: 'data.customerPhone',
+        address: {
+          city: 'data.city',
+          country: 'data.country',
+        },
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+The `address` object accepts `first_name`, `last_name`, `street`, `city`,
+`region`, `postal_code`, and `country`. When no user data resolves, the
+`set user_data` call is skipped and the conversion is sent normally.
