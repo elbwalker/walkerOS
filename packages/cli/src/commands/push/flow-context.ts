@@ -53,10 +53,35 @@ export interface FlowModule {
  * snapshot eval, ESM import with cache bust, error wrapping,
  * global cleanup in finally.
  */
-export async function withFlowContext(
+/**
+ * Default error mapper used by real-push call sites: produces a `PushResult`
+ * error envelope. Simulate call sites override this with a mapper that returns
+ * a `Simulation.Result` instead.
+ */
+function defaultPushError(error: unknown, startTime: number): PushResult {
+  return {
+    success: false,
+    duration: Date.now() - startTime,
+    error: getErrorMessage(error),
+  };
+}
+
+// Real-push call sites: default `PushResult`, no error mapper needed.
+export function withFlowContext(
   options: FlowContextOptions,
   fn: (module: FlowModule) => Promise<PushResult>,
-): Promise<PushResult> {
+): Promise<PushResult>;
+// Simulate call sites: arbitrary result type with an explicit error mapper.
+export function withFlowContext<T>(
+  options: FlowContextOptions,
+  fn: (module: FlowModule) => Promise<T>,
+  onError: (error: unknown, startTime: number) => T,
+): Promise<T>;
+export async function withFlowContext<T>(
+  options: FlowContextOptions,
+  fn: (module: FlowModule) => Promise<T | PushResult>,
+  onError?: (error: unknown, startTime: number) => T,
+): Promise<T | PushResult> {
   const {
     esmPath,
     platform,
@@ -153,7 +178,7 @@ export async function withFlowContext(
       // destinations awaiting an intercepted setTimeout during init don't
       // deadlock (see async-drain-pump.ts for context).
       const stopPump = drainPump ? startDrainPump(timerControl.pending) : null;
-      let result: PushResult;
+      let result: T | PushResult;
       try {
         result = await fn(flowModule);
       } finally {
@@ -173,11 +198,7 @@ export async function withFlowContext(
 
     return await fn(flowModule);
   } catch (error) {
-    return {
-      success: false,
-      duration: Date.now() - startTime,
-      error: getErrorMessage(error),
-    };
+    return (onError ?? defaultPushError)(error, startTime);
   } finally {
     if (timerControl) timerControl.restore();
     if (savedFetch !== undefined) {

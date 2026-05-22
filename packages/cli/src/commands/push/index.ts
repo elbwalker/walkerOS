@@ -20,7 +20,7 @@ import {
   type Platform,
 } from '../../core/index.js';
 
-import type { Flow, Logger, WalkerOS } from '@walkeros/core';
+import type { Flow, Logger, Simulation, WalkerOS } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonConfig } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
@@ -30,6 +30,7 @@ import type { PushOptions } from '../../schemas/push.js';
 import { buildOverrides, type PushOverrides } from './overrides.js';
 import { applyOverrides } from './apply-overrides.js';
 import { withFlowContext } from './flow-context.js';
+import { buildSimulationResult } from './simulation-result.js';
 import { prepareFlow } from './prepare.js';
 import { schemas } from '@walkeros/core/dev';
 import { runPushCommand } from './run.js';
@@ -550,7 +551,7 @@ export async function simulateSource(
   configOrPath: string | Flow.Json,
   input: unknown,
   options: SimulateSourceOptions,
-): Promise<PushResult> {
+): Promise<Simulation.Result> {
   const startTime = Date.now();
 
   // Resolve config: accept either file path or config object
@@ -608,7 +609,7 @@ export async function simulateSource(
 
     const networkCalls: NetworkCall[] = [];
 
-    return await withFlowContext(
+    return await withFlowContext<Simulation.Result>(
       {
         esmPath: prepared.bundlePath,
         platform: prepared.platform,
@@ -633,11 +634,17 @@ export async function simulateSource(
 
         // Capture events at the collector.push boundary via prePush hook.
         // Hook is wired by startFlow (inside createTrigger) before events fire.
-        const captured: Array<{ event: unknown; timestamp: number }> = [];
+        const captured: Array<{
+          event: WalkerOS.DeepPartialEvent;
+          timestamp: number;
+        }> = [];
 
         flowConfig.hooks = {
           ...((flowConfig.hooks as Record<string, unknown>) || {}),
-          prePush: ({ fn }: { fn: Function }, event: unknown) => {
+          prePush: (
+            { fn }: { fn: Function },
+            event: WalkerOS.DeepPartialEvent,
+          ) => {
             captured.push({ event, timestamp: Date.now() });
             return { ok: true }; // Stop propagation — don't call fn
           },
@@ -663,20 +670,28 @@ export async function simulateSource(
           await instance.flow.collector.command('shutdown');
         }
 
-        return {
-          success: true,
-          ...(captured.length > 0 ? { captured } : {}),
-          ...(networkCalls.length > 0 ? { networkCalls } : {}),
-          duration: Date.now() - startTime,
-        };
+        return buildSimulationResult({
+          step: 'source',
+          name: options.sourceId,
+          startTime,
+          captured,
+        });
       },
+      (error) =>
+        buildSimulationResult({
+          step: 'source',
+          name: options.sourceId,
+          startTime,
+          error,
+        }),
     );
   } catch (error) {
-    return {
-      success: false,
-      duration: Date.now() - startTime,
-      error: getErrorMessage(error),
-    };
+    return buildSimulationResult({
+      step: 'source',
+      name: options.sourceId,
+      startTime,
+      error,
+    });
   } finally {
     await prepared.cleanup();
   }
@@ -706,17 +721,18 @@ export async function simulateTransformer(
   configOrPath: string | Flow.Json,
   event: WalkerOS.DeepPartialEvent,
   options: SimulateTransformerOptions,
-): Promise<PushResult> {
+): Promise<Simulation.Result> {
   const startTime = Date.now();
 
   // Validate event with Zod
   const parsed = schemas.PartialEventSchema.safeParse(event);
   if (!parsed.success) {
-    return {
-      success: false,
-      duration: 0,
+    return buildSimulationResult({
+      step: 'transformer',
+      name: options.transformerId,
+      startTime,
       error: parsed.error.message,
-    };
+    });
   }
 
   // Resolve config: accept either file path or config object
@@ -767,7 +783,7 @@ export async function simulateTransformer(
 
     const networkCalls: NetworkCall[] = [];
 
-    return await withFlowContext(
+    return await withFlowContext<Simulation.Result>(
       {
         esmPath: prepared.bundlePath,
         platform: prepared.platform,
@@ -810,9 +826,14 @@ export async function simulateTransformer(
 
         const inputEvent = event;
         const ingest = createIngest(options.transformerId);
-        const captured: Array<{ event: unknown; timestamp: number }> = [];
-
-        captured.push({ event: { ...inputEvent }, timestamp: Date.now() });
+        // Output events only: each entry is a transformer output, or `null`
+        // when the event was dropped. `buildSimulationResult` drops null
+        // entries so a drop yields `events: []` and a passthrough yields
+        // `events: [<event>]`.
+        const captured: Array<{
+          event: WalkerOS.DeepPartialEvent | null;
+          timestamp: number;
+        }> = [];
 
         logger.info(`Simulating transformer: ${options.transformerId}`);
 
@@ -839,11 +860,12 @@ export async function simulateTransformer(
             if (beforeResult === null) {
               captured.push({ event: null, timestamp: Date.now() });
               await collector.command('shutdown');
-              return {
-                success: true,
+              return buildSimulationResult({
+                step: 'transformer',
+                name: options.transformerId,
+                startTime,
                 captured,
-                duration: Date.now() - startTime,
-              };
+              });
             }
             processedEvent = (
               Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
@@ -880,20 +902,28 @@ export async function simulateTransformer(
 
         await collector.command('shutdown');
 
-        return {
-          success: true,
+        return buildSimulationResult({
+          step: 'transformer',
+          name: options.transformerId,
+          startTime,
           captured,
-          ...(networkCalls.length > 0 ? { networkCalls } : {}),
-          duration: Date.now() - startTime,
-        };
+        });
       },
+      (error) =>
+        buildSimulationResult({
+          step: 'transformer',
+          name: options.transformerId,
+          startTime,
+          error,
+        }),
     );
   } catch (error) {
-    return {
-      success: false,
-      duration: Date.now() - startTime,
-      error: getErrorMessage(error),
-    };
+    return buildSimulationResult({
+      step: 'transformer',
+      name: options.transformerId,
+      startTime,
+      error,
+    });
   } finally {
     await prepared.cleanup();
   }
@@ -922,17 +952,18 @@ export async function simulateDestination(
   configOrPath: string | Flow.Json,
   event: WalkerOS.DeepPartialEvent,
   options: SimulateDestinationOptions,
-): Promise<PushResult> {
+): Promise<Simulation.Result> {
   const startTime = Date.now();
 
   // Validate event with Zod
   const parsed = schemas.PartialEventSchema.safeParse(event);
   if (!parsed.success) {
-    return {
-      success: false,
-      duration: 0,
+    return buildSimulationResult({
+      step: 'destination',
+      name: options.destinationId,
+      startTime,
       error: parsed.error.message,
-    };
+    });
   }
 
   // Resolve config: accept either file path or config object
@@ -981,7 +1012,7 @@ export async function simulateDestination(
 
     const networkCalls: NetworkCall[] = [];
 
-    return await withFlowContext(
+    return await withFlowContext<Simulation.Result>(
       {
         esmPath: prepared.bundlePath,
         platform: prepared.platform,
@@ -1062,29 +1093,36 @@ export async function simulateDestination(
 
         // Full pipeline: consent, mapping, enrichment, before chains
         // include filter ensures only the target destination receives the event
-        const elbResult = await collector.push(event, {
+        await collector.push(event, {
           include: [options.destinationId],
         });
 
         await collector.command('shutdown');
 
-        return {
-          success: true,
-          elbResult: elbResult as PushResult['elbResult'],
-          ...(trackedCalls.length > 0
-            ? { usage: { [options.destinationId]: trackedCalls } }
-            : {}),
-          ...(networkCalls.length > 0 ? { networkCalls } : {}),
-          duration: Date.now() - startTime,
-        };
+        return buildSimulationResult({
+          step: 'destination',
+          name: options.destinationId,
+          startTime,
+          usage: trackedCalls.length
+            ? { [options.destinationId]: trackedCalls }
+            : undefined,
+        });
       },
+      (error) =>
+        buildSimulationResult({
+          step: 'destination',
+          name: options.destinationId,
+          startTime,
+          error,
+        }),
     );
   } catch (error) {
-    return {
-      success: false,
-      duration: Date.now() - startTime,
-      error: getErrorMessage(error),
-    };
+    return buildSimulationResult({
+      step: 'destination',
+      name: options.destinationId,
+      startTime,
+      error,
+    });
   } finally {
     await prepared.cleanup();
   }
