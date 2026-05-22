@@ -13,7 +13,7 @@ on:
 
 concurrency:
   group: release
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -28,7 +28,7 @@ jobs:
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
@@ -36,7 +36,7 @@ jobs:
       # so we take it from the runtime rather than self-upgrading a running npm
       # in place (which is fragile). Pin the version; bump it deliberately.
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24.15.0'
           registry-url: 'https://registry.npmjs.org'
@@ -210,14 +210,14 @@ jobs:
         if:
           steps.check-flow.outputs.exists == 'false' ||
           steps.check-cli.outputs.exists == 'false'
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push Flow image
         if: steps.check-flow.outputs.exists == 'false'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: ./packages/cli
           file: ./packages/cli/Dockerfile
@@ -230,7 +230,7 @@ jobs:
 
       - name: Build and push CLI image
         if: steps.check-cli.outputs.exists == 'false'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: ./packages/cli
           file: ./packages/cli/Dockerfile.cli

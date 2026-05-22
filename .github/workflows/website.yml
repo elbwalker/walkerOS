@@ -25,9 +25,9 @@ jobs:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24.15.0'
           cache: 'npm'
@@ -66,10 +66,13 @@ jobs:
 
       - name: Comment PR with preview URL
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}
+          PR_NUM: ${{ github.event.pull_request.number }}
         with:
           script: |
-            const previewUrl = `${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}/preview/pr-${{ github.event.pull_request.number }}/`;
+            const previewUrl = `${process.env.BUNNY_PULLZONE_URL}/preview/pr-${process.env.PR_NUM}/`;
             const body = `### Preview deployed\n\n${previewUrl}`;
 
             // Find existing comment
@@ -103,13 +106,21 @@ jobs:
       - name: Delete preview folder
         run: |
           curl -X DELETE \
-            "https://storage.bunnycdn.com/${{ secrets.BUNNY_WEBSITE_STORAGE_ZONE }}/preview/pr-${{ github.event.pull_request.number }}/" \
-            -H "AccessKey: ${{ secrets.BUNNY_WEBSITE_STORAGE_PASSWORD }}"
-          echo "Deleted preview/pr-${{ github.event.pull_request.number }}/"
+            "https://storage.bunnycdn.com/${BUNNY_STORAGE_ZONE}/preview/pr-${PR_NUMBER}/" \
+            -H "AccessKey: ${BUNNY_STORAGE_PASSWORD}"
+          echo "Deleted preview/pr-${PR_NUMBER}/"
+        env:
+          BUNNY_STORAGE_ZONE: ${{ secrets.BUNNY_WEBSITE_STORAGE_ZONE }}
+          BUNNY_STORAGE_PASSWORD: ${{ secrets.BUNNY_WEBSITE_STORAGE_PASSWORD }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Purge preview cache
         run: |
           curl -X POST \
-            "https://api.bunny.net/purge?url=$(echo '${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}/preview/pr-${{ github.event.pull_request.number }}/*' | jq -sRr @uri)" \
-            -H "AccessKey: ${{ secrets.BUNNY_API_KEY }}"
+            "https://api.bunny.net/purge?url=$(echo "${BUNNY_PULLZONE_URL}/preview/pr-${PR_NUMBER}/*" | jq -sRr @uri)" \
+            -H "AccessKey: ${BUNNY_API_KEY}"
           echo "Cache purged"
+        env:
+          BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}
+          BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
