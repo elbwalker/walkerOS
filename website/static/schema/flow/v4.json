@@ -1279,6 +1279,96 @@
             "type": "string"
           },
           "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "package": {
+                "description": "Package specifier with optional version (e.g., \"@walkeros/web-source-browser@2.0.0\")",
+                "type": "string",
+                "minLength": 1
+              },
+              "code": {
+                "description": "Inline code definition (object form). For a named export from a package, use `import` instead.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowCode"
+                  }
+                ]
+              },
+              "import": {
+                "description": "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+                "type": "string",
+                "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
+              },
+              "config": {
+                "description": "Source-specific configuration object",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowSourceConfig"
+                  }
+                ]
+              },
+              "env": {
+                "description": "Source environment configuration",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowSourceEnv"
+                  }
+                ]
+              },
+              "primary": {
+                "description": "Mark as primary source (provides main elb). Only one source should be primary.",
+                "type": "boolean"
+              },
+              "variables": {
+                "description": "Source-level variables (highest priority in cascade)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowVariables"
+                  }
+                ]
+              },
+              "next": {
+                "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Route"
+                  }
+                ]
+              },
+              "before": {
+                "description": "Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Route"
+                  }
+                ]
+              },
+              "examples": {
+                "description": "Named step examples for testing and documentation (stripped during bundling)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowStepExamples"
+                  }
+                ]
+              },
+              "cache": {
+                "description": "Cache configuration for this source (match → key → ttl rules)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/EventCacheConfig"
+                  }
+                ]
+              },
+              "validate": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Validate"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "title": "Flow.Source",
             "description": "Source package reference with configuration",
             "allOf": [
               {
@@ -1294,6 +1384,92 @@
             "type": "string"
           },
           "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "package": {
+                "description": "Package specifier with optional version (e.g., \"@walkeros/web-destination-gtag@2.0.0\")",
+                "type": "string",
+                "minLength": 1
+              },
+              "code": {
+                "description": "Inline code definition (object form). For a named export from a package, use `import` instead.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowCode"
+                  }
+                ]
+              },
+              "import": {
+                "description": "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+                "type": "string",
+                "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
+              },
+              "config": {
+                "description": "Destination-specific configuration object",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowDestinationConfig"
+                  }
+                ]
+              },
+              "env": {
+                "description": "Destination environment configuration",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowDestinationEnv"
+                  }
+                ]
+              },
+              "variables": {
+                "description": "Destination-level variables (highest priority in cascade)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowVariables"
+                  }
+                ]
+              },
+              "before": {
+                "description": "Post-collector transformer chain. String, string[], or Route[] for conditional routing. `many` is not valid here — use multiple destinations for post-collector fan-out.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/RouteWithoutMany"
+                  }
+                ]
+              },
+              "next": {
+                "description": "Post-push transformer chain. Push response available at context.ingest._response. `many` is not valid here — use multiple destinations for post-collector fan-out.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/RouteWithoutMany"
+                  }
+                ]
+              },
+              "examples": {
+                "description": "Named step examples for testing and documentation (stripped during bundling)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowStepExamples"
+                  }
+                ]
+              },
+              "cache": {
+                "description": "Cache configuration for this destination (match → key → ttl rules)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/EventCacheConfig"
+                  }
+                ]
+              },
+              "validate": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Validate"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "title": "Flow.Destination",
             "description": "Destination package reference with configuration",
             "allOf": [
               {
@@ -1309,6 +1485,92 @@
             "type": "string"
           },
           "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "package": {
+                "description": "Package specifier with optional version (e.g., \"@walkeros/transformer-enricher@1.0.0\")",
+                "type": "string",
+                "minLength": 1
+              },
+              "code": {
+                "description": "Inline code definition (object form). For a named export from a package, use `import` instead.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowCode"
+                  }
+                ]
+              },
+              "import": {
+                "description": "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+                "type": "string",
+                "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
+              },
+              "config": {
+                "description": "Transformer-specific configuration object",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowTransformerConfig"
+                  }
+                ]
+              },
+              "env": {
+                "description": "Transformer environment configuration",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowTransformerEnv"
+                  }
+                ]
+              },
+              "before": {
+                "description": "Pre-transformer chain. Runs before this transformer push function.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Route"
+                  }
+                ]
+              },
+              "next": {
+                "description": "Next transformer in chain. String, string[], or Route[] for conditional routing.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Route"
+                  }
+                ]
+              },
+              "variables": {
+                "description": "Transformer-level variables (highest priority in cascade)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowVariables"
+                  }
+                ]
+              },
+              "examples": {
+                "description": "Named step examples for testing and documentation (stripped during bundling)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowStepExamples"
+                  }
+                ]
+              },
+              "cache": {
+                "description": "Cache configuration for this transformer (match → key → ttl rules)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/EventCacheConfig"
+                  }
+                ]
+              },
+              "validate": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Validate"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "title": "Flow.Transformer",
             "description": "Transformer package reference with configuration",
             "allOf": [
               {
@@ -1324,6 +1586,69 @@
             "type": "string"
           },
           "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "package": {
+                "description": "Store package specifier with optional version",
+                "type": "string",
+                "minLength": 1
+              },
+              "code": {
+                "description": "Inline code definition (object form). For a named export from a package, use `import` instead.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowCode"
+                  }
+                ]
+              },
+              "import": {
+                "description": "Named export from `package` to import as this step's implementation. Top-level identifier only. Requires `package`. Mutually exclusive with `code`.",
+                "type": "string",
+                "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
+              },
+              "config": {
+                "description": "Store-specific configuration object",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowStoreConfig"
+                  }
+                ]
+              },
+              "env": {
+                "description": "Store environment configuration",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowStoreEnv"
+                  }
+                ]
+              },
+              "cache": {
+                "description": "Cache configuration for this store (TTL-only rules, optional recursive `cache.store`)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/StoreCacheConfig"
+                  }
+                ]
+              },
+              "variables": {
+                "description": "Store-level variables (highest priority in cascade)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowVariables"
+                  }
+                ]
+              },
+              "examples": {
+                "description": "Named step examples for testing and documentation (stripped during bundling)",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowStepExamples"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "title": "Flow.Store",
             "description": "Store package reference with configuration",
             "allOf": [
               {
