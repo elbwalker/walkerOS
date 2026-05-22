@@ -106,6 +106,30 @@ describe('Server Destination Meta', () => {
     expect(requestBody.test_event_code).toEqual('TEST');
   });
 
+  test('access token sent in Authorization header, not URL', async () => {
+    const event = getEvent();
+    const config: Config = {
+      settings: { accessToken, pixelId },
+    };
+
+    await destination.push(
+      event,
+      createMockContext({
+        config,
+        env: testEnv,
+        id: 'test-meta',
+      }),
+    );
+
+    expect(mockSendServer).toHaveBeenCalled();
+    const url = mockSendServer.mock.calls[0][0];
+    const options = mockSendServer.mock.calls[0][2];
+
+    expect(url).not.toContain('access_token');
+    expect(url).not.toContain(accessToken);
+    expect(options.headers.Authorization).toBe(`Bearer ${accessToken}`);
+  });
+
   test('environment customization', async () => {
     const customSendServer = jest.fn();
     customSendServer.mockResolvedValue({ ok: true, data: {} });

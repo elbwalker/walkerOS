@@ -78,10 +78,11 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = env?.sendServer || sendServer;
-  const result = await sendServerFn(
-    `${endpoint}?access_token=${accessToken}`,
-    JSON.stringify(body),
-  );
+  const result = await sendServerFn(endpoint, JSON.stringify(body), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
 
   logger.debug('Meta API response', {
     ok: isObject(result) ? result.ok : true,
