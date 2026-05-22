@@ -80,11 +80,24 @@ describe('project_manage tool', () => {
         structuredContent: { projects: unknown[] };
       };
 
-      expect(listProjects).toHaveBeenCalled();
+      expect(listProjects).toHaveBeenCalledWith({
+        cursor: undefined,
+        limit: undefined,
+      });
       expect(result.structuredContent.projects).toEqual([
         { id: 'proj_1', name: '<user_data>My Project</user_data>' },
         { id: 'proj_2', name: '<user_data>Another Project</user_data>' },
       ]);
+    });
+
+    it('forwards cursor and limit to listProjects', async () => {
+      const listProjects = jest.fn().mockResolvedValue({ projects: [] });
+      registerProjectManageTool(server as never, stubClient({ listProjects }));
+
+      const tool = server.getTool('project_manage')!;
+      await tool.handler({ action: 'list', cursor: 'abc', limit: 10 });
+
+      expect(listProjects).toHaveBeenCalledWith({ cursor: 'abc', limit: 10 });
     });
 
     it('hints to create when projects list is empty', async () => {

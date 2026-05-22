@@ -1,12 +1,12 @@
 /**
- * Task 6: Size budget regression test.
+ * Size budget regression test.
  *
  * Guards against two regressions at once:
- *   1. Size blow-up: the cdn IIFE must stay within the baseline budget.
+ *   1. Size blow-up: the cdn IIFE must stay within the budget.
  *   2. Dev/zod leakage: the cdn and cdn-skeleton outputs must be free of any
  *      runtime-schema / zod markers that would indicate dev imports snuck in.
  *
- * Baseline: CDN direct IIFE = 70,560 bytes (clean). Budget = baseline × 1.15.
+ * Baseline: CDN direct IIFE = 70,560 bytes. Budget = baseline × 1.10.
  */
 import { readFile, mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -15,11 +15,11 @@ import { join } from 'path';
 import { bundle } from '../../../commands/bundle/index.js';
 import { MINIMAL_FLOW } from '../../fixtures/minimal-flow.js';
 
-// Clean CDN IIFE baseline (70,560 bytes) × 1.15 headroom. The baseline covers
-// the minimal web flow: core + collector (event engine, mapping, cache,
-// consent, spans) plus the browser source and api destination. This guards
-// against sudden growth; bump it deliberately only when a real feature lands.
-const SIZE_BUDGET_BYTES = 81144;
+// Current CDN IIFE size is 70,560 bytes for the minimal web flow: core +
+// collector (event engine, mapping, cache, consent, spans) plus the browser
+// source and api destination. Budget = 70,560 × 1.10 headroom. Guards against
+// sudden growth; bump it deliberately only when a real feature lands.
+const SIZE_BUDGET_BYTES = 77616;
 
 describe('CDN bundle size budget', () => {
   let tmpDir: string;

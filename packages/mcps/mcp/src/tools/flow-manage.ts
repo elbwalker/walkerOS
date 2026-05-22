@@ -127,6 +127,19 @@ const inputSchema = {
     .boolean()
     .optional()
     .describe('Include soft-deleted flows in list results.'),
+  cursor: z
+    .string()
+    .optional()
+    .describe(
+      'Pagination cursor from a previous list response. Only used with the list action.',
+    ),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .optional()
+    .describe('Max items per page (1-100). Only used with the list action.'),
   previewId: z
     .string()
     .optional()
@@ -183,6 +196,8 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
     sort,
     order,
     includeDeleted,
+    cursor,
+    limit,
     previewId,
     flowName,
     flowSettingsId,
@@ -208,6 +223,8 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
     sort?: 'name' | 'updated_at' | 'created_at';
     order?: 'asc' | 'desc';
     includeDeleted?: boolean;
+    cursor?: string;
+    limit?: number;
     previewId?: string;
     flowName?: string;
     flowSettingsId?: string;
@@ -222,6 +239,8 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
             sort,
             order,
             includeDeleted,
+            cursor,
+            limit,
           });
           const dataObj = data as { flows?: Array<{ name?: string }> };
           const flows = dataObj.flows;
@@ -234,6 +253,8 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           sort,
           order,
           includeDeleted,
+          cursor,
+          limit,
         });
         const safe = Array.isArray(data)
           ? (data as Array<{ name?: string }>).map(safeSummary)

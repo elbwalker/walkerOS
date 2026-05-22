@@ -20,6 +20,9 @@ export const mockProject = {
   role: 'owner' as const,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
+  memberCount: 1,
+  flowCount: 0,
+  deploymentCount: 0,
 } satisfies ProjectResponse;
 
 export const mockFlow = {
@@ -47,7 +50,11 @@ export const handlers = [
 
   // Projects
   http.get('*/api/projects', () => {
-    const body: ProjectsResponse = { projects: [mockProject], total: 1 };
+    const body: ProjectsResponse = {
+      projects: [mockProject],
+      total: 1,
+      nextCursor: null,
+    };
     return HttpResponse.json(body);
   }),
   http.post('*/api/projects', async ({ request }) => {
@@ -84,6 +91,7 @@ export const handlers = [
         },
       ],
       total: 1,
+      nextCursor: null,
     };
     return HttpResponse.json(body);
   }),

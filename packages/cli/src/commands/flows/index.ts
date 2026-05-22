@@ -27,6 +27,8 @@ export interface ListFlowsOptions {
   sort?: 'name' | 'updated_at' | 'created_at';
   order?: 'asc' | 'desc';
   includeDeleted?: boolean;
+  cursor?: string;
+  limit?: number;
 }
 
 export async function listFlows(options: ListFlowsOptions = {}) {
@@ -39,6 +41,8 @@ export async function listFlows(options: ListFlowsOptions = {}) {
         sort: options.sort,
         order: options.order,
         include_deleted: options.includeDeleted ? 'true' : undefined,
+        cursor: options.cursor,
+        limit: options.limit,
       },
     },
   });

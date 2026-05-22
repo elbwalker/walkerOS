@@ -19,7 +19,7 @@ import type {
  */
 export interface ToolClient {
   // Projects
-  listProjects(): Promise<unknown>;
+  listProjects(options?: { cursor?: string; limit?: number }): Promise<unknown>;
   getProject(options: { projectId?: string }): Promise<unknown>;
   createProject(options: { name: string }): Promise<unknown>;
   updateProject(options: {
@@ -35,6 +35,8 @@ export interface ToolClient {
     sort?: string;
     order?: 'asc' | 'desc';
     includeDeleted?: boolean;
+    cursor?: string;
+    limit?: number;
   }): Promise<unknown>;
   listFlows(options: ListFlowsOptions): Promise<unknown>;
   getFlow(options: {

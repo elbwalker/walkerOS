@@ -29,7 +29,11 @@ import { mockProject } from '../../helpers/msw-handlers.js';
 describe('projects (integration via MSW)', () => {
   it('listProjects returns typed project list', async () => {
     const result = await listProjects();
-    expect(result).toEqual({ projects: [mockProject], total: 1 });
+    expect(result).toEqual({
+      projects: [mockProject],
+      total: 1,
+      nextCursor: null,
+    });
   });
 
   it('getProject returns a single project', async () => {

@@ -6,9 +6,16 @@ import type { GlobalOptions } from '../../types/global.js';
 
 // === Programmatic API ===
 
-export async function listProjects() {
+export interface ListProjectsOptions {
+  cursor?: string;
+  limit?: number;
+}
+
+export async function listProjects(options: ListProjectsOptions = {}) {
   const client = createApiClient();
-  const { data, error } = await client.GET('/api/projects');
+  const { data, error } = await client.GET('/api/projects', {
+    params: { query: { cursor: options.cursor, limit: options.limit } },
+  });
   if (error) throw new Error(error.error?.message || 'Failed to list projects');
   return data;
 }
