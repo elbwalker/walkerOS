@@ -52,6 +52,7 @@
     "build:watch": "npm run build -- --watch",
     "test": "jest",
     "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "start": "run-p build:watch \"storybook --quiet\"",
     "prerelease": "zx scripts/prepublish-checks.js",

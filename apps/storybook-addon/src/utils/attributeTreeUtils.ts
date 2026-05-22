@@ -35,6 +35,18 @@ const generateElementHTML = (element: Element): string => {
   return `<${tagName}\n${formattedAttribs}\n></${tagName}>`;
 };
 
+// Convert a Properties map (values may be undefined) into a Property
+// object shape (values are all defined). Used when nesting a Properties
+// result as a single value in another Properties map.
+const toPropertyObject = (props: WalkerOS.Properties): WalkerOS.Property => {
+  const out: { [key: string]: WalkerOS.Property } = {};
+  for (const key of Object.keys(props)) {
+    const value = props[key];
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+};
+
 // Build attribute tree structure
 export const buildAttributeTree = (
   scope: Element,
@@ -107,7 +119,9 @@ export const buildAttributeTree = (
       if (attr.name.startsWith(`${prefix}-`)) {
         const propName = attr.name.substring(prefix.length + 1);
         try {
-          properties[propName] = getElbValues(prefix, el, propName, true);
+          properties[propName] = toPropertyObject(
+            getElbValues(prefix, el, propName, true),
+          );
         } catch (e) {
           // If parsing fails, just store the raw value
           properties[propName] = attr.value;
