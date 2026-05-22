@@ -235,7 +235,7 @@ export const RulePatchSchema = z
   .object({
     name: z.string().nullable().optional(),
     data: z.union([ValueSchema, ValuesSchema]).nullable().optional(),
-    settings: z.any().optional(),
+    settings: z.unknown().nullable().optional(),
     condition: z.string().nullable().optional(),
     consent: ConsentSchema.nullable().optional(),
     policy: PolicySchema.nullable().optional(),
@@ -288,7 +288,7 @@ export const RuleSchema = z
       .optional()
       .describe('Data transformation rules for event'),
     settings: z
-      .any()
+      .unknown()
       .optional()
       .describe('Destination-specific settings for this event mapping'),
     condition: z

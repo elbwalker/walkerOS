@@ -280,6 +280,32 @@ export const ValidateSchema = z
 // ========================================
 
 /**
+ * Cross-field rules shared by every step (source / destination / transformer /
+ * store): `import` names an export from `package`, so it requires `package` and
+ * cannot be combined with inline `code`. Enforced here because these are
+ * relationships between fields that a flat object schema cannot express on its
+ * own, so without it an invalid step would pass validation and fail at resolve.
+ */
+function checkImportCode(
+  value: { package?: string; code?: unknown; import?: string },
+  ctx: z.RefinementCtx,
+): void {
+  if (value.import === undefined) return;
+  if (value.code !== undefined)
+    ctx.addIssue({
+      code: 'custom',
+      message: '`import` cannot be combined with inline `code`',
+      path: ['import'],
+    });
+  if (value.package === undefined)
+    ctx.addIssue({
+      code: 'custom',
+      message: '`import` requires `package`',
+      path: ['import'],
+    });
+}
+
+/**
  * Source reference schema (Flow.Source).
  *
  * @remarks
@@ -364,7 +390,8 @@ export const SourceSchema = z
     description:
       'Source package reference with configuration, env, chains, and examples.',
   })
-  .describe('Source package reference with configuration');
+  .describe('Source package reference with configuration')
+  .superRefine(checkImportCode);
 
 /**
  * Transformer reference schema (Flow.Transformer).
@@ -432,7 +459,8 @@ export const TransformerSchema = z
     description:
       'Transformer package reference with configuration, env, chains, and cache.',
   })
-  .describe('Transformer package reference with configuration');
+  .describe('Transformer package reference with configuration')
+  .superRefine(checkImportCode);
 
 /**
  * Destination reference schema (Flow.Destination).
@@ -507,7 +535,8 @@ export const DestinationSchema = z
     description:
       'Destination package reference with configuration, env, chains, and cache.',
   })
-  .describe('Destination package reference with configuration');
+  .describe('Destination package reference with configuration')
+  .superRefine(checkImportCode);
 
 /**
  * Store reference schema (Flow.Store).
@@ -577,7 +606,8 @@ export const StoreSchema = z
     description:
       'Store package reference with configuration, env, cache, and examples.',
   })
-  .describe('Store package reference with configuration');
+  .describe('Store package reference with configuration')
+  .superRefine(checkImportCode);
 
 // ========================================
 // Contract Schemas

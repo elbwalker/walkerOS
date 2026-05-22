@@ -57,10 +57,16 @@ export interface Rule<Settings = unknown> {
 
 /**
  * A partial Rule used by `Rule.extend`. Every field is optional, and a
- * `null` value clears the inherited field (JSON merge-patch delete).
+ * `null` value clears the inherited field (JSON merge-patch delete). The
+ * control fields `extend` and `remove` are excluded: a patch models only
+ * direct rule fields, matching what the runtime patch schema accepts.
  */
+type RulePatchFields<Settings = unknown> = Omit<
+  Rule<Settings>,
+  'extend' | 'remove'
+>;
 export type RulePatch<Settings = unknown> = {
-  [K in keyof Rule<Settings>]?: Rule<Settings>[K] | null;
+  [K in keyof RulePatchFields<Settings>]?: RulePatchFields<Settings>[K] | null;
 };
 
 export interface Result {

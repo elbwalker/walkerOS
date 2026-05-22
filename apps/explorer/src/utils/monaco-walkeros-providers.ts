@@ -134,36 +134,49 @@ export function registerWalkerOSProviders(
 
         const entries: CompletionEntry[] = [];
 
+        // Single scope gate shared by the explicit `$kind.` branches and the
+        // open-`$` fallback. An explicit ref prefix that is not allowed at this
+        // location yields no suggestions, matching the Form fields' behavior so
+        // filtering is consistent however the ref is typed.
+        const subPath = getJsonPathAtOffset(fullText, offset);
+        const kinds = allowedRefKinds(context.nodeType, subPath);
+
         if (
           textBeforeCursor.includes('$var.') ||
           textBeforeCursor.endsWith('"$var')
         ) {
+          if (!kinds.includes('var')) return { suggestions: [] };
           entries.push(...getVariableCompletions(context.variables));
         } else if (
           textBeforeCursor.includes('$secret.') ||
           textBeforeCursor.endsWith('"$secret')
         ) {
+          if (!kinds.includes('secret')) return { suggestions: [] };
           entries.push(...getSecretCompletions(context.secrets));
         } else if (
           textBeforeCursor.includes('$store.') ||
           textBeforeCursor.endsWith('"$store')
         ) {
+          if (!kinds.includes('store')) return { suggestions: [] };
           entries.push(...getStoreCompletions(context.stores));
         } else if (
           textBeforeCursor.includes('$flow.') ||
           textBeforeCursor.endsWith('"$flow')
         ) {
+          if (!kinds.includes('flow')) return { suggestions: [] };
           entries.push(...getFlowCompletions(context.flows));
         } else if (
           textBeforeCursor.includes('$env.') ||
           textBeforeCursor.endsWith('"$env')
         ) {
+          if (!kinds.includes('env')) return { suggestions: [] };
           entries.push(...getEnvCompletions(context.envNames));
         } else if (
           (textBeforeCursor.includes('$contract.') ||
             textBeforeCursor.endsWith('"$contract')) &&
           isAtContractValueStart(model, position)
         ) {
+          if (!kinds.includes('contract')) return { suggestions: [] };
           // Extract the partial path typed so far after the "$contract."
           // prefix. This is a UI extraction helper (looser character class
           // than REF_CONTRACT because the user may be mid-typing), so it
@@ -187,11 +200,8 @@ export function registerWalkerOSProviders(
           textBeforeCursor.endsWith('"$') ||
           textBeforeCursor.endsWith('"')
         ) {
-          // Gate the open `$` fallback by the same pure scope rule the Form
-          // fields use: derive the subPath at the cursor, then offer only the
-          // ref kinds allowed at that location.
-          const subPath = getJsonPathAtOffset(fullText, offset);
-          const kinds = allowedRefKinds(context.nodeType, subPath);
+          // Open `$`: reuse the scope gate computed above and offer every ref
+          // kind allowed at this location.
           if (kinds.includes('var'))
             entries.push(...getVariableCompletions(context.variables));
           if (kinds.includes('secret'))

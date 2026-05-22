@@ -83,6 +83,29 @@ describe('byPath', () => {
     it('returns the value unchanged when it is not an object', () => {
       expect(deleteByPath<string>('scalar', 'a')).toBe('scalar');
     });
+    it('removes an object field nested inside an array', () => {
+      expect(
+        deleteByPath(
+          { items: [{ id: 'a', secret: 'x' }, { id: 'b' }] },
+          'items.0.secret',
+        ),
+      ).toEqual({ items: [{ id: 'a' }, { id: 'b' }] });
+    });
+    it('splices an array element by index instead of leaving a hole', () => {
+      expect(deleteByPath({ items: ['a', 'b', 'c'] }, 'items.1')).toEqual({
+        items: ['a', 'c'],
+      });
+    });
+    it('is a no-op for an out-of-range array index', () => {
+      expect(deleteByPath({ items: ['a', 'b'] }, 'items.5')).toEqual({
+        items: ['a', 'b'],
+      });
+    });
+    it('is a no-op for a non-numeric segment on an array', () => {
+      expect(deleteByPath({ items: ['a', 'b'] }, 'items.foo')).toEqual({
+        items: ['a', 'b'],
+      });
+    });
   });
 
   describe('getByPath cross-realm', () => {
