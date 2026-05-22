@@ -20,6 +20,7 @@ import {
   type CompletionEntry,
 } from './monaco-walkeros-completions';
 import { getJsonPathAtOffset } from './monaco-json-path';
+import { allowedRefKinds } from './allowed-ref-kinds';
 import { detectMappingContext } from './mapping-context-detector';
 import {
   detectChainRefContext,
@@ -133,36 +134,49 @@ export function registerWalkerOSProviders(
 
         const entries: CompletionEntry[] = [];
 
+        // Single scope gate shared by the explicit `$kind.` branches and the
+        // open-`$` fallback. An explicit ref prefix that is not allowed at this
+        // location yields no suggestions, matching the Form fields' behavior so
+        // filtering is consistent however the ref is typed.
+        const subPath = getJsonPathAtOffset(fullText, offset);
+        const kinds = allowedRefKinds(context.nodeType, subPath);
+
         if (
           textBeforeCursor.includes('$var.') ||
           textBeforeCursor.endsWith('"$var')
         ) {
+          if (!kinds.includes('var')) return { suggestions: [] };
           entries.push(...getVariableCompletions(context.variables));
         } else if (
           textBeforeCursor.includes('$secret.') ||
           textBeforeCursor.endsWith('"$secret')
         ) {
+          if (!kinds.includes('secret')) return { suggestions: [] };
           entries.push(...getSecretCompletions(context.secrets));
         } else if (
           textBeforeCursor.includes('$store.') ||
           textBeforeCursor.endsWith('"$store')
         ) {
+          if (!kinds.includes('store')) return { suggestions: [] };
           entries.push(...getStoreCompletions(context.stores));
         } else if (
           textBeforeCursor.includes('$flow.') ||
           textBeforeCursor.endsWith('"$flow')
         ) {
+          if (!kinds.includes('flow')) return { suggestions: [] };
           entries.push(...getFlowCompletions(context.flows));
         } else if (
           textBeforeCursor.includes('$env.') ||
           textBeforeCursor.endsWith('"$env')
         ) {
+          if (!kinds.includes('env')) return { suggestions: [] };
           entries.push(...getEnvCompletions(context.envNames));
         } else if (
           (textBeforeCursor.includes('$contract.') ||
             textBeforeCursor.endsWith('"$contract')) &&
           isAtContractValueStart(model, position)
         ) {
+          if (!kinds.includes('contract')) return { suggestions: [] };
           // Extract the partial path typed so far after the "$contract."
           // prefix. This is a UI extraction helper (looser character class
           // than REF_CONTRACT because the user may be mid-typing), so it
@@ -186,12 +200,20 @@ export function registerWalkerOSProviders(
           textBeforeCursor.endsWith('"$') ||
           textBeforeCursor.endsWith('"')
         ) {
-          entries.push(...getVariableCompletions(context.variables));
-          entries.push(...getSecretCompletions(context.secrets));
-          entries.push(...getStoreCompletions(context.stores));
-          entries.push(...getFlowCompletions(context.flows));
-          entries.push(...getEnvCompletions(context.envNames));
-          entries.push(...getContractCompletions(context.contractRaw, []));
+          // Open `$`: reuse the scope gate computed above and offer every ref
+          // kind allowed at this location.
+          if (kinds.includes('var'))
+            entries.push(...getVariableCompletions(context.variables));
+          if (kinds.includes('secret'))
+            entries.push(...getSecretCompletions(context.secrets));
+          if (kinds.includes('store'))
+            entries.push(...getStoreCompletions(context.stores));
+          if (kinds.includes('flow'))
+            entries.push(...getFlowCompletions(context.flows));
+          if (kinds.includes('env'))
+            entries.push(...getEnvCompletions(context.envNames));
+          if (kinds.includes('contract'))
+            entries.push(...getContractCompletions(context.contractRaw, []));
         }
 
         // Mapping value path completions (data., globals., user., etc.)

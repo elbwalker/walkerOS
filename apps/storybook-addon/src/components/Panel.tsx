@@ -1,4 +1,4 @@
-import type { WalkerOSAddon, AttributeNode } from '../types';
+import type { AttributeNode } from '../types';
 import type { WalkerOS } from '@walkeros/core';
 import React, { Fragment, memo, useCallback, useEffect, useState } from 'react';
 import {
@@ -25,7 +25,6 @@ import { formatEventTitle } from '../utils/formatEventTitle';
 
 interface PanelProps {
   active: boolean;
-  walkerOSAddon: WalkerOSAddon;
 }
 
 export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {

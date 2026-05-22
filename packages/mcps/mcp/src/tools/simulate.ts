@@ -4,10 +4,10 @@ import {
   simulateTransformer,
   simulateDestination,
 } from '@walkeros/cli';
-import type { PushResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
+import type { Simulation, WalkerOS } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
 
 import type { ToolSpec } from '../tool-spec.js';
@@ -116,7 +116,7 @@ async function flowSimulateHandlerBody(input: unknown) {
     const stepType = step.substring(0, dotIndex);
     const stepId = step.substring(dotIndex + 1);
 
-    let result: PushResult;
+    let result: Simulation.Result;
 
     switch (stepType) {
       case 'source':
@@ -130,7 +130,7 @@ async function flowSimulateHandlerBody(input: unknown) {
       case 'transformer':
         result = await simulateTransformer(
           configPath,
-          resolvedEvent as import('@walkeros/core').WalkerOS.DeepPartialEvent,
+          resolvedEvent as WalkerOS.DeepPartialEvent,
           {
             transformerId: stepId,
             flow,
@@ -142,7 +142,7 @@ async function flowSimulateHandlerBody(input: unknown) {
       case 'destination':
         result = await simulateDestination(
           configPath,
-          resolvedEvent as import('@walkeros/core').WalkerOS.DeepPartialEvent,
+          resolvedEvent as WalkerOS.DeepPartialEvent,
           {
             destinationId: stepId,
             flow,
@@ -157,17 +157,20 @@ async function flowSimulateHandlerBody(input: unknown) {
         );
     }
 
-    // Source simulation returns captured events
-    if (result.captured && result.captured.length > 0) {
-      const eventCount = result.captured.length;
+    const success = !result.error;
+    const errorMessage = result.error?.message;
+
+    // Source simulation: captured events are result.events
+    if (result.step === 'source') {
+      const eventCount = result.events.length;
       const summary = `Source captured ${eventCount} event${eventCount !== 1 ? 's' : ''}`;
 
       return mcpResult(
         {
-          success: result.success,
-          error: result.error,
+          success,
+          error: errorMessage,
           summary,
-          capturedEvents: result.captured,
+          capturedEvents: result.events,
           duration: result.duration,
         },
         {
@@ -183,35 +186,33 @@ async function flowSimulateHandlerBody(input: unknown) {
       );
     }
 
-    // Destination/transformer simulation
+    // Transformer simulation: surface the transformed events
+    if (result.step === 'transformer') {
+      return mcpResult(
+        {
+          success,
+          error: errorMessage,
+          summary: `Transformer processed event`,
+          capturedEvents: result.events,
+          duration: result.duration,
+        },
+        {
+          next: ['Use flow_bundle to build for production'],
+        },
+      );
+    }
+
+    // Destination simulation: count intercepted env calls, key by step name
     const destinations: Record<string, DestinationSummary> = {};
-
-    // Build destinations summary from elbResult.done
-    if (
-      result.elbResult &&
-      typeof result.elbResult === 'object' &&
-      'done' in result.elbResult &&
-      result.elbResult.done
-    ) {
-      const done = result.elbResult.done as Record<string, unknown>;
-      for (const name of Object.keys(done)) {
-        destinations[name] = { received: true, calls: 0 };
-      }
+    const callCount = result.calls.length;
+    const destSummary: DestinationSummary = {
+      received: callCount > 0,
+      calls: callCount,
+    };
+    if (verbose && callCount > 0) {
+      destSummary.payload = result.calls;
     }
-
-    // Also check usage (call tracking from mock envs)
-    if (result.usage) {
-      for (const [name, calls] of Object.entries(result.usage)) {
-        const summary: DestinationSummary = {
-          received: calls.length > 0,
-          calls: calls.length,
-        };
-        if (verbose && calls.length > 0) {
-          summary.payload = calls;
-        }
-        destinations[name] = summary;
-      }
-    }
+    destinations[result.name] = destSummary;
 
     const destCount = Object.keys(destinations).length;
     const receivedCount = Object.values(destinations).filter(
@@ -219,7 +220,7 @@ async function flowSimulateHandlerBody(input: unknown) {
     ).length;
 
     const warnings: string[] = [];
-    if (stepType === 'destination' && destCount === 0) {
+    if (receivedCount === 0) {
       warnings.push(
         'Destination did not receive the event. Common causes: ' +
           '(1) destination config has consent: { marketing: true } but event lacks matching consent, ' +
@@ -229,16 +230,11 @@ async function flowSimulateHandlerBody(input: unknown) {
       );
     }
 
-    const summary =
-      stepType === 'transformer'
-        ? `Transformer processed event`
-        : `${receivedCount}/${destCount} destinations received the event`;
-
     const resultObj = {
-      success: result.success,
-      error: result.error,
-      summary,
-      destinations: destCount > 0 ? destinations : undefined,
+      success,
+      error: errorMessage,
+      summary: `${receivedCount}/${destCount} destinations received the event`,
+      destinations,
       duration: result.duration,
     };
 

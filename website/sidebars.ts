@@ -208,6 +208,11 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/web/d8a',
+                  className: 'sidebar-badge-web',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/web/fullstory',
                   className: 'sidebar-badge-web',
                 },

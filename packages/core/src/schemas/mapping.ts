@@ -231,6 +231,37 @@ export const PolicySchema = z
 // Mapping Rule Schemas
 // ========================================
 
+export const RulePatchSchema = z
+  .object({
+    name: z.string().nullable().optional(),
+    data: z.union([ValueSchema, ValuesSchema]).nullable().optional(),
+    settings: z.unknown().nullable().optional(),
+    condition: z.string().nullable().optional(),
+    consent: ConsentSchema.nullable().optional(),
+    policy: PolicySchema.nullable().optional(),
+    batch: z
+      .union([
+        z.number(),
+        z.object({
+          wait: z.number().optional(),
+          size: z.number().optional(),
+          age: z.number().optional(),
+        }),
+      ])
+      .nullable()
+      .optional(),
+    include: z.array(z.string()).nullable().optional(),
+    ignore: z.boolean().nullable().optional(),
+    silent: z.boolean().nullable().optional(),
+  })
+  .meta({
+    id: 'MappingRulePatch',
+    title: 'Mapping.RulePatch',
+    description:
+      'Partial rule deep-merged onto a package-shipped default; a null value clears the inherited field.',
+  })
+  .describe('Partial rule for `extend`; null clears an inherited field');
+
 /**
  * Rule - Event-specific mapping configuration
  *
@@ -257,7 +288,7 @@ export const RuleSchema = z
       .optional()
       .describe('Data transformation rules for event'),
     settings: z
-      .any()
+      .unknown()
       .optional()
       .describe('Destination-specific settings for this event mapping'),
     condition: z
@@ -300,6 +331,15 @@ export const RuleSchema = z
       .optional()
       .describe(
         'Run side effects (settings.identify, ...) but suppress the destination default push call.',
+      ),
+    extend: RulePatchSchema.optional().describe(
+      'Merge mode: a partial rule deep-merged onto the package-shipped default at this key (instead of replacing it). A null value clears an inherited field.',
+    ),
+    remove: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Dotted paths stripped from the produced data payload after evaluation (applied last).',
       ),
   })
   .meta({

@@ -35,7 +35,7 @@ A contract is the schema for your event data: which fields are required, what ty
 A contract is a single, inheritable description of what your events should look like. It does not enforce anything at runtime: tools and humans read it for governance, documentation, and schema-driven workflows. Without a contract, schema rules can live inline (`validate:` on each step), which duplicates across flows.
 
 - **Single source of truth.** Define `product add` requirements once. Every flow that ships these events references the same definition.
-- **Inheritance.** Layer additional rules on top with `extends` (for example, `web_loggedin` extends `web` extends `default`) rather than copying.
+- **Inheritance.** Layer additional rules on top with `extend` (for example, `web_loggedin` extend `web` extend `default`) rather than copying.
 - **Versioned.** `tagging` tracks contract revisions alongside the events they govern.
 - **Self-documenting.** Each schema is JSON Schema, so `description` and `examples` annotate fields the same way humans and tools read them.
 - **Decoupled from enforcement.** Contracts describe what events should look like, step-level `validate:` references them, consumers decide whether to enforce.
@@ -49,7 +49,7 @@ If your flow has a single throwaway event, you do not need a contract. Reach for
 
 | Field | Purpose |
 |-------|---------|
-| `extends?` | Inherit from another named contract |
+| `extend?` | Inherit from another named contract |
 | `tagging?` | Integer revision marker |
 | `description?` | Human-readable note |
 | `events?` | Entity-action keyed JSON Schemas, applied per event |
@@ -80,7 +80,7 @@ If your flow has a single throwaway event, you do not need a contract. Reach for
       }
     },
     "web": {
-      "extends": "default",
+      "extend": "default",
       "events": {
         "product": {
           "add": {
@@ -135,17 +135,17 @@ Inside `events`, entity-action keyed entries define JSON Schemas for a partial `
 }
 ```
 
-## Inheritance with extends
+## Inheritance with extend
 
-Use `extends` to inherit from another named contract. Inheritance is additive:
+Use `extend` to inherit from another named contract. Inheritance is additive:
 
 - **`schema`** merges additively across the chain (deep merge of `properties`, union of `required`)
 - **`events`** merge at the entity-action level
 - **Scalars** (`tagging`, `description`): child overrides if set, otherwise inherited from parent
-- **Chains supported**: `web_loggedin` extends `web` extends `default`
+- **Chains supported**: `web_loggedin` extend `web` extend `default`
 - **Circular references** are detected and throw
 
-Extends chains are resolved first, then wildcards expand on the merged result. Schema merging follows the same additive rules as wildcard merging (see [Merge rules](#merge-rules)), so the same limitations on JSON Schema composition keywords apply.
+Extend chains are resolved first, then wildcards expand on the merged result. Schema merging follows the same additive rules as wildcard merging (see [Merge rules](#merge-rules)), so the same limitations on JSON Schema composition keywords apply.
 
 ```json
 "contract": {
@@ -158,7 +158,7 @@ Extends chains are resolved first, then wildcards expand on the merged result. S
     }
   },
   "web": {
-    "extends": "default",
+    "extend": "default",
     "events": {
       "product": {
         "add": { "properties": { "data": { "required": ["id", "quantity"] } } }
@@ -166,7 +166,7 @@ Extends chains are resolved first, then wildcards expand on the merged result. S
     }
   },
   "web_loggedin": {
-    "extends": "web",
+    "extend": "web",
     "schema": {
       "properties": {
         "user": {
@@ -219,7 +219,7 @@ This difference is intentional. Contracts express cumulative requirements (entit
 
 ### Merge rules
 
-When multiple wildcard levels (or `extends` chains) match, the JSON Schemas merge with these rules:
+When multiple wildcard levels (or `extend` chains) match, the JSON Schemas merge with these rules:
 
 | JSON Schema keyword | Merge behavior |
 |---------------------|----------------|
@@ -234,7 +234,7 @@ Annotations stay on the source contract for tooling (CLI hints, IDE descriptions
 
 ## `$contract` references
 
-Reference any part of a resolved contract with `$contract.<name>.<path>`. The contract is fully resolved (extends + wildcards) before path access, so the returned value is the merged shape, not the raw entry.
+Reference any part of a resolved contract with `$contract.<name>.<path>`. The contract is fully resolved (extend + wildcards) before path access, so the returned value is the merged shape, not the raw entry.
 
 ```json
 "destinations": {
@@ -279,7 +279,7 @@ walkeros validate flow.json
 The contract validator checks:
 
 - `tagging` is a non-negative integer (if present)
-- `extends` references exist and are not circular
+- `extend` references exist and are not circular
 - Entity and action keys are non-empty
 - `schema`, if present, is a valid JSON Schema object
 - Each event entry is a valid JSON Schema object
@@ -309,7 +309,7 @@ Top-level `variables` holds reusable values that any part of the config can pull
 }
 ```
 
-Use `variables` when the same JSON Schema fragment shows up in many events. For contract-shaped reuse across flows, prefer `extends`.
+Use `variables` when the same JSON Schema fragment shows up in many events. For contract-shaped reuse across flows, prefer `extend`.
 
 </details>
 
@@ -356,7 +356,7 @@ A shorter end-to-end illustration:
       }
     },
     "web_loggedin": {
-      "extends": "default",
+      "extend": "default",
       "schema": {
         "properties": {
           "user": {

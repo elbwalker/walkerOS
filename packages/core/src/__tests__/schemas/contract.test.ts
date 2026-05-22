@@ -22,7 +22,7 @@ describe('Contract schema validation', () => {
           },
         },
         web: {
-          extends: 'default',
+          extend: 'default',
           consent: { required: ['analytics'] },
         },
       },

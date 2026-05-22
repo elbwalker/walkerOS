@@ -10,7 +10,7 @@ const ANNOTATION_KEYS = new Set([
 ]);
 
 /**
- * Resolve all named contracts: process extends chains, expand wildcards,
+ * Resolve all named contracts: process extend chains, expand wildcards,
  * strip annotations from event schemas.
  *
  * Returns a fully resolved map where each contract entry has inherited
@@ -27,7 +27,7 @@ export function resolveContracts(
 
     if (resolving.has(name)) {
       throwError(
-        `Circular extends chain detected: ${[...resolving, name].join(' → ')}`,
+        `Circular extend chain detected: ${[...resolving, name].join(' → ')}`,
       );
     }
 
@@ -40,16 +40,16 @@ export function resolveContracts(
 
     let result: Flow.ContractRule = {};
 
-    // 1. Resolve parent first (if extends)
-    if (entry.extends) {
-      const parent = resolve(entry.extends);
+    // 1. Resolve parent first (if extend)
+    if (entry.extend) {
+      const parent = resolve(entry.extend);
       result = mergeContractEntries(parent, entry);
     } else {
       result = { ...entry };
     }
 
-    // Remove extends from resolved entry
-    delete result.extends;
+    // Remove extend from resolved entry
+    delete result.extend;
 
     // 2. Expand wildcards in events
     if (result.events) {

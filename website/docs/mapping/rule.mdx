@@ -286,6 +286,61 @@ The same event can be transformed at both stations:
 4. GA4 receives:         "view_item"
 ```
 
+## Patching package-shipped rules
+
+Some packages (such as `@walkeros/transformer-ga4`) ship their own default
+mapping rules. Normally, a user rule at the same key replaces the default in
+full. Two keywords change that:
+
+### `extend` (config layer)
+
+`extend` holds a **partial rule** that is deep-merged onto the package-shipped
+default at the same key instead of replacing it. The merge happens once at
+init, before any event is evaluated. A `null` value clears an inherited field.
+
+Use `extend` when you want to add or override one field of a default rule while
+inheriting the rest unchanged.
+
+### `remove` (output layer)
+
+`remove` is a list of **dotted paths** stripped from the produced data payload
+after evaluation, regardless of how each field was produced (`map`, `fn`,
+`include`, etc.). Applied last, so it always wins.
+
+Use `remove` when you must not emit a field (PII, a vendor-reserved parameter)
+but do not want to rewrite the full rule.
+
+### Mode switching
+
+A rule that has **neither** `extend` nor `remove` keeps today's replace
+behavior. Presence of either keyword activates merge mode for that rule.
+
+### Example: patch a GA4 decoder rule
+
+The transformer-ga4 `purchase` default ships `id`, `currency`, `total`, `tax`,
+`shipping`, and `coupon`. The config below adds `affiliation` from a GA4 event
+parameter and drops `currency` from the output, keeping all other default
+fields:
+
+```json
+{
+  "settings": {
+    "mapping": {
+      "purchase": {
+        "extend": {
+          "data": { "map": { "affiliation": "params.ep.affiliation" } }
+        },
+        "remove": ["currency"]
+      }
+    }
+  }
+}
+```
+
+`extend.data.map` is deep-merged onto the default `data.map`, so `affiliation`
+is added alongside the existing keys. `remove: ["currency"]` then strips that
+field from the final payload.
+
 ## See also
 
 - [Mapping.Value](./value.mdx): the eight value forms used in every rule field

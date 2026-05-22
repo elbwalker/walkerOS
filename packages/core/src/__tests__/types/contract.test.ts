@@ -36,7 +36,7 @@ describe('Contract types', () => {
           },
         },
         web: {
-          extends: 'default',
+          extend: 'default',
           schema: {
             type: 'object',
             properties: {
@@ -55,12 +55,12 @@ describe('Contract types', () => {
     expect(setup.contract).toBeDefined();
   });
 
-  it('should accept contract with extends chain', () => {
+  it('should accept contract with extend chain', () => {
     const contract: Flow.Contract = {
       default: { description: 'base' },
-      web: { extends: 'default', events: { product: { view: {} } } },
+      web: { extend: 'default', events: { product: { view: {} } } },
       web_loggedin: {
-        extends: 'web',
+        extend: 'web',
         schema: {
           type: 'object',
           properties: {

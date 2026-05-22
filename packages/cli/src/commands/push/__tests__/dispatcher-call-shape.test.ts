@@ -17,15 +17,24 @@ const mockedRoutes = jest.mocked(routes);
 
 beforeEach(() => {
   mockedRoutes.simulateDestination.mockReset().mockResolvedValue({
-    success: true,
+    step: 'destination',
+    name: 'mock',
+    events: [],
+    calls: [],
     duration: 0,
   });
   mockedRoutes.simulateSource.mockReset().mockResolvedValue({
-    success: true,
+    step: 'source',
+    name: 'mock',
+    events: [],
+    calls: [],
     duration: 0,
   });
   mockedRoutes.simulateTransformer.mockReset().mockResolvedValue({
-    success: true,
+    step: 'transformer',
+    name: 'mock',
+    events: [],
+    calls: [],
     duration: 0,
   });
   mockedRoutes.push.mockReset().mockResolvedValue({

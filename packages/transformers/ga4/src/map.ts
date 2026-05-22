@@ -1,5 +1,5 @@
 import type { Mapping, WalkerOS } from '@walkeros/core';
-import { getByPath, getId } from '@walkeros/core';
+import { getByPath, getId, deleteByPath, isObject } from '@walkeros/core';
 import type {
   GA4Event,
   GA4Hit,
@@ -77,7 +77,10 @@ function mapOneEvent(
   }
 
   if (rule.data !== undefined) {
-    const data = evalValue(rule.data, lookup);
+    let data = evalValue(rule.data, lookup);
+    if (rule.remove && isObject(data)) {
+      for (const path of rule.remove) data = deleteByPath(data, path);
+    }
     if (data !== undefined) {
       evaluated.data = data as WalkerOS.Properties;
     }

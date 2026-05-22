@@ -280,6 +280,32 @@ export const ValidateSchema = z
 // ========================================
 
 /**
+ * Cross-field rules shared by every step (source / destination / transformer /
+ * store): `import` names an export from `package`, so it requires `package` and
+ * cannot be combined with inline `code`. Enforced here because these are
+ * relationships between fields that a flat object schema cannot express on its
+ * own, so without it an invalid step would pass validation and fail at resolve.
+ */
+function checkImportCode(
+  value: { package?: string; code?: unknown; import?: string },
+  ctx: z.RefinementCtx,
+): void {
+  if (value.import === undefined) return;
+  if (value.code !== undefined)
+    ctx.addIssue({
+      code: 'custom',
+      message: '`import` cannot be combined with inline `code`',
+      path: ['import'],
+    });
+  if (value.package === undefined)
+    ctx.addIssue({
+      code: 'custom',
+      message: '`import` requires `package`',
+      path: ['import'],
+    });
+}
+
+/**
  * Source reference schema (Flow.Source).
  *
  * @remarks
@@ -364,7 +390,8 @@ export const SourceSchema = z
     description:
       'Source package reference with configuration, env, chains, and examples.',
   })
-  .describe('Source package reference with configuration');
+  .describe('Source package reference with configuration')
+  .superRefine(checkImportCode);
 
 /**
  * Transformer reference schema (Flow.Transformer).
@@ -432,7 +459,8 @@ export const TransformerSchema = z
     description:
       'Transformer package reference with configuration, env, chains, and cache.',
   })
-  .describe('Transformer package reference with configuration');
+  .describe('Transformer package reference with configuration')
+  .superRefine(checkImportCode);
 
 /**
  * Destination reference schema (Flow.Destination).
@@ -507,7 +535,8 @@ export const DestinationSchema = z
     description:
       'Destination package reference with configuration, env, chains, and cache.',
   })
-  .describe('Destination package reference with configuration');
+  .describe('Destination package reference with configuration')
+  .superRefine(checkImportCode);
 
 /**
  * Store reference schema (Flow.Store).
@@ -577,7 +606,8 @@ export const StoreSchema = z
     description:
       'Store package reference with configuration, env, cache, and examples.',
   })
-  .describe('Store package reference with configuration');
+  .describe('Store package reference with configuration')
+  .superRefine(checkImportCode);
 
 // ========================================
 // Contract Schemas
@@ -628,7 +658,7 @@ export const ContractEventsSchema = z
  */
 export const ContractRuleSchema = z
   .object({
-    extends: z.string().optional(),
+    extend: z.string().optional(),
     tagging: z.number().optional(),
     description: z.string().optional(),
     events: ValidateEventsSchema.optional(),
@@ -648,9 +678,9 @@ export const ContractSchema = z
   .meta({
     id: 'FlowContract',
     title: 'Flow.Contract',
-    description: 'Named contracts map with optional extends inheritance.',
+    description: 'Named contracts map with optional extend inheritance.',
   })
-  .describe('Named contracts with optional extends inheritance');
+  .describe('Named contracts with optional extend inheritance');
 
 // ========================================
 // Per-flow Config block + Single Flow
@@ -783,7 +813,7 @@ export const JsonSchema = z
       'Shared variables for interpolation across all flows (use $var.name syntax, deep paths supported)',
     ),
     contract: ContractSchema.optional().describe(
-      'Named contracts with extends inheritance and dot-path references',
+      'Named contracts with extend inheritance and dot-path references',
     ),
     flows: z
       .record(z.string(), FlowSchema)

@@ -98,13 +98,12 @@ describe('flow_simulate tool', () => {
     expect(config.outputSchema).toBe(SimulateOutputShape);
   });
 
-  it('summarizes per-destination results', async () => {
+  it('summarizes a destination result keyed by result name', async () => {
     mockSimulateDestination.mockResolvedValue({
-      success: true,
-      usage: {
-        gtag: [{ fn: 'event', args: ['page_view'], ts: 1 }],
-        meta: [],
-      },
+      step: 'destination',
+      name: 'gtag',
+      events: [],
+      calls: [{ fn: 'window.gtag', args: ['event', 'page_view'], ts: 1 }],
       duration: 42,
     });
 
@@ -118,29 +117,27 @@ describe('flow_simulate tool', () => {
 
     expect(result.structuredContent.success).toBe(true);
     expect(result.structuredContent.summary).toBe(
-      '1/2 destinations received the event',
+      '1/1 destinations received the event',
     );
     expect(result.structuredContent.destinations.gtag.received).toBe(true);
     expect(result.structuredContent.destinations.gtag.calls).toBe(1);
-    expect(result.structuredContent.destinations.meta.received).toBe(false);
-    expect(result.structuredContent.destinations.meta.calls).toBe(0);
     expect(result.structuredContent.duration).toBe(42);
     expect(result.isError).toBeUndefined();
   });
 
   it('returns all calls in payload when verbose', async () => {
     mockSimulateDestination.mockResolvedValue({
-      success: true,
-      usage: {
-        gtag: [
-          { fn: 'window.gtag', args: ['config', 'G-TEST123', {}], ts: 1 },
-          {
-            fn: 'window.gtag',
-            args: ['event', 'purchase', { value: 99, currency: 'EUR' }],
-            ts: 2,
-          },
-        ],
-      },
+      step: 'destination',
+      name: 'gtag',
+      events: [],
+      calls: [
+        { fn: 'window.gtag', args: ['config', 'G-TEST123', {}], ts: 1 },
+        {
+          fn: 'window.gtag',
+          args: ['event', 'purchase', { value: 99, currency: 'EUR' }],
+          ts: 2,
+        },
+      ],
       duration: 50,
     });
 
@@ -167,10 +164,10 @@ describe('flow_simulate tool', () => {
 
   it('omits payload when not verbose', async () => {
     mockSimulateDestination.mockResolvedValue({
-      success: true,
-      usage: {
-        gtag: [{ fn: 'window.gtag', args: ['event', 'page_view'], ts: 1 }],
-      },
+      step: 'destination',
+      name: 'gtag',
+      events: [],
+      calls: [{ fn: 'window.gtag', args: ['event', 'page_view'], ts: 1 }],
       duration: 10,
     });
 
@@ -189,8 +186,10 @@ describe('flow_simulate tool', () => {
 
   it('passes parameters to simulateDestination with destinationId', async () => {
     mockSimulateDestination.mockResolvedValue({
-      success: true,
-      usage: {},
+      step: 'destination',
+      name: 'ga4',
+      events: [],
+      calls: [],
       duration: 10,
     });
 
@@ -278,13 +277,10 @@ describe('flow_simulate tool', () => {
 
   it('returns capturedEvents for source simulation', async () => {
     mockSimulateSource.mockResolvedValue({
-      success: true,
-      captured: [
-        {
-          event: { name: 'cta click', data: { label: 'Sign Up' } },
-          timestamp: 1,
-        },
-      ],
+      step: 'source',
+      name: 'browser',
+      events: [{ name: 'cta click', data: { label: 'Sign Up' } }],
+      calls: [],
       duration: 15,
     });
 
@@ -321,7 +317,10 @@ describe('flow_simulate tool', () => {
 
   it('calls simulateTransformer for transformer step', async () => {
     mockSimulateTransformer.mockResolvedValue({
-      success: true,
+      step: 'transformer',
+      name: 'demo',
+      events: [{ name: 'page view', data: { title: 'Home' } }],
+      calls: [],
       duration: 8,
     });
 
@@ -338,6 +337,7 @@ describe('flow_simulate tool', () => {
     expect(result.structuredContent.summary).toBe(
       'Transformer processed event',
     );
+    expect(result.structuredContent.capturedEvents).toHaveLength(1);
 
     expect(mockSimulateTransformer).toHaveBeenCalledWith(
       './flow.json',
@@ -350,9 +350,12 @@ describe('flow_simulate tool', () => {
     );
   });
 
-  it('handles simulation with no usage data', async () => {
+  it('reports received: false when destination makes no calls', async () => {
     mockSimulateDestination.mockResolvedValue({
-      success: true,
+      step: 'destination',
+      name: 'gtag',
+      events: [],
+      calls: [],
       duration: 10,
     });
 
@@ -366,15 +369,18 @@ describe('flow_simulate tool', () => {
 
     expect(result.structuredContent.success).toBe(true);
     expect(result.structuredContent.summary).toBe(
-      '0/0 destinations received the event',
+      '0/1 destinations received the event',
     );
-    expect(result.structuredContent.destinations).toBeUndefined();
+    expect(result.structuredContent.destinations.gtag.received).toBe(false);
+    expect(result.structuredContent.destinations.gtag.calls).toBe(0);
   });
 
-  it('warns when destination step yields 0 destinations', async () => {
+  it('warns when destination receives no calls', async () => {
     mockSimulateDestination.mockResolvedValue({
-      success: true,
-      usage: {},
+      step: 'destination',
+      name: 'gtag',
+      events: [],
+      calls: [],
       duration: 5,
     });
 
@@ -388,31 +394,6 @@ describe('flow_simulate tool', () => {
 
     expect(result.structuredContent._hints?.warnings).toBeDefined();
     expect(result.structuredContent._hints.warnings.length).toBeGreaterThan(0);
-  });
-
-  it('does not warn when destinations exist but none received event', async () => {
-    mockSimulateDestination.mockResolvedValue({
-      success: true,
-      usage: {
-        gtag: [],
-        meta: [],
-      },
-      duration: 5,
-    });
-
-    const tool = server.getTool('flow_simulate');
-    const result = await tool.handler({
-      configPath: './flow.json',
-      event: '{"name":"page view"}',
-      flow: undefined,
-      step: 'destination.gtag',
-    });
-
-    // Warning only fires when destCount === 0, not when destinations exist but are empty
-    expect(result.structuredContent.summary).toBe(
-      '0/2 destinations received the event',
-    );
-    expect(result.structuredContent._hints?.warnings).toBeUndefined();
   });
 
   it('handles non-Error exceptions', async () => {
@@ -431,15 +412,14 @@ describe('flow_simulate tool', () => {
     expect(parsed.error).toBe('Unknown error');
   });
 
-  it('uses elbResult.done as fallback when no usage data', async () => {
+  it('surfaces step error message from result.error', async () => {
     mockSimulateDestination.mockResolvedValue({
-      success: true,
-      elbResult: {
-        done: {
-          gtag: { id: '123' },
-        },
-      } as any,
+      step: 'destination',
+      name: 'gtag',
+      events: [],
+      calls: [],
       duration: 20,
+      error: new Error('mapping threw'),
     });
 
     const tool = server.getTool('flow_simulate');
@@ -450,12 +430,8 @@ describe('flow_simulate tool', () => {
       step: 'destination.gtag',
     });
 
-    expect(result.structuredContent.success).toBe(true);
-    expect(result.structuredContent.summary).toBe(
-      '1/1 destinations received the event',
-    );
-    expect(result.structuredContent.destinations.gtag.received).toBe(true);
-    expect(result.structuredContent.destinations.gtag.calls).toBe(0);
+    expect(result.structuredContent.success).toBe(false);
+    expect(result.structuredContent.error).toBe('mapping threw');
   });
 
   it('errors on invalid step format without dot separator', async () => {

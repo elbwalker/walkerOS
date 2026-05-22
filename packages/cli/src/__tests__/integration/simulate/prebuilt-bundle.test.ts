@@ -81,18 +81,18 @@ describe('prebuilt-bundle simulation', () => {
     });
 
     // Core assertions: simulation succeeded
-    expect(result.success).toBe(true);
+    expect(result.step).toBe('destination');
+    expect(result.name).toBe('demo');
     expect(result.duration).toBeGreaterThan(0);
     expect(result.error).toBeUndefined();
+    expect(result.events).toEqual([]);
 
     // The destination-demo dev env tracks calls to env.log via simulation: ['call:log']
-    // Verify that usage was captured (proving __devExports was loaded and wrapEnv worked)
-    expect(result.usage).toBeDefined();
-    expect(result.usage!['demo']).toBeDefined();
-    expect(result.usage!['demo'].length).toBeGreaterThan(0);
+    // Verify that calls were captured (proving __devExports was loaded and wrapEnv worked)
+    expect(result.calls.length).toBeGreaterThan(0);
 
     // Each tracked call should have the expected shape
-    const call = result.usage!['demo'][0];
+    const call = result.calls[0];
     expect(call).toHaveProperty('fn');
     expect(call).toHaveProperty('args');
     expect(call).toHaveProperty('ts');
@@ -111,7 +111,7 @@ describe('prebuilt-bundle simulation', () => {
       silent: true,
     });
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('nonexistent');
+    expect(result.error).toBeInstanceOf(Error);
+    expect(result.error?.message).toContain('nonexistent');
   }, 60000);
 });

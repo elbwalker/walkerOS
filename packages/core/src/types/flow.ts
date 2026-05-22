@@ -626,8 +626,8 @@ export namespace Flow {
    * ```json
    * {
    *   "default": { "globals": { ... }, "consent": { ... } },
-   *   "web": { "extends": "default", "events": { ... } },
-   *   "server": { "extends": "default", "events": { ... } }
+   *   "web": { "extend": "default", "events": { ... } },
+   *   "server": { "extend": "default", "events": { ... } }
    * }
    * ```
    */
@@ -640,11 +640,11 @@ export namespace Flow {
    * globals, context, custom, user, consent.
    * Entity-action schemas live under `events`.
    *
-   * Use `extends` to inherit from another named contract (additive merge).
+   * Use `extend` to inherit from another named contract (additive merge).
    */
   export interface ContractRule {
     /** Inherit from another named contract entry. */
-    extends?: string;
+    extend?: string;
     /** Contract revision marker. */
     tagging?: number;
     /** Human-readable note. */

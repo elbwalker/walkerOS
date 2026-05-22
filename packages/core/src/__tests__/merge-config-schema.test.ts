@@ -1,4 +1,4 @@
-import { mergeConfigSchema } from '../merge-config-schema';
+import { mergeConfigSchema, resolveBaseSchema } from '../merge-config-schema';
 
 /**
  * Structural shape of the merged JSON Schema returned by `mergeConfigSchema`.
@@ -139,5 +139,29 @@ describe('mergeConfigSchema', () => {
     expect(props?.ingest).toBeUndefined();
     expect(props?.queue).toBeUndefined();
     expect(props?.consent).toBeUndefined();
+  });
+});
+
+describe('resolveBaseSchema (exported unwrap)', () => {
+  it('unwraps allOf/$ref + definitions one level so properties is reachable', () => {
+    const wrapped = {
+      description: 'X',
+      allOf: [{ $ref: '#/definitions/Foo' }],
+      definitions: {
+        Foo: { type: 'object', properties: { a: { type: 'string' } } },
+      },
+    };
+    const resolved = resolveBaseSchema(wrapped);
+    expect(resolved?.properties).toEqual({ a: { type: 'string' } });
+    expect(resolved?.definitions).toHaveProperty('Foo');
+  });
+
+  it('returns the schema unchanged when properties already present', () => {
+    const flat = { type: 'object', properties: { a: { type: 'string' } } };
+    expect(resolveBaseSchema(flat)).toBe(flat);
+  });
+
+  it('returns undefined for undefined input', () => {
+    expect(resolveBaseSchema(undefined)).toBeUndefined();
   });
 });

@@ -98,6 +98,38 @@ interface Rule {
   consent?: Consent; // Required consent for this rule
   settings?: unknown; // Custom event configuration
   batch?: number; // Batch size for grouping
+  extend?: RulePatch; // Config-layer merge onto a package-shipped default rule
+  remove?: string[]; // Output-layer: dotted paths stripped from the final payload
+}
+```
+
+#### `extend` and `remove` (patching package-shipped rules)
+
+Some packages ship their own default mapping rules. A user rule at the same key
+normally replaces the default in full. Two keywords change that:
+
+- **`extend`** (config layer): a partial rule deep-merged onto the
+  package-shipped default at init, before any event is evaluated. A `null` value
+  clears an inherited field. Lets you add or override one field while keeping
+  the rest.
+- **`remove`** (output layer): dotted paths stripped from the produced payload
+  after evaluation, applied last. Useful for dropping PII or vendor-reserved
+  fields without rewriting the full rule.
+
+A rule with **neither** keyword keeps the standard replace behavior.
+
+See the
+[website mapping docs](/docs/mapping/rule#patching-package-shipped-rules) for
+the authoritative reference and the GA4 example.
+
+```json
+{
+  "purchase": {
+    "extend": {
+      "data": { "map": { "affiliation": "params.ep.affiliation" } }
+    },
+    "remove": ["currency"]
+  }
 }
 ```
 
@@ -225,7 +257,7 @@ Common patterns shown below. For detailed examples of all 12 strategies, see
 // Set (create array)
 { set: ['data.id'] }                      // → ["SKU-123"]
 
-// Fallback array (first success wins)
+// Fallback chain: Value[] at any value position (first defined value wins)
 [{ key: 'data.sku' }, { key: 'data.id' }, { value: 'unknown' }]
 
 // Consent-gated
@@ -395,17 +427,19 @@ TypeScript ignores the unused second arg.
 
 ### Rule Features Cheatsheet
 
-| Feature     | Purpose                                            |
-| ----------- | -------------------------------------------------- |
-| `name`      | Override event name                                |
-| `data`      | Transform event data                               |
-| `ignore`    | Skip event entirely (no processing, no push)       |
-| `silent`    | Run settings side effects, skip default forwarding |
-| `policy`    | Pre-process event                                  |
-| `condition` | Match condition (arrays)                           |
-| `consent`   | Required consent                                   |
-| `settings`  | Custom configuration                               |
-| `batch`     | Batch size                                         |
+| Feature     | Purpose                                                                 |
+| ----------- | ----------------------------------------------------------------------- |
+| `name`      | Override event name                                                     |
+| `data`      | Transform event data                                                    |
+| `ignore`    | Skip event entirely (no processing, no push)                            |
+| `silent`    | Run settings side effects, skip default forwarding                      |
+| `policy`    | Pre-process event                                                       |
+| `condition` | Match condition (arrays)                                                |
+| `consent`   | Required consent                                                        |
+| `settings`  | Custom configuration                                                    |
+| `batch`     | Batch size                                                              |
+| `extend`    | Config-layer merge onto a package-shipped default (null clears a field) |
+| `remove`    | Output-layer: dotted paths stripped from the final payload              |
 
 ### Config Features Cheatsheet
 

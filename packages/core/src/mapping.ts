@@ -1,5 +1,5 @@
 import type { Mapping, WalkerOS, Collector } from './types';
-import { getByPath, setByPath } from './byPath';
+import { deleteByPath, getByPath, setByPath } from './byPath';
 import { isArray, isDefined, isString, isObject } from './is';
 import { castToProperty } from './property';
 import { tryCatchAsync } from './tryCatch';
@@ -367,6 +367,14 @@ export async function processEventMapping<
             data as Record<string, unknown>,
           ) as unknown as WalkerOS.Property)
         : (data ?? (includeData as unknown as WalkerOS.Property));
+    }
+  }
+
+  // Output layer: strip removed paths from the produced data. Applied last,
+  // after include, so remove always wins. Rooted at the produced payload.
+  if (eventMapping?.remove && isObject(data)) {
+    for (const path of eventMapping.remove) {
+      data = deleteByPath(data, path);
     }
   }
 

@@ -39,7 +39,35 @@ export interface Rule<Settings = unknown> {
   silent?: boolean; // Process settings side effects, but suppress the destination's default push call
   name?: string; // Use a custom event name
   policy?: Policy; // Event-level policy applied after config-level policy
+  /**
+   * Merge mode (config layer): a partial Rule deep-merged onto the
+   * package-shipped default rule at the same key, instead of replacing it.
+   * Resolved at the consuming package's init via `mergeMappingRule`; not
+   * seen by the runtime evaluator. A `null` value clears an inherited field.
+   * Presence of `extend` or `remove` switches this rule from replace to merge.
+   */
+  extend?: RulePatch<Settings>;
+  /**
+   * Output layer: dotted paths stripped from the produced data payload
+   * after evaluation, regardless of how each field was produced. Applied
+   * last, so it always wins.
+   */
+  remove?: string[];
 }
+
+/**
+ * A partial Rule used by `Rule.extend`. Every field is optional, and a
+ * `null` value clears the inherited field (JSON merge-patch delete). The
+ * control fields `extend` and `remove` are excluded: a patch models only
+ * direct rule fields, matching what the runtime patch schema accepts.
+ */
+type RulePatchFields<Settings = unknown> = Omit<
+  Rule<Settings>,
+  'extend' | 'remove'
+>;
+export type RulePatch<Settings = unknown> = {
+  [K in keyof RulePatchFields<Settings>]?: RulePatchFields<Settings>[K] | null;
+};
 
 export interface Result {
   eventMapping?: Rule;

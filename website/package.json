@@ -65,6 +65,7 @@
     "@walkeros/web-destination-amplitude": "^4.1.0",
     "@walkeros/web-destination-api": "^4.1.0",
     "@walkeros/web-destination-clarity": "^4.1.0",
+    "@walkeros/web-destination-d8a": "^4.1.0",
     "@walkeros/web-destination-fullstory": "^4.1.0",
     "@walkeros/web-destination-gtag": "^4.1.0",
     "@walkeros/web-destination-heap": "^4.1.0",

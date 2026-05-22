@@ -4,17 +4,19 @@ import { getEvent, isObject } from '@walkeros/core';
 /**
  * Meta Conversions API step examples.
  *
- * At push time, the destination calls `env.sendServer(url, body)` where
- * `url` is `${settings.url}${settings.pixelId}/events?access_token=${settings.accessToken}`
- * and `body` is the JSON-stringified `{ data: [serverEvent] }` payload.
+ * At push time, the destination calls `env.sendServer(url, body, options)`
+ * where `url` is `${settings.url}${settings.pixelId}/events`, `body` is the
+ * JSON-stringified `{ data: [serverEvent] }` payload, and `options` carries the
+ * access token in an `Authorization: Bearer` header (never in the URL).
  *
  * The public name users see when inspecting the destination is `sendServer`,
- * so each `out` tuple is `['sendServer', url, body]` with `body` as the
- * already-stringified JSON payload (mirroring the actual call signature).
+ * so each `out` tuple is `['sendServer', url, body, options]` with `body` as
+ * the already-stringified JSON payload (mirroring the actual call signature).
  *
  * The test fixture pins `accessToken = 's3cr3t'` and `pixelId = 'p1x3l1d'`,
  * so every endpoint resolves to:
- *   https://graph.facebook.com/v22.0/p1x3l1d/events?access_token=s3cr3t
+ *   https://graph.facebook.com/v22.0/p1x3l1d/events
+ * with header `Authorization: Bearer s3cr3t`.
  *
  * Body fields are emitted in the order the destination constructs them
  * (insertion order matters for `JSON.stringify` string equality):
@@ -26,8 +28,9 @@ import { getEvent, isObject } from '@walkeros/core';
  *   6. user_data (hashed per Meta's PII requirements)
  *   7. event_source_url (appended after hash when action_source === 'website')
  */
-const ENDPOINT =
-  'https://graph.facebook.com/v22.0/p1x3l1d/events?access_token=s3cr3t';
+const ENDPOINT = 'https://graph.facebook.com/v22.0/p1x3l1d/events';
+
+const OPTIONS = { headers: { Authorization: 'Bearer s3cr3t' } };
 
 export const purchase: Flow.StepExample = {
   title: 'Purchase',
@@ -98,6 +101,7 @@ export const purchase: Flow.StepExample = {
           },
         ],
       }),
+      OPTIONS,
     ],
   ],
 };
@@ -134,6 +138,7 @@ export const lead: Flow.StepExample = {
           },
         ],
       }),
+      OPTIONS,
     ],
   ],
 };
@@ -196,6 +201,7 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
           },
         ],
       }),
+      OPTIONS,
     ],
   ],
 };

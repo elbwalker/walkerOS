@@ -12,8 +12,23 @@ import {
   type Platform,
 } from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
-import type { WalkerOS } from '@walkeros/core';
+import type { Simulation, WalkerOS } from '@walkeros/core';
 import type { PushCommandOptions, PushResult } from './types.js';
+
+/**
+ * Adapt a step `Simulation.Result` into the CLI's `PushResult` envelope. The
+ * `walkeros push --simulate` command path formats and exits on a `PushResult`;
+ * the programmatic simulate functions return the unified `Simulation.Result`.
+ * This boundary keeps the command behavior identical while the functions
+ * expose the richer shape to library consumers.
+ */
+function simulationToPushResult(result: Simulation.Result): PushResult {
+  return {
+    success: !result.error,
+    duration: result.duration,
+    ...(result.error ? { error: result.error.message } : {}),
+  };
+}
 
 /**
  * Pure variant of `pushCommand` — produces a `PushResult` and never calls
@@ -68,27 +83,31 @@ export async function runPushCommand(
         break;
 
       case 'source':
-        result = await simulateSource(config, resolvedEvent, {
-          sourceId: plan.ids[0],
-          flow: options.flow,
-          silent: options.silent,
-          verbose: options.verbose,
-          snapshot: options.snapshot,
-        });
-        break;
-
-      case 'transformer':
-        result = await simulateTransformer(
-          config,
-          resolvedEvent as WalkerOS.DeepPartialEvent,
-          {
-            transformerId: plan.ids[0],
+        result = simulationToPushResult(
+          await simulateSource(config, resolvedEvent, {
+            sourceId: plan.ids[0],
             flow: options.flow,
-            mock: options.mock,
             silent: options.silent,
             verbose: options.verbose,
             snapshot: options.snapshot,
-          },
+          }),
+        );
+        break;
+
+      case 'transformer':
+        result = simulationToPushResult(
+          await simulateTransformer(
+            config,
+            resolvedEvent as WalkerOS.DeepPartialEvent,
+            {
+              transformerId: plan.ids[0],
+              flow: options.flow,
+              mock: options.mock,
+              silent: options.silent,
+              verbose: options.verbose,
+              snapshot: options.snapshot,
+            },
+          ),
         );
         break;
 
@@ -115,8 +134,7 @@ export async function runPushCommand(
 /**
  * Run `simulateDestination` once per destination id and aggregate into a
  * single `PushResult`. Stops on the first failure and returns a structured
- * error referencing the failed id; per-destination results are preserved
- * under `perDestination` for downstream inspection.
+ * error referencing the failed id.
  */
 async function runDestinationSimulationLoop(
   config: string,
@@ -125,7 +143,6 @@ async function runDestinationSimulationLoop(
   options: PushCommandOptions,
 ): Promise<PushResult> {
   const startTime = Date.now();
-  const perDestination: Record<string, PushResult> = {};
 
   for (const destinationId of destinationIds) {
     const r = await simulateDestination(config, event, {
@@ -136,13 +153,11 @@ async function runDestinationSimulationLoop(
       verbose: options.verbose,
       snapshot: options.snapshot,
     });
-    perDestination[destinationId] = r;
-    if (!r.success) {
+    if (r.error) {
       return {
         success: false,
         duration: Date.now() - startTime,
-        error: `simulate destination.${destinationId}: ${r.error ?? 'unknown error'}`,
-        perDestination,
+        error: `simulate destination.${destinationId}: ${r.error.message}`,
       };
     }
   }
@@ -150,6 +165,5 @@ async function runDestinationSimulationLoop(
   return {
     success: true,
     duration: Date.now() - startTime,
-    perDestination,
   };
 }

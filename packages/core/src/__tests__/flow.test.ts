@@ -115,6 +115,31 @@ describe('Flow Schemas', () => {
       expect(() => SourceSchema.parse({})).not.toThrow();
     });
 
+    test('accepts import alongside package', () => {
+      expect(() =>
+        SourceSchema.parse({
+          package: '@walkeros/web-source-browser',
+          import: 'sourceBrowser',
+        }),
+      ).not.toThrow();
+    });
+
+    test('rejects import without package', () => {
+      expect(() => SourceSchema.parse({ import: 'sourceBrowser' })).toThrow(
+        '`import` requires `package`',
+      );
+    });
+
+    test('rejects import combined with inline code', () => {
+      expect(() =>
+        SourceSchema.parse({
+          package: '@walkeros/web-source-browser',
+          import: 'sourceBrowser',
+          code: { push: '$code:() => {}' },
+        }),
+      ).toThrow('`import` cannot be combined with inline `code`');
+    });
+
     test('accepts inline code object', () => {
       const validSource = {
         code: {
@@ -2160,7 +2185,7 @@ describe('$contract reference resolution', () => {
     });
   });
 
-  test('resolves extends before path resolution', () => {
+  test('resolves extend before path resolution', () => {
     const setup: Flow.Json = {
       version: 4,
       contract: {
@@ -2170,7 +2195,7 @@ describe('$contract reference resolution', () => {
             properties: { consent: { required: ['analytics'] } },
           },
         },
-        web: { extends: 'default', events: { product: { view: {} } } },
+        web: { extend: 'default', events: { product: { view: {} } } },
       },
       flows: {
         default: {

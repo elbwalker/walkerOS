@@ -82,6 +82,24 @@ export type { SpinnerProps } from './components/atoms/spinner';
 // Utils
 export { isMonacoCancellation } from './utils/is-monaco-cancellation';
 
+// `$`-ref completion builders (no Monaco dependency) for reuse in custom inputs
+export {
+  getVariableCompletions,
+  getEnvCompletions,
+  getStoreCompletions,
+  getFlowCompletions,
+  getSecretCompletions,
+  getMappingPathCompletions,
+  getContractCompletions,
+} from './utils/monaco-walkeros-completions';
+export type { CompletionEntry } from './utils/monaco-walkeros-completions';
+
+// Cursor-scoped `$`-ref gate + JSON path helper. One pure gate shared by Monaco
+// (subPath derived live) and Form fields (subPath passed statically).
+export { allowedRefKinds } from './utils/allowed-ref-kinds';
+export type { RefKind } from './utils/allowed-ref-kinds';
+export { getJsonPathAtOffset } from './utils/monaco-json-path';
+
 // MDX Integration
 export { MDXProvider } from './providers/MDXProvider';
 export { MDXCode } from './components/atoms/mdx-code';

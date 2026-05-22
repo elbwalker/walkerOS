@@ -86,3 +86,41 @@ export function setByPath<T = unknown>(obj: T, key: string, value: unknown): T {
 
   return clonedObj as T;
 }
+
+/**
+ * Deletes a value in an object by a dot-notation string.
+ * Returns a new object; the input is not mutated. No-op when the path is
+ * absent or the target is neither an object nor an array. Numeric segments
+ * index into arrays; a final numeric segment splices the element out so no
+ * empty slot is left behind.
+ */
+export function deleteByPath<T = unknown>(obj: T, key: string): T {
+  if (!isObject(obj) && !isArray(obj)) return obj;
+  const clonedObj = clone(obj);
+  const keys = key.split('.');
+  let current: WalkerOS.AnyObject | unknown[] = clonedObj;
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    const isLast = i === keys.length - 1;
+
+    if (isArray(current)) {
+      const index = Number(k);
+      if (!Number.isInteger(index) || index < 0 || index >= current.length)
+        return clonedObj;
+      if (isLast) {
+        current.splice(index, 1);
+      } else {
+        const next = current[index];
+        if (!isObject(next) && !isArray(next)) return clonedObj;
+        current = next;
+      }
+    } else if (isLast) {
+      delete current[k];
+    } else {
+      const next = current[k];
+      if (!isObject(next) && !isArray(next)) return clonedObj;
+      current = next;
+    }
+  }
+  return clonedObj as T;
+}

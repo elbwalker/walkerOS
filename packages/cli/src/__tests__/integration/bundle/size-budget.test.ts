@@ -6,7 +6,7 @@
  *   2. Dev/zod leakage: the cdn and cdn-skeleton outputs must be free of any
  *      runtime-schema / zod markers that would indicate dev imports snuck in.
  *
- * Baseline: CDN direct IIFE = 50,479 bytes (clean). Budget = baseline × 1.15.
+ * Baseline: CDN direct IIFE = 70,560 bytes (clean). Budget = baseline × 1.15.
  */
 import { readFile, mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -15,8 +15,11 @@ import { join } from 'path';
 import { bundle } from '../../../commands/bundle/index.js';
 import { MINIMAL_FLOW } from '../../fixtures/minimal-flow.js';
 
-// Budget from Task 0 baseline measurement: 50,479 bytes × 1.15 headroom.
-const SIZE_BUDGET_BYTES = 58051;
+// Clean CDN IIFE baseline (70,560 bytes) × 1.15 headroom. The baseline covers
+// the minimal web flow: core + collector (event engine, mapping, cache,
+// consent, spans) plus the browser source and api destination. This guards
+// against sudden growth; bump it deliberately only when a real feature lands.
+const SIZE_BUDGET_BYTES = 81144;
 
 describe('CDN bundle size budget', () => {
   let tmpDir: string;

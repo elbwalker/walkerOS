@@ -354,7 +354,7 @@ Default: validates input as Flow.Json (schema, references, cross-step examples).
 | `flow` (default) | Flow.Json    | Schema, references, cross-step examples |
 | `event`          | Event object | Name format, schema, consent            |
 | `mapping`        | Mapping      | Pattern format, rule structure          |
-| `contract`       | Contract     | Named entries, extends, sections        |
+| `contract`       | Contract     | Named entries, extend, sections         |
 
 Use `--path` for entry validation against package schemas:
 

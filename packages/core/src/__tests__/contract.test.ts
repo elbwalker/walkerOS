@@ -46,7 +46,7 @@ describe('mergeContractSchemas', () => {
 });
 
 describe('resolveContracts', () => {
-  it('should resolve a single contract with no extends', () => {
+  it('should resolve a single contract with no extend', () => {
     const contract: Flow.Contract = {
       default: {
         schema: {
@@ -70,7 +70,7 @@ describe('resolveContracts', () => {
     expect(resolved.default.events?.product.view).toBeDefined();
   });
 
-  it('should resolve extends chain', () => {
+  it('should resolve extend chain', () => {
     const contract: Flow.Contract = {
       default: {
         schema: {
@@ -82,7 +82,7 @@ describe('resolveContracts', () => {
         },
       },
       web: {
-        extends: 'default',
+        extend: 'default',
         events: {
           product: { view: {} },
         },
@@ -100,7 +100,7 @@ describe('resolveContracts', () => {
     expect(resolved.web.events?.product.view).toBeDefined();
   });
 
-  it('should resolve deep extends chain', () => {
+  it('should resolve deep extend chain', () => {
     const contract: Flow.Contract = {
       default: {
         schema: {
@@ -111,11 +111,11 @@ describe('resolveContracts', () => {
         },
       },
       web: {
-        extends: 'default',
+        extend: 'default',
         events: { product: { view: {} } },
       },
       web_loggedin: {
-        extends: 'web',
+        extend: 'web',
         schema: {
           type: 'object',
           properties: {
@@ -135,24 +135,24 @@ describe('resolveContracts', () => {
     expect(resolved.web_loggedin.events?.product.view).toBeDefined();
   });
 
-  it('should detect circular extends', () => {
+  it('should detect circular extend', () => {
     const contract: Flow.Contract = {
-      a: { extends: 'b' },
-      b: { extends: 'a' },
+      a: { extend: 'b' },
+      b: { extend: 'a' },
     };
     expect(() => resolveContracts(contract)).toThrow(/circular/i);
   });
 
-  it('should detect self-referencing extends', () => {
+  it('should detect self-referencing extend', () => {
     const contract: Flow.Contract = {
-      web: { extends: 'web' },
+      web: { extend: 'web' },
     };
     expect(() => resolveContracts(contract)).toThrow(/circular/i);
   });
 
-  it('should throw for extends referencing non-existent contract', () => {
+  it('should throw for extend referencing non-existent contract', () => {
     const contract: Flow.Contract = {
-      web: { extends: 'nonExistent' },
+      web: { extend: 'nonExistent' },
     };
     expect(() => resolveContracts(contract)).toThrow(/nonExistent/);
   });
@@ -199,7 +199,7 @@ describe('resolveContracts', () => {
     });
   });
 
-  it('should resolve extends before wildcards', () => {
+  it('should resolve extend before wildcards', () => {
     const contract: Flow.Contract = {
       default: {
         events: {
@@ -209,7 +209,7 @@ describe('resolveContracts', () => {
         },
       },
       web: {
-        extends: 'default',
+        extend: 'default',
         events: {
           product: {
             add: { properties: { data: { required: ['qty'] } } },
@@ -234,7 +234,7 @@ describe('resolveContracts', () => {
         },
       },
       web: {
-        extends: 'default',
+        extend: 'default',
       },
     };
     const resolved = resolveContracts(contract);
@@ -244,17 +244,17 @@ describe('resolveContracts', () => {
   it('should let child tagging override parent tagging', () => {
     const contract: Flow.Contract = {
       default: { tagging: 1 },
-      web: { extends: 'default', tagging: 2 },
+      web: { extend: 'default', tagging: 2 },
     };
     const resolved = resolveContracts(contract);
     expect(resolved.web.tagging).toBe(2);
   });
 
-  it('should propagate tagging through a multi-level extends chain', () => {
+  it('should propagate tagging through a multi-level extend chain', () => {
     const contract: Flow.Contract = {
       default: { tagging: 3 },
-      web: { extends: 'default' },
-      web_loggedin: { extends: 'web' },
+      web: { extend: 'default' },
+      web_loggedin: { extend: 'web' },
     };
     const resolved = resolveContracts(contract);
     expect(resolved.web.tagging).toBe(3);
@@ -329,7 +329,7 @@ describe('resolveContracts', () => {
     });
   });
 
-  it('merges schemas additively via extends', () => {
+  it('merges schemas additively via extend', () => {
     const contract: Flow.Contract = {
       default: {
         schema: {
@@ -338,7 +338,7 @@ describe('resolveContracts', () => {
         },
       },
       web: {
-        extends: 'default',
+        extend: 'default',
         schema: {
           type: 'object',
           properties: { consent: { required: ['analytics'] } },
@@ -353,7 +353,7 @@ describe('resolveContracts', () => {
     });
   });
 
-  it('unions required arrays via extends', () => {
+  it('unions required arrays via extend', () => {
     const contract: Flow.Contract = {
       default: {
         schema: {
@@ -362,7 +362,7 @@ describe('resolveContracts', () => {
         },
       },
       web: {
-        extends: 'default',
+        extend: 'default',
         schema: {
           type: 'object',
           properties: { globals: { type: 'object', required: ['currency'] } },

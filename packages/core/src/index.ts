@@ -19,6 +19,7 @@ export * from './invocations';
 export * from './is';
 export * from './logger';
 export * from './mapping';
+export * from './mergeMapping';
 export * from './mockEnv';
 export * from './mockContext';
 export * from './mockLogger';
