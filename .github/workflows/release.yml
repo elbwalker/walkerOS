@@ -217,7 +217,7 @@ jobs:
 
       - name: Build and push Flow image
         if: steps.check-flow.outputs.exists == 'false'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: ./packages/cli
           file: ./packages/cli/Dockerfile
@@ -230,7 +230,7 @@ jobs:
 
       - name: Build and push CLI image
         if: steps.check-cli.outputs.exists == 'false'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: ./packages/cli
           file: ./packages/cli/Dockerfile.cli
