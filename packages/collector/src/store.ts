@@ -1,6 +1,7 @@
 import type { Cache, Collector, Store } from '@walkeros/core';
-import { useHooks } from '@walkeros/core';
+import { emitStep, useHooks } from '@walkeros/core';
 import { createCacheStore } from './cache-store';
+import { buildBaseState } from './observerEmit';
 import { wrapStoreWithCache } from './store-cache-wrapper';
 
 /**
@@ -15,70 +16,189 @@ type InitStoreWithCache = Store.InitStore & {
 };
 
 /**
- * Hook wrapping for a single store instance. Mutates `instance` in place.
+ * Hook wrapping and observer emission for a single store instance.
+ * Mutates `instance` in place.
  *
  * Called once per store, AFTER any cache wrapping in phase 2. Wrapping the
- * outer (wrapper) instance means the hook observes the consumer-facing
- * boundary: it fires on every `wrapped.get` regardless of cache HIT/MISS,
+ * outer (wrapper) instance means observers see the consumer-facing
+ * boundary: they fire on every `wrapped.get` regardless of cache HIT/MISS,
  * and only once per `wrapped.set` (not also for the wrapper's internal
  * write into `cacheStore`). If the store has no cache wrapper, the bare
- * backing is hook-wrapped instead, preserving observability.
+ * backing is wrapped instead, preserving observability.
  *
- * Double-wrap: the generic names (`StoreGet`, `StoreSet`, `StoreDelete`)
- * are wrapped first so existing observers and the public hook contract
- * keep working. A second pass wraps with per-store names
- * (`StoreGet_<id>`, etc.) so per-store telemetry observers can subscribe
- * without losing the store identity that the generic call signature does
- * not carry. The per-store wrap is the OUTER one (executes first on
- * call); it forwards into the generic wrap, which forwards into the
- * original store call.
+ * Two responsibilities per op:
+ *  1. Inner `useHooks(..., 'StoreGet', ...)` wrap keeps the generic
+ *     user-declared hook contract working (`preStoreGet`, `postStoreSet`,
+ *     etc.).
+ *  2. Outer self-emit wrap pushes `FlowState` (`stepType: 'store'`) into
+ *     `collector.observers` directly, so per-store telemetry no longer
+ *     needs a separate hook bag.
  */
 function applyStoreHooks(
   collector: Collector.Instance,
   instance: Store.Instance,
   storeId: string,
 ): void {
-  const originalGet = instance.get;
-  const originalSet = instance.set;
-  const originalDelete = instance.delete;
+  const stepIdFor = `store.${storeId}`;
 
   const innerGet = useHooks(
-    originalGet,
+    instance.get,
     'StoreGet',
     collector.hooks,
     collector.logger,
   );
   const innerSet = useHooks(
-    originalSet,
+    instance.set,
     'StoreSet',
     collector.hooks,
     collector.logger,
   );
   const innerDelete = useHooks(
-    originalDelete,
+    instance.delete,
     'StoreDelete',
     collector.hooks,
     collector.logger,
   );
 
-  instance.get = useHooks(
-    innerGet,
-    'StoreGet_' + storeId,
-    collector.hooks,
-    collector.logger,
-  );
-  instance.set = useHooks(
-    innerSet,
-    'StoreSet_' + storeId,
-    collector.hooks,
-    collector.logger,
-  );
-  instance.delete = useHooks(
-    innerDelete,
-    'StoreDelete_' + storeId,
-    collector.hooks,
-    collector.logger,
-  );
+  instance.get = async (key: string): Promise<unknown> => {
+    const started = Date.now();
+    const inState = buildBaseState(collector, {
+      stepId: stepIdFor,
+      stepType: 'store',
+      phase: 'in',
+      eventId: '',
+      now: started,
+    });
+    inState.meta = { op: 'get', key };
+    emitStep(collector, inState);
+
+    try {
+      const result = await innerGet(key);
+      const finished = Date.now();
+      const outState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'out',
+        eventId: '',
+        now: finished,
+      });
+      outState.durationMs = finished - started;
+      outState.meta = { op: 'get', key };
+      emitStep(collector, outState);
+      return result;
+    } catch (err) {
+      const finished = Date.now();
+      const errState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'error',
+        eventId: '',
+        now: finished,
+      });
+      errState.durationMs = finished - started;
+      errState.meta = { op: 'get', key };
+      errState.error =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : { message: String(err) };
+      emitStep(collector, errState);
+      throw err;
+    }
+  };
+
+  instance.set = async (
+    key: string,
+    value: unknown,
+    ttl?: number,
+  ): Promise<void> => {
+    const started = Date.now();
+    const inState = buildBaseState(collector, {
+      stepId: stepIdFor,
+      stepType: 'store',
+      phase: 'in',
+      eventId: '',
+      now: started,
+    });
+    inState.meta = { op: 'set', key, value };
+    emitStep(collector, inState);
+
+    try {
+      await innerSet(key, value, ttl);
+      const finished = Date.now();
+      const outState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'out',
+        eventId: '',
+        now: finished,
+      });
+      outState.durationMs = finished - started;
+      outState.meta = { op: 'set', key, value };
+      emitStep(collector, outState);
+    } catch (err) {
+      const finished = Date.now();
+      const errState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'error',
+        eventId: '',
+        now: finished,
+      });
+      errState.durationMs = finished - started;
+      errState.meta = { op: 'set', key, value };
+      errState.error =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : { message: String(err) };
+      emitStep(collector, errState);
+      throw err;
+    }
+  };
+
+  instance.delete = async (key: string): Promise<void> => {
+    const started = Date.now();
+    const inState = buildBaseState(collector, {
+      stepId: stepIdFor,
+      stepType: 'store',
+      phase: 'in',
+      eventId: '',
+      now: started,
+    });
+    inState.meta = { op: 'delete', key };
+    emitStep(collector, inState);
+
+    try {
+      await innerDelete(key);
+      const finished = Date.now();
+      const outState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'out',
+        eventId: '',
+        now: finished,
+      });
+      outState.durationMs = finished - started;
+      outState.meta = { op: 'delete', key };
+      emitStep(collector, outState);
+    } catch (err) {
+      const finished = Date.now();
+      const errState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'error',
+        eventId: '',
+        now: finished,
+      });
+      errState.durationMs = finished - started;
+      errState.meta = { op: 'delete', key };
+      errState.error =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : { message: String(err) };
+      emitStep(collector, errState);
+      throw err;
+    }
+  };
 }
 
 /**
@@ -232,7 +352,7 @@ export async function initStores(
       cacheStore,
       namespace: resolvedNamespace,
       logger: collector.logger.scope('store-cache').scope(storeId),
-      hooks: collector.hooks,
+      collector,
     });
   }
 

@@ -34,6 +34,7 @@ export * from './fatalError';
 export * from './useHooks';
 export * from './telemetry';
 export * from './telemetryResolver';
+export { emitStep } from './emitStep';
 export * from './batchedPoster';
 export * from './userAgent';
 export * from './wrapInlineCode';

@@ -22,7 +22,6 @@ import type { TelemetryLevel, TelemetryOptions } from './telemetry';
 
 interface ResolveTelemetryInput {
   flowId: string;
-  startedAt: number;
   /** From `flow.config?.observe`. May be undefined. */
   observe?: { level?: 'off' | 'standard' | 'trace'; sample?: number };
   /** Snapshot of `process.env` (or any equivalent). Test seam. */
@@ -32,9 +31,10 @@ interface ResolveTelemetryInput {
 }
 
 /**
- * Returns `TelemetryOptions` ready to pass to `createTelemetryHooks`, or
- * `null` if telemetry is disabled (`level === 'off'` with no trace
- * override). Callers should skip hook installation when this returns null.
+ * Returns `TelemetryOptions` ready to pass to `createTelemetryObserver`,
+ * or `null` if telemetry is disabled (`level === 'off'` with no trace
+ * override). Callers should skip observer installation when this returns
+ * null.
  */
 export function resolveTelemetryOptions(
   input: ResolveTelemetryInput,
@@ -48,7 +48,6 @@ export function resolveTelemetryOptions(
     if (!Number.isNaN(parsed) && parsed > now()) {
       return {
         flowId: input.flowId,
-        startedAt: input.startedAt,
         level: 'trace',
         includeIn: true,
         includeOut: true,
@@ -63,7 +62,6 @@ export function resolveTelemetryOptions(
   const sample = input.observe?.sample ?? 1;
   return {
     flowId: input.flowId,
-    startedAt: input.startedAt,
     level,
     sample,
   };

@@ -59,8 +59,9 @@ export interface WrapSkeletonOptions {
 
   /**
    * Browser-only: telemetry wiring. When provided, the wrapped bundle
-   * installs collector hooks built via `createTelemetryHooks` and forwards
-   * FlowState records to `observerUrl` using `createBatchedPoster`.
+   * installs an observer built via `createTelemetryObserver` onto
+   * `collector.observers` and forwards FlowState records to `observerUrl`
+   * using `createBatchedPoster`.
    *
    * Omit (or pass `level: 'off'`) to ship a bundle with zero telemetry
    * plumbing.

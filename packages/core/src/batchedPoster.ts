@@ -3,7 +3,7 @@
  *
  * Buffers FlowState records and flushes them to an HTTP endpoint either when
  * `batchMs` elapses since the first queued record, or when `batchSize` is
- * reached. Returns the emit callback that `createTelemetryHooks` consumes.
+ * reached. Returns the emit callback that `createTelemetryObserver` consumes.
  *
  * Errors from the underlying fetch are swallowed (or routed through the
  * optional `onError` callback) so a transient observer outage cannot crash

@@ -1,11 +1,12 @@
 /**
- * Phase 5 telemetry wiring tests for the runtime pipeline.
+ * Telemetry wiring tests for the runtime pipeline.
  *
  * The pipeline reads WALKEROS_OBSERVER_URL + WALKEROS_INGEST_TOKEN at boot
- * and (when both are present) builds a hooks bag via
- * createBatchedPoster + createTelemetryHooks, then forwards it to loadFlow
- * as the new 6th argument. When either env var is missing, no hooks are
- * passed (the bundle sees undefined and skips the merge).
+ * and (when both are present) builds a single-element observer array via
+ * createBatchedPoster + createTelemetryObserver, then forwards it to
+ * loadFlow as the 6th argument. When either env var is missing, no
+ * observers are passed (the bundle sees undefined and skips the install
+ * loop).
  *
  * The WALKEROS_TRACE_UNTIL override is exercised at the resolver layer; the
  * pipeline only forwards what the resolver returns.
@@ -104,7 +105,7 @@ describe('runPipeline telemetry wiring', () => {
     logger: mockLogger as never,
   };
 
-  it('passes telemetry hooks when WALKEROS_OBSERVER_URL and WALKEROS_INGEST_TOKEN are set', async () => {
+  it('passes a single-element observer array when WALKEROS_OBSERVER_URL and WALKEROS_INGEST_TOKEN are set', async () => {
     process.env.WALKEROS_OBSERVER_URL =
       'https://observer.example.com/ingest/dep_42';
     process.env.WALKEROS_INGEST_TOKEN = 'tok_test';
@@ -113,16 +114,13 @@ describe('runPipeline telemetry wiring', () => {
     await new Promise((r) => setTimeout(r, 30));
 
     const call = (loadFlow as jest.Mock).mock.calls[0];
-    const passedHooks = call[5];
-    expect(passedHooks).toBeDefined();
-    expect(typeof passedHooks).toBe('object');
-    // The standard hooks bag wires prePush / postPush (collector hop) plus
-    // destination + transformer pairs. Check the canonical collector pair.
-    expect(passedHooks.prePush).toBeInstanceOf(Function);
-    expect(passedHooks.postPush).toBeInstanceOf(Function);
+    const passed = call[5];
+    expect(Array.isArray(passed)).toBe(true);
+    expect(passed).toHaveLength(1);
+    expect(typeof passed[0]).toBe('function');
   });
 
-  it('passes undefined hooks when WALKEROS_OBSERVER_URL is missing', async () => {
+  it('passes undefined observers when WALKEROS_OBSERVER_URL is missing', async () => {
     process.env.WALKEROS_INGEST_TOKEN = 'tok_test';
 
     void runPipeline(baseOptions);
@@ -132,7 +130,7 @@ describe('runPipeline telemetry wiring', () => {
     expect(call[5]).toBeUndefined();
   });
 
-  it('passes undefined hooks when WALKEROS_INGEST_TOKEN is missing', async () => {
+  it('passes undefined observers when WALKEROS_INGEST_TOKEN is missing', async () => {
     process.env.WALKEROS_OBSERVER_URL =
       'https://observer.example.com/ingest/dep_42';
 

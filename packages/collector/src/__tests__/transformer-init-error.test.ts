@@ -27,6 +27,7 @@ function createTestCollector(
     transformers: {},
     globals: {},
     hooks: {},
+    observers: new Set(),
     logger: mockLogger,
     on: {},
     queue: [],

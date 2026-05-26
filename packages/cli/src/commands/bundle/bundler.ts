@@ -1674,15 +1674,17 @@ export default async function(context = {}) {
     }
   }
 
-  // Telemetry hooks injection (Phase 5): the host (pipeline.ts) builds the
-  // hooks bag via createTelemetryHooks + createBatchedPoster and passes it
-  // through context. Merged into any hooks the flow author may have
-  // declared so we don't clobber existing pipeline observation.
-  if (context.hooks) {
-    config.hooks = { ...(config.hooks || {}), ...context.hooks };
-  }
-
   const result = await startFlow(config);
+
+  // Telemetry observer installation: the host (pipeline.ts) builds the
+  // observer functions via createTelemetryObserver + createBatchedPoster
+  // and forwards them through context. Added to collector.observers so the
+  // runtime self-emission loop drives them.
+  if (context.observers) {
+    for (const observer of context.observers) {
+      result.collector.observers.add(observer);
+    }
+  }
 
   const httpSource = Object.values(result.collector.sources || {})
     .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
@@ -1740,7 +1742,7 @@ export function generateWebEntry(
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
   const telemetryImport = options.telemetry
-    ? `\nimport { createBatchedPoster as __cbp, createTelemetryHooks as __cth } from '@walkeros/core';`
+    ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
     : '';
   const telemetryBlock = options.telemetry
     ? `
@@ -1750,13 +1752,12 @@ export function generateWebEntry(
       url: ${JSON.stringify(options.telemetry.observerUrl)},
       token: ${JSON.stringify(options.telemetry.ingestToken)},
     });
-    const __hooks = __cth(__emit, {
+    const __observer = __cto(__emit, {
       flowId: ${JSON.stringify(options.telemetry.flowId)},
-      startedAt: Date.now(),
       level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
       sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
     });
-    config.hooks = Object.assign({}, config.hooks || {}, __hooks);
+    collector.observers.add(__observer);
   }`
     : '';
 
@@ -1765,8 +1766,8 @@ export function generateWebEntry(
 const __configData = ${dataPayload};
 
 (async () => {
-  const config = wireConfig(__configData);${envBlock}${telemetryBlock}
-  const { collector, elb } = await startFlow(config);${assignmentCode}
+  const config = wireConfig(__configData);${envBlock}
+  const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}
 })();`;
 }
 
@@ -1798,9 +1799,9 @@ export function generateWrapEntry(
     platform?: 'browser' | 'node';
     /**
      * Telemetry wiring. When set, the IIFE imports
-     * `createTelemetryHooks` + `createBatchedPoster` from `@walkeros/core`,
-     * builds a hooks bag, and merges it into `config.hooks` before
-     * `startFlow`.
+     * `createTelemetryObserver` + `createBatchedPoster` from `@walkeros/core`,
+     * builds an observer, and installs it on `collector.observers` after
+     * `startFlow` returns.
      */
     telemetry?: WrapEntryTelemetry;
   } = {},
@@ -1895,13 +1896,13 @@ export function generateWrapEntry(
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
   // Telemetry block: when telemetry options are present, import the two
-  // helpers from @walkeros/core and wire the hooks bag into config.hooks
-  // BEFORE startFlow consumes the config. The bundle ships the plaintext
-  // ingest token; the operator-controlled traceUntil debug flag is
-  // resolved server-side and would be rotated via redeploy until the
+  // helpers from @walkeros/core and install the observer on
+  // collector.observers AFTER startFlow returns. The bundle ships the
+  // plaintext ingest token; the operator-controlled traceUntil debug flag
+  // is resolved server-side and would be rotated via redeploy until the
   // poll-and-update plumbing lands.
   const telemetryImport = options.telemetry
-    ? `\nimport { createBatchedPoster as __cbp, createTelemetryHooks as __cth } from '@walkeros/core';`
+    ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
     : '';
   const telemetryBlock = options.telemetry
     ? `
@@ -1911,21 +1912,20 @@ export function generateWrapEntry(
       url: ${JSON.stringify(options.telemetry.observerUrl)},
       token: ${JSON.stringify(options.telemetry.ingestToken)},
     });
-    const __hooks = __cth(__emit, {
+    const __observer = __cto(__emit, {
       flowId: ${JSON.stringify(options.telemetry.flowId)},
-      startedAt: Date.now(),
       level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
       sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
     });
-    config.hooks = Object.assign({}, config.hooks || {}, __hooks);
+    collector.observers.add(__observer);
   }`
     : '';
 
   return `import { startFlow, wireConfig, __configData } from '${stage1Specifier}';${telemetryImport}
 
 (async () => {${preflightBlock}
-  const config = wireConfig(__configData);${envBlock}${telemetryBlock}
-  const { collector, elb } = await startFlow(config);${assignmentCode}
+  const config = wireConfig(__configData);${envBlock}
+  const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}
 })();`;
 }
 
@@ -1955,15 +1955,17 @@ export default async function(context = {}) {
     }
   }
 
-  // Telemetry hooks injection (Phase 5): the host (pipeline.ts) builds the
-  // hooks bag via createTelemetryHooks + createBatchedPoster and passes it
-  // through context. Merged into any hooks the flow author may have
-  // declared so we don't clobber existing pipeline observation.
-  if (context.hooks) {
-    config.hooks = { ...(config.hooks || {}), ...context.hooks };
-  }
-
   const result = await startFlow(config);
+
+  // Telemetry observer installation: the host (pipeline.ts) builds the
+  // observer functions via createTelemetryObserver + createBatchedPoster
+  // and forwards them through context. Added to collector.observers so the
+  // runtime self-emission loop drives them.
+  if (context.observers) {
+    for (const observer of context.observers) {
+      result.collector.observers.add(observer);
+    }
+  }
 
   const httpSource = Object.values(result.collector.sources || {})
     .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');

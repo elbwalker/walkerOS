@@ -124,14 +124,14 @@ export const __configData = { test: true };
 
     const output = await fs.readFile(outputPath, 'utf-8');
 
-    // The generated output may rename the imports during esbuild bundling,
-    // but the helper bodies must appear (the bundled createBatchedPoster
-    // implementation contains `Bearer ` and the URL/token literals).
+    // Configured literals must end up in the bundle.
     expect(output).toContain('https://observer.example.com/ingest/dep_42');
     expect(output).toContain('tok_test_value');
-    expect(output).toContain('Bearer ');
-    // The flowId we configured is baked into a string.
     expect(output).toContain('flow_x');
+    // The observer is installed onto collector.observers (Set#add). The
+    // legacy config.hooks merge must not appear.
+    expect(output).toMatch(/observers\.add/);
+    expect(output).not.toContain('config.hooks');
   });
 
   it('omits telemetry wiring when level is off', async () => {
@@ -152,10 +152,11 @@ export const __configData = { test: true };
     });
 
     const output = await fs.readFile(outputPath, 'utf-8');
-    // No observer URL, token, or Bearer header in the emitted bundle.
+    // wrap.ts drops `level: 'off'` to undefined telemetry, so the observer
+    // block and its literals never reach the bundle.
     expect(output).not.toContain('https://observer.example.com');
     expect(output).not.toContain('tok_test_value');
-    expect(output).not.toContain('Bearer ');
+    expect(output).not.toMatch(/observers\.add/);
   });
 
   it('omits telemetry wiring when telemetry option is absent', async () => {
@@ -170,7 +171,8 @@ export const __configData = { test: true };
     });
 
     const output = await fs.readFile(outputPath, 'utf-8');
-    expect(output).not.toContain('Bearer ');
+    expect(output).not.toMatch(/observers\.add/);
+    expect(output).not.toContain('config.hooks');
   });
 
   it('throws when the skeleton does not exist', async () => {

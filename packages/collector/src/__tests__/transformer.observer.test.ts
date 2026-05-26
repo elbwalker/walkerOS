@@ -1,0 +1,73 @@
+import type { FlowState } from '@walkeros/core';
+import { startFlow } from '..';
+
+describe('transformer.push self-emission', () => {
+  test('emits in+out for a successful transformer push', async () => {
+    const states: FlowState[] = [];
+
+    const { collector, elb } = await startFlow({
+      run: true,
+      transformers: {
+        echo: {
+          code: async (context) => ({
+            type: 'echo',
+            config: context.config,
+            push: async (event) => ({ event }),
+          }),
+        },
+      },
+      destinations: {
+        sink: {
+          code: { type: 'sink', config: {}, push: async () => undefined },
+          before: 'echo',
+        },
+      },
+    });
+    collector.observers.add((state) => states.push(state));
+
+    await elb({ name: 'page view', data: {} });
+
+    const tStates = states.filter(
+      (s) => s.stepType === 'transformer' && s.stepId === 'transformer.echo',
+    );
+    expect(tStates.some((s) => s.phase === 'in')).toBe(true);
+    expect(tStates.some((s) => s.phase === 'out')).toBe(true);
+  });
+
+  test('emits error when transformer throws', async () => {
+    const states: FlowState[] = [];
+
+    const { collector, elb } = await startFlow({
+      run: true,
+      transformers: {
+        bomb: {
+          code: async (context) => ({
+            type: 'bomb',
+            config: context.config,
+            push: async () => {
+              throw new Error('transformer kaboom');
+            },
+          }),
+        },
+      },
+      destinations: {
+        sink: {
+          code: { type: 'sink', config: {}, push: async () => undefined },
+          before: 'bomb',
+        },
+      },
+    });
+    collector.observers.add((state) => states.push(state));
+
+    await elb({ name: 'page view', data: {} });
+
+    const err = states.find(
+      (s) =>
+        s.stepType === 'transformer' &&
+        s.stepId === 'transformer.bomb' &&
+        s.phase === 'error',
+    );
+    expect(err).toBeDefined();
+    expect(err?.error?.message).toContain('transformer kaboom');
+  });
+});

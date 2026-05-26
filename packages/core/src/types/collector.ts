@@ -11,6 +11,7 @@ import type {
   Mapping,
 } from '.';
 import type { Ingest } from './ingest';
+import type { ObserverFn } from './observer';
 
 /** Identifies which kind of step a stepId belongs to. */
 export type StepKind = 'collector' | 'source' | 'transformer' | 'destination';
@@ -250,6 +251,15 @@ export interface Instance {
   stores: Stores;
   globals: WalkerOS.Properties;
   hooks: Hooks.Functions;
+  /**
+   * First-class observation channel. The runtime self-emits FlowState
+   * records at canonical step sites (collector.push, destination.push,
+   * destination.init, destination.pushBatch, destination consent skip,
+   * transformer.push, store.get/set/delete, store cache HIT/MISS).
+   * Observers run synchronously inside emitStep; thrown values are
+   * swallowed. Subscribers add/remove via the standard Set API.
+   */
+  observers: Set<ObserverFn>;
   logger: Logger.Instance;
   on: On.OnConfig;
   queue: WalkerOS.Events;

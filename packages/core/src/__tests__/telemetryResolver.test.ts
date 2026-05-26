@@ -8,13 +8,11 @@ describe('resolveTelemetryOptions', () => {
   it('returns trace level when WALKEROS_TRACE_UNTIL is in the future', () => {
     const opts = resolveTelemetryOptions({
       flowId: 'flow_x',
-      startedAt: NOW,
       env: { WALKEROS_TRACE_UNTIL: FUTURE },
       now: () => NOW,
     });
     expect(opts).toEqual({
       flowId: 'flow_x',
-      startedAt: NOW,
       level: 'trace',
       includeIn: true,
       includeOut: true,
@@ -25,14 +23,12 @@ describe('resolveTelemetryOptions', () => {
   it('ignores WALKEROS_TRACE_UNTIL when expired', () => {
     const opts = resolveTelemetryOptions({
       flowId: 'flow_x',
-      startedAt: NOW,
       observe: { level: 'standard' },
       env: { WALKEROS_TRACE_UNTIL: PAST },
       now: () => NOW,
     });
     expect(opts).toEqual({
       flowId: 'flow_x',
-      startedAt: NOW,
       level: 'standard',
       sample: 1,
     });
@@ -41,7 +37,6 @@ describe('resolveTelemetryOptions', () => {
   it('returns null when level is off and no trace override', () => {
     const opts = resolveTelemetryOptions({
       flowId: 'flow_x',
-      startedAt: NOW,
       observe: { level: 'off' },
       env: {},
       now: () => NOW,
@@ -52,13 +47,11 @@ describe('resolveTelemetryOptions', () => {
   it('falls back to standard level when observe is undefined', () => {
     const opts = resolveTelemetryOptions({
       flowId: 'flow_x',
-      startedAt: NOW,
       env: {},
       now: () => NOW,
     });
     expect(opts).toEqual({
       flowId: 'flow_x',
-      startedAt: NOW,
       level: 'standard',
       sample: 1,
     });
@@ -67,7 +60,6 @@ describe('resolveTelemetryOptions', () => {
   it('honors a custom sample fraction', () => {
     const opts = resolveTelemetryOptions({
       flowId: 'flow_x',
-      startedAt: NOW,
       observe: { level: 'standard', sample: 0.1 },
       env: {},
       now: () => NOW,
@@ -78,13 +70,11 @@ describe('resolveTelemetryOptions', () => {
   it('ignores malformed WALKEROS_TRACE_UNTIL values', () => {
     const opts = resolveTelemetryOptions({
       flowId: 'flow_x',
-      startedAt: NOW,
       env: { WALKEROS_TRACE_UNTIL: 'not-a-date' },
       now: () => NOW,
     });
     expect(opts).toEqual({
       flowId: 'flow_x',
-      startedAt: NOW,
       level: 'standard',
       sample: 1,
     });

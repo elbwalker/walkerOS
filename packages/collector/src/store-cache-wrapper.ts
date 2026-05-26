@@ -1,5 +1,6 @@
-import type { Cache, Hooks, Logger, Store } from '@walkeros/core';
-import { compileMatcher, useHooks } from '@walkeros/core';
+import type { Cache, Collector, Logger, Store } from '@walkeros/core';
+import { compileMatcher, emitStep } from '@walkeros/core';
+import { buildBaseState } from './observerEmit';
 
 /**
  * Options passed to `wrapStoreWithCache`. Pre-resolved by `initStores` phase
@@ -23,16 +24,15 @@ export interface WrappedStoreOptions {
   namespace: string;
   logger?: Logger.Instance;
   /**
-   * Optional collector hooks bag for cache-level observability. When
-   * provided, the wrapper invokes a per-store hook (`StoreCacheRead_<id>`)
-   * on every wrapped `get`, passing the key as the wrapped fn argument
-   * and the resolved status (`'hit'` or `'miss'`) as the wrapped result.
-   * Observers subscribe via `postStoreCacheRead_<id>` to record cache
-   * metadata in their FlowState. The hook is a no-op when the bag does
-   * not register a handler for the corresponding name, so wiring is
-   * always safe.
+   * Optional collector reference for cache-level observability. When
+   * provided, the wrapper emits a `FlowState` (`stepType: 'store'`,
+   * `meta.op: 'cache'`) on every wrapped `get`, carrying the resolved
+   * cache status (`'hit'` or `'miss'`) and the key. Observers attached
+   * to `collector.observers` see HIT/MISS without coupling to wrapper
+   * internals. Optional only to keep unit-test setups lightweight;
+   * production call sites pass it.
    */
-  hooks?: Hooks.Functions;
+  collector?: Collector.Instance;
 }
 
 interface CompiledStoreCacheRule {
@@ -108,19 +108,29 @@ export function wrapStoreWithCache(
   backing: Store.Instance,
   opts: WrappedStoreOptions,
 ): WrappedStoreInstance {
-  const { cacheConfig, cacheStore, namespace, logger, storeId, hooks } = opts;
+  const { cacheConfig, cacheStore, namespace, logger, storeId, collector } =
+    opts;
 
-  // Per-store hook name for cache observability. The function we wrap is a
-  // pure identity over the resolved status; observers attach a post hook to
-  // see HIT/MISS without coupling to the wrapper's internals. When `hooks`
-  // is absent, calls fall straight through useHooks's no-handler fast path,
-  // so unsubscribed deployments pay no measurable cost.
-  const cacheHookName = 'StoreCacheRead_' + storeId;
+  // Cache observability. Each wrapped `get` resolves to a HIT or MISS;
+  // the wrapper emits a `FlowState` on the collector so observers can
+  // record cache metadata without coupling to wrapper internals. When
+  // `collector` is absent (unit-test path), reporting is skipped.
   const reportCacheStatus = (key: string, status: 'hit' | 'miss'): void => {
-    if (!hooks) return;
-    // Identity fn so the post hook receives the status as `result`.
-    const fn = (_key: string, s: 'hit' | 'miss') => s;
-    useHooks(fn, cacheHookName, hooks, logger)(key, status);
+    if (!collector) return;
+    const state = buildBaseState(collector, {
+      stepId: `store.${storeId}`,
+      stepType: 'store',
+      phase: 'in',
+      eventId: '',
+      now: Date.now(),
+    });
+    state.meta = {
+      op: 'cache',
+      cached: status === 'hit',
+      status,
+      key,
+    };
+    emitStep(collector, state);
   };
 
   // Closure-scoped counters. Mutated directly at each path; the public

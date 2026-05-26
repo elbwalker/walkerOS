@@ -11,6 +11,7 @@ function createMockCollector(): Collector.Instance {
     logger: createMockLogger(),
     stores: {},
     hooks: {},
+    observers: new Set(),
   } as unknown as Collector.Instance;
 }
 

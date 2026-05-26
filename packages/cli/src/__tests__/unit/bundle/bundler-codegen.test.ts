@@ -15,9 +15,11 @@ import {
   detectStepPackages,
   detectNamedImports,
   serializeWithCode,
+  generateServerEntry,
   generateSplitWireConfigModule,
   generateWebEntry,
   generateWrapEntry,
+  generateWrapEntryServer,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
 import type { Flow } from '@walkeros/core';
@@ -903,6 +905,84 @@ describe('generateWrapEntry platform gating', () => {
     expect(previewReturnIdx).toBeGreaterThan(-1);
     expect(envBlockIdx).toBeGreaterThan(-1);
     expect(envBlockIdx).toBeGreaterThan(previewReturnIdx);
+  });
+});
+
+describe('generateServerEntry observer wiring', () => {
+  it('iterates context.observers and installs them on collector.observers after startFlow', () => {
+    const out = generateServerEntry('./skel.mjs', '{}');
+    expect(out).toContain('context.observers');
+    expect(out).toContain('collector.observers.add');
+    // The legacy hooks merge must be gone.
+    expect(out).not.toContain('context.hooks');
+    expect(out).not.toContain('config.hooks');
+    // Observer install must come AFTER startFlow returns the result.
+    const startFlowIdx = out.indexOf('await startFlow(config)');
+    const observerIdx = out.indexOf('result.collector.observers.add');
+    expect(startFlowIdx).toBeGreaterThan(-1);
+    expect(observerIdx).toBeGreaterThan(startFlowIdx);
+  });
+});
+
+describe('generateWrapEntryServer observer wiring', () => {
+  it('iterates context.observers and installs them on collector.observers after startFlow', () => {
+    const out = generateWrapEntryServer('./skel.mjs');
+    expect(out).toContain('context.observers');
+    expect(out).toContain('collector.observers.add');
+    expect(out).not.toContain('context.hooks');
+    expect(out).not.toContain('config.hooks');
+    const startFlowIdx = out.indexOf('await startFlow(config)');
+    const observerIdx = out.indexOf('result.collector.observers.add');
+    expect(startFlowIdx).toBeGreaterThan(-1);
+    expect(observerIdx).toBeGreaterThan(startFlowIdx);
+  });
+});
+
+describe('generateWebEntry telemetry observer wiring', () => {
+  it('imports createTelemetryObserver and adds the observer to collector.observers after startFlow', () => {
+    const out = generateWebEntry('./skel.mjs', '{}', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/i/d',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'standard',
+      },
+    });
+    expect(out).toContain('createTelemetryObserver');
+    expect(out).toContain('collector.observers.add');
+    expect(out).not.toContain('createTelemetryHooks');
+    expect(out).not.toContain('config.hooks');
+    const startFlowIdx = out.indexOf('await startFlow(config)');
+    const observerIdx = out.indexOf('collector.observers.add');
+    expect(startFlowIdx).toBeGreaterThan(-1);
+    expect(observerIdx).toBeGreaterThan(startFlowIdx);
+  });
+
+  it('omits telemetry import and block when telemetry option is absent', () => {
+    const out = generateWebEntry('./skel.mjs', '{}');
+    expect(out).not.toContain('createTelemetryObserver');
+    expect(out).not.toContain('collector.observers.add');
+  });
+});
+
+describe('generateWrapEntry telemetry observer wiring', () => {
+  it('imports createTelemetryObserver and adds the observer to collector.observers after startFlow', () => {
+    const out = generateWrapEntry('./skel.mjs', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/i/d',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'standard',
+      },
+    });
+    expect(out).toContain('createTelemetryObserver');
+    expect(out).toContain('collector.observers.add');
+    expect(out).not.toContain('createTelemetryHooks');
+    expect(out).not.toContain('config.hooks');
+    const startFlowIdx = out.indexOf('await startFlow(config)');
+    const observerIdx = out.indexOf('collector.observers.add');
+    expect(startFlowIdx).toBeGreaterThan(-1);
+    expect(observerIdx).toBeGreaterThan(startFlowIdx);
   });
 });
 

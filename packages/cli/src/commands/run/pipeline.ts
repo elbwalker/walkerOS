@@ -8,10 +8,10 @@
 
 import { writeFileSync } from 'fs';
 import fs from 'fs-extra';
-import type { Hooks, Logger } from '@walkeros/core';
+import type { Logger, ObserverFn } from '@walkeros/core';
 import {
   createBatchedPoster,
-  createTelemetryHooks,
+  createTelemetryObserver,
   resolveTelemetryOptions,
 } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
@@ -77,12 +77,12 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   // Health server (always on)
   const healthServer = await createHealthServer(port, logger);
 
-  // Telemetry hooks: only wire when both observer URL and ingest token are
-  // present. Missing env (local dev, run --flow without API) results in a
-  // no-op telemetry path. The resolver also consults WALKEROS_TRACE_UNTIL
+  // Telemetry observers: only wire when both observer URL and ingest token
+  // are present. Missing env (local dev, run --flow without API) results in
+  // a no-op telemetry path. The resolver also consults WALKEROS_TRACE_UNTIL
   // for the operator-controlled debug flag; that hook is read at boot only
   // until the heartbeat-poll plumbing lands.
-  const telemetryHooks = buildTelemetryHooks(api?.flowId ?? 'flow');
+  const telemetryObservers = buildTelemetryObservers(api?.flowId ?? 'flow');
 
   // Load flow
   const runtimeConfig: RuntimeConfig = { port };
@@ -94,7 +94,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
       logger,
       loggerConfig,
       healthServer,
-      telemetryHooks,
+      telemetryObservers,
     );
   } catch (error) {
     await healthServer.close();
@@ -172,7 +172,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
             logger,
             loggerConfig,
             healthServer,
-            telemetryHooks,
+            telemetryObservers,
           );
 
           writeCache(
@@ -244,24 +244,23 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 }
 
 /**
- * Build the telemetry hooks bag the runtime forwards through the bundle
- * context. Returns undefined when telemetry is disabled (missing env vars,
- * level=off and no trace override). The bundle then sees no `context.hooks`
- * and skips the hooks merge entirely.
+ * Build the telemetry observer array the runtime forwards through the
+ * bundle context. Returns undefined when telemetry is disabled (missing env
+ * vars, level=off and no trace override). The bundle then sees no
+ * `context.observers` and skips the install loop entirely.
  */
-function buildTelemetryHooks(flowId: string): Hooks.Functions | undefined {
+function buildTelemetryObservers(
+  flowId: string,
+): Array<ObserverFn> | undefined {
   const url = process.env.WALKEROS_OBSERVER_URL;
   const token = process.env.WALKEROS_INGEST_TOKEN;
   if (!url || !token) return undefined;
 
-  const opts = resolveTelemetryOptions({
-    flowId,
-    startedAt: Date.now(),
-  });
+  const opts = resolveTelemetryOptions({ flowId });
   if (!opts) return undefined;
 
   const emit = createBatchedPoster({ url, token });
-  return createTelemetryHooks(emit, opts);
+  return [createTelemetryObserver(emit, opts)];
 }
 
 async function injectSecrets(

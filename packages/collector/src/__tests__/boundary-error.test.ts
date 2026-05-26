@@ -47,6 +47,7 @@ function createTestCollector(): Collector.Instance {
     stores: {},
     globals: {},
     hooks: {},
+    observers: new Set(),
     logger: mockLogger,
     on: {},
     queue: [],

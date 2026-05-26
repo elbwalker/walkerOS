@@ -29,6 +29,7 @@ function createMockCollector(): Collector.Instance {
     stores: {},
     globals: {},
     hooks: {},
+    observers: new Set(),
     logger: createMockLogger(),
     on: {},
     queue: [],
@@ -309,7 +310,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    const result = stores.cache.get('key');
+    const result = await stores.cache.get('key');
     expect(preStoreGet).toHaveBeenCalledTimes(1);
     expect(result).toBe('value');
   });
@@ -331,7 +332,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    const result = stores.cache.get('key');
+    const result = await stores.cache.get('key');
     expect(postStoreGet).toHaveBeenCalledTimes(1);
     expect(result).toBe('value');
   });
@@ -356,7 +357,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    stores.cache.set('key', 'val', 1000);
+    await stores.cache.set('key', 'val', 1000);
     expect(preStoreSet).toHaveBeenCalledTimes(1);
     expect(setFn).toHaveBeenCalledWith('key', 'val', 1000);
   });
@@ -379,7 +380,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    stores.cache.delete('key');
+    await stores.cache.delete('key');
     expect(preStoreDelete).toHaveBeenCalledTimes(1);
     expect(deleteFn).toHaveBeenCalledWith('key');
   });
@@ -401,7 +402,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    expect(stores.cache.get('k')).toBe('val');
+    expect(await stores.cache.get('k')).toBe('val');
     expect(getFn).toHaveBeenCalledWith('k');
   });
 
@@ -422,6 +423,6 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    expect(stores.cache.get('key')).toBe('intercepted');
+    expect(await stores.cache.get('key')).toBe('intercepted');
   });
 });

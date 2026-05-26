@@ -63,11 +63,9 @@ describe('heartbeat traceUntil propagation', () => {
 
     const opts = resolveTelemetryOptions({
       flowId: 'flow_1',
-      startedAt: Date.now(),
     });
     expect(opts).toEqual({
       flowId: 'flow_1',
-      startedAt: expect.any(Number),
       level: 'trace',
       includeIn: true,
       includeOut: true,
@@ -105,12 +103,10 @@ describe('heartbeat traceUntil propagation', () => {
 
     const opts = resolveTelemetryOptions({
       flowId: 'flow_1',
-      startedAt: Date.now(),
       observe: { level: 'standard' },
     });
     expect(opts).toEqual({
       flowId: 'flow_1',
-      startedAt: expect.any(Number),
       level: 'standard',
       sample: 1,
     });

@@ -51,3 +51,5 @@ export type {
   FlowStepType,
   FlowStateBatch,
 } from './telemetry';
+
+export type { ObserverFn } from './observer';

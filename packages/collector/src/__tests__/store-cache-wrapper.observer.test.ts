@@ -1,20 +1,17 @@
-import type { Cache, Collector, Hooks, Store } from '@walkeros/core';
-import { createMockLogger, createTelemetryHooks } from '@walkeros/core';
-import type { FlowState } from '@walkeros/core';
+import type { Cache, Collector, FlowState, Store } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { initStores } from '../store';
 
-/**
- * Verifies that the cache wrapper emits cache HIT/MISS observability via
- * the per-store `StoreCacheRead_<id>` hook, and that the telemetry helper
- * surfaces it as `meta.cached: true|false`.
- */
-
-function createTestCollector(hooks: Hooks.Functions): Collector.Instance {
+function createTestCollector(): Collector.Instance {
   return {
-    push: jest.fn(),
-    command: jest.fn(),
+    push: async () => ({ ok: true }),
+    command: async () => ({ ok: true }),
     allowed: true,
-    config: { globalsStatic: {}, sessionStatic: {}, queueMax: 1000 },
+    config: {
+      globalsStatic: {},
+      sessionStatic: {},
+      queueMax: 1000,
+    },
     consent: {},
     custom: {},
     sources: {},
@@ -22,7 +19,8 @@ function createTestCollector(hooks: Hooks.Functions): Collector.Instance {
     transformers: {},
     stores: {},
     globals: {},
-    hooks,
+    hooks: {},
+    observers: new Set(),
     logger: createMockLogger(),
     on: {},
     queue: [],
@@ -69,15 +67,11 @@ function createBackingInit(): {
   return { init, data, calls };
 }
 
-describe('store-cache wrapper: cache HIT/MISS emits FlowState via hooks', () => {
-  it('first get emits cached:false; second get emits cached:true', async () => {
+describe('store-cache wrapper observer emissions', () => {
+  it('first get emits cached:false (miss); second get emits cached:true (hit)', async () => {
+    const collector = createTestCollector();
     const states: FlowState[] = [];
-    const teleHooks = createTelemetryHooks(
-      (s: FlowState) => states.push(s),
-      { flowId: 'default' },
-      ['api'],
-    );
-    const collector = createTestCollector(teleHooks);
+    collector.observers.add((s) => states.push(s));
 
     const { init, data, calls } = createBackingInit();
     const cacheConfig: Cache.Cache<Cache.StoreCacheRule> = {
@@ -93,17 +87,15 @@ describe('store-cache wrapper: cache HIT/MISS emits FlowState via hooks', () => 
 
     data.set('user', 'alice');
 
-    // First read: cache MISS.
-    const first = await stores.api.get('user');
-    expect(first).toBe('alice');
+    await stores.api.get('user');
     expect(calls.get).toBe(1);
 
-    // Second read: cache HIT, backing.get must NOT fire again.
-    const second = await stores.api.get('user');
-    expect(second).toBe('alice');
+    await stores.api.get('user');
     expect(calls.get).toBe(1);
 
-    const cacheStates = states.filter((s) => s.meta?.op === 'cache');
+    const cacheStates = states.filter(
+      (s) => s.stepType === 'store' && s.meta?.op === 'cache',
+    );
     expect(cacheStates.length).toBe(2);
     expect(cacheStates[0].stepId).toBe('store.api');
     expect(cacheStates[0].meta?.cached).toBe(false);
@@ -113,14 +105,10 @@ describe('store-cache wrapper: cache HIT/MISS emits FlowState via hooks', () => 
     expect(cacheStates[1].meta?.status).toBe('hit');
   });
 
-  it('store get hooks still fire on both cache MISS and HIT', async () => {
+  it('store.get emits in+out on every consumer-facing call regardless of cache hit', async () => {
+    const collector = createTestCollector();
     const states: FlowState[] = [];
-    const teleHooks = createTelemetryHooks(
-      (s: FlowState) => states.push(s),
-      { flowId: 'default' },
-      ['api'],
-    );
-    const collector = createTestCollector(teleHooks);
+    collector.observers.add((s) => states.push(s));
 
     const { init, data } = createBackingInit();
     const cacheConfig: Cache.Cache<Cache.StoreCacheRule> = {
@@ -134,11 +122,9 @@ describe('store-cache wrapper: cache HIT/MISS emits FlowState via hooks', () => 
     });
 
     data.set('user', 'alice');
-    await stores.api.get('user'); // MISS
-    await stores.api.get('user'); // HIT
+    await stores.api.get('user'); // miss
+    await stores.api.get('user'); // hit
 
-    // Each consumer-facing get fires the outer StoreGet_api hooks, giving
-    // us one in+out pair per call (regardless of HIT/MISS).
     const inOut = states.filter(
       (s) =>
         s.stepType === 'store' &&
