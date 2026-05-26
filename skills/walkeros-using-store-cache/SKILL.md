@@ -183,8 +183,8 @@ Store rules are a stricter subset:
 - **Empty `namespace: ""` is rejected** by the schema (re-introduces the
   collision footgun across stores sharing `__cache`).
 
-Use the [event-level Cache](../../website/docs/transformers/cache.mdx) on
-sources, transformers, or destinations when you need `key`, `update`, or `stop`.
+Use the [event-level Cache](../../website/docs/collector/cache.mdx) on sources,
+transformers, or destinations when you need `key`, `update`, or `stop`.
 
 ## Default tier: built-in `__cache`
 
@@ -311,8 +311,8 @@ replacement.
 - [Website: Store-level cache](../../website/docs/stores/cache.mdx) - Full
   reference for `Flow.Store.cache`
 - [Website: Stores](../../website/docs/stores/index.mdx) - Stores overview
-- [Website: Transformers Cache](../../website/docs/transformers/cache.mdx) -
-  Event-level cache (separate concept)
+- [Website: Collector Cache](../../website/docs/collector/cache.mdx) -
+  Event-level cache integrated into the collector (separate concept)
 
 **Source files:**
 
