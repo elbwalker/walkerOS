@@ -6,7 +6,7 @@
  */
 
 import { resolve, dirname } from 'path';
-import type { Collector, Logger } from '@walkeros/core';
+import type { Collector, Hooks, Logger } from '@walkeros/core';
 import type { HealthServer } from './health-server.js';
 import { loadBundle } from './load-bundle.js';
 
@@ -26,6 +26,10 @@ export interface FlowHandle {
 
 /**
  * Load a pre-built flow bundle and return a handle for managing it.
+ *
+ * `hooks` is the telemetry hooks bag built by `pipeline.ts`. The generated
+ * bundle factory (see `generateServerEntry` in `commands/bundle/bundler.ts`)
+ * merges `context.hooks` into `config.hooks` before calling `startFlow`.
  */
 export async function loadFlow(
   file: string,
@@ -33,6 +37,7 @@ export async function loadFlow(
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
+  hooks?: Hooks.Functions,
 ): Promise<FlowHandle> {
   const absolutePath = resolve(file);
   const flowDir = dirname(absolutePath);
@@ -42,6 +47,7 @@ export async function loadFlow(
     ...config,
     ...(loggerConfig ? { logger: loggerConfig } : {}),
     ...(healthServer ? { sourceSettings: { port: undefined } } : {}),
+    ...(hooks ? { hooks } : {}),
   };
 
   const result = await loadBundle(absolutePath, flowContext, logger);
@@ -72,6 +78,7 @@ export async function swapFlow(
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
+  hooks?: Hooks.Functions,
 ): Promise<FlowHandle> {
   logger.info('Shutting down current flow for hot-swap...');
 
@@ -96,6 +103,7 @@ export async function swapFlow(
     logger,
     loggerConfig,
     healthServer,
+    hooks,
   );
 
   logger.info('Flow swapped successfully');

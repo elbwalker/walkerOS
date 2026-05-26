@@ -105,6 +105,74 @@ export const __configData = { test: true };
     expect(output).toContain('httpHandler');
   });
 
+  it('emits telemetry wiring in the browser IIFE when telemetry is enabled', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrapSkeleton({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+      telemetry: {
+        observerUrl: 'https://observer.example.com/ingest/dep_42',
+        ingestToken: 'tok_test_value',
+        flowId: 'flow_x',
+        level: 'standard',
+      },
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+
+    // The generated output may rename the imports during esbuild bundling,
+    // but the helper bodies must appear (the bundled createBatchedPoster
+    // implementation contains `Bearer ` and the URL/token literals).
+    expect(output).toContain('https://observer.example.com/ingest/dep_42');
+    expect(output).toContain('tok_test_value');
+    expect(output).toContain('Bearer ');
+    // The flowId we configured is baked into a string.
+    expect(output).toContain('flow_x');
+  });
+
+  it('omits telemetry wiring when level is off', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrapSkeleton({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+      telemetry: {
+        observerUrl: 'https://observer.example.com/ingest/dep_42',
+        ingestToken: 'tok_test_value',
+        flowId: 'flow_x',
+        level: 'off',
+      },
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+    // No observer URL, token, or Bearer header in the emitted bundle.
+    expect(output).not.toContain('https://observer.example.com');
+    expect(output).not.toContain('tok_test_value');
+    expect(output).not.toContain('Bearer ');
+  });
+
+  it('omits telemetry wiring when telemetry option is absent', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrapSkeleton({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+    expect(output).not.toContain('Bearer ');
+  });
+
   it('throws when the skeleton does not exist', async () => {
     const outputPath = path.join(tmpDir, 'walker.js');
     await expect(

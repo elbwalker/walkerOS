@@ -23,30 +23,59 @@ type InitStoreWithCache = Store.InitStore & {
  * and only once per `wrapped.set` (not also for the wrapper's internal
  * write into `cacheStore`). If the store has no cache wrapper, the bare
  * backing is hook-wrapped instead, preserving observability.
+ *
+ * Double-wrap: the generic names (`StoreGet`, `StoreSet`, `StoreDelete`)
+ * are wrapped first so existing observers and the public hook contract
+ * keep working. A second pass wraps with per-store names
+ * (`StoreGet_<id>`, etc.) so per-store telemetry observers can subscribe
+ * without losing the store identity that the generic call signature does
+ * not carry. The per-store wrap is the OUTER one (executes first on
+ * call); it forwards into the generic wrap, which forwards into the
+ * original store call.
  */
 function applyStoreHooks(
   collector: Collector.Instance,
   instance: Store.Instance,
+  storeId: string,
 ): void {
   const originalGet = instance.get;
   const originalSet = instance.set;
   const originalDelete = instance.delete;
 
-  instance.get = useHooks(
+  const innerGet = useHooks(
     originalGet,
     'StoreGet',
     collector.hooks,
     collector.logger,
   );
-  instance.set = useHooks(
+  const innerSet = useHooks(
     originalSet,
     'StoreSet',
     collector.hooks,
     collector.logger,
   );
-  instance.delete = useHooks(
+  const innerDelete = useHooks(
     originalDelete,
     'StoreDelete',
+    collector.hooks,
+    collector.logger,
+  );
+
+  instance.get = useHooks(
+    innerGet,
+    'StoreGet_' + storeId,
+    collector.hooks,
+    collector.logger,
+  );
+  instance.set = useHooks(
+    innerSet,
+    'StoreSet_' + storeId,
+    collector.hooks,
+    collector.logger,
+  );
+  instance.delete = useHooks(
+    innerDelete,
+    'StoreDelete_' + storeId,
     collector.hooks,
     collector.logger,
   );
@@ -203,6 +232,7 @@ export async function initStores(
       cacheStore,
       namespace: resolvedNamespace,
       logger: collector.logger.scope('store-cache').scope(storeId),
+      hooks: collector.hooks,
     });
   }
 
@@ -216,7 +246,7 @@ export async function initStores(
   // `preStoreSet` against the consumer-facing boundary.
   for (const [storeId, instance] of Object.entries(result)) {
     if (storeId === '__cache') continue;
-    applyStoreHooks(collector, instance);
+    applyStoreHooks(collector, instance, storeId);
   }
 
   return result;

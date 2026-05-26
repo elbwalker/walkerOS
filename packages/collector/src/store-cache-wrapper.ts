@@ -1,5 +1,5 @@
-import type { Cache, Logger, Store } from '@walkeros/core';
-import { compileMatcher } from '@walkeros/core';
+import type { Cache, Hooks, Logger, Store } from '@walkeros/core';
+import { compileMatcher, useHooks } from '@walkeros/core';
 
 /**
  * Options passed to `wrapStoreWithCache`. Pre-resolved by `initStores` phase
@@ -22,6 +22,17 @@ export interface WrappedStoreOptions {
   cacheStore: Store.Instance;
   namespace: string;
   logger?: Logger.Instance;
+  /**
+   * Optional collector hooks bag for cache-level observability. When
+   * provided, the wrapper invokes a per-store hook (`StoreCacheRead_<id>`)
+   * on every wrapped `get`, passing the key as the wrapped fn argument
+   * and the resolved status (`'hit'` or `'miss'`) as the wrapped result.
+   * Observers subscribe via `postStoreCacheRead_<id>` to record cache
+   * metadata in their FlowState. The hook is a no-op when the bag does
+   * not register a handler for the corresponding name, so wiring is
+   * always safe.
+   */
+  hooks?: Hooks.Functions;
 }
 
 interface CompiledStoreCacheRule {
@@ -97,7 +108,20 @@ export function wrapStoreWithCache(
   backing: Store.Instance,
   opts: WrappedStoreOptions,
 ): WrappedStoreInstance {
-  const { cacheConfig, cacheStore, namespace, logger, storeId } = opts;
+  const { cacheConfig, cacheStore, namespace, logger, storeId, hooks } = opts;
+
+  // Per-store hook name for cache observability. The function we wrap is a
+  // pure identity over the resolved status; observers attach a post hook to
+  // see HIT/MISS without coupling to the wrapper's internals. When `hooks`
+  // is absent, calls fall straight through useHooks's no-handler fast path,
+  // so unsubscribed deployments pay no measurable cost.
+  const cacheHookName = 'StoreCacheRead_' + storeId;
+  const reportCacheStatus = (key: string, status: 'hit' | 'miss'): void => {
+    if (!hooks) return;
+    // Identity fn so the post hook receives the status as `result`.
+    const fn = (_key: string, s: 'hit' | 'miss') => s;
+    useHooks(fn, cacheHookName, hooks, logger)(key, status);
+  };
 
   // Closure-scoped counters. Mutated directly at each path; the public
   // `counters` accessor on the returned instance returns a fresh shallow copy
@@ -159,6 +183,7 @@ export function wrapStoreWithCache(
       const cached = await cacheStore.get(ns);
       if (cached !== undefined) {
         counters.hits++;
+        reportCacheStatus(key, 'hit');
         return cached;
       }
 
@@ -167,12 +192,14 @@ export function wrapStoreWithCache(
       const existing = inFlight.get(ns);
       if (existing) {
         counters.inflight_dedups++;
+        reportCacheStatus(key, 'hit');
         return existing;
       }
 
       // This caller drives the backing fetch — count the MISS once here so
       // joined callers above are not double-counted as misses too.
       counters.misses++;
+      reportCacheStatus(key, 'miss');
 
       const promise = (async () => {
         try {

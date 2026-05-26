@@ -217,6 +217,31 @@ export namespace Flow {
      * Consumed by the CLI bundler at build time.
      */
     bundle?: Bundle;
+
+    /**
+     * Observability configuration. Controls whether the runtime emits
+     * FlowState records to a remote observer, and at what verbosity.
+     *
+     * When omitted, the runtime defaults to `{ level: 'standard' }` for
+     * managed deployments. When `level: 'off'`, the bundle ships no
+     * telemetry plumbing at all.
+     */
+    observe?: Observe;
+  }
+
+  /**
+   * Observability configuration block.
+   *
+   * - `off` disables telemetry entirely (no hooks installed, no fetch).
+   * - `standard` emits structural FlowState records (no inEvent/outEvent).
+   * - `trace` emits full payloads on every hop. Use only for short debug
+   *   windows; the operator can also flip the deployment's `trace_until`
+   *   timestamp at runtime to enable trace without a redeploy.
+   */
+  export interface Observe {
+    level?: 'off' | 'standard' | 'trace';
+    /** Deterministic sample fraction in [0, 1]. Defaults to 1. */
+    sample?: number;
   }
 
   /**
