@@ -79,19 +79,19 @@ All three outputs are configurable via `settings.output`:
 
 Drop all bots:
 
-```
+```sql
 event.user.botScore > 50
 ```
 
 Drop crawlers but keep user-action AI traffic:
 
-```
+```sql
 event.user.botScore > 50 AND event.user.agentProduct NOT LIKE '%-User'
 ```
 
 AI traffic report:
 
-```
+```sql
 event.user.agentScore > 50, grouped by event.user.agentProduct
 ```
 

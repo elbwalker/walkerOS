@@ -1,6 +1,6 @@
 import { z } from '@walkeros/core/dev';
 
-const MappingValueSchema = z.union([
+const SingleMappingValueSchema = z.union([
   z.string().describe('Dot-notation path like "ingest.userAgent"'),
   z
     .object({
@@ -9,6 +9,13 @@ const MappingValueSchema = z.union([
       fn: z.string().optional(),
     })
     .describe('Mapping value object'),
+]);
+
+const MappingValueSchema = z.union([
+  SingleMappingValueSchema,
+  z
+    .array(SingleMappingValueSchema)
+    .describe('Array of fallback values, tried in order'),
 ]);
 
 export const SettingsSchema = z

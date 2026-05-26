@@ -1111,7 +1111,7 @@
             "type": ["string", "null"]
           }
         },
-        "required": ["deployments", "total", "limit", "offset"]
+        "required": ["deployments", "total", "limit", "offset", "nextCursor"]
       },
       "UpdateDeploymentResponse": {
         "type": "object",

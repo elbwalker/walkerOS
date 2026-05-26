@@ -31,9 +31,6 @@
     "@walkeros/core": "4.1.0",
     "isbot": "^5.1.39"
   },
-  "devDependencies": {
-    "@walkeros/core": "4.1.0"
-  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/server/transformers/bot"

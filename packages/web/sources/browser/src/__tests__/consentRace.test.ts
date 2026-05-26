@@ -1,5 +1,5 @@
 import { startFlow } from '@walkeros/collector';
-import { sourceBrowser } from '../index';
+import { sourceBrowser, __resetInstanceCountForTests } from '../index';
 import type { Collector } from '@walkeros/core';
 
 /**
@@ -35,6 +35,7 @@ const clearQueue = (): void => {
 describe('elbLayer queue replay vs. fresh walker consent', () => {
   beforeEach(() => {
     clearQueue();
+    __resetInstanceCountForTests();
   });
 
   afterEach(() => {

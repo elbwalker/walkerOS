@@ -84,7 +84,9 @@ export const transformerBot: Transformer.Init<
       const writeOutput = (path: string, value: unknown) => {
         if (!path || value === undefined) return;
         if (path.startsWith('ingest.')) {
-          setNestedPath(ingest, path.slice('ingest.'.length), value);
+          const subPath = path.slice('ingest.'.length);
+          if (!subPath) return;
+          setNestedPath(ingest, subPath, value);
         } else {
           nextEvent = setByPath(nextEvent, path, value);
         }

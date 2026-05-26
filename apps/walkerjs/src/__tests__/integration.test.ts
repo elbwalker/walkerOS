@@ -1,4 +1,5 @@
 import type { Collector, WalkerOS } from '@walkeros/core';
+import { __resetInstanceCountForTests } from '@walkeros/web-source-browser';
 import { createWalkerjs, getAllEvents, getEvents, getGlobals } from '../index';
 
 describe('Walker.js Integration Tests', () => {
@@ -6,6 +7,7 @@ describe('Walker.js Integration Tests', () => {
   let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
   beforeEach(() => {
+    __resetInstanceCountForTests();
     collectedEvents = [];
     document.body.innerHTML = '';
 

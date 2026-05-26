@@ -189,6 +189,8 @@ export async function listFlowsCommand(
     sort?: string;
     order?: string;
     includeDeleted?: boolean;
+    cursor?: string;
+    limit?: number;
   },
 ): Promise<void> {
   await handleResult(
@@ -198,6 +200,8 @@ export async function listFlowsCommand(
         sort: options.sort as ListFlowsOptions['sort'],
         order: options.order as ListFlowsOptions['order'],
         includeDeleted: options.includeDeleted,
+        cursor: options.cursor,
+        limit: options.limit,
       }),
     options,
   );

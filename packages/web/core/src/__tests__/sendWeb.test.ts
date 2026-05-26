@@ -158,6 +158,55 @@ describe('sendWeb', () => {
     });
   });
 
+  describe('timeout validation', () => {
+    // A fetch that hangs until the abort signal fires, then rejects.
+    const makeHangingFetch = () =>
+      jest.fn(
+        (_input: URL | RequestInfo, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            signal?.addEventListener('abort', () => {
+              reject(new Error('The operation was aborted.'));
+            });
+          }),
+      );
+
+    test('falls back to DEFAULT_FETCH_TIMEOUT when timeout is 0', async () => {
+      // Guard must replace 0 with DEFAULT_FETCH_TIMEOUT (10000).
+      // Advancing 5000ms should NOT have aborted yet (abort is at 10000).
+      const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
+      window.fetch = makeHangingFetch();
+      sendWeb(url, data, { transport: 'fetch', timeout: 0 });
+      jest.advanceTimersByTime(5000);
+      expect(abortSpy).not.toHaveBeenCalled();
+    });
+
+    test('falls back to DEFAULT_FETCH_TIMEOUT when timeout is negative', async () => {
+      const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
+      window.fetch = makeHangingFetch();
+      sendWeb(url, data, { transport: 'fetch', timeout: -1 });
+      jest.advanceTimersByTime(5000);
+      expect(abortSpy).not.toHaveBeenCalled();
+    });
+
+    test('falls back to DEFAULT_FETCH_TIMEOUT when timeout is NaN', async () => {
+      const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
+      window.fetch = makeHangingFetch();
+      sendWeb(url, data, { transport: 'fetch', timeout: NaN });
+      jest.advanceTimersByTime(5000);
+      expect(abortSpy).not.toHaveBeenCalled();
+    });
+
+    test('honors an explicit positive finite timeout', async () => {
+      window.fetch = makeHangingFetch();
+      const promise = sendWeb(url, data, { transport: 'fetch', timeout: 50 });
+      jest.advanceTimersByTime(50);
+      const response = await promise;
+      expect(response.ok).toBe(false);
+      expect(response.error).toBeDefined();
+    });
+  });
+
   describe('fetch timeout', () => {
     test('fetch rejects with timeout error when request exceeds timeout', async () => {
       // Never resolves on its own; rejects only when the signal aborts.

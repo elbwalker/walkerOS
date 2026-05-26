@@ -447,7 +447,7 @@ describe('Trigger System', () => {
       }).not.toThrow();
     });
 
-    test('hover trigger sets up mouseenter listener', () => {
+    test('hover trigger sets up mouseenter listener with an abort signal', () => {
       document.body.innerHTML = `
         <div id="hover-elem" data-elb="content" data-elbaction="hover:action">Content</div>
       `;
@@ -464,7 +464,7 @@ describe('Trigger System', () => {
       expect(mockAddEventListener).toHaveBeenCalledWith(
         'mouseenter',
         expect.any(Function),
-        undefined,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
     });
 
@@ -623,6 +623,55 @@ describe('Trigger System', () => {
     test('calling destroyTriggers before initTriggers does not throw', () => {
       const settings = createTestSettings('data-elb');
       expect(() => destroyTriggers(settings)).not.toThrow();
+    });
+  });
+
+  describe('Abort signal coverage on every listener registration', () => {
+    test('hover registers with a signal even when no globalAbortController exists yet', () => {
+      // Simulate the bug scenario: a session was torn down (or never started),
+      // so globalAbortController is undefined when triggerHover registers.
+      destroyTriggers(createTestSettings('data-elb'));
+
+      document.body.innerHTML = `
+        <div id="hover-elem" data-elb="content" data-elbaction="hover:action">Content</div>
+      `;
+      const element = document.getElementById('hover-elem')!;
+      const spy = jest.fn();
+      element.addEventListener = spy;
+
+      initScopeTrigger(
+        { elb: mockElb, settings: createTestSettings('data-elb') },
+        createTestSettings('data-elb'),
+      );
+
+      expect(spy).toHaveBeenCalledWith(
+        'mouseenter',
+        expect.any(Function),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+
+    test('scroll registers with a signal even when no globalAbortController exists yet', () => {
+      destroyTriggers(createTestSettings('data-elb'));
+      resetScrollListener();
+
+      document.body.innerHTML = `
+        <div style="height: 1000px;">
+          <div id="scroll-elem" data-elb="content" data-elbaction="scroll(50):action">Content</div>
+        </div>
+      `;
+
+      initScopeTrigger(
+        { elb: mockElb, settings: createTestSettings('data-elb') },
+        createTestSettings('data-elb'),
+      );
+
+      // The shared mockAddEventListener (document.addEventListener) captured the scroll registration.
+      expect(mockAddEventListener).toHaveBeenCalledWith(
+        'scroll',
+        expect.any(Function),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
     });
   });
 });

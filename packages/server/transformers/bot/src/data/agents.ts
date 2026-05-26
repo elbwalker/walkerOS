@@ -24,7 +24,7 @@
  *
  * Community cross-reference: https://github.com/ai-robots-txt/ai.robots.txt
  *
- * Reviewed quarterly — see /workspaces/developer/docs/research/2026-05-13-bot-detection.md.
+ * Reviewed quarterly. Source-of-truth references are listed above.
  */
 export interface AgentEntry {
   match: string;

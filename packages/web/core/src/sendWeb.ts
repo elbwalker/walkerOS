@@ -57,7 +57,11 @@ export async function sendWebAsFetch(
 ): Promise<SendResponse> {
   const headers = getHeaders(options.headers);
   const body = transformData(data);
-  const timeout = options.timeout ?? DEFAULT_FETCH_TIMEOUT;
+  const requested = options.timeout;
+  const timeout =
+    typeof requested === 'number' && Number.isFinite(requested) && requested > 0
+      ? requested
+      : DEFAULT_FETCH_TIMEOUT;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 

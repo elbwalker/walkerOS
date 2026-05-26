@@ -18,11 +18,29 @@ import {
 } from './triggerVisible';
 import { translateToCoreCollector } from './translation';
 
+// Module-level state is intentional. The walker.js browser source is
+// single-instance per window: one elb queue, one set of DOM listeners,
+// one scroll tracker. The state below is shared across all callers
+// because there is only ever one caller. If multi-instance ever becomes
+// a real requirement (e.g., micro-frontends with isolated walker queues),
+// refactor this into a per-instance closure returned by createSource()
+// and route every trigger function through that closure.
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 let globalAbortController: AbortController | undefined;
 let pulseIntervals: ReturnType<typeof setInterval>[] = [];
 let waitTimeouts: ReturnType<typeof setTimeout>[] = [];
+
+// Listeners registered before initTriggers (or after destroyTriggers) would
+// otherwise miss the AbortController and never be removed on teardown. This
+// helper guarantees every listener gets a signal from the current session's
+// controller, lazily creating one when needed.
+function ensureAbortController(): AbortController {
+  if (!globalAbortController) {
+    globalAbortController = new AbortController();
+  }
+  return globalAbortController;
+}
 
 // Reset function for testing
 export function resetScrollListener() {
@@ -248,9 +266,7 @@ function triggerHover(context: Context, elem: HTMLElement) {
       const target = getComposedTarget(ev);
       if (target) handleTrigger(context, target, Triggers.Hover);
     }),
-    globalAbortController
-      ? { signal: globalAbortController.signal }
-      : undefined,
+    { signal: ensureAbortController().signal },
   );
 }
 
@@ -346,12 +362,8 @@ function scroll(context: Context, scope: Scope, settings: Settings) {
       scrollElements = scrolling.call(scope, scrollElements, context);
     });
 
-    scope.addEventListener(
-      'scroll',
-      scrollListener,
-      globalAbortController
-        ? { signal: globalAbortController.signal }
-        : undefined,
-    );
+    scope.addEventListener('scroll', scrollListener, {
+      signal: ensureAbortController().signal,
+    });
   }
 }

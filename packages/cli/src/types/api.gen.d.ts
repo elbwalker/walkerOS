@@ -4054,7 +4054,7 @@ export interface components {
       total: number;
       limit: number;
       offset: number;
-      nextCursor?: string | null;
+      nextCursor: string | null;
     };
     UpdateDeploymentResponse: {
       /** @example dep_a1b2c3d4 */

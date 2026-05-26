@@ -130,4 +130,19 @@ describe('transformerBot', () => {
     const instance = await transformerBot(createInitContext({}));
     expect(instance.type).toBe('bot');
   });
+
+  test('output path "ingest." with empty sub-path does not write an empty key', async () => {
+    const instance = await transformerBot(
+      createInitContext({
+        settings: {
+          output: { botScore: 'ingest.' },
+        },
+      }),
+    );
+    const ctx = createPushContext({
+      userAgent: 'Mozilla/5.0 (compatible; GPTBot/1.2)',
+    });
+    await instance.push(baseEvent, ctx);
+    expect(Object.keys(ctx.ingest)).not.toContain('');
+  });
 });

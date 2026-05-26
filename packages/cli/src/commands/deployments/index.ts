@@ -175,6 +175,8 @@ interface DeploymentsCommandOptions extends GlobalOptions {
   type?: string;
   status?: string;
   label?: string;
+  cursor?: string;
+  limit?: number;
 }
 
 async function handleResult(
@@ -198,6 +200,8 @@ export async function listDeploymentsCommand(
         projectId: options.project,
         type: options.type as ListDeploymentsOptions['type'],
         status: options.status,
+        cursor: options.cursor,
+        limit: options.limit,
       }),
     options,
   );

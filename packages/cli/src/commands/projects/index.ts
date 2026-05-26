@@ -73,6 +73,8 @@ interface ProjectsCommandOptions extends GlobalOptions {
   output?: string;
   project?: string;
   name?: string;
+  cursor?: string;
+  limit?: number;
 }
 
 async function handleResult(
@@ -90,7 +92,10 @@ async function handleResult(
 export async function listProjectsCommand(
   options: ProjectsCommandOptions,
 ): Promise<void> {
-  await handleResult(() => listProjects(), options);
+  await handleResult(
+    () => listProjects({ cursor: options.cursor, limit: options.limit }),
+    options,
+  );
 }
 
 export async function getProjectCommand(

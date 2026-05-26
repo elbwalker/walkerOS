@@ -25,6 +25,13 @@ export * as SourceBrowser from './types';
 // Export examples
 export * as examples from './examples';
 
+let instanceCount = 0;
+
+/** For tests only. Resets the single-instance invariant. */
+export function __resetInstanceCountForTests(): void {
+  instanceCount = 0;
+}
+
 // Export walker utility functions
 export {
   getAllEvents,
@@ -49,6 +56,14 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  * in `instance.queueOn` until the source is started.
  */
 export const sourceBrowser: Source.Init<Types> = async (context) => {
+  if (instanceCount > 0 && typeof globalThis.window !== 'undefined') {
+    throw new Error(
+      'walker.js browser source is single-instance per window. ' +
+        'See packages/web/sources/browser/src/trigger.ts for the invariant note.',
+    );
+  }
+  instanceCount += 1;
+
   const { config, env, logger } = context;
   const { elb, command, window, document } = env;
 
