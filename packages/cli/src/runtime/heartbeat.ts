@@ -78,6 +78,39 @@ export function getInstanceId(): string {
   return instanceId;
 }
 
+/**
+ * Best-effort: pull `traceUntil` out of the heartbeat response and mirror
+ * it into `process.env.WALKEROS_TRACE_UNTIL`. The resolver reads the env
+ * on every call, so the next telemetry tick reflects the new state.
+ *
+ * A literal `null` clears the env var so the resolver falls back to the
+ * flow's `observe` block. A malformed body or missing field leaves the env
+ * var alone (no destructive default on a parse error).
+ */
+async function applyTraceUntilFromResponse(
+  response: Response,
+  logger: Logger.Instance,
+): Promise<void> {
+  let parsed: unknown;
+  try {
+    parsed = await response.json();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.debug(`Heartbeat response parse failed: ${message}`);
+    return;
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) return;
+  if (!('traceUntil' in parsed)) return;
+
+  const value = parsed.traceUntil;
+  if (typeof value === 'string' && value.length > 0) {
+    process.env.WALKEROS_TRACE_UNTIL = value;
+  } else if (value === null) {
+    delete process.env.WALKEROS_TRACE_UNTIL;
+  }
+}
+
 export interface HeartbeatConfig {
   appUrl: string;
   token: string;
@@ -153,6 +186,14 @@ export function createHeartbeat(
       // which may have changed during the HTTP POST
       if (response.ok && counters && current) {
         lastReported = current;
+      }
+
+      // Propagate the operator-controlled trace flag from the response into
+      // the env so the next `resolveTelemetryOptions` tick picks it up
+      // without a redeploy. Only act on a successful response: a failed
+      // heartbeat leaves any active trace window in place.
+      if (response.ok) {
+        await applyTraceUntilFromResponse(response, logger);
       }
 
       if (response.status === 401 || response.status === 403) {
