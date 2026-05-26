@@ -8,6 +8,7 @@ import {
   Triggers,
   handleTrigger,
   resetScrollListener,
+  destroyTriggers,
 } from '../trigger';
 
 // Helper function to create test settings
@@ -45,8 +46,9 @@ describe('Trigger System', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Reset trigger module state
+    // Reset trigger module state (scroll state + global AbortController)
     resetScrollListener();
+    destroyTriggers(createTestSettings());
 
     // Mock elb function
     mockElb = jest.fn().mockResolvedValue({
@@ -92,10 +94,12 @@ describe('Trigger System', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
       'click',
       expect.any(Function),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(mockAddEventListener).toHaveBeenCalledWith(
       'submit',
       expect.any(Function),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(mockAddEventListener).toHaveBeenCalledTimes(2);
   });
@@ -443,7 +447,7 @@ describe('Trigger System', () => {
       }).not.toThrow();
     });
 
-    test('hover trigger sets up mouseenter listener', () => {
+    test('hover trigger sets up mouseenter listener with an abort signal', () => {
       document.body.innerHTML = `
         <div id="hover-elem" data-elb="content" data-elbaction="hover:action">Content</div>
       `;
@@ -460,6 +464,7 @@ describe('Trigger System', () => {
       expect(mockAddEventListener).toHaveBeenCalledWith(
         'mouseenter',
         expect.any(Function),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
     });
 
@@ -475,6 +480,75 @@ describe('Trigger System', () => {
 
       // Load trigger should execute immediately
       expect(mockElb).toHaveBeenCalled();
+    });
+
+    describe('Pulse cleanup', () => {
+      test('pulse interval is cleared on destroyTriggers', () => {
+        document.body.innerHTML = `
+          <div id="pulse-elem" data-elb="content" data-elbaction="pulse(1000):action">Content</div>
+        `;
+
+        const settings = createTestSettings('data-elb');
+        const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
+
+        initScopeTrigger({ elb: mockElb, settings }, settings);
+
+        expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 1000);
+
+        destroyTriggers(settings);
+
+        expect(clearIntervalSpy).toHaveBeenCalled();
+      });
+
+      test('pulse does not fire after destroyTriggers', () => {
+        document.body.innerHTML = `
+          <div id="pulse-elem" data-elb="content" data-elbaction="pulse(1000):action">Content</div>
+        `;
+
+        const settings = createTestSettings('data-elb');
+
+        initScopeTrigger({ elb: mockElb, settings }, settings);
+        destroyTriggers(settings);
+
+        jest.advanceTimersByTime(5000);
+
+        expect(mockElb).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Wait cleanup', () => {
+      test('wait timeout is cleared on destroyTriggers', () => {
+        document.body.innerHTML = `
+          <div id="wait-elem" data-elb="content" data-elbaction="wait(2000):action">Content</div>
+        `;
+
+        const settings = createTestSettings('data-elb');
+        const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+
+        initScopeTrigger({ elb: mockElb, settings }, settings);
+
+        expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 2000);
+
+        destroyTriggers(settings);
+
+        expect(clearTimeoutSpy).toHaveBeenCalled();
+      });
+
+      test('wait does not fire after destroyTriggers', () => {
+        document.body.innerHTML = `
+          <div id="wait-elem" data-elb="content" data-elbaction="wait(1000):action">Content</div>
+        `;
+
+        const settings = createTestSettings('data-elb');
+
+        initScopeTrigger({ elb: mockElb, settings }, settings);
+        mockElb.mockClear();
+        destroyTriggers(settings);
+
+        jest.advanceTimersByTime(5000);
+
+        expect(mockElb).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -497,6 +571,106 @@ describe('Trigger System', () => {
           name: 'entity load',
           trigger: 'load',
         }),
+      );
+    });
+  });
+
+  describe('Trigger cleanup', () => {
+    test('destroyTriggers removes click and submit listeners from scope', () => {
+      // A fresh element uses the real addEventListener so the
+      // AbortController signal applies (only document.addEventListener is mocked).
+      const scope = document.createElement('div');
+
+      const settings: Settings = {
+        prefix: 'data-elb',
+        scope,
+        pageview: false,
+        elb: '',
+        elbLayer: false,
+      };
+      const context = { elb: mockElb, settings };
+
+      initGlobalTrigger(context, settings);
+      destroyTriggers(settings);
+
+      scope.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      scope.dispatchEvent(new Event('submit', { bubbles: true }));
+
+      expect(mockElb).not.toHaveBeenCalled();
+    });
+
+    test('destroyTriggers removes hover listeners added to individual elements', () => {
+      document.body.innerHTML = `
+        <div id="hover-elem" data-elb="content" data-elbaction="hover:action">Content</div>
+      `;
+      const element = document.getElementById('hover-elem')!;
+
+      const settings = createTestSettings('data-elb');
+      const context = { elb: mockElb, settings };
+
+      // Establish the global AbortController so hover listeners carry its signal
+      initGlobalTrigger(context, settings);
+      initScopeTrigger(context, settings);
+      destroyTriggers(settings);
+
+      element.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+      expect(mockElb).not.toHaveBeenCalledWith(
+        expect.objectContaining({ trigger: Triggers.Hover }),
+      );
+    });
+
+    test('calling destroyTriggers before initTriggers does not throw', () => {
+      const settings = createTestSettings('data-elb');
+      expect(() => destroyTriggers(settings)).not.toThrow();
+    });
+  });
+
+  describe('Abort signal coverage on every listener registration', () => {
+    test('hover registers with a signal even when no globalAbortController exists yet', () => {
+      // Simulate the bug scenario: a session was torn down (or never started),
+      // so globalAbortController is undefined when triggerHover registers.
+      destroyTriggers(createTestSettings('data-elb'));
+
+      document.body.innerHTML = `
+        <div id="hover-elem" data-elb="content" data-elbaction="hover:action">Content</div>
+      `;
+      const element = document.getElementById('hover-elem')!;
+      const spy = jest.fn();
+      element.addEventListener = spy;
+
+      initScopeTrigger(
+        { elb: mockElb, settings: createTestSettings('data-elb') },
+        createTestSettings('data-elb'),
+      );
+
+      expect(spy).toHaveBeenCalledWith(
+        'mouseenter',
+        expect.any(Function),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+
+    test('scroll registers with a signal even when no globalAbortController exists yet', () => {
+      destroyTriggers(createTestSettings('data-elb'));
+      resetScrollListener();
+
+      document.body.innerHTML = `
+        <div style="height: 1000px;">
+          <div id="scroll-elem" data-elb="content" data-elbaction="scroll(50):action">Content</div>
+        </div>
+      `;
+
+      initScopeTrigger(
+        { elb: mockElb, settings: createTestSettings('data-elb') },
+        createTestSettings('data-elb'),
+      );
+
+      // The shared mockAddEventListener (document.addEventListener) captured the scroll registration.
+      expect(mockAddEventListener).toHaveBeenCalledWith(
+        'scroll',
+        expect.any(Function),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
     });
   });

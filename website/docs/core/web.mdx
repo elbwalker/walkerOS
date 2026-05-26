@@ -297,6 +297,7 @@ transport?: 'fetch' | 'beacon' | 'xhr'; // Default: 'fetch'
 interface SendWebOptionsFetch extends SendWebOptions {
 credentials?: 'omit' | 'same-origin' | 'include';
 noCors?: boolean;
+timeout?: number; // Abort the request after this many ms (default 10000)
 }`}
   language="typescript"
 />

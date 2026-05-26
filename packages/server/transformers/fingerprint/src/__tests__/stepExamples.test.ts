@@ -1,5 +1,10 @@
-import type { Transformer, WalkerOS } from '@walkeros/core';
-import { createIngest, createMockContext, createMockLogger } from '@walkeros/core';
+import type { Mapping, Transformer, WalkerOS } from '@walkeros/core';
+import {
+  createIngest,
+  createMockContext,
+  createMockLogger,
+  getByPath,
+} from '@walkeros/core';
 import { transformerFingerprint } from '../transformer';
 import type { FingerprintSettings } from '../types';
 import { examples } from '../dev';
@@ -50,13 +55,12 @@ describe('Step Examples', () => {
       );
 
       expect(result).toBeDefined();
-      const outEvent = (result as { event: WalkerOS.DeepPartialEvent }).event;
-      expect(outEvent.user?.hash).toBeDefined();
-      expect(typeof outEvent.user?.hash).toBe('string');
-      expect((outEvent.user?.hash as string).length).toBe(16);
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
+      expect(typeof getByPath(result, 'event.user.hash')).toBe('string');
+      expect(getByPath(result, 'event.user.hash')).toHaveLength(16);
       // Verify event data is preserved
-      expect(outEvent.name).toBe(event.name);
-      expect(outEvent.data).toEqual(event.data);
+      expect(getByPath(result, 'event.name')).toBe(event.name);
+      expect(getByPath(result, 'event.data')).toEqual(event.data);
     });
   });
 
@@ -78,11 +82,10 @@ describe('Step Examples', () => {
       const result = await transformer.push(event, createPushContext({}));
 
       expect(result).toBeDefined();
-      const outEvent = (result as { event: WalkerOS.DeepPartialEvent }).event;
-      expect(outEvent.user?.hash).toBeDefined();
-      expect(typeof outEvent.user?.hash).toBe('string');
-      expect((outEvent.user?.hash as string).length).toBe(16);
-      expect(outEvent.name).toBe(event.name);
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
+      expect(typeof getByPath(result, 'event.user.hash')).toBe('string');
+      expect(getByPath(result, 'event.user.hash')).toHaveLength(16);
+      expect(getByPath(result, 'event.name')).toBe(event.name);
     });
   });
 
@@ -92,10 +95,8 @@ describe('Step Examples', () => {
       const event = example.in as WalkerOS.DeepPartialEvent;
 
       // fn receives the full source object { event, ingest }
-      const anonymizeIP = (source: unknown) => {
-        const ip = String(
-          (source as { ingest?: { ip?: string } }).ingest?.ip ?? '',
-        );
+      const anonymizeIP: Mapping.Fn = (source) => {
+        const ip = String(getByPath(source, 'ingest.ip') ?? '');
         return ip.replace(/\.\d+$/, '.0');
       };
 
@@ -120,10 +121,8 @@ describe('Step Examples', () => {
         createPushContext({ ip: '10.0.42.200', userAgent: ua }),
       );
 
-      const hash1 = (result1 as { event: WalkerOS.DeepPartialEvent }).event.user
-        ?.hash;
-      const hash2 = (result2 as { event: WalkerOS.DeepPartialEvent }).event.user
-        ?.hash;
+      const hash1 = getByPath(result1, 'event.user.hash');
+      const hash2 = getByPath(result2, 'event.user.hash');
 
       // Same /24 → same anonymized IP → same hash
       expect(hash1).toBe(hash2);
@@ -133,8 +132,7 @@ describe('Step Examples', () => {
         { ...event },
         createPushContext({ ip: '10.0.43.100', userAgent: ua }),
       );
-      const hash3 = (result3 as { event: WalkerOS.DeepPartialEvent }).event.user
-        ?.hash;
+      const hash3 = getByPath(result3, 'event.user.hash');
 
       expect(hash1).not.toBe(hash3);
     });

@@ -1,6 +1,6 @@
 import type { Ingest, Source, Collector } from '@walkeros/core';
 import { createIngest, createMockLogger } from '@walkeros/core';
-import { sourceBrowser } from '../index';
+import { sourceBrowser, __resetInstanceCountForTests } from '../index';
 import type { Types } from '../types';
 
 /**
@@ -33,6 +33,9 @@ export async function createBrowserSource(
     document,
     logger: createMockLogger(),
   };
+
+  // Reset the single-instance invariant so each test can create a fresh source.
+  __resetInstanceCountForTests();
 
   // Call sourceBrowser directly with context pattern
   const source = await sourceBrowser({

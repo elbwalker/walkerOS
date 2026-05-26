@@ -64,6 +64,20 @@ describe('deployments', () => {
       );
     });
 
+    it('appends cursor and limit when provided', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify({ deployments: [] }), { status: 200 }),
+      );
+      await listDeployments({
+        projectId: 'proj_123',
+        cursor: 'abc',
+        limit: 10,
+      });
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_123/deployments?cursor=abc&limit=10',
+      );
+    });
+
     it('omits flowId when not provided', async () => {
       mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ deployments: [] }), { status: 200 }),

@@ -165,8 +165,32 @@ describe('deploy_manage tool', () => {
         flowId: 'flow_abc',
         type: undefined,
         status: undefined,
+        cursor: undefined,
+        limit: undefined,
       });
       expect(result.structuredContent.deployments).toEqual(deployments);
+    });
+
+    it('forwards cursor and limit to listDeployments', async () => {
+      const listDeployments = jest.fn().mockResolvedValue({ deployments: [] });
+      registerDeployTool(server as never, stubClient({ listDeployments }));
+
+      const tool = server.getTool('deploy_manage')!;
+      await tool.handler({
+        action: 'list',
+        projectId: 'proj_1',
+        cursor: 'abc',
+        limit: 10,
+      });
+
+      expect(listDeployments).toHaveBeenCalledWith({
+        projectId: 'proj_1',
+        flowId: undefined,
+        type: undefined,
+        status: undefined,
+        cursor: 'abc',
+        limit: 10,
+      });
     });
 
     it('calls listDeployments without flowId', async () => {
@@ -181,6 +205,8 @@ describe('deploy_manage tool', () => {
         flowId: undefined,
         type: undefined,
         status: undefined,
+        cursor: undefined,
+        limit: undefined,
       });
     });
 
@@ -201,6 +227,8 @@ describe('deploy_manage tool', () => {
         flowId: undefined,
         type: 'web',
         status: 'active',
+        cursor: undefined,
+        limit: undefined,
       });
     });
   });

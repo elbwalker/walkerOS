@@ -14,6 +14,8 @@ export interface ListDeploymentsOptions {
   type?: 'web' | 'server';
   status?: string;
   flowId?: string;
+  cursor?: string;
+  limit?: number;
 }
 
 export async function listDeployments(options: ListDeploymentsOptions = {}) {
@@ -22,6 +24,8 @@ export async function listDeployments(options: ListDeploymentsOptions = {}) {
   if (options.type) params.set('type', options.type);
   if (options.status) params.set('status', options.status);
   if (options.flowId) params.set('flowId', options.flowId);
+  if (options.cursor) params.set('cursor', options.cursor);
+  if (options.limit !== undefined) params.set('limit', String(options.limit));
   const qs = params.toString();
 
   const response = await apiFetch(
@@ -171,6 +175,8 @@ interface DeploymentsCommandOptions extends GlobalOptions {
   type?: string;
   status?: string;
   label?: string;
+  cursor?: string;
+  limit?: number;
 }
 
 async function handleResult(
@@ -194,6 +200,8 @@ export async function listDeploymentsCommand(
         projectId: options.project,
         type: options.type as ListDeploymentsOptions['type'],
         status: options.status,
+        cursor: options.cursor,
+        limit: options.limit,
       }),
     options,
   );

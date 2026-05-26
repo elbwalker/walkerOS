@@ -11,7 +11,7 @@ Store-level cache wraps any `Flow.Store` with a read-through, write-through cach
 The wrapping is transparent: a transformer wired to `$store.crm` does not know whether reads hit a memory cache, a Redis tier, or the underlying API. The wrapper is a `Store.Instance` itself, so all the rules from [Stores](./index.mdx) still apply.
 
 :::tip
-Store-level cache is different from the [event-level Cache](../transformers/cache.mdx) configured on sources, transformers, and destinations. Event cache short-circuits the pipeline on hit. Store cache memoizes `get`/`set`/`delete` calls on a single store. Both can be used in the same flow.
+Store-level cache is different from the [event-level Cache](../collector/cache.mdx) configured on sources, transformers, and destinations. Event cache short-circuits the pipeline on hit. Store cache memoizes `get`/`set`/`delete` calls on a single store. Both can be used in the same flow.
 :::
 
 ## Minimal example
@@ -186,5 +186,5 @@ The dedicated `@walkeros/store-memory` package was removed once the built-in `__
 ## Related
 
 - [Stores](./index.mdx) — store interface, `$store.` wiring, lifecycle.
-- [Transformers: Cache](../transformers/cache.mdx) — event-level cache on sources, transformers, destinations.
+- [Collector: Cache](../collector/cache.mdx) — event-level cache on sources, transformers, destinations.
 - [Reference Syntax](../guides/reference-syntax.mdx) — `$store.`, `$env.`, `$var.` references.

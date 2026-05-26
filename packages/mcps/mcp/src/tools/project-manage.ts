@@ -31,6 +31,19 @@ const inputSchema = {
     .describe(
       'Project name. Required for create. Optional for update (to rename).',
     ),
+  cursor: z
+    .string()
+    .optional()
+    .describe(
+      'Pagination cursor from a previous list response. Only used with the list action.',
+    ),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .optional()
+    .describe('Max items per page (1-100). Only used with the list action.'),
 };
 
 const annotations = {
@@ -52,15 +65,17 @@ export function createProjectManageToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function projectManageHandlerBody(client: ToolClient, input: unknown) {
-  const { action, projectId, name } = (input ?? {}) as {
+  const { action, projectId, name, cursor, limit } = (input ?? {}) as {
     action?: 'list' | 'get' | 'create' | 'update' | 'delete' | 'set_default';
     projectId?: string;
     name?: string;
+    cursor?: string;
+    limit?: number;
   };
   try {
     switch (action) {
       case 'list': {
-        const projects = (await client.listProjects()) as
+        const projects = (await client.listProjects({ cursor, limit })) as
           | unknown[]
           | { projects?: unknown[] };
         const items = Array.isArray(projects)

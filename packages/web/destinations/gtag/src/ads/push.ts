@@ -12,6 +12,7 @@ export function pushAdsEvent(
   mappingName: string | undefined,
   env: DestinationWeb.Env | undefined,
   logger: Logger.Instance,
+  userData?: Record<string, unknown>,
 ): void {
   const { conversionId, currency } = settings;
   const eventData = isObject(data) ? data : {};
@@ -28,5 +29,11 @@ export function pushAdsEvent(
 
   const { window } = getEnv(env);
   const gtag = window.gtag as Gtag.Gtag;
+
+  // Set user data for enhanced conversions (must be before conversion event)
+  if (userData) {
+    gtag('set', 'user_data', userData);
+  }
+
   gtag('event', 'conversion', params);
 }

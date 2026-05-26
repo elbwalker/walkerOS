@@ -98,6 +98,7 @@ export {
   updateProject,
   deleteProject,
 } from './commands/projects/index.js';
+export type { ListProjectsOptions } from './commands/projects/index.js';
 export { whoami } from './commands/auth/index.js';
 export { feedback } from './commands/feedback/index.js';
 export {

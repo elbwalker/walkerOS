@@ -1137,6 +1137,11 @@ The `projects` command group manages walkerOS cloud projects. All commands requi
   language="bash"
 />
 
+| Option | Description |
+|--------|-------------|
+| `--cursor <c>` | Resume from a pagination cursor returned by a previous list call |
+| `--limit <n>` | Maximum number of projects to return |
+
 ### Get project details
 
 <CodeSnippet
@@ -1194,6 +1199,8 @@ The `flows` command group manages flow configurations within a project. All comm
 | Option | Description |
 |--------|-------------|
 | `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+| `--cursor <c>` | Resume from a pagination cursor returned by a previous list call |
+| `--limit <n>` | Maximum number of flows to return |
 | `--sort <field>` | Sort by: `name`, `updated_at`, `created_at` |
 | `--order <dir>` | Sort order: `asc`, `desc` |
 | `--include-deleted` | Include soft-deleted flows |
@@ -1370,6 +1377,8 @@ walkeros deploy list --status active`}
 | Option | Description |
 |--------|-------------|
 | `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+| `--cursor <c>` | Resume from a pagination cursor returned by a previous list call |
+| `--limit <n>` | Maximum number of deployments to return |
 | `--type <type>` | Filter by type: `web`, `server` |
 | `--status <status>` | Filter by status |
 

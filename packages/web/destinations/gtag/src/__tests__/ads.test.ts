@@ -1,6 +1,6 @@
 import { initAds, pushAdsEvent } from '../ads';
 import { examples } from '../dev';
-import { clone, createMockLogger } from '@walkeros/core';
+import { clone, createMockLogger, getEvent } from '@walkeros/core';
 import type { AdsSettings, AdsMapping } from '../types';
 
 describe('Google Ads Implementation', () => {
@@ -68,6 +68,27 @@ describe('Google Ads Implementation', () => {
       expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
       expect(mockGtag).toHaveBeenCalledWith('config', 'AW-XXXXXXXXX');
     });
+
+    it('should pass allow_enhanced_conversions when enhancedConversions is configured', () => {
+      const settings: AdsSettings = {
+        conversionId: 'AW-XXXXXXXXX',
+        enhancedConversions: { email: 'user.email' },
+      };
+
+      initAds(settings, false, mockEnv, createMockLogger());
+
+      expect(mockGtag).toHaveBeenCalledWith('config', 'AW-XXXXXXXXX', {
+        allow_enhanced_conversions: true,
+      });
+    });
+
+    it('should not pass allow_enhanced_conversions when enhancedConversions is not configured', () => {
+      const settings: AdsSettings = { conversionId: 'AW-XXXXXXXXX' };
+
+      initAds(settings, false, mockEnv, createMockLogger());
+
+      expect(mockGtag).toHaveBeenCalledWith('config', 'AW-XXXXXXXXX');
+    });
   });
 
   describe('pushAdsEvent', () => {
@@ -82,6 +103,10 @@ describe('Google Ads Implementation', () => {
       conversionId: 'AW-XXXXXXXXX',
       currency: 'EUR',
     };
+
+    const typedEvent = getEvent('order complete', {
+      data: { id: 'order-123', total: 99.99 },
+    });
 
     it('should throw error if no mapping name', () => {
       const logger = createThrowingLogger();
@@ -239,6 +264,83 @@ describe('Google Ads Implementation', () => {
           logger,
         ),
       ).toThrow('Config mapping ads.label missing');
+    });
+
+    it('should call gtag set user_data before conversion when userData is provided', () => {
+      const mappingName = 'PURCHASE_CONVERSION';
+      const userData = {
+        email: 'user@example.com',
+        phone_number: '+1234567890',
+      };
+
+      pushAdsEvent(
+        typedEvent,
+        settings,
+        {},
+        {},
+        mappingName,
+        mockEnv,
+        createMockLogger(),
+        userData,
+      );
+
+      // Verify set user_data is called BEFORE conversion event
+      expect(mockGtag).toHaveBeenNthCalledWith(1, 'set', 'user_data', userData);
+      expect(mockGtag).toHaveBeenNthCalledWith(2, 'event', 'conversion', {
+        send_to: 'AW-XXXXXXXXX/PURCHASE_CONVERSION',
+        currency: 'EUR',
+      });
+    });
+
+    it('should not call gtag set user_data when userData is undefined', () => {
+      const mappingName = 'PURCHASE_CONVERSION';
+
+      pushAdsEvent(
+        typedEvent,
+        settings,
+        {},
+        {},
+        mappingName,
+        mockEnv,
+        createMockLogger(),
+        undefined,
+      );
+
+      expect(mockGtag).not.toHaveBeenCalledWith(
+        'set',
+        'user_data',
+        expect.any(Object),
+      );
+      expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
+        send_to: 'AW-XXXXXXXXX/PURCHASE_CONVERSION',
+        currency: 'EUR',
+      });
+    });
+
+    it('should include address in user_data when provided', () => {
+      const mappingName = 'PURCHASE_CONVERSION';
+      const userData = {
+        email: 'user@example.com',
+        address: {
+          city: 'Hamburg',
+          region: 'HH',
+          postal_code: '20354',
+          country: 'DE',
+        },
+      };
+
+      pushAdsEvent(
+        typedEvent,
+        settings,
+        {},
+        {},
+        mappingName,
+        mockEnv,
+        createMockLogger(),
+        userData,
+      );
+
+      expect(mockGtag).toHaveBeenCalledWith('set', 'user_data', userData);
     });
   });
 });

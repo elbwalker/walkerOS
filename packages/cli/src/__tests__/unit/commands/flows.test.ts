@@ -45,6 +45,8 @@ describe('flows', () => {
             sort: undefined,
             order: undefined,
             include_deleted: undefined,
+            cursor: undefined,
+            limit: undefined,
           },
         },
       });
@@ -71,6 +73,25 @@ describe('flows', () => {
             sort: 'name',
             order: 'asc',
             include_deleted: 'true',
+            cursor: undefined,
+            limit: undefined,
+          },
+        },
+      });
+    });
+
+    it('forwards cursor and limit', async () => {
+      mockGet.mockResolvedValue({ data: { flows: [] } });
+      await listFlows({ projectId: 'proj_1', cursor: 'abc', limit: 10 });
+      expect(mockGet).toHaveBeenCalledWith('/api/projects/{projectId}/flows', {
+        params: {
+          path: { projectId: 'proj_1' },
+          query: {
+            sort: undefined,
+            order: undefined,
+            include_deleted: undefined,
+            cursor: 'abc',
+            limit: 10,
           },
         },
       });
@@ -282,6 +303,9 @@ describe('flows', () => {
             role: 'owner',
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
+            memberCount: 1,
+            flowCount: 0,
+            deploymentCount: 0,
           },
           {
             id: 'proj_b',
@@ -289,9 +313,13 @@ describe('flows', () => {
             role: 'member',
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
+            memberCount: 1,
+            flowCount: 0,
+            deploymentCount: 0,
           },
         ],
         total: 2,
+        nextCursor: null,
       });
       mockGet
         .mockResolvedValueOnce({
@@ -319,7 +347,11 @@ describe('flows', () => {
     });
 
     it('returns empty array when no projects', async () => {
-      mockListProjects.mockResolvedValue({ projects: [], total: 0 });
+      mockListProjects.mockResolvedValue({
+        projects: [],
+        total: 0,
+        nextCursor: null,
+      });
 
       const result = await listAllFlows();
 
@@ -336,6 +368,9 @@ describe('flows', () => {
             role: 'owner',
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
+            memberCount: 1,
+            flowCount: 0,
+            deploymentCount: 0,
           },
           {
             id: 'proj_b',
@@ -343,9 +378,13 @@ describe('flows', () => {
             role: 'member',
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
+            memberCount: 1,
+            flowCount: 0,
+            deploymentCount: 0,
           },
         ],
         total: 2,
+        nextCursor: null,
       });
       mockGet.mockResolvedValue({ data: { flows: [], total: 0 } });
 
@@ -359,6 +398,8 @@ describe('flows', () => {
             sort: 'name',
             order: 'asc',
             include_deleted: 'true',
+            cursor: undefined,
+            limit: undefined,
           },
         },
       });
@@ -369,6 +410,8 @@ describe('flows', () => {
             sort: 'name',
             order: 'asc',
             include_deleted: 'true',
+            cursor: undefined,
+            limit: undefined,
           },
         },
       });

@@ -462,7 +462,10 @@ export interface paths {
      */
     get: {
       parameters: {
-        query?: never;
+        query?: {
+          cursor?: string;
+          limit?: number;
+        };
         header?: never;
         path?: never;
         cookie?: never;
@@ -999,6 +1002,8 @@ export interface paths {
           sort?: 'name' | 'updated_at' | 'created_at';
           order?: 'asc' | 'desc';
           include_deleted?: 'true' | 'false';
+          cursor?: string;
+          limit?: number;
         };
         header?: never;
         path: {
@@ -1124,7 +1129,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Comma-separated dot-paths to select specific fields (e.g., "config.variables,config.flows.web.sources"). Always includes id, createdAt, updatedAt. */
+          /** @description Comma-separated dot-paths to select specific fields (e.g., "config.variables,config.flows.tracking.sources"). Always includes id, createdAt, updatedAt. */
           fields?: string;
         };
         header?: never;
@@ -1865,7 +1870,7 @@ export interface paths {
     };
     /**
      * Download settings JSON
-     * @description Download the named flow settings as a self-contained Config JSON file. Includes parent variables.
+     * @description Download the named flow settings as a self-contained Config JSON file. Includes parent variables and definitions.
      */
     get: {
       parameters: {
@@ -2242,6 +2247,263 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/projects/{projectId}/flows/{flowId}/previews': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List previews
+     * @description List all previews for a flow, ordered by creation date descending.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description List of previews */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListPreviewsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Create preview
+     * @description Create a new preview for a web flow settings entry. Bundles the flow and publishes to a unique token-based URL.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreatePreviewRequest'];
+        };
+      };
+      responses: {
+        /** @description Preview created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PreviewResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Quota exceeded */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Bundle or upload failed */
+        502: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/previews/{previewId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get preview
+     * @description Get a single preview by ID.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          previewId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Preview details */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PreviewResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    /**
+     * Delete preview
+     * @description Delete a preview and its S3 bundle. Requires member role.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          previewId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Preview deleted */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/projects/{projectId}/flows/{flowId}/versions': {
     parameters: {
       query?: never;
@@ -2593,14 +2855,16 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Trigger flow bundle
-     * @description Start a bundle job for a project flow. For multi-settings flows, specify the named flow via ?flow= query parameter.
+     * Bundle flow
+     * @description Bundle a flow using CLI. Returns bundleId (content-hash). Use ?output=download to redirect to presigned S3 URL.
      */
     post: {
       parameters: {
         query?: {
           /** @description Named flow to bundle (required for multi-settings flows) */
           flow?: string;
+          /** @description Set to "download" to redirect to the bundle file */
+          output?: 'download';
         };
         header?: never;
         path: {
@@ -2611,13 +2875,84 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Bundle job started */
+        /** @description Bundle result */
         200: {
           headers: {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['BundleJobResponse'];
+            'application/json': components['schemas']['BundleResponse'];
+          };
+        };
+        /** @description Redirect to presigned bundle URL (when output=download) */
+        302: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/simulate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Simulate a flow step
+     * @description Execute a simulation against a pre-built bundle. Requires bundleId from the bundle endpoint.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['SimulateRequest'];
+        };
+      };
+      responses: {
+        /** @description Simulation result */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['SimulateResponse'];
           };
         };
         /** @description Unauthorized */
@@ -2638,17 +2973,8 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Flow selection required for multi-settings flows */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Service unavailable */
-        503: {
+        /** @description Simulation container error */
+        502: {
           headers: {
             [name: string]: unknown;
           };
@@ -2664,7 +2990,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/bundle/stream': {
+  '/api/projects/{projectId}/deployments': {
     parameters: {
       query?: never;
       header?: never;
@@ -2672,29 +2998,53 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Stream bundle job status (SSE)
-     * @description Stream bundle job progress via Server-Sent Events.
+     * List deployments
+     * @description List deployments for a project. Supports filtering by status, type, origin, and flowId, plus pagination.
      */
     get: {
       parameters: {
-        query: {
-          jobId: string;
+        query?: {
+          status?:
+            | 'idle'
+            | 'deploying'
+            | 'published'
+            | 'active'
+            | 'stopped'
+            | 'failed';
+          type?: 'web' | 'server';
+          origin?: 'cloud' | 'self-hosted';
+          flowId?: string;
+          sort?: 'created_at' | 'updated_at';
+          order?: 'asc' | 'desc';
+          limit?: number;
+          offset?: number | null;
+          cursor?: string;
         };
         header?: never;
         path: {
           projectId: string;
-          flowId: string;
         };
         cookie?: never;
       };
       requestBody?: never;
       responses: {
-        /** @description SSE event stream */
+        /** @description List of deployments */
         200: {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            'application/json': components['schemas']['ListDeploymentsResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
         };
         /** @description Unauthorized */
         401: {
@@ -2709,106 +3059,6 @@ export interface paths {
     };
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/publish': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get publish status
-     * @description Get the current publish status for a flow (CDN deployment).
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Publish status */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Publish flow to CDN
-     * @description Publish a bundled flow to the CDN for client-side loading.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Flow published */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
     delete?: never;
     options?: never;
     head?: never;
@@ -3259,6 +3509,58 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/feedback': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Submit user feedback
+     * @description Accepts free-form feedback from the walkerOS CLI, MCP, or a future in-app form. Public endpoint — no authentication required. The body `userId` is stored verbatim as a best-effort contact email and is not validated against the app users table.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['FeedbackRequest'];
+        };
+      };
+      responses: {
+        /** @description Feedback stored */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FeedbackResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3281,12 +3583,36 @@ export interface components {
         };
       };
     };
+    ClientOutdatedError: {
+      error: {
+        /** @enum {string} */
+        code: 'CLIENT_OUTDATED';
+        /** @example This endpoint requires @walkeros/cli >= 3.5.0 (you are on 3.3.1). */
+        message: string;
+        /** @example 3.5.0 */
+        minVersion: string;
+        /** @example 3.3.1 */
+        clientVersion: string;
+        /** @example cli */
+        client: string;
+        /** @example npm install -g @walkeros/cli@latest */
+        upgrade: string;
+        /**
+         * Format: uri
+         * @example https://walkeros.io/docs/upgrading
+         */
+        docs: string;
+      };
+    };
     FlowConfig: {
       /** @enum {number} */
       version: 4;
       $schema?: string;
       include?: string[];
       variables?: {
+        [key: string]: unknown;
+      };
+      definitions?: {
         [key: string]: unknown;
       };
       flows?: {
@@ -3406,6 +3732,12 @@ export interface components {
        * @example 2026-01-26T14:30:00.000Z
        */
       updatedAt: string;
+      /** @example 3 */
+      memberCount: number;
+      /** @example 5 */
+      flowCount: number;
+      /** @example 2 */
+      deploymentCount: number;
     };
     Member: {
       userId: string;
@@ -3507,6 +3839,7 @@ export interface components {
       name: string;
       config: components['schemas']['FlowConfig'];
       settings?: components['schemas']['FlowSettingsEnriched'][];
+      bundleId?: string | null;
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -3607,6 +3940,9 @@ export interface components {
         | 'failed';
       currentVersionNumber: number | null;
       url: string | null;
+      /** @example flow_a1b2c3d4 */
+      flowId: string | null;
+      flowName: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -3701,6 +4037,9 @@ export interface components {
         | 'failed';
       currentVersionNumber: number | null;
       url: string | null;
+      /** @example flow_a1b2c3d4 */
+      flowId: string | null;
+      flowName: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -3715,6 +4054,7 @@ export interface components {
       total: number;
       limit: number;
       offset: number;
+      nextCursor: string | null;
     };
     UpdateDeploymentResponse: {
       /** @example dep_a1b2c3d4 */
@@ -3816,6 +4156,48 @@ export interface components {
       /** Format: uri */
       observerUrl: string;
     };
+    PreviewResponse: {
+      /** @example prv_abc123xyz456 */
+      id: string;
+      /** @example flow_a1b2c3d4 */
+      flowId: string;
+      flowSettingsId: string;
+      projectId: string;
+      /** @example k9x2m4p7abcd */
+      token: string;
+      /** Format: uri */
+      bundleUrl: string;
+      activationUrl: string;
+      createdBy: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    ListPreviewsResponse: {
+      previews: components['schemas']['PreviewResponse'][];
+      total: number;
+    };
+    CreatePreviewRequest: {
+      flowSettingsId: string;
+    };
+    FeedbackRequest: {
+      /** @example The MCP flow_bundle tool is great but slow on large configs. */
+      text: string;
+      /**
+       * Format: email
+       * @example alex@example.com
+       */
+      userId?: string;
+      /** @example proj_abc123 */
+      projectId?: string;
+      /** @example 0.4.2 */
+      version?: string;
+    };
+    FeedbackResponse: {
+      /** @enum {boolean} */
+      ok: true;
+      /** @example fb_abcdef1234567890 */
+      id: string;
+    };
     MagicLinkResponse: {
       /** @example true */
       success: boolean;
@@ -3878,6 +4260,7 @@ export interface components {
     ListProjectsResponse: {
       projects: components['schemas']['Project'][];
       total: number;
+      nextCursor: string | null;
     };
     CreateProjectRequest: {
       name: string;
@@ -3908,6 +4291,7 @@ export interface components {
     ListFlowsResponse: {
       flows: components['schemas']['FlowSummary'][];
       total: number;
+      nextCursor: string | null;
     };
     CreateFlowRequest: {
       /** @example my-website-flow */
@@ -4039,11 +4423,36 @@ export interface components {
       /** @example 90 */
       expiresInDays?: number | null;
     };
-    BundleJobResponse: {
-      jobId: string;
-      state: string;
-      hash: string;
-      bundlePath: string;
+    BundleResponse: {
+      bundleId: string;
+      cached: boolean;
+    };
+    SimulateResponse: {
+      success: boolean;
+      result?: {
+        /** @enum {string} */
+        step: 'source' | 'transformer' | 'destination';
+        name: string;
+        events: {
+          [key: string]: unknown;
+        }[];
+        calls: {
+          fn: string;
+          args: unknown[];
+          ts: number;
+        }[];
+        duration: number;
+      };
+    };
+    SimulateRequest: {
+      bundleId: string;
+      config: {
+        [key: string]: unknown;
+      };
+      event: {
+        [key: string]: unknown;
+      };
+      step: string;
     };
     RegisterRuntimeRequest: {
       flowId: string;

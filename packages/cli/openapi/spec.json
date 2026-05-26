@@ -59,6 +59,10 @@
     {
       "name": "Observer",
       "description": "Observer service (Fastify, port 3001)"
+    },
+    {
+      "name": "Feedback",
+      "description": "Public feedback submission (CLI, MCP, in-app)"
     }
   ],
   "components": {
@@ -110,6 +114,55 @@
         },
         "required": ["error"]
       },
+      "ClientOutdatedError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["CLIENT_OUTDATED"]
+              },
+              "message": {
+                "type": "string",
+                "example": "This endpoint requires @walkeros/cli >= 3.5.0 (you are on 3.3.1)."
+              },
+              "minVersion": {
+                "type": "string",
+                "example": "3.5.0"
+              },
+              "clientVersion": {
+                "type": "string",
+                "example": "3.3.1"
+              },
+              "client": {
+                "type": "string",
+                "example": "cli"
+              },
+              "upgrade": {
+                "type": "string",
+                "example": "npm install -g @walkeros/cli@latest"
+              },
+              "docs": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://walkeros.io/docs/upgrading"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "minVersion",
+              "clientVersion",
+              "client",
+              "upgrade",
+              "docs"
+            ]
+          }
+        },
+        "required": ["error"]
+      },
       "FlowConfig": {
         "type": "object",
         "properties": {
@@ -127,6 +180,10 @@
             }
           },
           "variables": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "definitions": {
             "type": "object",
             "additionalProperties": {}
           },
@@ -333,9 +390,30 @@
             "type": "string",
             "format": "date-time",
             "example": "2026-01-26T14:30:00.000Z"
+          },
+          "memberCount": {
+            "type": "integer",
+            "example": 3
+          },
+          "flowCount": {
+            "type": "integer",
+            "example": 5
+          },
+          "deploymentCount": {
+            "type": "integer",
+            "example": 2
           }
         },
-        "required": ["id", "name", "role", "createdAt", "updatedAt"]
+        "required": [
+          "id",
+          "name",
+          "role",
+          "createdAt",
+          "updatedAt",
+          "memberCount",
+          "flowCount",
+          "deploymentCount"
+        ]
       },
       "Member": {
         "type": "object",
@@ -537,6 +615,9 @@
               "$ref": "#/components/schemas/FlowSettingsEnriched"
             }
           },
+          "bundleId": {
+            "type": ["string", "null"]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -732,6 +813,14 @@
           "url": {
             "type": ["string", "null"]
           },
+          "flowId": {
+            "type": ["string", "null"],
+            "pattern": "^flow_[a-zA-Z0-9_-]+$",
+            "example": "flow_a1b2c3d4"
+          },
+          "flowName": {
+            "type": ["string", "null"]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -764,6 +853,8 @@
           "status",
           "currentVersionNumber",
           "url",
+          "flowId",
+          "flowName",
           "createdAt",
           "updatedAt"
         ]
@@ -949,6 +1040,14 @@
           "url": {
             "type": ["string", "null"]
           },
+          "flowId": {
+            "type": ["string", "null"],
+            "pattern": "^flow_[a-zA-Z0-9_-]+$",
+            "example": "flow_a1b2c3d4"
+          },
+          "flowName": {
+            "type": ["string", "null"]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -981,6 +1080,8 @@
           "status",
           "currentVersionNumber",
           "url",
+          "flowId",
+          "flowName",
           "createdAt",
           "updatedAt"
         ]
@@ -1005,9 +1106,12 @@
           "offset": {
             "type": "integer",
             "minimum": 0
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
           }
         },
-        "required": ["deployments", "total", "limit", "offset"]
+        "required": ["deployments", "total", "limit", "offset", "nextCursor"]
       },
       "UpdateDeploymentResponse": {
         "type": "object",
@@ -1285,6 +1389,126 @@
         },
         "required": ["ticket", "observerUrl"]
       },
+      "PreviewResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^prv_[a-z0-9]+$",
+            "example": "prv_abc123xyz456"
+          },
+          "flowId": {
+            "type": "string",
+            "pattern": "^flow_[a-zA-Z0-9_-]+$",
+            "example": "flow_a1b2c3d4"
+          },
+          "flowSettingsId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 12,
+            "pattern": "^[a-z0-9]+$",
+            "example": "k9x2m4p7abcd"
+          },
+          "bundleUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "activationUrl": {
+            "type": "string",
+            "pattern": "^\\?elbPreview=[a-z0-9]{12}$"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "flowId",
+          "flowSettingsId",
+          "projectId",
+          "token",
+          "bundleUrl",
+          "activationUrl",
+          "createdBy",
+          "createdAt"
+        ]
+      },
+      "ListPreviewsResponse": {
+        "type": "object",
+        "properties": {
+          "previews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewResponse"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["previews", "total"]
+      },
+      "CreatePreviewRequest": {
+        "type": "object",
+        "properties": {
+          "flowSettingsId": {
+            "type": "string"
+          }
+        },
+        "required": ["flowSettingsId"]
+      },
+      "FeedbackRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "example": "The MCP flow_bundle tool is great but slow on large configs."
+          },
+          "userId": {
+            "type": "string",
+            "format": "email",
+            "example": "alex@example.com"
+          },
+          "projectId": {
+            "type": "string",
+            "maxLength": 255,
+            "example": "proj_abc123"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "0.4.2"
+          }
+        },
+        "required": ["text"]
+      },
+      "FeedbackResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "id": {
+            "type": "string",
+            "example": "fb_abcdef1234567890"
+          }
+        },
+        "required": ["ok", "id"]
+      },
       "MagicLinkResponse": {
         "type": "object",
         "properties": {
@@ -1448,9 +1672,12 @@
           },
           "total": {
             "type": "number"
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
           }
         },
-        "required": ["projects", "total"]
+        "required": ["projects", "total", "nextCursor"]
       },
       "CreateProjectRequest": {
         "type": "object",
@@ -1526,9 +1753,12 @@
           "total": {
             "type": "integer",
             "minimum": 0
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
           }
         },
-        "required": ["flows", "total"]
+        "required": ["flows", "total", "nextCursor"]
       },
       "CreateFlowRequest": {
         "type": "object",
@@ -1906,23 +2136,90 @@
         },
         "required": ["name"]
       },
-      "BundleJobResponse": {
+      "BundleResponse": {
         "type": "object",
         "properties": {
-          "jobId": {
+          "bundleId": {
             "type": "string"
           },
-          "state": {
-            "type": "string"
-          },
-          "hash": {
-            "type": "string"
-          },
-          "bundlePath": {
-            "type": "string"
+          "cached": {
+            "type": "boolean"
           }
         },
-        "required": ["jobId", "state", "hash", "bundlePath"]
+        "required": ["bundleId", "cached"]
+      },
+      "SimulateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "step": {
+                "type": "string",
+                "enum": ["source", "transformer", "destination"]
+              },
+              "name": {
+                "type": "string"
+              },
+              "events": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              },
+              "calls": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "fn": {
+                      "type": "string"
+                    },
+                    "args": {
+                      "type": "array",
+                      "items": {}
+                    },
+                    "ts": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["fn", "args", "ts"]
+                }
+              },
+              "duration": {
+                "type": "number"
+              }
+            },
+            "required": ["step", "name", "events", "calls", "duration"]
+          }
+        },
+        "required": ["success"]
+      },
+      "SimulateRequest": {
+        "type": "object",
+        "properties": {
+          "bundleId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{8,64}$"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "event": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "step": {
+            "type": "string",
+            "pattern": "^(source|transformer|destination)\\..+$"
+          }
+        },
+        "required": ["bundleId", "config", "event", "step"]
       },
       "RegisterRuntimeRequest": {
         "type": "object",
@@ -2292,6 +2589,26 @@
         "tags": ["Projects"],
         "summary": "List my projects",
         "description": "List all projects where the authenticated user is a member.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of projects",
@@ -2877,6 +3194,24 @@
             "required": false,
             "name": "include_deleted",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
           }
         ],
         "responses": {
@@ -3020,11 +3355,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated dot-paths to select specific fields (e.g., \"config.variables,config.flows.web.sources\"). Always includes id, createdAt, updatedAt.",
-              "example": "config.variables,config.flows.web.sources"
+              "description": "Comma-separated dot-paths to select specific fields (e.g., \"config.variables,config.flows.tracking.sources\"). Always includes id, createdAt, updatedAt.",
+              "example": "config.variables,config.flows.tracking.sources"
             },
             "required": false,
-            "description": "Comma-separated dot-paths to select specific fields (e.g., \"config.variables,config.flows.web.sources\"). Always includes id, createdAt, updatedAt.",
+            "description": "Comma-separated dot-paths to select specific fields (e.g., \"config.variables,config.flows.tracking.sources\"). Always includes id, createdAt, updatedAt.",
             "name": "fields",
             "in": "query"
           }
@@ -3912,7 +4247,7 @@
       "get": {
         "tags": ["Settings"],
         "summary": "Download settings JSON",
-        "description": "Download the named flow settings as a self-contained Config JSON file. Includes parent variables.",
+        "description": "Download the named flow settings as a self-contained Config JSON file. Includes parent variables and definitions.",
         "parameters": [
           {
             "schema": {
@@ -4383,6 +4718,318 @@
         }
       }
     },
+    "/api/projects/{projectId}/flows/{flowId}/previews": {
+      "post": {
+        "tags": ["Previews"],
+        "summary": "Create preview",
+        "description": "Create a new preview for a web flow settings entry. Bundles the flow and publishes to a unique token-based URL.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Preview created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Quota exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bundle or upload failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Previews"],
+        "summary": "List previews",
+        "description": "List all previews for a flow, ordered by creation date descending.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of previews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPreviewsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/previews/{previewId}": {
+      "get": {
+        "tags": ["Previews"],
+        "summary": "Get preview",
+        "description": "Get a single preview by ID.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^prv_[a-z0-9]+$",
+              "example": "prv_abc123xyz456"
+            },
+            "required": true,
+            "name": "previewId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preview details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Previews"],
+        "summary": "Delete preview",
+        "description": "Delete a preview and its S3 bundle. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^prv_[a-z0-9]+$",
+              "example": "prv_abc123xyz456"
+            },
+            "required": true,
+            "name": "previewId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Preview deleted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{projectId}/flows/{flowId}/versions": {
       "get": {
         "tags": ["Versions"],
@@ -4718,8 +5365,8 @@
     "/api/projects/{projectId}/flows/{flowId}/bundle": {
       "post": {
         "tags": ["Bundle"],
-        "summary": "Trigger flow bundle",
-        "description": "Start a bundle job for a project flow. For multi-settings flows, specify the named flow via ?flow= query parameter.",
+        "summary": "Bundle flow",
+        "description": "Bundle a flow using CLI. Returns bundleId (content-hash). Use ?output=download to redirect to presigned S3 URL.",
         "parameters": [
           {
             "schema": {
@@ -4751,104 +5398,45 @@
             "description": "Named flow to bundle (required for multi-settings flows)",
             "name": "flow",
             "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Bundle job started",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BundleJobResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Flow selection required for multi-settings flows",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/projects/{projectId}/flows/{flowId}/bundle/stream": {
-      "get": {
-        "tags": ["Bundle"],
-        "summary": "Stream bundle job status (SSE)",
-        "description": "Stream bundle job progress via Server-Sent Events.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^proj_[a-zA-Z0-9_-]+$",
-              "example": "proj_x7y8z9"
-            },
-            "required": true,
-            "name": "projectId",
-            "in": "path"
           },
           {
             "schema": {
               "type": "string",
-              "pattern": "^flow_[a-zA-Z0-9_-]+$",
-              "example": "flow_a1b2c3d4"
+              "enum": ["download"],
+              "description": "Set to \"download\" to redirect to the bundle file"
             },
-            "required": true,
-            "name": "flowId",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": true,
-            "name": "jobId",
+            "required": false,
+            "description": "Set to \"download\" to redirect to the bundle file",
+            "name": "output",
             "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "SSE event stream"
+            "description": "Bundle result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleResponse"
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect to presigned bundle URL (when output=download)"
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4860,11 +5448,11 @@
         }
       }
     },
-    "/api/projects/{projectId}/flows/{flowId}/publish": {
-      "get": {
-        "tags": ["Deployments"],
-        "summary": "Get publish status",
-        "description": "Get the current publish status for a flow (CDN deployment).",
+    "/api/projects/{projectId}/flows/{flowId}/simulate": {
+      "post": {
+        "tags": ["Simulate"],
+        "summary": "Simulate a flow step",
+        "description": "Execute a simulation against a pre-built bundle. Requires bundleId from the bundle endpoint.",
         "parameters": [
           {
             "schema": {
@@ -4887,9 +5475,25 @@
             "in": "path"
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Publish status"
+            "description": "Simulation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulateResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4903,6 +5507,16 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Simulation container error",
             "content": {
               "application/json": {
                 "schema": {
@@ -4912,11 +5526,13 @@
             }
           }
         }
-      },
-      "post": {
+      }
+    },
+    "/api/projects/{projectId}/deployments": {
+      "get": {
         "tags": ["Deployments"],
-        "summary": "Publish flow to CDN",
-        "description": "Publish a bundled flow to the CDN for client-side loading.",
+        "summary": "List deployments",
+        "description": "List deployments for a project. Supports filtering by status, type, origin, and flowId, plus pagination.",
         "parameters": [
           {
             "schema": {
@@ -4931,20 +5547,106 @@
           {
             "schema": {
               "type": "string",
+              "enum": [
+                "idle",
+                "deploying",
+                "published",
+                "active",
+                "stopped",
+                "failed"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["web", "server"]
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["cloud", "self-hosted"]
+            },
+            "required": false,
+            "name": "origin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "pattern": "^flow_[a-zA-Z0-9_-]+$",
               "example": "flow_a1b2c3d4"
             },
-            "required": true,
+            "required": false,
             "name": "flowId",
-            "in": "path"
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["created_at", "updated_at"]
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            },
+            "required": false,
+            "name": "order",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": ["integer", "null"],
+              "minimum": 0
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Flow published"
+            "description": "List of deployments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListDeploymentsResponse"
+                }
+              }
+            }
           },
-          "401": {
-            "description": "Unauthorized",
+          "400": {
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -4953,8 +5655,8 @@
               }
             }
           },
-          "404": {
-            "description": "Not found",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -5299,6 +6001,44 @@
                     }
                   },
                   "required": ["status"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback": {
+      "post": {
+        "tags": ["Feedback"],
+        "summary": "Submit user feedback",
+        "description": "Accepts free-form feedback from the walkerOS CLI, MCP, or a future in-app form. Public endpoint — no authentication required. The body `userId` is stored verbatim as a best-effort contact email and is not validated against the app users table.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Feedback stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

@@ -54,6 +54,19 @@ const inputSchema = {
     .describe(
       'Flow name for multi-settings flows. Only used with deploy action.',
     ),
+  cursor: z
+    .string()
+    .optional()
+    .describe(
+      'Pagination cursor from a previous list response. Only used with the list action.',
+    ),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .optional()
+    .describe('Max items per page (1-100). Only used with the list action.'),
 };
 
 const annotations = {
@@ -88,17 +101,29 @@ export function createDeployManageToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function deployManageHandlerBody(client: ToolClient, input: unknown) {
-  const { action, projectId, flowId, slug, type, status, wait, flowName } =
-    (input ?? {}) as {
-      action?: 'deploy' | 'list' | 'get' | 'delete';
-      projectId?: string;
-      flowId?: string;
-      slug?: string;
-      type?: 'web' | 'server';
-      status?: string;
-      wait?: boolean;
-      flowName?: string;
-    };
+  const {
+    action,
+    projectId,
+    flowId,
+    slug,
+    type,
+    status,
+    wait,
+    flowName,
+    cursor,
+    limit,
+  } = (input ?? {}) as {
+    action?: 'deploy' | 'list' | 'get' | 'delete';
+    projectId?: string;
+    flowId?: string;
+    slug?: string;
+    type?: 'web' | 'server';
+    status?: string;
+    wait?: boolean;
+    flowName?: string;
+    cursor?: string;
+    limit?: number;
+  };
   try {
     switch (action) {
       case 'deploy': {
@@ -127,6 +152,8 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
           flowId,
           type,
           status,
+          cursor,
+          limit,
         });
         return mcpResult(data);
       }

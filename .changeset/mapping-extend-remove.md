@@ -1,6 +1,6 @@
 ---
-'@walkeros/core': minor
-'@walkeros/transformer-ga4': minor
+'@walkeros/core': patch
+'@walkeros/transformer-ga4': patch
 ---
 
 Add `extend` and `remove` to mapping rules. `extend` deep-merges a partial rule

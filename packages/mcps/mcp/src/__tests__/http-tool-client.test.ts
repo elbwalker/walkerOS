@@ -45,6 +45,13 @@ describe('HttpToolClient', () => {
     expect(result).toEqual({ projects: [] });
   });
 
+  it('forwards pagination options to cli.listProjects', async () => {
+    (cli.listProjects as jest.Mock).mockResolvedValue({ projects: [] });
+    const client = new HttpToolClient();
+    await client.listProjects({ cursor: 'abc', limit: 10 });
+    expect(cli.listProjects).toHaveBeenCalledWith({ cursor: 'abc', limit: 10 });
+  });
+
   it('delegates submitFeedback to cli.feedback', async () => {
     (cli.feedback as jest.Mock).mockResolvedValue(undefined);
     const client = new HttpToolClient();

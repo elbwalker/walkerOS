@@ -13,6 +13,7 @@ jest.mock('../ga4', () => ({
 jest.mock('../ads', () => ({
   initAds: jest.fn(),
   pushAdsEvent: jest.fn(),
+  resolveUserData: jest.fn(),
 }));
 
 jest.mock('../gtm', () => ({
@@ -21,7 +22,7 @@ jest.mock('../gtm', () => ({
 }));
 
 import { initGA4, pushGA4Event } from '../ga4';
-import { initAds, pushAdsEvent } from '../ads';
+import { initAds, pushAdsEvent, resolveUserData } from '../ads';
 import { initGTM, pushGTMEvent } from '../gtm';
 
 describe('Unified Gtag Destination', () => {
@@ -274,6 +275,87 @@ describe('Unified Gtag Destination', () => {
         'PURCHASE_CONVERSION',
         mockEnv,
         mockLogger,
+        undefined,
+      );
+    });
+
+    it('should resolve and pass userData when enhancedConversions is configured', async () => {
+      const mockUserData = { email: 'user@example.com' };
+      (resolveUserData as jest.Mock).mockResolvedValue(mockUserData);
+
+      const settings: Settings = {
+        ads: {
+          conversionId: 'AW-XXXXXXXXX',
+          enhancedConversions: { email: 'user.email' },
+        },
+      };
+      const config = { settings };
+      const mapping = {
+        name: 'PURCHASE_CONVERSION',
+        settings: { ads: {} },
+      };
+
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          rule: mapping,
+          data: mockData,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
+
+      expect(resolveUserData).toHaveBeenCalledWith(
+        mockEvent,
+        settings.ads,
+        expect.any(Object),
+      );
+      expect(pushAdsEvent).toHaveBeenCalledWith(
+        mockEvent,
+        settings.ads,
+        mapping.settings.ads,
+        mockData,
+        'PURCHASE_CONVERSION',
+        mockEnv,
+        mockLogger,
+        mockUserData,
+      );
+    });
+
+    it('should not resolve userData when enhancedConversions is not configured', async () => {
+      const settings: Settings = {
+        ads: { conversionId: 'AW-XXXXXXXXX' },
+      };
+      const config = { settings };
+      const mapping = {
+        name: 'PURCHASE_CONVERSION',
+        settings: { ads: {} },
+      };
+
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          rule: mapping,
+          data: mockData,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
+
+      expect(resolveUserData).not.toHaveBeenCalled();
+      expect(pushAdsEvent).toHaveBeenCalledWith(
+        mockEvent,
+        settings.ads,
+        mapping.settings.ads,
+        mockData,
+        'PURCHASE_CONVERSION',
+        mockEnv,
+        mockLogger,
+        undefined,
       );
     });
 
@@ -371,6 +453,7 @@ describe('Unified Gtag Destination', () => {
         'PURCHASE_CONVERSION',
         mockEnv,
         mockLogger,
+        undefined,
       );
       expect(pushGTMEvent).toHaveBeenCalledWith(
         mockEvent,

@@ -53,8 +53,11 @@ import type { ToolClient } from './tool-client.js';
  * (WALKEROS_TOKEN, WALKEROS_APP_URL), so no constructor args are required.
  */
 export class HttpToolClient implements ToolClient {
-  async listProjects(): Promise<unknown> {
-    return listProjects();
+  async listProjects(options?: {
+    cursor?: string;
+    limit?: number;
+  }): Promise<unknown> {
+    return listProjects(options);
   }
   async getProject(options: { projectId?: string }): Promise<unknown> {
     return getProject(options);
@@ -82,6 +85,8 @@ export class HttpToolClient implements ToolClient {
     sort?: string;
     order?: 'asc' | 'desc';
     includeDeleted?: boolean;
+    cursor?: string;
+    limit?: number;
   }): Promise<unknown> {
     return listAllFlows(options as Parameters<typeof listAllFlows>[0]);
   }

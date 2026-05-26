@@ -1,5 +1,10 @@
 import type { Transformer, WalkerOS } from '@walkeros/core';
-import { createIngest, createMockContext, createMockLogger } from '@walkeros/core';
+import {
+  createIngest,
+  createMockContext,
+  createMockLogger,
+  getByPath,
+} from '@walkeros/core';
 import { transformerFingerprint } from '../transformer';
 import type { FingerprintSettings } from '../types';
 
@@ -50,8 +55,8 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as any).event.user?.hash).toBeDefined();
-      expect((result as any).event.user?.hash).toHaveLength(16);
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
+      expect(getByPath(result, 'event.user.hash')).toHaveLength(16);
     });
 
     it('should hash fields in order (order matters)', async () => {
@@ -81,8 +86,8 @@ describe('Transformer Fingerprint', () => {
       const result2 = await transformer2.push(baseEvent, pushContext);
 
       // Different order should produce different hashes
-      expect((result1 as any).event.user?.hash).not.toEqual(
-        (result2 as any).event.user?.hash,
+      expect(getByPath(result1, 'event.user.hash')).not.toEqual(
+        getByPath(result2, 'event.user.hash'),
       );
     });
 
@@ -101,7 +106,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as any).event.user?.hash).toBeDefined();
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
     });
 
     it('should support function fields via mapping config', async () => {
@@ -120,7 +125,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as any).event.user?.hash).toBeDefined();
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
     });
 
     it('should support key + fn transformation', async () => {
@@ -140,7 +145,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as any).event.user?.hash).toBeDefined();
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
     });
   });
 
@@ -165,7 +170,7 @@ describe('Transformer Fingerprint', () => {
 
       // Should not throw, missing field becomes empty string
       expect(result).toBeDefined();
-      expect((result as any).event.user?.hash).toBeDefined();
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
     });
 
     it('should handle undefined ingest', async () => {
@@ -183,7 +188,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as any).event.user?.hash).toBeDefined();
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
     });
 
     it('should handle empty fields array', async () => {
@@ -202,7 +207,7 @@ describe('Transformer Fingerprint', () => {
 
       // Empty fields = hash of empty string
       expect(result).toBeDefined();
-      expect((result as any).event.user?.hash).toBeDefined();
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
     });
   });
 
@@ -221,7 +226,7 @@ describe('Transformer Fingerprint', () => {
 
       const result = await transformer.push(baseEvent, pushContext);
 
-      expect((result as any).event.user?.hash).toBeDefined();
+      expect(getByPath(result, 'event.user.hash')).toBeDefined();
     });
 
     it('should store hash at configured output path', async () => {
@@ -238,8 +243,8 @@ describe('Transformer Fingerprint', () => {
 
       const result = await transformer.push(baseEvent, pushContext);
 
-      expect((result as any).event.user?.fingerprint).toBeDefined();
-      expect((result as any).event.user?.hash).toBeUndefined();
+      expect(getByPath(result, 'event.user.fingerprint')).toBeDefined();
+      expect(getByPath(result, 'event.user.hash')).toBeUndefined();
     });
 
     it('should store hash at nested path', async () => {
@@ -256,7 +261,9 @@ describe('Transformer Fingerprint', () => {
 
       const result = await transformer.push(baseEvent, pushContext);
 
-      expect((result as any).event?.data?.tracking?.fingerprint).toBeDefined();
+      expect(
+        getByPath(result, 'event.data.tracking.fingerprint'),
+      ).toBeDefined();
     });
   });
 
@@ -275,7 +282,7 @@ describe('Transformer Fingerprint', () => {
 
       const result = await transformer.push(baseEvent, pushContext);
 
-      expect((result as any).event.user?.hash).toHaveLength(16);
+      expect(getByPath(result, 'event.user.hash')).toHaveLength(16);
     });
 
     it('should return full hash when length is not specified', async () => {
@@ -293,7 +300,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       // SHA-256 produces 64-char hex string
-      expect((result as any).event.user?.hash).toHaveLength(64);
+      expect(getByPath(result, 'event.user.hash')).toHaveLength(64);
     });
   });
 
@@ -316,8 +323,8 @@ describe('Transformer Fingerprint', () => {
       const result1 = await transformer.push({ ...baseEvent }, pushContext);
       const result2 = await transformer.push({ ...baseEvent }, pushContext);
 
-      expect((result1 as any).event.user?.hash).toEqual(
-        (result2 as any).event.user?.hash,
+      expect(getByPath(result1, 'event.user.hash')).toEqual(
+        getByPath(result2, 'event.user.hash'),
       );
     });
 
@@ -337,8 +344,8 @@ describe('Transformer Fingerprint', () => {
       const result1 = await transformer.push({ ...baseEvent }, pushContext1);
       const result2 = await transformer.push({ ...baseEvent }, pushContext2);
 
-      expect((result1 as any).event.user?.hash).not.toEqual(
-        (result2 as any).event.user?.hash,
+      expect(getByPath(result1, 'event.user.hash')).not.toEqual(
+        getByPath(result2, 'event.user.hash'),
       );
     });
   });

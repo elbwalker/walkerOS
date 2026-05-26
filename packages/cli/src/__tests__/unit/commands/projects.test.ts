@@ -28,10 +28,24 @@ describe('projects', () => {
 
   describe('listProjects', () => {
     it('calls GET /api/projects', async () => {
-      mockGet.mockResolvedValue({ data: { projects: [], total: 0 } });
+      mockGet.mockResolvedValue({
+        data: { projects: [], total: 0, nextCursor: null },
+      });
       const result = await listProjects();
-      expect(mockGet).toHaveBeenCalledWith('/api/projects');
-      expect(result).toEqual({ projects: [], total: 0 });
+      expect(mockGet).toHaveBeenCalledWith('/api/projects', {
+        params: { query: { cursor: undefined, limit: undefined } },
+      });
+      expect(result).toEqual({ projects: [], total: 0, nextCursor: null });
+    });
+
+    it('forwards cursor and limit', async () => {
+      mockGet.mockResolvedValue({
+        data: { projects: [], total: 0, nextCursor: null },
+      });
+      await listProjects({ cursor: 'abc', limit: 10 });
+      expect(mockGet).toHaveBeenCalledWith('/api/projects', {
+        params: { query: { cursor: 'abc', limit: 10 } },
+      });
     });
 
     it('throws on error response', async () => {

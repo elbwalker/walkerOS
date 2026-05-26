@@ -119,7 +119,7 @@ Stores are rarely used alone. They work together with transformers to enable ana
 |---------|-------|-------------|-----------------|
 | **Self-hosted tag delivery** | S3 or Filesystem | [File](/docs/transformers/file) | Serve walker.js and tracking pixels from your own infrastructure |
 | **Cookie-free user identification** | Built-in cache tier | [Fingerprint](/docs/transformers/fingerprint) | Store session hashes server-side, identify users without cookies or PII |
-| **Response caching** | Built-in cache tier | [Cache](/docs/transformers/cache) | Deduplicate identical requests, reduce load on downstream analytics APIs |
+| **Response caching** | Built-in cache tier | [Cache](/docs/collector/cache) | Deduplicate identical requests, reduce load on downstream analytics APIs |
 | **Quota-friendly Sheets lookups** | Sheets + [cache tier](./cache.mdx) | Any transformer | Memoize slow API reads, absorb rate limits via TTL |
 | **Local development** | Filesystem | [File](/docs/transformers/file) | Serve assets from disk during development, no S3 credentials needed |
 

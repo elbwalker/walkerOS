@@ -1,11 +1,12 @@
 import type { Trigger } from '@walkeros/core';
 import { examples } from '../dev';
-import { sourceBrowser } from '../index';
+import { sourceBrowser, __resetInstanceCountForTests } from '../index';
 
 describe('Browser createTrigger', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+    __resetInstanceCountForTests();
   });
 
   afterEach(() => {

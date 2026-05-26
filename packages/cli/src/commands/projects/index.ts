@@ -6,9 +6,16 @@ import type { GlobalOptions } from '../../types/global.js';
 
 // === Programmatic API ===
 
-export async function listProjects() {
+export interface ListProjectsOptions {
+  cursor?: string;
+  limit?: number;
+}
+
+export async function listProjects(options: ListProjectsOptions = {}) {
   const client = createApiClient();
-  const { data, error } = await client.GET('/api/projects');
+  const { data, error } = await client.GET('/api/projects', {
+    params: { query: { cursor: options.cursor, limit: options.limit } },
+  });
   if (error) throw new Error(error.error?.message || 'Failed to list projects');
   return data;
 }
@@ -66,6 +73,8 @@ interface ProjectsCommandOptions extends GlobalOptions {
   output?: string;
   project?: string;
   name?: string;
+  cursor?: string;
+  limit?: number;
 }
 
 async function handleResult(
@@ -83,7 +92,10 @@ async function handleResult(
 export async function listProjectsCommand(
   options: ProjectsCommandOptions,
 ): Promise<void> {
-  await handleResult(() => listProjects(), options);
+  await handleResult(
+    () => listProjects({ cursor: options.cursor, limit: options.limit }),
+    options,
+  );
 }
 
 export async function getProjectCommand(

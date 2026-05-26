@@ -84,6 +84,8 @@ describe('flow_manage tool', () => {
         sort: undefined,
         order: undefined,
         includeDeleted: undefined,
+        cursor: undefined,
+        limit: undefined,
       });
       expect(result.structuredContent.projects).toEqual(allFlows);
     });
@@ -104,10 +106,35 @@ describe('flow_manage tool', () => {
         sort: undefined,
         order: undefined,
         includeDeleted: undefined,
+        cursor: undefined,
+        limit: undefined,
       });
       expect(result.structuredContent.flows).toEqual([
         { id: 'flow_1', name: '<user_data>My Flow</user_data>' },
       ]);
+    });
+
+    it('forwards cursor and limit to listFlows', async () => {
+      const flows = { flows: [{ id: 'flow_1', name: 'My Flow' }] };
+      const listFlows = jest.fn().mockResolvedValue(flows);
+      registerFlowManageTool(server as never, stubClient({ listFlows }));
+
+      const tool = server.getTool('flow_manage')!;
+      await tool.handler({
+        action: 'list',
+        projectId: 'proj_1',
+        cursor: 'xyz',
+        limit: 5,
+      });
+
+      expect(listFlows).toHaveBeenCalledWith({
+        projectId: 'proj_1',
+        sort: undefined,
+        order: undefined,
+        includeDeleted: undefined,
+        cursor: 'xyz',
+        limit: 5,
+      });
     });
   });
 

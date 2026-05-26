@@ -87,6 +87,22 @@ export interface GA4Settings extends BaseSettings {
 export interface AdsSettings extends BaseSettings {
   conversionId: string;
   currency?: string;
+  /** Enhanced conversions: maps walkerOS event fields to Google user_data fields. */
+  enhancedConversions?: UserDataMapping;
+}
+
+export interface UserDataMapping {
+  email?: WalkerOSMapping.Value;
+  phone_number?: WalkerOSMapping.Value;
+  address?: {
+    first_name?: WalkerOSMapping.Value;
+    last_name?: WalkerOSMapping.Value;
+    street?: WalkerOSMapping.Value;
+    city?: WalkerOSMapping.Value;
+    region?: WalkerOSMapping.Value;
+    postal_code?: WalkerOSMapping.Value;
+    country?: WalkerOSMapping.Value;
+  };
 }
 
 // Google Ads specific mapping

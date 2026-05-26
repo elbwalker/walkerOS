@@ -1,7 +1,7 @@
 import type { WalkerOS, On, Collector, Logger } from '@walkeros/core';
 import type { Settings, Destination, ConsentMapping } from './types';
 import { initGA4, pushGA4Event } from './ga4';
-import { initAds, pushAdsEvent } from './ads';
+import { initAds, pushAdsEvent, resolveUserData } from './ads';
 import { initGTM, pushGTMEvent } from './gtm';
 import { getData } from './shared/mapping';
 import { getEnv } from '@walkeros/web-core';
@@ -90,6 +90,12 @@ export const destinationGtag: Destination = {
       pushGA4Event(event, ga4, ga4Data, env, logger);
     }
 
+    // Resolve enhanced conversions user data if configured
+    let adsUserData: Record<string, unknown> | undefined;
+    if (ads?.conversionId && ads?.enhancedConversions) {
+      adsUserData = await resolveUserData(event, ads, collector);
+    }
+
     // @TODO: Fix condition - should check for rule.settings?.ads?.label || rule.name
     // Currently requires rule.name even when label is provided via settings.ads.label
     if (ads?.conversionId && rule.name) {
@@ -101,6 +107,7 @@ export const destinationGtag: Destination = {
         rule.name,
         env,
         logger,
+        adsUserData,
       );
     }
 
