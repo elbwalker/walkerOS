@@ -34,6 +34,14 @@ export interface TelemetryOptions {
 export type EmitFn = (state: FlowState) => void;
 
 /**
+ * Optional supplier form. When passed instead of static `TelemetryOptions`,
+ * the observer evaluates the supplier on every emit so toggle-style runtime
+ * overrides (e.g. `WALKEROS_TRACE_UNTIL`) reach the projection without
+ * rebuilding the observer.
+ */
+export type TelemetryOptionsSupplier = () => TelemetryOptions | null;
+
+/**
  * Deterministic 32-bit FNV-1a hash of a string. Used for sampling so
  * identical eventIds always map to the same numeric bucket.
  */
@@ -72,30 +80,58 @@ function passesSample(eventId: string, sample: number): boolean {
  * synchronous, never throws (a throwing emit is swallowed), and does no
  * IO of its own. Designed to be added to `collector.observers` so the
  * runtime self-emission loop drives it.
+ *
+ * Accepts either a static `TelemetryOptions` value or a supplier
+ * `() => TelemetryOptions | null`. With a supplier, every emit reads the
+ * current opts so toggles such as `WALKEROS_TRACE_UNTIL` reach the
+ * projection without rebuilding the observer. A supplier returning `null`
+ * suppresses the emit (telemetry off).
  */
 export function createTelemetryObserver(
   emit: EmitFn,
-  opts: TelemetryOptions,
+  optsOrSupplier: TelemetryOptions | TelemetryOptionsSupplier,
 ): ObserverFn {
-  const level: TelemetryLevel = opts.level ?? 'standard';
-  if (level === 'off') {
-    return () => {
-      // Disabled observer.
-    };
-  }
-
-  const sample = opts.sample ?? 1;
-  const includeIn = opts.includeIn ?? level === 'trace';
-  const includeOut = opts.includeOut ?? level === 'trace';
-  const includeMappingKey = opts.includeMappingKey ?? level === 'trace';
+  const supply: TelemetryOptionsSupplier =
+    typeof optsOrSupplier === 'function'
+      ? optsOrSupplier
+      : () => optsOrSupplier;
 
   return function project(state: FlowState): void {
+    const opts = supply();
+    if (!opts) return;
+
+    const level: TelemetryLevel = opts.level ?? 'standard';
+    if (level === 'off') return;
+
+    const rawSample = opts.sample;
+    const sample =
+      typeof rawSample === 'number' && Number.isFinite(rawSample)
+        ? rawSample
+        : 1;
     if (state.eventId && !passesSample(state.eventId, sample)) return;
+
+    const includeIn = opts.includeIn ?? level === 'trace';
+    const includeOut = opts.includeOut ?? level === 'trace';
+    const includeMappingKey = opts.includeMappingKey ?? level === 'trace';
 
     const projected: FlowState = { ...state };
     if (!includeIn) delete projected.inEvent;
     if (!includeOut) delete projected.outEvent;
     if (!includeMappingKey) delete projected.mappingKey;
+
+    // Error message truncation: limit to 256 chars outside trace so stack
+    // fragments or echoed payloads do not leak verbosely. Trace keeps the
+    // full message.
+    if (
+      level !== 'trace' &&
+      projected.error?.message &&
+      projected.error.message.length > 256
+    ) {
+      projected.error = {
+        ...projected.error,
+        message: projected.error.message.slice(0, 256) + '…',
+      };
+    }
 
     try {
       emit(projected);

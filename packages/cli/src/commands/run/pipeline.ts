@@ -246,8 +246,15 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 /**
  * Build the telemetry observer array the runtime forwards through the
  * bundle context. Returns undefined when telemetry is disabled (missing env
- * vars, level=off and no trace override). The bundle then sees no
- * `context.observers` and skips the install loop entirely.
+ * vars). The bundle then sees no `context.observers` and skips the install
+ * loop entirely.
+ *
+ * Transport-level env (`WALKEROS_OBSERVER_URL`, `WALKEROS_INGEST_TOKEN`) is
+ * sampled once at boot: rebuilding the poster on every emit would discard
+ * the batch buffer. Projection-level opts (`level`, `sample`,
+ * `includeIn`/`Out`/`MappingKey`, plus the `WALKEROS_TRACE_UNTIL` override)
+ * are re-resolved per emit through the supplier so a heartbeat-driven
+ * toggle of `process.env.WALKEROS_TRACE_UNTIL` reaches the projection.
  */
 function buildTelemetryObservers(
   flowId: string,
@@ -256,11 +263,10 @@ function buildTelemetryObservers(
   const token = process.env.WALKEROS_INGEST_TOKEN;
   if (!url || !token) return undefined;
 
-  const opts = resolveTelemetryOptions({ flowId });
-  if (!opts) return undefined;
-
   const emit = createBatchedPoster({ url, token });
-  return [createTelemetryObserver(emit, opts)];
+  return [
+    createTelemetryObserver(emit, () => resolveTelemetryOptions({ flowId })),
+  ];
 }
 
 async function injectSecrets(

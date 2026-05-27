@@ -80,4 +80,23 @@ describe('emitStep', () => {
     const observers = new Set<ObserverFn>();
     expect(() => emitStep(makeCollector(observers), state('in'))).not.toThrow();
   });
+
+  test('observer adding another observer during iteration does not cause re-entry in the same emit', () => {
+    const seen: string[] = [];
+    const observers = new Set<ObserverFn>();
+    const collector = makeCollector(observers);
+
+    const second: ObserverFn = (s) => seen.push('second:' + s.phase);
+    const first: ObserverFn = (s) => {
+      seen.push('first:' + s.phase);
+      observers.add(second);
+    };
+    observers.add(first);
+
+    emitStep(collector, state('in'));
+    expect(seen).toEqual(['first:in']);
+
+    emitStep(collector, state('out'));
+    expect(seen).toEqual(['first:in', 'first:out', 'second:out']);
+  });
 });

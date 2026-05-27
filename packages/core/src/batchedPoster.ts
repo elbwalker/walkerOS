@@ -62,8 +62,25 @@ export interface BatchedPosterOptions {
 export function createBatchedPoster(
   opts: BatchedPosterOptions,
 ): (state: FlowState) => void {
-  const batchMs = opts.batchMs ?? 50;
-  const batchSize = opts.batchSize ?? 50;
+  // Narrow before use: nullish coalescing alone lets NaN, Infinity, 0, and
+  // negatives through, all of which break setTimeout or starve the flush.
+  // A garbage value falls back to the documented default rather than
+  // clamping to the smallest legal step.
+  const rawBatchMs = opts.batchMs;
+  const batchMs =
+    typeof rawBatchMs === 'number' &&
+    Number.isFinite(rawBatchMs) &&
+    rawBatchMs > 0
+      ? Math.floor(rawBatchMs)
+      : 50;
+
+  const rawBatchSize = opts.batchSize;
+  const batchSize =
+    typeof rawBatchSize === 'number' &&
+    Number.isFinite(rawBatchSize) &&
+    rawBatchSize >= 1
+      ? Math.floor(rawBatchSize)
+      : 50;
   // Lazy lookup of the global `fetch` so the helper imports cleanly even in
   // environments without one (it only fails when actually used). The cast
   // is to the narrowed PosterFetch surface, not to a broader type.

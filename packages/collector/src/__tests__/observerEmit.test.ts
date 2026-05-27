@@ -59,6 +59,7 @@ describe('observerEmit helpers', () => {
     expect(state.phase).toBe('in');
     expect(state.eventId).toBe('evt-1');
     expect(state.elapsedMs).toBe(500);
+    expect(state.timestamp).toBe(new Date(1500).toISOString());
   });
 
   test('emit fans out via emitStep and does not throw on observer failure', () => {

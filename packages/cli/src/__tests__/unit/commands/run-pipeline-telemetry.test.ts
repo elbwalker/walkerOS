@@ -69,6 +69,14 @@ jest.mock('../../../version.js', () => ({ VERSION: '0.0.0-test' }));
 
 import { loadFlow } from '../../../runtime/runner.js';
 
+async function waitFor(cond: () => boolean, timeoutMs = 1000): Promise<void> {
+  const start = Date.now();
+  while (!cond()) {
+    if (Date.now() - start > timeoutMs) throw new Error('waitFor timed out');
+    await new Promise((r) => setTimeout(r, 5));
+  }
+}
+
 const mockLogger = {
   info: jest.fn(),
   error: jest.fn(),
@@ -111,7 +119,7 @@ describe('runPipeline telemetry wiring', () => {
     process.env.WALKEROS_INGEST_TOKEN = 'tok_test';
 
     void runPipeline(baseOptions);
-    await new Promise((r) => setTimeout(r, 30));
+    await waitFor(() => (loadFlow as jest.Mock).mock.calls.length > 0);
 
     const call = (loadFlow as jest.Mock).mock.calls[0];
     const passed = call[5];
@@ -124,7 +132,7 @@ describe('runPipeline telemetry wiring', () => {
     process.env.WALKEROS_INGEST_TOKEN = 'tok_test';
 
     void runPipeline(baseOptions);
-    await new Promise((r) => setTimeout(r, 30));
+    await waitFor(() => (loadFlow as jest.Mock).mock.calls.length > 0);
 
     const call = (loadFlow as jest.Mock).mock.calls[0];
     expect(call[5]).toBeUndefined();
@@ -135,7 +143,7 @@ describe('runPipeline telemetry wiring', () => {
       'https://observer.example.com/ingest/dep_42';
 
     void runPipeline(baseOptions);
-    await new Promise((r) => setTimeout(r, 30));
+    await waitFor(() => (loadFlow as jest.Mock).mock.calls.length > 0);
 
     const call = (loadFlow as jest.Mock).mock.calls[0];
     expect(call[5]).toBeUndefined();
@@ -143,7 +151,7 @@ describe('runPipeline telemetry wiring', () => {
 
   it('still loads the flow when telemetry is disabled (no env)', async () => {
     void runPipeline(baseOptions);
-    await new Promise((r) => setTimeout(r, 30));
+    await waitFor(() => (loadFlow as jest.Mock).mock.calls.length > 0);
 
     expect(loadFlow).toHaveBeenCalledTimes(1);
     const call = (loadFlow as jest.Mock).mock.calls[0];

@@ -119,7 +119,10 @@ function applyStoreHooks(
       eventId: '',
       now: started,
     });
-    inState.meta = { op: 'set', key, value };
+    // Store values can be secrets or PII: emit only the op + key, never the
+    // raw value, on any phase (in/out/error). Observers see what happened,
+    // not what was written.
+    inState.meta = { op: 'set', key };
     emitStep(collector, inState);
 
     try {
@@ -133,7 +136,7 @@ function applyStoreHooks(
         now: finished,
       });
       outState.durationMs = finished - started;
-      outState.meta = { op: 'set', key, value };
+      outState.meta = { op: 'set', key };
       emitStep(collector, outState);
     } catch (err) {
       const finished = Date.now();
@@ -145,7 +148,7 @@ function applyStoreHooks(
         now: finished,
       });
       errState.durationMs = finished - started;
-      errState.meta = { op: 'set', key, value };
+      errState.meta = { op: 'set', key };
       errState.error =
         err instanceof Error
           ? { name: err.name, message: err.message }

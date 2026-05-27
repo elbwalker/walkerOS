@@ -156,4 +156,77 @@ describe('createTelemetryObserver', () => {
 
     expect(() => observer(fullState({ phase: 'in' }))).not.toThrow();
   });
+
+  test('accepts a supplier and re-evaluates opts on every emit', () => {
+    const { states, emit } = makeEmit();
+    let level: 'standard' | 'trace' = 'standard';
+    const observer = createTelemetryObserver(emit, () => ({
+      flowId: FLOW_ID,
+      level,
+    }));
+
+    observer(fullState({ phase: 'in', inEvent: { name: 'page view' } }));
+    level = 'trace';
+    observer(fullState({ phase: 'in', inEvent: { name: 'page view' } }));
+
+    expect(states.length).toBe(2);
+    expect(states[0].inEvent).toBeUndefined();
+    expect(states[1].inEvent).toEqual({ name: 'page view' });
+  });
+
+  test('supplier returning null skips the emit', () => {
+    const { states, emit } = makeEmit();
+    const observer = createTelemetryObserver(emit, () => null);
+
+    observer(fullState({ phase: 'in', inEvent: { name: 'page view' } }));
+    observer(fullState({ phase: 'out' }));
+
+    expect(states.length).toBe(0);
+  });
+
+  test('NaN sample defaults to 1 (emit all)', () => {
+    const { states, emit } = makeEmit();
+    const observer = createTelemetryObserver(emit, {
+      flowId: FLOW_ID,
+      sample: Number.NaN,
+    });
+
+    observer(fullState({ phase: 'in', eventId: 'evt-a' }));
+    observer(fullState({ phase: 'in', eventId: 'evt-b' }));
+    observer(fullState({ phase: 'in', eventId: 'evt-c' }));
+
+    expect(states.length).toBe(3);
+  });
+
+  test('error.message truncates to 256 chars outside trace; full at trace', () => {
+    const longMessage = 'x'.repeat(500);
+
+    const standard = makeEmit();
+    const standardObserver = createTelemetryObserver(standard.emit, {
+      flowId: FLOW_ID,
+      level: 'standard',
+    });
+    standardObserver(
+      fullState({
+        phase: 'error',
+        error: { name: 'BoomError', message: longMessage },
+      }),
+    );
+    expect(standard.states[0].error?.message.length).toBe(257);
+    expect(standard.states[0].error?.message.endsWith('…')).toBe(true);
+    expect(standard.states[0].error?.name).toBe('BoomError');
+
+    const trace = makeEmit();
+    const traceObserver = createTelemetryObserver(trace.emit, {
+      flowId: FLOW_ID,
+      level: 'trace',
+    });
+    traceObserver(
+      fullState({
+        phase: 'error',
+        error: { name: 'BoomError', message: longMessage },
+      }),
+    );
+    expect(trace.states[0].error?.message).toBe(longMessage);
+  });
 });
