@@ -10,6 +10,7 @@ import type {
 import { isString } from '@walkeros/core';
 import {
   initTriggers,
+  initScopeTrigger,
   processLoadTriggers,
   ready,
   destroyTriggers,
@@ -89,6 +90,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   const translationContext = {
     elb,
     settings,
+    initScope: initScopeTrigger,
   };
 
   // Helper to send pageview event if enabled

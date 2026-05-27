@@ -1,11 +1,12 @@
 import type { WalkerOS, Elb, Collector } from '@walkeros/core';
 import { isString, isObject, isElementOrDocument } from '@walkeros/core';
+import { createPushResult } from '@walkeros/collector';
 import type {
   BrowserPushData,
   BrowserPushOptions,
   BrowserPushContext,
 } from './types/elb';
-import type { Context } from './types';
+import type { Context, Settings } from './types';
 import { getEntities, getGlobals } from './walker';
 
 /**
@@ -23,8 +24,20 @@ export function translateToCoreCollector(
 ): Promise<Elb.PushResult> {
   const { elb, settings } = context;
 
-  // Handle walker commands - pass through directly to elb (it will route to command)
+  // Handle walker commands. `walker init` is browser-only (re-scans a DOM
+  // scope for `data-elb*` tags and fires load triggers) and is dispatched
+  // here because the collector must stay DOM-free. All other walker
+  // commands route through elb to commonHandleCommand on the collector.
+  // `initScope` arrives on `context` from the source factory to avoid a
+  // static import of `./trigger` (which would form a load-time cycle).
   if (isString(eventOrCommand) && eventOrCommand.startsWith('walker ')) {
+    if (eventOrCommand === 'walker init' && context.initScope) {
+      const scopes = normalizeInitScopes(data, settings);
+      for (const scope of scopes) {
+        context.initScope(context, { ...settings, scope });
+      }
+      return Promise.resolve(createPushResult({ ok: true }));
+    }
     return elb(eventOrCommand, data as WalkerOS.Properties);
   }
 
@@ -124,4 +137,41 @@ function getBrowserSource(win: Window, doc: Document): WalkerOS.Source {
     url: win.location.href,
     referrer: doc.referrer,
   };
+}
+
+/**
+ * Local type guard: narrows `unknown` to `Element | Document`. Mirrors the
+ * runtime check in `@walkeros/core`'s `isElementOrDocument` but exposes the
+ * accurate union return type so callers do not need casts.
+ */
+function isDomScope(value: unknown): value is Element | Document {
+  if (!value || typeof value !== 'object') return false;
+  return 'body' in value || 'tagName' in value;
+}
+
+/**
+ * Normalize the `data` argument of `elb('walker init', data)` to an array
+ * of Element/Document scopes. Falls back to `settings.scope` (or `document`
+ * if settings.scope is not a DOM node) when no scope is provided.
+ */
+function normalizeInitScopes(
+  data: unknown,
+  settings: Settings,
+): Array<Element | Document> {
+  if (isDomScope(data)) return [data];
+  if (Array.isArray(data)) {
+    const filtered: Array<Element | Document> = [];
+    for (const entry of data) {
+      if (isDomScope(entry)) filtered.push(entry);
+    }
+    return filtered;
+  }
+  if (typeof data === 'undefined') {
+    const fallback = settings.scope;
+    if (isDomScope(fallback)) return [fallback];
+    if (typeof globalThis.document !== 'undefined') {
+      return [globalThis.document];
+    }
+  }
+  return [];
 }
