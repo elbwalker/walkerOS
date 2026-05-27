@@ -105,6 +105,76 @@ export const __configData = { test: true };
     expect(output).toContain('httpHandler');
   });
 
+  it('emits telemetry wiring in the browser IIFE when telemetry is enabled', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrapSkeleton({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+      telemetry: {
+        observerUrl: 'https://observer.example.com/ingest/dep_42',
+        ingestToken: 'tok_test_value',
+        flowId: 'flow_x',
+        level: 'standard',
+      },
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+
+    // Configured literals must end up in the bundle.
+    expect(output).toContain('https://observer.example.com/ingest/dep_42');
+    expect(output).toContain('tok_test_value');
+    expect(output).toContain('flow_x');
+    // The observer is installed onto collector.observers (Set#add). The
+    // legacy config.hooks merge must not appear.
+    expect(output).toMatch(/observers\.add/);
+    expect(output).not.toContain('config.hooks');
+  });
+
+  it('omits telemetry wiring when level is off', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrapSkeleton({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+      telemetry: {
+        observerUrl: 'https://observer.example.com/ingest/dep_42',
+        ingestToken: 'tok_test_value',
+        flowId: 'flow_x',
+        level: 'off',
+      },
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+    // wrap.ts drops `level: 'off'` to undefined telemetry, so the observer
+    // block and its literals never reach the bundle.
+    expect(output).not.toContain('https://observer.example.com');
+    expect(output).not.toContain('tok_test_value');
+    expect(output).not.toMatch(/observers\.add/);
+  });
+
+  it('omits telemetry wiring when telemetry option is absent', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrapSkeleton({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+    expect(output).not.toMatch(/observers\.add/);
+    expect(output).not.toContain('config.hooks');
+  });
+
   it('throws when the skeleton does not exist', async () => {
     const outputPath = path.join(tmpDir, 'walker.js');
     await expect(

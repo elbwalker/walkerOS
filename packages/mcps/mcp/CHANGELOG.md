@@ -1,5 +1,22 @@
 # @walkeros/mcp
 
+## 4.1.1
+
+### Patch Changes
+
+- ddcd56e: The project, flow, and deployment list operations now accept optional
+  `cursor` and `limit` arguments and return a `nextCursor` to fetch the next
+  page. Listing without these arguments is unchanged and returns all results. In
+  the MCP, the `project_manage`, `flow_manage`, and `deploy_manage` tools expose
+  `cursor` and `limit` on their `list` action.
+- Updated dependencies [c1a4188]
+- Updated dependencies [b0279ee]
+- Updated dependencies [ddcd56e]
+- Updated dependencies [b0279ee]
+- Updated dependencies [0b7f494]
+  - @walkeros/cli@4.1.1
+  - @walkeros/core@4.1.1
+
 ## 4.1.0
 
 ### Minor Changes

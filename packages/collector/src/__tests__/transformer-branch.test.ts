@@ -52,6 +52,7 @@ function createMockCollector(
     stores: {},
     globals: {},
     hooks: {},
+    observers: new Set(),
     logger: createMockLogger(),
     on: {},
     queue: [],

@@ -16,6 +16,7 @@ import {
   storeCache,
   createIngest,
   debounce,
+  emitStep,
   getId,
   getGrantedConsent,
   getNextSteps,
@@ -27,6 +28,7 @@ import {
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
+import { buildBaseState } from './observerEmit';
 import { callDestinationOn } from './on';
 import {
   runTransformerChain,
@@ -342,6 +344,22 @@ export async function pushToDestinations(
           allowedEvents.push(queuedEvent); // Add to allowed queue
           return false; // Remove from destination queue
         }
+
+        // Emit a skip state for the consent-denied event so observers can
+        // see the gate decision per-event.
+        const skipState = buildBaseState(collector, {
+          stepId: stepId('destination', id),
+          stepType: 'destination',
+          phase: 'skip',
+          eventId: typeof queuedEvent.id === 'string' ? queuedEvent.id : '',
+          now: Date.now(),
+        });
+        skipState.skipReason = 'consent';
+        if (consent) skipState.consent = { ...consent };
+        if (destination.config.consent) {
+          skipState.meta = { required: { ...destination.config.consent } };
+        }
+        emitStep(collector, skipState);
 
         return true; // Keep denied events in the queue
       });
@@ -736,12 +754,43 @@ export async function destinationInit<Destination extends Destination.Instance>(
 
     destLogger.debug('init');
 
-    const configResult = await useHooks(
-      destination.init,
-      'DestinationInit',
-      collector.hooks,
-      collector.logger,
-    )(context);
+    const initStarted = Date.now();
+    emitStep(
+      collector,
+      buildBaseState(collector, {
+        stepId: stepId('destination', destId),
+        stepType: 'destination',
+        phase: 'init',
+        eventId: '',
+        now: initStarted,
+      }),
+    );
+
+    let configResult;
+    try {
+      configResult = await useHooks(
+        destination.init,
+        'DestinationInit',
+        collector.hooks,
+        collector.logger,
+      )(context);
+    } catch (err) {
+      const initErrFinished = Date.now();
+      const errState = buildBaseState(collector, {
+        stepId: stepId('destination', destId),
+        stepType: 'destination',
+        phase: 'error',
+        eventId: '',
+        now: initErrFinished,
+      });
+      errState.durationMs = initErrFinished - initStarted;
+      errState.error =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : { message: String(err) };
+      emitStep(collector, errState);
+      throw err;
+    }
 
     // Actively check for errors (when false)
     if (configResult === false) return configResult; // don't push if init is false
@@ -892,6 +941,17 @@ export async function destinationPush<Destination extends Destination.Instance>(
         const destIdResolved = destination.config.id || destId;
         const destStatus = ensureDestStatus(collector, destIdResolved);
 
+        const flushStarted = Date.now();
+        const flushState = buildBaseState(collector, {
+          stepId: stepId('destination', destId),
+          stepType: 'destination',
+          phase: 'flush',
+          eventId: '',
+          now: flushStarted,
+        });
+        flushState.batch = { size: snapshot.entries.length, index: 0 };
+        emitStep(collector, flushState);
+
         let succeeded = true;
         await tryCatchAsync(
           useHooks(
@@ -902,6 +962,24 @@ export async function destinationPush<Destination extends Destination.Instance>(
           ),
           (err) => {
             succeeded = false;
+            const errFinished = Date.now();
+            const batchErrState = buildBaseState(collector, {
+              stepId: stepId('destination', destId),
+              stepType: 'destination',
+              phase: 'error',
+              eventId: '',
+              now: errFinished,
+            });
+            batchErrState.durationMs = errFinished - flushStarted;
+            batchErrState.error =
+              err instanceof Error
+                ? { name: err.name, message: err.message }
+                : { message: String(err) };
+            batchErrState.batch = {
+              size: snapshot.entries.length,
+              index: 0,
+            };
+            emitStep(collector, batchErrState);
             // Defect 2 fix: route the entire batch to DLQ on failure.
             const dlq = (destination.dlq = destination.dlq || []);
             const dlqBound = {
@@ -1002,17 +1080,67 @@ export async function destinationPush<Destination extends Destination.Instance>(
   } else {
     destLogger.debug('push', { event: processed.event.name });
 
-    // It's time to go to the destination's side now
-    const response = await useHooks(
-      destination.push,
-      'DestinationPush',
-      collector.hooks,
-      collector.logger,
-    )(processed.event, context);
+    // Emit a per-event observer pair around the destination.push call so
+    // observers see the work this destination did for this event.
+    const eventIdValue =
+      typeof processed.event.id === 'string' ? processed.event.id : '';
+    const pushStarted = Date.now();
+    const inState = buildBaseState(collector, {
+      stepId: stepId('destination', destId),
+      stepType: 'destination',
+      phase: 'in',
+      eventId: eventIdValue,
+      now: pushStarted,
+    });
+    if (processed.mappingKey) inState.mappingKey = processed.mappingKey;
+    if (processed.event.consent) {
+      inState.consent = { ...processed.event.consent };
+    }
+    emitStep(collector, inState);
 
-    destLogger.debug('push done');
+    try {
+      // It's time to go to the destination's side now
+      const response = await useHooks(
+        destination.push,
+        'DestinationPush',
+        collector.hooks,
+        collector.logger,
+      )(processed.event, context);
 
-    return response;
+      const pushFinished = Date.now();
+      const outState = buildBaseState(collector, {
+        stepId: stepId('destination', destId),
+        stepType: 'destination',
+        phase: 'out',
+        eventId: eventIdValue,
+        now: pushFinished,
+      });
+      outState.durationMs = pushFinished - pushStarted;
+      outState.outEvent = response;
+      if (processed.mappingKey) outState.mappingKey = processed.mappingKey;
+      emitStep(collector, outState);
+
+      destLogger.debug('push done');
+
+      return response;
+    } catch (err) {
+      const pushFinished = Date.now();
+      const errState = buildBaseState(collector, {
+        stepId: stepId('destination', destId),
+        stepType: 'destination',
+        phase: 'error',
+        eventId: eventIdValue,
+        now: pushFinished,
+      });
+      errState.durationMs = pushFinished - pushStarted;
+      errState.error =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : { message: String(err) };
+      if (processed.mappingKey) errState.mappingKey = processed.mappingKey;
+      emitStep(collector, errState);
+      throw err;
+    }
   }
 }
 

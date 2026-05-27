@@ -51,6 +51,7 @@ describe('Destination', () => {
       destinations: { foo: destination },
       globals: {},
       hooks: {},
+      observers: new Set(),
       logger: mockLogger,
       user: {},
       consent: {},

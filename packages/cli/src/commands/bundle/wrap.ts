@@ -17,6 +17,7 @@
 
 import * as path from 'path';
 import * as os from 'os';
+import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import * as esbuild from 'esbuild';
 import {
@@ -57,6 +58,17 @@ export interface WrapSkeletonOptions {
   previewScope?: string;
 
   /**
+   * Browser-only: telemetry wiring. When provided, the wrapped bundle
+   * installs an observer built via `createTelemetryObserver` onto
+   * `collector.observers` and forwards FlowState records to `observerUrl`
+   * using `createBatchedPoster`.
+   *
+   * Omit (or pass `level: 'off'`) to ship a bundle with zero telemetry
+   * plumbing.
+   */
+  telemetry?: TelemetryBundleOptions;
+
+  /**
    * esbuild target. @default 'es2018' for browser, 'node18' for node.
    */
   target?: string;
@@ -66,6 +78,41 @@ export interface WrapSkeletonOptions {
 
   /** Fine-grained minification options, forwarded to esbuild. */
   minifyOptions?: MinifyOptions;
+}
+
+export interface TelemetryBundleOptions {
+  /** Absolute ingest URL. POST receives JSON array of FlowState. */
+  observerUrl: string;
+  /** Deployment-scoped plaintext token. Sent as `Authorization: Bearer`. */
+  ingestToken: string;
+  /** Used as the `flowId` on every emitted FlowState. */
+  flowId: string;
+  /** Verbosity. Default 'standard'. 'off' suppresses the entire wiring. */
+  level?: 'off' | 'standard' | 'trace';
+  /** Deterministic sample fraction in [0, 1]. Default 1. */
+  sample?: number;
+}
+
+/**
+ * Returns the candidate `node_modules` dirs esbuild should consult for
+ * the wrap step's stage 2 entry. We start at this module's own location
+ * and walk upward, since the wrap step always runs from inside the CLI
+ * package — either via `node_modules/@walkeros/cli/dist/...` or directly
+ * from the workspace source tree during tests.
+ */
+function getNodeResolutionPaths(): string[] {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates: string[] = [];
+  let dir = here;
+  // Walk up at most 8 levels looking for node_modules dirs.
+  for (let i = 0; i < 8; i++) {
+    const candidate = path.join(dir, 'node_modules');
+    candidates.push(candidate);
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return candidates;
 }
 
 export async function wrapSkeleton(
@@ -102,6 +149,22 @@ export async function wrapSkeleton(
 
   const absoluteSkeletonPath = path.resolve(skeletonPath);
 
+  // Normalize the telemetry options for the entry generator: drop 'off'
+  // and narrow the level union so generateWrapEntry's `WrapEntryTelemetry`
+  // shape (which has no 'off' member) accepts the value.
+  const tInput = options.telemetry;
+  const tLevel = tInput?.level ?? 'standard';
+  const telemetry =
+    tInput && tLevel !== 'off'
+      ? {
+          observerUrl: tInput.observerUrl,
+          ingestToken: tInput.ingestToken,
+          flowId: tInput.flowId,
+          level: tLevel,
+          ...(tInput.sample !== undefined ? { sample: tInput.sample } : {}),
+        }
+      : undefined;
+
   // Stage 2 entry imports from the skeleton via an absolute path.
   const entryText =
     platform === 'browser'
@@ -115,6 +178,7 @@ export async function wrapSkeleton(
             ? { previewScope: options.previewScope }
             : {}),
           platform,
+          ...(telemetry ? { telemetry } : {}),
         })
       : generateWrapEntryServer(absoluteSkeletonPath);
 
@@ -133,6 +197,12 @@ export async function wrapSkeleton(
       format: 'esm',
       platform,
       outfile: outputPath,
+      // Resolve `@walkeros/core` (used by the telemetry block) from the CLI
+      // package's own dependency tree and the workspace root. Without this,
+      // esbuild looks under the temp entryDir which has no node_modules.
+      // The wrap step always runs from inside the CLI process; both the
+      // CLI's local node_modules and the workspace root are safe anchors.
+      nodePaths: getNodeResolutionPaths(),
       treeShaking: true,
       logLevel: 'error',
       minify,

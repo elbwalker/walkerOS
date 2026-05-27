@@ -40,8 +40,10 @@ import type {
 } from '@walkeros/core';
 import {
   createIngest,
+  emitStep,
   FatalError,
   isObject,
+  stepId,
   tryCatchAsync,
   useHooks,
   getNextSteps,
@@ -52,6 +54,7 @@ import {
   validateStepEntry,
   processEventMapping,
 } from '@walkeros/core';
+import { buildBaseState } from './observerEmit';
 import { getCacheStore } from './cache';
 
 /**
@@ -441,16 +444,57 @@ export async function transformerPush(
 
   transformerLogger.debug('push', { event: (event as { name?: string }).name });
 
-  const result = await useHooks(
-    transformer.push,
-    'TransformerPush',
-    collector.hooks,
-    collector.logger,
-  )(event, context);
+  const eventId = typeof event.id === 'string' ? event.id : '';
+  const started = Date.now();
+  const inState = buildBaseState(collector, {
+    stepId: stepId('transformer', transformerId),
+    stepType: 'transformer',
+    phase: 'in',
+    eventId,
+    now: started,
+  });
+  emitStep(collector, inState);
 
-  transformerLogger.debug('push done');
+  try {
+    const result = await useHooks(
+      transformer.push,
+      'TransformerPush',
+      collector.hooks,
+      collector.logger,
+    )(event, context);
 
-  return result;
+    const finished = Date.now();
+    const outState = buildBaseState(collector, {
+      stepId: stepId('transformer', transformerId),
+      stepType: 'transformer',
+      phase: 'out',
+      eventId,
+      now: finished,
+    });
+    outState.durationMs = finished - started;
+    outState.outEvent = result;
+    emitStep(collector, outState);
+
+    transformerLogger.debug('push done');
+
+    return result;
+  } catch (err) {
+    const finished = Date.now();
+    const errState = buildBaseState(collector, {
+      stepId: stepId('transformer', transformerId),
+      stepType: 'transformer',
+      phase: 'error',
+      eventId,
+      now: finished,
+    });
+    errState.durationMs = finished - started;
+    errState.error =
+      err instanceof Error
+        ? { name: err.name, message: err.message }
+        : { message: String(err) };
+    emitStep(collector, errState);
+    throw err;
+  }
 }
 
 /**

@@ -40,6 +40,7 @@ describe('queue bounds', () => {
       stores: {},
       globals: {},
       hooks: {},
+      observers: new Set(),
       logger: mockLogger,
       user: {},
       consent: args.consent || {},

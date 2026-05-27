@@ -19,6 +19,7 @@ describe('destination modes (disabled/mock)', () => {
       destinations,
       globals: {},
       hooks: {},
+      observers: new Set(),
       logger: mockLogger,
       user: {},
       consent: {},

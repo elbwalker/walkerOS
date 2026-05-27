@@ -34,6 +34,7 @@ describe('on.ts user-callback throws (Category B)', () => {
     const mockLogger = createMockLogger();
     const collector = {
       logger: mockLogger,
+      observers: new Set(),
       status: {
         startedAt: 0,
         in: 0,

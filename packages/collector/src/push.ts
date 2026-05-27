@@ -1,6 +1,7 @@
 import type { Collector, WalkerOS, Elb, Ingest } from '@walkeros/core';
 import {
   createIngest,
+  emitStep,
   FatalError,
   getGrantedConsent,
   processEventMapping,
@@ -9,6 +10,7 @@ import {
 } from '@walkeros/core';
 import { createEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
+import { buildBaseState } from './observerEmit';
 import { runTransformerChain } from './transformer';
 
 function filterDestinations(
@@ -42,7 +44,7 @@ export function createPush<T extends Collector.Instance>(
   collector: T,
   prepareEvent: (event: WalkerOS.DeepPartialEvent) => WalkerOS.PartialEvent,
 ): Collector.PushFn {
-  return useHooks(
+  const innerPush = useHooks(
     async (
       event: WalkerOS.DeepPartialEvent,
       options: Collector.PushOptions = {},
@@ -224,5 +226,54 @@ export function createPush<T extends Collector.Instance>(
     'Push',
     collector.hooks,
     collector.logger,
-  ) as Collector.PushFn;
+  );
+
+  const wrapped: Collector.PushFn = async (event, options) => {
+    const eventId = typeof event.id === 'string' ? event.id : '';
+    const started = Date.now();
+    emitStep(
+      collector,
+      buildBaseState(collector, {
+        stepId: 'collector.push',
+        stepType: 'collector',
+        phase: 'in',
+        eventId,
+        now: started,
+      }),
+    );
+
+    try {
+      const result = await innerPush(event, options);
+      const finished = Date.now();
+      const outState = buildBaseState(collector, {
+        stepId: 'collector.push',
+        stepType: 'collector',
+        phase: 'out',
+        eventId,
+        now: finished,
+      });
+      outState.durationMs = finished - started;
+      outState.outEvent = result;
+      emitStep(collector, outState);
+      return result;
+    } catch (err) {
+      const finished = Date.now();
+      const errState = buildBaseState(collector, {
+        stepId: 'collector.push',
+        stepType: 'collector',
+        phase: 'error',
+        eventId,
+        now: finished,
+      });
+      errState.durationMs = finished - started;
+      errState.error =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : { message: String(err) };
+      emitStep(collector, errState);
+      throw err;
+    }
+  };
+
+  return wrapped;
 }

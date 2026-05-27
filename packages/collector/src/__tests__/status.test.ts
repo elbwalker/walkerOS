@@ -43,6 +43,7 @@ describe('Status', () => {
       destinations: {},
       globals: {},
       hooks: {},
+      observers: new Set(),
       logger: mockLogger,
       user: {},
       consent: {},

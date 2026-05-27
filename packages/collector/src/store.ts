@@ -1,6 +1,7 @@
 import type { Cache, Collector, Store } from '@walkeros/core';
-import { useHooks } from '@walkeros/core';
+import { emitStep, useHooks } from '@walkeros/core';
 import { createCacheStore } from './cache-store';
+import { buildBaseState } from './observerEmit';
 import { wrapStoreWithCache } from './store-cache-wrapper';
 
 /**
@@ -15,41 +16,192 @@ type InitStoreWithCache = Store.InitStore & {
 };
 
 /**
- * Hook wrapping for a single store instance. Mutates `instance` in place.
+ * Hook wrapping and observer emission for a single store instance.
+ * Mutates `instance` in place.
  *
  * Called once per store, AFTER any cache wrapping in phase 2. Wrapping the
- * outer (wrapper) instance means the hook observes the consumer-facing
- * boundary: it fires on every `wrapped.get` regardless of cache HIT/MISS,
+ * outer (wrapper) instance means observers see the consumer-facing
+ * boundary: they fire on every `wrapped.get` regardless of cache HIT/MISS,
  * and only once per `wrapped.set` (not also for the wrapper's internal
  * write into `cacheStore`). If the store has no cache wrapper, the bare
- * backing is hook-wrapped instead, preserving observability.
+ * backing is wrapped instead, preserving observability.
+ *
+ * Two responsibilities per op:
+ *  1. Inner `useHooks(..., 'StoreGet', ...)` wrap keeps the generic
+ *     user-declared hook contract working (`preStoreGet`, `postStoreSet`,
+ *     etc.).
+ *  2. Outer self-emit wrap pushes `FlowState` (`stepType: 'store'`) into
+ *     `collector.observers` directly, so per-store telemetry no longer
+ *     needs a separate hook bag.
  */
 function applyStoreHooks(
   collector: Collector.Instance,
   instance: Store.Instance,
+  storeId: string,
 ): void {
-  const originalGet = instance.get;
-  const originalSet = instance.set;
-  const originalDelete = instance.delete;
+  const stepIdFor = `store.${storeId}`;
 
-  instance.get = useHooks(
-    originalGet,
+  const innerGet = useHooks(
+    instance.get,
     'StoreGet',
     collector.hooks,
     collector.logger,
   );
-  instance.set = useHooks(
-    originalSet,
+  const innerSet = useHooks(
+    instance.set,
     'StoreSet',
     collector.hooks,
     collector.logger,
   );
-  instance.delete = useHooks(
-    originalDelete,
+  const innerDelete = useHooks(
+    instance.delete,
     'StoreDelete',
     collector.hooks,
     collector.logger,
   );
+
+  instance.get = async (key: string): Promise<unknown> => {
+    const started = Date.now();
+    const inState = buildBaseState(collector, {
+      stepId: stepIdFor,
+      stepType: 'store',
+      phase: 'in',
+      eventId: '',
+      now: started,
+    });
+    inState.meta = { op: 'get', key };
+    emitStep(collector, inState);
+
+    try {
+      const result = await innerGet(key);
+      const finished = Date.now();
+      const outState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'out',
+        eventId: '',
+        now: finished,
+      });
+      outState.durationMs = finished - started;
+      outState.meta = { op: 'get', key };
+      emitStep(collector, outState);
+      return result;
+    } catch (err) {
+      const finished = Date.now();
+      const errState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'error',
+        eventId: '',
+        now: finished,
+      });
+      errState.durationMs = finished - started;
+      errState.meta = { op: 'get', key };
+      errState.error =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : { message: String(err) };
+      emitStep(collector, errState);
+      throw err;
+    }
+  };
+
+  instance.set = async (
+    key: string,
+    value: unknown,
+    ttl?: number,
+  ): Promise<void> => {
+    const started = Date.now();
+    const inState = buildBaseState(collector, {
+      stepId: stepIdFor,
+      stepType: 'store',
+      phase: 'in',
+      eventId: '',
+      now: started,
+    });
+    // Store values can be secrets or PII: emit only the op + key, never the
+    // raw value, on any phase (in/out/error). Observers see what happened,
+    // not what was written.
+    inState.meta = { op: 'set', key };
+    emitStep(collector, inState);
+
+    try {
+      await innerSet(key, value, ttl);
+      const finished = Date.now();
+      const outState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'out',
+        eventId: '',
+        now: finished,
+      });
+      outState.durationMs = finished - started;
+      outState.meta = { op: 'set', key };
+      emitStep(collector, outState);
+    } catch (err) {
+      const finished = Date.now();
+      const errState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'error',
+        eventId: '',
+        now: finished,
+      });
+      errState.durationMs = finished - started;
+      errState.meta = { op: 'set', key };
+      errState.error =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : { message: String(err) };
+      emitStep(collector, errState);
+      throw err;
+    }
+  };
+
+  instance.delete = async (key: string): Promise<void> => {
+    const started = Date.now();
+    const inState = buildBaseState(collector, {
+      stepId: stepIdFor,
+      stepType: 'store',
+      phase: 'in',
+      eventId: '',
+      now: started,
+    });
+    inState.meta = { op: 'delete', key };
+    emitStep(collector, inState);
+
+    try {
+      await innerDelete(key);
+      const finished = Date.now();
+      const outState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'out',
+        eventId: '',
+        now: finished,
+      });
+      outState.durationMs = finished - started;
+      outState.meta = { op: 'delete', key };
+      emitStep(collector, outState);
+    } catch (err) {
+      const finished = Date.now();
+      const errState = buildBaseState(collector, {
+        stepId: stepIdFor,
+        stepType: 'store',
+        phase: 'error',
+        eventId: '',
+        now: finished,
+      });
+      errState.durationMs = finished - started;
+      errState.meta = { op: 'delete', key };
+      errState.error =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : { message: String(err) };
+      emitStep(collector, errState);
+      throw err;
+    }
+  };
 }
 
 /**
@@ -203,6 +355,7 @@ export async function initStores(
       cacheStore,
       namespace: resolvedNamespace,
       logger: collector.logger.scope('store-cache').scope(storeId),
+      collector,
     });
   }
 
@@ -216,7 +369,7 @@ export async function initStores(
   // `preStoreSet` against the consumer-facing boundary.
   for (const [storeId, instance] of Object.entries(result)) {
     if (storeId === '__cache') continue;
-    applyStoreHooks(collector, instance);
+    applyStoreHooks(collector, instance, storeId);
   }
 
   return result;

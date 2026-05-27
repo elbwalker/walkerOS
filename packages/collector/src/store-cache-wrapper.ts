@@ -1,5 +1,6 @@
-import type { Cache, Logger, Store } from '@walkeros/core';
-import { compileMatcher } from '@walkeros/core';
+import type { Cache, Collector, Logger, Store } from '@walkeros/core';
+import { compileMatcher, emitStep } from '@walkeros/core';
+import { buildBaseState } from './observerEmit';
 
 /**
  * Options passed to `wrapStoreWithCache`. Pre-resolved by `initStores` phase
@@ -22,6 +23,16 @@ export interface WrappedStoreOptions {
   cacheStore: Store.Instance;
   namespace: string;
   logger?: Logger.Instance;
+  /**
+   * Optional collector reference for cache-level observability. When
+   * provided, the wrapper emits a `FlowState` (`stepType: 'store'`,
+   * `meta.op: 'cache'`) on every wrapped `get`, carrying the resolved
+   * cache status (`'hit'` or `'miss'`) and the key. Observers attached
+   * to `collector.observers` see HIT/MISS without coupling to wrapper
+   * internals. Optional only to keep unit-test setups lightweight;
+   * production call sites pass it.
+   */
+  collector?: Collector.Instance;
 }
 
 interface CompiledStoreCacheRule {
@@ -97,7 +108,30 @@ export function wrapStoreWithCache(
   backing: Store.Instance,
   opts: WrappedStoreOptions,
 ): WrappedStoreInstance {
-  const { cacheConfig, cacheStore, namespace, logger, storeId } = opts;
+  const { cacheConfig, cacheStore, namespace, logger, storeId, collector } =
+    opts;
+
+  // Cache observability. Each wrapped `get` resolves to a HIT or MISS;
+  // the wrapper emits a `FlowState` on the collector so observers can
+  // record cache metadata without coupling to wrapper internals. When
+  // `collector` is absent (unit-test path), reporting is skipped.
+  const reportCacheStatus = (key: string, status: 'hit' | 'miss'): void => {
+    if (!collector) return;
+    const state = buildBaseState(collector, {
+      stepId: `store.${storeId}`,
+      stepType: 'store',
+      phase: 'in',
+      eventId: '',
+      now: Date.now(),
+    });
+    state.meta = {
+      op: 'cache',
+      cached: status === 'hit',
+      status,
+      key,
+    };
+    emitStep(collector, state);
+  };
 
   // Closure-scoped counters. Mutated directly at each path; the public
   // `counters` accessor on the returned instance returns a fresh shallow copy
@@ -159,6 +193,7 @@ export function wrapStoreWithCache(
       const cached = await cacheStore.get(ns);
       if (cached !== undefined) {
         counters.hits++;
+        reportCacheStatus(key, 'hit');
         return cached;
       }
 
@@ -167,12 +202,14 @@ export function wrapStoreWithCache(
       const existing = inFlight.get(ns);
       if (existing) {
         counters.inflight_dedups++;
+        reportCacheStatus(key, 'hit');
         return existing;
       }
 
       // This caller drives the backing fetch — count the MISS once here so
       // joined callers above are not double-counted as misses too.
       counters.misses++;
+      reportCacheStatus(key, 'miss');
 
       const promise = (async () => {
         try {

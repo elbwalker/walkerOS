@@ -42,6 +42,7 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
       transformers: {},
       globals: {},
       hooks: {},
+      observers: new Set(),
       logger: mockLogger,
       on: {},
       queue: [],

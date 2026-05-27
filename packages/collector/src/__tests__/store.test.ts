@@ -1,6 +1,8 @@
 import type {
   Collector,
   Destination,
+  FlowState,
+  ObserverFn,
   Source,
   Store,
   Transformer,
@@ -29,6 +31,7 @@ function createMockCollector(): Collector.Instance {
     stores: {},
     globals: {},
     hooks: {},
+    observers: new Set(),
     logger: createMockLogger(),
     on: {},
     queue: [],
@@ -309,7 +312,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    const result = stores.cache.get('key');
+    const result = await stores.cache.get('key');
     expect(preStoreGet).toHaveBeenCalledTimes(1);
     expect(result).toBe('value');
   });
@@ -331,7 +334,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    const result = stores.cache.get('key');
+    const result = await stores.cache.get('key');
     expect(postStoreGet).toHaveBeenCalledTimes(1);
     expect(result).toBe('value');
   });
@@ -356,7 +359,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    stores.cache.set('key', 'val', 1000);
+    await stores.cache.set('key', 'val', 1000);
     expect(preStoreSet).toHaveBeenCalledTimes(1);
     expect(setFn).toHaveBeenCalledWith('key', 'val', 1000);
   });
@@ -379,7 +382,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    stores.cache.delete('key');
+    await stores.cache.delete('key');
     expect(preStoreDelete).toHaveBeenCalledTimes(1);
     expect(deleteFn).toHaveBeenCalledWith('key');
   });
@@ -401,7 +404,7 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    expect(stores.cache.get('k')).toBe('val');
+    expect(await stores.cache.get('k')).toBe('val');
     expect(getFn).toHaveBeenCalledWith('k');
   });
 
@@ -422,6 +425,39 @@ describe('store hooks', () => {
       cache: { code: mockInit },
     });
 
-    expect(stores.cache.get('key')).toBe('intercepted');
+    expect(await stores.cache.get('key')).toBe('intercepted');
+  });
+});
+
+describe('store observer emissions', () => {
+  it('store.set emission never carries the raw value in meta', async () => {
+    const seen: FlowState[] = [];
+    const observer: ObserverFn = (state) => seen.push(state);
+    const collector = createMockCollector();
+    collector.observers = new Set([observer]);
+
+    const mockInit: Store.Init = (context) => ({
+      type: 'test',
+      config: context.config as Store.Config,
+      get: jest.fn(),
+      set: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn(),
+    });
+
+    const stores = await initStores(collector, {
+      secrets: { code: mockInit },
+    });
+
+    await stores.secrets.set('api_token', 'super-secret-value');
+
+    const setEmissions = seen.filter(
+      (state) => state.stepType === 'store' && state.meta?.op === 'set',
+    );
+    expect(setEmissions.length).toBeGreaterThan(0);
+    for (const state of setEmissions) {
+      expect(state.meta?.key).toBe('api_token');
+      expect(state.meta?.value).toBeUndefined();
+      expect(JSON.stringify(state)).not.toContain('super-secret-value');
+    }
   });
 });

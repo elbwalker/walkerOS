@@ -6,7 +6,7 @@
  */
 
 import { resolve, dirname } from 'path';
-import type { Collector, Logger } from '@walkeros/core';
+import type { Collector, Logger, ObserverFn } from '@walkeros/core';
 import type { HealthServer } from './health-server.js';
 import { loadBundle } from './load-bundle.js';
 
@@ -26,6 +26,11 @@ export interface FlowHandle {
 
 /**
  * Load a pre-built flow bundle and return a handle for managing it.
+ *
+ * `observers` is the telemetry observer array built by `pipeline.ts`. The
+ * generated bundle factory (see `generateServerEntry` in
+ * `commands/bundle/bundler.ts`) installs each observer onto
+ * `collector.observers` after `startFlow` returns.
  */
 export async function loadFlow(
   file: string,
@@ -33,6 +38,7 @@ export async function loadFlow(
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
+  observers?: Array<ObserverFn>,
 ): Promise<FlowHandle> {
   const absolutePath = resolve(file);
   const flowDir = dirname(absolutePath);
@@ -42,6 +48,7 @@ export async function loadFlow(
     ...config,
     ...(loggerConfig ? { logger: loggerConfig } : {}),
     ...(healthServer ? { sourceSettings: { port: undefined } } : {}),
+    ...(observers ? { observers } : {}),
   };
 
   const result = await loadBundle(absolutePath, flowContext, logger);
@@ -72,10 +79,11 @@ export async function swapFlow(
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
+  observers?: Array<ObserverFn>,
 ): Promise<FlowHandle> {
   logger.info('Shutting down current flow for hot-swap...');
 
-  // Detach old handler — health endpoints still work during swap
+  // Detach old handler, health endpoints still work during swap
   if (healthServer) {
     healthServer.setFlowHandler(null);
   }
@@ -89,13 +97,14 @@ export async function swapFlow(
     logger.debug(`Shutdown warning: ${error}`);
   }
 
-  // Load new flow — mounts new handler onto same server
+  // Load new flow, mounts new handler onto same server
   const newHandle = await loadFlow(
     newFile,
     config,
     logger,
     loggerConfig,
     healthServer,
+    observers,
   );
 
   logger.info('Flow swapped successfully');

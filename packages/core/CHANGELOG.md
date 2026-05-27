@@ -1,5 +1,24 @@
 # @walkeros/core
 
+## 4.1.1
+
+### Patch Changes
+
+- b0279ee: Rename the contract inheritance key from `extends` to `extend` for
+  consistency with the rest of the flow config vocabulary. Contracts that
+  inherit from another named contract now use `"extend": "<name>"`.
+- b0279ee: Add `extend` and `remove` to mapping rules. `extend` deep-merges a
+  partial rule onto a package-shipped default (a `null` value clears an
+  inherited field); `remove` strips fields from the produced payload. Rules
+  without either keyword keep the existing replace behavior.
+- 0b7f494: The collector exposes `observers: Set<ObserverFn>` so any subscriber
+  can watch every step of the pipeline. Each source, transformer, destination,
+  and store call emits a `FlowState` record with timings, mapping match, consent
+  state, and skip reasons. `createTelemetryObserver` from `@walkeros/core`
+  batches emissions to an HTTP endpoint, and the CLI runtime picks up the
+  `traceUntil` flag from its heartbeat so trace mode toggles take effect without
+  a redeploy.
+
 ## 4.1.0
 
 ### Minor Changes

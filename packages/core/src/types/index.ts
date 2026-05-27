@@ -43,3 +43,13 @@ export type { Ingest, IngestMeta } from './ingest';
 export { createIngest } from './ingest';
 
 export type { JsonSchema, ValidateEvents, Validate } from './validate';
+
+// Telemetry FlowState shape, surfaced for observers to consume.
+export type {
+  FlowState,
+  FlowStatePhase,
+  FlowStepType,
+  FlowStateBatch,
+} from './telemetry';
+
+export type { ObserverFn } from './observer';

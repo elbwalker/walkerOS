@@ -21,6 +21,16 @@ function createMockCollector(): MockCollectorWithLogger {
     logger: createMockLogger(),
     stores: {},
     hooks: {},
+    observers: new Set(),
+    status: {
+      startedAt: 0,
+      in: 0,
+      out: 0,
+      failed: 0,
+      sources: {},
+      destinations: {},
+      dropped: {},
+    },
   } as unknown as MockCollectorWithLogger;
 }
 

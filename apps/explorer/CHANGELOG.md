@@ -1,5 +1,29 @@
 # @walkeros/explorer
 
+## 4.1.1
+
+### Patch Changes
+
+- b0279ee: Export the `$`-ref completion builders (`getVariableCompletions`,
+  `getEnvCompletions`, `getStoreCompletions`, `getFlowCompletions`,
+  `getSecretCompletions`) and the `CompletionEntry` type from the package barrel
+  so custom inputs can reuse them outside Monaco.
+- b0279ee: Export `getMappingPathCompletions` and `getContractCompletions` so
+  custom form inputs can seed contract-driven path and `$contract` reference
+  suggestions outside Monaco. Add `allowedRefKinds` (the cursor-scoped `$`-ref
+  gate, now covering `$contract`) and `getJsonPathAtOffset`, and gate the open
+  `$` completion fallback by the same scope rule so Monaco offers only the ref
+  kinds valid at the cursor.
+- Updated dependencies [b0279ee]
+- Updated dependencies [b0279ee]
+- Updated dependencies [0b7f494]
+- Updated dependencies [edd3836]
+- Updated dependencies [edd3836]
+  - @walkeros/core@4.1.1
+  - @walkeros/collector@4.1.1
+  - @walkeros/web-core@4.1.1
+  - @walkeros/web-source-browser@4.1.1
+
 ## 4.1.0
 
 ### Minor Changes

@@ -1,5 +1,21 @@
 # @walkeros/web-source-browser
 
+## 4.1.1
+
+### Patch Changes
+
+- edd3836: The browser source now releases its DOM event listeners, pulse
+  intervals, and wait timeouts when the source is destroyed. This prevents
+  memory growth and avoids duplicate events when the source is torn down or
+  re-initialized.
+- Updated dependencies [b0279ee]
+- Updated dependencies [b0279ee]
+- Updated dependencies [0b7f494]
+- Updated dependencies [edd3836]
+  - @walkeros/core@4.1.1
+  - @walkeros/collector@4.1.1
+  - @walkeros/web-core@4.1.1
+
 ## 4.1.0
 
 ### Minor Changes
