@@ -1,5 +1,18 @@
 # @walkeros/server-destination-meta
 
+## 4.1.1
+
+### Patch Changes
+
+- b3a6ca9: Send the Conversions API access token in an `Authorization: Bearer`
+  header instead of the URL query string, so the credential no longer appears in
+  server, proxy, or APM request logs.
+- Updated dependencies [b0279ee]
+- Updated dependencies [b0279ee]
+- Updated dependencies [0b7f494]
+  - @walkeros/core@4.1.1
+  - @walkeros/server-core@4.1.1
+
 ## 4.1.0
 
 ### Patch Changes

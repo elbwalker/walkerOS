@@ -1,5 +1,18 @@
 # @walkeros/transformer-ga4
 
+## 4.1.1
+
+### Patch Changes
+
+- b0279ee: Add `extend` and `remove` to mapping rules. `extend` deep-merges a
+  partial rule onto a package-shipped default (a `null` value clears an
+  inherited field); `remove` strips fields from the produced payload. Rules
+  without either keyword keep the existing replace behavior.
+- Updated dependencies [b0279ee]
+- Updated dependencies [b0279ee]
+- Updated dependencies [0b7f494]
+  - @walkeros/core@4.1.1
+
 ## 4.1.0
 
 ### Patch Changes

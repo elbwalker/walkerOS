@@ -1,5 +1,19 @@
 # @walkeros/web-destination-gtag
 
+## 4.1.1
+
+### Patch Changes
+
+- e15199b: Add Google Ads Enhanced Conversions support. Set
+  `enhancedConversions` on the `ads` settings to map event fields to Google's
+  `user_data`, sent before each conversion.
+- Updated dependencies [b0279ee]
+- Updated dependencies [b0279ee]
+- Updated dependencies [0b7f494]
+- Updated dependencies [edd3836]
+  - @walkeros/core@4.1.1
+  - @walkeros/web-core@4.1.1
+
 ## 4.1.0
 
 ### Patch Changes

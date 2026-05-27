@@ -1,5 +1,15 @@
 # @walkeros/server-destination-aws
 
+## 4.1.1
+
+### Patch Changes
+
+- Updated dependencies [b0279ee]
+- Updated dependencies [b0279ee]
+- Updated dependencies [0b7f494]
+  - @walkeros/core@4.1.1
+  - @walkeros/server-core@4.1.1
+
 ## 4.1.0
 
 ### Patch Changes

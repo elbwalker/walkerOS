@@ -1,5 +1,37 @@
 # @walkeros/cli
 
+## 4.1.1
+
+### Patch Changes
+
+- c1a4188: The simulate functions (`simulateSource`, `simulateTransformer`,
+  `simulateDestination`) now return the unified `Simulation.Result` shape with
+  captured `events` and intercepted `calls`, instead of the internal push
+  result. `PushResult` no longer carries the simulate-only `captured`, `usage`,
+  and `perDestination` fields.
+- b0279ee: Rename the contract inheritance key from `extends` to `extend` for
+  consistency with the rest of the flow config vocabulary. Contracts that
+  inherit from another named contract now use `"extend": "<name>"`.
+- ddcd56e: The project, flow, and deployment list operations now accept optional
+  `cursor` and `limit` arguments and return a `nextCursor` to fetch the next
+  page. Listing without these arguments is unchanged and returns all results. In
+  the MCP, the `project_manage`, `flow_manage`, and `deploy_manage` tools expose
+  `cursor` and `limit` on their `list` action.
+- 0b7f494: The collector exposes `observers: Set<ObserverFn>` so any subscriber
+  can watch every step of the pipeline. Each source, transformer, destination,
+  and store call emits a `FlowState` record with timings, mapping match, consent
+  state, and skip reasons. `createTelemetryObserver` from `@walkeros/core`
+  batches emissions to an HTTP endpoint, and the CLI runtime picks up the
+  `traceUntil` flag from its heartbeat so trace mode toggles take effect without
+  a redeploy.
+- Updated dependencies [b0279ee]
+- Updated dependencies [b0279ee]
+- Updated dependencies [0b7f494]
+  - @walkeros/core@4.1.1
+  - @walkeros/collector@4.1.1
+  - @walkeros/server-core@4.1.1
+  - @walkeros/server-destination-api@4.1.1
+
 ## 4.1.0
 
 ### Minor Changes

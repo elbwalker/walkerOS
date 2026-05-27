@@ -1,5 +1,17 @@
 # @walkeros/web-core
 
+## 4.1.1
+
+### Patch Changes
+
+- edd3836: Web requests sent via fetch now support a configurable timeout,
+  defaulting to 10 seconds. A stalled network request is aborted instead of
+  hanging indefinitely.
+- Updated dependencies [b0279ee]
+- Updated dependencies [b0279ee]
+- Updated dependencies [0b7f494]
+  - @walkeros/core@4.1.1
+
 ## 4.1.0
 
 ### Patch Changes
