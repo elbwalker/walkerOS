@@ -140,13 +140,23 @@ function getBrowserSource(win: Window, doc: Document): WalkerOS.Source {
 }
 
 /**
- * Local type guard: narrows `unknown` to `Element | Document`. Mirrors the
- * runtime check in `@walkeros/core`'s `isElementOrDocument` but exposes the
- * accurate union return type so callers do not need casts.
+ * Local type guard: narrows `unknown` to `Element | Document`. Prefers the
+ * native `instanceof` check (works in browsers and JSDOM) and falls back to
+ * the WhatWG DOM `nodeType` property for realms where the global Element or
+ * Document constructors are not in scope (cross-frame, certain test
+ * runners). Returns an accurate `Element | Document` union so callers do
+ * not need casts.
  */
 function isDomScope(value: unknown): value is Element | Document {
   if (!value || typeof value !== 'object') return false;
-  return 'body' in value || 'tagName' in value;
+  if (typeof Element !== 'undefined' && value instanceof Element) return true;
+  if (typeof Document !== 'undefined' && value instanceof Document) return true;
+  if ('nodeType' in value) {
+    const nodeType = value.nodeType;
+    // 1 = ELEMENT_NODE, 9 = DOCUMENT_NODE per the WhatWG DOM standard.
+    return nodeType === 1 || nodeType === 9;
+  }
+  return false;
 }
 
 /**
