@@ -53,6 +53,7 @@ export type Config = Source.Config<Types>;
 export interface Context {
   elb: Elb.Fn;
   settings: Settings;
+  initScope?: (context: Context, settings: Settings) => void;
 }
 
 // ELB Layer types for async command handling

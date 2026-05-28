@@ -1,5 +1,14 @@
 # @walkeros/cli
 
+## 4.1.2
+
+### Patch Changes
+
+- @walkeros/collector@4.1.2
+- @walkeros/core@4.1.2
+- @walkeros/server-core@4.1.2
+- @walkeros/server-destination-api@4.1.2
+
 ## 4.1.1
 
 ### Patch Changes

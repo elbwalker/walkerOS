@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-twitter",
   "description": "X (Twitter) Conversions API server destination for walkerOS",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "license": "MIT",
   "exports": {
     ".": {
@@ -35,12 +35,12 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.1.1",
-    "@walkeros/server-core": "4.1.1",
+    "@walkeros/core": "4.1.2",
+    "@walkeros/server-core": "4.1.2",
     "oauth-1.0a": "^2.2.6"
   },
   "devDependencies": {
-    "@walkeros/collector": "4.1.1"
+    "@walkeros/collector": "4.1.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

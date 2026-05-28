@@ -1,5 +1,18 @@
 # @walkeros/web-source-browser
 
+## 4.1.2
+
+### Patch Changes
+
+- b506f2c: Fixes `elb('walker init', scope)` which previously did nothing.
+  Calling `walker init` with a DOM element, an array of elements, or with no
+  argument (defaults to `document`) now re-scans the scope for `data-elb*` tags
+  and fires `load` triggers on the matched elements, matching the documented
+  contract for SPA and infinite-scroll re-initialization.
+  - @walkeros/collector@4.1.2
+  - @walkeros/core@4.1.2
+  - @walkeros/web-core@4.1.2
+
 ## 4.1.1
 
 ### Patch Changes

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/source-demo",
   "description": "Demo source for walkerOS - generates events from config",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -39,10 +39,10 @@
     "test": "jest"
   },
   "dependencies": {
-    "@walkeros/core": "4.1.1"
+    "@walkeros/core": "4.1.2"
   },
   "devDependencies": {
-    "@walkeros/collector": "4.1.1"
+    "@walkeros/collector": "4.1.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
