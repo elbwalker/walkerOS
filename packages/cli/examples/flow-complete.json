@@ -158,8 +158,8 @@
               "prefix": "gtag"
             },
             "mapping": {
-              "add_to_cart": {
-                "*": {
+              "gtag": {
+                "add_to_cart": {
                   "name": "product add",
                   "data": {
                     "map": {
@@ -173,10 +173,8 @@
                       }
                     }
                   }
-                }
-              },
-              "purchase": {
-                "*": {
+                },
+                "purchase": {
                   "name": "order complete",
                   "data": {
                     "map": {

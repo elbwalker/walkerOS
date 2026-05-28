@@ -44,6 +44,9 @@ export interface IntelliSenseContext {
   /** Known environment variable names. If omitted, `$env.` offers only the prefix. */
   envNames?: string[];
 
+  /** Consent identifier names seen on the active flow's destinations. Enables consent-name completions. */
+  consentNames?: string[];
+
   /** Step type at the cursor. Scopes which `$`-refs the provider offers. */
   nodeType?: 'source' | 'destination' | 'transformer' | 'store' | 'collector';
 
