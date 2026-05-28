@@ -43,10 +43,11 @@ export * from './contract';
 export * from './mcpHelpers';
 export * from './respond';
 export * from './matcher';
-// Route helpers: only `getNextSteps` is public. `compileNext`, `resolveNext`,
-// `CompiledNext`, `CompiledRoute`, and `isRouteArray` remain package-internal
-// (importable from `./route` inside core, not from the public package).
-export { getNextSteps } from './route';
+// Route helpers. `getNextSteps` is the runtime resolver. `isRouteArray` and
+// `isRouteConfigEntry` are the canonical shape probes for `Transformer.Route`.
+// `compileNext`, `resolveNext`, `CompiledNext`, and `CompiledRoute` remain
+// package-internal.
+export { getNextSteps, isRouteArray, isRouteConfigEntry } from './route';
 export * from './cache';
 export * from './step-entry';
 export * from './examples/formatOut';
@@ -59,4 +60,5 @@ export {
   REF_STORE,
   REF_SECRET,
   REF_CODE_PREFIX,
+  scanFlowRefs,
 } from './references';

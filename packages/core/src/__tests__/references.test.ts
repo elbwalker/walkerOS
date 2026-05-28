@@ -8,6 +8,7 @@ import {
   REF_STORE,
   REF_SECRET,
   REF_CODE_PREFIX,
+  scanFlowRefs,
 } from '../references';
 import * as core from '../index';
 
@@ -109,6 +110,58 @@ describe('REF_FLOW', () => {
   test('does not match partial / inline references', () => {
     expect('prefix$flow.server.url'.match(REF_FLOW)).toBeNull();
     expect('$flow.server.url suffix'.match(REF_FLOW)).toBeNull();
+  });
+});
+
+describe('scanFlowRefs', () => {
+  it('returns an empty set for nullish input', () => {
+    expect(scanFlowRefs(null).size).toBe(0);
+    expect(scanFlowRefs(undefined).size).toBe(0);
+  });
+
+  it('returns an empty set for a string with no $flow. refs', () => {
+    expect(scanFlowRefs('hello world').size).toBe(0);
+  });
+
+  it('scans a single $flow. reference out of a string', () => {
+    const refs = scanFlowRefs('value is $flow.server.url');
+    expect(refs.has('server')).toBe(true);
+    expect(refs.size).toBe(1);
+  });
+
+  it('scans multiple distinct $flow. references in one string', () => {
+    const refs = scanFlowRefs('$flow.a and $flow.b plus $flow.a-2');
+    expect(refs.has('a')).toBe(true);
+    expect(refs.has('b')).toBe(true);
+    expect(refs.has('a-2')).toBe(true);
+  });
+
+  it('scans $flow. refs nested inside $code: snippets', () => {
+    const refs = scanFlowRefs(
+      '$code:(e) => e.fields[$flow.tracking.id] || $flow.fallback',
+    );
+    expect(refs.has('tracking')).toBe(true);
+    expect(refs.has('fallback')).toBe(true);
+  });
+
+  it('walks objects and arrays recursively', () => {
+    const refs = scanFlowRefs({
+      a: '$flow.one',
+      b: { c: '$flow.two' },
+      d: ['$flow.three', { e: '$flow.four' }],
+    });
+    expect(refs.has('one')).toBe(true);
+    expect(refs.has('two')).toBe(true);
+    expect(refs.has('three')).toBe(true);
+    expect(refs.has('four')).toBe(true);
+  });
+
+  it('accepts an existing set for accumulation', () => {
+    const existing = new Set<string>(['preexisting']);
+    const refs = scanFlowRefs('$flow.added', existing);
+    expect(refs).toBe(existing);
+    expect(refs.has('preexisting')).toBe(true);
+    expect(refs.has('added')).toBe(true);
   });
 });
 
