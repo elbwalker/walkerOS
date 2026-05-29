@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
 import type { editor } from 'monaco-editor';
 import { useMonaco } from '@monaco-editor/react';
 import { Box } from '../atoms/box';
@@ -13,6 +19,13 @@ export interface CodeBoxTab {
   code: string;
   language?: string; // Optional, defaults to CodeBox's language prop
 }
+
+type MarkerDetail = {
+  message: string;
+  severity: 'error' | 'warning';
+  line: number;
+  column: number;
+};
 
 export interface CodeBoxProps extends Omit<CodeProps, 'code'> {
   // Single code mode (backward compat)
@@ -128,12 +141,6 @@ export function CodeBox({
     sticky: codeProps.sticky ?? true,
   });
   const settingsRef = useRef<HTMLDivElement>(null);
-  type MarkerDetail = {
-    message: string;
-    severity: 'error' | 'warning';
-    line: number;
-    column: number;
-  };
   const [markerCounts, setMarkerCounts] = useState({ errors: 0, warnings: 0 });
   const [markerDetails, setMarkerDetails] = useState<MarkerDetail[]>([]);
   const [openMarkerMenu, setOpenMarkerMenu] = useState<
@@ -237,84 +244,32 @@ export function CodeBox({
     setOpenMarkerMenu(null);
   }, []);
 
-  const settingsProps = {
-    lineNumbers: settings.lineNumbers,
-    minimap: settings.minimap,
-    wordWrap: settings.wordWrap,
-    sticky: settings.sticky,
-  };
+  const settingsProps = useMemo(
+    () => ({
+      lineNumbers: settings.lineNumbers,
+      minimap: settings.minimap,
+      wordWrap: settings.wordWrap,
+      sticky: settings.sticky,
+    }),
+    [
+      settings.lineNumbers,
+      settings.minimap,
+      settings.wordWrap,
+      settings.sticky,
+    ],
+  );
 
   // Build header actions
   const actions = (
     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-      {markerCounts.errors > 0 && (
-        <div
-          ref={openMarkerMenu === 'error' ? markerMenuRef : undefined}
-          style={{ position: 'relative' }}
-        >
-          <button
-            className="elb-codebox-marker-badge elb-codebox-marker-badge--error"
-            onClick={() =>
-              setOpenMarkerMenu(openMarkerMenu === 'error' ? null : 'error')
-            }
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="15" y1="9" x2="9" y2="15" />
-              <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
-            <span>{markerCounts.errors}</span>
-          </button>
-          {openMarkerMenu === 'error' && (
-            <MarkerMenu
-              markers={markerDetails.filter((m) => m.severity === 'error')}
-              onJump={jumpToLine}
-            />
-          )}
-        </div>
-      )}
-      {markerCounts.warnings > 0 && (
-        <div
-          ref={openMarkerMenu === 'warning' ? markerMenuRef : undefined}
-          style={{ position: 'relative' }}
-        >
-          <button
-            className="elb-codebox-marker-badge elb-codebox-marker-badge--warning"
-            onClick={() =>
-              setOpenMarkerMenu(openMarkerMenu === 'warning' ? null : 'warning')
-            }
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <circle cx="12" cy="17" r=".5" />
-            </svg>
-            <span>{markerCounts.warnings}</span>
-          </button>
-          {openMarkerMenu === 'warning' && (
-            <MarkerMenu
-              markers={markerDetails.filter((m) => m.severity === 'warning')}
-              onJump={jumpToLine}
-            />
-          )}
-        </div>
-      )}
+      <MarkerBadges
+        markerCounts={markerCounts}
+        markerDetails={markerDetails}
+        openMarkerMenu={openMarkerMenu}
+        setOpenMarkerMenu={setOpenMarkerMenu}
+        jumpToLine={jumpToLine}
+        markerMenuRef={markerMenuRef}
+      />
       {showFormat && !disabled && currentLanguage === 'json' && (
         <button
           className="elb-explorer-btn"
@@ -448,24 +403,42 @@ export function CodeBox({
   const autoHeightClass = autoHeight ? 'elb-box--auto-height' : '';
   const boxClassName = `${autoHeightClass} ${className || ''}`.trim();
 
-  // Convert CodeBoxTab[] to BoxTab[] with Code as content (Box handles rendering)
-  const boxTabs = tabs?.map((tab) => ({
-    id: tab.id,
-    label: tab.label,
-    content: (
-      <Code
-        code={tab.code}
-        language={tab.language ?? language}
-        onChange={onChange}
-        disabled={disabled}
-        autoHeight={autoHeight}
-        onMount={handleEditorMount}
-        onMarkerCounts={handleMarkerCounts}
-        {...restCodeProps}
-        {...settingsProps}
-      />
-    ),
-  }));
+  // Convert CodeBoxTab[] to BoxTab[] with Code as content (Box handles rendering).
+  // Memoized so a marker-count update does not give each <Code>/Monaco subtree
+  // new element identity (which caused a visible flash on validation changes).
+  // Fully stable only when callers pass stable `codeProps` (restCodeProps is
+  // rebuilt from `...codeProps` each render); deep-stabilizing it is out of scope.
+  const boxTabs = useMemo(
+    () =>
+      tabs?.map((tab) => ({
+        id: tab.id,
+        label: tab.label,
+        content: (
+          <Code
+            code={tab.code}
+            language={tab.language ?? language}
+            onChange={onChange}
+            disabled={disabled}
+            autoHeight={autoHeight}
+            onMount={handleEditorMount}
+            onMarkerCounts={handleMarkerCounts}
+            {...restCodeProps}
+            {...settingsProps}
+          />
+        ),
+      })),
+    [
+      tabs,
+      language,
+      onChange,
+      disabled,
+      autoHeight,
+      settingsProps,
+      restCodeProps,
+      handleEditorMount,
+      handleMarkerCounts,
+    ],
+  );
 
   return (
     <Box
@@ -499,6 +472,107 @@ export function CodeBox({
     </Box>
   );
 }
+
+interface MarkerBadgesProps {
+  markerCounts: { errors: number; warnings: number };
+  markerDetails: MarkerDetail[];
+  openMarkerMenu: 'error' | 'warning' | null;
+  setOpenMarkerMenu: React.Dispatch<
+    React.SetStateAction<'error' | 'warning' | null>
+  >;
+  jumpToLine: (line: number, column: number) => void;
+  markerMenuRef: React.RefObject<HTMLDivElement | null>;
+}
+
+/**
+ * MarkerBadges - error/warning marker count badges + their MarkerMenu dropdowns.
+ *
+ * Memoized so a re-render of the parent CodeBox toolbar that does not change
+ * marker state skips re-rendering the badges. Click-outside handling and the
+ * `openMarkerMenu` state live in the parent; `markerMenuRef` is passed down and
+ * attached to whichever badge wrapper currently owns the open menu.
+ */
+const MarkerBadges = React.memo(function MarkerBadges({
+  markerCounts,
+  markerDetails,
+  openMarkerMenu,
+  setOpenMarkerMenu,
+  jumpToLine,
+  markerMenuRef,
+}: MarkerBadgesProps) {
+  return (
+    <>
+      {markerCounts.errors > 0 && (
+        <div
+          ref={openMarkerMenu === 'error' ? markerMenuRef : undefined}
+          style={{ position: 'relative' }}
+        >
+          <button
+            className="elb-codebox-marker-badge elb-codebox-marker-badge--error"
+            onClick={() =>
+              setOpenMarkerMenu(openMarkerMenu === 'error' ? null : 'error')
+            }
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            <span>{markerCounts.errors}</span>
+          </button>
+          {openMarkerMenu === 'error' && (
+            <MarkerMenu
+              markers={markerDetails.filter((m) => m.severity === 'error')}
+              onJump={jumpToLine}
+            />
+          )}
+        </div>
+      )}
+      {markerCounts.warnings > 0 && (
+        <div
+          ref={openMarkerMenu === 'warning' ? markerMenuRef : undefined}
+          style={{ position: 'relative' }}
+        >
+          <button
+            className="elb-codebox-marker-badge elb-codebox-marker-badge--warning"
+            onClick={() =>
+              setOpenMarkerMenu(openMarkerMenu === 'warning' ? null : 'warning')
+            }
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <circle cx="12" cy="17" r=".5" />
+            </svg>
+            <span>{markerCounts.warnings}</span>
+          </button>
+          {openMarkerMenu === 'warning' && (
+            <MarkerMenu
+              markers={markerDetails.filter((m) => m.severity === 'warning')}
+              onJump={jumpToLine}
+            />
+          )}
+        </div>
+      )}
+    </>
+  );
+});
 
 function MarkerMenu({
   markers,

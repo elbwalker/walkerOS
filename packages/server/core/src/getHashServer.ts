@@ -1,7 +1,11 @@
 import { createHash } from 'crypto';
 
-async function sha256(message: string): Promise<string> {
-  const hash = createHash('sha256');
+export interface HashOptions {
+  algorithm?: 'sha256' | 'md5';
+}
+
+async function digest(message: string, algorithm: string): Promise<string> {
+  const hash = createHash(algorithm);
   hash.update(message);
   return hash.digest('hex');
 }
@@ -9,6 +13,8 @@ async function sha256(message: string): Promise<string> {
 export async function getHashServer(
   str: string,
   length?: number,
+  options: HashOptions = {},
 ): Promise<string> {
-  return (await sha256(str)).slice(0, length);
+  const algorithm = options.algorithm ?? 'sha256';
+  return (await digest(str, algorithm)).slice(0, length);
 }

@@ -1,4 +1,5 @@
 import type {
+  CriteoEmailHashes,
   CriteoEvent,
   CriteoIdentity,
   CriteoItem,
@@ -8,11 +9,44 @@ import type {
   Settings,
 } from './types';
 import { getMappingValue, isObject } from '@walkeros/core';
-import { sendServer } from '@walkeros/server-core';
-import { hashEmail } from './hash';
+import { getHashServer, sendServer } from '@walkeros/server-core';
 import { DEFAULT_URL } from './config';
 
 const INTEGRATION_VERSION = 'walkeros_criteo_1.0.0';
+
+const sha256HexPattern = /^[a-f0-9]{64}$/;
+const md5HexPattern = /^[a-f0-9]{32}$/;
+
+/**
+ * Criteo Events API expects email in three hashed forms:
+ * - md5: MD5 of lowercased/trimmed email
+ * - sha256: SHA-256 of lowercased/trimmed email
+ * - sha256_md5: SHA-256 of the MD5 hex string
+ *
+ * Already-hashed input is passed through: a SHA-256 hex only sets `sha256`;
+ * an MD5 hex sets `md5` and derives `sha256_md5` from it.
+ *
+ * https://guides.criteotilt.com/events-api/
+ */
+async function hashEmail(email: string): Promise<CriteoEmailHashes> {
+  const normalized = email.toLowerCase().trim();
+  if (!normalized) return {};
+
+  if (sha256HexPattern.test(normalized)) {
+    return { sha256: normalized };
+  }
+
+  if (md5HexPattern.test(normalized)) {
+    return { md5: normalized, sha256_md5: await getHashServer(normalized) };
+  }
+
+  const md5 = await getHashServer(normalized, undefined, { algorithm: 'md5' });
+  return {
+    md5,
+    sha256: await getHashServer(normalized),
+    sha256_md5: await getHashServer(md5),
+  };
+}
 
 function toStringOrUndef(value: unknown): string | undefined {
   if (value === undefined || value === null) return undefined;

@@ -82,8 +82,9 @@ error?: string; // Error message (if request failed)
 
 ### getHashServer
 
-`getHashServer(str: string, length?: number): Promise<string>` generates SHA-256
-hashes using Node.js crypto module.
+`getHashServer(str: string, length?: number, options?: { algorithm?: 'sha256' | 'md5' }): Promise<string>`
+generates hashes using Node.js crypto module. The algorithm defaults to
+`sha256`; pass `{ algorithm: 'md5' }` for an MD5 digest.
 
 <CodeSnippet
   code={`// Generate full SHA-256 hash
