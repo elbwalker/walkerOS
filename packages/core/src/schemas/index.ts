@@ -73,6 +73,9 @@ export {
   CacheRuleSchema,
 } from './cache';
 
+// State schema (declarative store get/set on a step)
+export { StateSchema } from './state';
+
 // Matcher schemas (used by flow schemas for routing)
 import * as MatcherSchemas from './matcher';
 export { MatcherSchemas };

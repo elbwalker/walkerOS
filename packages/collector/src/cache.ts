@@ -15,3 +15,17 @@ export function getCacheStore(
   }
   return collector.stores.__cache;
 }
+
+/**
+ * Returns the store for a declarative `state` operation.
+ * An explicit store id resolves to `collector.stores[id]` (or `undefined`
+ * when that store is not declared). An omitted id falls back to the default
+ * in-memory `__cache` store.
+ */
+export function getStateStore(
+  storeId: string | undefined,
+  collector: Pick<Collector.Instance, 'stores'>,
+): Store.Instance | undefined {
+  if (storeId) return collector.stores[storeId];
+  return collector.stores.__cache;
+}

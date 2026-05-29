@@ -116,6 +116,8 @@ export interface Config<T extends TypesGeneric = Types> {
   before?: Route; // Pre-transformer chain (runs before push)
   next?: Route; // Graph wiring to next transformer
   cache?: import('./cache').Cache; // Step-level cache config
+  /** Declarative store get/set operations applied around this transformer. */
+  state?: import('./state').State | import('./state').State[];
   init?: boolean; // Track init state (like Destination)
   disabled?: boolean; // Completely skip this transformer in chains
   /** Return this value instead of calling push(). Global mock for all chains. */
@@ -247,7 +249,7 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
    *   `cache` chain.
    *
    * Validation: an entry without `code` must declare at least one of
-   * `package`, `before`, `next`, `cache`, `mapping`. Enforced by
+   * `package`, `before`, `next`, `cache`, `state`, `mapping`. Enforced by
    * `validateStepEntry` in `@walkeros/core`.
    */
   code?: Init<T>;
@@ -256,6 +258,7 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   before?: Route;
   next?: Route;
   cache?: import('./cache').Cache;
+  state?: import('./state').State | import('./state').State[];
   mapping?: MappingConfig;
   validate?: import('./validate').Validate;
 };

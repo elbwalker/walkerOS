@@ -439,6 +439,9 @@ operator workflow.
   Architecture and Flow structure
 - [walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md) -
   Transformer interface and env pattern
+- [walkeros-using-store-cache](../walkeros-using-store-cache/SKILL.md) -
+  Store-level cache and the declarative `state` block for fetch/stash without
+  `$code:`
 - [walkeros-using-cli](../walkeros-using-cli/SKILL.md) - Bundling flows with
   stores
 

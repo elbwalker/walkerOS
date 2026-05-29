@@ -18,6 +18,8 @@ import {
   storeCache,
   applyUpdate,
   buildCacheContext,
+  compileState,
+  applyState,
 } from '@walkeros/core';
 import {
   walkChain,
@@ -44,7 +46,7 @@ function isStaticRoute(
   }
   return false;
 }
-import { getCacheStore } from './cache';
+import { getCacheStore, getStateStore } from './cache';
 
 /**
  * Flush a source's queueOn buffer. Called when the source becomes "started"
@@ -106,6 +108,14 @@ export async function initSource(
     before,
     cache,
   } = sourceDefinition;
+
+  // Compile declarative state entries once. For a source, all state entries
+  // run before handing the event to `collector.push` (get enriches the event
+  // the collector receives, set stashes from it), so they execute together in
+  // array order. A config-level `state` takes precedence over the
+  // definition-level one.
+  const sourceState = config.state ?? sourceDefinition.state;
+  const stateEntries = sourceState ? compileState(sourceState) : undefined;
 
   // Compile source cache config (if configured).
   // Source caches operate on events (request-scoped HIT/MISS keyed by event
@@ -344,6 +354,21 @@ export async function initSource(
             } as Dispatch;
           })()
         : ({ kind: 'single', preChain: [] } as Dispatch);
+
+    // Apply declarative state per event before handing off to the collector.
+    // Entries run sequentially in array order at this single pipeline point.
+    if (stateEntries && stateEntries.length > 0) {
+      events = await Promise.all(
+        events.map((event) =>
+          applyState(
+            stateEntries,
+            (id) => getStateStore(id, collector),
+            event,
+            collector,
+          ),
+        ),
+      );
+    }
 
     // Push each event independently through the post-before pipeline.
     // For non-fan-out (single event) this is a one-iteration loop and

@@ -53,9 +53,11 @@ import {
   buildCacheContext,
   validateStepEntry,
   processEventMapping,
+  compileState,
+  applyState,
 } from '@walkeros/core';
 import { buildBaseState } from './observerEmit';
-import { getCacheStore } from './cache';
+import { getCacheStore, getStateStore } from './cache';
 
 /**
  * Extracts transformer next configuration for chain walking.
@@ -204,7 +206,8 @@ export async function initTransformers(
 
     // Validate the entry via the shared predicate. A code-less entry must
     // declare at least one operative field (package, before, next, cache,
-    // mapping). Unknown keys and code+package conflicts are also rejected.
+    // state, mapping). Unknown keys and code+package conflicts are also
+    // rejected.
     const validation = validateStepEntry(
       transformerDef as Record<string, unknown>,
       'Transformer',
@@ -237,6 +240,14 @@ export async function initTransformers(
     const { cache } = transformerDef;
     const configWithCache = cache ? { ...configWithEnv, cache } : configWithEnv;
 
+    // Merge definition-level state into config for runtime access. A
+    // config-level `state` (if present) takes precedence.
+    const { state } = transformerDef;
+    const configWithState =
+      state !== undefined && configWithCache.state === undefined
+        ? { ...configWithCache, state }
+        : configWithCache;
+
     // Build transformer context for init
     const transformerLogger = collector.logger
       .scope('transformer')
@@ -247,7 +258,7 @@ export async function initTransformers(
       logger: transformerLogger,
       id: transformerId,
       ingest: createIngest(transformerId),
-      config: configWithCache,
+      config: configWithState,
       env: env as Transformer.Env,
     };
 
@@ -644,6 +655,15 @@ export async function runTransformerChain(
       ? getCacheStore(compiledTCache, collector)
       : undefined;
 
+    // Compile declarative state entries once. `get` runs before the step's
+    // mapping (so the mapping can read fetched values); `set` runs after the
+    // mapping settles `processedEvent` and before the `next` dispatch.
+    const stateEntries = transformer.config?.state
+      ? compileState(transformer.config.state)
+      : undefined;
+    const stateGet = stateEntries?.filter((entry) => entry.mode === 'get');
+    const stateSet = stateEntries?.filter((entry) => entry.mode === 'set');
+
     // Check transformer cache (step-level: skip push, continue chain)
     let cacheMiss: { key: string; ttl: number } | undefined;
     if (compiledTCache && tCacheStore) {
@@ -762,6 +782,17 @@ export async function runTransformerChain(
         // No merge: many is fan-out, not enrichment. Parent processedEvent
         // unchanged.
       }
+    }
+
+    // state[get]: read from the store and write fetched values onto the event
+    // before the transformer's mapping runs.
+    if (stateGet && stateGet.length > 0) {
+      processedEvent = await applyState(
+        stateGet,
+        (id) => getStateStore(id, collector),
+        processedEvent,
+        collector,
+      );
     }
 
     // Run the transformer
@@ -1017,6 +1048,17 @@ export async function runTransformerChain(
       }
     }
     // If result is undefined (void), continue with current event unchanged
+
+    // state[set]: write to the store from the settled event, after the
+    // mapping and before the `next` dispatch.
+    if (stateSet && stateSet.length > 0) {
+      processedEvent = await applyState(
+        stateSet,
+        (id) => getStateStore(id, collector),
+        processedEvent,
+        collector,
+      );
+    }
 
     // Cache MISS: store the processed event after push
     if (cacheMiss && tCacheStore) {

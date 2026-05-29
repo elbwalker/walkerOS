@@ -1,0 +1,109 @@
+---
+title: State
+sidebar_position: 5
+---
+
+# State
+
+State is a built-in config property available on source, transformer, and destination steps. It replaces inline `$code:` for the two most common store operations: stash a value (`set`) and fetch a value (`get`). Both directions reuse the same [mapping](../mapping/index.mdx) engine, so any value you can express in a mapping you can stash or fetch.
+
+## Configuration
+
+Add `state` to any step. It accepts a single operation or an array of operations:
+
+```json
+"transformers": {
+  "session": {
+    "state": { "mode": "set", "key": "user.session", "value": "data.gclid" }
+  }
+}
+```
+
+### Properties
+
+| Property | Type            | Description                                                            |
+| -------- | --------------- | ---------------------------------------------------------------------- |
+| `mode`   | `'get' \| 'set'` | Direction. `get` reads from the store, `set` writes to it.            |
+| `store`  | `string`        | Optional store id from `flow.stores`. Defaults to the in-memory cache. |
+| `key`    | `Mapping.Value` | Resolves against the event to the **store key**.                       |
+| `value`  | `Mapping.Value` | The **event side** of the operation (see below).                       |
+
+## key is the store side, value is the event side
+
+The mental model is symmetric: `key` always names the slot in the store, `value` always refers to the event. `mode` decides the direction the data flows between them.
+
+The one asymmetry is what `value` means per mode:
+
+- **`set`** resolves `value` against the event to produce the **payload** to store. `value` can be any mapping value (a path, a constant, an `fn`, a `map`).
+- **`get`** treats `value` as a **write-target path** on the event. It must be a bare string path (or a `ValueConfig` with a `key`), because the fetched value is written there via that path. A pure constant, `fn`, `map`, `loop`, or `set` is rejected for a `get`, and the path may not contain `*`.
+
+```json
+// set: value is the payload (read from the event, written to the store)
+{ "mode": "set", "key": "user.id", "value": "data.token" }
+
+// get: value is the destination path (fetched value written onto the event)
+{ "mode": "get", "key": "user.id", "value": "data.token" }
+```
+
+## The default store
+
+When `store` is omitted, state uses the same built-in in-memory store as [cache](./cache.mdx) (`__cache`). This store is an entry-capped LRU with a TTL sweep, so entries are **evictable**: treat the default store as best-effort, not durable. For persistence across restarts or instances, point `store` at a configured backing (Redis, S3, filesystem).
+
+State keys on the default store are prefixed with `state:` so they cannot collide with cache entries that share the same store. Explicitly named stores use the key as-is.
+
+An explicitly named store that is not declared in `flow.stores` is a validation error; state never silently falls back to the default store for a named miss.
+
+## Execution order
+
+`state` normalizes to an array and entries run sequentially. Where the operations slot into the pipeline depends on the step type:
+
+- **Source:** `before` chain → state → `collector.push`. All entries run before the collector receives the event, in array order.
+- **Transformer:** `before` chain → `get` → step mapping → `set` → `next` dispatch. `get` entries enrich the event before the mapping runs; `set` entries run after it settles.
+- **Destination:** `get` → mapping-to-payload push → `set` (after a successful send). A failed push skips the `set`.
+
+State is **fail-open**: if a store call or value resolution throws, the error is logged and the event passes through unchanged. The chain always continues.
+
+## Examples
+
+### Stash a session value
+
+A pre-collector transformer stashes the inbound `gclid` keyed by session id:
+
+```json
+"transformers": {
+  "stashGclid": {
+    "state": { "mode": "set", "store": "sessions", "key": "user.session", "value": "data.gclid" }
+  }
+}
+```
+
+### Look up a stashed value
+
+A later step fetches the stored `gclid` back onto the event:
+
+```json
+"transformers": {
+  "restoreGclid": {
+    "state": { "mode": "get", "store": "sessions", "key": "user.session", "value": "data.gclid" }
+  }
+}
+```
+
+### Fetch a product margin before sending
+
+A destination reads a per-product margin from a store and writes it onto the event before mapping it to the vendor payload:
+
+```json
+"destinations": {
+  "warehouse": {
+    "package": "@walkeros/server-destination-api",
+    "state": { "mode": "get", "store": "catalog", "key": "data.product_id", "value": "data.margin" }
+  }
+}
+```
+
+## Related
+
+- [Cache](./cache.mdx) short-circuits the pipeline on a hit; state always reads or writes and continues.
+- [Stores](../stores/index.mdx) provide the backing that state reads from and writes to.
+- [Mapping](../mapping/index.mdx) defines the `key` and `value` resolution.

@@ -153,6 +153,41 @@ describe('validateStepEntry — kind-specific', () => {
       validateStepEntry({ package: '@walkeros/x', primary: true }, 'Source').ok,
     ).toBe(true);
   });
+
+  it.each(['Source', 'Transformer', 'Destination'] as const)(
+    '%s: accepts `state` key (not UNKNOWN_KEY)',
+    (kind) => {
+      const r = validateStepEntry(
+        {
+          package: '@walkeros/x',
+          state: { mode: 'get', key: 'a', value: 'b' },
+        },
+        kind,
+      );
+      expect(r.ok).toBe(true);
+    },
+  );
+
+  it('Transformer: accepts state-only entry', () => {
+    expect(
+      validateStepEntry(
+        { state: { mode: 'get', key: 'a', value: 'b' } },
+        'Transformer',
+      ).ok,
+    ).toBe(true);
+  });
+
+  it('Store: rejects `state` key (UNKNOWN_KEY)', () => {
+    const r = validateStepEntry(
+      {
+        package: '@walkeros/x',
+        state: { mode: 'get', key: 'a', value: 'b' },
+      } as unknown as Record<string, unknown>,
+      'Store',
+    );
+    expect(r.ok).toBe(false);
+    expect(r.code).toBe('UNKNOWN_KEY');
+  });
 });
 
 describe('isPathStepEntry', () => {
@@ -171,6 +206,14 @@ describe('isPathStepEntry', () => {
   });
   it('returns false for non-transformer kinds (no pass-through)', () => {
     expect(isPathStepEntry({ mapping: {} }, 'Source')).toBe(false);
+  });
+  it('returns true for Transformer with state only', () => {
+    expect(
+      isPathStepEntry(
+        { state: { mode: 'get', key: 'a', value: 'b' } },
+        'Transformer',
+      ),
+    ).toBe(true);
   });
 });
 

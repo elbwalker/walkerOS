@@ -5,6 +5,7 @@ import {
   ValuesSchema,
 } from './mapping';
 import { Identifier } from './primitives';
+import { StateSchema } from './state';
 import { LoggerConfigSchema } from './logger';
 
 /**
@@ -156,6 +157,12 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .boolean()
     .describe('Completely skip this source (no init, no event capture)')
     .optional(),
+  state: z
+    .union([StateSchema, z.array(StateSchema)])
+    .optional()
+    .describe(
+      'Declarative store get/set operations applied around this source',
+    ),
   init: z
     .boolean()
     .optional()

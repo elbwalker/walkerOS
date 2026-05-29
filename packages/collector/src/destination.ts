@@ -27,6 +27,8 @@ import {
   stepId,
   tryCatchAsync,
   useHooks,
+  compileState,
+  applyState,
 } from '@walkeros/core';
 import { buildBaseState } from './observerEmit';
 import { callDestinationOn } from './on';
@@ -36,7 +38,7 @@ import {
   extractTransformerNextMap,
   extractChainProperty,
 } from './transformer';
-import { getCacheStore } from './cache';
+import { getCacheStore, getStateStore } from './cache';
 import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
 
 const DEFAULT_QUEUE_MAX = 1_000;
@@ -166,7 +168,15 @@ export async function addDestination(
   collector: Collector.Instance,
   data: Destination.Init,
 ): Promise<Elb.PushResult> {
-  const { code, config: dataConfig = {}, env = {}, before, next, cache } = data;
+  const {
+    code,
+    config: dataConfig = {},
+    env = {},
+    before,
+    next,
+    cache,
+    state,
+  } = data;
 
   // Validate that code has a push method
   if (!isFunction(code.push)) {
@@ -186,6 +196,8 @@ export async function addDestination(
   let config = before ? { ...baseConfig, before } : { ...baseConfig };
   if (next) config = { ...config, next };
   if (cache) config = { ...config, cache };
+  if (state !== undefined && config.state === undefined)
+    config = { ...config, state };
 
   const destination: Destination.Instance = {
     ...code,
@@ -456,6 +468,15 @@ export async function pushToDestinations(
         ? getCacheStore(compiledDCache, collector)
         : undefined;
 
+      // Compile declarative state entries once per batch. `get` runs before
+      // the mapping-to-payload push (so it can shape the pushed event); `set`
+      // runs after a successful send.
+      const dStateEntries = destination.config?.state
+        ? compileState(destination.config.state)
+        : undefined;
+      const dStateGet = dStateEntries?.filter((entry) => entry.mode === 'get');
+      const dStateSet = dStateEntries?.filter((entry) => entry.mode === 'set');
+
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
       let totalDuration = 0;
       // Count of events enqueued into a batch in this pass; the aggregation
@@ -536,6 +557,16 @@ export async function pushToDestinations(
             }
           }
 
+          // state[get]: enrich the event before the mapping-to-payload push.
+          if (dStateGet && dStateGet.length > 0 && processedEvent) {
+            processedEvent = await applyState(
+              dStateGet,
+              (storeId) => getStateStore(storeId, collector),
+              processedEvent,
+              collector,
+            );
+          }
+
           const pushStart = Date.now();
           let pushFailed = false;
           const result = await tryCatchAsync(destinationPush, (err) => {
@@ -604,6 +635,21 @@ export async function pushToDestinations(
               cacheMiss.key,
               result ?? true,
               cacheMiss.ttl,
+            );
+          }
+
+          // state[set]: stash from the event after a successful send.
+          if (
+            !pushFailed &&
+            dStateSet &&
+            dStateSet.length > 0 &&
+            processedEvent
+          ) {
+            processedEvent = await applyState(
+              dStateSet,
+              (storeId) => getStateStore(storeId, collector),
+              processedEvent,
+              collector,
             );
           }
 
@@ -1167,7 +1213,7 @@ export function createPushResult(
 export function registerDestination(
   def: Destination.Init,
 ): Destination.Instance {
-  const { code, config = {}, env = {}, cache } = def;
+  const { code, config = {}, env = {}, cache, state } = def;
   const { config: configWithBefore } = extractChainProperty(def, 'before');
   const { config: configWithChains } = extractChainProperty(
     { ...def, config: configWithBefore },
@@ -1176,6 +1222,9 @@ export function registerDestination(
   const mergedConfig = { ...code.config, ...config, ...configWithChains };
   // Merge definition-level cache into config for runtime access
   if (cache) mergedConfig.cache = cache;
+  // Merge definition-level state into config; a config-level state wins.
+  if (state !== undefined && mergedConfig.state === undefined)
+    mergedConfig.state = state;
   const mergedEnv = mergeEnvironments(code.env, env);
   return { ...code, config: mergedConfig, env: mergedEnv };
 }

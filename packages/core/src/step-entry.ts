@@ -17,7 +17,7 @@ import type { Flow } from './types/flow';
  */
 
 export const STEP_OPERATIVE_FIELDS: Record<Flow.StepKind, readonly string[]> = {
-  Source: ['code', 'package', 'import', 'before', 'next', 'cache'],
+  Source: ['code', 'package', 'import', 'before', 'next', 'cache', 'state'],
   Transformer: [
     'code',
     'package',
@@ -25,9 +25,18 @@ export const STEP_OPERATIVE_FIELDS: Record<Flow.StepKind, readonly string[]> = {
     'before',
     'next',
     'cache',
+    'state',
     'mapping',
   ],
-  Destination: ['code', 'package', 'import', 'before', 'next', 'cache'],
+  Destination: [
+    'code',
+    'package',
+    'import',
+    'before',
+    'next',
+    'cache',
+    'state',
+  ],
   Store: ['code', 'package', 'import', 'cache'],
 } as const;
 
@@ -177,6 +186,7 @@ export function isPathStepEntry(
     entry.before !== undefined ||
     entry.next !== undefined ||
     entry.cache !== undefined ||
+    entry.state !== undefined ||
     entry.mapping !== undefined
   );
 }
