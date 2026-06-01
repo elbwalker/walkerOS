@@ -19,7 +19,7 @@ const config: Config = {
     v4: {
       removeLegacyPostBuildHeadAttribute: true,
     },
-    experimental_faster: {
+    faster: {
       swcJsLoader: true, // Use SWC instead of Babel
       swcJsMinimizer: true, // Use SWC instead of Terser (less memory)
       swcHtmlMinimizer: true, // Use SWC for HTML minification

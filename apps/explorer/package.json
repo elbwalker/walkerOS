@@ -59,16 +59,16 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
-    "@types/jest": "^29.5.14",
+    "@types/jest": "^30.0.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
-    "@vitejs/plugin-react": "^5.1.2",
+    "@vitejs/plugin-react": "^6.0.2",
     "@walkeros/config": "4.1.2",
     "@walkeros/web-destination-gtag": "4.1.2",
     "eslint": "^9.23.0",
-    "eslint-plugin-jest": "^28.11.0",
+    "eslint-plugin-jest": "^29.15.2",
     "eslint-plugin-storybook": "^10.1.11",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.0.4",
@@ -77,7 +77,7 @@
     "storybook": "^10.1.11",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
-    "vite": "^7.2.7"
+    "vite": "^8.0.15"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

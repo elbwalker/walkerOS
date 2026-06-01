@@ -33,16 +33,16 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.2",
+    "@vitejs/plugin-react": "^6.0.2",
     "@walkeros/config": "4.1.2",
     "autoprefixer": "^10.4.23",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.25",
+    "eslint-plugin-react-refresh": "^0.5.2",
     "fdir": "^6.5.0",
-    "hermes-parser": "^0.25.1",
+    "hermes-parser": "^0.36.1",
     "tailwindcss": "^4.1.18",
     "tsup": "^8.5.1",
-    "vite": "^7.3.0",
-    "zod-validation-error": "^4.0.2"
+    "vite": "^8.0.15",
+    "zod-validation-error": "^5.0.0"
   }
 }

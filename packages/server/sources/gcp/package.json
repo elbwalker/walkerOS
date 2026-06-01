@@ -25,7 +25,7 @@
     "@walkeros/core": "4.1.2"
   },
   "peerDependencies": {
-    "@google-cloud/functions-framework": "^3.0.0"
+    "@google-cloud/functions-framework": "^5.0.2"
   },
   "devDependencies": {},
   "repository": {

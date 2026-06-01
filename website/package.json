@@ -95,7 +95,7 @@
     "react-dom": "^19.2.4",
     "react-simple-code-editor": "^0.14.1",
     "sass": "^1.96.0",
-    "sass-loader": "^16.0.6",
+    "sass-loader": "^17.0.0",
     "style-loader": "^4.0.0",
     "tailwind-merge": "^3.4.0"
   },
