@@ -242,8 +242,10 @@ replaces every reference before the bundler or collector sees the config.
 ## What else to read
 
 - [`@walkeros/core` reference exports](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/references.ts):
-  `REF_VAR_FULL`, `REF_VAR_INLINE`, `REF_ENV`, `REF_CONTRACT`, `REF_STORE`,
-  `REF_SECRET`, `REF_CODE_PREFIX`. The single source of truth for the regex
-  patterns.
+  `REF_VAR_FULL`, `REF_VAR_INLINE`, `REF_ENV`, `REF_CONTRACT`, `REF_FLOW`,
+  `REF_STORE`, `REF_SECRET`, `REF_CODE_PREFIX`. The single source of truth for
+  the regex patterns. Also exports `scanFlowRefs(value)` which walks any value
+  (string, array, object) and returns every `$flow.<name>` reference found,
+  including refs nested inside `$code:` snippets.
 - [Stores guide](../stores/index.mdx): wiring stores via `$store.`.
 - [Mapping guide](../mapping/index.mdx): `$code:` and mapping-value shortcuts.

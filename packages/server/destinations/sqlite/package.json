@@ -42,8 +42,8 @@
     "@walkeros/server-core": "4.1.2"
   },
   "peerDependencies": {
-    "better-sqlite3": "^11.0.0",
-    "@libsql/client": "^0.14.0"
+    "better-sqlite3": "^12.0.0",
+    "@libsql/client": "^0.17.0"
   },
   "peerDependenciesMeta": {
     "better-sqlite3": {
@@ -55,9 +55,9 @@
   },
   "devDependencies": {
     "@walkeros/collector": "4.1.2",
-    "better-sqlite3": "^11.0.0",
-    "@libsql/client": "^0.14.0",
-    "@types/better-sqlite3": "^7.6.11"
+    "better-sqlite3": "^12.0.0",
+    "@libsql/client": "^0.17.0",
+    "@types/better-sqlite3": "^7.6.13"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

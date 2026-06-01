@@ -130,6 +130,52 @@ Filter which dataLayer events get processed:
   language="typescript"
 />
 
+## Source-level mapping
+
+The source emits walkerOS events whose `name` is `"<prefix> <gtag-action>"`. The collector splits `name` on the first space into `entity` and `action`, so the prefix becomes the entity and the gtag action becomes the action. Source-level mapping rules key on that pair:
+
+<CodeSnippet
+  code={`"sources": {
+  "dataLayer": {
+    "package": "@walkeros/web-source-datalayer",
+    "config": {
+      "settings": { "prefix": "dataLayer" },
+      "mapping": {
+        "dataLayer": {
+          "add_to_cart": {
+            "name": "product add",
+            "data": {
+              "map": {
+                "id": "items.0.item_id",
+                "name": "items.0.item_name",
+                "price": "value",
+                "currency": "currency",
+                "quantity": "items.0.quantity"
+              }
+            }
+          },
+          "purchase": {
+            "name": "order complete",
+            "data": {
+              "map": {
+                "id": "transaction_id",
+                "total": "value",
+                "currency": "currency"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+For the gtag commands `consent`, `config`, and `set`, the action equals the command name (any trailing token such as `update` or a measurement ID is dropped by the entity/action split). Branch on the dropped value via rule-level `condition` or `event.data` if you need to distinguish, for example, `consent default` from `consent update`.
+
+If you set a custom `prefix` (for example `"gtag"`), use that string as the entity key: `mapping.gtag.add_to_cart`.
+
 ## Migration strategy
 
 Use the dataLayer source for gradual migration from GA4/GTM:

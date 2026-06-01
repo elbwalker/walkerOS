@@ -1,4 +1,9 @@
-import { compileNext, resolveNext } from '../route';
+import {
+  compileNext,
+  resolveNext,
+  isRouteArray,
+  isRouteConfigEntry,
+} from '../route';
 import type {
   Route,
   RouteConfig,
@@ -211,6 +216,40 @@ describe('compileNext', () => {
   });
 
   // TODO: type-level test via tsd or similar — disjoint union is enforced by RouteConfig's `never` properties
+});
+
+describe('route shape predicates', () => {
+  it('isRouteConfigEntry detects objects with match/next/one/many', () => {
+    expect(
+      isRouteConfigEntry({ match: { key: 'a', operator: 'eq', value: 'b' } }),
+    ).toBe(true);
+    expect(isRouteConfigEntry({ next: 'x' })).toBe(true);
+    expect(isRouteConfigEntry({ one: ['a', 'b'] })).toBe(true);
+    expect(isRouteConfigEntry({ many: ['a', 'b'] })).toBe(true);
+  });
+
+  it('isRouteConfigEntry rejects non-route shapes', () => {
+    expect(isRouteConfigEntry('x')).toBe(false);
+    expect(isRouteConfigEntry(['a', 'b'])).toBe(false);
+    expect(isRouteConfigEntry({})).toBe(false);
+    expect(isRouteConfigEntry(null)).toBe(false);
+    expect(isRouteConfigEntry(undefined)).toBe(false);
+  });
+
+  it('isRouteArray detects pure RouteConfig arrays (legacy first-match)', () => {
+    expect(
+      isRouteArray([
+        { match: { key: 'a', operator: 'eq', value: 'b' }, next: 'x' },
+        { next: 'y' },
+      ]),
+    ).toBe(true);
+  });
+
+  it('isRouteArray rejects pure-string arrays and empty arrays', () => {
+    expect(isRouteArray(['a', 'b'])).toBe(false);
+    expect(isRouteArray([])).toBe(false);
+    expect(isRouteArray('x')).toBe(false);
+  });
 });
 
 describe('RouteConfig disjoint union surface', () => {

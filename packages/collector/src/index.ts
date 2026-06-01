@@ -13,6 +13,8 @@ export {
   runTransformerChain,
   transformerPush,
   transformerInit,
+  walkChain,
+  extractTransformerNextMap,
 } from './transformer';
 export { wrapEnv } from './wrapEnv';
 export { getCacheStore } from './cache';

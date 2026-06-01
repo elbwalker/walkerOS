@@ -42,6 +42,8 @@ Flow startup order:
 
 For ephemeral, in-process caching, use the built-in [cache tier](./cache.mdx) on any of the stores above, no separate package needed.
 
+To read from or write to a store from a step without wiring `$store` and writing `$code:`, use the declarative [`state`](../collector/state) block on a source, transformer, or destination.
+
 ## Wiring stores to components
 
 Components reference stores via `$store.storeId` in their `env` configuration. The collector resolves this at startup and passes the live store instance to the component.

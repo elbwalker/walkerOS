@@ -451,6 +451,8 @@ respond function is optional — only present when the source provides one.
   transformers fit in architecture
 - [walkeros-create-transformer](../walkeros-create-transformer/SKILL.md) -
   Create new transformer
+- [walkeros-using-store-cache](../walkeros-using-store-cache/SKILL.md) -
+  Declarative `state` block for fetch/stash without `$code:`
 
 **Source Files:**
 

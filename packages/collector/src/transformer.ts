@@ -53,9 +53,11 @@ import {
   buildCacheContext,
   validateStepEntry,
   processEventMapping,
+  compileState,
+  applyState,
 } from '@walkeros/core';
 import { buildBaseState } from './observerEmit';
-import { getCacheStore } from './cache';
+import { getCacheStore, getStateStore } from './cache';
 
 /**
  * Extracts transformer next configuration for chain walking.
@@ -204,7 +206,8 @@ export async function initTransformers(
 
     // Validate the entry via the shared predicate. A code-less entry must
     // declare at least one operative field (package, before, next, cache,
-    // mapping). Unknown keys and code+package conflicts are also rejected.
+    // state, mapping). Unknown keys and code+package conflicts are also
+    // rejected.
     const validation = validateStepEntry(
       transformerDef as Record<string, unknown>,
       'Transformer',
@@ -237,6 +240,14 @@ export async function initTransformers(
     const { cache } = transformerDef;
     const configWithCache = cache ? { ...configWithEnv, cache } : configWithEnv;
 
+    // Merge definition-level state into config for runtime access. A
+    // config-level `state` (if present) takes precedence over def-level.
+    const resolvedState = transformerDef.config?.state ?? transformerDef.state;
+    const configWithState =
+      resolvedState !== undefined && configWithCache.state === undefined
+        ? { ...configWithCache, state: resolvedState }
+        : configWithCache;
+
     // Build transformer context for init
     const transformerLogger = collector.logger
       .scope('transformer')
@@ -247,7 +258,7 @@ export async function initTransformers(
       logger: transformerLogger,
       id: transformerId,
       ingest: createIngest(transformerId),
-      config: configWithCache,
+      config: configWithState,
       env: env as Transformer.Env,
     };
 
@@ -341,6 +352,14 @@ export async function initTransformers(
       instance.config = {
         ...(instance.config ?? {}),
         next: transformerDef.next,
+      };
+    }
+    // Propagate the precedence-resolved state (config-level wins over
+    // def-level) onto instance.config when a custom factory dropped it.
+    if (resolvedState !== undefined && instance.config?.state === undefined) {
+      instance.config = {
+        ...(instance.config ?? {}),
+        state: resolvedState,
       };
     }
 
@@ -644,6 +663,32 @@ export async function runTransformerChain(
       ? getCacheStore(compiledTCache, collector)
       : undefined;
 
+    // Compile declarative state entries once. `get` runs before the step's
+    // mapping (so the mapping can read fetched values); `set` runs after the
+    // mapping settles `processedEvent` and before the `next` dispatch.
+    const stateEntries = transformer.config?.state
+      ? compileState(transformer.config.state)
+      : undefined;
+    const stateGet = stateEntries?.filter((entry) => entry.mode === 'get');
+    const stateSet = stateEntries?.filter((entry) => entry.mode === 'set');
+
+    // Apply `state[set]` to a settled event right before it is routed. Called
+    // once per emitted event on every emitting path (straight-through,
+    // runtime `{ next }` single/many, conditional `config.next`, and per fork
+    // of a `Result[]` fan-out). Not called on halted paths (push returned
+    // `false`, a `cache.stop` HIT, a stopped before-chain, init failure).
+    const applyStateSet = async (
+      evt: WalkerOS.DeepPartialEvent,
+    ): Promise<WalkerOS.DeepPartialEvent> => {
+      if (!stateSet || stateSet.length === 0) return evt;
+      return applyState(
+        stateSet,
+        (id) => getStateStore(id, collector),
+        evt,
+        collector,
+      );
+    };
+
     // Check transformer cache (step-level: skip push, continue chain)
     let cacheMiss: { key: string; ttl: number } | undefined;
     if (compiledTCache && tCacheStore) {
@@ -764,6 +809,17 @@ export async function runTransformerChain(
       }
     }
 
+    // state[get]: read from the store and write fetched values onto the event
+    // before the transformer's mapping runs.
+    if (stateGet && stateGet.length > 0) {
+      processedEvent = await applyState(
+        stateGet,
+        (id) => getStateStore(id, collector),
+        processedEvent,
+        collector,
+      );
+    }
+
     // Run the transformer
     const result = await tryCatchAsync(transformerPush, (err) => {
       collector.logger
@@ -791,7 +847,9 @@ export async function runTransformerChain(
 
       const forkResults = await Promise.all(
         result.map(async (forkResult) => {
-          const forkEvent = forkResult.event || processedEvent;
+          const forkEvent = await applyStateSet(
+            forkResult.event || processedEvent,
+          );
           // Clone ingest per fork to prevent cross-fork contamination
           const forkIngest = cloneIngest(ingest, 'unknown');
 
@@ -942,13 +1000,16 @@ export async function runTransformerChain(
       //                    error isolation arrives in Task 4.1; respond
       //                    suppression in 4.2.
       if (next !== undefined) {
+        // Apply `state[set]` to the settled event before this step's `next`
+        // dispatch, once for every branch that emits it.
+        const settledEvent = await applyStateSet(resultEvent || processedEvent);
         const nextIds = getNextSteps(
           next,
-          buildCacheContext(ingest, processedEvent),
+          buildCacheContext(ingest, settledEvent),
         );
         if (nextIds.length === 0) {
           // No route matched → passthrough (continue chain)
-          if (resultEvent) processedEvent = resultEvent;
+          processedEvent = settledEvent;
           continue;
         }
         if (nextIds.length === 1) {
@@ -961,7 +1022,7 @@ export async function runTransformerChain(
               collector,
               transformers,
               branchedChain,
-              resultEvent || processedEvent,
+              settledEvent,
               ingest,
               currentRespond,
               chainContext,
@@ -1001,7 +1062,7 @@ export async function runTransformerChain(
               collector,
               transformers,
               walkChain(id, extractTransformerNextMap(transformers)),
-              resultEvent || processedEvent,
+              settledEvent,
               cloneIngest(ingest, id),
               undefined,
               chainContext,
@@ -1017,6 +1078,17 @@ export async function runTransformerChain(
       }
     }
     // If result is undefined (void), continue with current event unchanged
+
+    // state[set]: write to the store from the settled event, after the
+    // mapping and before the `next` dispatch.
+    if (stateSet && stateSet.length > 0) {
+      processedEvent = await applyState(
+        stateSet,
+        (id) => getStateStore(id, collector),
+        processedEvent,
+        collector,
+      );
+    }
 
     // Cache MISS: store the processed event after push
     if (cacheMiss && tCacheStore) {

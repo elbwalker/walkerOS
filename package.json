@@ -59,7 +59,7 @@
     "@changesets/cli": "^2.30.0",
     "@walkeros/config": "4.1.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.7.4",
     "turbo": "^2.6.3",
     "typescript": "^5.9.3"
@@ -78,7 +78,7 @@
     "not dead"
   ],
   "overrides": {
-    "@types/node": "^20.0.0",
+    "@types/node": "^25.9.1",
     "@eslint/eslintrc": {
       "ajv": "^6.12.6"
     },

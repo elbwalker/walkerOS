@@ -1,16 +1,45 @@
 import type { Mapping } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
 
 /**
- * Consent Mode Mapping - Primary use case
- * Maps gtag consent events to walker consent commands
+ * Source-level mapping examples for `@walkeros/web-source-datalayer`.
+ *
+ * The source emits walkerOS events whose `name` is the configured `prefix`
+ * (default `"dataLayer"`) followed by a space and the gtag action. The
+ * collector splits `name` on the first space into `entity` and `action`,
+ * so every event from this source uses the prefix as its entity:
+ *
+ *   gtag('event', 'add_to_cart', { ... })
+ *     -> event.name   = "dataLayer add_to_cart"
+ *     -> event.entity = "dataLayer"
+ *     -> event.action = "add_to_cart"
+ *
+ *   gtag('consent', 'update', { ... })
+ *     -> event.name   = "dataLayer consent update"
+ *     -> event.entity = "dataLayer"
+ *     -> event.action = "consent"
+ *
+ * Mapping rules therefore key on the prefix as entity and the gtag action
+ * as action: `mapping.<prefix>.<action>`. For the gtag commands
+ * `consent`, `config`, and `set`, the action equals that command name
+ * (any trailing token such as `update` or a measurement ID is dropped by
+ * the entity/action split; inspect it via `event.data` or a rule-level
+ * `condition` if you need to branch on it).
+ *
+ * If you set a custom `prefix` (for example `"gtag"`), use that string as
+ * the entity key: `mapping.gtag.add_to_cart`.
  */
-export const consentUpdate: Mapping.Rule = {
+
+/**
+ * Consent rule. Maps `gtag('consent', 'update'|'default', { ... })` into
+ * a walker consent command. The same shape covers both `update` and
+ * `default` because the payload fields are identical.
+ */
+export const consent: Mapping.Rule = {
   name: 'walker consent',
   settings: {
     command: {
       map: {
-        functional: { value: true }, // Static value - always true for functional
+        functional: { value: true },
         analytics: {
           key: 'analytics_storage',
           fn: (value: unknown) => value === 'granted',
@@ -25,8 +54,8 @@ export const consentUpdate: Mapping.Rule = {
 };
 
 /**
- * E-commerce Event Mappings
- * Transform GA4 ecommerce events to WalkerOS events
+ * Purchase rule. Maps `gtag('event', 'purchase', { ... })` to a walker
+ * `order complete` event with nested product entries.
  */
 export const purchase: Mapping.Rule = {
   name: 'order complete',
@@ -58,6 +87,10 @@ export const purchase: Mapping.Rule = {
   },
 };
 
+/**
+ * Add-to-cart rule. Maps `gtag('event', 'add_to_cart', { ... })` to a
+ * walker `product add` event for the first item in the cart.
+ */
 export const add_to_cart: Mapping.Rule = {
   name: 'product add',
   data: {
@@ -72,6 +105,10 @@ export const add_to_cart: Mapping.Rule = {
   },
 };
 
+/**
+ * View-item rule. Maps `gtag('event', 'view_item', { ... })` to a walker
+ * `product view` event for the first item in the list.
+ */
 export const view_item: Mapping.Rule = {
   name: 'product view',
   data: {
@@ -86,10 +123,11 @@ export const view_item: Mapping.Rule = {
 };
 
 /**
- * Config Event Mapping
- * Transform GA4 config events to WalkerOS page events
+ * Config rule. Maps `gtag('config', '<measurement-id>', { ... })` to a
+ * walker `page view` event. The measurement ID is dropped during the
+ * entity/action split, so a single rule covers every config call.
  */
-export const configGA4: Mapping.Rule = {
+export const config_event: Mapping.Rule = {
   name: 'page view',
   data: {
     map: {
@@ -100,14 +138,12 @@ export const configGA4: Mapping.Rule = {
 };
 
 /**
- * Custom Event Mapping
- * Handle direct dataLayer pushes
+ * Catch-all custom event rule. Keeps the gtag event name (no `name`
+ * override) and copies selected payload fields through.
  */
 export const customEvent: Mapping.Rule = {
-  // Keep original event name with gtag prefix
   data: {
     map: {
-      // Map all properties as-is
       user_id: 'user_id',
       custom_parameter: 'custom_parameter',
     },
@@ -115,40 +151,30 @@ export const customEvent: Mapping.Rule = {
 };
 
 /**
- * Complete mapping configuration
- * Following the same pattern as destination mappings
+ * Complete source-level mapping. The outer key is the prefix used by the
+ * source (default `"dataLayer"`); change it if you configure a custom
+ * prefix.
  */
-export const config = {
-  // Consent events
-  consent: {
-    update: consentUpdate,
-  },
-
-  // E-commerce events
-  purchase: purchase,
-  add_to_cart: add_to_cart,
-  view_item: view_item,
-
-  // Config events
-  'config G-XXXXXXXXXX': configGA4,
-
-  // Custom events
-  custom_event: customEvent,
-
-  // Catch-all for unmapped events
-  '*': {
-    // Pass through with gtag prefix
-    data: {
-      // Copy all data as-is
+export const config: Mapping.Rules = {
+  dataLayer: {
+    consent,
+    purchase,
+    add_to_cart,
+    view_item,
+    config: config_event,
+    custom_event: customEvent,
+    // Catch-all for any other gtag action under this prefix.
+    '*': {
+      data: {},
     },
   },
-} as unknown as Mapping.Rules;
+};
 
 /**
- * Minimal consent-only mapping for focused use cases
+ * Minimal consent-only mapping for focused use cases.
  */
-export const consentOnlyMapping = {
-  consent: {
-    update: consentUpdate,
+export const consentOnlyMapping: Mapping.Rules = {
+  dataLayer: {
+    consent,
   },
-} as unknown as Mapping.Rules;
+};

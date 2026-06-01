@@ -282,6 +282,41 @@ proves the herd prevention worked.
 - **Renaming a store is a breaking change** to anything caching through it
   (`cache.store: "X"` references break). Migrate explicitly.
 
+## Fetch & stash without `$code:`
+
+When a step only needs to read a value out of a store or write one into it, you
+do not need to wire `$store` into the step's `env` and hand-write a `$code:`
+push. The declarative `state` block on a source, transformer, or destination
+does both directions through the mapping engine.
+
+```json
+"transformers": {
+  "stashGclid": {
+    "state": { "mode": "set", "store": "sessions", "key": "user.session", "value": "data.gclid" }
+  },
+  "restoreGclid": {
+    "state": { "mode": "get", "store": "sessions", "key": "user.session", "value": "data.gclid" }
+  }
+}
+```
+
+`key` is always the store side; `value` is always the event side. `mode` sets
+the direction:
+
+- **`set`** resolves `value` against the event (a path, constant, `fn`, or
+  `map`) and writes that payload to the store under `key`.
+- **`get`** reads `key` from the store and writes the fetched value onto the
+  event at the `value` path. For a `get`, `value` must be a bare string path (or
+  a `ValueConfig` with `key`), not a constant or operator.
+
+Omit `store` to use the built-in `__cache` tier; state keys there are prefixed
+with `state:` so they never collide with cache entries. State is **fail-open**:
+a store error is logged and the event passes through unchanged. Use `state` for
+simple fetch/stash; reach for `$code:` only when the logic is genuinely
+non-declarative.
+
+Full reference: [Website: State](../../website/docs/collector/state.mdx).
+
 ## Migration from `@walkeros/store-memory`
 
 The dedicated `@walkeros/store-memory` package was deleted once the built-in

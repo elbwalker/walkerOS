@@ -123,6 +123,8 @@ export interface Config<
    * `config.init === true` and `config.require` is empty/absent, then replayed.
    */
   init?: boolean;
+  /** Declarative store get/set operations applied around this source. */
+  state?: import('./state').State | import('./state').State[];
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -233,6 +235,7 @@ export type InitSource<T extends TypesGeneric = Types> = {
   next?: Route;
   before?: Route;
   cache?: import('./cache').Cache;
+  state?: import('./state').State | import('./state').State[];
   validate?: import('./validate').Validate;
 };
 

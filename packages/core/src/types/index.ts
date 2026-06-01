@@ -15,6 +15,7 @@ export * as On from './on';
 export * as Transformer from './transformer';
 export * as Request from './request';
 export * as Source from './source';
+export type { State } from './state';
 export * as Store from './store';
 export * as Trigger from './trigger';
 export * as Lifecycle from './lifecycle';

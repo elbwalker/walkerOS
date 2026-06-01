@@ -120,15 +120,15 @@ npx walkeros run packages/cli/examples/flow-complete.json --flow web
 
 #### Sources
 
-| Feature                 | Location      | Example                               |
-| ----------------------- | ------------- | ------------------------------------- |
-| Primary source          | browser       | `"primary": true`                     |
-| Multiple sources        | web flow      | browser + dataLayer + demo            |
-| Source-level mapping    | dataLayer     | `"mapping": { "add_to_cart": {...} }` |
-| Pre-collector chain     | dataLayer     | `"next": "enricher"`                  |
-| Pre-collector array     | http (server) | `"next": ["filter"]` (array form)     |
-| Require (deferred init) | dataLayer     | `"require": ["session"]`              |
-| Demo source events      | demo          | Pre-configured test events            |
+| Feature                 | Location      | Example                                           |
+| ----------------------- | ------------- | ------------------------------------------------- |
+| Primary source          | browser       | `"primary": true`                                 |
+| Multiple sources        | web flow      | browser + dataLayer + demo                        |
+| Source-level mapping    | dataLayer     | `"mapping": { "gtag": { "add_to_cart": {...} } }` |
+| Pre-collector chain     | dataLayer     | `"next": "enricher"`                              |
+| Pre-collector array     | http (server) | `"next": ["filter"]` (array form)                 |
+| Require (deferred init) | dataLayer     | `"require": ["session"]`                          |
+| Demo source events      | demo          | Pre-configured test events                        |
 
 #### Transformers
 

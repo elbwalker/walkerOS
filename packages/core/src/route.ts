@@ -20,7 +20,7 @@ export type CompiledNext =
   | { type: 'gate'; match: CompiledMatcher; next?: CompiledNext }
   | { type: 'sequence'; value: CompiledNext[] };
 
-function isRouteConfigEntry(entry: unknown): boolean {
+export function isRouteConfigEntry(entry: unknown): boolean {
   return (
     typeof entry === 'object' &&
     entry !== null &&

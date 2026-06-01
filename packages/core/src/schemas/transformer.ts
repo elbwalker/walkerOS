@@ -2,6 +2,7 @@ import { z, toJsonSchema } from './validation';
 import { Identifier } from './primitives';
 import { RouteSchema } from './matcher';
 import { EventCacheSchema } from './cache';
+import { StateSchema } from './state';
 import { LoggerConfigSchema } from './logger';
 import { ConfigSchema as MappingConfigSchema } from './mapping';
 
@@ -63,6 +64,12 @@ export const ConfigSchema = z
     cache: EventCacheSchema.optional().describe(
       'Step-level cache configuration for this transformer',
     ),
+    state: z
+      .union([StateSchema, z.array(StateSchema)])
+      .optional()
+      .describe(
+        'Declarative store get/set operations applied around this transformer',
+      ),
     init: z.boolean().describe('Whether to initialize immediately').optional(),
     disabled: z
       .boolean()

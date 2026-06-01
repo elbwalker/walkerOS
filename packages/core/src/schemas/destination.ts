@@ -10,6 +10,7 @@ import {
 import { Identifier } from './primitives';
 import { RouteWithoutManySchema } from './matcher';
 import { EventCacheSchema } from './cache';
+import { StateSchema } from './state';
 import { LoggerConfigSchema } from './logger';
 
 /**
@@ -125,6 +126,12 @@ export const ConfigSchema = z
     cache: EventCacheSchema.optional().describe(
       'Cache configuration for deduplication; skip push on cache HIT',
     ),
+    state: z
+      .union([StateSchema, z.array(StateSchema)])
+      .optional()
+      .describe(
+        'Declarative store get/set operations applied around this destination',
+      ),
     disabled: z
       .boolean()
       .describe('Completely skip this destination (no init, no push, no queue)')

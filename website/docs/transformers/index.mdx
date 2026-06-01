@@ -73,7 +73,8 @@ transformer's page.
 <PropertyTable schema={transformerConfig} />
 
 Beyond `code`, `package`, `before`, `next`, and `cache`, transformer entries
-also accept a `mapping` field that takes a `Mapping.Config` value.
+also accept a `mapping` field that takes a `Mapping.Config` value, and a
+[`state`](../collector/state) field for declarative store get/set.
 
 :::note Dual semantic of `mapping`
 The `mapping` field uses the same `Mapping.Config` shape on destinations and
@@ -92,4 +93,5 @@ step (forgot the `cache:` wrapper).
 ## Next steps
 
 * **[Cache](../collector/cache)** - Cache pure handler results (integrated collector mode)
+* **[State](../collector/state)** - Declarative store get/set without `$code:`
 * **[Create your own](./create-your-own)** - Custom transformer guide

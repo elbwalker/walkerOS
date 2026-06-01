@@ -26,3 +26,24 @@ export const REF_FLOW =
 export const REF_STORE = /^\$store\.([a-zA-Z_][a-zA-Z0-9_]*)$/;
 export const REF_SECRET = /^\$secret\.([A-Z0-9_]+)$/;
 export const REF_CODE_PREFIX = '$code:';
+
+const FLOW_REF_PATTERN = /\$flow\.([a-zA-Z_][a-zA-Z0-9_]*)/g;
+
+/**
+ * Canonical scanner for the `$flow.` reference grammar. Walks strings,
+ * arrays, and objects and returns every referenced flow name. The returned
+ * set is the same instance as `into` when one is supplied, so callers can
+ * accumulate across multiple values.
+ */
+export function scanFlowRefs(value: unknown, into?: Set<string>): Set<string> {
+  const refs = into ?? new Set<string>();
+  if (typeof value === 'string') {
+    for (const m of value.matchAll(FLOW_REF_PATTERN)) refs.add(m[1]);
+    return refs;
+  }
+  if (value && typeof value === 'object') {
+    for (const v of Object.values(value as Record<string, unknown>))
+      scanFlowRefs(v, refs);
+  }
+  return refs;
+}

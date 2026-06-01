@@ -123,6 +123,8 @@ export interface Config<T extends TypesGeneric = Types> {
   next?: Transformer.Route;
   /** Cache configuration for deduplication (step-level: skip push on HIT). */
   cache?: import('./cache').Cache;
+  /** Declarative store get/set operations applied around this destination. */
+  state?: import('./state').State | import('./state').State[];
   /** Completely skip this destination — no init, no push, no queuing. */
   disabled?: boolean;
   /** Return this value instead of calling push(). Uses !== undefined check to support falsy values. */
@@ -186,6 +188,7 @@ export type Init<T extends TypesGeneric = Types> = {
   before?: Transformer.Route;
   next?: Transformer.Route;
   cache?: import('./cache').Cache;
+  state?: import('./state').State | import('./state').State[];
   validate?: import('./validate').Validate;
 };
 
