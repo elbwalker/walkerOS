@@ -1,16 +1,19 @@
 /**
  * Telemetry wiring tests for the runtime pipeline.
  *
- * The pipeline reads WALKEROS_OBSERVER_URL + WALKEROS_INGEST_TOKEN at boot
- * and (when both are present) builds a single-element observer array via
- * createBatchedPoster + createTelemetryObserver, then forwards it to
- * loadFlow as the 6th argument. When either env var is missing, no
- * observers are passed (the bundle sees undefined and skips the install
- * loop).
+ * The pipeline reads WALKEROS_OBSERVER_URL (the observer base) +
+ * WALKEROS_INGEST_TOKEN + WALKEROS_DEPLOYMENT_ID at boot and (when all are
+ * present) builds a single-element observer array via createBatchedPoster
+ * (POSTing to `${base}/ingest/${deploymentId}`) + createTelemetryObserver,
+ * then forwards it to loadFlow as the 6th argument. When any of those env
+ * vars is missing, no observers are passed (the bundle sees undefined and
+ * skips the install loop).
  *
- * The WALKEROS_TRACE_UNTIL override is exercised at the resolver layer; the
- * pipeline only forwards what the resolver returns.
+ * The active trace window arrives via the trace-poller, which writes the
+ * shared `traceUntil` holder in @walkeros/core; the pipeline supplier reads
+ * it per emit.
  */
+import { setTraceUntil } from '@walkeros/core';
 import type { PipelineOptions } from '../../../commands/run/pipeline.js';
 
 jest.mock('../../../runtime/health-server.js', () => ({
@@ -44,6 +47,14 @@ jest.mock('../../../runtime/heartbeat.js', () => ({
 
 jest.mock('../../../runtime/poller.js', () => ({
   createPoller: jest.fn().mockReturnValue({
+    start: jest.fn(),
+    stop: jest.fn(),
+    pollOnce: jest.fn(),
+  }),
+}));
+
+jest.mock('../../../runtime/trace-poller.js', () => ({
+  createTracePoller: jest.fn().mockReturnValue({
     start: jest.fn(),
     stop: jest.fn(),
     pollOnce: jest.fn(),
@@ -95,7 +106,8 @@ describe('runPipeline telemetry wiring', () => {
     process.on = jest.fn() as never;
     delete process.env.WALKEROS_OBSERVER_URL;
     delete process.env.WALKEROS_INGEST_TOKEN;
-    delete process.env.WALKEROS_TRACE_UNTIL;
+    delete process.env.WALKEROS_DEPLOYMENT_ID;
+    setTraceUntil(null);
     const mod = await import('../../../commands/run/pipeline.js');
     runPipeline = mod.runPipeline;
   });
@@ -104,7 +116,8 @@ describe('runPipeline telemetry wiring', () => {
     process.on = originalProcessOn;
     delete process.env.WALKEROS_OBSERVER_URL;
     delete process.env.WALKEROS_INGEST_TOKEN;
-    delete process.env.WALKEROS_TRACE_UNTIL;
+    delete process.env.WALKEROS_DEPLOYMENT_ID;
+    setTraceUntil(null);
   });
 
   const baseOptions: PipelineOptions = {
@@ -113,10 +126,10 @@ describe('runPipeline telemetry wiring', () => {
     logger: mockLogger as never,
   };
 
-  it('passes a single-element observer array when WALKEROS_OBSERVER_URL and WALKEROS_INGEST_TOKEN are set', async () => {
-    process.env.WALKEROS_OBSERVER_URL =
-      'https://observer.example.com/ingest/dep_42';
+  it('passes a single-element observer array when WALKEROS_OBSERVER_URL, WALKEROS_INGEST_TOKEN, and WALKEROS_DEPLOYMENT_ID are set', async () => {
+    process.env.WALKEROS_OBSERVER_URL = 'https://observer.example.com';
     process.env.WALKEROS_INGEST_TOKEN = 'tok_test';
+    process.env.WALKEROS_DEPLOYMENT_ID = 'dep_42';
 
     void runPipeline(baseOptions);
     await waitFor(() => (loadFlow as jest.Mock).mock.calls.length > 0);
@@ -130,6 +143,7 @@ describe('runPipeline telemetry wiring', () => {
 
   it('passes undefined observers when WALKEROS_OBSERVER_URL is missing', async () => {
     process.env.WALKEROS_INGEST_TOKEN = 'tok_test';
+    process.env.WALKEROS_DEPLOYMENT_ID = 'dep_42';
 
     void runPipeline(baseOptions);
     await waitFor(() => (loadFlow as jest.Mock).mock.calls.length > 0);
@@ -139,8 +153,19 @@ describe('runPipeline telemetry wiring', () => {
   });
 
   it('passes undefined observers when WALKEROS_INGEST_TOKEN is missing', async () => {
-    process.env.WALKEROS_OBSERVER_URL =
-      'https://observer.example.com/ingest/dep_42';
+    process.env.WALKEROS_OBSERVER_URL = 'https://observer.example.com';
+    process.env.WALKEROS_DEPLOYMENT_ID = 'dep_42';
+
+    void runPipeline(baseOptions);
+    await waitFor(() => (loadFlow as jest.Mock).mock.calls.length > 0);
+
+    const call = (loadFlow as jest.Mock).mock.calls[0];
+    expect(call[5]).toBeUndefined();
+  });
+
+  it('passes undefined observers when WALKEROS_DEPLOYMENT_ID is missing', async () => {
+    process.env.WALKEROS_OBSERVER_URL = 'https://observer.example.com';
+    process.env.WALKEROS_INGEST_TOKEN = 'tok_test';
 
     void runPipeline(baseOptions);
     await waitFor(() => (loadFlow as jest.Mock).mock.calls.length > 0);

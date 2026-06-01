@@ -1782,9 +1782,15 @@ const __configData = ${dataPayload};
  */
 export interface WrapEntryTelemetry {
   observerUrl: string;
+  /**
+   * Full deployment-scoped trace endpoint, e.g.
+   * `https://observer.example.com/trace/<deploymentId>`. Baked verbatim and
+   * polled by the browser; the bundle never constructs it from a base.
+   */
+  traceUrl: string;
   ingestToken: string;
   flowId: string;
-  level?: 'standard' | 'trace';
+  level?: 'off' | 'standard' | 'trace';
   sample?: number;
 }
 
@@ -1895,14 +1901,43 @@ export function generateWrapEntry(
 
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
-  // Telemetry block: when telemetry options are present, import the two
-  // helpers from @walkeros/core and install the observer on
-  // collector.observers AFTER startFlow returns. The bundle ships the
-  // plaintext ingest token; the operator-controlled traceUntil debug flag
-  // is resolved server-side and would be rotated via redeploy until the
-  // poll-and-update plumbing lands.
+  // Telemetry block: when telemetry options are present, import the helpers
+  // from @walkeros/core and install the observer on collector.observers AFTER
+  // startFlow returns. The observer is wired as a SUPPLIER so the operator's
+  // runtime trace flag reaches each emit: a module-level `__traceUntil` is
+  // refreshed by polling the baked full `traceUrl`, and `resolveTelemetryOptions`
+  // re-resolves the projection per emit. This lets a deploy-time `level: 'off'`
+  // baseline be flipped to trace by the poll without a redeploy.
   const telemetryImport = options.telemetry
-    ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
+    ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto, resolveTelemetryOptions as __cto_resolve } from '@walkeros/core';`
+    : '';
+  const telemetryPoller = options.telemetry
+    ? `
+let __traceUntil = null;
+function __pollTrace() {
+  if (typeof fetch === 'undefined') return;
+  fetch(${JSON.stringify(options.telemetry.traceUrl)}, {
+    headers: { Authorization: ${JSON.stringify(`Bearer ${options.telemetry.ingestToken}`)} },
+  })
+    .then(function (__res) {
+      if (!__res || __res.status !== 200) return;
+      return __res.json().then(function (__body) {
+        if (!__body || typeof __body !== 'object') return;
+        var __value = __body.traceUntil;
+        // Mirror the server poller: set on a non-empty string, clear on null,
+        // leave unchanged on anything else. The null path is the disable case
+        // (stop a trace early) and MUST be honored so web deployments can be
+        // turned off without waiting for the old timestamp to lapse.
+        if (typeof __value === 'string' && __value.length > 0) {
+          __traceUntil = __value;
+        } else if (__value === null) {
+          __traceUntil = null;
+        }
+      });
+    })
+    .catch(function () {});
+}
+`
     : '';
   const telemetryBlock = options.telemetry
     ? `
@@ -1912,17 +1947,22 @@ export function generateWrapEntry(
       url: ${JSON.stringify(options.telemetry.observerUrl)},
       token: ${JSON.stringify(options.telemetry.ingestToken)},
     });
-    const __observer = __cto(__emit, {
+    const __observer = __cto(__emit, () => __cto_resolve({
       flowId: ${JSON.stringify(options.telemetry.flowId)},
-      level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
-      sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
-    });
+      observe: {
+        level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
+        sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
+      },
+      traceUntil: __traceUntil,
+    }));
     collector.observers.add(__observer);
+    __pollTrace();
+    setInterval(__pollTrace, 15000 + Math.floor(Math.random() * 5000));
   }`
     : '';
 
   return `import { startFlow, wireConfig, __configData } from '${stage1Specifier}';${telemetryImport}
-
+${telemetryPoller}
 (async () => {${preflightBlock}
   const config = wireConfig(__configData);${envBlock}
   const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}

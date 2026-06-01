@@ -83,11 +83,20 @@ export interface WrapSkeletonOptions {
 export interface TelemetryBundleOptions {
   /** Absolute ingest URL. POST receives JSON array of FlowState. */
   observerUrl: string;
+  /**
+   * Full deployment-scoped trace endpoint, e.g.
+   * `https://observer.example.com/trace/<deploymentId>`. Baked into the bundle
+   * and polled verbatim; the browser never constructs it from a base.
+   */
+  traceUrl: string;
   /** Deployment-scoped plaintext token. Sent as `Authorization: Bearer`. */
   ingestToken: string;
   /** Used as the `flowId` on every emitted FlowState. */
   flowId: string;
-  /** Verbosity. Default 'standard'. 'off' suppresses the entire wiring. */
+  /**
+   * Baseline verbosity. Default 'standard'. Even an 'off' baseline is wired
+   * (as a supplier) so the runtime trace poll can flip it to trace.
+   */
   level?: 'off' | 'standard' | 'trace';
   /** Deterministic sample fraction in [0, 1]. Default 1. */
   sample?: number;
@@ -149,21 +158,21 @@ export async function wrapSkeleton(
 
   const absoluteSkeletonPath = path.resolve(skeletonPath);
 
-  // Normalize the telemetry options for the entry generator: drop 'off'
-  // and narrow the level union so generateWrapEntry's `WrapEntryTelemetry`
-  // shape (which has no 'off' member) accepts the value.
+  // Normalize the telemetry options for the entry generator. Telemetry is
+  // wired whenever an ingest token exists, even for an 'off' baseline: the
+  // observer is a supplier and the runtime trace poll can flip 'off' to trace.
   const tInput = options.telemetry;
   const tLevel = tInput?.level ?? 'standard';
-  const telemetry =
-    tInput && tLevel !== 'off'
-      ? {
-          observerUrl: tInput.observerUrl,
-          ingestToken: tInput.ingestToken,
-          flowId: tInput.flowId,
-          level: tLevel,
-          ...(tInput.sample !== undefined ? { sample: tInput.sample } : {}),
-        }
-      : undefined;
+  const telemetry = tInput
+    ? {
+        observerUrl: tInput.observerUrl,
+        traceUrl: tInput.traceUrl,
+        ingestToken: tInput.ingestToken,
+        flowId: tInput.flowId,
+        level: tLevel,
+        ...(tInput.sample !== undefined ? { sample: tInput.sample } : {}),
+      }
+    : undefined;
 
   // Stage 2 entry imports from the skeleton via an absolute path.
   const entryText =

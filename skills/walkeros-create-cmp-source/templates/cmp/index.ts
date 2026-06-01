@@ -44,9 +44,11 @@ export const sourceCmpName: Source.Init<Types> = async (context) => {
 
   const fullConfig: Source.Config<Types> = { settings };
 
-  // 3. Track listener references for cleanup
+  // 3. Track listener references for cleanup. Typing consentListener against
+  // the augmented WindowEventMap event (CustomEvent<CmpConsent>) removes the
+  // need to cast the event inside the handler.
   let initListener: (() => void) | undefined;
-  let consentListener: ((e: Event) => void) | undefined;
+  let consentListener: ((e: CustomEvent<CmpConsent>) => void) | undefined;
 
   if (actualWindow) {
     // 4. handleConsent -- maps CMP categories to walkerOS consent groups
@@ -87,9 +89,8 @@ export const sourceCmpName: Source.Init<Types> = async (context) => {
 
     // 7. Detection path: Change listener
     // TODO: Replace 'cmp_consent' with your CMP's consent change event
-    consentListener = (e: Event) => {
-      const customEvent = e as CustomEvent<CmpConsent>;
-      handleConsent(customEvent.detail);
+    consentListener = (e: CustomEvent<CmpConsent>) => {
+      handleConsent(e.detail);
     };
     actualWindow.addEventListener('cmp_consent', consentListener);
   }

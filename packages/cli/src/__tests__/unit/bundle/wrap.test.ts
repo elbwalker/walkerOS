@@ -116,6 +116,7 @@ export const __configData = { test: true };
       minify: false,
       telemetry: {
         observerUrl: 'https://observer.example.com/ingest/dep_42',
+        traceUrl: 'https://observer.example.com/trace/dep_42',
         ingestToken: 'tok_test_value',
         flowId: 'flow_x',
         level: 'standard',
@@ -126,6 +127,7 @@ export const __configData = { test: true };
 
     // Configured literals must end up in the bundle.
     expect(output).toContain('https://observer.example.com/ingest/dep_42');
+    expect(output).toContain('https://observer.example.com/trace/dep_42');
     expect(output).toContain('tok_test_value');
     expect(output).toContain('flow_x');
     // The observer is installed onto collector.observers (Set#add). The
@@ -134,7 +136,7 @@ export const __configData = { test: true };
     expect(output).not.toContain('config.hooks');
   });
 
-  it('omits telemetry wiring when level is off', async () => {
+  it('still wires telemetry when the baseline level is off', async () => {
     const skeletonPath = await writeFakeSkeleton();
     const outputPath = path.join(tmpDir, 'walker.js');
 
@@ -145,6 +147,7 @@ export const __configData = { test: true };
       minify: false,
       telemetry: {
         observerUrl: 'https://observer.example.com/ingest/dep_42',
+        traceUrl: 'https://observer.example.com/trace/dep_42',
         ingestToken: 'tok_test_value',
         flowId: 'flow_x',
         level: 'off',
@@ -152,11 +155,12 @@ export const __configData = { test: true };
     });
 
     const output = await fs.readFile(outputPath, 'utf-8');
-    // wrap.ts drops `level: 'off'` to undefined telemetry, so the observer
-    // block and its literals never reach the bundle.
-    expect(output).not.toContain('https://observer.example.com');
-    expect(output).not.toContain('tok_test_value');
-    expect(output).not.toMatch(/observers\.add/);
+    // An 'off' baseline is still wired as a supplier so the runtime trace
+    // poll can flip it to trace: literals, observer, and poller all present.
+    expect(output).toContain('https://observer.example.com/ingest/dep_42');
+    expect(output).toContain('https://observer.example.com/trace/dep_42');
+    expect(output).toContain('tok_test_value');
+    expect(output).toMatch(/observers\.add/);
   });
 
   it('omits telemetry wiring when telemetry option is absent', async () => {

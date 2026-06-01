@@ -701,7 +701,10 @@ test('handles consent withdrawal', async () => {
 ### 7. Use `MockWindow` interface in tests
 
 Properly typed, not `as unknown as` casts scattered through tests. Define one
-`MockWindow` interface in `test-utils.ts` with helper methods.
+`MockWindow` interface in `test-utils.ts` that extends the source's **narrowed**
+`CmpWindow` (the surface the source actually touches), not the global `Window`.
+Because `Env.window` is narrowed to `CmpWindow`, the mock literal satisfies it
+directly — no `as unknown as Window` anywhere.
 
 ### 8. Store category keys in user-expected format
 

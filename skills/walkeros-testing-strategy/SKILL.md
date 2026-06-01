@@ -301,28 +301,44 @@ export * as step from './step'; // Step examples { in, out }
 ### Testing Sources with Injected env
 
 Sources accept platform dependencies via `env`. Mock `window`, `document`, or
-library imports by passing them through `env` instead of mocking globals:
+library imports by passing them through `env` instead of mocking globals.
+
+Type the mock against the source's own `Env` type, not against the global
+`Window`. A source narrows `Env.window` to only the members it touches, so the
+mock satisfies that narrowed shape directly with **no `as unknown as Window`
+cast**:
 
 ```typescript
+import type { Env } from '../types'; // the source's narrowed Env
+
 // Instead of mocking window.performance globally:
-const mockWindow = {
-  performance: {
-    getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+const env: Env = {
+  window: {
+    performance: {
+      getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+    },
+    location: { href: 'https://test.com/' },
   },
-  location: { href: 'https://test.com/' },
-} as unknown as Window & typeof globalThis;
+};
 
-await createSessionSource(collector, undefined, { window: mockWindow });
+await createSessionSource(collector, undefined, env);
 
-// Instead of mocking express import:
-const mockExpress = Object.assign(jest.fn().mockReturnValue(mockApp), {
-  json: jest.fn().mockReturnValue(middleware),
-});
-await sourceExpress(createSourceContext({}, { express: mockExpress as never }));
+// Instead of mocking express import, type the binding against the source's
+// injected dependency type so the mock is assignable without a cast:
+import type { SourceEnv } from './types';
+
+const express: SourceEnv['express'] = Object.assign(
+  jest.fn().mockReturnValue(mockApp),
+  { json: jest.fn().mockReturnValue(middleware) },
+);
+await sourceExpress(createSourceContext({}, { express }));
 ```
 
-This pattern avoids global state pollution between tests and enables simulation
-in non-browser environments.
+This pattern avoids global state pollution between tests, enables simulation in
+non-browser environments, and stays cast-free because the source narrows its own
+`Env` to exactly the members it uses (the same declare-global + narrowed-`Env`
+approach destinations use — see
+[create-destination §3.3.1](../walkeros-create-destination/SKILL.md)).
 
 ## Red Flags - Stop and Fix
 

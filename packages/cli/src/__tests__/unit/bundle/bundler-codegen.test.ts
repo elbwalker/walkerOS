@@ -943,6 +943,7 @@ describe('generateWebEntry telemetry observer wiring', () => {
     const out = generateWebEntry('./skel.mjs', '{}', {
       telemetry: {
         observerUrl: 'https://o.example.com/i/d',
+        traceUrl: 'https://o.example.com/trace/d',
         ingestToken: 'tok_t',
         flowId: 'flow_t',
         level: 'standard',
@@ -970,6 +971,7 @@ describe('generateWrapEntry telemetry observer wiring', () => {
     const out = generateWrapEntry('./skel.mjs', {
       telemetry: {
         observerUrl: 'https://o.example.com/i/d',
+        traceUrl: 'https://o.example.com/trace/d',
         ingestToken: 'tok_t',
         flowId: 'flow_t',
         level: 'standard',
