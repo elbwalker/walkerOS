@@ -27,7 +27,7 @@ export const REF_STORE = /^\$store\.([a-zA-Z_][a-zA-Z0-9_]*)$/;
 export const REF_SECRET = /^\$secret\.([A-Z0-9_]+)$/;
 export const REF_CODE_PREFIX = '$code:';
 
-const FLOW_REF_PATTERN = /\$flow\.([\w-]+)/g;
+const FLOW_REF_PATTERN = /\$flow\.([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
 /**
  * Canonical scanner for the `$flow.` reference grammar. Walks strings,

@@ -1,5 +1,6 @@
 import type { Collector, Mapping, State, Store, WalkerOS } from './types';
 import { getMappingValue } from './mapping';
+import { FatalError } from './fatalError';
 import { setByPath } from './byPath';
 import { isArray, isDefined, isObject, isString } from './is';
 import { tryCatchAsync } from './tryCatch';
@@ -69,6 +70,7 @@ export async function applyState<E extends WalkerOS.DeepPartialEvent>(
         }
       },
       (error) => {
+        if (error instanceof FatalError) throw error;
         collector.logger?.error?.('[state] operation failed', error);
       },
     )();

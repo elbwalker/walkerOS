@@ -1,6 +1,6 @@
 import { startFlow } from '..';
 import { Source } from '@walkeros/core';
-import type { WalkerOS } from '@walkeros/core';
+import type { Collector, Elb, WalkerOS } from '@walkeros/core';
 
 type TestSourceTypes = Source.Types<unknown, unknown, Source.Push>;
 
@@ -72,6 +72,46 @@ describe('Source state integration', () => {
       (event) => event.data?.fetched !== undefined,
     );
     expect(readerEvent?.data?.fetched).toBe('TOK1');
+  });
+
+  it('skips source state when a user env.push override is present', async () => {
+    const spyEvents: WalkerOS.DeepPartialEvent[] = [];
+    const spyPush: Collector.PushFn = async (event) => {
+      spyEvents.push(event as WalkerOS.DeepPartialEvent);
+      return { ok: true } as Elb.PushResult;
+    };
+
+    const { collector } = await startFlow({
+      sources: {
+        s1: {
+          primary: true,
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => ({
+            type: 's1',
+            config: context.config as Source.Config<TestSourceTypes>,
+            push: context.env.push,
+          }),
+          env: { push: spyPush },
+          // would enrich data.fetched if state ran; with env.push it must not
+          config: {
+            state: [
+              { mode: 'set', key: 'user.id', value: 'data.token' },
+              { mode: 'get', key: 'user.id', value: 'data.fetched' },
+            ],
+          },
+        },
+      },
+    });
+
+    await collector.sources.s1.push({
+      name: 'page view',
+      user: { id: 'u3' },
+      data: { token: 'TOK3' },
+    });
+
+    expect(spyEvents).toHaveLength(1);
+    // raw event: state did not enrich data.fetched
+    expect(spyEvents[0]?.data?.fetched).toBeUndefined();
+    expect(spyEvents[0]?.data?.token).toBe('TOK3');
   });
 
   it('set-after stashes from the event for a later read', async () => {

@@ -2,6 +2,7 @@ import type { Collector, State, Store, WalkerOS } from '../types';
 import { applyState, compileState } from '../state';
 import type { GetStore } from '../state';
 import { getByPath } from '../byPath';
+import { FatalError } from '../fatalError';
 import {
   createAsyncMockStore,
   createMockCollector,
@@ -327,6 +328,34 @@ describe('applyState', () => {
 
     expect(out).toEqual(event);
     expect(collector.logger.error).toHaveBeenCalled();
+  });
+
+  test('FatalError from value resolution rejects (not swallowed)', async () => {
+    const store = createMockStore();
+    const getStore = makeGetStore({ sessions: store });
+    const collector = createMockCollector({ stores: { sessions: store } });
+    const event = buildEvent();
+
+    await expect(
+      applyState(
+        [
+          {
+            mode: 'set',
+            store: 'sessions',
+            key: 'user.session',
+            value: {
+              fn: () => {
+                throw new FatalError('fatal in state');
+              },
+            },
+          },
+        ],
+        getStore,
+        event,
+        collector,
+      ),
+    ).rejects.toBeInstanceOf(FatalError);
+    expect(collector.logger.error).not.toHaveBeenCalled();
   });
 
   test('default store (no store field) namespaces keys with "state:" in __cache', async () => {

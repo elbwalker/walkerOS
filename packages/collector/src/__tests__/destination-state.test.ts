@@ -1,5 +1,26 @@
 import { startFlow } from '..';
-import type { WalkerOS } from '@walkeros/core';
+import type { Destination, Store, WalkerOS } from '@walkeros/core';
+
+/**
+ * Build a store backed by a Map the test holds a reference to, so writes are
+ * directly observable. Registered under a named id and targeted via
+ * `state.store`.
+ */
+function makeBackedStore(): { code: Store.Init; data: Map<string, unknown> } {
+  const data = new Map<string, unknown>();
+  const code: Store.Init = (context) => ({
+    type: 'kv',
+    config: context.config as Store.Config,
+    get: async (key: string) => data.get(key),
+    set: async (key: string, value: unknown) => {
+      data.set(key, value);
+    },
+    delete: async (key: string) => {
+      data.delete(key);
+    },
+  });
+  return { code, data };
+}
 
 /**
  * Integration tests for the declarative `state` block on destination steps.
@@ -105,5 +126,62 @@ describe('Destination state integration', () => {
 
     expect(pushed).toHaveLength(1);
     expect(pushed[0].data?.fetched).toBeUndefined();
+  });
+
+  it('does not write state[set] on a batched-enqueue (only a real send writes)', async () => {
+    const { code, data } = makeBackedStore();
+    const dest: Destination.Instance = {
+      type: 'batched',
+      push: async () => undefined,
+      pushBatch: async () => undefined,
+      config: {
+        // high wait + size cap so a single event stays enqueued (no flush)
+        batch: { wait: 60_000, size: 50 },
+        mapping: { '*': { '*': { batch: 1 } } },
+        state: {
+          mode: 'set',
+          store: 'kv',
+          key: 'user.id',
+          value: 'data.token',
+        },
+      },
+    };
+
+    const { elb } = await startFlow({
+      stores: { kv: { code } },
+      destinations: { batchDest: { code: dest } },
+    });
+
+    await elb({ name: 'page view', user: { id: 'b1' }, data: { token: 'B1' } });
+
+    // event was enqueued, not delivered: set must NOT have written
+    expect(data.has('b1')).toBe(false);
+  });
+
+  it('writes state[set] on a non-batched successful send (regression)', async () => {
+    const { code, data } = makeBackedStore();
+
+    const { elb } = await startFlow({
+      stores: { kv: { code } },
+      destinations: {
+        stasher: {
+          code: {
+            type: 'stasher',
+            config: {},
+            push: async () => undefined,
+          },
+          state: {
+            mode: 'set',
+            store: 'kv',
+            key: 'user.id',
+            value: 'data.token',
+          },
+        },
+      },
+    });
+
+    await elb({ name: 'page view', user: { id: 'b2' }, data: { token: 'B2' } });
+
+    expect(data.get('b2')).toBe('B2');
   });
 });

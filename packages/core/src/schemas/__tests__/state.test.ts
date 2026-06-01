@@ -67,6 +67,33 @@ describe('StateSchema', () => {
     ).toBe(false);
   });
 
+  it('rejects a get whose value carries a key plus fn', () => {
+    expect(
+      StateSchema.safeParse({
+        mode: 'get',
+        key: 'user.session',
+        value: { key: 'data.x', fn: '$code: (e) => e' },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a get whose value carries a key plus value/map/loop/set', () => {
+    expect(
+      StateSchema.safeParse({
+        mode: 'get',
+        key: 'user.session',
+        value: { key: 'data.x', value: 'static' },
+      }).success,
+    ).toBe(false);
+    expect(
+      StateSchema.safeParse({
+        mode: 'get',
+        key: 'user.session',
+        value: { key: 'data.x', map: { a: 'b' } },
+      }).success,
+    ).toBe(false);
+  });
+
   it('rejects a get whose value path contains a wildcard', () => {
     expect(
       StateSchema.safeParse({

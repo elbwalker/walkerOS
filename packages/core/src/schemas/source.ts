@@ -309,6 +309,12 @@ export const InitSourceSchema = z
     env: BaseEnvSchema.partial()
       .optional()
       .describe('Partial environment overrides'),
+    state: z
+      .union([StateSchema, z.array(StateSchema)])
+      .optional()
+      .describe(
+        'Declarative store get/set operations applied around this source',
+      ),
     primary: z
       .boolean()
       .optional()

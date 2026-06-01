@@ -65,49 +65,54 @@ function isZodSchema(val: unknown): val is z.ZodTypeAny {
   );
 }
 
-/**
- * Read the resolved meta ({ id, title, description }) from the emitted JSON
- * Schema. Reading from the JSON Schema (not the in-memory `.meta()` accessor)
- * is deliberate - it's what the website's PropertyTable actually consumes,
- * and it surfaces `id` correctly (the `.meta()` accessor does not).
- *
- * The emitted shape for a decorated top-level schema is either:
- *   Draft-7:     { allOf: [{$ref:'#/definitions/X'}], definitions: { X: {...} } }
- *   Draft-2020:  { $ref: '#/$defs/X', $defs: { X: {...} } }
- * We unwrap one level to reach the node carrying the id/title.
- */
-function readMetaFromJsonSchema(
-  schema: z.ZodTypeAny,
-): { id?: unknown; title?: unknown } | undefined {
-  const json = z.toJSONSchema(schema, { target: 'draft-7' }) as Record<
-    string,
-    unknown
-  >;
-  const resolved = unwrapRef(json);
-  if (!resolved || typeof resolved !== 'object') return undefined;
-  const r = resolved as { id?: unknown; title?: unknown };
-  if (r.id === undefined && r.title === undefined) return undefined;
-  return r;
+type JsonNode = {
+  title?: unknown;
+  $ref?: unknown;
+  allOf?: Array<{ $ref?: unknown }>;
+};
+
+/** Extract the `#/definitions/<key>` target from a `$ref` or `allOf` node. */
+function refKey(node: JsonNode | undefined): string | undefined {
+  const ref =
+    typeof node?.$ref === 'string' ? node.$ref : node?.allOf?.[0]?.$ref;
+  if (typeof ref !== 'string') return undefined;
+  return ref.match(/^#\/definitions\/(.+)$/)?.[1];
 }
 
-function unwrapRef(
-  node: Record<string, unknown>,
-): Record<string, unknown> | undefined {
-  const defs =
-    (node.definitions as Record<string, Record<string, unknown>> | undefined) ??
-    (node.$defs as Record<string, Record<string, unknown>> | undefined);
-  const ref = (() => {
-    if (typeof node.$ref === 'string') return node.$ref;
-    if (Array.isArray(node.allOf)) {
-      const first = node.allOf[0] as Record<string, unknown> | undefined;
-      if (first && typeof first.$ref === 'string') return first.$ref;
-    }
-    return undefined;
-  })();
-  if (!ref || !defs) return node;
-  const match = ref.match(/^#\/(?:definitions|\$defs)\/(.+)$/);
-  if (!match) return node;
-  return defs[match[1]];
+/**
+ * Read the resolved meta ({ id, title }) the way the website's PropertyTable
+ * consumes it: from emitted JSON Schema. The schema is wrapped in a parent
+ * object so it emits as a `$ref` into `$defs`, where the `id` survives as the
+ * definition key. Reading the top-level schema directly inlines it and drops
+ * `id`, and the `.meta()` accessor loses `id` whenever a `.describe()` is
+ * chained after `.meta()`, so neither is a reliable source on its own.
+ *
+ * Zod synthesises anonymous `__schemaN` definition keys for wrapper nodes
+ * (e.g. a `.describe()` around a `.lazy()`), which forward to the real,
+ * id-keyed definition via a nested `$ref`. We follow that indirection until we
+ * reach a canonically keyed definition.
+ */
+function readMetaFromSchema(
+  schema: z.ZodTypeAny,
+): { id?: unknown; title?: unknown } | undefined {
+  const wrapped = z.object({ value: schema });
+  const json = z.toJSONSchema(wrapped, { target: 'draft-7' }) as {
+    definitions?: Record<string, JsonNode>;
+    properties?: { value?: JsonNode };
+  };
+  const definitions = json.definitions ?? {};
+
+  let id = refKey(json.properties?.value);
+  const seen = new Set<string>();
+  while (id !== undefined && /^__schema\d+$/.test(id) && !seen.has(id)) {
+    seen.add(id);
+    id = refKey(definitions[id]);
+  }
+  if (id === undefined) return undefined;
+
+  const def = definitions[id];
+  if (!def) return undefined;
+  return { id, title: def.title };
 }
 
 describe('Schema meta coverage', () => {
@@ -129,7 +134,7 @@ describe('Schema meta coverage', () => {
   test.each(candidates)(
     '%s has a canonical .meta({ id, title })',
     (_name, schema) => {
-      const meta = readMetaFromJsonSchema(schema);
+      const meta = readMetaFromSchema(schema);
       expect(meta).toBeDefined();
       expect(typeof meta?.title).toBe('string');
       expect(typeof meta?.id).toBe('string');

@@ -357,7 +357,9 @@ export async function initSource(
 
     // Apply declarative state per event before handing off to the collector.
     // Entries run sequentially in array order at this single pipeline point.
-    if (stateEntries && stateEntries.length > 0) {
+    // A user `env.push` override receives the raw event with no pipeline
+    // (see the terminal-push contract above), so state is skipped for it.
+    if (!hasUserTerminalPush && stateEntries && stateEntries.length > 0) {
       events = await Promise.all(
         events.map((event) =>
           applyState(

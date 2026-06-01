@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getRelatedProducts,
@@ -12,6 +12,31 @@ interface ProductListProps {
   title?: string;
   showAllProducts?: boolean;
 }
+
+interface InitialState {
+  products: Product[];
+  offset: number;
+  hasMore: boolean;
+}
+
+const getInitialState = (
+  currentProductId: number,
+  showAllProducts: boolean,
+): InitialState => {
+  if (showAllProducts) {
+    return {
+      products: allProducts.slice(0, 4),
+      offset: 4,
+      hasMore: allProducts.length > 4,
+    };
+  }
+  const initialProducts = getRelatedProducts(currentProductId, 4);
+  return {
+    products: initialProducts,
+    offset: 4,
+    hasMore: initialProducts.length === 4,
+  };
+};
 
 // Simulate async loading with delay
 const loadMoreProducts = async (
@@ -38,26 +63,25 @@ function ProductList({
   title = 'You Might Also Like',
   showAllProducts = false,
 }: ProductListProps) {
-  const [products, setProducts] = useState<Product[]>([]);
+  const initial = getInitialState(currentProductId, showAllProducts);
+  const [products, setProducts] = useState<Product[]>(initial.products);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(initial.hasMore);
+  const [offset, setOffset] = useState(initial.offset);
   const [error, setError] = useState<string | null>(null);
 
-  // Load initial products
-  useEffect(() => {
-    if (showAllProducts) {
-      const initialProducts = allProducts.slice(0, 4);
-      setProducts(initialProducts);
-      setOffset(4);
-      setHasMore(allProducts.length > 4);
-    } else {
-      const initialProducts = getRelatedProducts(currentProductId, 4);
-      setProducts(initialProducts);
-      setOffset(4);
-      setHasMore(initialProducts.length === 4);
-    }
-  }, [currentProductId, showAllProducts]);
+  // Re-derive initial state during render when the source props change,
+  // instead of synchronising via an effect.
+  const [syncKey, setSyncKey] = useState(
+    `${currentProductId}:${showAllProducts}`,
+  );
+  const currentKey = `${currentProductId}:${showAllProducts}`;
+  if (syncKey !== currentKey) {
+    setSyncKey(currentKey);
+    setProducts(initial.products);
+    setOffset(initial.offset);
+    setHasMore(initial.hasMore);
+  }
 
   const handleLoadMore = async () => {
     if (loading) return;

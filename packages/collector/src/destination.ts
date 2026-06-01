@@ -638,9 +638,13 @@ export async function pushToDestinations(
             );
           }
 
-          // state[set]: stash from the event after a successful send.
+          // state[set]: stash from the event after a successful send. A
+          // batched-enqueue is not a real send (the sentinel is returned
+          // before delivery), so set is deferred until flush. The flush-path
+          // write is a documented follow-up, not handled here yet.
           if (
             !pushFailed &&
+            !isBatchedResult(result) &&
             dStateSet &&
             dStateSet.length > 0 &&
             processedEvent

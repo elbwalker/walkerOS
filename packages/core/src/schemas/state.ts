@@ -54,6 +54,17 @@ export const StateSchema = z
         'key' in value &&
         typeof value.key === 'string'
       ) {
+        const extraKeys = ['value', 'fn', 'map', 'loop', 'set'].filter(
+          (k) => k in value,
+        );
+        if (extraKeys.length > 0) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'For mode "get", `value` may only provide a `key` path.',
+            path: ['value'],
+          });
+          return;
+        }
         path = value.key;
       }
 

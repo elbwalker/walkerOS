@@ -57,9 +57,9 @@ An explicitly named store that is not declared in `flow.stores` is a validation 
 
 `state` normalizes to an array and entries run sequentially. Where the operations slot into the pipeline depends on the step type:
 
-- **Source:** `before` chain → state → `collector.push`. All entries run before the collector receives the event, in array order.
-- **Transformer:** `before` chain → `get` → step mapping → `set` → `next` dispatch. `get` entries enrich the event before the mapping runs; `set` entries run after it settles.
-- **Destination:** `get` → mapping-to-payload push → `set` (after a successful send). A failed push skips the `set`.
+- **Source:** `before` chain → state → `collector.push`. All entries run before the collector receives the event, in array order. State is skipped when the source uses a user `env.push` override, which receives the raw event with no pipeline.
+- **Transformer:** `before` chain → `get` → step mapping → `set` → `next` dispatch. `get` entries enrich the event before the mapping runs; `set` entries run after it settles, on every emitting path (straight-through, `next` routing, and per fork of a fan-out).
+- **Destination:** `get` → mapping-to-payload push → `set` (after a successful send). A failed push skips the `set`. For a batched destination, an event that is enqueued (not yet delivered) does not trigger `set`; the batched `set`-on-flush path is not yet wired.
 
 State is **fail-open**: if a store call or value resolution throws, the error is logged and the event passes through unchanged. The chain always continues.
 

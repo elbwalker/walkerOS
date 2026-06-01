@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { WalkerOS } from '@walkeros/core';
 import type { Config, CriteoEmailHashes, Settings } from '../types';
 import { clone, createMockContext, getEvent } from '@walkeros/core';
@@ -63,7 +64,9 @@ describe('Criteo email hashing', () => {
 
   test('sha256_md5 is the SHA-256 of the md5 hex, distinct from sha256', async () => {
     const result = await pushEmail('user@example.com');
-    expect(result.sha256_md5).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.sha256_md5).toBe(
+      createHash('sha256').update(result.md5!).digest('hex'),
+    );
     expect(result.sha256_md5).not.toBe(result.sha256);
   });
 

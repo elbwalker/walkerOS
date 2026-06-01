@@ -130,10 +130,25 @@ describe('scanFlowRefs', () => {
   });
 
   it('scans multiple distinct $flow. references in one string', () => {
-    const refs = scanFlowRefs('$flow.a and $flow.b plus $flow.a-2');
+    const refs = scanFlowRefs('$flow.a and $flow.b plus $flow.c');
     expect(refs.has('a')).toBe(true);
     expect(refs.has('b')).toBe(true);
-    expect(refs.has('a-2')).toBe(true);
+    expect(refs.has('c')).toBe(true);
+  });
+
+  it('matches the resolver name grammar (hyphen is a boundary)', () => {
+    // hyphen ends the name: $flow.a-2 captures `a`, not `a-2`
+    const hyphen = scanFlowRefs('$flow.a-2');
+    expect(hyphen.has('a')).toBe(true);
+    expect(hyphen.has('a-2')).toBe(false);
+
+    // leading digit is not a valid name: no capture
+    const leadingDigit = scanFlowRefs('$flow.1abc');
+    expect(leadingDigit.size).toBe(0);
+
+    // underscores and trailing digits are valid name chars
+    const valid = scanFlowRefs('$flow.valid_name');
+    expect(valid.has('valid_name')).toBe(true);
   });
 
   it('scans $flow. refs nested inside $code: snippets', () => {

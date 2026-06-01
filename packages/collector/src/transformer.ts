@@ -241,11 +241,11 @@ export async function initTransformers(
     const configWithCache = cache ? { ...configWithEnv, cache } : configWithEnv;
 
     // Merge definition-level state into config for runtime access. A
-    // config-level `state` (if present) takes precedence.
-    const { state } = transformerDef;
+    // config-level `state` (if present) takes precedence over def-level.
+    const resolvedState = transformerDef.config?.state ?? transformerDef.state;
     const configWithState =
-      state !== undefined && configWithCache.state === undefined
-        ? { ...configWithCache, state }
+      resolvedState !== undefined && configWithCache.state === undefined
+        ? { ...configWithCache, state: resolvedState }
         : configWithCache;
 
     // Build transformer context for init
@@ -352,6 +352,14 @@ export async function initTransformers(
       instance.config = {
         ...(instance.config ?? {}),
         next: transformerDef.next,
+      };
+    }
+    // Propagate the precedence-resolved state (config-level wins over
+    // def-level) onto instance.config when a custom factory dropped it.
+    if (resolvedState !== undefined && instance.config?.state === undefined) {
+      instance.config = {
+        ...(instance.config ?? {}),
+        state: resolvedState,
       };
     }
 
@@ -664,6 +672,23 @@ export async function runTransformerChain(
     const stateGet = stateEntries?.filter((entry) => entry.mode === 'get');
     const stateSet = stateEntries?.filter((entry) => entry.mode === 'set');
 
+    // Apply `state[set]` to a settled event right before it is routed. Called
+    // once per emitted event on every emitting path (straight-through,
+    // runtime `{ next }` single/many, conditional `config.next`, and per fork
+    // of a `Result[]` fan-out). Not called on halted paths (push returned
+    // `false`, a `cache.stop` HIT, a stopped before-chain, init failure).
+    const applyStateSet = async (
+      evt: WalkerOS.DeepPartialEvent,
+    ): Promise<WalkerOS.DeepPartialEvent> => {
+      if (!stateSet || stateSet.length === 0) return evt;
+      return applyState(
+        stateSet,
+        (id) => getStateStore(id, collector),
+        evt,
+        collector,
+      );
+    };
+
     // Check transformer cache (step-level: skip push, continue chain)
     let cacheMiss: { key: string; ttl: number } | undefined;
     if (compiledTCache && tCacheStore) {
@@ -822,7 +847,9 @@ export async function runTransformerChain(
 
       const forkResults = await Promise.all(
         result.map(async (forkResult) => {
-          const forkEvent = forkResult.event || processedEvent;
+          const forkEvent = await applyStateSet(
+            forkResult.event || processedEvent,
+          );
           // Clone ingest per fork to prevent cross-fork contamination
           const forkIngest = cloneIngest(ingest, 'unknown');
 
@@ -973,13 +1000,16 @@ export async function runTransformerChain(
       //                    error isolation arrives in Task 4.1; respond
       //                    suppression in 4.2.
       if (next !== undefined) {
+        // Apply `state[set]` to the settled event before this step's `next`
+        // dispatch, once for every branch that emits it.
+        const settledEvent = await applyStateSet(resultEvent || processedEvent);
         const nextIds = getNextSteps(
           next,
-          buildCacheContext(ingest, processedEvent),
+          buildCacheContext(ingest, settledEvent),
         );
         if (nextIds.length === 0) {
           // No route matched → passthrough (continue chain)
-          if (resultEvent) processedEvent = resultEvent;
+          processedEvent = settledEvent;
           continue;
         }
         if (nextIds.length === 1) {
@@ -992,7 +1022,7 @@ export async function runTransformerChain(
               collector,
               transformers,
               branchedChain,
-              resultEvent || processedEvent,
+              settledEvent,
               ingest,
               currentRespond,
               chainContext,
@@ -1032,7 +1062,7 @@ export async function runTransformerChain(
               collector,
               transformers,
               walkChain(id, extractTransformerNextMap(transformers)),
-              resultEvent || processedEvent,
+              settledEvent,
               cloneIngest(ingest, id),
               undefined,
               chainContext,
