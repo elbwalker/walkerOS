@@ -1,4 +1,4 @@
-import type { DestinationWeb } from '@walkeros/web-core';
+import type { Env, VendorSdk } from '../templates/simple/types';
 
 /**
  * Mock environment for testing destinations.
@@ -7,12 +7,15 @@ import type { DestinationWeb } from '@walkeros/web-core';
  * Test-only file - requires Jest.
  *
  * Create this file BEFORE implementation (Phase 2).
+ *
+ * Because the SDK is declared OPTIONAL (`vendorSdk?`), the mock env satisfies
+ * `Env` directly - no `as unknown as Window` cast needed. The jest mock is
+ * assigned through a typed binding so it stays assignable to `VendorSdk`.
  */
-export const env: { push: DestinationWeb.Env } = {
+const vendorSdk: VendorSdk = jest.fn(); // Captures all calls for verification
+
+export const env: { push: Env } = {
   push: {
-    window: {
-      vendorSdk: jest.fn(), // Captures all calls for verification
-    } as unknown as Window,
-    document: {} as Document,
+    window: { vendorSdk },
   },
 };

@@ -1,7 +1,5 @@
-import type { Config, Destination, Settings } from './types';
-import type { DestinationWeb } from '@walkeros/web-core';
+import type { Destination, Env, Settings, VendorSdk } from './types';
 import { isObject } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
 
 export * as DestinationVendor from './types';
 
@@ -11,7 +9,8 @@ export * as DestinationVendor from './types';
  * Key patterns:
  * 1. Init receives context - destructure config, env, logger, id
  * 2. Push receives context - includes data, rule (renamed from mapping), ingest
- * 3. Use getEnv(env) - never access window/document directly
+ * 3. Resolve the SDK cast-free - prefer the injected env (tests, simulation),
+ *    fall back to the typed `window` global declared in types.ts
  * 4. Return config from init - allows updating config during initialization
  */
 export const destinationVendor: Destination = {
@@ -30,19 +29,10 @@ export const destinationVendor: Destination = {
    *   - data: Pre-computed data from mapping
    */
   init(context) {
-    const { config, env, logger } = context;
-    const { window } = getEnv(env);
+    const { config } = context;
     const settings = config.settings || {};
 
-    if (config.loadScript) addScript(settings, env);
-
-    // Initialize vendor SDK queue
-    (window as Window).vendorSdk =
-      (window as Window).vendorSdk ||
-      function () {
-        ((window as Window).vendorSdk.q =
-          (window as Window).vendorSdk.q || []).push(arguments);
-      };
+    if (config.loadScript) addScript(settings);
 
     return config;
   },
@@ -61,17 +51,30 @@ export const destinationVendor: Destination = {
    *   - ingest: Optional request metadata from source
    */
   push(event, context) {
-    const { config, data, env, rule } = context;
+    const { data, env } = context;
     const params = isObject(data) ? data : {};
-    const { window } = getEnv(env);
 
-    // Call vendor API - must match outputs.ts examples
-    (window as Window).vendorSdk('track', event.name, params);
+    const vendorSdk = resolveSdk(env);
+    if (!vendorSdk) return;
+
+    // Call vendor API - must match the step examples
+    vendorSdk('track', event.name, params);
   },
 };
 
-function addScript(settings: Settings, env?: DestinationWeb.Env) {
-  const { document } = getEnv(env);
+/**
+ * Resolve the vendor SDK without casts: prefer the injected env (tests,
+ * simulation), fall back to the browser global declared on `Window`.
+ */
+function resolveSdk(env: Env): VendorSdk | undefined {
+  return (
+    env.window?.vendorSdk ??
+    (typeof window !== 'undefined' ? window.vendorSdk : undefined)
+  );
+}
+
+function addScript(settings: Settings) {
+  if (typeof document === 'undefined') return;
   const script = document.createElement('script');
   script.src = `https://vendor.com/sdk.js?key=${settings.apiKey}`;
   document.head.appendChild(script);

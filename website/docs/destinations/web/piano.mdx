@@ -1,0 +1,91 @@
+---
+title: Piano Analytics
+description: Send events to Piano Analytics
+path: /docs/destinations/web/piano
+sidebar_position: 5
+package: '@walkeros/web-destination-piano'
+---
+
+import data from '@walkeros/web-destination-piano/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Piano Analytics
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/piano"
+  npm="@walkeros/web-destination-piano"
+/>
+
+[Piano Analytics](https://piano.io/product/analytics/) is an enterprise
+analytics and audience platform. The destination loads the official Piano
+`pa` SDK, configures it with your site id and collection domain, and forwards
+events via `pa.sendEvent`.
+
+<WhereThisFits
+  pre={<>Piano is a <strong>web destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Piano', highlight: true } },
+  }}
+/>
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-piano`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationPiano } from '@walkeros/web-destination-piano';
+
+await startFlow({
+  destinations: {
+    piano: {
+      code: destinationPiano,
+      config: {
+        loadScript: true,
+        settings: {
+          site: 123456789,
+          collectDomain: 'https://example.pa-cd.com',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "piano": {
+    "package": "@walkeros/web-destination-piano",
+    "config": {
+      "loadScript": true,
+      "settings": {
+        "site": 123456789,
+        "collectDomain": "https://example.pa-cd.com"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="destination" data={data} />

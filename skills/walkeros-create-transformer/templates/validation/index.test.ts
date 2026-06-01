@@ -34,8 +34,10 @@ describe('Redact Transformer', () => {
     const pushContext = createPushContext();
     const result = transformer.push(event, pushContext);
 
-    expect(result).toMatchObject(examples.events.processedEvent);
-    expect((result as any).data.email).toBeUndefined();
+    // Narrow the Result union cast-free: a single Result carries `.event`.
+    if (!result || Array.isArray(result)) throw new Error('expected an event');
+    expect(result.event).toMatchObject(examples.events.processedEvent);
+    expect(result.event?.data?.email).toBeUndefined();
   });
 
   test('passes through event when no fields match', () => {
@@ -49,7 +51,8 @@ describe('Redact Transformer', () => {
     const pushContext = createPushContext();
     const result = transformer.push(event, pushContext);
 
-    expect((result as any).data.email).toBe('user@example.com');
+    if (!result || Array.isArray(result)) throw new Error('expected an event');
+    expect(result.event?.data?.email).toBe('user@example.com');
   });
 
   test('logs redactions when enabled', () => {
