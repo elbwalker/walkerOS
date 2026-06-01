@@ -650,6 +650,12 @@ already-loaded vs event-listener), mapping MUST work identically in each.
 Many CMPs fire multiple signals for the same consent action. If you don't guard
 against this, `handleConsent` fires twice per user action. Three known patterns:
 
+The collector's exactly-once delivery does not solve this for you: it guarantees
+each subscriber sees a given state version once, but two upstream CMP signals (a
+callback plus a DOM event) are two distinct consent commands, so both are
+delivered legitimately. Coalescing duplicate upstream signals is the source's
+job, as below.
+
 **Pattern A: Callback + event (CookiePro)** CMP fires both a callback
 (`OptanonWrapper`) and a DOM event (`OneTrustGroupsUpdated`) on the same action.
 Use the callback for init only and self-unwrap after first call:

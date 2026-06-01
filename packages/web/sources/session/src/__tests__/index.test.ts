@@ -43,11 +43,13 @@ describe('Session Source', () => {
     expect(typeof source.push).toBe('function');
   });
 
-  test('returns source instance with on function', async () => {
+  test('does not expose an on handler (collector owns exactly-once)', async () => {
     const source = await createSessionSource(collector);
 
-    expect(source.on).toBeDefined();
-    expect(typeof source.on).toBe('function');
+    // The consent rule is registered once at init via command('on', ...).
+    // The collector guarantees exactly-once delivery, so the source no longer
+    // reacts to consent events through its own `on` handler.
+    expect(source.on).toBeUndefined();
   });
 
   describe('Session Start', () => {
@@ -79,31 +81,19 @@ describe('Session Source', () => {
   });
 
   describe('Consent Handling', () => {
-    test('re-initializes session on consent event', async () => {
-      const source = await createSessionSource(collector);
+    test('registers a single consent rule once at init', async () => {
+      await createSessionSource(collector, {
+        settings: { consent: 'marketing' },
+      });
 
-      // Clear previous calls
-      mockCommand.mockClear();
-
-      // Trigger consent event
-      await source.on?.('consent');
-
-      // Session should be re-initialized
-      expect(mockCommand).toHaveBeenCalled();
-    });
-
-    test('does not re-initialize on other events', async () => {
-      const source = await createSessionSource(collector);
-
-      // Clear previous calls
-      mockCommand.mockClear();
-
-      // Trigger other events
-      await source.on?.('ready');
-      await source.on?.('run');
-
-      // Session should NOT be re-initialized for these events
-      expect(mockCommand).not.toHaveBeenCalled();
+      // Exactly one consent registration; no re-registration on consent events
+      // (the source no longer re-runs sessionStart per consent change).
+      const consentRegistrations = mockCommand.mock.calls.filter(
+        ([cmd, init]) =>
+          cmd === 'on' &&
+          (init as { type?: string } | undefined)?.type === 'consent',
+      );
+      expect(consentRegistrations).toHaveLength(1);
     });
   });
 });

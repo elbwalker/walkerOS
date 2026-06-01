@@ -154,6 +154,14 @@ export async function withFlowContext<T>(
     // Import ESM bundle with cache bust. Node runtime import() accepts
     // file:// URLs; for paths embedded into source for esbuild bundling
     // use core/import-specifier.ts instead (esbuild rejects file://).
+    //
+    // A node skeleton keeps `@walkeros/*` step packages as EXTERNAL bare
+    // imports. Node resolves those bare specifiers by walking `node_modules`
+    // up from the IMPORTING FILE's directory (`esmPath`), not from cwd, and
+    // the `?t=` cache-buster does not affect resolution. So externals load
+    // from a `node_modules/` co-located next to `esmPath`. Callers that point
+    // `esmPath` at a prebuilt skeleton MUST place the traced sibling
+    // `node_modules/` in the same directory.
     const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
     const module = await import(`${fileUrl}?t=${Date.now()}`);
     const { wireConfig, startFlow } = module;

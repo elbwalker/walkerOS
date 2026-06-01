@@ -52,6 +52,8 @@ export async function collector(
     on: {},
     queue: [],
     round: 0,
+    stateVersion: 0,
+    delivery: new WeakMap(),
     session: undefined,
     status: {
       startedAt: Date.now(),

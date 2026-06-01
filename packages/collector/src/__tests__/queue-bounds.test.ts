@@ -46,6 +46,8 @@ describe('queue bounds', () => {
       consent: args.consent || {},
       queue: [],
       round: 0,
+      stateVersion: 0,
+      delivery: new WeakMap(),
       session: undefined,
       timing: Date.now(),
       sources: {},

@@ -36,6 +36,8 @@ function createMockCollector(): Collector.Instance {
     on: {},
     queue: [],
     round: 0,
+    stateVersion: 0,
+    delivery: new WeakMap(),
     session: undefined,
     status: {
       startedAt: 0,

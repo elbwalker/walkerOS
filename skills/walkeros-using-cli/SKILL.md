@@ -247,8 +247,12 @@ Output:
 - Web: `dist/walker.js` (single self-contained IIFE)
 - Server: `dist/{flow.mjs, package.json, node_modules/}` (always a directory;
   nft-traced)
+- Server archive: `flow.tar.gz` / `flow.tgz` (the server bundle directory packed
+  into a single gzip file)
 
-Use `-o ./dist/walker.js` for web or `-o ./dist/` for server.
+Use `-o ./dist/walker.js` for web, `-o ./dist/` for a server directory, or
+`-o ./flow.tar.gz` for a server archive. Web single-file bundles do not support
+archive output.
 
 ### Push Command
 
@@ -287,11 +291,25 @@ Exit codes:
 
 ```bash
 # HTTP event collection server
-walkeros run <config|bundle> [options]
+walkeros run <config|bundle|archive> [options]
 
 Options:
   -p, --port <number>   Port (default: 8080)
   -h, --host <string>   Host (default: 0.0.0.0)
+```
+
+`run` accepts a flow config, a pre-built bundle, or a `.tar.gz`/`.tgz` flow
+archive (URL or local file). For an archive, the CLI fetches or reads the gzip,
+extracts the bundle and its sibling `node_modules/`, and runs the entry. This
+lets server flows whose step packages are external resolve those packages at
+runtime from the extracted `node_modules/`.
+
+```bash
+# Run a packed server bundle from a local archive
+walkeros run flow.tar.gz --port 8080
+
+# Run a packed server bundle from a URL
+walkeros run https://example.com/flow.tar.gz
 ```
 
 ---

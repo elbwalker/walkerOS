@@ -601,6 +601,14 @@ export async function bundleCore(
       codeKeyInputs,
     );
 
+    // The skeleton is the build-once, introspectable currency every downstream
+    // consumer shares: it exports wireConfig/startFlow/__configData (+__devExports)
+    // so simulate and preview can introspect and re-wire it, while web/server
+    // deploy wrap or run it. One artifact, many targets, so do NOT collapse it into
+    // a finished bundle here. For node, step packages stay EXTERNAL on purpose so
+    // nft materializes them into a sibling node_modules/ the host resolves on disk
+    // (the only way native addons like sqlite .node files can ship); inlining here
+    // would break server simulate and native destinations.
     if (buildOptions.skipWrapper || !hasFlow) {
       // Simulation path or no-flow path: concatenate code + data (no wrapper, no stage 2 esbuild)
       const dataDeclaration = `const __configData = ${dataPayload};\nexport { __configData };`;
@@ -695,6 +703,9 @@ export async function bundleCore(
     if (buildOptions.platform === 'node') {
       // Server path: trace the just-emitted bundle, copy used files into
       // `outDir/node_modules/`, write an informational sidecar package.json.
+      // This emits the sibling node_modules/ that every server host (deploy
+      // container, simulate-server) resolves the external @walkeros/* from.
+      // Load-bearing, do not remove.
       await runNftServerPath(
         outputPath,
         flowSettings,
@@ -851,8 +862,10 @@ function createEsbuildOptions(
     // emitted bundle and copies the actual code from `tempDir/node_modules/`
     // into the sibling `dist/node_modules/`. Without this, esbuild would
     // inline every step package's source into flow.mjs and we would ship
-    // both the inline copy and the nft-traced copy. Decision #9 in the
-    // bundler-nft-redesign plan.
+    // both the inline copy and the nft-traced copy. Keeping step packages
+    // external (not inlined) is what lets the host resolve them from the
+    // nft-traced sibling node_modules/, which is what makes server simulate
+    // and native-addon destinations work; inlining would regress both.
     const nodeExternals = getNodeExternals();
     const externalsParts = [nodeExternals, stepPackageExternals];
     if (buildOptions.external) externalsParts.push(buildOptions.external);

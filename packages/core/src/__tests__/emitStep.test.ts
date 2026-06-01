@@ -19,6 +19,8 @@ function makeCollector(observers: Set<ObserverFn>): Collector.Instance {
     on: {},
     queue: [],
     round: 0,
+    stateVersion: 0,
+    delivery: new WeakMap<object, number>(),
     session: undefined,
     status: {
       startedAt: 0,

@@ -1,4 +1,4 @@
-import type { Source, On, Collector } from '@walkeros/core';
+import type { Source, Collector } from '@walkeros/core';
 import type { Types, Settings } from './types';
 import { sessionStart } from './lib';
 
@@ -38,7 +38,10 @@ export const sourceSession: Source.Init<Types> = async (context) => {
     command,
   };
 
-  // Initialize session using local lib
+  // Initialize session using local lib. When `settings.consent` is set this
+  // registers a single consent rule with the collector; the collector then
+  // guarantees exactly-once delivery per state change, so the source does not
+  // need to react to consent events itself.
   sessionStart({
     ...settings,
     window: env.window,
@@ -46,24 +49,10 @@ export const sourceSession: Source.Init<Types> = async (context) => {
     collector: collectorInterface as Collector.Instance,
   });
 
-  // Handle events pushed from collector (consent, session, ready, run)
-  const handleEvent = async (event: On.Types) => {
-    if (event === 'consent') {
-      // Re-initialize session on consent changes
-      sessionStart({
-        ...settings,
-        window: env.window,
-        document: env.document,
-        collector: collectorInterface as Collector.Instance,
-      });
-    }
-  };
-
   return {
     type: 'session',
     config: fullConfig,
     push: elb,
-    on: handleEvent,
   };
 };
 

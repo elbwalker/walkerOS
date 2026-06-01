@@ -237,6 +237,17 @@ export interface CommandFn {
   (command: string, data?: unknown): Promise<ElbTypes.PushResult>;
 }
 
+/**
+ * Per-cascade tracking for the bounded recursion guard (see `Instance.cascade`).
+ * `counts` maps a subscriber identity object to per-cell-type delivery counts
+ * within one top-level command's cascade. A pair is stopped once its count
+ * exceeds the guard's bound; the non-convergence error logs once per pair on the
+ * crossing transition.
+ */
+export interface Cascade {
+  counts: WeakMap<object, Record<string, number>>;
+}
+
 // Main Collector interface
 export interface Instance {
   push: PushFn;
@@ -264,6 +275,36 @@ export interface Instance {
   on: On.OnConfig;
   queue: WalkerOS.Events;
   round: number;
+  /**
+   * Monotonic counter bumped on every accepted reactive-state mutation
+   * (consent, user, globals, custom). Used for per-subscriber high-water-mark
+   * dedup. Not bumped for non-reactive config changes.
+   */
+  stateVersion: number;
+  /**
+   * Per-subscriber high-water mark registry for exactly-once state delivery.
+   * Keys are subscriber identity objects (a ConsentRule object, a generic-fn,
+   * or a source instance). The stored value is the `stateVersion` at which the
+   * subscriber was last invoked for a state delivery. A missing key means the
+   * subscriber has never been delivered (sentinel "-infinity", read as -1).
+   * A subscriber is invoked iff `stateVersion > mark` AND `allowed === true`.
+   */
+  delivery: WeakMap<object, number>;
+  /**
+   * Transient per-cascade tracking for the bounded recursion guard. A
+   * top-level state command creates this when it first enters the delivery
+   * cascade and tears it down when it returns; nested commands emitted by
+   * reacting callbacks reuse the same structure. It counts deliveries per
+   * `(subscriber, cell-type)` so a cyclic cascade terminates (and logs once)
+   * instead of recursing until stack overflow. `undefined` between top-level
+   * commands. See `on.ts` `cascadeAllow`.
+   *
+   * This tracker, together with `stateVersion` and `delivery`, assumes top-level
+   * state commands are processed serially on a given collector. Concurrent,
+   * overlapping state commands on one shared collector are not supported (web is
+   * serial; the server per-request path is event push, not state commands).
+   */
+  cascade?: Cascade;
   session: undefined | SessionData;
   status: Status;
   timing: number;

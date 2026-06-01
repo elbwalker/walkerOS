@@ -15,7 +15,7 @@ import {
 import { assign, getSpanId, isFunction, isString } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { processConsent } from './consent';
-import { on, onApply } from './on';
+import { on, onApply, redeliverStateAtRun, enterCascade } from './on';
 import { destroyAllSteps } from './shutdown';
 import type { RunState } from './types/collector';
 
@@ -36,116 +36,137 @@ export async function commonHandleCommand(
   let onData: unknown;
   let shouldNotify = false;
 
-  switch (action) {
-    case Const.Commands.Config:
-      if (isObject(data)) {
-        assign(collector.config, data as Partial<Collector.Config>, {
-          shallow: false,
-        });
-        onData = data;
-        shouldNotify = true;
-      }
-      break;
-
-    case Const.Commands.Consent:
-      if (isObject(data)) {
-        const { update } = processConsent(collector, data as WalkerOS.Consent);
-        onData = update;
-        shouldNotify = true;
-      }
-      break;
-
-    case Const.Commands.Custom:
-      if (isObject(data)) {
-        collector.custom = assign(
-          collector.custom,
-          data as WalkerOS.Properties,
-        );
-        onData = data;
-        shouldNotify = true;
-      }
-      break;
-
-    case Const.Commands.Destination:
-      if (
-        isObject(data) &&
-        'code' in data &&
-        isObject((data as Destination.Init).code)
-      ) {
-        result = await addDestination(collector, data as Destination.Init);
-      }
-      break;
-
-    case Const.Commands.Globals:
-      if (isObject(data)) {
-        collector.globals = assign(
-          collector.globals,
-          data as WalkerOS.Properties,
-        );
-        onData = data;
-        shouldNotify = true;
-      }
-      break;
-
-    case Const.Commands.Hook:
-      if (
-        isObject(data) &&
-        isString((data as { name?: unknown }).name) &&
-        isFunction((data as { fn?: unknown }).fn)
-      ) {
-        const { name, fn } = data as {
-          name: string;
-          fn: WalkerOS.AnyFunction;
-        };
-        collector.hooks[name as keyof Hooks.Functions] = fn;
-        onData = data;
-        shouldNotify = true;
-      }
-      break;
-
-    case Const.Commands.On:
-      if (isObject(data) && isString((data as { type?: unknown }).type)) {
-        const { type, rules } = data as {
-          type: On.Types;
-          rules: WalkerOS.SingleOrArray<On.Subscription>;
-        };
-        await on(collector, type, rules);
-      }
-      break;
-
-    case Const.Commands.Ready:
-      shouldNotify = true;
-      break;
-
-    case Const.Commands.Run:
-      result = await runCollector(collector, data as RunState);
-      shouldNotify = true;
-      break;
-
-    case Const.Commands.Session:
-      shouldNotify = true;
-      break;
-
-    case Const.Commands.Shutdown:
-      await destroyAllSteps(collector);
-      break;
-
-    case Const.Commands.User:
-      if (isObject(data)) {
-        assign(collector.user, data as WalkerOS.User, { shallow: false });
-        onData = data;
-        shouldNotify = true;
-      }
-      break;
+  // Open the bounded-recursion cascade tracker for the OUTERMOST top-level
+  // command. Nested commands emitted by reacting state callbacks find it
+  // already open and reuse it; teardown is a no-op for them, so the
+  // per-(subscriber, cell-type) counters are scoped to this top-level command
+  // and reset when it returns.
+  const exitCascade = enterCascade(collector);
+  try {
+    return await runHandleCommand();
+  } finally {
+    exitCascade();
   }
 
-  // Single notification + flush point for all state-mutation commands
-  if (shouldNotify) {
-    await onApply(collector, action as On.Types, undefined, onData);
-    result = await pushToDestinations(collector);
-  }
+  async function runHandleCommand(): Promise<Elb.PushResult> {
+    switch (action) {
+      case Const.Commands.Config:
+        if (isObject(data)) {
+          assign(collector.config, data as Partial<Collector.Config>, {
+            shallow: false,
+          });
+          onData = data;
+          shouldNotify = true;
+        }
+        break;
 
-  return result || createPushResult({ ok: true });
+      case Const.Commands.Consent:
+        if (isObject(data)) {
+          const { update } = processConsent(
+            collector,
+            data as WalkerOS.Consent,
+          );
+          collector.stateVersion++;
+          onData = update;
+          shouldNotify = true;
+        }
+        break;
+
+      case Const.Commands.Custom:
+        if (isObject(data)) {
+          collector.custom = assign(
+            collector.custom,
+            data as WalkerOS.Properties,
+          );
+          collector.stateVersion++;
+          onData = data;
+          shouldNotify = true;
+        }
+        break;
+
+      case Const.Commands.Destination:
+        if (
+          isObject(data) &&
+          'code' in data &&
+          isObject((data as Destination.Init).code)
+        ) {
+          result = await addDestination(collector, data as Destination.Init);
+        }
+        break;
+
+      case Const.Commands.Globals:
+        if (isObject(data)) {
+          collector.globals = assign(
+            collector.globals,
+            data as WalkerOS.Properties,
+          );
+          collector.stateVersion++;
+          onData = data;
+          shouldNotify = true;
+        }
+        break;
+
+      case Const.Commands.Hook:
+        if (
+          isObject(data) &&
+          isString((data as { name?: unknown }).name) &&
+          isFunction((data as { fn?: unknown }).fn)
+        ) {
+          const { name, fn } = data as {
+            name: string;
+            fn: WalkerOS.AnyFunction;
+          };
+          collector.hooks[name as keyof Hooks.Functions] = fn;
+          onData = data;
+          shouldNotify = true;
+        }
+        break;
+
+      case Const.Commands.On:
+        if (isObject(data) && isString((data as { type?: unknown }).type)) {
+          const { type, rules } = data as {
+            type: On.Types;
+            rules: WalkerOS.SingleOrArray<On.Subscription>;
+          };
+          await on(collector, type, rules);
+        }
+        break;
+
+      case Const.Commands.Ready:
+        shouldNotify = true;
+        break;
+
+      case Const.Commands.Run:
+        result = await runCollector(collector, data as RunState);
+        shouldNotify = true;
+        break;
+
+      case Const.Commands.Session:
+        shouldNotify = true;
+        break;
+
+      case Const.Commands.Shutdown:
+        await destroyAllSteps(collector);
+        break;
+
+      case Const.Commands.User:
+        if (isObject(data)) {
+          assign(collector.user, data as WalkerOS.User, { shallow: false });
+          collector.stateVersion++;
+          onData = data;
+          shouldNotify = true;
+        }
+        break;
+    }
+
+    // Single notification + flush point for all state-mutation commands
+    if (shouldNotify) {
+      await onApply(collector, action as On.Types, undefined, onData);
+      result = await pushToDestinations(collector);
+    }
+
+    return result || createPushResult({ ok: true });
+  }
 }
 
 /**
@@ -223,11 +244,13 @@ export async function runCollector(
     // Update consent if provided
     if (state.consent) {
       collector.consent = assign(collector.consent, state.consent);
+      collector.stateVersion++;
     }
 
     // Update user if provided
     if (state.user) {
       collector.user = assign(collector.user, state.user);
+      collector.stateVersion++;
     }
 
     // Update globals if provided
@@ -236,11 +259,13 @@ export async function runCollector(
         collector.config.globalsStatic || {},
         state.globals,
       );
+      collector.stateVersion++;
     }
 
     // Update custom if provided
     if (state.custom) {
       collector.custom = assign(collector.custom, state.custom);
+      collector.stateVersion++;
     }
   }
 
@@ -254,6 +279,16 @@ export async function runCollector(
 
   // Increase round counter
   collector.round++;
+
+  // Run barrier: the collector just became `allowed`. Re-deliver each non-empty
+  // recorded state cell to subscribers owed a pre-run deferral (mark <
+  // stateVersion) exactly once, so their reactions (e.g. a session source's
+  // `session start` push) emit into the now-open, consent-gated pipeline. The
+  // per-subscriber high-water mark guarantees exactly-once; this is the narrow
+  // path (no require-decrement / queueOn flush). The subsequent `onApply(…,
+  // 'run', …)` from commonHandleCommand is a lifecycle broadcast and does not
+  // collide with these state re-deliveries.
+  await redeliverStateAtRun(collector);
 
   // Process any queued events now that the collector is allowed
   const result = await pushToDestinations(collector);
