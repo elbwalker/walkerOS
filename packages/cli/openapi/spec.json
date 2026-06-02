@@ -1522,6 +1522,33 @@
         "properties": {
           "flowSettingsId": {
             "type": "string"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["draft"]
+                  }
+                },
+                "required": ["kind"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["deployment-version"]
+                  },
+                  "deploymentVersionId": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind", "deploymentVersionId"]
+              }
+            ]
           }
         },
         "required": ["flowSettingsId"]

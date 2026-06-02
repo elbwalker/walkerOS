@@ -4414,6 +4414,16 @@ export interface components {
     };
     CreatePreviewRequest: {
       flowSettingsId: string;
+      source?:
+        | {
+            /** @enum {string} */
+            kind: 'draft';
+          }
+        | {
+            /** @enum {string} */
+            kind: 'deployment-version';
+            deploymentVersionId: string;
+          };
     };
     FeedbackRequest: {
       /** @example The MCP flow_bundle tool is great but slow on large configs. */
