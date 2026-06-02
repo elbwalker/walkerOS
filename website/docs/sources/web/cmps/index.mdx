@@ -84,8 +84,9 @@ destination, all at once.
    after all sources have registered.
 4. Sources whose `require` just emptied have their queued lifecycle events
    replayed via `source.on(type, data)`. Destinations whose `require` just
-   emptied initialize and receive all previously queued events, so no data is
-   lost.
+   emptied are registered and become eligible to initialize/send; any previously
+   queued events are preserved and delivered once the collector is allowed to
+   push, so no data is lost.
 
 ### Key points
 

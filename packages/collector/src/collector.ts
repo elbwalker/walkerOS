@@ -53,6 +53,7 @@ export async function collector(
     queue: [],
     round: 0,
     stateVersion: 0,
+    cellVersion: {},
     delivery: new WeakMap(),
     session: undefined,
     status: {

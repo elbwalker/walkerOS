@@ -82,7 +82,8 @@ export async function flushSourceQueueOn(
     // Defer state deliveries while !allowed: leave them owed (drop the queued
     // entry without firing or advancing the mark). The run-barrier re-delivery
     // (a later task) re-broadcasts owed state to behind-mark subscribers.
-    if (isStateDelivery(type) && !shouldDeliver(collector, source)) continue;
+    if (isStateDelivery(type) && !shouldDeliver(collector, source, type))
+      continue;
 
     await tryCatchAsync(source.on, (err: unknown): undefined => {
       if (err instanceof FatalError) throw err;
@@ -95,7 +96,7 @@ export async function flushSourceQueueOn(
       return undefined;
     })(type, data);
 
-    if (isStateDelivery(type)) setMark(collector, source);
+    if (isStateDelivery(type)) setMark(collector, source, type);
   }
 }
 

@@ -79,7 +79,7 @@ describe('reconcile adversarial guards', () => {
     // the source's consent handler was deferred (mark not advanced).
     expect(captured).toEqual([]);
     expect(gated).toEqual([]);
-    expect(onSpy).not.toHaveBeenCalledWith('consent', expect.anything());
+    expect(onSpy).not.toHaveBeenCalledWith('consent');
 
     await collector.command('run');
 

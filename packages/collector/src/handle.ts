@@ -21,6 +21,17 @@ import { destroyAllSteps } from './shutdown';
 import type { RunState } from './types/collector';
 
 /**
+ * Record a reactive-state mutation: bump the global `stateVersion` and stamp the
+ * changed cell's own version. The per-cell stamp lets delivery dedup be per-cell
+ * (a subscriber owed two cells at once receives both), while `stateVersion`
+ * stays the monotonic tick used by the cascade guard.
+ */
+function bumpCell(collector: Collector.Instance, type: string): void {
+  collector.stateVersion++;
+  collector.cellVersion[type] = collector.stateVersion;
+}
+
+/**
  * Handles common commands.
  *
  * @param collector The walkerOS collector instance.
@@ -67,7 +78,7 @@ export async function commonHandleCommand(
             collector,
             data as WalkerOS.Consent,
           );
-          collector.stateVersion++;
+          bumpCell(collector, Const.Commands.Consent);
           onData = update;
           shouldNotify = true;
         }
@@ -79,7 +90,7 @@ export async function commonHandleCommand(
             collector.custom,
             data as WalkerOS.Properties,
           );
-          collector.stateVersion++;
+          bumpCell(collector, Const.Commands.Custom);
           onData = data;
           shouldNotify = true;
         }
@@ -101,7 +112,7 @@ export async function commonHandleCommand(
             collector.globals,
             data as WalkerOS.Properties,
           );
-          collector.stateVersion++;
+          bumpCell(collector, Const.Commands.Globals);
           onData = data;
           shouldNotify = true;
         }
@@ -153,7 +164,7 @@ export async function commonHandleCommand(
       case Const.Commands.User:
         if (isObject(data)) {
           assign(collector.user, data as WalkerOS.User, { shallow: false });
-          collector.stateVersion++;
+          bumpCell(collector, Const.Commands.User);
           onData = data;
           shouldNotify = true;
         }
@@ -245,13 +256,13 @@ export async function runCollector(
     // Update consent if provided
     if (state.consent) {
       collector.consent = assign(collector.consent, state.consent);
-      collector.stateVersion++;
+      bumpCell(collector, Const.Commands.Consent);
     }
 
     // Update user if provided
     if (state.user) {
       collector.user = assign(collector.user, state.user);
-      collector.stateVersion++;
+      bumpCell(collector, Const.Commands.User);
     }
 
     // Update globals if provided
@@ -260,13 +271,13 @@ export async function runCollector(
         collector.config.globalsStatic || {},
         state.globals,
       );
-      collector.stateVersion++;
+      bumpCell(collector, Const.Commands.Globals);
     }
 
     // Update custom if provided
     if (state.custom) {
       collector.custom = assign(collector.custom, state.custom);
-      collector.stateVersion++;
+      bumpCell(collector, Const.Commands.Custom);
     }
   }
 

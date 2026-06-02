@@ -46,8 +46,10 @@ describe('collector-enforced exactly-once state delivery', () => {
     // Grant consent: bumps stateVersion, broadcast delivers exactly once.
     await collector.command('consent', { marketing: true });
     expect(fired).toHaveLength(1);
-    // Mark advanced to the current stateVersion.
-    expect(collector.delivery.get(rule)).toBe(collector.stateVersion);
+    // Per-cell mark advanced to the consent cell's version.
+    expect(collector.delivery.get(rule)?.consent).toBe(
+      collector.cellVersion.consent,
+    );
 
     // A second broadcast at the SAME version (no state bump) must NOT re-fire:
     // stateVersion is no longer > mark.
@@ -66,13 +68,13 @@ describe('collector-enforced exactly-once state delivery', () => {
     // Registration catch-up fires once against current (empty) user state:
     // stateVersion(0) > sentinel(-1) and allowed, so the generic branch runs.
     expect(fired).toHaveLength(1);
-    const markAfterRegister = collector.delivery.get(fn);
-    expect(markAfterRegister).toBe(collector.stateVersion);
+    // At registration the user cell has never bumped (version 0 == stateVersion).
+    expect(collector.delivery.get(fn)?.user).toBe(collector.stateVersion);
 
     // Set user: bumps stateVersion, broadcast delivers exactly once more.
     await collector.command('user', { id: 'u1' });
     expect(fired).toHaveLength(2);
-    expect(collector.delivery.get(fn)).toBe(collector.stateVersion);
+    expect(collector.delivery.get(fn)?.user).toBe(collector.cellVersion.user);
 
     // Same-version re-notify must NOT re-fire the generic subscriber.
     await onApply(collector, 'user', undefined, collector.user);

@@ -91,7 +91,7 @@ export async function createCmpSource(
   mockElb: Elb.Fn,
   config?: Partial<Source.Config<Types>>,
 ): Promise<Source.Instance<Types>> {
-  return await sourceCmpName({
+  const source = await sourceCmpName({
     collector: {} as Collector.Instance,
     config: config || {},
     env: {
@@ -105,4 +105,7 @@ export async function createCmpSource(
     logger: createMockLogger(),
     withScope: async (_r, _resp, body) => body({} as never),
   });
+  // Adapter setup (listeners + static read) runs in init(), not the factory.
+  await source.init?.();
+  return source;
 }

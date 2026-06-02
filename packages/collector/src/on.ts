@@ -137,39 +137,70 @@ export function isRequireSatisfied(
 }
 
 /**
- * Read a subscriber's high-water mark. A subscriber that has never been
- * delivered has no entry; we read that as the sentinel -1 ("-infinity").
- * Since `stateVersion` starts at 0, the sentinel makes registration catch-up
- * fire (`stateVersion(0) > -1`) even when no version bump has occurred yet.
+ * Read a subscriber's high-water mark FOR A CELL. A subscriber that has never
+ * been delivered that cell has no entry; we read that as the sentinel -1
+ * ("-infinity"). Since `stateVersion` starts at 0, the sentinel makes
+ * registration catch-up fire (`stateVersion(0) > -1`) even when no version bump
+ * has occurred yet.
  *
- * Subscriber identity keys are objects: a `ConsentRule` object (marked per
+ * Marks are per `(subscriber, cell-type)`: a subscriber owed two distinct cells
+ * at the same `stateVersion` must receive both, so each cell carries its own
+ * mark. Subscriber identity keys are objects: a `ConsentRule` object (marked per
  * rule-OBJECT, coarser than per-key but sufficient for single-grant
  * exactly-once), a generic-fn, or a source instance.
  */
-function getMark(collector: Collector.Instance, subscriber: object): number {
-  const mark = collector.delivery.get(subscriber);
+function getMark(
+  collector: Collector.Instance,
+  subscriber: object,
+  type: On.Types,
+): number {
+  const marks = collector.delivery.get(subscriber);
+  const mark = marks?.[String(type)];
   return mark === undefined ? -1 : mark;
 }
 
-/** Advance a subscriber's mark to the current stateVersion after an invocation. */
-export function setMark(
-  collector: Collector.Instance,
-  subscriber: object,
-): void {
-  collector.delivery.set(subscriber, collector.stateVersion);
+/**
+ * The version at which a CELL last changed. A single global `stateVersion`
+ * cannot gate per-cell delivery: a later bump to cell B would make an
+ * already-delivered cell A look stale. `cellVersion[type]` advances only when
+ * that cell changes, so each cell's freshness is independent. A cell never
+ * mutated via a command (e.g. `globalsStatic` seeded at construction) reads 0,
+ * the construction baseline, so it still delivers once at the run barrier.
+ */
+function cellVersionOf(collector: Collector.Instance, type: On.Types): number {
+  return collector.cellVersion[String(type)] ?? 0;
 }
 
 /**
- * A subscriber is invoked for a state delivery iff the state has advanced
- * past its mark AND the collector is allowed. While `!allowed`, deliveries
+ * Advance a subscriber's mark for a cell to that cell's current version after
+ * an invocation. Only the delivered cell's mark moves; other cells stay owed.
+ */
+export function setMark(
+  collector: Collector.Instance,
+  subscriber: object,
+  type: On.Types,
+): void {
+  let marks = collector.delivery.get(subscriber);
+  if (!marks) {
+    marks = {};
+    collector.delivery.set(subscriber, marks);
+  }
+  marks[String(type)] = cellVersionOf(collector, type);
+}
+
+/**
+ * A subscriber is invoked for a state delivery iff that CELL has advanced past
+ * its per-cell mark AND the collector is allowed. While `!allowed`, deliveries
  * are deferred (not fired, mark not advanced) so the subscriber stays "owed".
  */
 export function shouldDeliver(
   collector: Collector.Instance,
   subscriber: object,
+  type: On.Types,
 ): boolean {
   return (
-    collector.allowed && collector.stateVersion > getMark(collector, subscriber)
+    collector.allowed &&
+    cellVersionOf(collector, type) > getMark(collector, subscriber, type)
   );
 }
 
@@ -367,7 +398,7 @@ function fireCallbacks(
         // State-delivery generics (user/custom/globals) carry the per-subscriber
         // exactly-once + `allowed` gate. Non-reactive generics (config, arbitrary
         // events) keep their previous unconditional behavior.
-        if (gated && !shouldDeliver(collector, func)) return;
+        if (gated && !shouldDeliver(collector, func, type)) return;
         // Bounded recursion guard: a reacting generic that re-emits state could
         // cascade cyclically. Stop delivering this (func, cell-type) past the
         // bound (logs once); leave state at its last value.
@@ -375,7 +406,7 @@ function fireCallbacks(
         tryCatch(func as On.GenericFn, (err) =>
           logOnCallbackError(collector, 'generic', err, { type }),
         )(contextData, ctx);
-        if (gated) setMark(collector, func);
+        if (gated) setMark(collector, func, type);
       });
       break;
     }
@@ -433,7 +464,8 @@ async function deliverStateToSource(
   // exactly-once + `allowed` gate keyed by the source instance. While !allowed
   // a state delivery is deferred (not invoked, mark not advanced). Lifecycle
   // deliveries (ready/run/session/config) are not gated here.
-  if (isStateDelivery(type) && !shouldDeliver(collector, source)) return false;
+  if (isStateDelivery(type) && !shouldDeliver(collector, source, type))
+    return false;
 
   // Bounded recursion guard: a source `on` handler that re-emits state could
   // cascade cyclically. Stop delivering this (source, cell-type) past the bound
@@ -445,7 +477,7 @@ async function deliverStateToSource(
     logOnCallbackError(collector, 'source', err, { sourceId, type }),
   )(type, contextData);
 
-  if (isStateDelivery(type)) setMark(collector, source);
+  if (isStateDelivery(type)) setMark(collector, source, type);
 
   return result === false;
 }
@@ -604,7 +636,7 @@ function onConsent(
     // Per-subscriber exactly-once gate, keyed by the rule OBJECT (coarser than
     // per-key, but sufficient for single-grant exactly-once). While !allowed
     // the delivery is deferred: don't invoke, don't advance the mark.
-    if (!shouldDeliver(collector, rule)) return;
+    if (!shouldDeliver(collector, rule, Const.Commands.Consent)) return;
 
     // Bounded recursion guard: a consent rule that re-emits state could cascade
     // cyclically. Stop delivering this (rule, consent) past the bound (logs
@@ -621,7 +653,7 @@ function onConsent(
       });
 
     // Advance the mark after an allowed invocation.
-    setMark(collector, rule);
+    setMark(collector, rule, Const.Commands.Consent);
   });
 }
 

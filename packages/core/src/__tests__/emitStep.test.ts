@@ -20,7 +20,8 @@ function makeCollector(observers: Set<ObserverFn>): Collector.Instance {
     queue: [],
     round: 0,
     stateVersion: 0,
-    delivery: new WeakMap<object, number>(),
+    cellVersion: {},
+    delivery: new WeakMap<object, Record<string, number>>(),
     session: undefined,
     status: {
       startedAt: 0,

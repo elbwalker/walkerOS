@@ -282,14 +282,28 @@ export interface Instance {
    */
   stateVersion: number;
   /**
-   * Per-subscriber high-water mark registry for exactly-once state delivery.
-   * Keys are subscriber identity objects (a ConsentRule object, a generic-fn,
-   * or a source instance). The stored value is the `stateVersion` at which the
-   * subscriber was last invoked for a state delivery. A missing key means the
-   * subscriber has never been delivered (sentinel "-infinity", read as -1).
-   * A subscriber is invoked iff `stateVersion > mark` AND `allowed === true`.
+   * Per-cell change version: the `stateVersion` at which each state cell
+   * (`consent`/`user`/`globals`/`custom`) last changed. Lets delivery dedup be
+   * per-cell — a subscriber owed two cells at the same `stateVersion` receives
+   * both, because each cell's freshness is tracked independently rather than
+   * against the single global `stateVersion`. A missing entry reads as 0.
    */
-  delivery: WeakMap<object, number>;
+  cellVersion: Record<string, number>;
+  /**
+   * Per-subscriber, per-cell high-water mark registry for exactly-once state
+   * delivery. Keys are subscriber identity objects (a ConsentRule object, a
+   * generic-fn, or a source instance); the inner record maps each state-cell
+   * type (`consent`/`user`/`globals`/`custom`) to the `stateVersion` at which
+   * that subscriber was last invoked FOR THAT CELL. A missing entry means never
+   * delivered (sentinel "-infinity", read as -1). A subscriber is invoked for a
+   * cell iff `stateVersion > mark[cell]` AND `allowed === true`.
+   *
+   * Per-cell (not a single scalar per subscriber) so a handler owed two
+   * distinct cells at the same `stateVersion` — e.g. consent and user both
+   * bumped before run — receives both at the run barrier instead of the first
+   * delivery advancing one mark and swallowing the second cell's edge.
+   */
+  delivery: WeakMap<object, Record<string, number>>;
   /**
    * Transient per-cascade tracking for the bounded recursion guard. A
    * top-level state command creates this when it first enters the delivery
