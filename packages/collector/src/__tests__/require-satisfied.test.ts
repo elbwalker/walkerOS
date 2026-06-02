@@ -40,11 +40,12 @@ describe('isRequireSatisfied', () => {
     expect(isRequireSatisfied(collector, 'custom')).toBe(true);
   });
 
-  test('session: set satisfies, undefined does not', async () => {
+  test('session: satisfied via seenEvents broadcast, not the vestigial cell', async () => {
     const collector = await freshCollector();
-    collector.session = undefined;
+    // The `collector.session` cell is never written, so it cannot gate; a
+    // broadcast (recorded in seenEvents) is what satisfies require:["session"].
     expect(isRequireSatisfied(collector, 'session')).toBe(false);
-    collector.session = { isStart: true, storage: false };
+    collector.seenEvents.add('session');
     expect(isRequireSatisfied(collector, 'session')).toBe(true);
   });
 

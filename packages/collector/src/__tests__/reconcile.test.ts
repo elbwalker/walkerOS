@@ -141,6 +141,35 @@ describe('reconcilePending (level-based activation)', () => {
     await reconcilePending(collector);
     expect(collector.sources['dep'].config.require?.length || 0).toBe(0);
   });
+
+  test('session require is order-independent via seenEvents (no dead session cell)', async () => {
+    const onMock = jest.fn();
+    const { collector } = await startFlow({
+      run: false,
+      sources: {
+        dep: {
+          code: async (ctx: any) => ({
+            type: 'dep',
+            config: {},
+            push: ctx.env.elb,
+            on: onMock,
+          }),
+          config: { require: ['session'] },
+        },
+      },
+    });
+
+    // Not broadcast yet → parked.
+    await reconcilePending(collector);
+    expect(collector.sources['dep'].config.require).toEqual(['session']);
+
+    // A `command('session')` broadcast records the type in seenEvents even
+    // though `collector.session` is never written. reconcile must activate from
+    // that (the session cell is vestigial; gating on it would park forever).
+    collector.seenEvents.add('session');
+    await reconcilePending(collector);
+    expect(collector.sources['dep'].config.require?.length || 0).toBe(0);
+  });
 });
 
 describe('reconcile triggers (the order-independence bug fix)', () => {

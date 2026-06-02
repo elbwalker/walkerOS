@@ -47,6 +47,19 @@ function logOnCallbackError(
 }
 
 /**
+ * The reactive state cells: the only commands that bump `collector.stateVersion`
+ * and carry the per-subscriber exactly-once + `allowed` gate. Single source of
+ * truth for "which types are state cells" — every list/membership check derives
+ * from here, so adding a cell is a one-line change (no silently-missed site).
+ */
+const STATE_CELLS: readonly On.Types[] = [
+  Const.Commands.Consent,
+  Const.Commands.User,
+  Const.Commands.Globals,
+  Const.Commands.Custom,
+];
+
+/**
  * State-delivery event types: the reactive-state commands that bump
  * `collector.stateVersion` (see handle.ts). These are the only deliveries
  * subject to the per-subscriber high-water-mark + `allowed` gate. Lifecycle
@@ -54,12 +67,7 @@ function logOnCallbackError(
  * (onReady/onRun check `allowed`, onSession checks `session`).
  */
 export function isStateDelivery(type: On.Types): boolean {
-  return (
-    type === Const.Commands.Consent ||
-    type === Const.Commands.User ||
-    type === Const.Commands.Globals ||
-    type === Const.Commands.Custom
-  );
+  return STATE_CELLS.includes(type);
 }
 
 /**
@@ -100,10 +108,15 @@ export function isStatePresent(
  *
  * Cell-backed types defer to `isStatePresent` (presence, not grant — the
  * destination send-gate `getGrantedConsent` remains a separate concern).
- * `session` is satisfied once set; `run`/`ready` map to `allowed`. Any other
- * (arbitrary) type is satisfied once it has been broadcast (recorded in
- * `seenEvents`), which also recovers a broadcast that fired before the
- * requiring step registered.
+ * `run`/`ready` map to `allowed`. Any other type (including `session`) is
+ * satisfied once it has been broadcast (recorded in `seenEvents`), which also
+ * recovers a broadcast that fired before the requiring step registered.
+ *
+ * `session` deliberately uses the `seenEvents` path, not a cell check:
+ * `collector.session` is vestigial (never written), so gating on it would park
+ * a `require:["session"]` step forever. The session source signals via
+ * `command('session', …)`, which records `session` in `seenEvents`, so this
+ * keeps `session` order-independent like every other type.
  */
 export function isRequireSatisfied(
   collector: Collector.Instance,
@@ -115,8 +128,6 @@ export function isRequireSatisfied(
     case Const.Commands.Globals:
     case Const.Commands.Custom:
       return isStatePresent(collector, type);
-    case Const.Commands.Session:
-      return collector.session !== undefined;
     case Const.Commands.Run:
     case Const.Commands.Ready:
       return collector.allowed === true;
@@ -455,14 +466,7 @@ async function deliverStateToSource(
 export async function redeliverStateAtRun(
   collector: Collector.Instance,
 ): Promise<void> {
-  const cells: Array<On.Types> = [
-    Const.Commands.Consent,
-    Const.Commands.User,
-    Const.Commands.Globals,
-    Const.Commands.Custom,
-  ];
-
-  for (const type of cells) {
+  for (const type of STATE_CELLS) {
     if (!isStatePresent(collector, type)) continue;
 
     const contextData = resolveDeliveryData(collector, type);
