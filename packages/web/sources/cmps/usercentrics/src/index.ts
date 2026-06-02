@@ -6,9 +6,6 @@ import { setupV3Adapter } from './lib/v3';
 // Export types for external usage
 export * as SourceUsercentrics from './types';
 
-// Export examples
-export * from './examples';
-
 /**
  * Usercentrics consent management source for walkerOS.
  *

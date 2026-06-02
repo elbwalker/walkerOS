@@ -4,7 +4,6 @@ import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
 import {
-  examples,
   clearUserData,
   enableAnonymousTracking,
   disableAnonymousTracking,
@@ -13,6 +12,7 @@ import {
   MEDIA_SCHEMAS,
   MEDIA_ACTIONS,
 } from '.';
+import { examples } from './dev';
 import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
 
 // Step example `.mapping` is typed as `unknown` (it can be any rule shape).

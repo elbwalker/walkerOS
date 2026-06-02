@@ -9,9 +9,6 @@ import type {
 // Export types for external usage
 export * as SourceCookieFirst from './types';
 
-// Export examples
-export * from './examples';
-
 /**
  * Default category mapping from CookieFirst to walkerOS consent groups.
  *

@@ -5,9 +5,6 @@ import { interceptDataLayer, processExistingEvents } from './interceptor';
 // Export types for external usage
 export * as SourceDataLayer from './types';
 
-// Export examples
-export * from './examples';
-
 /**
  * DataLayer source implementation using environment injection.
  *

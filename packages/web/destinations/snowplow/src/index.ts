@@ -136,9 +136,6 @@ export function disableAnonymousTracking(
   }
 }
 
-// Examples (for testing)
-export * as examples from './examples';
-
 /**
  * Snowplow destination for walkerOS
  *

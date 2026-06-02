@@ -30,7 +30,20 @@ export default [
       'jest/no-disabled-tests': 'warn',
       'jest/no-focused-tests': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "ExportAllDeclaration[source.value=/(^|\\/)(examples|schemas)$/]",
+          message:
+            'Examples and schemas must be exported only from src/dev.ts (the ./dev subpath); a production-entry export leaks them into bundled output.',
+        },
+      ],
     },
+  },
+  {
+    files: ['**/src/dev.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
   },
   {
     // Relaxed rules for test files

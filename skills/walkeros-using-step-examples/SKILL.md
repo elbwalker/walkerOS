@@ -259,6 +259,19 @@ export * as step from './step';
 The file exports **only** `Flow.StepExample` objects. No intermediate variables,
 no `all`, no `config`. Consumers iterate via `Object.entries(examples.step)`.
 
+### Rule: examples live only on the `./dev` subpath
+
+Examples (and schemas) must be exported **only** from `src/dev.ts` (the `./dev`
+package subpath), never from a production entry (`src/index.ts` / the package
+main). Production bundles tree-shake on the import path: if `examples` is
+reachable from the main entry, the bundler inlines every example (and its
+`getEvent` fixtures) into the shipped JS, bloating consumer bundles with
+test-only data. Importing them from `./dev` keeps them available for simulation
+and testing while leaving production output clean.
+
+A `no-restricted-syntax` ESLint rule enforces this, so a `export ... examples`
+from a production entry fails lint.
+
 ## Metadata: title, description, public
 
 Every `Flow.StepExample` accepts three optional metadata fields that control how

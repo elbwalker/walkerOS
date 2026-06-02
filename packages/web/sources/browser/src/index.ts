@@ -23,9 +23,6 @@ import { getConfig } from './config';
 
 export * as SourceBrowser from './types';
 
-// Export examples
-export * as examples from './examples';
-
 let instanceCount = 0;
 
 /** For tests only. Resets the single-instance invariant. */

@@ -1,7 +1,12 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { DestinationAPI } from '.';
-import { createEvent, clone, createMockContext, createMockLogger } from '@walkeros/core';
-import { examples } from '.';
+import {
+  createEvent,
+  clone,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
+import { examples } from './dev';
 
 describe('Destination API', () => {
   const mockSendServer = jest.fn();

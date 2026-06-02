@@ -4,9 +4,6 @@ import type { Types, Settings, OneTrustAPI } from './types';
 // Export types for external usage
 export * as SourceCookiePro from './types';
 
-// Export examples
-export * from './examples';
-
 /**
  * Default category mapping from CookiePro/OneTrust to walkerOS consent groups.
  *
