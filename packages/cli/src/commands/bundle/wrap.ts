@@ -87,8 +87,12 @@ export interface TelemetryBundleOptions {
    * Full deployment-scoped trace endpoint, e.g.
    * `https://observer.example.com/trace/<deploymentId>`. Baked into the bundle
    * and polled verbatim; the browser never constructs it from a base.
+   *
+   * Optional: when omitted, the bundle wires the observer at a fixed `level`
+   * with no polling. Suits short-lived, URL-opted-in sessions (e.g. a preview
+   * at `level: 'trace'`).
    */
-  traceUrl: string;
+  traceUrl?: string;
   /** Deployment-scoped plaintext token. Sent as `Authorization: Bearer`. */
   ingestToken: string;
   /** Used as the `flowId` on every emitted FlowState. */
@@ -166,10 +170,10 @@ export async function wrapSkeleton(
   const telemetry = tInput
     ? {
         observerUrl: tInput.observerUrl,
-        traceUrl: tInput.traceUrl,
         ingestToken: tInput.ingestToken,
         flowId: tInput.flowId,
         level: tLevel,
+        ...(tInput.traceUrl !== undefined ? { traceUrl: tInput.traceUrl } : {}),
         ...(tInput.sample !== undefined ? { sample: tInput.sample } : {}),
       }
     : undefined;

@@ -402,6 +402,10 @@
           "deploymentCount": {
             "type": "integer",
             "example": 2
+          },
+          "isDemo": {
+            "type": "boolean",
+            "example": false
           }
         },
         "required": [
@@ -412,7 +416,8 @@
           "updatedAt",
           "memberCount",
           "flowCount",
-          "deploymentCount"
+          "deploymentCount",
+          "isDemo"
         ]
       },
       "Member": {
@@ -829,6 +834,10 @@
             "type": "string",
             "format": "date-time"
           },
+          "traceUntil": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
           "usageSummary": {
             "type": "object",
             "properties": {
@@ -856,7 +865,8 @@
           "flowId",
           "flowName",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "traceUntil"
         ]
       },
       "DeploymentDetailResponse": {
@@ -903,6 +913,9 @@
           "currentVersion": {
             "$ref": "#/components/schemas/DeploymentVersionDetail"
           },
+          "error": {
+            "$ref": "#/components/schemas/DeploymentError"
+          },
           "url": {
             "type": ["string", "null"]
           },
@@ -930,6 +943,10 @@
               "healthy"
             ]
           },
+          "traceUntil": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -948,8 +965,10 @@
           "origin",
           "status",
           "currentVersion",
+          "error",
           "url",
           "selfHosted",
+          "traceUntil",
           "createdAt",
           "updatedAt"
         ]
@@ -982,6 +1001,12 @@
             },
             "required": ["type"]
           },
+          "errorMessage": {
+            "type": ["string", "null"]
+          },
+          "errorCode": {
+            "type": ["string", "null"]
+          },
           "publishedAt": {
             "type": "string",
             "format": "date-time"
@@ -990,7 +1015,27 @@
             "type": ["string", "null"]
           }
         },
-        "required": ["number", "status", "source", "publishedAt", "publishedBy"]
+        "required": [
+          "number",
+          "status",
+          "source",
+          "errorMessage",
+          "errorCode",
+          "publishedAt",
+          "publishedBy"
+        ]
+      },
+      "DeploymentError": {
+        "type": ["object", "null"],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"]
       },
       "CreateDeploymentResponse": {
         "type": "object",
@@ -1056,6 +1101,10 @@
             "type": "string",
             "format": "date-time"
           },
+          "traceUntil": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
           "usageSummary": {
             "type": "object",
             "properties": {
@@ -1083,7 +1132,8 @@
           "flowId",
           "flowName",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "traceUntil"
         ]
       },
       "ListDeploymentsResponse": {
@@ -1313,6 +1363,12 @@
                   },
                   "required": ["type"]
                 },
+                "errorMessage": {
+                  "type": ["string", "null"]
+                },
+                "errorCode": {
+                  "type": ["string", "null"]
+                },
                 "bundlePath": {
                   "type": ["string", "null"]
                 },
@@ -1328,6 +1384,8 @@
                 "number",
                 "status",
                 "source",
+                "errorMessage",
+                "errorCode",
                 "bundlePath",
                 "publishedAt",
                 "publishedBy"
@@ -1508,6 +1566,190 @@
           }
         },
         "required": ["ok", "id"]
+      },
+      "StepExample": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "trigger": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "options": {}
+            }
+          },
+          "mapping": {},
+          "command": {
+            "type": "string"
+          },
+          "in": {
+            "$ref": "#/components/schemas/StepExampleEvent"
+          },
+          "out": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {}
+            }
+          }
+        },
+        "required": ["in"]
+      },
+      "StepExampleEvent": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "globals": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "custom": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "timing": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "user": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "version": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateStepExampleRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "trigger": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "options": {}
+            }
+          },
+          "mapping": {},
+          "command": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "event": {
+            "$ref": "#/components/schemas/StepExampleEvent"
+          },
+          "out": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {}
+            }
+          }
+        },
+        "required": ["name", "event"]
+      },
+      "EditStepExampleRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "trigger": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "options": {}
+            }
+          },
+          "mapping": {},
+          "command": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "event": {
+            "$ref": "#/components/schemas/StepExampleEvent"
+          },
+          "out": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {}
+            }
+          }
+        },
+        "required": ["name"]
+      },
+      "StepExamplesResponse": {
+        "type": "object",
+        "properties": {
+          "examples": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/StepExample"
+            }
+          }
+        },
+        "required": ["examples"]
       },
       "MagicLinkResponse": {
         "type": "object",
@@ -2035,9 +2277,20 @@
           "total": {
             "type": "integer",
             "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasMore": {
+            "type": "boolean"
           }
         },
-        "required": ["data", "flowId", "total"]
+        "required": ["data", "flowId", "total", "limit", "offset", "hasMore"]
       },
       "GetVersionResponse": {
         "type": "object",
@@ -3680,6 +3933,308 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/steps/{stepPath}/examples": {
+      "post": {
+        "tags": ["Flows"],
+        "summary": "Add step example",
+        "description": "Add a named example to a step. Examples are stored as an object map keyed by name. Rejects duplicate names with 409.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dot-segmented step path (sectionKey.stepName), e.g. \"destinations.gtag\".",
+              "example": "destinations.gtag"
+            },
+            "required": true,
+            "description": "Dot-segmented step path (sectionKey.stepName), e.g. \"destinations.gtag\".",
+            "name": "stepPath",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStepExampleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated examples object map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepExamplesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Flows"],
+        "summary": "Edit step example",
+        "description": "Edit an existing named example in place, merging provided fields onto the stored entry. Returns 404 when the named example does not exist.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dot-segmented step path (sectionKey.stepName), e.g. \"destinations.gtag\".",
+              "example": "destinations.gtag"
+            },
+            "required": true,
+            "description": "Dot-segmented step path (sectionKey.stepName), e.g. \"destinations.gtag\".",
+            "name": "stepPath",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditStepExampleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated examples object map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepExamplesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Flows"],
+        "summary": "Remove step example",
+        "description": "Remove a named example from a step. Returns 404 when the named example does not exist.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dot-segmented step path (sectionKey.stepName), e.g. \"destinations.gtag\".",
+              "example": "destinations.gtag"
+            },
+            "required": true,
+            "description": "Dot-segmented step path (sectionKey.stepName), e.g. \"destinations.gtag\".",
+            "name": "stepPath",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the example to remove.",
+              "example": "product view"
+            },
+            "required": true,
+            "description": "Name of the example to remove.",
+            "name": "name",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated examples object map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepExamplesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable entity",
             "content": {
               "application/json": {
                 "schema": {

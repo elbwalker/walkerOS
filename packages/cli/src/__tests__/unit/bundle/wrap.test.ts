@@ -163,6 +163,35 @@ export const __configData = { test: true };
     expect(output).toMatch(/observers\.add/);
   });
 
+  it('emits a static observer with no trace poll when traceUrl is omitted', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrapSkeleton({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+      telemetry: {
+        observerUrl: 'https://observer.example.com/ingest/preview/prv_9',
+        ingestToken: 'tok_preview_value',
+        flowId: 'flow_x',
+        level: 'trace',
+      },
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+    // The preview ingest URL and token are baked, and the observer is wired.
+    expect(output).toContain(
+      'https://observer.example.com/ingest/preview/prv_9',
+    );
+    expect(output).toContain('tok_preview_value');
+    expect(output).toMatch(/observers\.add/);
+    // No poll machinery when traceUrl is omitted.
+    expect(output).not.toMatch(/setInterval/);
+    expect(output).not.toMatch(/\/trace\//);
+  });
+
   it('omits telemetry wiring when telemetry option is absent', async () => {
     const skeletonPath = await writeFakeSkeleton();
     const outputPath = path.join(tmpDir, 'walker.js');

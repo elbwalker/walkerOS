@@ -1799,8 +1799,13 @@ export interface WrapEntryTelemetry {
    * Full deployment-scoped trace endpoint, e.g.
    * `https://observer.example.com/trace/<deploymentId>`. Baked verbatim and
    * polled by the browser; the bundle never constructs it from a base.
+   *
+   * Optional: when omitted, the bundle installs the observer at a fixed
+   * `level` with no polling. Suits short-lived, URL-opted-in sessions (e.g.
+   * a preview at `level: 'trace'`) where the opt-in is the URL itself and
+   * there is nothing to poll for.
    */
-  traceUrl: string;
+  traceUrl?: string;
   ingestToken: string;
   flowId: string;
   level?: 'off' | 'standard' | 'trace';
@@ -1916,16 +1921,27 @@ export function generateWrapEntry(
 
   // Telemetry block: when telemetry options are present, import the helpers
   // from @walkeros/core and install the observer on collector.observers AFTER
-  // startFlow returns. The observer is wired as a SUPPLIER so the operator's
-  // runtime trace flag reaches each emit: a module-level `__traceUntil` is
-  // refreshed by polling the baked full `traceUrl`, and `resolveTelemetryOptions`
-  // re-resolves the projection per emit. This lets a deploy-time `level: 'off'`
-  // baseline be flipped to trace by the poll without a redeploy.
+  // startFlow returns.
+  //
+  // Two shapes, picked by whether a `traceUrl` is baked:
+  //  - POLL form (traceUrl present): the observer is wired as a SUPPLIER so the
+  //    operator's runtime trace flag reaches each emit: a module-level
+  //    `__traceUntil` is refreshed by polling the baked full `traceUrl`, and
+  //    `resolveTelemetryOptions` re-resolves the projection per emit. This lets
+  //    a deploy-time `level: 'off'` baseline be flipped to trace by the poll
+  //    without a redeploy.
+  //  - STATIC form (traceUrl omitted): a fixed-level observer with no poll,
+  //    mirroring `generateWebEntry`. The session opts in via its URL and emits
+  //    for the session's life; there is nothing to poll for.
+  const hasPoll = !!options.telemetry?.traceUrl;
   const telemetryImport = options.telemetry
-    ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto, resolveTelemetryOptions as __cto_resolve } from '@walkeros/core';`
+    ? hasPoll
+      ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto, resolveTelemetryOptions as __cto_resolve } from '@walkeros/core';`
+      : `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
     : '';
-  const telemetryPoller = options.telemetry
-    ? `
+  const telemetryPoller =
+    options.telemetry && hasPoll
+      ? `
 let __traceUntil = null;
 let __tracePollInFlight = false;
 function __pollTrace() {
@@ -1962,9 +1978,10 @@ function __pollTrace() {
     });
 }
 `
-    : '';
+      : '';
   const telemetryBlock = options.telemetry
-    ? `
+    ? hasPoll
+      ? `
   // --- Telemetry wiring ---
   {
     const __emit = __cbp({
@@ -1982,6 +1999,20 @@ function __pollTrace() {
     collector.observers.add(__observer);
     __pollTrace();
     setInterval(__pollTrace, 15000 + Math.floor(Math.random() * 5000));
+  }`
+      : `
+  // --- Telemetry wiring ---
+  {
+    const __emit = __cbp({
+      url: ${JSON.stringify(options.telemetry.observerUrl)},
+      token: ${JSON.stringify(options.telemetry.ingestToken)},
+    });
+    const __observer = __cto(__emit, {
+      flowId: ${JSON.stringify(options.telemetry.flowId)},
+      level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
+      sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
+    });
+    collector.observers.add(__observer);
   }`
     : '';
 

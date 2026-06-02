@@ -38,7 +38,7 @@
     "test": "jest --colors --testPathIgnorePatterns '__tests__/e2e/'",
     "test:debug": "jest --colors --detectOpenHandles --testPathIgnorePatterns '__tests__/e2e/'",
     "test:integration": "jest --colors --testPathPatterns='__tests__/e2e/'",
-    "generate:types": "openapi-typescript ${OPENAPI_SPEC:-./openapi/spec.json} -o src/types/api.gen.d.ts",
+    "generate:types": "openapi-typescript ${OPENAPI_SPEC:-./openapi/spec.json} -o src/types/api.gen.d.ts && prettier --write src/types/api.gen.d.ts ./openapi/spec.json",
     "generate:types:local": "OPENAPI_SPEC=${WALKEROS_APP_URL:-http://localhost:3000}/api/openapi.json npm run generate:types",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts*\"",

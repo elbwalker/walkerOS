@@ -1416,6 +1416,225 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/projects/{projectId}/flows/{flowId}/steps/{stepPath}/examples': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Edit step example
+     * @description Edit an existing named example in place, merging provided fields onto the stored entry. Returns 404 when the named example does not exist.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Dot-segmented step path (sectionKey.stepName), e.g. "destinations.gtag". */
+          stepPath: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['EditStepExampleRequest'];
+        };
+      };
+      responses: {
+        /** @description Updated examples object map */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StepExamplesResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unprocessable entity */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Add step example
+     * @description Add a named example to a step. Examples are stored as an object map keyed by name. Rejects duplicate names with 409.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Dot-segmented step path (sectionKey.stepName), e.g. "destinations.gtag". */
+          stepPath: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateStepExampleRequest'];
+        };
+      };
+      responses: {
+        /** @description Updated examples object map */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StepExamplesResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unprocessable entity */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Remove step example
+     * @description Remove a named example from a step. Returns 404 when the named example does not exist.
+     */
+    delete: {
+      parameters: {
+        query: {
+          /** @description Name of the example to remove. */
+          name: string;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Dot-segmented step path (sectionKey.stepName), e.g. "destinations.gtag". */
+          stepPath: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Updated examples object map */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StepExamplesResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unprocessable entity */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/projects/{projectId}/flows/{flowId}/deploy': {
     parameters: {
       query?: never;
@@ -3738,6 +3957,8 @@ export interface components {
       flowCount: number;
       /** @example 2 */
       deploymentCount: number;
+      /** @example false */
+      isDemo: boolean;
     };
     Member: {
       userId: string;
@@ -3947,6 +4168,8 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+      /** Format: date-time */
+      traceUntil: string | null;
       usageSummary?: {
         eventsIn24h: number;
         healthy: boolean;
@@ -3981,6 +4204,7 @@ export interface components {
         | 'stopped'
         | 'failed';
       currentVersion: components['schemas']['DeploymentVersionDetail'];
+      error: components['schemas']['DeploymentError'];
       url: string | null;
       selfHosted: {
         /** Format: date-time */
@@ -3989,6 +4213,8 @@ export interface components {
         cliVersion: string | null;
         healthy: boolean;
       } | null;
+      /** Format: date-time */
+      traceUntil: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -4003,9 +4229,15 @@ export interface components {
         flowSettingsId?: string;
         configHash?: string;
       };
+      errorMessage: string | null;
+      errorCode: string | null;
       /** Format: date-time */
       publishedAt: string;
       publishedBy: string | null;
+    } | null;
+    DeploymentError: {
+      code: string;
+      message: string;
     } | null;
     CreateDeploymentResponse: {
       /** @example dep_a1b2c3d4 */
@@ -4044,6 +4276,8 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+      /** Format: date-time */
+      traceUntil: string | null;
       usageSummary?: {
         eventsIn24h: number;
         healthy: boolean;
@@ -4132,6 +4366,8 @@ export interface components {
           flowSettingsId?: string;
           configHash?: string;
         };
+        errorMessage: string | null;
+        errorCode: string | null;
         bundlePath: string | null;
         /** Format: date-time */
         publishedAt: string;
@@ -4197,6 +4433,79 @@ export interface components {
       ok: true;
       /** @example fb_abcdef1234567890 */
       id: string;
+    };
+    StepExample: {
+      title?: string;
+      description?: string;
+      public?: boolean;
+      trigger?: {
+        type?: string;
+        options?: unknown;
+      };
+      mapping?: unknown;
+      command?: string;
+      in: components['schemas']['StepExampleEvent'];
+      out?: unknown[][];
+    };
+    StepExampleEvent: {
+      entity?: string;
+      action?: string;
+      data?: {
+        [key: string]: unknown;
+      };
+      context?: {
+        [key: string]: unknown;
+      };
+      globals?: {
+        [key: string]: unknown;
+      };
+      custom?: {
+        [key: string]: unknown;
+      };
+      id?: string;
+      timestamp?: string;
+      timing?: {
+        [key: string]: unknown;
+      };
+      user?: {
+        [key: string]: unknown;
+      };
+      version?: string;
+      source?: string;
+      trigger?: string;
+    };
+    CreateStepExampleRequest: {
+      title?: string;
+      description?: string;
+      public?: boolean;
+      trigger?: {
+        type?: string;
+        options?: unknown;
+      };
+      mapping?: unknown;
+      command?: string;
+      name: string;
+      event: components['schemas']['StepExampleEvent'];
+      out?: unknown[][];
+    };
+    EditStepExampleRequest: {
+      title?: string;
+      description?: string;
+      public?: boolean;
+      trigger?: {
+        type?: string;
+        options?: unknown;
+      };
+      mapping?: unknown;
+      command?: string;
+      name: string;
+      event?: components['schemas']['StepExampleEvent'];
+      out?: unknown[][];
+    };
+    StepExamplesResponse: {
+      examples: {
+        [key: string]: components['schemas']['StepExample'];
+      };
     };
     MagicLinkResponse: {
       /** @example true */
@@ -4379,6 +4688,9 @@ export interface components {
       /** @example flow_a1b2c3d4 */
       flowId: string;
       total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
     };
     GetVersionResponse: {
       /** @example 1 */
