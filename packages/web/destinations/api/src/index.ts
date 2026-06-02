@@ -43,13 +43,15 @@ export const destinationAPI: Destination = {
     send(body, { ...settings, url }, env.sendWeb || sendWeb);
   },
 
-  pushBatch(batch, { config, rule, env }) {
-    // `config.settings` is `Partial<Settings>` (InitSettings) but `send` needs
-    // the resolved `Settings`; init guarantees `url` by this point. Narrowing
-    // without this assertion needs a core-types change and is tracked as a
-    // follow-up. pushBatch has no logger param to guard with.
-    const settings = config.settings as Settings;
-    const { transform } = settings;
+  pushBatch(batch, { config, rule, env, logger }) {
+    const { settings } = config;
+    const { url, transform } = settings || {};
+
+    if (!url) {
+      logger.throw('Config settings url missing');
+      return;
+    }
+
     const items = batch.data.length ? batch.data : batch.events;
 
     // Apply transform to each item if defined, then stringify array
@@ -57,7 +59,7 @@ export const destinationAPI: Destination = {
       ? items.map((item) => transform(item, config, rule))
       : items;
 
-    send(JSON.stringify(payload), settings, env.sendWeb || sendWeb);
+    send(JSON.stringify(payload), { ...settings, url }, env.sendWeb || sendWeb);
   },
 };
 

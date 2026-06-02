@@ -1,14 +1,7 @@
 import { initGTM, pushGTMEvent } from '../gtm';
 import { examples } from '../dev';
-import { clone } from '@walkeros/core';
-import type { WalkerOS } from '@walkeros/core';
+import { clone, getEvent } from '@walkeros/core';
 import type { GTMSettings, Env } from '../types';
-
-// These tests feed deliberately minimal fixtures (a partial event, a non-object
-// data value) to exercise specific code paths; widen them at the call site.
-const asEvent = (value: unknown): WalkerOS.Event => value as WalkerOS.Event;
-const asData = (value: unknown): WalkerOS.AnyObject =>
-  value as WalkerOS.AnyObject;
 
 describe('GTM Implementation', () => {
   const mockDataLayer: unknown[] = [];
@@ -68,17 +61,14 @@ describe('GTM Implementation', () => {
   });
 
   describe('pushGTMEvent', () => {
-    const mockEvent = {
-      name: 'product view',
-      entity: 'product',
-      action: 'view',
+    const mockEvent = getEvent('product view', {
       data: { id: 'product-1', name: 'Test Product' },
-    };
+    });
 
     const settings: GTMSettings = { containerId: 'GTM-XXXXXXX' };
 
     it('should push event to dataLayer', () => {
-      pushGTMEvent(asEvent(mockEvent), settings, {}, {}, mockEnv);
+      pushGTMEvent(mockEvent, settings, {}, {}, mockEnv);
 
       expect(mockDataLayer).toHaveLength(1);
       expect(mockDataLayer[0]).toEqual({
@@ -89,7 +79,7 @@ describe('GTM Implementation', () => {
     it('should push event with data when data is object', () => {
       const data = { price: 99.99, currency: 'USD' };
 
-      pushGTMEvent(asEvent(mockEvent), settings, {}, data, mockEnv);
+      pushGTMEvent(mockEvent, settings, {}, data, mockEnv);
 
       expect(mockDataLayer).toHaveLength(1);
       expect(mockDataLayer[0]).toEqual({
@@ -100,22 +90,12 @@ describe('GTM Implementation', () => {
     });
 
     it('should fallback to event object when data is not an object', () => {
-      pushGTMEvent(
-        asEvent(mockEvent),
-        settings,
-        {},
-        asData('invalid-data'),
-        mockEnv,
-      );
+      // pushGTMEvent guards isObject(data) at runtime, falling back to the
+      // event when data is not an object. A non-object exercises that guard.
+      pushGTMEvent(mockEvent, settings, {}, 'invalid-data', mockEnv);
 
       expect(mockDataLayer).toHaveLength(1);
-      expect(mockDataLayer[0]).toEqual({
-        event: 'product view',
-        name: 'product view',
-        entity: 'product',
-        action: 'view',
-        data: { id: 'product-1', name: 'Test Product' },
-      });
+      expect(mockDataLayer[0]).toEqual({ event: mockEvent.name, ...mockEvent });
     });
 
     it('should handle custom dataLayer name in environment', () => {
@@ -127,7 +107,7 @@ describe('GTM Implementation', () => {
         document: mockEnv.document,
       };
 
-      pushGTMEvent(asEvent(mockEvent), settings, {}, {}, customEnv);
+      pushGTMEvent(mockEvent, settings, {}, {}, customEnv);
 
       expect(customDataLayer).toHaveLength(1);
       expect(customDataLayer[0]).toEqual({

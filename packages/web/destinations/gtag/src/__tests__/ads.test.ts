@@ -1,12 +1,7 @@
 import { initAds, pushAdsEvent } from '../ads';
 import { examples } from '../dev';
 import { clone, createMockLogger, getEvent } from '@walkeros/core';
-import type { WalkerOS } from '@walkeros/core';
 import type { AdsSettings, AdsMapping } from '../types';
-
-// These tests feed a deliberately minimal event fixture to exercise ads
-// conversion logic; widen it to the full event shape at the call site.
-const asEvent = (value: unknown): WalkerOS.Event => value as WalkerOS.Event;
 
 describe('Google Ads Implementation', () => {
   const mockGtag = jest.fn();
@@ -97,35 +92,22 @@ describe('Google Ads Implementation', () => {
   });
 
   describe('pushAdsEvent', () => {
-    const mockEvent = {
-      event: 'order complete',
-      entity: 'order',
-      action: 'complete',
+    const mockEvent = getEvent('order complete', {
       data: { id: 'order-123', total: 99.99 },
-    };
+    });
 
     const settings: AdsSettings = {
       conversionId: 'AW-XXXXXXXXX',
       currency: 'EUR',
     };
 
-    const typedEvent = getEvent('order complete', {
-      data: { id: 'order-123', total: 99.99 },
-    });
+    const typedEvent = mockEvent;
 
     it('should throw error if no mapping name', () => {
       const logger = createThrowingLogger();
 
       expect(() =>
-        pushAdsEvent(
-          asEvent(mockEvent),
-          settings,
-          {},
-          {},
-          undefined,
-          mockEnv,
-          logger,
-        ),
+        pushAdsEvent(mockEvent, settings, {}, {}, undefined, mockEnv, logger),
       ).toThrow('Config mapping ads.label missing');
     });
 
@@ -133,7 +115,7 @@ describe('Google Ads Implementation', () => {
       const mappingName = 'PURCHASE_CONVERSION';
 
       pushAdsEvent(
-        asEvent(mockEvent),
+        mockEvent,
         settings,
         {},
         {},
@@ -156,7 +138,7 @@ describe('Google Ads Implementation', () => {
       };
 
       pushAdsEvent(
-        asEvent(mockEvent),
+        mockEvent,
         settings,
         {},
         additionalData,
@@ -180,7 +162,7 @@ describe('Google Ads Implementation', () => {
       const mappingName = 'PURCHASE_CONVERSION';
 
       pushAdsEvent(
-        asEvent(mockEvent),
+        mockEvent,
         settingsWithoutCurrency,
         {},
         {},
@@ -199,7 +181,7 @@ describe('Google Ads Implementation', () => {
       const mappingName = 'PURCHASE_CONVERSION';
 
       pushAdsEvent(
-        asEvent(mockEvent),
+        mockEvent,
         settings,
         {},
         'invalid-data',
@@ -219,7 +201,7 @@ describe('Google Ads Implementation', () => {
       const mappingName = 'FALLBACK_LABEL';
 
       pushAdsEvent(
-        asEvent(mockEvent),
+        mockEvent,
         settings,
         mapping,
         {},
@@ -239,7 +221,7 @@ describe('Google Ads Implementation', () => {
       const mappingName = 'FALLBACK_LABEL';
 
       pushAdsEvent(
-        asEvent(mockEvent),
+        mockEvent,
         settings,
         mapping,
         {},
@@ -260,7 +242,7 @@ describe('Google Ads Implementation', () => {
 
       expect(() =>
         pushAdsEvent(
-          asEvent(mockEvent),
+          mockEvent,
           settings,
           mapping,
           {},

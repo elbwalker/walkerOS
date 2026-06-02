@@ -1,20 +1,26 @@
 import type { WalkerOS, Logger } from '@walkeros/core';
 import type { GTMSettings, GTMMapping, Env } from '../types';
-import { isObject } from '@walkeros/core';
+import { isArray, isObject } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
+import { defaultDataLayer } from './config';
 
 export function pushGTMEvent(
   event: WalkerOS.Event,
   settings: GTMSettings,
   mapping: GTMMapping = {},
-  data: WalkerOS.AnyObject,
+  data: unknown,
   env?: Env,
   _logger?: Logger.Instance,
 ): void {
   const { window } = getEnv<Env>(env);
   const obj = { event: event.name }; // Use the name mapping by default
 
-  window.dataLayer.push({
+  const dataLayerName = settings.dataLayer || defaultDataLayer;
+  const existing = window[dataLayerName];
+  const dataLayerArray: unknown[] = isArray(existing) ? existing : [];
+  window[dataLayerName] = dataLayerArray;
+
+  dataLayerArray.push({
     ...obj,
     ...(isObject(data) ? data : event),
   });

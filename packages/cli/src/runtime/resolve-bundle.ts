@@ -139,10 +139,13 @@ async function extractToDir(
   }
 
   // destDir is stable across runs (e.g. /app/flow in a long-lived container).
-  // Drop any stale entry first so the post-extract existence check proves THIS
-  // archive delivered it, not a leftover from an earlier run.
+  // Wipe the full extracted footprint first so a prior run's node_modules/ or
+  // package.json can't shadow the new archive, and the post-extract existence
+  // check proves THIS archive delivered flow.mjs, not a leftover.
   const entryPath = join(destDir, ARCHIVE_ENTRY);
-  rmSync(entryPath, { force: true });
+  for (const member of [ARCHIVE_ENTRY, 'node_modules', 'package.json']) {
+    rmSync(join(destDir, member), { recursive: true, force: true });
+  }
 
   const extract = tarExtract({ cwd: destDir });
 

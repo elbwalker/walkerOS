@@ -22,7 +22,7 @@ export const destinationPiwikPro: Destination = {
     // Set up the Piwik Pro interface _paq
     window._paq = window._paq || [];
 
-    const paq = window._paq.push;
+    const paq = (args: unknown[]) => window._paq!.push(args);
     if (loadScript) {
       // Load the JavaScript Tracking Client
       addScript(url!, env);
@@ -40,7 +40,7 @@ export const destinationPiwikPro: Destination = {
 
   async push(event, { rule = {}, data, env, collector }) {
     const { window } = getEnv<Env>(env);
-    const paq = window._paq!.push;
+    const paq = (args: unknown[]) => window._paq!.push(args);
 
     // Send pageviews if not disabled
     if (event.name === 'page view' && !rule.settings) {

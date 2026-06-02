@@ -3,7 +3,7 @@ import type { GTMSettings, Env } from '../types';
 import { isArray } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 
-const defaultDataLayer = 'dataLayer';
+export const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 
 export function initGTM(

@@ -48,7 +48,6 @@ describe('createTracePoller', () => {
       { ...baseOptions, fetch: fetchFn },
       mockLogger,
     );
-    poller.start();
     await poller.pollOnce();
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -123,6 +122,49 @@ describe('createTracePoller', () => {
 
     expect(getTraceUntil()).toBe('2026-06-01T00:00:00.000Z');
     poller.stop();
+  });
+
+  it('skips overlapping polls while one is in flight', async () => {
+    let resolveFirst: (value: TestResponse) => void = () => {};
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<TestResponse>((resolve) => {
+          resolveFirst = resolve;
+        }),
+    );
+
+    const poller = createTracePoller(
+      { ...baseOptions, fetch: fetchFn },
+      mockLogger,
+    );
+
+    const first = poller.pollOnce();
+    // Second call must short-circuit while the first request is unresolved.
+    await poller.pollOnce();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    resolveFirst(okResponse({ traceUntil: '2026-06-01T12:00:00.000Z' }));
+    await first;
+    poller.stop();
+  });
+
+  it('start is idempotent and does not orphan the interval', () => {
+    fetchMock.mockResolvedValue(okResponse({ traceUntil: null }));
+
+    const poller = createTracePoller(
+      { ...baseOptions, fetch: fetchFn },
+      mockLogger,
+    );
+    poller.start();
+    poller.start();
+    const callsAfterStart = fetchMock.mock.calls.length;
+    // A single immediate poll, not one per start().
+    expect(callsAfterStart).toBe(1);
+
+    poller.stop();
+    jest.advanceTimersByTime(60_000);
+    // stop() must fully clear the lone interval — no leaked timer keeps firing.
+    expect(fetchMock.mock.calls.length).toBe(callsAfterStart);
   });
 
   it('stop clears the interval (no further polls)', () => {

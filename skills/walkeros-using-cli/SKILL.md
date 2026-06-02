@@ -352,7 +352,7 @@ The CLI:
 
 There is no `walkerOS.bundle.external` annotation. nft figures it out.
 
-**Output shape (always a directory for server flows):**
+**Bundle directory (the server flow's unpacked artifact):**
 
 ```
 dist/
@@ -361,7 +361,9 @@ dist/
 └── node_modules/    # only the files nft traced
 ```
 
-Web flows are unchanged: a single `dist/walker.js`.
+The same directory can be packed into a `.tar.gz`/`.tgz` archive (see the Bundle
+Command section), and `walkeros run` accepts either form. Web flows are
+unchanged: a single `dist/walker.js`.
 
 ### Canonical Dockerfile
 

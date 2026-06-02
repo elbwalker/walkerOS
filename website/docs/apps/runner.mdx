@@ -208,7 +208,7 @@ A flow's baseline observability is set by the `flow.<name>.config.observe` block
 
 | Level | What the runtime emits |
 |-------|------------------------|
-| `off` | Nothing. No telemetry hooks are installed and no fetch is made. |
+| `off` | No baseline records are emitted. In a managed deployment the observer and trace poll stay wired, so runtime trace can still elevate to `trace`; a self-hosted bundle built with no telemetry option makes no fetches at all. |
 | `standard` (default) | Structural FlowState records, without inbound or outbound event payloads. |
 | `trace` | Full payloads on every hop (inbound and outbound), sample rate `1`. |
 

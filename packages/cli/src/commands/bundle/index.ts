@@ -177,6 +177,11 @@ export async function bundleCommand(
         'Cannot use --all without --output (multiple bundles need file output)',
       );
     }
+    if (options.all && options.output && isArchiveOutput(options.output)) {
+      throw new Error(
+        'Cannot use --all with an archive output (.tar.gz/.tgz). Archive packing produces one file per flow; point -o at a directory instead.',
+      );
+    }
 
     // Step 1: Load config — from stdin or file
     let rawConfig: unknown;

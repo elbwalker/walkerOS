@@ -1927,10 +1927,17 @@ export function generateWrapEntry(
   const telemetryPoller = options.telemetry
     ? `
 let __traceUntil = null;
+let __tracePollInFlight = false;
 function __pollTrace() {
-  if (typeof fetch === 'undefined') return;
+  if (typeof fetch === 'undefined' || __tracePollInFlight) return;
+  __tracePollInFlight = true;
+  // Bound each poll so a stalled trace endpoint can't pin the in-flight guard
+  // forever (and stack concurrent fetches via setInterval).
+  var __ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var __t = __ctrl ? setTimeout(function () { __ctrl.abort(); }, 10000) : null;
   fetch(${JSON.stringify(options.telemetry.traceUrl)}, {
     headers: { Authorization: ${JSON.stringify(`Bearer ${options.telemetry.ingestToken}`)} },
+    signal: __ctrl ? __ctrl.signal : undefined,
   })
     .then(function (__res) {
       if (!__res || __res.status !== 200) return;
@@ -1948,7 +1955,11 @@ function __pollTrace() {
         }
       });
     })
-    .catch(function () {});
+    .catch(function () {})
+    .finally(function () {
+      if (__t) clearTimeout(__t);
+      __tracePollInFlight = false;
+    });
 }
 `
     : '';

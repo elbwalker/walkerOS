@@ -36,8 +36,8 @@ describe('per-cell delivery marks', () => {
     await collector.command('run');
 
     // Both owed cells must be delivered at the barrier, not only the first.
-    expect(received).toContain('consent');
-    expect(received).toContain('user');
+    expect(received.filter((t) => t === 'consent')).toHaveLength(1);
+    expect(received.filter((t) => t === 'user')).toHaveLength(1);
   });
 
   test('exactly-once per cell across re-run (no double, no cross-cell skip)', async () => {

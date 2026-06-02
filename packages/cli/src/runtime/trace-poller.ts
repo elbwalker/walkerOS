@@ -45,47 +45,58 @@ export function createTracePoller(
   logger: Logger.Instance,
 ): TracePollerHandle {
   let timer: ReturnType<typeof setInterval> | null = null;
+  let inFlight = false;
   const doFetch = config.fetch ?? defaultFetch;
 
   async function pollOnce(): Promise<void> {
-    let response: Awaited<ReturnType<TracePollerFetch>>;
+    // Guard against overlapping polls: a slow request must not let a later poll
+    // settle first and roll traceUntil back to stale data.
+    if (inFlight) return;
+    inFlight = true;
     try {
-      response = await doFetch(config.url, {
-        method: 'GET',
-        headers: mergeAuthHeaders(config.token),
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.debug(`Trace poll error: ${message}`);
-      return;
-    }
+      let response: Awaited<ReturnType<TracePollerFetch>>;
+      try {
+        response = await doFetch(config.url, {
+          method: 'GET',
+          headers: mergeAuthHeaders(config.token),
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.debug(`Trace poll error: ${message}`);
+        return;
+      }
 
-    if (!response.ok) {
-      logger.debug(`Trace poll non-200 (${response.status})`);
-      return;
-    }
+      if (!response.ok) {
+        logger.debug(`Trace poll non-200 (${response.status})`);
+        return;
+      }
 
-    let parsed: unknown;
-    try {
-      parsed = await response.json();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.debug(`Trace poll response parse failed: ${message}`);
-      return;
-    }
+      let parsed: unknown;
+      try {
+        parsed = await response.json();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.debug(`Trace poll response parse failed: ${message}`);
+        return;
+      }
 
-    if (typeof parsed !== 'object' || parsed === null) return;
-    if (!('traceUntil' in parsed)) return;
+      if (typeof parsed !== 'object' || parsed === null) return;
+      if (!('traceUntil' in parsed)) return;
 
-    const value = parsed.traceUntil;
-    if (typeof value === 'string' && value.length > 0) {
-      setTraceUntil(value);
-    } else if (value === null) {
-      setTraceUntil(null);
+      const value = parsed.traceUntil;
+      if (typeof value === 'string' && value.length > 0) {
+        setTraceUntil(value);
+      } else if (value === null) {
+        setTraceUntil(null);
+      }
+    } finally {
+      inFlight = false;
     }
   }
 
   function start(): void {
+    // Idempotent: a second start() must not orphan the existing interval.
+    if (timer) return;
     pollOnce();
     const jitter = config.intervalMs * 0.15 * (Math.random() * 2 - 1);
     timer = setInterval(() => pollOnce(), config.intervalMs + jitter);
