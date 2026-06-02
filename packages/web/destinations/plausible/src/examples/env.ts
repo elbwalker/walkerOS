@@ -12,7 +12,7 @@ const noop = () => {};
 
 export const init: Env | undefined = {
   window: {
-    plausible: undefined as unknown as Env['window']['plausible'],
+    // plausible absent: init() is expected to install the stub.
   },
   document: {
     createElement: () => ({
@@ -31,7 +31,7 @@ export const push: Env = {
     plausible: Object.assign(noop, {
       // Add queue property for analytics loading pattern
       q: [] as IArguments[],
-    }) as unknown as Env['window']['plausible'],
+    }),
   },
   document: {
     createElement: () => ({

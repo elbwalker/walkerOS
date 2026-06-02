@@ -29,16 +29,25 @@ export const destinationAPI: Destination = {
     const { settings } = config;
     const { url, transform } = settings || {};
 
+    if (!url) {
+      logger.throw('Config settings url missing');
+      return;
+    }
+
     const eventData = isDefined(data) ? data : event;
     // Transform returns body directly, otherwise stringify
     const body = transform
       ? transform(eventData, config, rule)
       : JSON.stringify(eventData);
 
-    send(body, settings as Settings, env.sendWeb || sendWeb);
+    send(body, { ...settings, url }, env.sendWeb || sendWeb);
   },
 
   pushBatch(batch, { config, rule, env }) {
+    // `config.settings` is `Partial<Settings>` (InitSettings) but `send` needs
+    // the resolved `Settings`; init guarantees `url` by this point. Narrowing
+    // without this assertion needs a core-types change and is tracked as a
+    // follow-up. pushBatch has no logger param to guard with.
     const settings = config.settings as Settings;
     const { transform } = settings;
     const items = batch.data.length ? batch.data : batch.events;

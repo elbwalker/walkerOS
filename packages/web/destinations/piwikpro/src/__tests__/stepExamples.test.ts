@@ -4,7 +4,7 @@ import type {
   Mapping as WalkerOSMapping,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, createLogger } from '@walkeros/core';
 import { examples } from '../dev';
 
 type CallRecord = [string, ...unknown[]];
@@ -12,27 +12,18 @@ type CallRecord = [string, ...unknown[]];
 const initConfig = examples.step.init.in as Destination.Config;
 const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
 
-const noopLogger = {
-  log: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  throw: (msg: string) => {
-    throw new Error(msg);
-  },
-} as unknown as Destination.Context['logger'];
+const noopLogger = createLogger();
 
 function makeMockPaq(): {
-  mockPaq: { push: jest.Mock };
+  mockPaq: unknown[];
   calls: CallRecord[];
 } {
   const calls: CallRecord[] = [];
-  const mockPaq = {
-    push: jest.fn((...args: unknown[]) => {
-      for (const arg of args) calls.push(['_paq.push', arg]);
-      return calls.length;
-    }),
-  };
+  const mockPaq: unknown[] = [];
+  mockPaq.push = jest.fn((...args: unknown[]) => {
+    for (const arg of args) calls.push(['_paq.push', arg]);
+    return calls.length;
+  });
   return { mockPaq, calls };
 }
 
@@ -44,7 +35,7 @@ describe('piwikpro web destination -- step examples', () => {
   it('init', async () => {
     const { mockPaq, calls } = makeMockPaq();
     const env = clone(examples.env.push);
-    env.window._paq = mockPaq as unknown as typeof env.window._paq;
+    env.window._paq = mockPaq;
 
     const dest = jest.requireActual('../').default;
 
@@ -65,7 +56,7 @@ describe('piwikpro web destination -- step examples', () => {
 
     const { mockPaq, calls } = makeMockPaq();
     const env = clone(examples.env.push);
-    env.window._paq = mockPaq as unknown as typeof env.window._paq;
+    env.window._paq = mockPaq;
 
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow();

@@ -393,13 +393,13 @@ config: {},
 
 async init({ config, env }) {
 // Initialize SDK using env, falls back to real APIs
-const { window } = getEnv(env);
+const { window } = getEnv<Env>(env);
 window.customAPI('init');
 return config;
 },
 
 push(event, { config, env }) {
-const { window } = getEnv(env);
+const { window } = getEnv<Env>(env);
 window.customAPI(event.name);
 },
 };`}

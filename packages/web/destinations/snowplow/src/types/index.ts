@@ -50,7 +50,7 @@ export type { BrowserPlugin, ActivityTrackingConfiguration };
 declare global {
   interface Window {
     snowplow?: SnowplowFunction;
-    GlobalSnowplowNamespace?: string;
+    GlobalSnowplowNamespace?: string[];
   }
 }
 

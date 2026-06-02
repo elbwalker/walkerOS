@@ -11,19 +11,15 @@ import type { Env } from '../types';
 const noop = () => {};
 
 export const init: Env | undefined = {
-  // Environment before initialization (fbq not loaded yet)
-  window: {
-    fbq: undefined as unknown as Env['window']['fbq'],
-    _fbq: undefined,
-  },
+  // Environment before initialization (fbq/_fbq absent until setup() runs)
+  window: {},
   document: {
-    createElement: () =>
-      ({
-        src: '',
-        async: false,
-        setAttribute: () => {},
-        removeAttribute: () => {},
-      }) as unknown as Element,
+    createElement: () => ({
+      src: '',
+      async: false,
+      setAttribute: () => {},
+      removeAttribute: () => {},
+    }),
     head: { appendChild: () => {} },
   },
 };
@@ -34,27 +30,26 @@ export const push: Env = {
     fbq: Object.assign(noop, {
       // Add Meta Pixel specific properties
       callMethod: noop,
-      queue: [] as unknown[],
+      queue: [],
       push: noop,
       loaded: true,
       version: '2.0',
-    }) as unknown as Env['window']['fbq'],
+    }),
     _fbq: Object.assign(noop, {
       callMethod: noop,
-      queue: [] as unknown[],
+      queue: [],
       push: noop,
       loaded: true,
       version: '2.0',
-    }) as unknown as Env['window']['_fbq'],
+    }),
   },
   document: {
-    createElement: () =>
-      ({
-        src: '',
-        async: false,
-        setAttribute: () => {},
-        removeAttribute: () => {},
-      }) as unknown as Element,
+    createElement: () => ({
+      src: '',
+      async: false,
+      setAttribute: () => {},
+      removeAttribute: () => {},
+    }),
     head: { appendChild: () => {} },
   },
 };

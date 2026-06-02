@@ -31,8 +31,8 @@ function isLoopContextData(
   return (
     isObject(data) &&
     'loop' in data &&
-    isArray((data as Record<string, unknown>).loop) &&
-    ((data as Record<string, unknown>).loop as unknown[]).length === 2
+    isArray(data.loop) &&
+    data.loop.length === 2
   );
 }
 

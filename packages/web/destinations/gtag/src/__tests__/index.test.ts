@@ -4,6 +4,9 @@ import type { Settings, Rule } from '../types';
 import { type WalkerOS, type Collector } from '@walkeros/core';
 import { clone, createMockContext, createMockLogger } from '@walkeros/core';
 
+// Widen a deliberately minimal event fixture to the full event shape.
+const asEvent = (value: unknown): WalkerOS.Event => value as WalkerOS.Event;
+
 // Mock all tool implementations
 jest.mock('../ga4', () => ({
   initGA4: jest.fn(),
@@ -210,10 +213,10 @@ describe('Unified Gtag Destination', () => {
   });
 
   describe('push', () => {
-    const mockEvent = {
+    const mockEvent = asEvent({
       name: 'product view',
       data: { id: 'product-1', name: 'Test Product' },
-    } as any;
+    });
 
     const mockData = { custom_param: 'custom_value' };
 
@@ -546,7 +549,7 @@ describe('Unified Gtag Destination', () => {
         // Call a regular event
         const event = { name: 'button click', data: { id: 'test-btn' } };
         destination.push(
-          event as any,
+          asEvent(event),
           createMockContext({
             config: destination.config,
             data: {},
@@ -602,7 +605,7 @@ describe('Unified Gtag Destination', () => {
         // Call a regular event
         const event = { name: 'page view', data: { title: 'Test Page' } };
         await destination.push(
-          event as any,
+          asEvent(event),
           createMockContext({
             config: destination.config,
             data: {},
@@ -715,7 +718,7 @@ describe('Unified Gtag Destination', () => {
         // Call a regular event
         const event = { name: 'order complete', data: { value: 99.99 } };
         await destination.push(
-          event as any,
+          asEvent(event),
           createMockContext({
             config: destination.config,
             data: {},

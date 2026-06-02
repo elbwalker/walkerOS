@@ -26,7 +26,8 @@ export interface Mapping {}
 
 export interface Env extends DestinationWeb.Env {
   window: {
-    plausible: Plausible & { q?: IArguments[] };
+    // Optional: the SDK global may be absent until `init` installs the stub.
+    plausible?: Plausible & { q?: IArguments[] };
   };
 }
 

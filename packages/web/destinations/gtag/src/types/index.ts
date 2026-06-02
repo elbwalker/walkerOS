@@ -5,7 +5,7 @@ import type {
 import type { DestinationWeb } from '@walkeros/web-core';
 
 // Extend Window interface with specific dataLayer typing
-interface WindowWithDataLayer extends Window {
+export interface WindowWithDataLayer extends Window {
   dataLayer: unknown[];
   gtag?: Gtag.Gtag;
   [key: string]: unknown; // For custom dataLayer names and other properties
@@ -21,7 +21,8 @@ declare global {
 // Gtag-specific environment interface
 export interface Env extends DestinationWeb.Env {
   window: {
-    gtag: Gtag.Gtag;
+    // Optional: the SDK global is absent until `initializeGtag` installs it.
+    gtag?: Gtag.Gtag;
     dataLayer: unknown[];
   };
   document: {

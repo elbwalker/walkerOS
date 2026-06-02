@@ -4,7 +4,7 @@ import type {
   Mapping as WalkerOSMapping,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, createLogger } from '@walkeros/core';
 import { examples } from '../dev';
 
 type CallRecord = [string, ...unknown[]];
@@ -12,15 +12,7 @@ type CallRecord = [string, ...unknown[]];
 const initConfig = examples.step.init.in as Destination.Config;
 const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
 
-const noopLogger = {
-  log: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  throw: (msg: string) => {
-    throw new Error(msg);
-  },
-} as unknown as Destination.Context['logger'];
+const noopLogger = createLogger();
 
 describe('meta web destination -- step examples', () => {
   const stepEntries = Object.entries(examples.step).filter(
@@ -31,7 +23,7 @@ describe('meta web destination -- step examples', () => {
     const mockFbq = jest.fn();
     const calls: CallRecord[] = [];
     mockFbq.mockImplementation((...args: unknown[]) => {
-      calls.push(['fbq', ...args] as CallRecord);
+      calls.push(['fbq', ...args]);
     });
     const env = clone(examples.env.push);
     env.window.fbq = mockFbq;
@@ -57,7 +49,7 @@ describe('meta web destination -- step examples', () => {
     const mockFbq = jest.fn();
     const calls: CallRecord[] = [];
     mockFbq.mockImplementation((...args: unknown[]) => {
-      calls.push(['fbq', ...args] as CallRecord);
+      calls.push(['fbq', ...args]);
     });
     const env = clone(examples.env.push);
     env.window.fbq = mockFbq;

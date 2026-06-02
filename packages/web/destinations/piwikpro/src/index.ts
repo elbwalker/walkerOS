@@ -1,5 +1,4 @@
-import type { Mapping, Destination } from './types';
-import type { DestinationWeb } from '@walkeros/web-core';
+import type { Mapping, Destination, Env } from './types';
 import { getMappingValue, isArray } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 
@@ -12,8 +11,7 @@ export const destinationPiwikPro: Destination = {
   config: {},
 
   init({ config, env, logger }) {
-    const { window } = getEnv(env);
-    const w = window as Window;
+    const { window } = getEnv<Env>(env);
     const { settings, loadScript } = config;
     const { appId, url } = settings || {};
 
@@ -22,9 +20,9 @@ export const destinationPiwikPro: Destination = {
     if (!url) logger.throw('Config settings url missing');
 
     // Set up the Piwik Pro interface _paq
-    w._paq = w._paq || [];
+    window._paq = window._paq || [];
 
-    const paq = w._paq.push;
+    const paq = window._paq.push;
     if (loadScript) {
       // Load the JavaScript Tracking Client
       addScript(url!, env);
@@ -41,8 +39,8 @@ export const destinationPiwikPro: Destination = {
   },
 
   async push(event, { rule = {}, data, env, collector }) {
-    const { window } = getEnv(env);
-    const paq = (window as Window)._paq!.push;
+    const { window } = getEnv<Env>(env);
+    const paq = window._paq!.push;
 
     // Send pageviews if not disabled
     if (event.name === 'page view' && !rule.settings) {
@@ -74,15 +72,14 @@ export const destinationPiwikPro: Destination = {
   },
 };
 
-function addScript(url: string, env?: DestinationWeb.Env) {
-  const { document } = getEnv(env);
-  const doc = document as Document;
-  const script = doc.createElement('script');
+function addScript(url: string, env?: Env) {
+  const { document } = getEnv<Env>(env);
+  const script = document.createElement('script');
   script.type = 'text/javascript';
   script.src = url + 'ppms.js';
   script.async = true;
   script.defer = true;
-  doc.head.appendChild(script);
+  document.head.appendChild(script);
 }
 
 export default destinationPiwikPro;

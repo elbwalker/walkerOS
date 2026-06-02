@@ -1,8 +1,14 @@
 import { initGTM, pushGTMEvent } from '../gtm';
 import { examples } from '../dev';
 import { clone } from '@walkeros/core';
-import type { GTMSettings } from '../types';
-import { DestinationWeb } from '@walkeros/web-core';
+import type { WalkerOS } from '@walkeros/core';
+import type { GTMSettings, Env } from '../types';
+
+// These tests feed deliberately minimal fixtures (a partial event, a non-object
+// data value) to exercise specific code paths; widen them at the call site.
+const asEvent = (value: unknown): WalkerOS.Event => value as WalkerOS.Event;
+const asData = (value: unknown): WalkerOS.AnyObject =>
+  value as WalkerOS.AnyObject;
 
 describe('GTM Implementation', () => {
   const mockDataLayer: unknown[] = [];
@@ -72,7 +78,7 @@ describe('GTM Implementation', () => {
     const settings: GTMSettings = { containerId: 'GTM-XXXXXXX' };
 
     it('should push event to dataLayer', () => {
-      pushGTMEvent(mockEvent as any, settings, {}, {}, mockEnv);
+      pushGTMEvent(asEvent(mockEvent), settings, {}, {}, mockEnv);
 
       expect(mockDataLayer).toHaveLength(1);
       expect(mockDataLayer[0]).toEqual({
@@ -83,7 +89,7 @@ describe('GTM Implementation', () => {
     it('should push event with data when data is object', () => {
       const data = { price: 99.99, currency: 'USD' };
 
-      pushGTMEvent(mockEvent as any, settings, {}, data, mockEnv);
+      pushGTMEvent(asEvent(mockEvent), settings, {}, data, mockEnv);
 
       expect(mockDataLayer).toHaveLength(1);
       expect(mockDataLayer[0]).toEqual({
@@ -95,10 +101,10 @@ describe('GTM Implementation', () => {
 
     it('should fallback to event object when data is not an object', () => {
       pushGTMEvent(
-        mockEvent as any,
+        asEvent(mockEvent),
         settings,
         {},
-        'invalid-data' as any,
+        asData('invalid-data'),
         mockEnv,
       );
 
@@ -114,14 +120,14 @@ describe('GTM Implementation', () => {
 
     it('should handle custom dataLayer name in environment', () => {
       const customDataLayer: unknown[] = [];
-      const customEnv: DestinationWeb.Env = {
+      const customEnv: Env = {
         window: {
           dataLayer: customDataLayer,
         },
         document: mockEnv.document,
       };
 
-      pushGTMEvent(mockEvent as any, settings, {}, {}, customEnv);
+      pushGTMEvent(asEvent(mockEvent), settings, {}, {}, customEnv);
 
       expect(customDataLayer).toHaveLength(1);
       expect(customDataLayer[0]).toEqual({

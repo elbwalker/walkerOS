@@ -1,6 +1,5 @@
 import type { WalkerOS, Logger } from '@walkeros/core';
-import type { GA4Settings, Parameters } from '../types';
-import type { DestinationWeb } from '@walkeros/web-core';
+import type { GA4Settings, Parameters, Env } from '../types';
 import { isObject } from '@walkeros/core';
 import { normalizeEventName } from '../shared/mapping';
 import { getEnv } from '@walkeros/web-core';
@@ -9,17 +8,15 @@ export function pushGA4Event(
   event: WalkerOS.Event,
   settings: GA4Settings,
   data: WalkerOS.AnyObject,
-  env: DestinationWeb.Env | undefined,
+  env: Env | undefined,
   logger: Logger.Instance,
 ): void {
-  const { window } = getEnv(env);
+  const { window } = getEnv<Env>(env);
 
   if (!settings.measurementId)
     logger.throw('Config settings ga4.measurementId missing');
 
-  const eventParams: Parameters = isObject(data)
-    ? { ...(data as Record<string, unknown>) }
-    : {};
+  const eventParams: Parameters = isObject(data) ? { ...data } : {};
 
   // Event name (snake_case default)
   let eventName = event.name; // Assume custom mapped name
@@ -34,6 +31,6 @@ export function pushGA4Event(
   // Debug mode
   if (settings.debug) eventParams.debug_mode = true;
 
-  const gtag = window.gtag as Gtag.Gtag;
+  const gtag = window.gtag!;
   gtag('event', eventName, eventParams);
 }

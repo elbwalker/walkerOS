@@ -1,9 +1,10 @@
 import type { WalkerOS, On, Collector, Logger } from '@walkeros/core';
-import type { Settings, Destination, ConsentMapping } from './types';
+import type { Settings, Destination, ConsentMapping, Env } from './types';
 import { initGA4, pushGA4Event } from './ga4';
 import { initAds, pushAdsEvent, resolveUserData } from './ads';
 import { initGTM, pushGTMEvent } from './gtm';
 import { getData } from './shared/mapping';
+import { isObject } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 
 // Types
@@ -29,7 +30,7 @@ export const destinationGtag: Destination = {
   config: { settings: {} },
 
   init({ config, env, logger }) {
-    const { settings = {} as Partial<Settings>, loadScript } = config;
+    const { settings = {}, loadScript } = config;
     const { ga4, ads, gtm } = settings;
 
     // Fail if no tools are configured
@@ -119,9 +120,13 @@ export const destinationGtag: Destination = {
 
   on(type, context) {
     // Only handle consent events
-    if (type !== 'consent' || !context.data) return;
+    if (type !== 'consent' || !isObject(context.data)) return;
 
-    const consent = context.data as WalkerOS.Consent;
+    const consent = context.data;
+    // `on` runs with the runtime (non-generic) context, so config.settings and
+    // env surface as the loose base types. Narrowing them to this destination's
+    // own Settings/Env needs a core-types change to make `on` generic over
+    // Types; tracked as a follow-up. The two `as` casts mark that boundary.
     const settings = (context.config?.settings || {}) as Partial<Settings>;
     const { como = true } = settings;
 
@@ -129,8 +134,8 @@ export const destinationGtag: Destination = {
     if (!como) return;
 
     // gtag is available after init() - on() is only called after init completes
-    const { window } = getEnv(context.env);
-    const gtag = window.gtag as Gtag.Gtag;
+    const { window } = getEnv<Env>(context.env as Env);
+    const gtag = window.gtag;
     if (!gtag) return;
 
     // Determine consent mapping to use

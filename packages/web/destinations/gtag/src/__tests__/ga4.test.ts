@@ -1,7 +1,11 @@
 import { initGA4, pushGA4Event } from '../ga4';
 import { examples } from '../dev';
 import { clone, createMockLogger } from '@walkeros/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { GA4Settings } from '../types';
+
+// Widen a deliberately minimal event fixture to the full event shape.
+const asEvent = (value: unknown): WalkerOS.Event => value as WalkerOS.Event;
 
 describe('GA4 Implementation', () => {
   const mockGtag = jest.fn();
@@ -82,12 +86,12 @@ describe('GA4 Implementation', () => {
   });
 
   describe('pushGA4Event', () => {
-    const mockEvent = {
+    const mockEvent = asEvent({
       name: 'page view',
       data: {},
       timestamp: 1234567890,
       id: 'test-id',
-    } as any;
+    });
 
     it('should throw error if no measurementId', () => {
       const settings: GA4Settings = { measurementId: '' };

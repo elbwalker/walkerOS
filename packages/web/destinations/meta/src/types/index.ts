@@ -24,11 +24,17 @@ export interface Mapping {
 
 export interface Env extends DestinationWeb.Env {
   window: {
-    fbq: facebook.Pixel.Event;
+    // Optional: the SDK global is absent until `setup` installs the stub.
+    fbq?: facebook.Pixel.Event;
     _fbq?: facebook.Pixel.Event;
   };
   document: {
-    createElement: (tagName: string) => Element;
+    createElement: (tagName: string) => {
+      src: string;
+      async: boolean;
+      setAttribute: (name: string, value: string) => void;
+      removeAttribute: (name: string) => void;
+    };
     head: { appendChild: (node: unknown) => void };
   };
 }

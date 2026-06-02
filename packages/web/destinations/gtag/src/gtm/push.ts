@@ -1,6 +1,5 @@
 import type { WalkerOS, Logger } from '@walkeros/core';
-import type { GTMSettings, GTMMapping } from '../types';
-import type { DestinationWeb } from '@walkeros/web-core';
+import type { GTMSettings, GTMMapping, Env } from '../types';
 import { isObject } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 
@@ -9,13 +8,13 @@ export function pushGTMEvent(
   settings: GTMSettings,
   mapping: GTMMapping = {},
   data: WalkerOS.AnyObject,
-  env?: DestinationWeb.Env,
+  env?: Env,
   _logger?: Logger.Instance,
 ): void {
-  const { window } = getEnv(env);
+  const { window } = getEnv<Env>(env);
   const obj = { event: event.name }; // Use the name mapping by default
 
-  (window.dataLayer as unknown[]).push({
+  window.dataLayer.push({
     ...obj,
     ...(isObject(data) ? data : event),
   });

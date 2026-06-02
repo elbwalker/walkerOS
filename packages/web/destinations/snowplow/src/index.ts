@@ -16,6 +16,7 @@ import {
 import { addScript, setup } from './setup';
 import { pushSnowplowEvent } from './push';
 import { createQueueAdapter, createBrowserTrackerAdapter } from './adapter';
+import { isObject } from '@walkeros/core';
 
 // Types
 export * as DestinationSnowplow from './types';
@@ -185,7 +186,7 @@ export const destinationSnowplow: Destination = {
    * @returns Updated configuration
    */
   init({ config, env, logger }) {
-    const { settings = {} as Partial<Settings>, loadScript } = config;
+    const { settings = {}, loadScript } = config;
     const { collectorUrl, tracker: trackerFunctions } = settings;
 
     // Required collector URL
@@ -331,9 +332,13 @@ export const destinationSnowplow: Destination = {
    */
   on(type, context) {
     // Only handle consent events
-    if (type !== 'consent' || !context.data) return;
+    if (type !== 'consent' || !isObject(context.data)) return;
 
-    const consent = context.data as WalkerOS.Consent;
+    const consent = context.data;
+    // `on` runs with the runtime (non-generic) context, so config.settings and
+    // env surface as the loose base types. Narrowing them to the destination's
+    // own Settings/Env needs a core-types change to make `on` generic over
+    // Types; tracked as a follow-up. These two `as` casts are that boundary.
     const settings = (context.config?.settings || {}) as Partial<Settings>;
     const consentConfig = settings.consent;
 
