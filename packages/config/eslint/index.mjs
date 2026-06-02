@@ -42,7 +42,11 @@ export default [
     },
   },
   {
-    files: ['**/src/dev.ts'],
+    // Examples and schemas may only be exported from the dev surface, never a
+    // production entry. The dev.ts subpath and the examples/ and schemas/
+    // directory trees are dev-only zones (reached by the bundler only via
+    // ./dev), so re-exporting example/schema sub-modules there is expected.
+    files: ['**/src/dev.ts', '**/examples/**', '**/schemas/**'],
     rules: { 'no-restricted-syntax': 'off' },
   },
   {
