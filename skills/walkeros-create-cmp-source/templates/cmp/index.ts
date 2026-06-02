@@ -50,7 +50,13 @@ export const sourceCmpName: Source.Init<Types> = async (context) => {
   let initListener: (() => void) | undefined;
   let consentListener: ((e: CustomEvent<CmpConsent>) => void) | undefined;
 
-  if (actualWindow) {
+  // Detection paths run in init() (Pass 2), NOT the factory body (Pass 1), so
+  // the factory stays side-effect-free: no listener registration and no
+  // elb('walker consent', state) emit during construction (which would race
+  // source merge order and can park a later require:["consent"] source).
+  const init = async (): Promise<void> => {
+    if (!actualWindow) return;
+
     // 4. handleConsent -- maps CMP categories to walkerOS consent groups
     const handleConsent = (consent: CmpConsent | null) => {
       // Check explicitOnly
@@ -93,12 +99,13 @@ export const sourceCmpName: Source.Init<Types> = async (context) => {
       handleConsent(e.detail);
     };
     actualWindow.addEventListener('cmp_consent', consentListener);
-  }
+  };
 
   return {
     type: 'cmp-name', // TODO: Your CMP's lowercase identifier
     config: fullConfig,
     push: elb,
+    init,
     destroy: async () => {
       // Remove all event listeners on cleanup
       // TODO: For callback-based CMPs, restore original functions here

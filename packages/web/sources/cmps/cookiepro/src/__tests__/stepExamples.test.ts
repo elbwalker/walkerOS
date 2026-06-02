@@ -39,7 +39,7 @@ describe('Step Examples', () => {
     win.OptanonActiveGroups = example.in as string;
     win.OneTrust = { IsAlertBoxClosed: () => true };
 
-    await sourceCookiePro({
+    const source = await sourceCookiePro({
       collector: collectorStub,
       config: {
         settings: {
@@ -59,6 +59,9 @@ describe('Step Examples', () => {
       logger: createMockLogger(),
       withScope: async (_r, _resp, body) => body({} as never),
     });
+
+    // Adapter setup (listeners + OptanonWrapper + static read) runs in init().
+    await source.init?.();
 
     // Source pushes via detached elb chain — yield for it
     for (let i = 0; i < 10 && mockElb.mock.calls.length === 0; i++) {

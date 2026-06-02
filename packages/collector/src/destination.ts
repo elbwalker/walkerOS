@@ -40,6 +40,7 @@ import {
 } from './transformer';
 import { getCacheStore, getStateStore } from './cache';
 import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
+import { reconcilePending } from './pending';
 
 const DEFAULT_QUEUE_MAX = 1_000;
 const DEFAULT_DLQ_MAX = 100;
@@ -199,19 +200,38 @@ export async function addDestination(
   if (state !== undefined && config.state === undefined)
     config = { ...config, state };
 
+  let id = config.id; // Use given id
+  if (!id) {
+    // Generate a new id if none was given (lowercase alpha only for readability)
+    do {
+      id = getId(5, 'abcdefghijklmnopqrstuvwxyz');
+    } while (collector.destinations[id] || collector.pending.destinations[id]);
+  }
+
+  // Honor `require`: a runtime destination with a require gate must wait for the
+  // collector's current state to satisfy it, exactly like a startup destination
+  // (initDestinations). Without this, addDestination registered + pushed
+  // regardless of require. Route it through pending + reconcile: reconcile
+  // activates it immediately if current state already satisfies it, otherwise it
+  // stays pending until a later state change/run reconcile.
+  if (config.require?.length) {
+    // Store the raw Init def (before/next/cache/state at root) exactly as
+    // initDestinations does; registerDestination folds the chain props on
+    // activation. The map key carries the resolved id.
+    collector.pending.destinations[id] = data;
+    await reconcilePending(collector);
+    const activated = collector.destinations[id];
+    if (activated) {
+      return pushToDestinations(collector, undefined, {}, { [id]: activated });
+    }
+    return createPushResult({ ok: true });
+  }
+
   const destination: Destination.Instance = {
     ...code,
     config,
     env: mergeEnvironments(code.env, env),
   };
-
-  let id = destination.config.id; // Use given id
-  if (!id) {
-    // Generate a new id if none was given (lowercase alpha only for readability)
-    do {
-      id = getId(5, 'abcdefghijklmnopqrstuvwxyz');
-    } while (collector.destinations[id]);
-  }
 
   // Add the destination
   collector.destinations[id] = destination;

@@ -35,6 +35,7 @@ function makeCollector(observers: Set<ObserverFn>): Collector.Instance {
     user: {},
     sources: {},
     pending: { destinations: {} },
+    seenEvents: new Set(),
     push: async () => ({ ok: true }),
     command: async () => ({ ok: true }),
   };

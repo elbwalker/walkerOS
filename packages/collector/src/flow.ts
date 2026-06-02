@@ -19,10 +19,15 @@ export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
 
   const { consent, user, globals, custom } = initConfig;
 
+  // Route all four startup state cells through `command` so each bumps
+  // `stateVersion`, broadcasts to subscribers, and triggers reconcile. A bare
+  // `Object.assign` for globals/custom would silently skip those, leaving a
+  // `require:["globals"]` step un-reconciled and `on('globals')` subscribers
+  // un-notified at startup.
   if (consent) await instance.command('consent', consent);
   if (user) await instance.command('user', user);
-  if (globals) Object.assign(instance.globals, globals);
-  if (custom) Object.assign(instance.custom, custom);
+  if (globals) await instance.command('globals', globals);
+  if (custom) await instance.command('custom', custom);
 
   if (instance.config.run) await instance.command('run');
 

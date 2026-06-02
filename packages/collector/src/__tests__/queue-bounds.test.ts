@@ -48,6 +48,7 @@ describe('queue bounds', () => {
       round: 0,
       stateVersion: 0,
       delivery: new WeakMap(),
+      seenEvents: new Set(),
       session: undefined,
       timing: Date.now(),
       sources: {},

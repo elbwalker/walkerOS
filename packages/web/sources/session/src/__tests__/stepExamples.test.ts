@@ -115,7 +115,7 @@ describe('Step Examples', () => {
       allowed: true,
     } as unknown as Collector.Instance;
 
-    await sourceSession({
+    const source = await sourceSession({
       collector: collectorStub,
       config: { settings },
       env: {
@@ -130,6 +130,9 @@ describe('Step Examples', () => {
       logger: createMockLogger(),
       withScope: async (_r, _resp, body) => body({} as never),
     });
+
+    // Session detection runs in init(), not the factory.
+    await source.init?.();
 
     // Yield to pick up any deferred pushes
     for (let i = 0; i < 10 && mockElb.mock.calls.length === 0; i++) {

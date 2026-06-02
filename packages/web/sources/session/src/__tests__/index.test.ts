@@ -1,5 +1,7 @@
 import { startFlow } from '@walkeros/collector';
 import type { WalkerOS, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
+import { sourceSession } from '../index';
 import {
   createMockPush,
   createMockCommand,
@@ -57,6 +59,32 @@ describe('Session Source', () => {
       await createSessionSource(collector);
 
       // Session start should have been called, which calls command('user', ...)
+      expect(mockCommand).toHaveBeenCalled();
+    });
+  });
+
+  describe('factory side-effect-free (init hygiene)', () => {
+    test('factory does not run sessionStart until init() runs', async () => {
+      const source = await sourceSession({
+        collector,
+        config: { settings: { consent: 'marketing' } },
+        env: {
+          push: collector.push.bind(collector),
+          command: mockCommand,
+          elb: collector.sources?.elb?.push,
+          logger: createMockLogger(),
+        },
+        id: 'test-session',
+        logger: createMockLogger(),
+        withScope: async (_r, _resp, body) => body({} as never),
+      });
+
+      // Pass-1 factory must be side-effect-free: sessionStart (which registers
+      // the consent rule + may emit state) has not run yet.
+      expect(mockCommand).not.toHaveBeenCalled();
+
+      // init() (Pass 2) runs sessionStart.
+      await source.init?.();
       expect(mockCommand).toHaveBeenCalled();
     });
   });

@@ -19,7 +19,7 @@ describe('Step Examples', () => {
       allowed: true,
     } as unknown as Collector.Instance;
 
-    await sourceUsercentrics({
+    const source = await sourceUsercentrics({
       collector: collectorStub,
       config: {
         settings: {
@@ -42,6 +42,9 @@ describe('Step Examples', () => {
       logger: createMockLogger(),
       withScope: async (_r, _resp, body) => body({} as never),
     });
+
+    // Adapter setup (listener attach) happens in init(), not the factory.
+    await source.init?.();
 
     // Dispatch CMP event — source listener catches it
     const eventName = (mapping?.eventName as string) || 'ucEvent';

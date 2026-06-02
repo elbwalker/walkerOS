@@ -93,7 +93,12 @@ export const sourceCookiePro: Source.Init<Types> = async (context) => {
   let originalOptanonWrapper: (() => void) | undefined;
   let wrappedOptanonWrapper = false;
 
-  if (actualWindow) {
+  // Attach the CMP listeners / OptanonWrapper and perform the static consent
+  // read. Deferred to init() (Pass 2 of initSources) so the factory (Pass 1)
+  // stays side-effect free: no listener registration, no OptanonWrapper wrap,
+  // and no `elb('walker consent')` emit during construction.
+  const init = async (): Promise<void> => {
+    if (!actualWindow) return;
     const globalName = settings.globalName ?? 'OneTrust';
 
     /**
@@ -185,12 +190,13 @@ export const sourceCookiePro: Source.Init<Types> = async (context) => {
       handleConsent();
     };
     actualWindow.addEventListener('OneTrustGroupsUpdated', eventListener);
-  }
+  };
 
   return {
     type: 'cookiepro',
     config: fullConfig,
     push: elb,
+    init,
     destroy: async (_context) => {
       // Remove event listener
       if (actualWindow && eventListener) {

@@ -651,6 +651,47 @@ describe('Usercentrics Source', () => {
     });
   });
 
+  describe('factory side-effect-free (init hygiene)', () => {
+    test('factory attaches no listener and emits no consent until init() runs', async () => {
+      const mockWindow = createMockWindow();
+      // V2 already initialized: a static read WOULD emit if the factory did it.
+      (mockWindow as unknown as { UC_UI: UsercentricsV2Api }).UC_UI = {
+        isInitialized: () => true,
+        getServicesBaseInfo: (): UsercentricsV2Service[] => [
+          { categorySlug: 'essential', consent: { status: true } },
+        ],
+      };
+
+      const source = await sourceUsercentrics({
+        collector: {} as never,
+        config: { settings: { apiVersion: 'v2', explicitOnly: false } },
+        env: {
+          push: mockElb,
+          command: mockElb,
+          elb: mockElb,
+          window: mockWindow as unknown as Window & typeof globalThis,
+          logger: createMockLogger(),
+        },
+        id: 'test-usercentrics',
+        logger: createMockLogger(),
+        withScope: async (_r, _resp, body) => body({} as never),
+      });
+
+      // Pass-1 factory must be side-effect-free: no listener, no consent emit.
+      expect(mockWindow.addEventListener).not.toHaveBeenCalled();
+      expect(consentCalls).toHaveLength(0);
+
+      // init() (Pass 2) performs the adapter setup: listener + static read emit.
+      await source.init?.();
+
+      expect(mockWindow.addEventListener).toHaveBeenCalledWith(
+        'ucEvent',
+        expect.any(Function),
+      );
+      expect(consentCalls).toHaveLength(1);
+    });
+  });
+
   describe('no window environment', () => {
     test('handles missing window gracefully', async () => {
       const source = await sourceUsercentrics({

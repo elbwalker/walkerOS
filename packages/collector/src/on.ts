@@ -9,7 +9,7 @@ import { isArray, FatalError } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
 import { mergeEnvironments } from './destination';
-import { activatePending } from './pending';
+import { reconcilePending } from './pending';
 import { flushSourceQueueOn, isSourceStarted } from './source';
 
 type OnCallbackKind =
@@ -60,6 +60,69 @@ export function isStateDelivery(type: On.Types): boolean {
     type === Const.Commands.Globals ||
     type === Const.Commands.Custom
   );
+}
+
+/**
+ * Is a recorded state CELL present (non-empty)? The single source of truth for
+ * "cell X has a value", shared by `isRequireSatisfied` (require gating) and
+ * `redeliverStateAtRun` (run-barrier re-delivery) so the presence semantics
+ * never drift between the two. PRESENCE, not grant: a denied consent
+ * (`{marketing:false}`) counts as present. Non-cell types return `false` here;
+ * their satisfaction (session/run/ready/arbitrary) is handled by the callers.
+ *
+ * Note: `globals` is seeded from `config.globalsStatic` at construction, so it
+ * reads present whenever a static global exists, before any `command('globals')`
+ * fires. That is intentional and presence-based.
+ */
+export function isStatePresent(
+  collector: Collector.Instance,
+  type: On.Types,
+): boolean {
+  switch (type) {
+    case Const.Commands.Consent:
+      return Object.keys(collector.consent).length > 0;
+    case Const.Commands.User:
+      return Object.keys(collector.user).length > 0;
+    case Const.Commands.Globals:
+      return Object.keys(collector.globals).length > 0;
+    case Const.Commands.Custom:
+      return Object.keys(collector.custom).length > 0;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Predicate: is a `require` entry satisfied by the collector's CURRENT recorded
+ * state? This is the level-not-edge core of order-independent activation: a
+ * step's gate is checked against the present state, not against whether the
+ * required type fired before or after the step registered.
+ *
+ * Cell-backed types defer to `isStatePresent` (presence, not grant — the
+ * destination send-gate `getGrantedConsent` remains a separate concern).
+ * `session` is satisfied once set; `run`/`ready` map to `allowed`. Any other
+ * (arbitrary) type is satisfied once it has been broadcast (recorded in
+ * `seenEvents`), which also recovers a broadcast that fired before the
+ * requiring step registered.
+ */
+export function isRequireSatisfied(
+  collector: Collector.Instance,
+  type: On.Types,
+): boolean {
+  switch (type) {
+    case Const.Commands.Consent:
+    case Const.Commands.User:
+    case Const.Commands.Globals:
+    case Const.Commands.Custom:
+      return isStatePresent(collector, type);
+    case Const.Commands.Session:
+      return collector.session !== undefined;
+    case Const.Commands.Run:
+    case Const.Commands.Ready:
+      return collector.allowed === true;
+    default:
+      return collector.seenEvents.has(String(type));
+  }
 }
 
 /**
@@ -262,34 +325,8 @@ function fireCallbacks(
   options: Array<On.Subscription>,
   config?: unknown,
 ): void {
-  // Calculate context data once for all sources and destinations
-  let contextData: unknown;
-
-  switch (type) {
-    case Const.Commands.Consent:
-      contextData = config || collector.consent;
-      break;
-    case Const.Commands.Session:
-      contextData = collector.session;
-      break;
-    case Const.Commands.User:
-      contextData = config || collector.user;
-      break;
-    case Const.Commands.Custom:
-      contextData = config || collector.custom;
-      break;
-    case Const.Commands.Globals:
-      contextData = config || collector.globals;
-      break;
-    case Const.Commands.Config:
-      contextData = config || collector.config;
-      break;
-    case Const.Commands.Ready:
-    case Const.Commands.Run:
-    default:
-      contextData = undefined;
-      break;
-  }
+  // Calculate context data once for all sources and destinations.
+  const contextData = resolveDeliveryData(collector, type, config);
 
   if (!options.length) return;
 
@@ -418,27 +455,15 @@ async function deliverStateToSource(
 export async function redeliverStateAtRun(
   collector: Collector.Instance,
 ): Promise<void> {
-  const cells: Array<{ type: On.Types; nonEmpty: boolean }> = [
-    {
-      type: Const.Commands.Consent,
-      nonEmpty: Object.keys(collector.consent).length > 0,
-    },
-    {
-      type: Const.Commands.User,
-      nonEmpty: Object.keys(collector.user).length > 0,
-    },
-    {
-      type: Const.Commands.Globals,
-      nonEmpty: Object.keys(collector.globals).length > 0,
-    },
-    {
-      type: Const.Commands.Custom,
-      nonEmpty: Object.keys(collector.custom).length > 0,
-    },
+  const cells: Array<On.Types> = [
+    Const.Commands.Consent,
+    Const.Commands.User,
+    Const.Commands.Globals,
+    Const.Commands.Custom,
   ];
 
-  for (const { type, nonEmpty } of cells) {
-    if (!nonEmpty) continue;
+  for (const type of cells) {
+    if (!isStatePresent(collector, type)) continue;
 
     const contextData = resolveDeliveryData(collector, type);
 
@@ -474,6 +499,11 @@ export async function onApply(
   options?: Array<On.Subscription>,
   config?: unknown,
 ): Promise<boolean> {
+  // Record every broadcast type so a `require:[<arbitrary>]` gate stays
+  // satisfiable from current state (incl. a broadcast that fired before the
+  // requiring step registered). Cell-backed types are level-checked separately.
+  collector.seenEvents.add(String(type));
+
   // Use the optionally provided options
   let onConfig = options || [];
 
@@ -482,34 +512,8 @@ export async function onApply(
     onConfig = collector.on[type] || [];
   }
 
-  // Calculate context data once for source/destination broadcast
-  let contextData: unknown;
-
-  switch (type) {
-    case Const.Commands.Consent:
-      contextData = config || collector.consent;
-      break;
-    case Const.Commands.Session:
-      contextData = collector.session;
-      break;
-    case Const.Commands.User:
-      contextData = config || collector.user;
-      break;
-    case Const.Commands.Custom:
-      contextData = config || collector.custom;
-      break;
-    case Const.Commands.Globals:
-      contextData = config || collector.globals;
-      break;
-    case Const.Commands.Config:
-      contextData = config || collector.config;
-      break;
-    case Const.Commands.Ready:
-    case Const.Commands.Run:
-    default:
-      contextData = undefined;
-      break;
-  }
+  // Calculate context data once for source/destination broadcast.
+  const contextData = resolveDeliveryData(collector, type, config);
 
   let vetoed = false;
   // Per-source require decrement + gated on() delivery.
@@ -560,11 +564,23 @@ export async function onApply(
     }
   }
 
-  // Activate pending destinations whose require conditions are met.
-  // (Pending sources are gone — their require is tracked in source.config.require
-  // and gated via queueOn above.)
-  if (Object.keys(collector.pending.destinations).length > 0) {
-    await activatePending(collector, type);
+  // Activate any pending source/destination whose require is now satisfied by
+  // current state. Level-based and additive: the per-source broadcast decrement
+  // above still handles started-source delivery + queueOn buffering; reconcile
+  // additionally activates steps satisfied by the recorded cell (or by an
+  // arbitrary type already in `seenEvents`), so order does not matter.
+  //
+  // Gate the await on there being actual pending work: with nothing to
+  // reconcile this is a no-op, and skipping the await preserves the
+  // synchronous microtask ordering the bounded-recursion cascade relies on.
+  const hasUnstartedSource = Object.values(collector.sources).some(
+    (source) => !isSourceStarted(source) && source.config.require?.length,
+  );
+  if (
+    Object.keys(collector.pending.destinations).length > 0 ||
+    hasUnstartedSource
+  ) {
+    await reconcilePending(collector);
   }
 
   fireCallbacks(collector, type, onConfig, config);

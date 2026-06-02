@@ -61,7 +61,14 @@ export const sourceUsercentrics: Source.Init<Types> = async (context) => {
   const fullConfig: Source.Config<Types> = { settings };
   const cleanups: Array<() => void> = [];
 
-  if (actualWindow) {
+  // Attach the CMP listeners and perform the static consent read. Deferred to
+  // init() (Pass 2 of initSources) so the factory (Pass 1) stays side-effect
+  // free: no listener registration and, critically, no `elb('walker consent')`
+  // emit during construction. Emitting from the factory races source merge
+  // order and can leave a later `require:["consent"]` source parked.
+  const init = async (): Promise<void> => {
+    if (!actualWindow) return;
+
     const adapterCtx = { window: actualWindow, elb, settings, logger };
     const apiVersion = settings.apiVersion ?? 'auto';
 
@@ -81,12 +88,13 @@ export const sourceUsercentrics: Source.Init<Types> = async (context) => {
         cleanups.push(await setupV3Adapter(adapterCtx));
       }
     }
-  }
+  };
 
   return {
     type: 'usercentrics',
     config: fullConfig,
     push: elb,
+    init,
     destroy: async () => {
       cleanups.forEach((fn) => fn());
     },

@@ -38,21 +38,27 @@ export const sourceSession: Source.Init<Types> = async (context) => {
     command,
   };
 
-  // Initialize session using local lib. When `settings.consent` is set this
-  // registers a single consent rule with the collector; the collector then
-  // guarantees exactly-once delivery per state change, so the source does not
-  // need to react to consent events itself.
-  sessionStart({
-    ...settings,
-    window: env.window,
-    document: env.document,
-    collector: collectorInterface as Collector.Instance,
-  });
+  // Run session detection in init() (Pass 2 of initSources), not the factory
+  // (Pass 1), so construction stays side-effect free. When `settings.consent`
+  // is set this registers a single consent rule with the collector; the
+  // collector then guarantees exactly-once delivery per state change, so the
+  // source does not need to react to consent events itself. Deferring to init()
+  // keeps that single registration but moves the emit out of construction,
+  // where it would race source merge order.
+  const init = async (): Promise<void> => {
+    sessionStart({
+      ...settings,
+      window: env.window,
+      document: env.document,
+      collector: collectorInterface as Collector.Instance,
+    });
+  };
 
   return {
     type: 'session',
     config: fullConfig,
     push: elb,
+    init,
   };
 };
 

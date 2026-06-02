@@ -312,4 +312,11 @@ export interface Instance {
   pending: {
     destinations: Destination.InitDestinations;
   };
+  /**
+   * Every event type ever broadcast through `onApply` (state, lifecycle, and
+   * arbitrary). Lets a `require:[<arbitrary>]` gate be satisfied by the current
+   * recorded state for events that have no backing cell, including a broadcast
+   * that fired before the requiring step registered.
+   */
+  seenEvents: Set<string>;
 }

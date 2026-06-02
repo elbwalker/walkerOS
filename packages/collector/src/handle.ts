@@ -16,6 +16,7 @@ import { assign, getSpanId, isFunction, isString } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { processConsent } from './consent';
 import { on, onApply, redeliverStateAtRun, enterCascade } from './on';
+import { reconcilePending } from './pending';
 import { destroyAllSteps } from './shutdown';
 import type { RunState } from './types/collector';
 
@@ -279,6 +280,15 @@ export async function runCollector(
 
   // Increase round counter
   collector.round++;
+
+  // Run barrier — activate first, then re-deliver. The collector just became
+  // `allowed` and any RunState cells were merged + bumped above, so a step
+  // parked on `require` (e.g. a source gated on consent that only arrives via
+  // the run state) can now activate. Reconcile BEFORE redeliver so the
+  // freshly-started step is in `collector.sources` when redeliver re-broadcasts
+  // owed state, and thus receives its consent/user/globals/custom delivery at
+  // the barrier rather than missing it.
+  await reconcilePending(collector);
 
   // Run barrier: the collector just became `allowed`. Re-deliver each non-empty
   // recorded state cell to subscribers owed a pre-run deferral (mark <

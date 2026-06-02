@@ -28,6 +28,7 @@ import {
   cloneIngest,
 } from './transformer';
 import { isStateDelivery, shouldDeliver, setMark } from './on';
+import { reconcilePending } from './pending';
 
 /**
  * A Route is "static" when it's a transformer-ID string or an array of
@@ -621,6 +622,14 @@ export async function initSources(
       await flushSourceQueueOn(collector, instance, sourceId);
     }
   }
+
+  // Registration trigger: a source's factory or init (Pass 2) may have recorded
+  // state that satisfies another source's/destination's `require`. The live
+  // broadcast can miss a step that was not yet merged into collector.sources
+  // when the state fired (a factory emit during Pass 1), so reconcile once over
+  // the now-fully-registered set to activate any step satisfied by current
+  // state. This is the load-bearing fix for order-independent activation.
+  await reconcilePending(collector);
 
   return result;
 }

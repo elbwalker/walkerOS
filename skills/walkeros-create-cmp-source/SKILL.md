@@ -531,6 +531,19 @@ Key implementation steps:
 6. Detection path: Init listener
 7. Detection path: Change listener
 
+**The factory MUST be side-effect-free; do the detection paths in `init()`.**
+Steps 5-7 attach listeners and perform the "already loaded" static consent read,
+which emits `elb('walker consent', state)`. Put them inside an `init()` method
+on the returned instance, NOT in the factory body. The collector runs the
+factory in Pass 1 (before all sources are merged) and `init()` in Pass 2.
+Emitting consent from the factory races source merge order and can leave a later
+`require:["consent"]` source parked. Return
+`{ type, config, push, init, destroy }`; `init` runs the static read + attaches
+listeners, `destroy` removes them. (The collector also matches `require` against
+current recorded state, so a consent read from `init()` still activates
+dependent steps regardless of order — but a side-effect-free factory is the
+contract.)
+
 **Note on init listeners:** Some init listeners (like CookieFirst's `cf_init`)
 read consent from the global window object, not from `event.detail`. Others
 (like `cf_consent`) receive consent via `event.detail`. Check which pattern your
