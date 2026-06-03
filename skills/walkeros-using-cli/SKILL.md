@@ -190,6 +190,31 @@ Step: destinations.gtag
   Status: PASS
 ```
 
+### Same flow via MCP (`flow_simulate`)
+
+From an AI assistant the equivalent tool is `flow_simulate`. A few specifics:
+
+- **`step` is required.** Pass the target as `"type.name"`, e.g.
+  `"source.browser"`, `"destination.gtag"`, or `"transformer.router"`. There is
+  no all-steps mode.
+- **Source-step `event` shape is `{ content, trigger? }`**, where `content` is
+  the walkerOS event `{ name, data }` and `trigger` is optional
+  `{ type?, options? }`. There is no `env` field. Destination and transformer
+  steps take a plain walkerOS event `{ name, data, consent? }`.
+- **Sources are simulatable as a step**, including the `@walkeros/source-demo`
+  demo source.
+
+`flow_load` loads a flow from a local path, URL, inline JSON, or a cloud
+flow/config ID (`flow_...` / `cfg_...`). Configs returned by `flow_load` and
+`flow_manage` are round-trip safe: structural values (package names, platform,
+IDs) come back literally, so a returned config can be edited and sent back to
+`flow_manage({ action: "update" })` unchanged.
+
+When an MCP request fails, the `diagnostics` tool (read-only, no parameters,
+works logged out) reports the MCP and CLI versions, the resolved app URL, app
+`/api/health` reachability, the bundled OpenAPI contract version, and which
+source served the last package lookup.
+
 ### Validate flow config
 
 Validate schema, references, and cross-step example compatibility:

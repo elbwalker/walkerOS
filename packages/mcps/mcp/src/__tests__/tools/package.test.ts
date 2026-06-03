@@ -41,6 +41,7 @@ const mockFetchPackage = fetchPackage as jest.MockedFunction<
 jest.mock('../../catalog.js', () => ({
   fetchCatalog: jest.fn(),
   normalizePlatform: jest.requireActual('../../catalog.js').normalizePlatform,
+  getPackageBaseUrl: jest.requireActual('../../catalog.js').getPackageBaseUrl,
 }));
 
 import { fetchCatalog } from '../../catalog.js';
@@ -457,7 +458,7 @@ describe('package_search tool', () => {
         description: 'GA4',
       },
     ];
-    mockFetchCatalog.mockResolvedValue(mockCatalog);
+    mockFetchCatalog.mockResolvedValue({ entries: mockCatalog, warnings: [] });
 
     const tool = mockServer.getTool('package_search');
     const result = await tool.handler({});
@@ -471,8 +472,41 @@ describe('package_search tool', () => {
     expect(result.structuredContent.count).toBe(1);
   });
 
+  it('should surface catalog warnings in browse output hints', async () => {
+    mockFetchCatalog.mockResolvedValue({
+      entries: [],
+      warnings: [
+        'app catalog endpoint unavailable, fell back to npm; results may be incomplete',
+      ],
+    });
+
+    const tool = mockServer.getTool('package_search');
+    const result = await tool.handler({});
+
+    const hints = result.structuredContent._hints as {
+      next?: string[];
+      warnings?: string[];
+    };
+    expect(hints.warnings).toEqual([
+      'app catalog endpoint unavailable, fell back to npm; results may be incomplete',
+    ]);
+  });
+
+  it('should omit warnings hint when catalog returns none', async () => {
+    mockFetchCatalog.mockResolvedValue({ entries: [], warnings: [] });
+
+    const tool = mockServer.getTool('package_search');
+    const result = await tool.handler({});
+
+    const hints = result.structuredContent._hints as {
+      next?: string[];
+      warnings?: string[];
+    };
+    expect(hints.warnings).toBeUndefined();
+  });
+
   it('should pass type filter to catalog', async () => {
-    mockFetchCatalog.mockResolvedValue([]);
+    mockFetchCatalog.mockResolvedValue({ entries: [], warnings: [] });
 
     const tool = mockServer.getTool('package_search');
     await tool.handler({ type: 'destination' });
@@ -484,7 +518,7 @@ describe('package_search tool', () => {
   });
 
   it('should pass platform filter to catalog', async () => {
-    mockFetchCatalog.mockResolvedValue([]);
+    mockFetchCatalog.mockResolvedValue({ entries: [], warnings: [] });
 
     const tool = mockServer.getTool('package_search');
     await tool.handler({ platform: 'web' });
@@ -496,7 +530,7 @@ describe('package_search tool', () => {
   });
 
   it('should pass combined filters to catalog', async () => {
-    mockFetchCatalog.mockResolvedValue([]);
+    mockFetchCatalog.mockResolvedValue({ entries: [], warnings: [] });
 
     const tool = mockServer.getTool('package_search');
     await tool.handler({ type: 'source', platform: 'server' });

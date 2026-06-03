@@ -12,6 +12,7 @@ import {
 } from './tools/package.js';
 import { registerFlowLoadTool } from './tools/flow-load.js';
 import { registerFeedbackTool } from './tools/feedback.js';
+import { registerDiagnosticsTool } from './tools/diagnostics.js';
 import { registerAuthTool } from './tools/auth.js';
 import { registerProjectManageTool } from './tools/project-manage.js';
 import { registerFlowManageTool } from './tools/flow-manage.js';
@@ -122,13 +123,14 @@ export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   registerFlowManageTool(server, opts.client);
   registerDeployTool(server, opts.client);
   registerFeedbackTool(server, opts.client);
+  registerDiagnosticsTool(server, opts.client, packageVersion);
 
   registerFlowValidateTool(server);
   registerFlowBundleTool(server);
   registerFlowSimulateTool(server);
   registerFlowPushTool(server);
   registerFlowExamplesTool(server);
-  registerFlowLoadTool(server);
+  registerFlowLoadTool(server, opts.client);
 
   registerPackageSearchTool(server);
   registerGetPackageSchemaTool(server);

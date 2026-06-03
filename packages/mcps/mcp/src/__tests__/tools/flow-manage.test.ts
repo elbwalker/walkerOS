@@ -149,7 +149,7 @@ describe('flow_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('flowId is required');
+      expect(parsed.error).toContain('flowId is required for get action');
     });
 
     it('calls getFlow with fields', async () => {
@@ -174,6 +174,24 @@ describe('flow_manage tool', () => {
       expect(result.structuredContent.kind).toBe('flow-canvas');
       expect(result.structuredContent.flowId).toBe('flow_1');
     });
+
+    it('reports top-level platform "web" for a web-only flow (not "server")', async () => {
+      const flow = {
+        id: 'flow_1',
+        name: 'Web Flow',
+        config: { flows: { default: { config: { platform: 'web' } } } },
+      };
+      const getFlow = jest.fn().mockResolvedValue(flow);
+      registerFlowManageTool(server as never, stubClient({ getFlow }));
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler({
+        action: 'get',
+        flowId: 'flow_1',
+      })) as { structuredContent: { platform: string } };
+
+      expect(result.structuredContent.platform).toBe('web');
+    });
   });
 
   describe('create', () => {
@@ -187,7 +205,7 @@ describe('flow_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('name is required');
+      expect(parsed.error).toContain('name is required for create action');
     });
 
     it('calls createFlow', async () => {
@@ -212,6 +230,70 @@ describe('flow_manage tool', () => {
       expect(result.structuredContent.kind).toBe('flow-canvas');
       expect(result.structuredContent.flowId).toBe('flow_new');
     });
+
+    it('errors with NO_DEFAULT_PROJECT message when no projectId and no default', async () => {
+      const createFlow = jest.fn();
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createFlow, getDefaultProject: () => null }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler({
+        action: 'create',
+        name: 'New Flow',
+      })) as { isError: boolean; content: Array<{ text: string }> };
+
+      expect(result.isError).toBe(true);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).not.toContain('Project not found');
+      expect(createFlow).not.toHaveBeenCalled();
+    });
+
+    it('uses the default project when no projectId provided', async () => {
+      const created = { id: 'flow_new', name: 'New Flow' };
+      const createFlow = jest.fn().mockResolvedValue(created);
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createFlow, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler({
+        action: 'create',
+        name: 'New Flow',
+      })) as { structuredContent: { flowId: string } };
+
+      expect(createFlow).toHaveBeenCalledWith({
+        name: 'New Flow',
+        content: {},
+        projectId: 'proj_default',
+      });
+      expect(result.structuredContent.flowId).toBe('flow_new');
+    });
+
+    it('explicit projectId wins over the default and is passed through', async () => {
+      const created = { id: 'flow_new', name: 'New Flow' };
+      const createFlow = jest.fn().mockResolvedValue(created);
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createFlow, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      await tool.handler({
+        action: 'create',
+        name: 'New Flow',
+        projectId: 'proj_explicit',
+      });
+
+      expect(createFlow).toHaveBeenCalledWith({
+        name: 'New Flow',
+        content: {},
+        projectId: 'proj_explicit',
+      });
+    });
   });
 
   describe('update', () => {
@@ -225,7 +307,7 @@ describe('flow_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('flowId is required');
+      expect(parsed.error).toContain('flowId is required for update action');
     });
 
     it('defaults patch to true (passes mergePatch: true)', async () => {
@@ -264,7 +346,7 @@ describe('flow_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('flowId is required');
+      expect(parsed.error).toContain('flowId is required for delete action');
     });
 
     it('calls deleteFlow', async () => {
@@ -296,7 +378,7 @@ describe('flow_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('flowId is required');
+      expect(parsed.error).toContain('flowId is required for duplicate action');
     });
 
     it('calls duplicateFlow', async () => {

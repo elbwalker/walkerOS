@@ -127,7 +127,7 @@ describe('project_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('projectId is required');
+      expect(parsed.error).toContain('projectId is required for get action');
     });
 
     it('returns project data when projectId provided', async () => {
@@ -157,7 +157,7 @@ describe('project_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('name is required');
+      expect(parsed.error).toContain('name is required for create action');
     });
 
     it('calls createProject with name', async () => {
@@ -192,7 +192,7 @@ describe('project_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('projectId is required');
+      expect(parsed.error).toContain('projectId is required for update action');
     });
 
     it('requires name', async () => {
@@ -205,7 +205,7 @@ describe('project_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('name is required');
+      expect(parsed.error).toContain('name is required for update action');
     });
 
     it('calls updateProject with projectId and name', async () => {
@@ -241,7 +241,7 @@ describe('project_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('projectId is required');
+      expect(parsed.error).toContain('projectId is required for delete action');
     });
 
     it('calls deleteProject with projectId', async () => {
@@ -270,7 +270,9 @@ describe('project_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('projectId is required');
+      expect(parsed.error).toContain(
+        'projectId is required for set_default action',
+      );
     });
 
     it('calls setDefaultProject and hints about flow_manage', async () => {

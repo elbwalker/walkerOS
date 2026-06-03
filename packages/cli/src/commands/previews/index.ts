@@ -2,6 +2,7 @@ import { requireProjectId } from '../../core/auth.js';
 import { apiFetch } from '../../core/http.js';
 import { throwApiError } from '../../core/api-error.js';
 import { getFlow } from '../flows/index.js';
+import type { components } from '../../types/api.gen.js';
 
 // === Programmatic API ===
 
@@ -10,7 +11,9 @@ export interface ListPreviewsOptions {
   flowId: string;
 }
 
-export async function listPreviews(options: ListPreviewsOptions) {
+export async function listPreviews(
+  options: ListPreviewsOptions,
+): Promise<components['schemas']['ListPreviewsResponse']> {
   const pid = options.projectId ?? requireProjectId();
   const response = await apiFetch(
     `/api/projects/${pid}/flows/${options.flowId}/previews`,
@@ -28,7 +31,9 @@ export interface GetPreviewOptions {
   previewId: string;
 }
 
-export async function getPreview(options: GetPreviewOptions) {
+export async function getPreview(
+  options: GetPreviewOptions,
+): Promise<components['schemas']['PreviewResponse']> {
   const pid = options.projectId ?? requireProjectId();
   const response = await apiFetch(
     `/api/projects/${pid}/flows/${options.flowId}/previews/${options.previewId}`,
@@ -45,9 +50,15 @@ export interface CreatePreviewOptions {
   flowId: string;
   flowName?: string;
   flowSettingsId?: string;
+  /** What the preview should run: the flow's draft (default) or a deployed
+   *  version's stored config. Anchored to the generated API contract so a new
+   *  request field becomes a type error here rather than silent drift. */
+  source?: components['schemas']['CreatePreviewRequest']['source'];
 }
 
-export async function createPreview(options: CreatePreviewOptions) {
+export async function createPreview(
+  options: CreatePreviewOptions,
+): Promise<components['schemas']['PreviewResponse']> {
   const pid = options.projectId ?? requireProjectId();
 
   let settingsId = options.flowSettingsId;
@@ -74,7 +85,10 @@ export async function createPreview(options: CreatePreviewOptions) {
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ flowSettingsId: settingsId }),
+      body: JSON.stringify({
+        flowSettingsId: settingsId,
+        ...(options.source ? { source: options.source } : {}),
+      }),
     },
   );
   if (!response.ok) {
@@ -101,6 +115,9 @@ export async function deletePreview(options: DeletePreviewOptions) {
     throwApiError(body, 'Failed to delete preview');
   }
   // App returns 204 No Content on success; older surfaces may return JSON.
-  if (response.status === 204) return null;
-  return response.json().catch(() => null);
+  // Always resolve to a record so every consumer (MCP, CLI command) gets a
+  // serializable confirmation instead of a bare null.
+  const confirmation = { deleted: true, previewId: options.previewId };
+  if (response.status === 204) return confirmation;
+  return (await response.json().catch(() => null)) ?? confirmation;
 }

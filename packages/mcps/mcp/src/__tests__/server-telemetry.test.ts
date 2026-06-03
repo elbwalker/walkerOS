@@ -83,6 +83,7 @@ function stubClient(): ToolClient {
     whoami: notImpl,
     resolveToken: () => null,
     deleteConfig: () => false,
+    checkHealth: async () => ({ reachable: true }),
     submitFeedback: notImpl,
     getFeedbackPreference: () => undefined,
     setFeedbackPreference: () => {},

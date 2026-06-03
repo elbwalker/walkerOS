@@ -7,6 +7,8 @@ const config = {
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
     '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^@walkeros/cli/openapi/spec.json$':
+      '<rootDir>/../../cli/openapi/spec.json',
     '^@walkeros/cli$': '<rootDir>/../../cli/src/',
     '^@walkeros/cli/dev$': '<rootDir>/../../cli/src/dev',
   },

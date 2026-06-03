@@ -138,11 +138,13 @@ export {
   writeConfig,
   deleteConfig,
   resolveToken,
+  resolveAppUrl,
   setDefaultProject,
   getDefaultProject,
   setFeedbackPreference,
   getFeedbackPreference,
 } from './lib/config-file.js';
+export { VERSION } from './version.js';
 export type { WalkerOSConfig } from './lib/config-file.js';
 export type { ListFlowsOptions, ProjectFlows } from './commands/flows/index.js';
 export type { DeployOptions } from './commands/deploy/index.js';

@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { registerFlowSimulateTool } from '../../tools/simulate.js';
 import { SimulateOutputShape } from '../../schemas/output.js';
 
@@ -96,6 +97,17 @@ describe('flow_simulate tool', () => {
     const tool = server.getTool('flow_simulate');
     const config = tool.config as any;
     expect(config.outputSchema).toBe(SimulateOutputShape);
+  });
+
+  it('registers step as a required (non-optional) zod string', () => {
+    const tool = server.getTool('flow_simulate');
+    const config = tool.config as { inputSchema: { step: z.ZodType } };
+    const stepSchema = config.inputSchema.step;
+
+    // A required string accepts a string but rejects undefined.
+    expect(stepSchema.safeParse('destination.gtag').success).toBe(true);
+    expect(stepSchema.safeParse(undefined).success).toBe(false);
+    expect(stepSchema.isOptional()).toBe(false);
   });
 
   it('summarizes a destination result keyed by result name', async () => {
@@ -226,6 +238,28 @@ describe('flow_simulate tool', () => {
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toContain('step is required');
+  });
+
+  it('proceeds past the step guard when step is present', async () => {
+    mockSimulateDestination.mockResolvedValue({
+      step: 'destination',
+      name: 'gtag',
+      events: [],
+      calls: [],
+      duration: 10,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'destination.gtag',
+    });
+
+    // No "step is required" guard hit; the destination simulate ran.
+    expect(result.isError).toBeUndefined();
+    expect(mockSimulateDestination).toHaveBeenCalled();
   });
 
   it('returns isError when simulateDestination rejects', async () => {

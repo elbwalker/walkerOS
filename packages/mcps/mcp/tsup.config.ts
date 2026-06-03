@@ -19,6 +19,13 @@ const common = {
     '@walkeros/cli',
     '@walkeros/core',
   ],
+  // tsup auto-externalizes every dependency (including `@walkeros/cli`) and,
+  // with it, all of the package's subpaths. We want the OPPOSITE for the
+  // bundled OpenAPI spec: inline its JSON at build time so the resource and
+  // diagnostics serve a build-pinned in-memory copy with no runtime module
+  // resolution. `noExternal` forces just that one subpath to be bundled while
+  // the rest of `@walkeros/cli` stays external.
+  noExternal: [/^@walkeros\/cli\/openapi\/spec\.json$/],
   define: {
     __VERSION__: JSON.stringify(version),
   },

@@ -6,6 +6,11 @@ import { wrapUserData } from '../user-data.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import {
+  validateActionInput,
+  assertParam,
+  PROJECT_MANAGE_REQUIREMENTS,
+} from '../action-requirements.js';
 
 function wrapProjectName<T extends { name?: string }>(p: T): T {
   return p.name !== undefined ? { ...p, name: wrapUserData(p.name) } : p;
@@ -22,14 +27,12 @@ const inputSchema = {
   projectId: z
     .string()
     .optional()
-    .describe(
-      'Project ID. Required for get, update, delete, and set_default actions.',
-    ),
+    .describe('Required for get, update, delete, set_default.'),
   name: z
     .string()
     .optional()
     .describe(
-      'Project name. Required for create. Optional for update (to rename).',
+      'Required for create and update (update also requires projectId).',
     ),
   cursor: z
     .string()
@@ -72,6 +75,13 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
     cursor?: string;
     limit?: number;
   };
+  const validationError = validateActionInput(
+    'project_manage',
+    action ?? '',
+    { projectId, name },
+    PROJECT_MANAGE_REQUIREMENTS,
+  );
+  if (validationError) return mcpError(new Error(validationError));
   try {
     switch (action) {
       case 'list': {
@@ -100,21 +110,12 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'get': {
-        if (!projectId) {
-          return mcpError(
-            new Error(
-              'projectId is required for get action. Use action "list" to see available projects.',
-            ),
-          );
-        }
         const project = await client.getProject({ projectId });
         return mcpResult(wrapProjectName(project as { name?: string }));
       }
 
       case 'create': {
-        if (!name) {
-          return mcpError(new Error('name is required for create action.'));
-        }
+        assertParam(name, 'name', 'create');
         const created = await client.createProject({ name });
         return mcpResult(wrapProjectName(created as { name?: string }), {
           next: [
@@ -124,40 +125,18 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'update': {
-        if (!projectId) {
-          return mcpError(
-            new Error(
-              'projectId is required for update action. Use action "list" to see available projects.',
-            ),
-          );
-        }
-        if (!name) {
-          return mcpError(new Error('name is required for update action.'));
-        }
+        assertParam(name, 'name', 'update');
         const updated = await client.updateProject({ projectId, name });
         return mcpResult(wrapProjectName(updated as { name?: string }));
       }
 
       case 'delete': {
-        if (!projectId) {
-          return mcpError(
-            new Error(
-              'projectId is required for delete action. Use action "list" to see available projects.',
-            ),
-          );
-        }
         const deleted = await client.deleteProject({ projectId });
         return mcpResult(deleted);
       }
 
       case 'set_default': {
-        if (!projectId) {
-          return mcpError(
-            new Error(
-              'projectId is required for set_default action. Use action "list" to see available projects.',
-            ),
-          );
-        }
+        assertParam(projectId, 'projectId', 'set_default');
         client.setDefaultProject(projectId);
         return mcpResult(
           { defaultProjectId: projectId },

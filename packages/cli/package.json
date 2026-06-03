@@ -19,7 +19,8 @@
       "types": "./dist/examples/index.d.ts",
       "default": "./dist/examples/index.js"
     },
-    "./examples/*": "./examples/*"
+    "./examples/*": "./examples/*",
+    "./openapi/spec.json": "./openapi/spec.json"
   },
   "bin": {
     "walkeros": "./dist/cli.js"
@@ -27,6 +28,7 @@
   "files": [
     "dist/**",
     "examples/**",
+    "openapi/spec.json",
     "src/telemetry/flow.json",
     "README.md",
     "CHANGELOG.md"

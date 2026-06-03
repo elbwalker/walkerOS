@@ -89,6 +89,45 @@ describe('flow_manage tool — preview actions', () => {
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toEqual({ previews: [] });
     });
+
+    it('errors with NO_DEFAULT_PROJECT when no projectId and no default', async () => {
+      const listPreviews = jest.fn();
+      registerFlowManageTool(
+        server as never,
+        stubClient({ listPreviews, getDefaultProject: () => null }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        { action: 'preview_list', flowId: 'cfg_1' },
+        mockExtra,
+      )) as { isError: boolean; content: Array<{ text: string }> };
+
+      expect(result.isError).toBe(true);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).not.toContain('Project not found');
+      expect(listPreviews).not.toHaveBeenCalled();
+    });
+
+    it('resolves the default project when no projectId provided', async () => {
+      const listPreviews = jest.fn().mockResolvedValue({ previews: [] });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ listPreviews, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      await tool.handler(
+        { action: 'preview_list', flowId: 'cfg_1' },
+        mockExtra,
+      );
+
+      expect(listPreviews).toHaveBeenCalledWith({
+        projectId: 'proj_default',
+        flowId: 'cfg_1',
+      });
+    });
   });
 
   describe('preview_get', () => {
@@ -171,7 +210,10 @@ describe('flow_manage tool — preview actions', () => {
         createdBy: 'user_1',
         createdAt: '2026-04-21T00:00:00Z',
       });
-      registerFlowManageTool(server as never, stubClient({ createPreview }));
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
 
       const tool = server.getTool('flow_manage')!;
       const result = (await tool.handler(
@@ -180,7 +222,7 @@ describe('flow_manage tool — preview actions', () => {
       )) as { isError?: boolean; structuredContent: Record<string, unknown> };
 
       expect(createPreview).toHaveBeenCalledWith({
-        projectId: undefined,
+        projectId: 'proj_default',
         flowId: 'cfg_1',
         flowName: 'demo',
         flowSettingsId: undefined,
@@ -201,7 +243,10 @@ describe('flow_manage tool — preview actions', () => {
         createdBy: 'user_1',
         createdAt: '2026-04-21T00:00:00Z',
       });
-      registerFlowManageTool(server as never, stubClient({ createPreview }));
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
 
       const tool = server.getTool('flow_manage')!;
       const result = (await tool.handler(
@@ -223,6 +268,65 @@ describe('flow_manage tool — preview actions', () => {
       expect(data.activationParam).toBe('?elbPreview=tok_abc');
     });
 
+    it('forwards source to createPreview when provided', async () => {
+      const createPreview = jest.fn().mockResolvedValue({
+        id: 'prv_1',
+        token: 'tok_abc',
+        activationUrl: '?elbPreview=tok_abc',
+        bundleUrl: 'https://cdn.example.com/preview.js',
+        createdBy: 'user_1',
+        createdAt: '2026-04-21T00:00:00Z',
+      });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        {
+          action: 'preview_create',
+          flowId: 'cfg_1',
+          flowSettingsId: 'set_1',
+          source: { kind: 'deployment-version', deploymentVersionId: 'dpv_1' },
+        },
+        mockExtra,
+      )) as { isError?: boolean };
+
+      expect(createPreview).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: 'cfg_1',
+          flowSettingsId: 'set_1',
+          source: { kind: 'deployment-version', deploymentVersionId: 'dpv_1' },
+        }),
+      );
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('omits source from the createPreview call when not provided', async () => {
+      const createPreview = jest.fn().mockResolvedValue({
+        id: 'prv_1',
+        token: 'tok_abc',
+        activationUrl: '?elbPreview=tok_abc',
+        bundleUrl: 'https://cdn.example.com/preview.js',
+        createdBy: 'user_1',
+        createdAt: '2026-04-21T00:00:00Z',
+      });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      await tool.handler(
+        { action: 'preview_create', flowId: 'cfg_1', flowSettingsId: 'set_1' },
+        mockExtra,
+      );
+
+      const callArg = createPreview.mock.calls[0][0] as Record<string, unknown>;
+      expect(Object.keys(callArg)).not.toContain('source');
+    });
+
     it('works with flowSettingsId instead of flowName', async () => {
       const createPreview = jest.fn().mockResolvedValue({
         id: 'prv_1',
@@ -232,7 +336,10 @@ describe('flow_manage tool — preview actions', () => {
         createdBy: 'user_1',
         createdAt: '2026-04-21T00:00:00Z',
       });
-      registerFlowManageTool(server as never, stubClient({ createPreview }));
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
 
       const tool = server.getTool('flow_manage')!;
       const result = (await tool.handler(
@@ -245,12 +352,65 @@ describe('flow_manage tool — preview actions', () => {
       )) as { isError?: boolean };
 
       expect(createPreview).toHaveBeenCalledWith({
-        projectId: undefined,
+        projectId: 'proj_default',
         flowId: 'cfg_1',
         flowName: undefined,
         flowSettingsId: 'set_1',
       });
       expect(result.isError).toBeUndefined();
+    });
+
+    it('errors with NO_DEFAULT_PROJECT when no projectId and no default', async () => {
+      const createPreview = jest.fn();
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createPreview, getDefaultProject: () => null }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        { action: 'preview_create', flowId: 'cfg_1', flowName: 'demo' },
+        mockExtra,
+      )) as { isError: boolean; content: Array<{ text: string }> };
+
+      expect(result.isError).toBe(true);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).not.toContain('Project not found');
+      expect(createPreview).not.toHaveBeenCalled();
+    });
+
+    it('explicit projectId wins over the default and is passed through', async () => {
+      const createPreview = jest.fn().mockResolvedValue({
+        id: 'prv_1',
+        token: 'tok_abc',
+        activationUrl: '?elbPreview=tok_abc',
+        bundleUrl: 'https://cdn.example.com/preview.js',
+        createdBy: 'user_1',
+        createdAt: '2026-04-21T00:00:00Z',
+      });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      await tool.handler(
+        {
+          action: 'preview_create',
+          projectId: 'proj_explicit',
+          flowId: 'cfg_1',
+          flowName: 'demo',
+        },
+        mockExtra,
+      );
+
+      expect(createPreview).toHaveBeenCalledWith({
+        projectId: 'proj_explicit',
+        flowId: 'cfg_1',
+        flowName: 'demo',
+        flowSettingsId: undefined,
+      });
     });
   });
 
@@ -300,6 +460,29 @@ describe('flow_manage tool — preview actions', () => {
       });
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toEqual({ deleted: true });
+    });
+
+    it('does not emit a null structuredContent when the client returns null (raw 204 path)', async () => {
+      const deletePreview = jest.fn().mockResolvedValue(null);
+      registerFlowManageTool(server as never, stubClient({ deletePreview }));
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        {
+          action: 'preview_delete',
+          projectId: 'proj_1',
+          flowId: 'cfg_1',
+          previewId: 'prv_1',
+        },
+        mockExtra,
+      )) as { isError?: boolean; structuredContent: unknown };
+
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).not.toBeNull();
+      expect(result.structuredContent).toEqual({
+        deleted: true,
+        previewId: 'prv_1',
+      });
     });
   });
 });

@@ -91,6 +91,15 @@ export interface ToolClient {
   resolveToken(): { token: string; source: 'env' | 'config' } | null;
   deleteConfig(): boolean;
 
+  // Diagnostics: unauthenticated reachability probe of the app's public
+  // `/api/health` route. Resolves `{ reachable: false }` only on a real
+  // network/timeout failure, never on "not authenticated".
+  checkHealth(): Promise<{
+    reachable: boolean;
+    status?: string;
+    version?: string;
+  }>;
+
   // Feedback
   submitFeedback(text: string, options?: FeedbackOptions): Promise<void>;
   getFeedbackPreference(): boolean | undefined;

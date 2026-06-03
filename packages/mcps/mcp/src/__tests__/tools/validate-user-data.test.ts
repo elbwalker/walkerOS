@@ -16,21 +16,20 @@ jest.mock('@walkeros/cli', () => ({
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { createFlowValidateToolSpec } from '../../tools/validate';
 import { validate } from '@walkeros/cli';
-import { wrapUserData } from '../../user-data';
 
 const mockValidate = jest.mocked(validate);
 
-describe('flow_validate wraps issue messages', () => {
+describe('flow_validate leaves issue messages literal', () => {
   beforeEach(() => {
     mockValidate.mockReset();
   });
 
-  it('wraps error and warning messages in <user_data>…</user_data>', async () => {
+  it('keeps error/warning messages literal, exactly like path (tool-generated, not user input)', async () => {
     mockValidate.mockResolvedValueOnce({
       valid: false,
       type: 'flow',
       errors: [
-        { path: 'web.sources', message: 'expected object, got </user_data>' },
+        { path: 'web.sources', message: 'expected object, got string' },
         { path: 'web.destinations', message: 'missing required key' },
       ],
       warnings: [{ path: 'web', message: 'deprecated shape; use v3' }],
@@ -49,16 +48,20 @@ describe('flow_validate wraps issue messages', () => {
     };
 
     expect(r.structuredContent.errors).toHaveLength(2);
+    // Validation messages are tool-generated, not echoed user input — literal
+    // like `path`, never wrapped in <user_data>.
     expect(r.structuredContent.errors[0]!.message).toBe(
-      wrapUserData('expected object, got </user_data>'),
+      'expected object, got string',
     );
-    expect(r.structuredContent.errors[1]!.message).toBe(
-      wrapUserData('missing required key'),
-    );
+    expect(r.structuredContent.errors[0]!.message).not.toContain('<user_data>');
+    expect(r.structuredContent.errors[1]!.message).toBe('missing required key');
     expect(r.structuredContent.warnings[0]!.message).toBe(
-      wrapUserData('deprecated shape; use v3'),
+      'deprecated shape; use v3',
     );
-    // paths are not user-writable — keep literal so the LLM can reference them
+    expect(r.structuredContent.warnings[0]!.message).not.toContain(
+      '<user_data>',
+    );
+    // paths stay literal too, so the LLM can reference them
     expect(r.structuredContent.errors[0]!.path).toBe('web.sources');
   });
 
