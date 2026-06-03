@@ -5,10 +5,12 @@ import './support/version.js';
 // resolveAppUrl mirrors the real env-vs-default precedence so the appUrl
 // assertions exercise real provenance logic.
 const MOCK_CLI_VERSION = '5.4.3-test';
+const mockCompareContract = jest.fn();
 jest.mock('@walkeros/cli', () => ({
   VERSION: '5.4.3-test',
   resolveAppUrl: () =>
     process.env.WALKEROS_APP_URL ?? 'https://app.walkeros.io',
+  compareContract: () => mockCompareContract(),
 }));
 
 import { createRequire } from 'module';
@@ -39,7 +41,11 @@ interface DiagnosticsResult {
   cli: { version: string };
   appUrl: { resolved: string; source: 'env' | 'default' };
   app: { reachable: boolean; status?: string };
-  contract: { openapiVersion: string };
+  contract: {
+    openapiVersion: string;
+    verdict: 'in-sync' | 'client-older' | 'client-newer' | 'unknown';
+    action?: string;
+  };
   catalog: { lastSource?: string; lastCount?: number; partial?: boolean };
   _hints?: { next?: string[]; warnings?: string[] };
 }
@@ -63,6 +69,12 @@ describe('diagnostics tool', () => {
     clearCatalogCache();
     global.fetch = mockFetch;
     delete process.env.WALKEROS_APP_URL;
+    // Default: in-sync verdict so existing assertions are unaffected.
+    mockCompareContract.mockResolvedValue({
+      verdict: 'in-sync',
+      bakedVersion: '1.0.0',
+      liveVersion: '1.0.0',
+    });
   });
 
   afterEach(() => {
@@ -127,9 +139,48 @@ describe('diagnostics tool', () => {
     );
   });
 
+  it('reports app.reachable false and still returns when checkHealth is absent', async () => {
+    // An external ToolClient implementation may omit the optional checkHealth
+    // method; diagnostics must degrade to reachable: false without throwing.
+    const { checkHealth: _omit, ...withoutHealth } = stubClient();
+    const out = await runDiagnostics(withoutHealth);
+    expect(out.app.reachable).toBe(false);
+    expect(
+      out._hints?.warnings?.some((w) => /health check is unavailable/i.test(w)),
+    ).toBe(true);
+  });
+
   it('reports the bundled contract openapi version', async () => {
     const out = await runDiagnostics();
     expect(out.contract.openapiVersion).toBe(specJson.info.version);
+  });
+
+  it('reports the contract drift verdict and action from compareContract', async () => {
+    mockCompareContract.mockResolvedValue({
+      verdict: 'client-older',
+      bakedVersion: '1.0.0',
+      liveVersion: '1.3.0',
+      action: 'upgrade @walkeros/cli to >= 1.3.0',
+    });
+    const out = await runDiagnostics();
+    expect(out.contract.verdict).toBe('client-older');
+    expect(out.contract.action).toBe('upgrade @walkeros/cli to >= 1.3.0');
+  });
+
+  it('degrades the verdict to unknown when compareContract reports unreachable', async () => {
+    mockCompareContract.mockResolvedValue({
+      verdict: 'unknown',
+      bakedVersion: '1.0.0',
+    });
+    const out = await runDiagnostics();
+    expect(out.contract.verdict).toBe('unknown');
+    expect(out.contract.action).toBeUndefined();
+  });
+
+  it('degrades the verdict to unknown when compareContract throws', async () => {
+    mockCompareContract.mockRejectedValue(new Error('boom'));
+    const out = await runDiagnostics();
+    expect(out.contract.verdict).toBe('unknown');
   });
 
   it('reports catalog.lastSource app after an app catalog fetch', async () => {

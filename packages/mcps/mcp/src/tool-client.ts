@@ -93,8 +93,10 @@ export interface ToolClient {
 
   // Diagnostics: unauthenticated reachability probe of the app's public
   // `/api/health` route. Resolves `{ reachable: false }` only on a real
-  // network/timeout failure, never on "not authenticated".
-  checkHealth(): Promise<{
+  // network/timeout failure, never on "not authenticated". Optional: clients
+  // that cannot probe reachability (e.g. in-process hosts) may omit it, and
+  // diagnostics degrades to `app.reachable: false`.
+  checkHealth?(): Promise<{
     reachable: boolean;
     status?: string;
     version?: string;

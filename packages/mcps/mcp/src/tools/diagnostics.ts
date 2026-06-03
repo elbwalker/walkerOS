@@ -1,6 +1,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult } from '@walkeros/core';
-import { VERSION as CLI_VERSION, resolveAppUrl } from '@walkeros/cli';
+import {
+  VERSION as CLI_VERSION,
+  resolveAppUrl,
+  compareContract,
+} from '@walkeros/cli';
+import type { ContractComparison } from '@walkeros/cli';
 import openapiSpec from '@walkeros/cli/openapi/spec.json';
 
 import type { ToolClient } from '../tool-client.js';
@@ -55,14 +60,26 @@ async function diagnosticsHandlerBody(
     : 'default';
   const resolved = resolveAppUrl();
 
-  // checkHealth's contract is to resolve { reachable: false } on failure, but
-  // guard here too so a throwing client never breaks diagnostics.
-  let health: { reachable: boolean; status?: string };
-  try {
-    health = await client.checkHealth();
-  } catch {
-    health = { reachable: false };
-  }
+  // checkHealth is optional on ToolClient: clients that cannot probe
+  // reachability omit it, in which case diagnostics degrades to
+  // { reachable: false }. When present, its contract is to resolve
+  // { reachable: false } on failure, but catch here too so a throwing client
+  // never breaks diagnostics.
+  const health: { reachable: boolean; status?: string } = client.checkHealth
+    ? await client.checkHealth().catch(() => ({ reachable: false }))
+    : { reachable: false };
+  const healthUnavailable = !client.checkHealth;
+
+  // Contract drift verdict: compare the client's baked baseline against the
+  // live app's /api/health. Degrade to 'unknown' if the probe throws so a
+  // network blip never breaks diagnostics.
+  const contractComparison: ContractComparison = await compareContract().catch(
+    () => ({
+      verdict: 'unknown' as const,
+      bakedVersion: CONTRACT_OPENAPI_VERSION,
+    }),
+  );
+
   const catalogInfo = getLastCatalogSource();
 
   const warnings: string[] = [];
@@ -71,9 +88,21 @@ async function diagnosticsHandlerBody(
       'WALKEROS_APP_URL is not set; using the default app URL. Set it to target a specific backend.',
     );
   }
-  if (!health.reachable) {
+  if (healthUnavailable) {
+    warnings.push(
+      'health check is unavailable on this client; app reachability is reported as false.',
+    );
+  } else if (!health.reachable) {
     warnings.push(
       `app /api/health is unreachable at ${resolved}; check the URL, network, and that the app is running.`,
+    );
+  }
+  if (
+    contractComparison.verdict === 'client-older' &&
+    contractComparison.action
+  ) {
+    warnings.push(
+      `client contract is behind the server: ${contractComparison.action}.`,
     );
   }
 
@@ -89,6 +118,10 @@ async function diagnosticsHandlerBody(
     },
     contract: {
       openapiVersion: CONTRACT_OPENAPI_VERSION,
+      verdict: contractComparison.verdict,
+      ...(contractComparison.action !== undefined && {
+        action: contractComparison.action,
+      }),
     },
     catalog: catalogInfo
       ? {

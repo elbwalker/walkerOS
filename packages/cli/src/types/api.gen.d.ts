@@ -4794,6 +4794,21 @@ export interface components {
     HealthResponse: {
       /** @example ok */
       status: string;
+      /**
+       * @description Build identity of the running app (git short hash injected at build time).
+       * @example a1b2c3d
+       */
+      appVersion: string;
+      /**
+       * @description Semver of the API contract the server implements.
+       * @example 1.0.0
+       */
+      contractVersion: string;
+      /**
+       * @description Deterministic sha256 of the OpenAPI contract content.
+       * @example e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+       */
+      contractHash: string;
     };
   };
   responses: never;

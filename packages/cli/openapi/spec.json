@@ -2553,9 +2553,24 @@
           "status": {
             "type": "string",
             "example": "ok"
+          },
+          "appVersion": {
+            "type": "string",
+            "example": "a1b2c3d",
+            "description": "Build identity of the running app (git short hash injected at build time)."
+          },
+          "contractVersion": {
+            "type": "string",
+            "example": "1.0.0",
+            "description": "Semver of the API contract the server implements."
+          },
+          "contractHash": {
+            "type": "string",
+            "example": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "description": "Deterministic sha256 of the OpenAPI contract content."
           }
         },
-        "required": ["status"]
+        "required": ["status", "appVersion", "contractVersion", "contractHash"]
       }
     },
     "parameters": {}
