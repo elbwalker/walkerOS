@@ -18,6 +18,7 @@ export const Commands: Record<CommandTypes, Collector.CommandType> = {
   Prefix: 'data-elb',
   Ready: 'ready',
   Run: 'run',
+  Scoped: '_',
   Session: 'session',
   Shutdown: 'shutdown',
   User: 'user',

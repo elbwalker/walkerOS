@@ -32,6 +32,7 @@ export type CommandTypes =
   | 'Prefix'
   | 'Ready'
   | 'Run'
+  | 'Scoped'
   | 'Session'
   | 'Shutdown'
   | 'User'

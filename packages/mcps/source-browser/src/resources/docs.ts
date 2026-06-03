@@ -163,6 +163,22 @@ Add the \`[]\` suffix to a property's name, such as \`size[]:m\`. It will genera
 
 Leave the entity name empty (only \`data-elb-\`) to add the property to any related entity. Explicitly named properties are preferred over generic ones.
 
+### Scoped generic properties
+
+Use \`data-elb_\` (trailing underscore, no dash) to add a generic property that reaches only the triggers nested below it. It uses the same \`key:value\` payload as \`data-elb-\` (including \`[]\` arrays and \`#dynamic\` values), but it is collected only while bubbling up from the triggered element, so sibling triggers outside its branch never receive it. A scoped value closer to the trigger wins over a value set farther up the tree.
+
+\`\`\`html
+<div data-elb="product" data-elb-product="name:A">
+  <div data-elb_="size:L">
+    <button data-elbaction="click">L</button>
+  </div>
+  <div data-elb-="color:red"></div>
+  <button data-elbaction="click">Plain</button>
+</div>
+\`\`\`
+
+The first button gets \`{ name: 'A', color: 'red', size: 'L' }\`; the second button gets \`{ name: 'A', color: 'red' }\` (no \`size\`).
+
 ## Globals
 
 Properties that apply to **all events on a page**. Define them anywhere using the \`data-elbglobals\` attribute. Globals are collected once, right before the first event.
@@ -203,7 +219,7 @@ A \`data-elb\` entity within another \`data-elb\` entity is called a nested enti
 
 ## Reserved attributes
 
-\`data-elb\`, \`data-elbaction\`, \`data-elbactions\`, \`data-elbcontext\`, \`data-elbglobals\`, and \`data-elblink\` are reserved attributes. \`data-elb-*\` attributes may be arbitrary combinations based on the related entity name.
+\`data-elb\`, \`data-elbaction\`, \`data-elbactions\`, \`data-elbcontext\`, \`data-elbglobals\`, and \`data-elblink\` are reserved attributes. \`data-elb-*\` attributes may be arbitrary combinations based on the related entity name. \`data-elb_\` is a reserved path-scoped generic that uses the same value syntax as \`data-elb-\` but only reaches triggers nested below it.
 `;
 
 const TAGGER_DOCS = `# Tagger

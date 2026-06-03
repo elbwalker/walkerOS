@@ -139,6 +139,105 @@
   </div>
 </div>
 
+<!-- Scoped generic (data-elb_) fixtures -->
+<div id="scoped-root" data-elb="product" data-elb-product="name:A">
+  <div data-elb_="size:L">
+    <button id="scoped" data-elbaction="click">L</button>
+  </div>
+  <div data-elb-="color:red"></div>
+  <button id="plain" data-elbaction="click">Plain</button>
+</div>
+
+<div id="scoped-parse-root" data-elb="parse" data-elb-parse="base:x">
+  <input
+    id="scoped-parse"
+    type="text"
+    value="dyn"
+    data-elb_="size[]:s;size[]:m;count:42;empty:;val:#value"
+    data-elbaction="click"
+  />
+</div>
+
+<div id="scoped-vs-blanket-root" data-elb="pv">
+  <span data-elb-="shared:blanket"></span>
+  <div data-elb_="shared:scoped">
+    <button id="scoped-vs-blanket" data-elbaction="click"></button>
+  </div>
+</div>
+
+<div id="scoped-closer-root" data-elb="cc" data-elb-cc="prop:explicit">
+  <div data-elb_="prop:scoped">
+    <button id="scoped-closer" data-elbaction="click"></button>
+  </div>
+</div>
+
+<div id="scoped-farther-root" data-elb="cf">
+  <div data-elb_="prop:scoped">
+    <div data-elb-cf="prop:explicit">
+      <button id="scoped-farther" data-elbaction="click"></button>
+    </div>
+  </div>
+</div>
+
+<div id="scoped-stack-root" data-elb="st">
+  <div data-elb_="level:outer;outerkey:o">
+    <div data-elb_="level:inner;innerkey:i">
+      <button id="scoped-stack" data-elbaction="click"></button>
+    </div>
+  </div>
+</div>
+
+<div id="scoped-self-root" data-elb="self">
+  <button id="scoped-self" data-elb_="own:yes" data-elbaction="click"></button>
+</div>
+
+<div id="scoped-onentity-root" data-elb="oe" data-elb_="ek:ev">
+  <button id="scoped-onentity" data-elbaction="click"></button>
+</div>
+
+<div id="scoped-orphan-root" data-elb="orph">
+  <div data-elb_="ghost:boo"></div>
+  <button id="scoped-orphan" data-elbaction="click"></button>
+</div>
+
+<div id="scoped-nested-outer" data-elb="outer">
+  <div data-elb_="shared:S">
+    <div data-elb="inner" data-elb-inner="i:1">
+      <button id="scoped-nested" data-elbactions="click"></button>
+    </div>
+  </div>
+</div>
+
+<div id="scoped-shadow-host" data-elb="sh" data-elb_="boundary:crossed"></div>
+
+<div id="scoped-link-wrap">
+  <div data-elb="lp" data-elb_="fromparent:yes">
+    <div data-elblink="slink:parent"></div>
+  </div>
+  <div data-elblink="slink:child">
+    <button id="scoped-link-child" data-elbactions="click"></button>
+  </div>
+</div>
+
+<div id="scoped-page-wrap">
+  <div data-elb_="leak:page">
+    <button id="scoped-page" data-elbaction="click"></button>
+  </div>
+</div>
+
+<div id="scoped-empty-root" data-elb="emp">
+  <div data-elb_="">
+    <div data-elb_=":">
+      <button id="scoped-empty" data-elbaction="click"></button>
+    </div>
+  </div>
+</div>
+
+<div id="scoped-blanket-guard-root" data-elb="bg">
+  <span data-elb-="leak:everywhere"></span>
+  <button id="scoped-blanket-guard" data-elbaction="click"></button>
+</div>
+
 <div>
   <div
     id="link-parent"

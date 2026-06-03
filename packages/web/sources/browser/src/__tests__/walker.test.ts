@@ -375,6 +375,130 @@ describe('Walker', () => {
       },
     ]);
   });
+
+  test('Scoped generic only reaches descendants of the scope element', () => {
+    expect(getEvents(getElem('scoped'), Triggers.Click)).toMatchObject([
+      {
+        entity: 'product',
+        action: 'click',
+        data: { name: 'A', color: 'red', size: 'L' },
+      },
+    ]);
+  });
+
+  test('Scoped generic does not leak to sibling triggers', () => {
+    const events = getEvents(getElem('plain'), Triggers.Click);
+    expect(events).toMatchObject([
+      { entity: 'product', action: 'click', data: { name: 'A', color: 'red' } },
+    ]);
+    expect(events[0].data).not.toHaveProperty('size');
+  });
+
+  test('Scoped generic parses arrays, casts, and dynamics like blanket', () => {
+    expect(getEvents(getElem('scoped-parse'), Triggers.Click)).toMatchObject([
+      {
+        entity: 'parse',
+        data: { base: 'x', size: ['s', 'm'], count: 42, empty: '', val: 'dyn' },
+      },
+    ]);
+  });
+
+  test('Scoped generic beats blanket collected via down-search', () => {
+    expect(
+      getEvents(getElem('scoped-vs-blanket'), Triggers.Click),
+    ).toMatchObject([{ entity: 'pv', data: { shared: 'scoped' } }]);
+  });
+
+  test('Scoped value closer to trigger beats farther explicit entity prop', () => {
+    expect(getEvents(getElem('scoped-closer'), Triggers.Click)).toMatchObject([
+      { entity: 'cc', data: { prop: 'scoped' } },
+    ]);
+  });
+
+  test('Explicit prop closer to trigger beats farther scoped wrapper', () => {
+    expect(getEvents(getElem('scoped-farther'), Triggers.Click)).toMatchObject([
+      { entity: 'cf', data: { prop: 'explicit' } },
+    ]);
+  });
+
+  test('Closer scoped ancestor wins over farther scoped ancestor', () => {
+    expect(getEvents(getElem('scoped-stack'), Triggers.Click)).toMatchObject([
+      {
+        entity: 'st',
+        data: { level: 'inner', innerkey: 'i', outerkey: 'o' },
+      },
+    ]);
+  });
+
+  test('Scoped on the triggered element itself is collected', () => {
+    expect(getEvents(getElem('scoped-self'), Triggers.Click)).toMatchObject([
+      { entity: 'self', data: { own: 'yes' } },
+    ]);
+  });
+
+  test('Scoped on the entity element reaches a descendant trigger', () => {
+    expect(getEvents(getElem('scoped-onentity'), Triggers.Click)).toMatchObject(
+      [{ entity: 'oe', data: { ek: 'ev' } }],
+    );
+  });
+
+  test('Scoped block with no triggered descendant appears on nothing', () => {
+    const events = getEvents(getElem('scoped-orphan'), Triggers.Click);
+    expect(events).toMatchObject([{ entity: 'orph' }]);
+    expect(events[0].data).not.toHaveProperty('ghost');
+
+    const all = getAllEvents(document.body);
+    expect(all.every((event) => !(event.data && 'ghost' in event.data))).toBe(
+      true,
+    );
+  });
+
+  test('Scoped ancestor reaches a trigger inside a nested entity on the shared path', () => {
+    expect(getEvents(getElem('scoped-nested'), Triggers.Click)).toMatchObject([
+      { entity: 'inner', data: { i: 1, shared: 'S' } },
+      { entity: 'outer', data: { shared: 'S' } },
+    ]);
+  });
+
+  test('Scoped crosses the shadow host boundary going up', () => {
+    const host = getElem('scoped-shadow-host');
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = `<button id="scoped-shadow-action" data-elbaction="click"></button>`;
+
+    expect(
+      getEvents(root.getElementById('scoped-shadow-action')!, Triggers.Click),
+    ).toMatchObject([{ entity: 'sh', data: { boundary: 'crossed' } }]);
+  });
+
+  test('Scoped on a link parent reaches the linked child trigger', () => {
+    expect(
+      getEvents(getElem('scoped-link-child'), Triggers.Click),
+    ).toMatchObject([{ entity: 'lp', data: { fromparent: 'yes' } }]);
+  });
+
+  test('Scoped is ignored for the synthetic page entity', () => {
+    const events = getEvents(getElem('scoped-page'), Triggers.Click);
+    expect(events).toMatchObject([{ entity: 'page' }]);
+    expect(events[0].data).not.toHaveProperty('leak');
+  });
+
+  test('Empty or malformed scoped attributes are inert', () => {
+    let events: ReturnType<typeof getEvents> = [];
+    expect(() => {
+      events = getEvents(getElem('scoped-empty'), Triggers.Click);
+    }).not.toThrow();
+    expect(events).toMatchObject([{ entity: 'emp' }]);
+    // Same parse pipeline as blanket data-elb-: empty value is inert, a bare
+    // ":" collapses to an empty-string key (no real property, no error).
+    expect(events[0].data).toEqual({ '': '' });
+    expect(events[0].data).not.toHaveProperty('ghost');
+  });
+
+  test('Blanket generic still leaks to sibling triggers via down-search', () => {
+    expect(
+      getEvents(getElem('scoped-blanket-guard'), Triggers.Click),
+    ).toMatchObject([{ entity: 'bg', data: { leak: 'everywhere' } }]);
+  });
 });
 
 function getElem(selector: string) {
