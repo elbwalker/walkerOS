@@ -14,7 +14,8 @@ export async function destroyAllSteps(
   // Phase 1: Sources (stop intake)
   await destroyStepGroup(collector.sources, 'source', logger);
 
-  // Phase 2: Destinations (close connections)
+  // Phase 2: Destinations, flush pending batches first, then close connections.
+  await flushDestinationBatches(collector.destinations, logger);
   await destroyStepGroup(collector.destinations, 'destination', logger);
 
   // Phase 3: Transformers (release caches)
@@ -22,6 +23,34 @@ export async function destroyAllSteps(
 
   // Phase 4: Stores (release storage — last, so transformers can flush during their destroy)
   await destroyStepGroup(collector.stores, 'store', logger);
+}
+
+async function flushDestinationBatches(
+  destinations: Collector.Instance['destinations'],
+  rootLogger: Logger.Instance,
+): Promise<void> {
+  const promises = Object.entries(destinations).flatMap(([id, dest]) => {
+    const batches = dest.batches;
+    if (!batches) return [];
+    const logger = rootLogger.scope(dest.type || 'destination');
+    return Object.values(batches).map(async (b) => {
+      try {
+        await Promise.race([
+          b.flush(),
+          new Promise<void>((_, reject) =>
+            setTimeout(
+              () =>
+                reject(new Error(`destination '${id}' batch flush timed out`)),
+              STEP_TIMEOUT,
+            ),
+          ),
+        ]);
+      } catch (err) {
+        logger.error(`destination '${id}' batch flush failed: ${err}`);
+      }
+    });
+  });
+  await Promise.allSettled(promises);
 }
 
 async function destroyStepGroup<

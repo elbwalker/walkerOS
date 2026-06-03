@@ -26,10 +26,9 @@ export const pushBatch: PushBatchFn = (batch, { config, logger }) => {
     return;
   }
 
-  const rows = batch.events.map((event, i) => {
-    const data = batch.data[i];
-    return isObject(data) ? data : eventToRow(event);
-  });
+  const rows = batch.entries.map((e) =>
+    isObject(e.data) ? e.data : eventToRow(e.event),
+  );
 
   if (rows.length === 0) return;
 

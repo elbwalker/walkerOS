@@ -240,9 +240,10 @@ ingestion. This replaces the legacy `tabledata.insertAll` path.
 
 - **Cost**: $25/TB after the 2 TiB/month free tier (vs ~$50/TB for the legacy
   path). Most low-volume deployments fit entirely in the free tier.
-- **Batching**: `pushBatch` is implemented. Set the collector's `batch: <ms>`
-  mapping setting to flush all events in a window as a single `appendRows`
-  call.
+- **Batching**: `pushBatch` is implemented. Set `config.batch` on the
+  destination (a bare number is the debounce `wait` in ms) to flush all events
+  in a window as a single `appendRows` call. No `'* *'` wildcard mapping rule is
+  needed.
 
 :::caution EXPERIMENTAL SDK
 The upstream `@google-cloud/bigquery-storage` package self-marks as

@@ -171,7 +171,7 @@ export const ConfigSchema = z
       ])
       .optional()
       .describe(
-        'Batch scheduling: bare number is the debounce wait window (legacy); object form supports wait (debounce ms), size (count cap, default 1000), age (max ms since first entry, default 30000).',
+        "Enables batching for all of this destination's events into one shared default buffer; a mapping rule's own batch splits that entity-action into its own buffer and overrides per field. Bare number is the debounce wait window; object form supports wait (debounce ms), size (count cap, default 1000), age (max ms since first entry, default 30000).",
       ),
   })
   .meta({

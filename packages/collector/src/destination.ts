@@ -64,6 +64,16 @@ function isBatchedResult(value: unknown): boolean {
 }
 
 /**
+ * Reserved buffer key for the destination-wide default batch created by
+ * `config.batch`. A produced mappingKey is `"<entity> <action>"` with both
+ * segments guaranteed non-empty (getMappingEvent returns no key when either
+ * is empty, packages/core/src/mapping.ts:24-25), so no event-derived key can
+ * begin with a space. The leading space here therefore never collides with a
+ * rule buffer or the `'* *'` fallback.
+ */
+const BATCH_ALL_KEY = ' batch-all';
+
+/**
  * Normalize a batch config value to the canonical `{ wait?, size?, age? }`
  * shape. A bare number is treated as `wait` (legacy form). `undefined`
  * normalizes to an empty object so callers can chain `??` lookups.
@@ -938,10 +948,13 @@ export async function destinationPush<Destination extends Destination.Instance>(
   }
 
   const eventMapping = processed.mapping;
-  const mappingKey = processed.mappingKey || '* *';
+  const ruleHasBatch = Boolean(eventMapping?.batch);
+  const mappingKey = ruleHasBatch
+    ? processed.mappingKey || '* *'
+    : BATCH_ALL_KEY;
 
   if (
-    eventMapping?.batch &&
+    (ruleHasBatch || config.batch) &&
     destination.pushBatch &&
     config.mock === undefined
   ) {
@@ -960,7 +973,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
       // Resolve scheduling options: mapping-level overrides destination-level.
       // Mapping rule `batch` (number form = wait; object = wait/size/age).
       // Destination config `batch` (number = wait; object = wait/size/age).
-      const ruleOpts = normalizeBatchOptions(eventMapping.batch);
+      const ruleOpts = normalizeBatchOptions(eventMapping?.batch);
       const destOpts = normalizeBatchOptions(config.batch);
       const wait =
         ruleOpts.wait ??
@@ -998,7 +1011,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
           id: destId,
           config,
           data: undefined,
-          rule: rep.rule,
+          rule: batchState.isDefault ? undefined : rep.rule,
           ingest: rep.ingest!,
           env: {
             ...baseEnv,
@@ -1115,6 +1128,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
 
       destination.batches[mappingKey] = {
         batched,
+        isDefault: !ruleHasBatch, // created via config.batch, not a rule's own batch
         batchFn: () => {
           void scheduler();
         },

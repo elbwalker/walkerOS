@@ -812,6 +812,185 @@ describe('Destination', () => {
     });
   });
 
+  describe('config.batch enables batch-all', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('batches all events when only config.batch is set (no mapping rule)', async () => {
+      const captured: { events: WalkerOS.Events; key: string }[] = [];
+      const mockPushBatch = jest.fn((batch) =>
+        captured.push({ events: [...batch.events], key: batch.key }),
+      );
+      const mockPush = jest.fn();
+      const dest: Destination.Instance = {
+        push: mockPush,
+        pushBatch: mockPushBatch,
+        config: { init: true, batch: { wait: 50, size: 20 } },
+      };
+      const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+
+      await elb('page view');
+      await elb('product add');
+      jest.advanceTimersByTime(100);
+
+      expect(mockPushBatch).toHaveBeenCalledTimes(1);
+      expect(captured[0].events).toHaveLength(2);
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('keeps batching OFF when neither config.batch nor a rule batch is set', async () => {
+      const mockPushBatch = jest.fn();
+      const mockPush = jest.fn();
+      const dest: Destination.Instance = {
+        push: mockPush,
+        pushBatch: mockPushBatch,
+        config: { init: true },
+      };
+      const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+
+      await elb('page view');
+      jest.advanceTimersByTime(100);
+
+      expect(mockPush).toHaveBeenCalledTimes(1);
+      expect(mockPushBatch).not.toHaveBeenCalled();
+    });
+
+    it('treats a bare-number config.batch as the wait window (legacy form)', async () => {
+      const mockPushBatch = jest.fn();
+      const dest: Destination.Instance = {
+        pushBatch: mockPushBatch,
+        push: jest.fn(),
+        config: { init: true, batch: 50 },
+      };
+      const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+      await elb('page view');
+      expect(mockPushBatch).not.toHaveBeenCalled(); // debounce not yet fired
+      jest.advanceTimersByTime(60);
+      expect(mockPushBatch).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not push or pushBatch when config.mock is set alongside config.batch', async () => {
+      const mockPushBatch = jest.fn();
+      const mockPush = jest.fn();
+      const dest: Destination.Instance = {
+        push: mockPush,
+        pushBatch: mockPushBatch,
+        config: { init: true, batch: { wait: 50 }, mock: { ok: true } },
+      };
+      const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+      await elb('page view');
+      jest.advanceTimersByTime(100);
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(mockPushBatch).not.toHaveBeenCalled();
+    });
+
+    it('does not enqueue into a config.batch buffer when consent is denied', async () => {
+      const mockPushBatch = jest.fn();
+      const mockPush = jest.fn();
+      const dest: Destination.Instance = {
+        push: mockPush,
+        pushBatch: mockPushBatch,
+        config: {
+          init: true,
+          batch: { wait: 50 },
+          consent: { marketing: true },
+        },
+      };
+      const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+      await elb('page view');
+      jest.advanceTimersByTime(100);
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(mockPushBatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('config.batch shared default buffer', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('routes two data-only rules into one shared default buffer under config.batch', async () => {
+      const captured: { count: number; key: string }[] = [];
+      const mockPushBatch = jest.fn((batch) =>
+        captured.push({ count: batch.events.length, key: batch.key }),
+      );
+      const dest: Destination.Instance = {
+        push: jest.fn(),
+        pushBatch: mockPushBatch,
+        config: {
+          init: true,
+          batch: { wait: 50, size: 20 },
+          mapping: {
+            page: { view: { data: { map: { foo: { value: 'bar' } } } } },
+            product: { add: { data: { map: { foo: { value: 'baz' } } } } },
+          },
+        },
+      };
+      const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+      await elb('page view');
+      await elb('product add');
+      jest.advanceTimersByTime(100);
+
+      expect(mockPushBatch).toHaveBeenCalledTimes(1); // ONE buffer, one flush
+      expect(captured[0].count).toBe(2);
+    });
+
+    it('passes rule: undefined to pushBatch for the config.batch default buffer', async () => {
+      let seenRule: unknown = 'unset';
+      const dest: Destination.Instance = {
+        push: jest.fn(),
+        pushBatch: jest.fn((_batch, ctx) => {
+          seenRule = ctx.rule;
+        }),
+        config: { init: true, batch: { wait: 50 } },
+      };
+      const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+      await elb('page view');
+      jest.advanceTimersByTime(60);
+      expect(seenRule).toBeUndefined();
+    });
+
+    it('does not collide config.batch default buffer with an explicit wildcard batch rule', async () => {
+      const keys: string[] = [];
+      const dest: Destination.Instance = {
+        push: jest.fn(),
+        pushBatch: jest.fn((batch) => keys.push(batch.key)),
+        config: {
+          init: true,
+          batch: { wait: 50 },
+          mapping: { '*': { '*': { batch: { wait: 50, size: 1 } } } }, // own rule buffer
+        },
+      };
+      const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+      await elb('page view'); // matches wildcard rule -> its own '* *' buffer, size 1 flush
+      jest.advanceTimersByTime(60);
+      expect(keys).toContain('* *');
+      expect(keys).not.toContain(' batch-all');
+    });
+  });
+
+  describe('config.batch rule-level override', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('rule-level batch overrides config.batch per field for its own buffer', async () => {
+      const flushes: { key: string; size: number }[] = [];
+      const dest: Destination.Instance = {
+        push: jest.fn(),
+        pushBatch: jest.fn((batch) =>
+          flushes.push({ key: batch.key, size: batch.events.length }),
+        ),
+        config: {
+          init: true,
+          batch: { wait: 60_000, size: 50 }, // default: big wait, size 50
+          mapping: { order: { complete: { batch: { size: 1 } } } }, // override size only
+        },
+      };
+      const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+      await elb('order complete'); // own buffer, size 1 -> flush immediately, inherits wait from config
+      expect(flushes).toEqual([{ key: 'order complete', size: 1 }]);
+    });
+  });
+
   describe('auto-generated id charset', () => {
     test('auto-generated destination id uses lowercase alpha charset (a-z, length 5)', async () => {
       const autoIdDestination: Destination.Instance = {

@@ -189,6 +189,55 @@ describe('storeGcsInit', () => {
     });
   });
 
+  describe('codec round-trip', () => {
+    // Characterization test: locks in that an arbitrary Buffer (such as the
+    // base64-JSON payload the request cache codec produces) survives a
+    // set -> get cycle byte-for-byte through the GCS HTTP client.
+    it('round-trips an arbitrary Buffer byte-identically', async () => {
+      const original = Buffer.from(
+        JSON.stringify({
+          __walkeros_cache_v__: {
+            status: 200,
+            body: {
+              __walkeros_cache__: 'buffer',
+              d: Buffer.from([0, 1, 2, 255, 254, 0x7f, 0x80]).toString(
+                'base64',
+              ),
+            },
+          },
+        }),
+      );
+
+      // Capture the body bytes uploaded on set, then replay them as the GET
+      // response's arrayBuffer so the test mirrors a real backing store.
+      let storedBody: ArrayBuffer | undefined;
+      mockFetch.mockImplementation((_url: string, init?: RequestInit) => {
+        if (init?.method === 'POST' && init.body instanceof Uint8Array) {
+          // Copy into a fresh ArrayBuffer-backed view so the stored bytes are
+          // independent of the upload view's (possibly SharedArrayBuffer)
+          // backing store.
+          const view = init.body;
+          const copy = new ArrayBuffer(view.byteLength);
+          new Uint8Array(copy).set(view);
+          storedBody = copy;
+          return Promise.resolve({ ok: true });
+        }
+        // GET (download) path
+        return Promise.resolve({
+          ok: true,
+          arrayBuffer: () => Promise.resolve(storedBody ?? new ArrayBuffer(0)),
+        });
+      });
+
+      const store = await createStore();
+      await store.set('cache/entry', original);
+      const result = await store.get('cache/entry');
+
+      expect(result).toBeInstanceOf(Buffer);
+      expect((result as Buffer).equals(original)).toBe(true);
+    });
+  });
+
   describe('delete', () => {
     it('should delete an object', async () => {
       mockFetch.mockResolvedValueOnce({ ok: true });

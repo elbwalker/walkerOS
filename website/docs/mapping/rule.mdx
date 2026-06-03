@@ -84,12 +84,14 @@ object `{ wait?, size?, age? }` for finer control:
 - `size`: hard count cap. Flushes immediately at this many events.
 - `age` (ms): hard age cap since the first entry of the current window.
 
-Per-destination upper bounds (`config.batch` on the destination) apply
-when the mapping rule omits a field; mapping-level values override
-destination-level for matched events. Defaults when batching is enabled:
-`size: 1000`, `age: 30000`. `wait` is a hint, not a hard delay: when
-events keep arriving faster than `wait`, the `size` and `age` caps are
-what force the flush.
+A rule-level `batch` splits this entity-action into its own buffer. When the
+destination also sets `config.batch`, the rule's values override
+destination-level per field (`rule ?? config ?? default`); fields the rule omits
+fall back to `config.batch`. Setting `config.batch` alone batches **all** of the
+destination's events into one shared buffer with no rule needed. Defaults when
+batching is enabled: `size: 1000`, `age: 30000`. `wait` is a hint, not a hard
+delay: when events keep arriving faster than `wait`, the `size` and `age` caps
+are what force the flush.
 
 ## Conditional rules
 

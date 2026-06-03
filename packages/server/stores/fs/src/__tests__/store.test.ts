@@ -87,6 +87,32 @@ describe('FsStore', () => {
     });
   });
 
+  describe('raw byte persistence', () => {
+    it('writes a Buffer raw and get returns a Buffer with the same bytes', async () => {
+      const store = await createStore(tmpDir);
+      const bytes = Buffer.from('var x = 1;');
+      await store.set('buf', bytes);
+      const result = await store.get('buf');
+      if (!Buffer.isBuffer(result)) throw new Error('expected Buffer');
+      expect(result.equals(bytes)).toBe(true);
+    });
+
+    it('writes a string raw and get returns a Buffer with the same bytes', async () => {
+      const store = await createStore(tmpDir);
+      await store.set('str', 'hello world');
+      const result = await store.get('str');
+      if (!Buffer.isBuffer(result)) throw new Error('expected Buffer');
+      expect(result.toString()).toBe('hello world');
+    });
+
+    it('rejects a non-Buffer/string value with a clear error', async () => {
+      const store = await createStore(tmpDir);
+      await expect(store.set('x', { a: 1 })).rejects.toThrow(
+        /Buffer or string/,
+      );
+    });
+  });
+
   describe('delete', () => {
     it('should remove a file', async () => {
       await fs.writeFile(path.join(tmpDir, 'remove.txt'), 'bye');

@@ -29,7 +29,7 @@ export const storeFsInit: Store.Init<Store.Types<FsStoreSettings>> = (
     type: 'fs',
     config: context.config as Store.Config<Store.Types<FsStoreSettings>>,
 
-    async get(key: string): Promise<Buffer | undefined> {
+    async get(key: string): Promise<unknown> {
       const filePath = resolvePath(key);
       if (!filePath) return undefined;
       try {
@@ -42,8 +42,13 @@ export const storeFsInit: Store.Init<Store.Types<FsStoreSettings>> = (
     async set(key: string, value: unknown): Promise<void> {
       const filePath = resolvePath(key);
       if (!filePath) return;
+      if (!Buffer.isBuffer(value) && typeof value !== 'string') {
+        throw new Error(
+          `fs store persists Buffer or string values only, received ${typeof value}`,
+        );
+      }
       await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, value as Buffer);
+      await fs.writeFile(filePath, value);
     },
 
     async delete(key: string): Promise<void> {

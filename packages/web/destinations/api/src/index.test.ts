@@ -209,14 +209,15 @@ describe('Destination API', () => {
       expect(JSON.parse(calledData)).toEqual(events);
     });
 
-    test('prefers batch.data over batch.events', () => {
-      const events = [getEvent('product view')];
-      const mappedData = [{ custom: 'data1' }, { custom: 'data2' }];
+    test('sends entry data when present, raw event otherwise', () => {
+      const e0 = getEvent('product view');
+      const e1 = getEvent('product click');
+      const mapped = { custom: 'data1' };
       const batch = {
         key: 'product view',
-        events,
-        data: mappedData,
-        entries: events.map((event) => ({ event })),
+        events: [e0, e1],
+        data: [mapped],
+        entries: [{ event: e0, data: mapped }, { event: e1 }],
       };
 
       destination.pushBatch!(
@@ -231,7 +232,35 @@ describe('Destination API', () => {
 
       expect(mockSendWeb).toHaveBeenCalledTimes(1);
       const [, calledData] = mockSendWeb.mock.calls[0];
-      expect(JSON.parse(calledData)).toEqual(mappedData);
+      expect(JSON.parse(calledData)).toEqual([mapped, e1]);
+    });
+
+    test('delivers every entry when some have mapped data and some do not', () => {
+      const e0 = getEvent('product view');
+      const e1 = getEvent('product click');
+      const mapped = { mapped: 1 };
+      const batch = {
+        key: 'product view',
+        events: [e0, e1], // derived back-compat view
+        data: [mapped], // compacted, length 1 -- the bug condition
+        // Entry 1 has the mapped data; the compacted `data[0]` would otherwise
+        // cross-assign it to e0 and drop e1.
+        entries: [{ event: e0 }, { event: e1, data: mapped }],
+      };
+
+      destination.pushBatch!(
+        batch,
+        createMockContext({
+          config: { settings: { url } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      expect(mockSendWeb).toHaveBeenCalledTimes(1);
+      const [, calledData] = mockSendWeb.mock.calls[0];
+      expect(JSON.parse(calledData)).toEqual([e0, mapped]);
     });
 
     test('applies transform to each batch item', () => {

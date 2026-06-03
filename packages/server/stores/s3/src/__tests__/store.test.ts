@@ -174,6 +174,49 @@ describe('storeS3Init', () => {
     });
   });
 
+  describe('codec round-trip', () => {
+    // Characterization test: locks in that an arbitrary Buffer (such as the
+    // base64-JSON payload the request cache codec produces) survives a
+    // set -> get cycle byte-for-byte through the s3mini client.
+    it('round-trips an arbitrary Buffer byte-identically', async () => {
+      const original = Buffer.from(
+        JSON.stringify({
+          __walkeros_cache_v__: {
+            status: 200,
+            body: {
+              __walkeros_cache__: 'buffer',
+              d: Buffer.from([0, 1, 2, 255, 254, 0x7f, 0x80]).toString(
+                'base64',
+              ),
+            },
+          },
+        }),
+      );
+
+      // Capture the bytes handed to the client on set, then replay them as
+      // the client's get response so the test mirrors a real backing store.
+      let stored: Buffer | undefined;
+      mockPutObject.mockImplementation(async (_key: string, value: Buffer) => {
+        stored = value;
+        return { ok: true };
+      });
+      mockGetObjectArrayBuffer.mockImplementation(async () => {
+        if (!stored) return null;
+        return stored.buffer.slice(
+          stored.byteOffset,
+          stored.byteOffset + stored.byteLength,
+        );
+      });
+
+      const store = await createStore();
+      await store.set('cache/entry', original);
+      const result = await store.get('cache/entry');
+
+      expect(result).toBeInstanceOf(Buffer);
+      expect((result as Buffer).equals(original)).toBe(true);
+    });
+  });
+
   describe('delete', () => {
     it('should delete an object', async () => {
       mockDeleteObject.mockResolvedValue(true);

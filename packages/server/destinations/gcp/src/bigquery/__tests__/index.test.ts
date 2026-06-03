@@ -21,6 +21,7 @@ import {
 } from '@walkeros/core';
 import type { MockLogger } from '@walkeros/core';
 import * as examples from '../examples';
+import { eventToRow } from '../eventToRow';
 import { openWriter } from '../writer';
 
 jest.mock('@google-cloud/bigquery');
@@ -328,6 +329,47 @@ describe('Server Destination BigQuery', () => {
       expect(Array.isArray(rowsArg)).toBe(true);
       if (!Array.isArray(rowsArg)) return;
       expect(rowsArg).toHaveLength(3);
+    });
+
+    test('uses entry data when present and eventToRow otherwise per entry', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+
+      const config = await buildConfig();
+      __resetMockCalls();
+
+      const e0 = createEvent();
+      const e1 = createEvent();
+      const mappedRow = { custom: 'mapped-row' };
+      const events = [e0, e1];
+      // Entry 1 carries mapped data, entry 0 does not. The derived `data` array
+      // is compacted (only defined entries), so `data[0]` is the mapped row and
+      // `data[1]` is undefined -- misaligned with `events`. Reading `entries`
+      // keeps each event's data correct.
+      const data = [mappedRow];
+      const entries = [{ event: e0 }, { event: e1, data: mappedRow }];
+
+      destination.pushBatch(
+        { key: 'k', events, data, entries },
+        createMockContext({
+          config,
+          env: testEnv,
+          logger: createMockLogger(),
+          id: 'test-bq',
+        }),
+      );
+
+      await new Promise((r) => setImmediate(r));
+
+      const calls = __getMockCalls();
+      const append = calls.find((c) => c.method === 'appendRows');
+      expect(append).toBeDefined();
+      if (!append) return;
+      const rowsArg = append.args[0];
+      expect(Array.isArray(rowsArg)).toBe(true);
+      if (!Array.isArray(rowsArg)) return;
+      expect(rowsArg).toHaveLength(2);
+      expect(rowsArg[0]).toEqual(eventToRow(e0));
+      expect(rowsArg[1]).toEqual(mappedRow);
     });
 
     test('logs partial failures without throwing', async () => {

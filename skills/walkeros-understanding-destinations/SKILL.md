@@ -107,10 +107,10 @@ evictions) and `?.dlq` (DLQ evictions). Build the key with `stepId()` from
 
 ## Batch scheduling
 
-When a mapping rule sets `batch` and the destination implements `pushBatch`,
-events are buffered and delivered in groups. The configuration shape is
-`batch?: number | { wait?, size?, age? }` at both the mapping-rule layer and the
-destination-config layer.
+Set `config.batch` on a destination (with `pushBatch` implemented) to batch
+**all** of its events into one shared buffer. No `'* *'` wildcard mapping rule
+is needed. The configuration shape is `batch?: number | { wait?, size?, age? }`
+at both the destination-config layer and the mapping-rule layer.
 
 - `wait` (ms): debounce window. The timer resets on every push. Legacy form
   `batch: 1000` is shorthand for `{ wait: 1000 }`.
@@ -118,7 +118,10 @@ destination-config layer.
 - `age` (ms): hard age cap since the first entry of the current window. Default
   `30000`. Prevents debounce starvation under sustained load.
 
-Mapping-level values override destination-level for matched events.
+A mapping rule's own `batch` splits that entity-action into its own buffer and
+overrides `config.batch` per field (`rule ?? config ?? default`). To batch only
+specific events, omit `config.batch` and set `batch` on those rules. Pending
+batches flush on shutdown.
 
 ### Per-event metadata
 

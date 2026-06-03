@@ -105,6 +105,21 @@ describe('shutdown command', () => {
     await elb('walker shutdown');
   });
 
+  it('flushes pending destination batches on shutdown', async () => {
+    const mockPushBatch = jest.fn();
+    const dest: Destination.Instance = {
+      push: jest.fn(),
+      pushBatch: mockPushBatch,
+      config: { init: true, batch: { wait: 60_000 } }, // wait long; only shutdown can flush
+    };
+    const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+    await elb('page view');
+    expect(mockPushBatch).not.toHaveBeenCalled(); // still buffered
+
+    await elb('walker shutdown');
+    expect(mockPushBatch).toHaveBeenCalledTimes(1);
+  });
+
   it('respects shutdown order: sources before destinations before transformers', async () => {
     const order: string[] = [];
     const { collector, elb } = await startFlow({});

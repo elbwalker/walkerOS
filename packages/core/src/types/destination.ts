@@ -140,9 +140,11 @@ export interface Config<T extends TypesGeneric = Types> {
    */
   dlqMax?: number;
   /**
-   * Per-destination batch upper bounds. Supplements the mapping-level
-   * `batch` setting on individual rules. A bare number is treated as
-   * the debounce `wait` window (legacy compat).
+   * Enables batching for ALL of this destination's events into one shared
+   * default buffer. A mapping rule's own `batch` splits that entity-action
+   * into its own buffer and overrides per field (`rule ?? config ?? default`).
+   * Batching stays off when neither is set. A bare number is treated as the
+   * debounce `wait` window.
    *
    * - `wait`: debounce window in ms; the timer resets on every push.
    * - `size`: hard count cap; flush immediately when entries reach this number. Default 1000 when batching is enabled.
@@ -271,6 +273,12 @@ export interface Batch<Mapping> {
 export interface BatchRegistry<Mapping> {
   [mappingKey: string]: {
     batched: Batch<Mapping>;
+    /**
+     * Marks a buffer created by `config.batch` (the destination-wide default
+     * batch) rather than a mapping rule's own `batch`. The default buffer is
+     * heterogeneous, so its flush reports `rule: undefined` to consumers.
+     */
+    isDefault?: boolean;
     batchFn: () => void;
     /**
      * Force a flush of the current batch immediately. Used by shutdown

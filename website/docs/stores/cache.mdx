@@ -14,6 +14,14 @@ The wrapping is transparent: a transformer wired to `$store.crm` does not know w
 Store-level cache is different from the [event-level Cache](../collector/cache.mdx) configured on sources, transformers, and destinations. Event cache short-circuits the pipeline on hit. Store cache memoizes `get`/`set`/`delete` calls on a single store. Both can be used in the same flow.
 :::
 
+## Request-cache values and TTL
+
+Request-cache values are serialized by the cache layer before they reach the backing store, so any store backend (filesystem, S3, GCS, in-memory) can hold structured HTTP responses, not just the in-memory tier. Cached entries honor their TTL: an expired entry is treated as a miss and re-fetched from the backing.
+
+Cached values must be JSON-safe plus `Buffer` (a `Date` becomes a string, an `Error` loses its fields), which is fine for HTTP responses, events, and push results.
+
+The filesystem, S3, and GCS stores persist `Buffer` or `string` values only, so structured `state` payloads (which bypass the cache layer) need an object-capable store such as the default in-memory cache.
+
 ## Minimal example
 
 Enable the built-in in-memory tier (`__cache`) on any store by setting `cache` on the store declaration. No extra store needed:

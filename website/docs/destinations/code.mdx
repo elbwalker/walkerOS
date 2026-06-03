@@ -137,9 +137,9 @@ Each code string has access to specific variables:
 
 #### Batch scheduling
 
-A destination can cap how large or how old a batch may grow before it is
-flushed. Configure via `config.batch` (bare number = legacy debounce
-`wait` window):
+Set `config.batch` to batch **all** of a destination's events into one shared
+buffer. No `'* *'` wildcard mapping rule is needed. A bare number is the
+debounce `wait` window; an object tunes `wait`, `size`, and `age`:
 
 ```ts
 {
@@ -159,6 +159,26 @@ flushed. Configure via `config.batch` (bare number = legacy debounce
 Without `size`/`age` the batch can grow unbounded under sustained load
 (the debounce timer keeps resetting). Defaults are conservative; raise
 them only when you understand your destination's batch-size limits.
+
+**Batch all vs. batch selectively.** With `config.batch` set, every event of
+the destination joins the shared default buffer, including events matched by
+data-only mapping rules. A mapping rule's own `batch` splits that entity-action
+into its own buffer and overrides `config.batch` per field
+(`rule ?? config ?? default`). To batch only specific events, omit
+`config.batch` and set `batch` on those rules:
+
+```ts
+{
+  config: {
+    // no config.batch: batching stays off for everything else
+    mapping: {
+      order: { complete: { batch: { wait: 1000, size: 100 } } },
+    },
+  },
+}
+```
+
+Pending batches flush automatically on shutdown, so buffered events are not lost.
 
 #### Failure handling
 
@@ -320,13 +340,7 @@ Use mapping to override the default push code for specific events:
             })
           \`,
         },
-        mapping: {
-          '*': {
-            '*': {
-              batch: 1000, // Batch events with 1 second debounce
-            },
-          },
-        },
+        batch: 1000, // Batch all events with 1 second debounce
       },
     },
   },
