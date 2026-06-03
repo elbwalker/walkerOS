@@ -25,7 +25,8 @@ export interface Mapping {
 
 export interface Env extends DestinationWeb.Env {
   window: {
-    _paq: Array<unknown>;
+    // Optional: the SDK queue may be absent until `init` installs it.
+    _paq?: Array<unknown>;
   };
   document: {
     createElement: (tagName: string) => {

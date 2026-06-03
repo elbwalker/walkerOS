@@ -23,6 +23,7 @@ export const mockProject = {
   memberCount: 1,
   flowCount: 0,
   deploymentCount: 0,
+  isDemo: false,
 } satisfies ProjectResponse;
 
 export const mockFlow = {

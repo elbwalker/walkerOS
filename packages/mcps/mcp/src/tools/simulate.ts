@@ -22,8 +22,9 @@ const TITLE = 'Simulate Flow';
 const DESCRIPTION =
   'Simulate events through a walkerOS flow without making real API calls. ' +
   'For destinations: event is a walkerOS event { name: "entity action", data: {...} }. ' +
-  'For sources: event is { content: ..., trigger?: { type?, options? }, env?: {...} }. ' +
-  'Use step to target a specific step. ' +
+  'For sources: event is { content, trigger?: { type?, options? } }, where content is the ' +
+  'walkerOS event { name: "entity action", data: {...} }. ' +
+  'step (required) targets the step to simulate, e.g. "destination.gtag". ' +
   'Use flow_examples to discover available test data. ' +
   'IMPORTANT: Destinations with require (e.g. require: ["consent"]) stay pending until ' +
   'that collector event fires — simulation will error "not found" if require is not satisfied. ' +
@@ -41,12 +42,19 @@ const inputSchema = {
     .describe(
       'For destinations: { name, data, consent? }. Include consent (e.g. { marketing: true }) ' +
         'to satisfy destination consent requirements. ' +
-        'For sources: { content, trigger?, env? }. ' +
+        'For sources: { content, trigger? } where content is the walkerOS event ' +
+        '{ name, data }. ' +
         'Can also be a JSON string or file path.',
     ),
   flow: schemas.SimulateInputShape.flow,
   platform: schemas.SimulateInputShape.platform,
-  step: schemas.SimulateInputShape.step,
+  // Override the (optional) CLI `step` shape: the simulate handler hard-requires
+  // a target step (no all-steps mode), so the registered schema must be honest.
+  step: z
+    .string()
+    .describe(
+      'Required. Target step as "type.name" — e.g. "source.demo", "destination.gtag", "transformer.router".',
+    ),
   verbose: z
     .boolean()
     .optional()

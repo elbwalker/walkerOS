@@ -567,7 +567,15 @@ Use these templates as your starting point:
    context
 2. **Push receives context**: Includes `data`, `rule` (renamed from `mapping`),
    `ingest`
-3. **Use `getEnv(env)`**: Never access `window`/`document` directly
+3. **Use `getEnv<Env>(env)`**: Never access `window`/`document` directly, and
+   never cast them. Declare your SDK global
+   (`declare global { interface Window { vendorSdk?: ... } }`) and narrow
+   `Env['window']` to the SDK shape in `types.ts`. The generic
+   `getEnv<Env>(env)` then returns your narrowed env intersected with the real
+   DOM globals, so `window.vendorSdk` and `document.createElement` are fully
+   typed with zero casts. No `as any`, `as unknown`, `as Window`, `as Document`,
+   `@ts-ignore`, or `@ts-expect-error` is allowed in production **or** test
+   code, ever. If something will not type check, fix the types, do not cast.
 4. **Return config from init**: Allows updating config during initialization
 5. **Optional `destroy` method**: Implement if the destination holds resources
    (DB connections, SDK clients, timers) that need cleanup on shutdown. Call
@@ -785,7 +793,8 @@ Beyond
 [understanding-development](../walkeros-understanding-development/SKILL.md)
 requirements (build, test, lint, no `any`):
 
-- [ ] Uses `getEnv(env)` pattern (never direct `window`/`document` access)
+- [ ] Uses `getEnv<Env>(env)` pattern (never direct `window`/`document` access,
+      never `as Window`/`as Document`/`as unknown` casts in src or tests)
 - [ ] `dev.ts` exports `schemas` and `examples`
 - [ ] Examples match type signatures
 - [ ] Tests use examples for assertions (not hardcoded values)

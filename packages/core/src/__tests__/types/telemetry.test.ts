@@ -8,6 +8,7 @@ describe('FlowState types', () => {
   test('compiles a literal with every optional field', () => {
     const state: FlowState = {
       flowId: 'default',
+      platform: 'web',
       stepId: 'destination.gtag',
       stepType: 'destination',
       phase: 'out',
@@ -28,6 +29,7 @@ describe('FlowState types', () => {
       meta: { extra: 'value' },
     };
     expect(state.flowId).toBe('default');
+    expect(state.platform).toBe('web');
     expect(state.stepType).toBe('destination');
   });
 

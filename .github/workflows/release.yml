@@ -47,15 +47,6 @@ jobs:
       - name: Clean
         run: npm run clean
 
-      - name: Build
-        # Needed for test/typecheck/lint/integration. A second rebuild runs
-        # after `changeset version` so the published dist embeds the bumped
-        # __VERSION__ (see walkerOS/packages/config/tsup/index.mjs).
-        run: npx turbo run build --filter='!@walkeros/website'
-
-      - name: Test, typecheck, lint, integration
-        run: npx turbo run test typecheck lint test:integration
-
       - name: Capture changeset info
         id: changesets
         run: |
@@ -99,6 +90,11 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
           echo "release_needed=$RELEASE_NEEDED" >> $GITHUB_OUTPUT
 
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Version packages (stable)
         if: inputs.release_type == 'stable release'
         run: |
@@ -110,11 +106,6 @@ jobs:
           fi
           npx changeset version
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Version packages (pre-release)
         if: inputs.release_type == 'pre-release (next)'
         run: npx changeset version --snapshot next
@@ -122,8 +113,14 @@ jobs:
       - name: Update lock file
         run: npm install --package-lock-only
 
-      - name: Rebuild packages with bumped versions
+      - name: Build
+        # Bump runs first so this single build embeds the bumped __VERSION__
+        # (see walkerOS/packages/config/tsup/index.mjs). The dist produced here
+        # is exactly what the gate below tests and what publish ships.
         run: npx turbo run build --filter='!@walkeros/website'
+
+      - name: Test, typecheck, lint, integration
+        run: npx turbo run test typecheck lint test:integration
 
       # Trusted Publishing: npm exchanges the GitHub OIDC token at publish time.
       # No NPM_TOKEN. Provenance attestations are generated automatically.

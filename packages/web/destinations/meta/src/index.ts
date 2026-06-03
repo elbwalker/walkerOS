@@ -1,4 +1,4 @@
-import type { Settings, Destination } from './types';
+import type { Destination, Env } from './types';
 import { addScript, setup } from './setup';
 import { isObject } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
@@ -24,15 +24,14 @@ export const destinationMeta: Destination = {
     // fbq function setup
     setup(env);
 
-    const { window } = getEnv(env);
-    const fbq = window.fbq as facebook.Pixel.Event;
-    fbq('init', pixelId!);
+    const { window } = getEnv<Env>(env);
+    window.fbq!('init', pixelId!);
   },
 
   push(event, { config, rule = {}, data, env }) {
     const { track, trackCustom } = rule.settings || {};
-    const { window } = getEnv(env);
-    const fbq = window.fbq as facebook.Pixel.Event;
+    const { window } = getEnv<Env>(env);
+    const fbq = window.fbq!;
 
     // page view
     if (event.name === 'page view' && !rule.settings) {

@@ -27,6 +27,12 @@ export interface FlowStateBatch {
 export interface FlowState {
   /** The flow this state belongs to. */
   flowId: string;
+  /**
+   * Runtime that produced this state: `web` (browser bundle) or `server`
+   * (Node runtime). Mirrors the originating flow's `config.platform`.
+   * Optional: emitters may omit it; populated when the runtime is known.
+   */
+  platform?: 'web' | 'server';
   /** Step identifier, e.g. 'destination.gtag', 'transformer.consent', 'collector.push'. */
   stepId: string;
   stepType: FlowStepType;

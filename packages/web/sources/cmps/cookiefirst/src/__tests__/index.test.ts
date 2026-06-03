@@ -313,4 +313,40 @@ describe('CookieFirst Source', () => {
       expect(consentCalls).toHaveLength(0);
     });
   });
+
+  describe('factory side-effect-free (init hygiene)', () => {
+    test('factory attaches no listener and emits no consent until init() runs', async () => {
+      // CookieFirst already loaded with consent: a static read WOULD emit if
+      // the factory performed it.
+      const mockWindow = createMockWindow({ necessary: true });
+
+      const source = await sourceCookieFirst({
+        collector: {} as never,
+        config: { settings: { explicitOnly: false } },
+        env: {
+          push: mockElb,
+          command: mockElb,
+          elb: mockElb,
+          window: mockWindow,
+          logger: createMockLogger(),
+        },
+        id: 'test-cookiefirst',
+        logger: createMockLogger(),
+        withScope: async (_r, _resp, body) => body({} as never),
+      });
+
+      // Pass-1 factory must be side-effect-free: no listener, no consent emit.
+      expect(mockWindow.addEventListener).not.toHaveBeenCalled();
+      expect(consentCalls).toHaveLength(0);
+
+      // init() (Pass 2) attaches listeners and performs the static read.
+      await source.init?.();
+
+      expect(mockWindow.addEventListener).toHaveBeenCalledWith(
+        'cf_consent',
+        expect.any(Function),
+      );
+      expect(consentCalls).toHaveLength(1);
+    });
+  });
 });

@@ -27,6 +27,8 @@ import {
   runTransformerChain,
   cloneIngest,
 } from './transformer';
+import { isStateDelivery, shouldDeliver, setMark } from './on';
+import { reconcilePending } from './pending';
 
 /**
  * A Route is "static" when it's a transformer-ID string or an array of
@@ -58,6 +60,14 @@ import { getCacheStore, getStateStore } from './cache';
  * scoped 'source' logger and increment `status.failed`. The flush itself
  * is walkerOS-orchestrated startup; the throw represents the source's
  * inability to consume a buffered state-change event.
+ *
+ * State-delivery entries (consent/user/globals/custom) are gated through the
+ * same per-source high-water mark as the direct `onApply` broadcast: while
+ * `!allowed` they defer (not invoked, mark not advanced — the source stays
+ * "owed" for the run-barrier re-delivery), and an allowed delivery advances
+ * the source mark so a later broadcast at the same version does not double
+ * deliver. Lifecycle/arbitrary entries (ready/run/session/config) flush with
+ * their unchanged behavior.
  */
 export async function flushSourceQueueOn(
   collector: Collector.Instance,
@@ -69,6 +79,12 @@ export async function flushSourceQueueOn(
   source.queueOn = [];
   const id = sourceId || source.config?.id || 'unknown';
   for (const { type, data } of queue) {
+    // Defer state deliveries while !allowed: leave them owed (drop the queued
+    // entry without firing or advancing the mark). The run-barrier re-delivery
+    // (a later task) re-broadcasts owed state to behind-mark subscribers.
+    if (isStateDelivery(type) && !shouldDeliver(collector, source, type))
+      continue;
+
     await tryCatchAsync(source.on, (err: unknown): undefined => {
       if (err instanceof FatalError) throw err;
       collector.status.failed++;
@@ -79,6 +95,8 @@ export async function flushSourceQueueOn(
       });
       return undefined;
     })(type, data);
+
+    if (isStateDelivery(type)) setMark(collector, source, type);
   }
 }
 
@@ -605,6 +623,14 @@ export async function initSources(
       await flushSourceQueueOn(collector, instance, sourceId);
     }
   }
+
+  // Registration trigger: a source's factory or init (Pass 2) may have recorded
+  // state that satisfies another source's/destination's `require`. The live
+  // broadcast can miss a step that was not yet merged into collector.sources
+  // when the state fired (a factory emit during Pass 1), so reconcile once over
+  // the now-fully-registered set to activate any step satisfied by current
+  // state. This is the load-bearing fix for order-independent activation.
+  await reconcilePending(collector);
 
   return result;
 }

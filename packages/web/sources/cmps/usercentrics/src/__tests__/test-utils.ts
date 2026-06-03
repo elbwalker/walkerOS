@@ -63,14 +63,19 @@ export function createMockWindow(): MockWindow {
 }
 
 /**
- * Create and initialize a Usercentrics source with mock environment
+ * Create and initialize a Usercentrics source with mock environment.
+ *
+ * The factory is side-effect-free; the adapter setup (listeners + static
+ * consent read) runs in `init()`. This helper calls `init()` after
+ * construction so behavior tests observe a fully set-up source, mirroring how
+ * the collector drives sources (factory in Pass 1, init in Pass 2).
  */
 export async function createUsercentricsSource(
   mockWindow: MockWindow,
   mockElb: Elb.Fn,
   config?: Partial<Source.Config<Types>>,
 ): Promise<Source.Instance<Types>> {
-  return await sourceUsercentrics({
+  const source = await sourceUsercentrics({
     collector: {} as Collector.Instance,
     config: config || {},
     env: {
@@ -84,4 +89,6 @@ export async function createUsercentricsSource(
     logger: createMockLogger(),
     withScope: async (_r, _resp, body) => body({} as never),
   });
+  await source.init?.();
+  return source;
 }

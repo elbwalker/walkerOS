@@ -135,6 +135,18 @@ export function getDefaultProject(): string | null {
 }
 
 /**
+ * Remove the default project ID from the config.
+ * Does nothing when no config exists. Used to drop a stale default after the
+ * project it pointed at has been deleted.
+ */
+export function clearDefaultProject(): void {
+  const config = readConfig();
+  if (!config) return;
+  const { defaultProjectId: _removed, ...rest } = config;
+  writeConfig(rest);
+}
+
+/**
  * Resolve the API token using priority order:
  * 1. WALKEROS_TOKEN env var
  * 2. Config file (~/.config/walkeros/config.json)

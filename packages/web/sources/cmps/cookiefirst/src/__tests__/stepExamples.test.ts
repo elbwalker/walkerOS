@@ -34,7 +34,7 @@ describe('Step Examples', () => {
       consent: content,
     };
 
-    await sourceCookieFirst({
+    const source = await sourceCookieFirst({
       collector: collectorStub,
       config: {
         settings: {
@@ -53,8 +53,9 @@ describe('Step Examples', () => {
       withScope: async (_r, _resp, body) => body({} as never),
     });
 
-    // Source already processed existing consent during init via
-    // window.CookieFirst.consent — no need to dispatch cf_init again.
+    // Adapter setup runs in init(); the static read of window.CookieFirst.consent
+    // happens there (no need to dispatch cf_init again).
+    await source.init?.();
 
     // Source pushes via detached elb chain — yield for it
     for (let i = 0; i < 10 && mockElb.mock.calls.length === 0; i++) {

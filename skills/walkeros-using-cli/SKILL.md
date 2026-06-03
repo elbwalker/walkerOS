@@ -190,6 +190,31 @@ Step: destinations.gtag
   Status: PASS
 ```
 
+### Same flow via MCP (`flow_simulate`)
+
+From an AI assistant the equivalent tool is `flow_simulate`. A few specifics:
+
+- **`step` is required.** Pass the target as `"type.name"`, e.g.
+  `"source.browser"`, `"destination.gtag"`, or `"transformer.router"`. There is
+  no all-steps mode.
+- **Source-step `event` shape is `{ content, trigger? }`**, where `content` is
+  the walkerOS event `{ name, data }` and `trigger` is optional
+  `{ type?, options? }`. There is no `env` field. Destination and transformer
+  steps take a plain walkerOS event `{ name, data, consent? }`.
+- **Sources are simulatable as a step**, including the `@walkeros/source-demo`
+  demo source.
+
+`flow_load` loads a flow from a local path, URL, inline JSON, or a cloud
+flow/config ID (`flow_...` / `cfg_...`). Configs returned by `flow_load` and
+`flow_manage` are round-trip safe: structural values (package names, platform,
+IDs) come back literally, so a returned config can be edited and sent back to
+`flow_manage({ action: "update" })` unchanged.
+
+When an MCP request fails, the `diagnostics` tool (read-only, no parameters,
+works logged out) reports the MCP and CLI versions, the resolved app URL, app
+`/api/health` reachability, the bundled OpenAPI contract version, and which
+source served the last package lookup.
+
 ### Validate flow config
 
 Validate schema, references, and cross-step example compatibility:
@@ -247,8 +272,12 @@ Output:
 - Web: `dist/walker.js` (single self-contained IIFE)
 - Server: `dist/{flow.mjs, package.json, node_modules/}` (always a directory;
   nft-traced)
+- Server archive: `flow.tar.gz` / `flow.tgz` (the server bundle directory packed
+  into a single gzip file)
 
-Use `-o ./dist/walker.js` for web or `-o ./dist/` for server.
+Use `-o ./dist/walker.js` for web, `-o ./dist/` for a server directory, or
+`-o ./flow.tar.gz` for a server archive. Web single-file bundles do not support
+archive output.
 
 ### Push Command
 
@@ -287,11 +316,25 @@ Exit codes:
 
 ```bash
 # HTTP event collection server
-walkeros run <config|bundle> [options]
+walkeros run <config|bundle|archive> [options]
 
 Options:
   -p, --port <number>   Port (default: 8080)
   -h, --host <string>   Host (default: 0.0.0.0)
+```
+
+`run` accepts a flow config, a pre-built bundle, or a `.tar.gz`/`.tgz` flow
+archive (URL or local file). For an archive, the CLI fetches or reads the gzip,
+extracts the bundle and its sibling `node_modules/`, and runs the entry. This
+lets server flows whose step packages are external resolve those packages at
+runtime from the extracted `node_modules/`.
+
+```bash
+# Run a packed server bundle from a local archive
+walkeros run flow.tar.gz --port 8080
+
+# Run a packed server bundle from a URL
+walkeros run https://example.com/flow.tar.gz
 ```
 
 ---
@@ -334,7 +377,7 @@ The CLI:
 
 There is no `walkerOS.bundle.external` annotation. nft figures it out.
 
-**Output shape (always a directory for server flows):**
+**Bundle directory (the server flow's unpacked artifact):**
 
 ```
 dist/
@@ -343,7 +386,9 @@ dist/
 └── node_modules/    # only the files nft traced
 ```
 
-Web flows are unchanged: a single `dist/walker.js`.
+The same directory can be packed into a `.tar.gz`/`.tgz` archive (see the Bundle
+Command section), and `walkeros run` accepts either form. Web flows are
+unchanged: a single `dist/walker.js`.
 
 ### Canonical Dockerfile
 

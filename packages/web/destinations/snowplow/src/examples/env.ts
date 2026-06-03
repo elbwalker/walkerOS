@@ -12,7 +12,7 @@ const noop = () => {};
 
 export const init: Env | undefined = {
   window: {
-    snowplow: undefined as unknown as Env['window']['snowplow'],
+    // snowplow absent: setup() is expected to install the queue stub.
   },
   document: {
     createElement: () => ({
@@ -29,7 +29,7 @@ export const push: Env = {
   window: {
     snowplow: Object.assign(noop, {
       q: [],
-    }) as unknown as Env['window']['snowplow'],
+    }),
   },
   document: {
     createElement: () => ({

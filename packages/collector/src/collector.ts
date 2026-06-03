@@ -52,6 +52,9 @@ export async function collector(
     on: {},
     queue: [],
     round: 0,
+    stateVersion: 0,
+    cellVersion: {},
+    delivery: new WeakMap(),
     session: undefined,
     status: {
       startedAt: Date.now(),
@@ -66,6 +69,7 @@ export async function collector(
     user: initConfig.user || {},
     sources: {},
     pending: { destinations: {} },
+    seenEvents: new Set(),
     push: undefined as unknown as Collector.PushFn, // Placeholder, will be set below
     command: undefined as unknown as Collector.CommandFn, // Placeholder, will be set below
   };

@@ -12,7 +12,7 @@ export const env: { push: DestinationWeb.Env } = {
   push: {
     window: {
       vendorSdk: jest.fn(), // Captures all calls for verification
-    } as unknown as Window,
-    document: {} as Document,
+    },
+    document: {},
   },
 };

@@ -82,6 +82,20 @@ export {
   mergeAuthHeaders,
 } from './core/http.js';
 export { createApiClient } from './core/api-client.js';
+export {
+  fetchHealth,
+  compareContract,
+  annotateErrorWithDrift,
+  canonicalContractHash,
+  bakedContractVersion,
+  bakedContractHash,
+} from './core/contract.js';
+export type {
+  HealthResult,
+  ContractVerdict,
+  ContractComparison,
+  CompareContractInput,
+} from './core/contract.js';
 export { ApiError, throwApiError } from './core/api-error.js';
 export type { ApiErrorDetail } from './core/api-error.js';
 export {
@@ -138,11 +152,13 @@ export {
   writeConfig,
   deleteConfig,
   resolveToken,
+  resolveAppUrl,
   setDefaultProject,
   getDefaultProject,
   setFeedbackPreference,
   getFeedbackPreference,
 } from './lib/config-file.js';
+export { VERSION } from './version.js';
 export type { WalkerOSConfig } from './lib/config-file.js';
 export type { ListFlowsOptions, ProjectFlows } from './commands/flows/index.js';
 export type { DeployOptions } from './commands/deploy/index.js';

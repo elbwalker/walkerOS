@@ -1,4 +1,5 @@
-export { schemas, examples } from './cloudfunction';
+export * as schemas from './cloudfunction/schemas';
+export * as examples from './cloudfunction/examples';
 export * as pubsubPullSchemas from './pubsub/pull/schemas';
 export * as pubsubPullExamples from './pubsub/pull/examples';
 export * as pubsubPushSchemas from './pubsub/push/schemas';

@@ -61,15 +61,12 @@ describe('Destination Meta Pixel', () => {
 
   test('init with load script', async () => {
     const scriptEnv = clone(examples.env.push);
-    const createElementSpy = jest.fn(
-      () =>
-        ({
-          src: '',
-          async: false,
-          setAttribute: jest.fn(),
-          removeAttribute: jest.fn(),
-        }) as unknown as Element,
-    );
+    const createElementSpy = jest.fn(() => ({
+      src: '',
+      async: false,
+      setAttribute: jest.fn(),
+      removeAttribute: jest.fn(),
+    }));
     const appendChildSpy = jest.fn();
 
     scriptEnv.document.createElement = createElementSpy;

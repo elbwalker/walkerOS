@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
+import { redactDisplayNames } from '../user-data.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
@@ -10,6 +11,11 @@ import {
   type DeploymentSummaryForResolver,
   type ListDeploymentsForResolver,
 } from './_resolvers.js';
+import {
+  validateActionInput,
+  assertParam,
+  DEPLOY_MANAGE_REQUIREMENTS,
+} from '../action-requirements.js';
 
 const TITLE = 'Deploy Management';
 const DESCRIPTION =
@@ -25,12 +31,7 @@ const inputSchema = {
     .string()
     .optional()
     .describe('Project ID. Optional; falls back to the default project.'),
-  flowId: z
-    .string()
-    .optional()
-    .describe(
-      'Flow ID. Required for: deploy, get, delete. Optional filter for list.',
-    ),
+  flowId: z.string().optional().describe('Required for deploy, get, delete.'),
   slug: z
     .string()
     .optional()
@@ -124,22 +125,23 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
     cursor?: string;
     limit?: number;
   };
+  const validationError = validateActionInput(
+    'deploy_manage',
+    action ?? '',
+    { flowId, projectId },
+    DEPLOY_MANAGE_REQUIREMENTS,
+  );
+  if (validationError) return mcpError(new Error(validationError));
   try {
     switch (action) {
       case 'deploy': {
-        if (!flowId) {
-          return mcpError(
-            new Error(
-              'flowId is required for deploy action. Use flow_manage with action "list" to see available flows.',
-            ),
-          );
-        }
+        assertParam(flowId, 'flowId', 'deploy');
         const result = await client.deploy({
           flowId,
           wait: wait ?? true,
           flowName,
         });
-        return mcpResult(result, {
+        return mcpResult(redactDisplayNames(result), {
           next: [
             'Use deploy_manage with action "get" to check deployment status',
           ],
@@ -155,17 +157,11 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
           cursor,
           limit,
         });
-        return mcpResult(data);
+        return mcpResult(redactDisplayNames(data));
       }
 
       case 'get': {
-        if (!flowId) {
-          return mcpError(
-            new Error(
-              'flowId is required for get action. Use flow_manage with action "list" to see available flows.',
-            ),
-          );
-        }
+        assertParam(flowId, 'flowId', 'get');
         const resolvedSlug = await resolveDeploymentSlug({
           projectId: projectId ?? '',
           flowId,
@@ -176,17 +172,11 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
           slug: resolvedSlug,
           projectId,
         });
-        return mcpResult(data);
+        return mcpResult(redactDisplayNames(data));
       }
 
       case 'delete': {
-        if (!flowId) {
-          return mcpError(
-            new Error(
-              'flowId is required for delete action. Use flow_manage with action "list" to see available flows.',
-            ),
-          );
-        }
+        assertParam(flowId, 'flowId', 'delete');
         const resolvedSlug = await resolveDeploymentSlug({
           projectId: projectId ?? '',
           flowId,
@@ -197,10 +187,12 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
           slug: resolvedSlug,
           projectId,
         });
-        return mcpResult({
-          deleted: true,
-          ...(data as Record<string, unknown>),
-        });
+        return mcpResult(
+          redactDisplayNames({
+            deleted: true,
+            ...(data as Record<string, unknown>),
+          }),
+        );
       }
 
       default:

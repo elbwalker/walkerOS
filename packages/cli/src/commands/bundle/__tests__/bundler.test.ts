@@ -1068,3 +1068,162 @@ describe('legacy walkerOS.bundle annotation warning', () => {
     expect(bundleWarns).toEqual([]);
   });
 });
+
+/**
+ * Browser telemetry codegen: the wrapped IIFE must poll the observer's
+ * trace endpoint and re-resolve telemetry per emit via a supplier, so a
+ * deploy-time `level: 'off'` baseline can be flipped to trace by the poll.
+ */
+describe('generateWrapEntry telemetry supplier + poller codegen', () => {
+  const stage1Path = '/tmp/skeleton/flow.mjs';
+
+  const emit = (level: 'off' | 'standard' | 'trace') =>
+    generateWrapEntry(stage1Path, {
+      telemetry: {
+        observerUrl: 'https://observer.example.com/ingest',
+        traceUrl: 'https://observer.example.com/trace/dep-123',
+        ingestToken: 'tok-abc',
+        flowId: 'flow-1',
+        level,
+        sample: 0.5,
+      },
+    });
+
+  it('imports resolveTelemetryOptions alongside the observer/poster helpers', () => {
+    const out = emit('standard');
+    expect(out).toContain(
+      "import { createBatchedPoster as __cbp, createTelemetryObserver as __cto, resolveTelemetryOptions as __cto_resolve } from '@walkeros/core';",
+    );
+  });
+
+  it('bakes the full traceUrl and ingestToken', () => {
+    const out = emit('standard');
+    expect(out).toContain('"https://observer.example.com/trace/dep-123"');
+    expect(out).toContain('"tok-abc"');
+  });
+
+  it('wires the observer as a supplier that re-resolves per emit', () => {
+    const out = emit('standard');
+    expect(out).toContain('__cto(__emit, () => __cto_resolve({');
+    expect(out).toContain('flowId: "flow-1"');
+    expect(out).toContain('level: "standard"');
+    expect(out).toContain('sample: 0.5');
+    expect(out).toContain('traceUntil: __traceUntil');
+  });
+
+  it('declares a module-level __traceUntil and a __pollTrace fetcher', () => {
+    const out = emit('standard');
+    expect(out).toMatch(/let\s+__traceUntil/);
+    expect(out).toContain('function __pollTrace');
+    expect(out).toContain('Authorization');
+    expect(out).toContain('Bearer ');
+    // fetches the baked full traceUrl verbatim
+    expect(out).toContain('fetch("https://observer.example.com/trace/dep-123"');
+  });
+
+  it('polls immediately and on an interval', () => {
+    const out = emit('standard');
+    expect(out).toContain('__pollTrace()');
+    expect(out).toContain('setInterval(__pollTrace');
+  });
+
+  it('handles a null traceUntil body as a clear (mirrors server poller)', () => {
+    const out = emit('standard');
+    // The poller must accept a string (set) OR null (clear); the null path is
+    // the disable case and must not be ignored.
+    expect(out).toContain("typeof __value === 'string' && __value.length > 0");
+    expect(out).toContain('__value === null');
+    expect(out).toContain('__traceUntil = null');
+  });
+
+  /**
+   * Behavioral check: extract the generated `__pollTrace` body and run it
+   * against stubbed fetch responses. Asserts set-on-string, clear-on-null, and
+   * unchanged-on-non-200/error, exactly mirroring the server trace poller.
+   */
+  it('sets on string, clears on null, leaves unchanged on non-200/error', async () => {
+    const out = emit('standard');
+
+    // Wrap the generated poller in a harness that exposes the holder + setup.
+    const harness = `
+      ${out
+        .split('\n(async () => {')[0] // import + module-level poller declarations
+        .replace(/^import .*$/gm, '')} // strip ESM imports; fetch is injected
+      return { pollTrace: __pollTrace, getTraceUntil: () => __traceUntil };
+    `;
+
+    const makeRunner = () =>
+      new Function('fetch', harness) as (fetchImpl: typeof fetch) => {
+        pollTrace: () => void;
+        getTraceUntil: () => string | null;
+      };
+
+    // 1. String body -> sets __traceUntil.
+    {
+      const fetchImpl = (() =>
+        Promise.resolve({
+          status: 200,
+          json: () => Promise.resolve({ traceUntil: '2999-01-01T00:00:00Z' }),
+        })) as unknown as typeof fetch;
+      const runner = makeRunner()(fetchImpl);
+      runner.pollTrace();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(runner.getTraceUntil()).toBe('2999-01-01T00:00:00Z');
+    }
+
+    // 2. null body -> clears __traceUntil even after a prior set.
+    {
+      let body: { traceUntil: string | null } = {
+        traceUntil: '2999-01-01T00:00:00Z',
+      };
+      const fetchImpl = (() =>
+        Promise.resolve({
+          status: 200,
+          json: () => Promise.resolve(body),
+        })) as unknown as typeof fetch;
+      const runner = makeRunner()(fetchImpl);
+      runner.pollTrace();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(runner.getTraceUntil()).toBe('2999-01-01T00:00:00Z');
+      body = { traceUntil: null };
+      runner.pollTrace();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(runner.getTraceUntil()).toBeNull();
+    }
+
+    // 3. non-200 -> leaves __traceUntil unchanged.
+    {
+      let status = 200;
+      const fetchImpl = (() =>
+        Promise.resolve({
+          status,
+          json: () => Promise.resolve({ traceUntil: '2999-01-01T00:00:00Z' }),
+        })) as unknown as typeof fetch;
+      const runner = makeRunner()(fetchImpl);
+      runner.pollTrace();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(runner.getTraceUntil()).toBe('2999-01-01T00:00:00Z');
+      status = 503;
+      runner.pollTrace();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(runner.getTraceUntil()).toBe('2999-01-01T00:00:00Z');
+    }
+
+    // 4. fetch rejects -> leaves __traceUntil unchanged.
+    {
+      const fetchImpl = (() =>
+        Promise.reject(new Error('network'))) as unknown as typeof fetch;
+      const runner = makeRunner()(fetchImpl);
+      runner.pollTrace();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(runner.getTraceUntil()).toBeNull();
+    }
+  });
+
+  it('wires telemetry even when the baseline level is off', () => {
+    const out = emit('off');
+    expect(out).toContain('__cto(__emit, () => __cto_resolve({');
+    expect(out).toContain('level: "off"');
+    expect(out).toContain('function __pollTrace');
+  });
+});

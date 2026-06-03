@@ -10,6 +10,11 @@ import type { Env } from '../types';
 // Simple no-op function for mocking
 const noop = () => {};
 
+// `sendWeb` has a generic, transport-conditional return type that a concrete
+// no-op cannot express; widen the placeholder to the env's function slot.
+// Tests and simulation replace this with their own capturing mock.
+const widen = <T>(value: unknown): T => value as T;
+
 export const init: Env | undefined = {
   // Environment before initialization (sendWeb not configured yet)
   sendWeb: undefined,
@@ -17,9 +22,7 @@ export const init: Env | undefined = {
 
 export const push: Env = {
   // Standard mock environment for testing
-  sendWeb: Object.assign(noop, {
-    // Add any specific properties if needed for sendWeb
-  }) as unknown as Env['sendWeb'],
+  sendWeb: widen<Env['sendWeb']>(noop),
 };
 
 /**

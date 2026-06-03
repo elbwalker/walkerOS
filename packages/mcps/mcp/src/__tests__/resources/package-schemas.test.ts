@@ -6,15 +6,19 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 jest.mock('../../catalog.js', () => ({
-  fetchCatalog: jest.fn().mockResolvedValue([
-    {
-      name: '@walkeros/test-pkg',
-      version: '1.0.0',
-      type: 'destination',
-      platform: ['web'],
-      description: 'Test package',
-    },
-  ]),
+  fetchCatalog: jest.fn().mockResolvedValue({
+    entries: [
+      {
+        name: '@walkeros/test-pkg',
+        version: '1.0.0',
+        type: 'destination',
+        platform: ['web'],
+        description: 'Test package',
+      },
+    ],
+    warnings: [],
+  }),
+  getPackageBaseUrl: jest.fn(() => undefined),
 }));
 
 const mockFetchPackageSchema = fetchPackageSchema as jest.MockedFunction<

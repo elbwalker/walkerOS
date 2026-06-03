@@ -268,10 +268,23 @@ console.log(calls);
 When using walkerOS MCP tools, check `_hints.warnings` in tool responses for
 diagnostic information:
 
-- **`flow_simulate`** warns when 0 destinations exist or none received the event
+- **`flow_simulate`** warns when 0 destinations exist or none received the
+  event. `step` is required (e.g. `"destination.gtag"`). Source steps take a
+  `{ content, trigger? }` event where `content` is `{ name, data }`; sources,
+  including `@walkeros/source-demo`, can be simulated this way.
 - **`flow_bundle`** warns when the build produces no output
 - **`flow_examples`** warns when no examples are found in the config
+- **`package_search`** returns the complete catalog and warns (via the
+  `warnings` array) when it falls back to a partial source or omits packages,
+  instead of silently returning a partial list
 - All error responses include a `hint` field with recovery suggestions
+
+When a request fails or behaves unexpectedly, call **`diagnostics`** (read-only,
+no parameters, works logged out). It reports the MCP and CLI versions, the
+resolved app URL and whether it came from `WALKEROS_APP_URL` or the default, app
+`/api/health` reachability, the bundled OpenAPI contract version, and which
+source served the last package lookup, so you can tell which backend and
+versions you are on.
 
 ## Related Skills
 

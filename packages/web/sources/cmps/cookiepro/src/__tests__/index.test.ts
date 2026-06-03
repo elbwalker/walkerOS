@@ -508,4 +508,44 @@ describe('CookiePro Source', () => {
       expect(consentCalls).toHaveLength(0);
     });
   });
+
+  describe('factory side-effect-free (init hygiene)', () => {
+    test('factory attaches no listener and emits no consent until init() runs', async () => {
+      // OneTrust already loaded with active groups: a static read WOULD emit if
+      // the factory performed it.
+      const mockWindow = createMockWindow({
+        sdkLoaded: true,
+        activeGroups: 'C0001',
+        alertBoxClosed: true,
+      });
+
+      const source = await sourceCookiePro({
+        collector: {} as never,
+        config: { settings: { explicitOnly: false } },
+        env: {
+          push: mockElb,
+          command: mockElb,
+          elb: mockElb,
+          window: mockWindow as unknown as Window & typeof globalThis,
+          logger: createMockLogger(),
+        },
+        id: 'test-cookiepro',
+        logger: createMockLogger(),
+        withScope: async (_r, _resp, body) => body({} as never),
+      });
+
+      // Pass-1 factory must be side-effect-free: no listener, no consent emit.
+      expect(mockWindow.addEventListener).not.toHaveBeenCalled();
+      expect(consentCalls).toHaveLength(0);
+
+      // init() (Pass 2) attaches listeners and performs the static read.
+      await source.init?.();
+
+      expect(mockWindow.addEventListener).toHaveBeenCalledWith(
+        'OneTrustGroupsUpdated',
+        expect.any(Function),
+      );
+      expect(consentCalls).toHaveLength(1);
+    });
+  });
 });

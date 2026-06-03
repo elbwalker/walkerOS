@@ -36,6 +36,9 @@ export const BUNDLE_TARGETS: Readonly<
     platform: 'browser',
     injectEnv: true,
   }),
+  // skipWrapper emits the introspectable skeleton (not a finished bundle),
+  // consumed by simulate/preview/deploy; node keeps step packages external for
+  // on-disk resolution (see the skeleton branch in bundler.ts).
   'cdn-skeleton': Object.freeze({
     skipWrapper: true,
     withDev: false,

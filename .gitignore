@@ -1,8 +1,5 @@
 dist
 
-# Sentinel written by app/scripts/prepare-file-mode.sh in file: mode deploys
-.file-mode-built-at
-
 # Logs
 logs
 *.log

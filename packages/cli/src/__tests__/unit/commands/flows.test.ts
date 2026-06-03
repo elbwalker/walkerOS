@@ -306,6 +306,7 @@ describe('flows', () => {
             memberCount: 1,
             flowCount: 0,
             deploymentCount: 0,
+            isDemo: false,
           },
           {
             id: 'proj_b',
@@ -316,6 +317,7 @@ describe('flows', () => {
             memberCount: 1,
             flowCount: 0,
             deploymentCount: 0,
+            isDemo: false,
           },
         ],
         total: 2,
@@ -371,6 +373,7 @@ describe('flows', () => {
             memberCount: 1,
             flowCount: 0,
             deploymentCount: 0,
+            isDemo: false,
           },
           {
             id: 'proj_b',
@@ -381,6 +384,7 @@ describe('flows', () => {
             memberCount: 1,
             flowCount: 0,
             deploymentCount: 0,
+            isDemo: false,
           },
         ],
         total: 2,

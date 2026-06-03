@@ -67,6 +67,7 @@ function stubClient(): ToolClient {
     whoami: notImpl,
     resolveToken: () => null,
     deleteConfig: () => false,
+    checkHealth: async () => ({ reachable: true }),
     submitFeedback: notImpl,
     getFeedbackPreference: () => undefined,
     setFeedbackPreference: () => {},
@@ -83,7 +84,7 @@ describe('createWalkerOSMcpServer', () => {
     expect(server.server).toBeDefined();
   });
 
-  it('registers all 13 tools', () => {
+  it('registers all 14 tools', () => {
     const server = createWalkerOSMcpServer({
       client: stubClient(),
       version: '0.0.0',
@@ -96,6 +97,7 @@ describe('createWalkerOSMcpServer', () => {
       [
         'auth',
         'deploy_manage',
+        'diagnostics',
         'feedback',
         'flow_bundle',
         'flow_examples',

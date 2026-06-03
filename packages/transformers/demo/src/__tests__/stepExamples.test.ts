@@ -2,7 +2,7 @@ import type { WalkerOS, Transformer } from '@walkeros/core';
 import { createMockContext } from '@walkeros/core';
 import { transformerDemo } from '../index';
 import type { Types } from '../types';
-import { examples } from '../index';
+import { examples } from '../dev';
 
 describe('Step Examples', () => {
   const createInitContext = (

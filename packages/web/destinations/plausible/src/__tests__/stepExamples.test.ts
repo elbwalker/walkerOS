@@ -3,6 +3,7 @@ import type {
   WalkerOS,
   Mapping as WalkerOSMapping,
 } from '@walkeros/core';
+import { createLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { Config, Env } from '../types';
@@ -12,15 +13,7 @@ type CallRecord = [string, ...unknown[]];
 const initConfig = examples.step.init.in as Config;
 const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
 
-const noopLogger = {
-  log: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  throw: (msg: string) => {
-    throw new Error(msg);
-  },
-} as unknown as Destination.Context['logger'];
+const noopLogger = createLogger();
 
 /**
  * Unified spy: captures both init-side `script.appendChild` calls and
@@ -38,22 +31,21 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
     if (options !== undefined) args.push(options);
     calls.push(['plausible', ...args]);
   };
-  const env = {
+  const env: Env = {
     window: {
-      // Pre-install spy so init's `w.plausible = w.plausible || ...`
+      // Pre-install spy so init's `window.plausible = window.plausible || ...`
       // keeps our function instead of replacing with the queue stub.
       plausible: Object.assign(spy, {
         q: [] as IArguments[],
-      }) as unknown as Env['window']['plausible'],
+      }),
     },
     document: {
-      createElement: (_tag: string) => {
-        const el = { src: '', dataset: {} as { domain?: string } };
-        return el as unknown as HTMLScriptElement;
-      },
+      createElement: (_tag: string) => ({ src: '', dataset: {} }),
       head: {
-        appendChild: (el: unknown) => {
-          const script = el as { src: string; dataset: { domain?: string } };
+        appendChild: (script: {
+          src: string;
+          dataset: { domain?: string };
+        }) => {
           calls.push([
             'script.appendChild',
             {
@@ -61,12 +53,12 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
               domain: script.dataset.domain,
             },
           ]);
-          return el;
+          return script;
         },
       },
       querySelector: () => null,
     },
-  } as unknown as Env;
+  };
   return { env, collected: () => calls };
 }
 
@@ -80,7 +72,7 @@ describe('plausible destination — step examples', () => {
     // Init test: start with plausible unset so addScript's appendChild
     // fires and the init queue-stub assignment is exercised. The push
     // spy isn't needed here.
-    (env.window as { plausible?: unknown }).plausible = undefined;
+    env.window.plausible = undefined;
 
     const dest = jest.requireActual('../').default;
 

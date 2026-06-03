@@ -1,7 +1,8 @@
 import type { Destination, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, createLogger } from '@walkeros/core';
 import { examples } from '../dev';
+import type { Env } from '../types';
 import { resetConsentState } from '../index';
 
 const INIT_DATE_MS = 1700000000000;
@@ -21,39 +22,27 @@ const ga4InitOut = (ga4Init.out ?? []) as ReadonlyArray<CallRecord>;
 const adsInitOut = (adsInit.out ?? []) as ReadonlyArray<CallRecord>;
 const gtmInitOut = (gtmInit.out ?? []) as ReadonlyArray<CallRecord>;
 
-const noopLogger = {
-  log: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  throw: (msg: string) => {
-    throw new Error(msg);
-  },
-} as unknown as Destination.Context['logger'];
-
-type TestEnv = ReturnType<typeof clone> & {
-  window: { gtag: jest.Mock; dataLayer: unknown[] };
-};
+const noopLogger = createLogger();
 
 function makeTestEnv(): {
-  env: TestEnv;
+  env: Env;
   mockGtag: jest.Mock;
   calls: CallRecord[];
 } {
   const calls: CallRecord[] = [];
-  const env = clone(examples.env.push) as unknown as TestEnv;
+  const env: Env = clone(examples.env.push);
   const mockGtag = jest.fn((...args: unknown[]) => {
-    calls.push(['gtag', ...args] as CallRecord);
+    calls.push(['gtag', ...args]);
   });
   env.window.gtag = mockGtag;
 
-  const dataLayerProxy = new Proxy([] as unknown[], {
+  const dataLayerProxy = new Proxy<unknown[]>([], {
     set(target, prop, value) {
-      target[prop as unknown as number] = value;
+      Reflect.set(target, prop, value);
       if (prop !== 'length' && typeof prop === 'string') {
         const idx = Number(prop);
         if (!Number.isNaN(idx)) {
-          calls.push(['dataLayer.push', value] as CallRecord);
+          calls.push(['dataLayer.push', value]);
         }
       }
       return true;

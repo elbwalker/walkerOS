@@ -237,6 +237,17 @@ export interface CommandFn {
   (command: string, data?: unknown): Promise<ElbTypes.PushResult>;
 }
 
+/**
+ * Per-cascade tracking for the bounded recursion guard (see `Instance.cascade`).
+ * `counts` maps a subscriber identity object to per-cell-type delivery counts
+ * within one top-level command's cascade. A pair is stopped once its count
+ * exceeds the guard's bound; the non-convergence error logs once per pair on the
+ * crossing transition.
+ */
+export interface Cascade {
+  counts: WeakMap<object, Record<string, number>>;
+}
+
 // Main Collector interface
 export interface Instance {
   push: PushFn;
@@ -264,6 +275,50 @@ export interface Instance {
   on: On.OnConfig;
   queue: WalkerOS.Events;
   round: number;
+  /**
+   * Monotonic counter bumped on every accepted reactive-state mutation
+   * (consent, user, globals, custom). Used for per-subscriber high-water-mark
+   * dedup. Not bumped for non-reactive config changes.
+   */
+  stateVersion: number;
+  /**
+   * Per-cell change version: the `stateVersion` at which each state cell
+   * (`consent`/`user`/`globals`/`custom`) last changed. Lets delivery dedup be
+   * per-cell — a subscriber owed two cells at the same `stateVersion` receives
+   * both, because each cell's freshness is tracked independently rather than
+   * against the single global `stateVersion`. A missing entry reads as 0.
+   */
+  cellVersion: Record<string, number>;
+  /**
+   * Per-subscriber, per-cell high-water mark registry for exactly-once state
+   * delivery. Keys are subscriber identity objects (a ConsentRule object, a
+   * generic-fn, or a source instance); the inner record maps each state-cell
+   * type (`consent`/`user`/`globals`/`custom`) to the `stateVersion` at which
+   * that subscriber was last invoked FOR THAT CELL. A missing entry means never
+   * delivered (sentinel "-infinity", read as -1). A subscriber is invoked for a
+   * cell iff `stateVersion > mark[cell]` AND `allowed === true`.
+   *
+   * Per-cell (not a single scalar per subscriber) so a handler owed two
+   * distinct cells at the same `stateVersion` — e.g. consent and user both
+   * bumped before run — receives both at the run barrier instead of the first
+   * delivery advancing one mark and swallowing the second cell's edge.
+   */
+  delivery: WeakMap<object, Record<string, number>>;
+  /**
+   * Transient per-cascade tracking for the bounded recursion guard. A
+   * top-level state command creates this when it first enters the delivery
+   * cascade and tears it down when it returns; nested commands emitted by
+   * reacting callbacks reuse the same structure. It counts deliveries per
+   * `(subscriber, cell-type)` so a cyclic cascade terminates (and logs once)
+   * instead of recursing until stack overflow. `undefined` between top-level
+   * commands. See `on.ts` `cascadeAllow`.
+   *
+   * This tracker, together with `stateVersion` and `delivery`, assumes top-level
+   * state commands are processed serially on a given collector. Concurrent,
+   * overlapping state commands on one shared collector are not supported (web is
+   * serial; the server per-request path is event push, not state commands).
+   */
+  cascade?: Cascade;
   session: undefined | SessionData;
   status: Status;
   timing: number;
@@ -271,4 +326,11 @@ export interface Instance {
   pending: {
     destinations: Destination.InitDestinations;
   };
+  /**
+   * Every event type ever broadcast through `onApply` (state, lifecycle, and
+   * arbitrary). Lets a `require:[<arbitrary>]` gate be satisfied by the current
+   * recorded state for events that have no backing cell, including a broadcast
+   * that fired before the requiring step registered.
+   */
+  seenEvents: Set<string>;
 }

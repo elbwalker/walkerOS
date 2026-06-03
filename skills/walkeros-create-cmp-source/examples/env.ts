@@ -35,18 +35,30 @@ export const createMockCmpAPI = (consent: CmpConsent | null = null) => ({
   consent,
 });
 
+/**
+ * Minimal window surface the CMP source touches: the CMP global plus event
+ * registration. Typing the env window to this narrowed shape (instead of the
+ * global `typeof window`) lets the mock satisfy it directly, with no
+ * `as unknown as typeof window` cast.
+ */
+interface MockCmpWindow {
+  [globalName: string]: ReturnType<typeof createMockCmpAPI> | unknown;
+  addEventListener: (event: string, handler: (e: Event) => void) => void;
+  removeEventListener: (event: string, handler: (e: Event) => void) => void;
+}
+
 /** Generic mock window with CMP API */
 export const createMockWindow = (
   consent: CmpConsent | null = null,
   globalName = 'CmpName',
-) => ({
+): MockCmpWindow => ({
   [globalName]: createMockCmpAPI(consent),
   addEventListener: noop,
   removeEventListener: noop,
 });
 
 interface CmpEnv extends Source.BaseEnv {
-  window?: typeof window;
+  window?: MockCmpWindow;
 }
 
 /** Standard mock environment for testing CMP sources */
@@ -61,7 +73,7 @@ export const mockEnv: CmpEnv = {
     return createMockElbFn();
   },
   get window() {
-    return createMockWindow() as unknown as typeof window;
+    return createMockWindow();
   },
   logger: noopLogger,
 };

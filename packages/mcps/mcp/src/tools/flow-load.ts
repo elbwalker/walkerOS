@@ -2,21 +2,16 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { loadJsonConfig } from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
-import { redactNestedStrings } from '../user-data.js';
+import { isAuthError, AUTH_HINT } from '../types.js';
+import { redactNestedStrings, keepStructural } from '../user-data.js';
 
+import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
 
-const KEEP_LITERAL = new Set([
-  'id',
-  'flowId',
-  'projectId',
-  'version',
-  'slug',
-  'createdAt',
-  'updatedAt',
-  'deletedAt',
-]);
-const keepLiteral = (key: string) => KEEP_LITERAL.has(key);
+/** `flow_` and `cfg_` are reserved walkerOS API id namespaces. A source
+ *  matching either is a cloud flow/config id, loaded via the client, not a
+ *  local file path or URL. */
+const API_ID_PREFIX = /^(flow|cfg)_/;
 
 const WEB_SKELETON = {
   version: 4,
@@ -75,26 +70,45 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
-export function createFlowLoadToolSpec(): ToolSpec {
+export function createFlowLoadToolSpec(client: ToolClient): ToolSpec {
   return {
     name: 'flow_load',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowLoadHandlerBody(input),
+    handler: (input) => flowLoadHandlerBody(client, input),
   };
 }
 
-async function flowLoadHandlerBody(input: unknown) {
+async function flowLoadHandlerBody(client: ToolClient, input: unknown) {
   const { source, platform } = (input ?? {}) as {
     source?: string;
     platform?: 'web' | 'server';
   };
+
+  // Load by cloud flow/config id (flow_… / cfg_…) via the same client seam
+  // flow_manage `get` uses. Its NOT_FOUND surfaces directly, never remapped
+  // to the local "file not found" hint below.
+  if (source && API_ID_PREFIX.test(source)) {
+    try {
+      const flow = await client.getFlow({ flowId: source });
+      const config = (flow as { config?: Record<string, unknown> }).config;
+      return mcpResult(
+        redactNestedStrings(config ?? {}, { skip: keepStructural }),
+        {
+          next: ['Use flow_validate to check', 'Use add-step prompt to modify'],
+        },
+      );
+    } catch (error) {
+      return mcpError(error, isAuthError(error) ? AUTH_HINT : undefined);
+    }
+  }
+
   try {
     if (source) {
       const config = await loadJsonConfig(source);
-      return mcpResult(redactNestedStrings(config, { skip: keepLiteral }), {
+      return mcpResult(redactNestedStrings(config, { skip: keepStructural }), {
         next: ['Use flow_validate to check', 'Use add-step prompt to modify'],
       });
     }
@@ -123,8 +137,8 @@ async function flowLoadHandlerBody(input: unknown) {
   }
 }
 
-export function registerFlowLoadTool(server: McpServer) {
-  const spec = createFlowLoadToolSpec();
+export function registerFlowLoadTool(server: McpServer, client: ToolClient) {
+  const spec = createFlowLoadToolSpec(client);
   server.registerTool(
     spec.name,
     {

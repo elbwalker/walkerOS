@@ -2,7 +2,6 @@ import type { Source } from '@walkeros/core';
 import type { Types } from './types';
 
 export * as SourceDemo from './types';
-export * as examples from './examples';
 
 /**
  * Demo source for walkerOS

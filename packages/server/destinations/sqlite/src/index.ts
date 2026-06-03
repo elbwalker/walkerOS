@@ -8,9 +8,6 @@ import { setup, tableExists } from './setup';
 // Types re-export
 export * as DestinationSQLite from './types';
 
-// Examples
-export * as examples from './examples';
-
 // Serialization helpers (exported for tests and advanced consumers)
 export {
   CANONICAL_COLUMNS,

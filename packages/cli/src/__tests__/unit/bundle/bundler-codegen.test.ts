@@ -943,6 +943,7 @@ describe('generateWebEntry telemetry observer wiring', () => {
     const out = generateWebEntry('./skel.mjs', '{}', {
       telemetry: {
         observerUrl: 'https://o.example.com/i/d',
+        traceUrl: 'https://o.example.com/trace/d',
         ingestToken: 'tok_t',
         flowId: 'flow_t',
         level: 'standard',
@@ -970,6 +971,7 @@ describe('generateWrapEntry telemetry observer wiring', () => {
     const out = generateWrapEntry('./skel.mjs', {
       telemetry: {
         observerUrl: 'https://o.example.com/i/d',
+        traceUrl: 'https://o.example.com/trace/d',
         ingestToken: 'tok_t',
         flowId: 'flow_t',
         level: 'standard',
@@ -983,6 +985,45 @@ describe('generateWrapEntry telemetry observer wiring', () => {
     const observerIdx = out.indexOf('collector.observers.add');
     expect(startFlowIdx).toBeGreaterThan(-1);
     expect(observerIdx).toBeGreaterThan(startFlowIdx);
+  });
+
+  it('emits a static observer with no trace poll when traceUrl is omitted', () => {
+    const out = generateWrapEntry('./skel.mjs', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/ingest/preview/prv_1',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'trace',
+      },
+    });
+    expect(out).toContain('createTelemetryObserver');
+    expect(out).toContain('collector.observers.add');
+    expect(out).toContain('"trace"');
+    // No poll machinery when traceUrl is absent.
+    expect(out).not.toContain('__pollTrace');
+    expect(out).not.toContain('setInterval');
+    expect(out).not.toContain('resolveTelemetryOptions');
+    expect(out).not.toContain('traceUntil');
+    const startFlowIdx = out.indexOf('await startFlow(config)');
+    const observerIdx = out.indexOf('collector.observers.add');
+    expect(startFlowIdx).toBeGreaterThan(-1);
+    expect(observerIdx).toBeGreaterThan(startFlowIdx);
+  });
+
+  it('keeps the trace poll when traceUrl is present', () => {
+    const out = generateWrapEntry('./skel.mjs', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/i/d',
+        traceUrl: 'https://o.example.com/trace/d',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'standard',
+      },
+    });
+    expect(out).toContain('__pollTrace');
+    expect(out).toContain('setInterval');
+    expect(out).toContain('resolveTelemetryOptions');
+    expect(out).toContain('traceUntil');
   });
 });
 

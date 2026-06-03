@@ -1,5 +1,7 @@
 import { startFlow } from '@walkeros/collector';
 import type { WalkerOS, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
+import { sourceSession } from '../index';
 import {
   createMockPush,
   createMockCommand,
@@ -43,11 +45,13 @@ describe('Session Source', () => {
     expect(typeof source.push).toBe('function');
   });
 
-  test('returns source instance with on function', async () => {
+  test('does not expose an on handler (collector owns exactly-once)', async () => {
     const source = await createSessionSource(collector);
 
-    expect(source.on).toBeDefined();
-    expect(typeof source.on).toBe('function');
+    // The consent rule is registered once at init via command('on', ...).
+    // The collector guarantees exactly-once delivery, so the source no longer
+    // reacts to consent events through its own `on` handler.
+    expect(source.on).toBeUndefined();
   });
 
   describe('Session Start', () => {
@@ -55,6 +59,32 @@ describe('Session Source', () => {
       await createSessionSource(collector);
 
       // Session start should have been called, which calls command('user', ...)
+      expect(mockCommand).toHaveBeenCalled();
+    });
+  });
+
+  describe('factory side-effect-free (init hygiene)', () => {
+    test('factory does not run sessionStart until init() runs', async () => {
+      const source = await sourceSession({
+        collector,
+        config: { settings: { consent: 'marketing' } },
+        env: {
+          push: collector.push.bind(collector),
+          command: mockCommand,
+          elb: collector.sources?.elb?.push,
+          logger: createMockLogger(),
+        },
+        id: 'test-session',
+        logger: createMockLogger(),
+        withScope: async (_r, _resp, body) => body({} as never),
+      });
+
+      // Pass-1 factory must be side-effect-free: sessionStart (which registers
+      // the consent rule + may emit state) has not run yet.
+      expect(mockCommand).not.toHaveBeenCalled();
+
+      // init() (Pass 2) runs sessionStart.
+      await source.init?.();
       expect(mockCommand).toHaveBeenCalled();
     });
   });
@@ -79,31 +109,19 @@ describe('Session Source', () => {
   });
 
   describe('Consent Handling', () => {
-    test('re-initializes session on consent event', async () => {
-      const source = await createSessionSource(collector);
+    test('registers a single consent rule once at init', async () => {
+      await createSessionSource(collector, {
+        settings: { consent: 'marketing' },
+      });
 
-      // Clear previous calls
-      mockCommand.mockClear();
-
-      // Trigger consent event
-      await source.on?.('consent');
-
-      // Session should be re-initialized
-      expect(mockCommand).toHaveBeenCalled();
-    });
-
-    test('does not re-initialize on other events', async () => {
-      const source = await createSessionSource(collector);
-
-      // Clear previous calls
-      mockCommand.mockClear();
-
-      // Trigger other events
-      await source.on?.('ready');
-      await source.on?.('run');
-
-      // Session should NOT be re-initialized for these events
-      expect(mockCommand).not.toHaveBeenCalled();
+      // Exactly one consent registration; no re-registration on consent events
+      // (the source no longer re-runs sessionStart per consent change).
+      const consentRegistrations = mockCommand.mock.calls.filter(
+        ([cmd, init]) =>
+          cmd === 'on' &&
+          (init as { type?: string } | undefined)?.type === 'consent',
+      );
+      expect(consentRegistrations).toHaveLength(1);
     });
   });
 });

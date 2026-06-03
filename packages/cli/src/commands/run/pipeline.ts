@@ -12,6 +12,7 @@ import type { Logger, ObserverFn } from '@walkeros/core';
 import {
   createBatchedPoster,
   createTelemetryObserver,
+  getTraceUntil,
   resolveTelemetryOptions,
 } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
@@ -28,6 +29,10 @@ import {
   type HeartbeatHandle,
 } from '../../runtime/heartbeat.js';
 import { createPoller, type PollerHandle } from '../../runtime/poller.js';
+import {
+  createTracePoller,
+  type TracePollerHandle,
+} from '../../runtime/trace-poller.js';
 import {
   fetchSecrets,
   SecretsHttpError,
@@ -77,11 +82,12 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   // Health server (always on)
   const healthServer = await createHealthServer(port, logger);
 
-  // Telemetry observers: only wire when both observer URL and ingest token
-  // are present. Missing env (local dev, run --flow without API) results in
-  // a no-op telemetry path. The resolver also consults WALKEROS_TRACE_UNTIL
-  // for the operator-controlled debug flag; that hook is read at boot only
-  // until the heartbeat-poll plumbing lands.
+  // Telemetry observers: only wire when observer URL, ingest token, and
+  // deployment id are all present. Missing env (local dev, run --flow without
+  // API) results in a no-op telemetry path. The active trace window arrives
+  // via the trace-poller below (which writes the shared `traceUntil` holder);
+  // the per-emit supplier reads it, so trace flips on and off at runtime
+  // without a redeploy.
   const telemetryObservers = buildTelemetryObservers(api?.flowId ?? 'flow');
 
   // Load flow
@@ -107,6 +113,28 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   // API features (heartbeat + poller)
   let heartbeat: HeartbeatHandle | null = null;
   let poller: PollerHandle | null = null;
+  let tracePoller: TracePollerHandle | null = null;
+
+  // Trace-poller: GET the observer's `/trace/:deploymentId` and feed the
+  // result into the shared `traceUntil` holder. Gated on the SAME env as the
+  // telemetry observers (observer base + ingest token + deployment id), NOT on
+  // `api`: a flow with `api` but no observer env (local dev) must not start a
+  // poller that errors every interval.
+  const observerBase = process.env.WALKEROS_OBSERVER_URL;
+  const ingestToken = process.env.WALKEROS_INGEST_TOKEN;
+  const deploymentId = process.env.WALKEROS_DEPLOYMENT_ID;
+  if (observerBase && ingestToken && deploymentId) {
+    tracePoller = createTracePoller(
+      {
+        url: `${observerBase}/trace/${deploymentId}`,
+        token: ingestToken,
+        intervalMs: 15_000,
+      },
+      logger,
+    );
+    tracePoller.start();
+    logger.info('Trace poller: active (every 15s)');
+  }
 
   // Track temp files for cleanup on hot-swap and shutdown
   let currentBundleCleanup: (() => Promise<void>) | undefined;
@@ -213,6 +241,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
     }, 15000);
 
     try {
+      if (tracePoller) tracePoller.stop();
       if (poller) poller.stop();
       if (heartbeat) heartbeat.stop();
       if (handle.collector.command) {
@@ -249,23 +278,28 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
  * vars). The bundle then sees no `context.observers` and skips the install
  * loop entirely.
  *
- * Transport-level env (`WALKEROS_OBSERVER_URL`, `WALKEROS_INGEST_TOKEN`) is
+ * `WALKEROS_OBSERVER_URL` is the observer base; the ingest POST URL is built
+ * as `${base}/ingest/${WALKEROS_DEPLOYMENT_ID}`. Transport-level env is
  * sampled once at boot: rebuilding the poster on every emit would discard
  * the batch buffer. Projection-level opts (`level`, `sample`,
- * `includeIn`/`Out`/`MappingKey`, plus the `WALKEROS_TRACE_UNTIL` override)
- * are re-resolved per emit through the supplier so a heartbeat-driven
- * toggle of `process.env.WALKEROS_TRACE_UNTIL` reaches the projection.
+ * `includeIn`/`Out`/`MappingKey`, plus the active `traceUntil`) are
+ * re-resolved per emit through the supplier so the trace-poller's writes to
+ * the shared holder reach the projection.
  */
 function buildTelemetryObservers(
   flowId: string,
 ): Array<ObserverFn> | undefined {
-  const url = process.env.WALKEROS_OBSERVER_URL;
+  const base = process.env.WALKEROS_OBSERVER_URL;
   const token = process.env.WALKEROS_INGEST_TOKEN;
-  if (!url || !token) return undefined;
+  const deploymentId = process.env.WALKEROS_DEPLOYMENT_ID;
+  if (!base || !token || !deploymentId) return undefined;
 
+  const url = `${base}/ingest/${deploymentId}`;
   const emit = createBatchedPoster({ url, token });
   return [
-    createTelemetryObserver(emit, () => resolveTelemetryOptions({ flowId })),
+    createTelemetryObserver(emit, () =>
+      resolveTelemetryOptions({ flowId, traceUntil: getTraceUntil() }),
+    ),
   ];
 }
 

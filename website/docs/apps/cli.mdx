@@ -325,7 +325,7 @@ The bundle command handles all of this.
   language="bash"
 />
 
-This writes the optimized bundle to stdout (web flows only). Use `-o` to write to a file or directory (e.g., `-o ./dist/walker.js` for web, `-o ./dist/` for server, which produces `dist/{flow.mjs, package.json, node_modules/}`).
+This writes the optimized bundle to stdout (web flows only). Use `-o` to write to a file or directory (e.g., `-o ./dist/walker.js` for web, `-o ./dist/` for server, which produces `dist/{flow.mjs, package.json, node_modules/}`). For server flows you can also write a `.tar.gz`/`.tgz` archive (e.g., `-o ./flow.tar.gz`), which packs the server bundle directory (`flow.mjs`, `package.json`, `node_modules/`) into a single gzip file. Web single-file bundles do not support archive output.
 
 ### Step-by-Step Guide
 
@@ -434,7 +434,7 @@ The bundle is now ready to deploy!
 
 When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads via HTTP PUT. This is used by the walkerOS cloud service for remote builds.
 
-For server flows, `-o` resolves to a directory: `dist/{flow.mjs, package.json, node_modules/}`. For multi-flow `--all`, each flow gets its own subdirectory: `dist/<flowName>/...`.
+For server flows, `-o` resolves to a directory: `dist/{flow.mjs, package.json, node_modules/}`. When `-o` ends in `.tar.gz` or `.tgz`, that same directory is packed into a single gzip archive instead (server flows only). For multi-flow `--all`, each flow gets its own subdirectory: `dist/<flowName>/...`.
 
 ### Multi-Flow Example
 
@@ -1658,9 +1658,11 @@ The collector terminal shows:
 ### Options
 
 <CodeSnippet
-  code={`walkeros run <config-or-bundle> [options]`}
+  code={`walkeros run <config|bundle|archive> [options]`}
   language="bash"
 />
+
+The input can be a flow config, a pre-built bundle, or a `.tar.gz`/`.tgz` flow archive (local file or URL).
 
 | Option | Description |
 |--------|-------------|
@@ -1703,6 +1705,22 @@ walkeros bundle collect.json
 
 # Then run the bundle
 walkeros run dist/flow.mjs --port 8080`}
+  language="bash"
+/>
+
+### Running flow archives
+
+`run` also accepts a `.tar.gz`/`.tgz` flow archive, either a local file or a URL. The CLI fetches or reads the gzip, extracts the bundle and its sibling `node_modules/`, and runs the entry. This lets server flows whose step packages are external resolve those packages at runtime from the extracted `node_modules/`.
+
+<CodeSnippet
+  code={`# Bundle to an archive
+walkeros bundle collect.json -o flow.tar.gz
+
+# Run a local archive
+walkeros run flow.tar.gz --port 8080
+
+# Run an archive from a URL
+walkeros run https://example.com/flow.tar.gz`}
   language="bash"
 />
 

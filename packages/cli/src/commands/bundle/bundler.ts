@@ -601,6 +601,14 @@ export async function bundleCore(
       codeKeyInputs,
     );
 
+    // The skeleton is the build-once, introspectable currency every downstream
+    // consumer shares: it exports wireConfig/startFlow/__configData (+__devExports)
+    // so simulate and preview can introspect and re-wire it, while web/server
+    // deploy wrap or run it. One artifact, many targets, so do NOT collapse it into
+    // a finished bundle here. For node, step packages stay EXTERNAL on purpose so
+    // nft materializes them into a sibling node_modules/ the host resolves on disk
+    // (the only way native addons like sqlite .node files can ship); inlining here
+    // would break server simulate and native destinations.
     if (buildOptions.skipWrapper || !hasFlow) {
       // Simulation path or no-flow path: concatenate code + data (no wrapper, no stage 2 esbuild)
       const dataDeclaration = `const __configData = ${dataPayload};\nexport { __configData };`;
@@ -695,6 +703,9 @@ export async function bundleCore(
     if (buildOptions.platform === 'node') {
       // Server path: trace the just-emitted bundle, copy used files into
       // `outDir/node_modules/`, write an informational sidecar package.json.
+      // This emits the sibling node_modules/ that every server host (deploy
+      // container, simulate-server) resolves the external @walkeros/* from.
+      // Load-bearing, do not remove.
       await runNftServerPath(
         outputPath,
         flowSettings,
@@ -851,8 +862,10 @@ function createEsbuildOptions(
     // emitted bundle and copies the actual code from `tempDir/node_modules/`
     // into the sibling `dist/node_modules/`. Without this, esbuild would
     // inline every step package's source into flow.mjs and we would ship
-    // both the inline copy and the nft-traced copy. Decision #9 in the
-    // bundler-nft-redesign plan.
+    // both the inline copy and the nft-traced copy. Keeping step packages
+    // external (not inlined) is what lets the host resolve them from the
+    // nft-traced sibling node_modules/, which is what makes server simulate
+    // and native-addon destinations work; inlining would regress both.
     const nodeExternals = getNodeExternals();
     const externalsParts = [nodeExternals, stepPackageExternals];
     if (buildOptions.external) externalsParts.push(buildOptions.external);
@@ -1782,9 +1795,20 @@ const __configData = ${dataPayload};
  */
 export interface WrapEntryTelemetry {
   observerUrl: string;
+  /**
+   * Full deployment-scoped trace endpoint, e.g.
+   * `https://observer.example.com/trace/<deploymentId>`. Baked verbatim and
+   * polled by the browser; the bundle never constructs it from a base.
+   *
+   * Optional: when omitted, the bundle installs the observer at a fixed
+   * `level` with no polling. Suits short-lived, URL-opted-in sessions (e.g.
+   * a preview at `level: 'trace'`) where the opt-in is the URL itself and
+   * there is nothing to poll for.
+   */
+  traceUrl?: string;
   ingestToken: string;
   flowId: string;
-  level?: 'standard' | 'trace';
+  level?: 'off' | 'standard' | 'trace';
   sample?: number;
 }
 
@@ -1895,17 +1919,88 @@ export function generateWrapEntry(
 
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
-  // Telemetry block: when telemetry options are present, import the two
-  // helpers from @walkeros/core and install the observer on
-  // collector.observers AFTER startFlow returns. The bundle ships the
-  // plaintext ingest token; the operator-controlled traceUntil debug flag
-  // is resolved server-side and would be rotated via redeploy until the
-  // poll-and-update plumbing lands.
+  // Telemetry block: when telemetry options are present, import the helpers
+  // from @walkeros/core and install the observer on collector.observers AFTER
+  // startFlow returns.
+  //
+  // Two shapes, picked by whether a `traceUrl` is baked:
+  //  - POLL form (traceUrl present): the observer is wired as a SUPPLIER so the
+  //    operator's runtime trace flag reaches each emit: a module-level
+  //    `__traceUntil` is refreshed by polling the baked full `traceUrl`, and
+  //    `resolveTelemetryOptions` re-resolves the projection per emit. This lets
+  //    a deploy-time `level: 'off'` baseline be flipped to trace by the poll
+  //    without a redeploy.
+  //  - STATIC form (traceUrl omitted): a fixed-level observer with no poll,
+  //    mirroring `generateWebEntry`. The session opts in via its URL and emits
+  //    for the session's life; there is nothing to poll for.
+  const hasPoll = !!options.telemetry?.traceUrl;
   const telemetryImport = options.telemetry
-    ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
+    ? hasPoll
+      ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto, resolveTelemetryOptions as __cto_resolve } from '@walkeros/core';`
+      : `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
     : '';
+  const telemetryPoller =
+    options.telemetry && hasPoll
+      ? `
+let __traceUntil = null;
+let __tracePollInFlight = false;
+function __pollTrace() {
+  if (typeof fetch === 'undefined' || __tracePollInFlight) return;
+  __tracePollInFlight = true;
+  // Bound each poll so a stalled trace endpoint can't pin the in-flight guard
+  // forever (and stack concurrent fetches via setInterval).
+  var __ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var __t = __ctrl ? setTimeout(function () { __ctrl.abort(); }, 10000) : null;
+  fetch(${JSON.stringify(options.telemetry.traceUrl)}, {
+    headers: { Authorization: ${JSON.stringify(`Bearer ${options.telemetry.ingestToken}`)} },
+    signal: __ctrl ? __ctrl.signal : undefined,
+  })
+    .then(function (__res) {
+      if (!__res || __res.status !== 200) return;
+      return __res.json().then(function (__body) {
+        if (!__body || typeof __body !== 'object') return;
+        var __value = __body.traceUntil;
+        // Mirror the server poller: set on a non-empty string, clear on null,
+        // leave unchanged on anything else. The null path is the disable case
+        // (stop a trace early) and MUST be honored so web deployments can be
+        // turned off without waiting for the old timestamp to lapse.
+        if (typeof __value === 'string' && __value.length > 0) {
+          __traceUntil = __value;
+        } else if (__value === null) {
+          __traceUntil = null;
+        }
+      });
+    })
+    .catch(function () {})
+    .finally(function () {
+      if (__t) clearTimeout(__t);
+      __tracePollInFlight = false;
+    });
+}
+`
+      : '';
   const telemetryBlock = options.telemetry
-    ? `
+    ? hasPoll
+      ? `
+  // --- Telemetry wiring ---
+  {
+    const __emit = __cbp({
+      url: ${JSON.stringify(options.telemetry.observerUrl)},
+      token: ${JSON.stringify(options.telemetry.ingestToken)},
+    });
+    const __observer = __cto(__emit, () => __cto_resolve({
+      flowId: ${JSON.stringify(options.telemetry.flowId)},
+      observe: {
+        level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
+        sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
+      },
+      traceUntil: __traceUntil,
+    }));
+    collector.observers.add(__observer);
+    __pollTrace();
+    setInterval(__pollTrace, 15000 + Math.floor(Math.random() * 5000));
+  }`
+      : `
   // --- Telemetry wiring ---
   {
     const __emit = __cbp({
@@ -1922,7 +2017,7 @@ export function generateWrapEntry(
     : '';
 
   return `import { startFlow, wireConfig, __configData } from '${stage1Specifier}';${telemetryImport}
-
+${telemetryPoller}
 (async () => {${preflightBlock}
   const config = wireConfig(__configData);${envBlock}
   const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}

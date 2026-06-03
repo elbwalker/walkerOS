@@ -40,6 +40,14 @@ jobs:
           node-version: '24.15.0'
           cache: 'npm'
       - run: npm ci
+      # Drift gate: the committed CLI api.gen.d.ts (and spec.json) must equal a
+      # fresh, prettier-formatted generate:types run. Prevents stale/unformatted
+      # generated API types from being committed (the recurring eternal-diff).
+      - name: Verify CLI API types are in sync
+        run: |
+          npm --prefix packages/cli run generate:types
+          git diff --exit-code packages/cli/openapi/spec.json packages/cli/src/types/api.gen.d.ts \
+          || (echo "::error ::CLI generated API types are stale. Run 'cd packages/cli && npm run generate:types' and commit the result." && exit 1)
       - name: Validate documentation
         run: npm run validate:links
       - name: Verify (PR, affected only)

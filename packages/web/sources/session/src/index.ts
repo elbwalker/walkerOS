@@ -1,4 +1,4 @@
-import type { Source, On, Collector } from '@walkeros/core';
+import type { Source, Collector } from '@walkeros/core';
 import type { Types, Settings } from './types';
 import { sessionStart } from './lib';
 
@@ -38,32 +38,27 @@ export const sourceSession: Source.Init<Types> = async (context) => {
     command,
   };
 
-  // Initialize session using local lib
-  sessionStart({
-    ...settings,
-    window: env.window,
-    document: env.document,
-    collector: collectorInterface as Collector.Instance,
-  });
-
-  // Handle events pushed from collector (consent, session, ready, run)
-  const handleEvent = async (event: On.Types) => {
-    if (event === 'consent') {
-      // Re-initialize session on consent changes
-      sessionStart({
-        ...settings,
-        window: env.window,
-        document: env.document,
-        collector: collectorInterface as Collector.Instance,
-      });
-    }
+  // Run session detection in init() (Pass 2 of initSources), not the factory
+  // (Pass 1), so construction stays side-effect free. When `settings.consent`
+  // is set this registers a single consent rule with the collector; the
+  // collector then guarantees exactly-once delivery per state change, so the
+  // source does not need to react to consent events itself. Deferring to init()
+  // keeps that single registration but moves the emit out of construction,
+  // where it would race source merge order.
+  const init = async (): Promise<void> => {
+    sessionStart({
+      ...settings,
+      window: env.window,
+      document: env.document,
+      collector: collectorInterface as Collector.Instance,
+    });
   };
 
   return {
     type: 'session',
     config: fullConfig,
     push: elb,
-    on: handleEvent,
+    init,
   };
 };
 

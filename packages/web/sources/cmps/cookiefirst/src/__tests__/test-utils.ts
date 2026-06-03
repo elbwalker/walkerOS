@@ -72,7 +72,7 @@ export async function createCookieFirstSource(
   mockElb: Elb.Fn,
   config?: Partial<Source.Config<Types>>,
 ): Promise<Source.Instance<Types>> {
-  return await sourceCookieFirst({
+  const source = await sourceCookieFirst({
     collector: {} as Collector.Instance,
     config: config || {},
     env: {
@@ -86,4 +86,7 @@ export async function createCookieFirstSource(
     logger: createMockLogger(),
     withScope: async (_r, _resp, body) => body({} as never),
   });
+  // Adapter setup (listeners + static read) runs in init(), not the factory.
+  await source.init?.();
+  return source;
 }

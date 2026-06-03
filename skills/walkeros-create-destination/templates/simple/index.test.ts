@@ -36,8 +36,8 @@ describe('destinationVendor', () => {
     const mockSdk = jest.fn();
     const context = createPushContext({
       env: {
-        window: { vendorSdk: mockSdk } as unknown as Window,
-        document: {} as Document,
+        window: { vendorSdk: mockSdk },
+        document: {},
       },
       data: { url: '/home', title: 'Home Page' },
     });
@@ -55,8 +55,8 @@ describe('destinationVendor', () => {
     const mockSdk = jest.fn();
     const context = createPushContext({
       env: {
-        window: { vendorSdk: mockSdk } as unknown as Window,
-        document: {} as Document,
+        window: { vendorSdk: mockSdk },
+        document: {},
       },
       data: {
         transaction_id: 'T-123',
@@ -78,8 +78,8 @@ describe('destinationVendor', () => {
     const mockSdk = jest.fn();
     const context = createPushContext({
       env: {
-        window: { vendorSdk: mockSdk } as unknown as Window,
-        document: {} as Document,
+        window: { vendorSdk: mockSdk },
+        document: {},
       },
       data: { button_id: 'cta', button_text: 'Sign Up' },
     });

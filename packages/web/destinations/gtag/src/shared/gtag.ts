@@ -1,5 +1,7 @@
 // Gtag script loading and initialization utilities
 
+import type { WindowWithDataLayer } from '../types';
+
 const loadedScripts = new Set<string>();
 
 // For testing: allow resetting loaded scripts
@@ -21,7 +23,9 @@ export function addScript(
   loadedScripts.add(id);
 }
 
-export function initializeGtag(window: Window): Gtag.Gtag | undefined {
+export function initializeGtag(
+  window: WindowWithDataLayer,
+): Gtag.Gtag | undefined {
   const w = window;
 
   // Setup dataLayer if not exists
@@ -30,7 +34,7 @@ export function initializeGtag(window: Window): Gtag.Gtag | undefined {
   // Setup gtag function if not exists
   if (!w.gtag) {
     w.gtag = function () {
-      (w.dataLayer as unknown[]).push(arguments);
+      w.dataLayer.push(arguments);
     };
   }
 

@@ -8,7 +8,8 @@
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { schemas } from '@walkeros/core/dev';
-import { fetchCatalog } from '../catalog.js';
+import openapiSpec from '@walkeros/cli/openapi/spec.json';
+import { fetchCatalog, getPackageBaseUrl } from '../catalog.js';
 
 export function registerReferenceResources(server: McpServer) {
   // Flow Schema reference (generated from Zod)
@@ -233,27 +234,18 @@ export function registerReferenceResources(server: McpServer) {
       description: 'walkerOS cloud API — OpenAPI 3.1 specification',
       mimeType: 'application/json',
     },
-    async () => {
-      let openApiSpec: string;
-      try {
-        const { readFileSync } = await import('fs');
-        const { createRequire } = await import('module');
-        const require = createRequire(import.meta.url);
-        const specPath = require.resolve('@walkeros/cli/openapi/spec.json');
-        openApiSpec = readFileSync(specPath, 'utf-8');
-      } catch {
-        openApiSpec = JSON.stringify({ error: 'OpenAPI spec not found' });
-      }
-      return {
-        contents: [
-          {
-            uri: 'walkeros://reference/openapi',
-            text: openApiSpec,
-            mimeType: 'application/json',
-          },
-        ],
-      };
-    },
+    // The spec is embedded at build time (import above), so it is always
+    // available with no runtime module resolution. This serves the client's
+    // bundled contract baseline, not the live backend's spec.
+    async () => ({
+      contents: [
+        {
+          uri: 'walkeros://reference/openapi',
+          text: JSON.stringify(openapiSpec, null, 2),
+          mimeType: 'application/json',
+        },
+      ],
+    }),
   );
 
   // Packages catalog resource
@@ -266,12 +258,12 @@ export function registerReferenceResources(server: McpServer) {
       mimeType: 'application/json',
     },
     async () => {
-      const catalog = await fetchCatalog();
+      const { entries } = await fetchCatalog({ baseUrl: getPackageBaseUrl() });
       return {
         contents: [
           {
             uri: 'walkeros://reference/packages',
-            text: JSON.stringify(catalog, null, 2),
+            text: JSON.stringify(entries, null, 2),
             mimeType: 'application/json',
           },
         ],

@@ -15,6 +15,8 @@ jest.mock('../../../lib/config-file.js', () => ({
   resolveToken: jest
     .fn()
     .mockReturnValue({ token: 'test-token', source: 'env' }),
+  getDefaultProject: jest.fn().mockReturnValue(null),
+  clearDefaultProject: jest.fn(),
 }));
 
 import {

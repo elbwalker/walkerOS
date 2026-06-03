@@ -58,7 +58,7 @@ export async function createSessionSource(
   config?: Partial<Source.Config<Types>>,
   envOverrides?: Partial<Types['env']>,
 ): Promise<Source.Instance<Types>> {
-  return await sourceSession({
+  const source = await sourceSession({
     collector,
     config: config || {},
     env: {
@@ -72,4 +72,7 @@ export async function createSessionSource(
     logger: createMockLogger(),
     withScope: async (_r, _resp, body) => body({} as never),
   });
+  // Session detection runs in init(), not the factory.
+  await source.init?.();
+  return source;
 }

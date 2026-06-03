@@ -1,8 +1,7 @@
 import { initGTM, pushGTMEvent } from '../gtm';
 import { examples } from '../dev';
-import { clone } from '@walkeros/core';
-import type { GTMSettings } from '../types';
-import { DestinationWeb } from '@walkeros/web-core';
+import { clone, getEvent } from '@walkeros/core';
+import type { GTMSettings, Env } from '../types';
 
 describe('GTM Implementation', () => {
   const mockDataLayer: unknown[] = [];
@@ -62,17 +61,14 @@ describe('GTM Implementation', () => {
   });
 
   describe('pushGTMEvent', () => {
-    const mockEvent = {
-      name: 'product view',
-      entity: 'product',
-      action: 'view',
+    const mockEvent = getEvent('product view', {
       data: { id: 'product-1', name: 'Test Product' },
-    };
+    });
 
     const settings: GTMSettings = { containerId: 'GTM-XXXXXXX' };
 
     it('should push event to dataLayer', () => {
-      pushGTMEvent(mockEvent as any, settings, {}, {}, mockEnv);
+      pushGTMEvent(mockEvent, settings, {}, {}, mockEnv);
 
       expect(mockDataLayer).toHaveLength(1);
       expect(mockDataLayer[0]).toEqual({
@@ -83,7 +79,7 @@ describe('GTM Implementation', () => {
     it('should push event with data when data is object', () => {
       const data = { price: 99.99, currency: 'USD' };
 
-      pushGTMEvent(mockEvent as any, settings, {}, data, mockEnv);
+      pushGTMEvent(mockEvent, settings, {}, data, mockEnv);
 
       expect(mockDataLayer).toHaveLength(1);
       expect(mockDataLayer[0]).toEqual({
@@ -94,34 +90,24 @@ describe('GTM Implementation', () => {
     });
 
     it('should fallback to event object when data is not an object', () => {
-      pushGTMEvent(
-        mockEvent as any,
-        settings,
-        {},
-        'invalid-data' as any,
-        mockEnv,
-      );
+      // pushGTMEvent guards isObject(data) at runtime, falling back to the
+      // event when data is not an object. A non-object exercises that guard.
+      pushGTMEvent(mockEvent, settings, {}, 'invalid-data', mockEnv);
 
       expect(mockDataLayer).toHaveLength(1);
-      expect(mockDataLayer[0]).toEqual({
-        event: 'product view',
-        name: 'product view',
-        entity: 'product',
-        action: 'view',
-        data: { id: 'product-1', name: 'Test Product' },
-      });
+      expect(mockDataLayer[0]).toEqual({ event: mockEvent.name, ...mockEvent });
     });
 
     it('should handle custom dataLayer name in environment', () => {
       const customDataLayer: unknown[] = [];
-      const customEnv: DestinationWeb.Env = {
+      const customEnv: Env = {
         window: {
           dataLayer: customDataLayer,
         },
         document: mockEnv.document,
       };
 
-      pushGTMEvent(mockEvent as any, settings, {}, {}, customEnv);
+      pushGTMEvent(mockEvent, settings, {}, {}, customEnv);
 
       expect(customDataLayer).toHaveLength(1);
       expect(customDataLayer[0]).toEqual({

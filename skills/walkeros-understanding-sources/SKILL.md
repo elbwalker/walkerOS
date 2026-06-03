@@ -82,11 +82,11 @@ Receives `{ id, config, env, logger }`.
 The collector and every source agree on three lifecycle markers, all on
 `Source.Config`:
 
-| Field                | Purpose                                                                                                                                 |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `init?: boolean`     | Set by the collector to `true` after `Instance.init()` resolves. Authors do not write to it. Reflects "init has run", not "is started". |
-| `require?: string[]` | Author-supplied. Lists collector events that must fire before this source receives `on()` calls. Decremented in place as events fire.   |
-| `disabled?: boolean` | Hard skip — no factory invocation, no init, no event capture.                                                                           |
+| Field                | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `init?: boolean`     | Set by the collector to `true` after `Instance.init()` resolves. Authors do not write to it. Reflects "init has run", not "is started".                                                                                                                                                                                                                                                                                                      |
+| `require?: string[]` | Author-supplied **timing hint**. Lists collector state a source needs before its first `on()` delivery. Satisfied by the collector's **current recorded state** (level), not only by a future event — so order does not matter: the gate clears whether the required state was recorded before or after this source registered. It is not a correctness dependency: a source reacts to state correctly whether or not it declares `require`. |
+| `disabled?: boolean` | Hard skip — no factory invocation, no init, no event capture.                                                                                                                                                                                                                                                                                                                                                                                |
 
 The flow is:
 
@@ -96,14 +96,28 @@ The flow is:
    then sets `config.init = true`.
 3. **Lifecycle delivery** — for each collector event (`consent`, `user`,
    `session`, `run`, …) the collector decrements every source's `require` in
-   place. If a source is started, it calls `source.on(type, data)` directly.
-   Otherwise it pushes `{ type, data }` into `Instance.queueOn`.
+   place AND reconciles every still-pending source/destination against current
+   state, so a gate also clears from state that was already recorded. If a
+   source is started, it calls `source.on(type, data)` directly. Otherwise it
+   pushes `{ type, data }` into `Instance.queueOn`.
 4. **Replay** — when a source becomes started (require empties), the collector
    replays its `queueOn` via `source.on(...)` and clears the queue.
 
-`require` therefore gates **`on()` delivery**, not code execution.
-`Instance.init()` always runs eagerly. There is no `collector.pending.sources`
-map — per-source state lives entirely on `Source.Instance` and `Source.Config`.
+`require` therefore gates the **timing** of `on()` delivery, not code execution
+and not correctness. `Instance.init()` always runs eagerly. There is no
+`collector.pending.sources` map: per-source state lives entirely on
+`Source.Instance` and `Source.Config`.
+
+### Exactly-once state delivery is a collector guarantee
+
+State commands (`consent`, `user`, `globals`, `custom`) are recorded by the
+collector immediately, even before `run`, and delivered to each source's `on`
+handler exactly once per change. The collector tracks what each subscriber has
+already received, so re-running or re-registering never double-fires a state
+reaction. Sources should **not** hand-roll their own deduplication for state
+deliveries: the collector enforces exactly-once, and delivery is
+order-independent (it does not depend on source init order or on whether the
+state arrived before or after `run`).
 
 This mirrors the destination model: `Destination.Instance.init` handles one-time
 bootstrap, `Destination.Config.init` is the collector-managed "init has run"

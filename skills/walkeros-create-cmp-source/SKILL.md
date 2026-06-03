@@ -531,6 +531,19 @@ Key implementation steps:
 6. Detection path: Init listener
 7. Detection path: Change listener
 
+**The factory MUST be side-effect-free; do the detection paths in `init()`.**
+Steps 5-7 attach listeners and perform the "already loaded" static consent read,
+which emits `elb('walker consent', state)`. Put them inside an `init()` method
+on the returned instance, NOT in the factory body. The collector runs the
+factory in Pass 1 (before all sources are merged) and `init()` in Pass 2.
+Emitting consent from the factory races source merge order and can leave a later
+`require:["consent"]` source parked. Return
+`{ type, config, push, init, destroy }`; `init` runs the static read + attaches
+listeners, `destroy` removes them. (The collector also matches `require` against
+current recorded state, so a consent read from `init()` still activates
+dependent steps regardless of order — but a side-effect-free factory is the
+contract.)
+
 **Note on init listeners:** Some init listeners (like CookieFirst's `cf_init`)
 read consent from the global window object, not from `event.detail`. Others
 (like `cf_consent`) receive consent via `event.detail`. Check which pattern your
@@ -650,6 +663,12 @@ already-loaded vs event-listener), mapping MUST work identically in each.
 Many CMPs fire multiple signals for the same consent action. If you don't guard
 against this, `handleConsent` fires twice per user action. Three known patterns:
 
+The collector's exactly-once delivery does not solve this for you: it guarantees
+each subscriber sees a given state version once, but two upstream CMP signals (a
+callback plus a DOM event) are two distinct consent commands, so both are
+delivered legitimately. Coalescing duplicate upstream signals is the source's
+job, as below.
+
 **Pattern A: Callback + event (CookiePro)** CMP fires both a callback
 (`OptanonWrapper`) and a DOM event (`OneTrustGroupsUpdated`) on the same action.
 Use the callback for init only and self-unwrap after first call:
@@ -701,7 +720,10 @@ test('handles consent withdrawal', async () => {
 ### 7. Use `MockWindow` interface in tests
 
 Properly typed, not `as unknown as` casts scattered through tests. Define one
-`MockWindow` interface in `test-utils.ts` with helper methods.
+`MockWindow` interface in `test-utils.ts` that extends the source's **narrowed**
+`CmpWindow` (the surface the source actually touches), not the global `Window`.
+Because `Env.window` is narrowed to `CmpWindow`, the mock literal satisfies it
+directly — no `as unknown as Window` anywhere.
 
 ### 8. Store category keys in user-expected format
 
