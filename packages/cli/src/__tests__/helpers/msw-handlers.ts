@@ -1,11 +1,19 @@
 import { http, HttpResponse } from 'msw';
 import type { paths } from '../../types/api.gen.js';
 
-// Extract response types from the spec
+// Extract response types from the spec. The project endpoints return three
+// distinct shapes: the list returns the full record, get-by-id returns a
+// narrower detail view, and create returns only the freshly written fields.
 type ProjectsResponse =
   paths['/api/projects']['get']['responses']['200']['content']['application/json'];
-type ProjectResponse =
+type CreateProjectResponse =
+  paths['/api/projects']['post']['responses']['201']['content']['application/json'];
+type ProjectDetailResponse =
   paths['/api/projects/{projectId}']['get']['responses']['200']['content']['application/json'];
+type UpdateProjectResponse =
+  paths['/api/projects/{projectId}']['patch']['responses']['200']['content']['application/json'];
+// The full project record, as carried by the list endpoint.
+type Project = ProjectsResponse['projects'][number];
 type FlowsResponse =
   paths['/api/projects/{projectId}/flows']['get']['responses']['200']['content']['application/json'];
 type FlowResponse =
@@ -13,7 +21,8 @@ type FlowResponse =
 type WhoamiResponse =
   paths['/api/auth/whoami']['get']['responses']['200']['content']['application/json'];
 
-// If the API spec changes these shapes, TypeScript will error HERE
+// If the API spec changes these shapes, TypeScript will error HERE.
+// Full record returned by the list endpoint.
 export const mockProject = {
   id: 'proj_test123',
   name: 'Test Project',
@@ -24,7 +33,22 @@ export const mockProject = {
   flowCount: 0,
   deploymentCount: 0,
   isDemo: false,
-} satisfies ProjectResponse;
+} satisfies Project;
+
+// Narrower view returned by GET /api/projects/:projectId.
+export const mockProjectDetail = {
+  id: mockProject.id,
+  name: mockProject.name,
+  siteUrl: null,
+  role: mockProject.role,
+} satisfies ProjectDetailResponse;
+
+// POST /api/projects returns only the freshly written fields.
+export const mockCreatedProject = {
+  id: mockProject.id,
+  name: mockProject.name,
+  createdAt: mockProject.createdAt,
+} satisfies CreateProjectResponse;
 
 export const mockFlow = {
   id: 'flow_test456',
@@ -61,19 +85,22 @@ export const handlers = [
   http.post('*/api/projects', async ({ request }) => {
     const body = (await request.json()) as { name: string };
     return HttpResponse.json(
-      { ...mockProject, name: body.name } satisfies ProjectResponse,
+      {
+        ...mockCreatedProject,
+        name: body.name,
+      } satisfies CreateProjectResponse,
       { status: 201 },
     );
   }),
   http.get('*/api/projects/:projectId', () => {
-    return HttpResponse.json(mockProject satisfies ProjectResponse);
+    return HttpResponse.json(mockProjectDetail satisfies ProjectDetailResponse);
   }),
   http.patch('*/api/projects/:projectId', async ({ request }) => {
     const body = (await request.json()) as { name?: string };
     return HttpResponse.json({
       ...mockProject,
       ...(body.name && { name: body.name }),
-    } satisfies ProjectResponse);
+    } satisfies UpdateProjectResponse);
   }),
   http.delete('*/api/projects/:projectId', () => {
     return new HttpResponse(null, { status: 204 });
