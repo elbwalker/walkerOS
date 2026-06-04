@@ -106,10 +106,7 @@ describe('output schemas', () => {
         success: true,
         totalSize: 2048,
         buildTime: 150,
-        packages: [
-          { name: '@walkeros/ga4', size: 1024 },
-          { name: '@walkeros/meta', size: 512 },
-        ],
+        packages: [{ name: '@walkeros/ga4' }, { name: '@walkeros/meta' }],
         treeshakingEffective: true,
       });
       expect(result.success).toBe(true);

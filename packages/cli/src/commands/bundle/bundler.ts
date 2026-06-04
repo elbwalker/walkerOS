@@ -175,7 +175,7 @@ import type { CodeCacheKeyInputs } from '../../core/build-cache.js';
 
 export interface BundleStats {
   totalSize: number;
-  packages: { name: string; size: number }[];
+  packages: { name: string }[];
   buildTime: number;
   treeshakingEffective: boolean;
 }
@@ -482,7 +482,6 @@ export async function bundleCore(
             const packageStats = Object.entries(buildOptions.packages).map(
               ([name, pkg]) => ({
                 name: `${name}@${pkg.version || 'latest'}`,
-                size: 0, // Size estimation not available for cached builds
               }),
             );
             const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(
@@ -773,27 +772,12 @@ async function collectBundleStats(
   const totalSize = stats.size;
   const buildTime = Date.now() - startTime;
 
-  // Estimate package sizes by analyzing imports in entry content
-  const packageStats = Object.entries(packages).map(([name, pkg]) => {
-    const importPattern = new RegExp(`from\\s+['"]${name}['"]`, 'g');
-    const namedImportPattern = new RegExp(
-      `import\\s+\\{[^}]*\\}\\s+from\\s+['"]${name}['"]`,
-      'g',
-    );
-    const hasImports =
-      importPattern.test(entryContent) || namedImportPattern.test(entryContent);
-
-    // Rough estimation: if package is imported, assign proportional size
-    const packagesCount = Object.keys(packages).length;
-    const estimatedSize = hasImports
-      ? Math.floor(totalSize / packagesCount)
-      : 0;
-
-    return {
-      name: `${name}@${pkg.version || 'latest'}`,
-      size: estimatedSize,
-    };
-  });
+  // Report the packages bundled. Per-package byte attribution is not available
+  // without the esbuild metafile, which this two-stage pipeline does not
+  // capture, so the breakdown is names only — never a synthesized size.
+  const packageStats = Object.entries(packages).map(([name, pkg]) => ({
+    name: `${name}@${pkg.version || 'latest'}`,
+  }));
 
   // Tree-shaking is effective if we use named imports (not wildcard imports)
   const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(entryContent);

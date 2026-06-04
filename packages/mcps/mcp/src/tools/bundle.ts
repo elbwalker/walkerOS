@@ -4,7 +4,9 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { BundleOutputShape } from '../schemas/output.js';
 
+import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { resolveConfigPath } from './resolve-config-path.js';
 
 const TITLE = 'Bundle Flow';
 const DESCRIPTION =
@@ -23,18 +25,18 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
-export function createFlowBundleToolSpec(): ToolSpec {
+export function createFlowBundleToolSpec(client: ToolClient): ToolSpec {
   return {
     name: 'flow_bundle',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowBundleHandlerBody(input),
+    handler: (input) => flowBundleHandlerBody(client, input),
   };
 }
 
-async function flowBundleHandlerBody(input: unknown) {
+async function flowBundleHandlerBody(client: ToolClient, input: unknown) {
   const { configPath, flow, stats, output } = (input ?? {}) as {
     configPath: string;
     flow?: string;
@@ -42,7 +44,9 @@ async function flowBundleHandlerBody(input: unknown) {
     output?: string;
   };
   try {
-    const result = await bundle(configPath, {
+    // Accept a cloud flow/config id as configPath, resolving it to inline JSON.
+    const resolvedConfigPath = await resolveConfigPath(client, configPath);
+    const result = await bundle(resolvedConfigPath, {
       flowName: flow,
       stats: stats ?? true,
       buildOverrides: output ? { output } : undefined,
@@ -76,8 +80,8 @@ async function flowBundleHandlerBody(input: unknown) {
   }
 }
 
-export function registerFlowBundleTool(server: McpServer) {
-  const spec = createFlowBundleToolSpec();
+export function registerFlowBundleTool(server: McpServer, client: ToolClient) {
+  const spec = createFlowBundleToolSpec(client);
   server.registerTool(
     spec.name,
     {

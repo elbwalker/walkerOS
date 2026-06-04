@@ -29,14 +29,11 @@ export function displayStats(
     : '⚠️  Not optimal (consider using named imports)';
   logger.info(`Tree-shaking: ${treeshakingStatus}`);
 
-  // Package breakdown
+  // Package breakdown (names only — per-package byte sizes are not measured)
   if (stats.packages.length > 0) {
-    logger.info(`\nPackage Breakdown:`);
+    logger.info(`\nPackages:`);
     stats.packages.forEach((pkg) => {
-      if (pkg.size > 0) {
-        const pkgSizeKB = formatBytes(pkg.size);
-        logger.info(`  • ${pkg.name}: ${pkgSizeKB} KB`);
-      }
+      logger.info(`  • ${pkg.name}`);
     });
   }
 
@@ -56,8 +53,6 @@ export function createStatsSummary(stats: BundleStats) {
     packageCount: stats.packages.length,
     packages: stats.packages.map((pkg) => ({
       name: pkg.name,
-      size: pkg.size,
-      sizeFormatted: `${formatBytes(pkg.size)} KB`,
     })),
   };
 }

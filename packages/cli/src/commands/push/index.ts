@@ -7,6 +7,7 @@ import {
   buildCacheContext,
 } from '@walkeros/core';
 import {
+  enrichEvent,
   transformerInit,
   transformerPush,
   runTransformerChain,
@@ -20,7 +21,13 @@ import {
   type Platform,
 } from '../../core/index.js';
 
-import type { Flow, Logger, Simulation, WalkerOS } from '@walkeros/core';
+import type {
+  Flow,
+  Ingest,
+  Logger,
+  Simulation,
+  WalkerOS,
+} from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonConfig } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
@@ -787,6 +794,12 @@ export interface SimulateTransformerOptions {
   silent?: boolean;
   verbose?: boolean;
   snapshot?: string;
+  /**
+   * Pipeline context the transformer reads via `ctx.ingest` (e.g. a decoder
+   * reads `ingest.url`). Merged onto a fresh ingest so `_meta` is always
+   * present; provide only the keys the step reads.
+   */
+  ingest?: Omit<Ingest, '_meta'>;
 }
 
 /**
@@ -907,7 +920,10 @@ export async function simulateTransformer(
         }
 
         const inputEvent = event;
-        const ingest = createIngest(options.transformerId);
+        const ingest = {
+          ...createIngest(options.transformerId),
+          ...options.ingest,
+        };
         // Output events only: each entry is a transformer output, or `null`
         // when the event was dropped. `buildSimulationResult` drops null
         // entries so a drop yields `events: []` and a passthrough yields
@@ -1003,6 +1019,164 @@ export async function simulateTransformer(
     return buildSimulationResult({
       step: 'transformer',
       name: options.transformerId,
+      startTime,
+      error,
+    });
+  } finally {
+    await prepared.cleanup();
+  }
+}
+
+export interface SimulateCollectorOptions {
+  collectorName: string;
+  bundlePath?: string;
+  flow?: string;
+  silent?: boolean;
+  verbose?: boolean;
+  snapshot?: string;
+  state?: {
+    consent?: WalkerOS.Consent;
+    user?: WalkerOS.User;
+    globals?: WalkerOS.Properties;
+    timing?: number; // sets collector.timing, the base from which prepareEvent computes the relative event.timing
+  };
+}
+
+/**
+ * Self-contained collector enrichment simulation.
+ *
+ * Takes a post-next `DeepPartialEvent` and an optional collector-state
+ * snapshot, then returns the fully enriched event the runtime produces between
+ * the pre-collector `next` chain and the post-collector `before` chain. Reuses
+ * the runtime's own enrichment (`enrichEvent`); it does not reimplement it.
+ */
+export async function simulateCollector(
+  configOrPath: string | Flow.Json,
+  event: WalkerOS.DeepPartialEvent,
+  options: SimulateCollectorOptions,
+): Promise<Simulation.Result> {
+  const startTime = Date.now();
+
+  // Validate event with Zod
+  const parsed = schemas.PartialEventSchema.safeParse(event);
+  if (!parsed.success) {
+    return buildSimulationResult({
+      step: 'collector',
+      name: options.collectorName,
+      startTime,
+      error: parsed.error.message,
+    });
+  }
+
+  // Resolve config: accept either file path or config object
+  let config: Flow.Json;
+  if (typeof configOrPath === 'string') {
+    config = (await loadJsonConfig(configOrPath)) as Flow.Json;
+  } else {
+    config = configOrPath;
+  }
+
+  const prepareInput = options.bundlePath
+    ? {
+        mode: 'prebuilt' as const,
+        bundlePath: options.bundlePath,
+        config,
+        flow: options.flow,
+        simulate: ['collector.' + options.collectorName],
+        silent: options.silent,
+        verbose: options.verbose,
+      }
+    : {
+        mode: 'build' as const,
+        config,
+        flow: options.flow,
+        simulate: ['collector.' + options.collectorName],
+        silent: options.silent,
+        verbose: options.verbose,
+      };
+
+  const prepared = await prepareFlow(prepareInput);
+
+  try {
+    const logger = createCLILogger({
+      silent: options.silent,
+      verbose: options.verbose,
+    });
+
+    // Load snapshot code if provided
+    let snapshotCode: string | undefined;
+    if (options.snapshot) {
+      snapshotCode = (await loadConfig(options.snapshot, {
+        json: false,
+      })) as string;
+      logger.debug(`Snapshot loaded (${snapshotCode.length} bytes)`);
+    }
+
+    const networkCalls: NetworkCall[] = [];
+
+    return await withFlowContext<Simulation.Result>(
+      {
+        esmPath: prepared.bundlePath,
+        platform: prepared.platform,
+        logger,
+        snapshotCode,
+        networkCalls,
+      },
+      async (module) => {
+        const flowConfig = module.wireConfig(module.__configData ?? undefined);
+        applyOverrides(flowConfig, prepared.overrides);
+
+        // Don't initialize sources or destinations during collector enrichment.
+        if (flowConfig.sources) flowConfig.sources = {};
+        if (flowConfig.destinations) flowConfig.destinations = {};
+
+        const result = await module.startFlow(flowConfig);
+        if (!result?.collector)
+          throw new Error('Invalid bundle: collector not available');
+
+        const collector = result.collector;
+
+        // Seed collector state from the snapshot. These are plain mutable
+        // instance props; pure enrichment needs no `run()`.
+        if (options.state) {
+          if (options.state.consent !== undefined)
+            collector.consent = options.state.consent;
+          if (options.state.user !== undefined)
+            collector.user = options.state.user;
+          if (options.state.globals !== undefined)
+            collector.globals = options.state.globals;
+          if (options.state.timing !== undefined)
+            collector.timing = options.state.timing;
+        }
+
+        const enriched = enrichEvent(collector, event);
+
+        const captured: Array<{
+          event: WalkerOS.DeepPartialEvent | null;
+          timestamp: number;
+        }> = [{ event: enriched, timestamp: Date.now() }];
+
+        await collector.command('shutdown');
+
+        return buildSimulationResult({
+          step: 'collector',
+          name: options.collectorName,
+          startTime,
+          captured,
+        });
+      },
+      (error) =>
+        buildSimulationResult({
+          step: 'collector',
+          name: options.collectorName,
+          startTime,
+          error,
+        }),
+    );
+  } catch (error) {
+    return buildSimulationResult({
+      step: 'collector',
+      name: options.collectorName,
       startTime,
       error,
     });

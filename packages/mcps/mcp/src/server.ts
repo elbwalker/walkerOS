@@ -126,8 +126,8 @@ export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   registerDiagnosticsTool(server, opts.client, packageVersion);
 
   registerFlowValidateTool(server);
-  registerFlowBundleTool(server);
-  registerFlowSimulateTool(server);
+  registerFlowBundleTool(server, opts.client);
+  registerFlowSimulateTool(server, opts.client);
   registerFlowPushTool(server);
   registerFlowExamplesTool(server);
   registerFlowLoadTool(server, opts.client);

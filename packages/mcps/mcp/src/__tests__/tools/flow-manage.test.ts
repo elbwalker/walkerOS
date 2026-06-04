@@ -161,6 +161,7 @@ describe('flow_manage tool', () => {
       const result = (await tool.handler({
         action: 'get',
         flowId: 'flow_1',
+        projectId: 'proj_1',
         fields: ['name', 'content.flows'],
       })) as {
         structuredContent: { kind: string; flowId: string; configName: string };
@@ -168,10 +169,52 @@ describe('flow_manage tool', () => {
 
       expect(getFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',
-        projectId: undefined,
+        projectId: 'proj_1',
         fields: ['name', 'content.flows'],
       });
       expect(result.structuredContent.kind).toBe('flow-canvas');
+      expect(result.structuredContent.flowId).toBe('flow_1');
+    });
+
+    it('errors with NO_DEFAULT_PROJECT message when no projectId and no default', async () => {
+      const getFlow = jest.fn();
+      registerFlowManageTool(
+        server as never,
+        stubClient({ getFlow, getDefaultProject: () => null }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler({
+        action: 'get',
+        flowId: 'flow_1',
+      })) as { isError: boolean; content: Array<{ text: string }> };
+
+      expect(result.isError).toBe(true);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).not.toContain('Flow not found');
+      expect(getFlow).not.toHaveBeenCalled();
+    });
+
+    it('uses the default project when no projectId provided', async () => {
+      const flow = { id: 'flow_1', name: 'My Flow', content: {} };
+      const getFlow = jest.fn().mockResolvedValue(flow);
+      registerFlowManageTool(
+        server as never,
+        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler({
+        action: 'get',
+        flowId: 'flow_1',
+      })) as { structuredContent: { flowId: string } };
+
+      expect(getFlow).toHaveBeenCalledWith({
+        flowId: 'flow_1',
+        projectId: 'proj_default',
+        fields: undefined,
+      });
       expect(result.structuredContent.flowId).toBe('flow_1');
     });
 
@@ -188,6 +231,7 @@ describe('flow_manage tool', () => {
       const result = (await tool.handler({
         action: 'get',
         flowId: 'flow_1',
+        projectId: 'proj_1',
       })) as { structuredContent: { platform: string } };
 
       expect(result.structuredContent.platform).toBe('web');

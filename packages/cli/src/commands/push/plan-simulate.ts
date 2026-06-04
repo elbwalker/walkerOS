@@ -16,7 +16,10 @@ import { parseStep } from './overrides.js';
  */
 export type SimulatePlan =
   | { kind: 'none'; ids: [] }
-  | { kind: 'source' | 'destination' | 'transformer'; ids: string[] };
+  | {
+      kind: 'source' | 'destination' | 'transformer' | 'collector';
+      ids: string[];
+    };
 
 export function planSimulate(flags: readonly string[]): SimulatePlan {
   if (flags.length === 0) return { kind: 'none', ids: [] };
@@ -42,7 +45,10 @@ export function planSimulate(flags: readonly string[]): SimulatePlan {
   const [type] = types;
   const ids = [...new Set(parsed.map((p) => p.name))];
 
-  if ((type === 'source' || type === 'transformer') && ids.length > 1) {
+  if (
+    (type === 'source' || type === 'transformer' || type === 'collector') &&
+    ids.length > 1
+  ) {
     throw new Error(
       `--simulate ${type}.* expects a single target; got ${ids.length}. Run one --simulate ${type}.NAME per invocation.`,
     );

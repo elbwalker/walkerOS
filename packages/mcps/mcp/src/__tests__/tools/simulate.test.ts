@@ -15,11 +15,27 @@ jest.mock('@walkeros/cli/dev', () => ({
   },
 }));
 
-// Mock @walkeros/cli simulate functions
+// Mock @walkeros/cli simulate functions. `bundle` writes the requested output
+// so the prebuilt-bundle cache resolves a real path; the simulate fns then
+// receive it as `bundlePath`.
 jest.mock('@walkeros/cli', () => ({
+  bundle: jest.fn(
+    async (
+      _config: unknown,
+      options: { buildOverrides?: { output?: string } },
+    ) => {
+      const output = options.buildOverrides?.output;
+      if (output) {
+        const fs = await import('node:fs/promises');
+        await fs.writeFile(output, '// stub bundle', 'utf-8');
+      }
+      return undefined;
+    },
+  ),
   simulateSource: jest.fn(),
   simulateTransformer: jest.fn(),
   simulateDestination: jest.fn(),
+  simulateCollector: jest.fn(),
 }));
 
 jest.mock('@walkeros/core', () => ({
@@ -53,10 +69,13 @@ import {
   simulateSource,
   simulateTransformer,
   simulateDestination,
+  simulateCollector,
 } from '@walkeros/cli';
+import { stubClient } from '../support/stub-client.js';
 const mockSimulateSource = jest.mocked(simulateSource);
 const mockSimulateTransformer = jest.mocked(simulateTransformer);
 const mockSimulateDestination = jest.mocked(simulateDestination);
+const mockSimulateCollector = jest.mocked(simulateCollector);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -72,10 +91,12 @@ function createMockServer() {
 
 describe('flow_simulate tool', () => {
   let server: ReturnType<typeof createMockServer>;
+  let getFlow: jest.Mock;
 
   beforeEach(() => {
     server = createMockServer();
-    registerFlowSimulateTool(server as any);
+    getFlow = jest.fn();
+    registerFlowSimulateTool(server as any, stubClient({ getFlow }));
     jest.clearAllMocks();
   });
 
@@ -219,7 +240,102 @@ describe('flow_simulate tool', () => {
       { name: 'page view' },
       {
         destinationId: 'ga4',
+        bundlePath: undefined,
         flow: 'production',
+        silent: true,
+      },
+    );
+  });
+
+  it('resolves a cloud flow id (flow_…) via the client and passes config inline', async () => {
+    const cloudConfig = { version: 4, flows: { default: {} } };
+    getFlow.mockResolvedValue({ config: cloudConfig });
+    mockSimulateDestination.mockResolvedValue({
+      step: 'destination',
+      name: 'gtag',
+      events: [],
+      calls: [],
+      duration: 5,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    await tool.handler({
+      configPath: 'flow_abc123',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'destination.gtag',
+    });
+
+    expect(getFlow).toHaveBeenCalledWith({ flowId: 'flow_abc123' });
+    expect(mockSimulateDestination).toHaveBeenCalledWith(
+      JSON.stringify(cloudConfig),
+      { name: 'page view' },
+      {
+        destinationId: 'gtag',
+        bundlePath: expect.any(String),
+        flow: undefined,
+        silent: true,
+      },
+    );
+  });
+
+  it('resolves a cloud config id (cfg_…) via the client for a source step', async () => {
+    const cloudConfig = { version: 4, flows: { default: {} } };
+    getFlow.mockResolvedValue({ config: cloudConfig });
+    mockSimulateSource.mockResolvedValue({
+      step: 'source',
+      name: 'demo',
+      events: [],
+      calls: [],
+      duration: 5,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    await tool.handler({
+      configPath: 'cfg_xyz789',
+      event: '{"content":{"name":"page view"}}',
+      flow: undefined,
+      step: 'source.demo',
+    });
+
+    expect(getFlow).toHaveBeenCalledWith({ flowId: 'cfg_xyz789' });
+    expect(mockSimulateSource).toHaveBeenCalledWith(
+      JSON.stringify(cloudConfig),
+      { content: { name: 'page view' } },
+      {
+        sourceId: 'demo',
+        bundlePath: expect.any(String),
+        flow: undefined,
+        silent: true,
+      },
+    );
+  });
+
+  it('passes a local file path through unchanged (no client call)', async () => {
+    mockSimulateDestination.mockResolvedValue({
+      step: 'destination',
+      name: 'gtag',
+      events: [],
+      calls: [],
+      duration: 5,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'destination.gtag',
+    });
+
+    expect(getFlow).not.toHaveBeenCalled();
+    expect(mockSimulateDestination).toHaveBeenCalledWith(
+      './flow.json',
+      { name: 'page view' },
+      {
+        destinationId: 'gtag',
+        bundlePath: undefined,
+        flow: undefined,
         silent: true,
       },
     );
@@ -343,6 +459,7 @@ describe('flow_simulate tool', () => {
       },
       {
         sourceId: 'browser',
+        bundlePath: undefined,
         flow: undefined,
         silent: true,
       },
@@ -378,9 +495,72 @@ describe('flow_simulate tool', () => {
       { name: 'page view' },
       {
         transformerId: 'demo',
+        bundlePath: undefined,
         flow: undefined,
         silent: true,
+        ingest: undefined,
       },
+    );
+  });
+
+  it('forwards ingest into simulateTransformer for transformer step', async () => {
+    mockSimulateTransformer.mockResolvedValue({
+      step: 'transformer',
+      name: 'decoder',
+      events: [{ name: 'page view', data: {} }],
+      calls: [],
+      duration: 4,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'transformer.decoder',
+      ingest: { url: 'https://example.com/collect?v=2' },
+    });
+
+    expect(mockSimulateTransformer).toHaveBeenCalledWith(
+      './flow.json',
+      { name: 'page view' },
+      expect.objectContaining({
+        transformerId: 'decoder',
+        ingest: { url: 'https://example.com/collect?v=2' },
+      }),
+    );
+  });
+
+  it('forwards state into simulateCollector for collector step', async () => {
+    mockSimulateCollector.mockResolvedValue({
+      step: 'collector',
+      name: 'default',
+      events: [{ name: 'page view', data: {} }],
+      calls: [],
+      duration: 6,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'collector.default',
+      state: { consent: { marketing: true } },
+    });
+
+    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent.success).toBe(true);
+    expect(result.structuredContent.summary).toBe('Collector enriched event');
+    expect(result.structuredContent.capturedEvents).toHaveLength(1);
+
+    expect(mockSimulateCollector).toHaveBeenCalledWith(
+      './flow.json',
+      { name: 'page view' },
+      expect.objectContaining({
+        collectorName: 'default',
+        state: { consent: { marketing: true } },
+      }),
     );
   });
 

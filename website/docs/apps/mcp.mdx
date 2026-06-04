@@ -153,10 +153,14 @@ Bundle a walkerOS flow configuration into deployable JavaScript.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `configPath` | string | Yes | Path to flow configuration file |
+| `configPath` | string | Yes | Flow source: file path, or an API flow/config ID (`flow_...` / `cfg_...`) resolved like `flow_load` |
 | `flow` | string | No | Flow name for multi-flow configs |
 | `stats` | boolean | No | Return bundle statistics (default: `true`) |
 | `output` | string | No | Output file path |
+
+`configPath` accepts a cloud flow id, so you can bundle a saved flow directly
+without loading it to a file first. Bundle stats report the real total bundle
+size and the included package names (no per-package size estimate).
 
 #### `flow_simulate`
 
@@ -165,24 +169,38 @@ Returns summarized per-destination results.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `configPath` | string | Yes | Path to flow configuration file |
+| `configPath` | string | Yes | Flow source: file path, or an API flow/config ID (`flow_...` / `cfg_...`) resolved like `flow_load` |
 | `event` | string \| object | Yes | Event input (see shapes below). JSON string, file path, or URL also accepted. |
-| `step` | string | Yes | Target step as `"type.name"` (e.g. `"source.demo"`, `"destination.gtag"`, `"transformer.router"`) |
+| `step` | string | Yes | Target step as `"type.name"` (e.g. `"source.demo"`, `"collector.default"`, `"destination.gtag"`, `"transformer.router"`) |
 | `flow` | string | No | Flow name for multi-flow configs |
 | `platform` | `"web"` \| `"server"` | No | Override platform detection |
 | `verbose` | boolean | No | Include full payload per destination (default: `false`) |
 
-The `event` shape depends on the step type:
+There are four step types: `source`, `collector`, `transformer`, and
+`destination`. The `event` shape depends on the step type:
 
 - **Destinations / transformers:** a walkerOS event, `{ name: "entity action",
   data: {...} }`. Add `consent` (e.g. `{ marketing: true }`) when the
   destination requires it.
+- **Collector:** the enrichment step. It takes a post-`next` partial event plus
+  an optional state snapshot `{ consent?, user?, globals?, timing? }`, applies
+  the collector's `createEvent`, and returns the fully enriched event.
 - **Sources:** `{ content, trigger? }`, where `content` is the walkerOS event
   `{ name, data }` and the optional `trigger` is `{ type?, options? }`. There is
   no `env` field in the source-step event.
 
 Sources can be simulated as a step, including the `@walkeros/source-demo` demo
 source.
+
+When `configPath` is a cloud flow id, you can simulate a saved flow without a
+manual file round-trip. Repeated simulations of the same configuration reuse a
+prebuilt bundle, so successive calls run faster (local file paths always
+rebuild).
+
+A `transformer` step also accepts an optional `ingest` field, a raw ingest
+without `_meta`. Supply it to test a request decoder standalone, for example a
+GA4 decoder that reads `ctx.ingest.url`: pass `ingest: { url: "..." }` alongside
+the event.
 
 #### `flow_push`
 
@@ -203,10 +221,14 @@ List all step examples in a walkerOS flow configuration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `configPath` | string | Yes | Path to flow configuration file |
+| `configPath` | string | Yes | Flow source: file path, or an API flow/config ID (`flow_...` / `cfg_...`) resolved like `flow_load` |
 | `flow` | string | No | Flow name for multi-flow configs |
 | `step` | string | No | Filter to a specific step (e.g., `"destination.gtag"`) |
 | `full` | boolean | No | Return full in/out/mapping data (default: `false`, metadata only) |
+
+When a step has no inline examples, `flow_examples` falls back to the examples
+shipped with that step's package, tagged by source so you can tell inline
+examples from package-provided ones.
 
 #### `package_search`
 

@@ -1,6 +1,6 @@
 import type { Collector, Logger, WalkerOS } from '@walkeros/core';
 import { assign, createLogger } from '@walkeros/core';
-import { commonHandleCommand } from './handle';
+import { commonHandleCommand, prepareEvent } from './handle';
 import { initDestinations } from './destination';
 import { initTransformers } from './transformer';
 import { createPush } from './push';
@@ -8,9 +8,6 @@ import { createCommand } from './command';
 import { initSources } from './source';
 import { initStores, resolveStoreReferences } from './store';
 import { createCacheStore } from './cache-store';
-
-// Replaced at build time by tsup's `define` (see packages/config/tsup).
-declare const __VERSION__: string;
 
 export async function collector(
   initConfig: Collector.InitConfig,
@@ -76,14 +73,8 @@ export async function collector(
   };
 
   // Set the push and command functions with the collector reference
-  collector.push = createPush(
-    collector,
-    (event: WalkerOS.DeepPartialEvent): WalkerOS.PartialEvent =>
-      ({
-        timing: Math.round((Date.now() - collector.timing) / 10) / 100,
-        source: { type: 'collector', schema: '4', version: __VERSION__ },
-        ...event,
-      }) as WalkerOS.PartialEvent,
+  collector.push = createPush(collector, (event) =>
+    prepareEvent(collector, event),
   );
 
   collector.command = createCommand(collector, commonHandleCommand);

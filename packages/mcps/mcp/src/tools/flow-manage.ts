@@ -39,21 +39,10 @@ import {
   assertParam,
   FLOW_MANAGE_REQUIREMENTS,
 } from '../action-requirements.js';
-
-const NO_DEFAULT_PROJECT_ERROR =
-  'No default project set and no projectId provided. Run project_manage action "set_default", or pass projectId.';
-
-/** Resolves the project for actions that fall back to the CLI default when
- *  `projectId` is omitted. Returns the resolved id, or undefined when there is
- *  no default to fall back to (the no-project-at-all case). An explicit
- *  `projectId` is always honoured as-is so the app's genuine NOT_FOUND still
- *  surfaces for an explicit-but-wrong id. */
-function resolveDefaultProject(
-  client: ToolClient,
-  projectId: string | undefined,
-): string | undefined {
-  return projectId ?? client.getDefaultProject() ?? undefined;
-}
+import {
+  NO_DEFAULT_PROJECT_ERROR,
+  resolveDefaultProject,
+} from './project-context.js';
 
 function safeSummary<T extends { name?: string }>(flow: T): T {
   return flow.name !== undefined
@@ -303,7 +292,15 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
 
       case 'get': {
         assertParam(flowId, 'flowId', 'get');
-        const flow = await client.getFlow({ flowId, projectId, fields });
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
+        }
+        const flow = await client.getFlow({
+          flowId,
+          projectId: resolvedProjectId,
+          fields,
+        });
         const safe = safeDetail(
           flow as {
             id?: string;

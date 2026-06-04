@@ -15,17 +15,18 @@ export interface Call {
 
 /**
  * Result of simulating a single step.
- * Same shape for source, transformer, and destination.
+ * Same shape for source, transformer, collector, and destination.
  */
 export interface Result {
   /** Which step type was simulated */
-  step: 'source' | 'transformer' | 'destination';
+  step: 'source' | 'transformer' | 'destination' | 'collector';
   /** Step name, e.g. "gtag", "dataLayer", "enricher" */
   name: string;
   /**
    * Output events:
    * - source: captured pre-collector events
    * - transformer: [transformed event] or [] if filtered
+   * - collector: [enriched event] (createEvent applied)
    * - destination: [] (destinations don't produce events)
    */
   events: WalkerOS.DeepPartialEvent[];

@@ -195,7 +195,7 @@ describe('action ↔ schema ↔ handler contract is in sync', () => {
   }
 
   describe('flow_simulate.step', () => {
-    const spec = createFlowSimulateToolSpec();
+    const spec = createFlowSimulateToolSpec(stubClient());
 
     it('registers step as a required (non-optional) zod string', () => {
       const stepSchema = spec.inputSchema.step as z.ZodType;

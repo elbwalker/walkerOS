@@ -206,13 +206,19 @@ describe('flow_load tool', () => {
         config: { version: 4, flows: {} },
       });
       server = createMockServer();
-      registerFlowLoadTool(server as any, stubClient({ getFlow }));
+      registerFlowLoadTool(
+        server as any,
+        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
+      );
 
       const tool = server.getTool('flow_load');
       const result = await tool.handler({ source: 'cfg_abc' });
 
       expect(getFlow).toHaveBeenCalledTimes(1);
-      expect(getFlow).toHaveBeenCalledWith({ flowId: 'cfg_abc' });
+      expect(getFlow).toHaveBeenCalledWith({
+        flowId: 'cfg_abc',
+        projectId: 'proj_default',
+      });
       expect(mockLoadJsonConfig).not.toHaveBeenCalled();
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
@@ -227,13 +233,19 @@ describe('flow_load tool', () => {
         config: { version: 4, flows: {} },
       });
       server = createMockServer();
-      registerFlowLoadTool(server as any, stubClient({ getFlow }));
+      registerFlowLoadTool(
+        server as any,
+        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
+      );
 
       const tool = server.getTool('flow_load');
       const result = await tool.handler({ source: 'flow_xyz' });
 
       expect(getFlow).toHaveBeenCalledTimes(1);
-      expect(getFlow).toHaveBeenCalledWith({ flowId: 'flow_xyz' });
+      expect(getFlow).toHaveBeenCalledWith({
+        flowId: 'flow_xyz',
+        projectId: 'proj_default',
+      });
       expect(mockLoadJsonConfig).not.toHaveBeenCalled();
       expect(result.isError).toBeUndefined();
     });
@@ -255,12 +267,33 @@ describe('flow_load tool', () => {
       expect(getFlow).not.toHaveBeenCalled();
     });
 
+    it('errors with NO_DEFAULT_PROJECT message when no default project and an ID source', async () => {
+      const getFlow = jest.fn();
+      server = createMockServer();
+      registerFlowLoadTool(
+        server as never,
+        stubClient({ getFlow, getDefaultProject: () => null }),
+      );
+
+      const tool = server.getTool('flow_load');
+      const result = await tool.handler({ source: 'cfg_abc' });
+
+      expect(result.isError).toBe(true);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).not.toContain('Flow not found');
+      expect(getFlow).not.toHaveBeenCalled();
+    });
+
     it('surfaces a NOT_FOUND-style error for a non-existent ID, not a file-not-found message', async () => {
       const getFlow = jest
         .fn()
         .mockRejectedValue(new Error('Flow not found: cfg_missing'));
       server = createMockServer();
-      registerFlowLoadTool(server as any, stubClient({ getFlow }));
+      registerFlowLoadTool(
+        server as any,
+        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
+      );
 
       const tool = server.getTool('flow_load');
       const result = await tool.handler({ source: 'cfg_missing' });
@@ -291,7 +324,10 @@ describe('flow_load tool', () => {
         },
       });
       server = createMockServer();
-      registerFlowLoadTool(server as any, stubClient({ getFlow }));
+      registerFlowLoadTool(
+        server as any,
+        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
+      );
 
       const tool = server.getTool('flow_load');
       const result = await tool.handler({ source: 'cfg_abc' });

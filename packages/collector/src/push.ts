@@ -8,7 +8,7 @@ import {
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
-import { createEvent } from './handle';
+import { createEvent, enrichEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
 import { buildBaseState } from './observerEmit';
 import { runTransformerChain } from './transformer';
@@ -177,11 +177,8 @@ export function createPush<T extends Collector.Instance>(
             partialEvent = chainResult.event;
           }
 
-          // Prepare event (add timing, source info)
-          const enrichedEvent = prepareEvent(partialEvent);
-
-          // Create full event
-          const fullEvent = createEvent(collector, enrichedEvent);
+          // Enrich into a full event (timing, source info, defaults)
+          const fullEvent = enrichEvent(collector, partialEvent);
 
           // Push to destinations with id and ingest
           const result = await pushToDestinations(

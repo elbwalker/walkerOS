@@ -71,6 +71,10 @@ only by default. Per-field patching via `extend`/`remove` is supported.
 - One HTTP request can fan out to N walkerOS events. This requires the collector
   fan-out fix (shipped in this release).
 
+This wiring contract (before-chain placement plus the `config.ingest` keys the
+source must populate) is also surfaced as a package hint, so `package_get` on
+`@walkeros/transformer-ga4` returns it without this skill.
+
 ## Configuration recipes
 
 ### Patch one field in a default mapping (extend + remove)

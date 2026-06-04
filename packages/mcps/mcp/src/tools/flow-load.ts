@@ -7,6 +7,10 @@ import { redactNestedStrings, keepStructural } from '../user-data.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import {
+  NO_DEFAULT_PROJECT_ERROR,
+  resolveDefaultProject,
+} from './project-context.js';
 
 /** `flow_` and `cfg_` are reserved walkerOS API id namespaces. A source
  *  matching either is a cloud flow/config id, loaded via the client, not a
@@ -91,8 +95,15 @@ async function flowLoadHandlerBody(client: ToolClient, input: unknown) {
   // flow_manage `get` uses. Its NOT_FOUND surfaces directly, never remapped
   // to the local "file not found" hint below.
   if (source && API_ID_PREFIX.test(source)) {
+    const resolvedProjectId = resolveDefaultProject(client, undefined);
+    if (!resolvedProjectId) {
+      return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
+    }
     try {
-      const flow = await client.getFlow({ flowId: source });
+      const flow = await client.getFlow({
+        flowId: source,
+        projectId: resolvedProjectId,
+      });
       const config = (flow as { config?: Record<string, unknown> }).config;
       return mcpResult(
         redactNestedStrings(config ?? {}, { skip: keepStructural }),

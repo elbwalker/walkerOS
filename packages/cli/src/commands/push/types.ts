@@ -1,4 +1,4 @@
-import type { Elb } from '@walkeros/core';
+import type { Elb, Ingest } from '@walkeros/core';
 
 /** Captured network call from polyfilled fetch/sendBeacon during simulation */
 export interface NetworkCall {
@@ -25,6 +25,11 @@ export interface PushCommandOptions {
   simulate?: string[];
   mock?: string[];
   snapshot?: string;
+  /**
+   * Pipeline context a simulated transformer reads via `ctx.ingest` (e.g. a
+   * request decoder reads `ingest.url`). Forwarded to `simulateTransformer`.
+   */
+  ingest?: Omit<Ingest, '_meta'>;
 }
 
 /**

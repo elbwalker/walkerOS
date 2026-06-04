@@ -13,7 +13,7 @@ const mockBundleCore = jest.mocked(bundleCore);
 
 const mockStats: BundleStats = {
   totalSize: 2048,
-  packages: [{ name: '@walkeros/core', size: 1024 }],
+  packages: [{ name: '@walkeros/core' }],
   buildTime: 42,
   treeshakingEffective: true,
 };

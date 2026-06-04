@@ -66,11 +66,13 @@ export {
   simulateSource,
   simulateTransformer,
   simulateDestination,
+  simulateCollector,
 } from './commands/push/index.js';
 export type {
   SimulateSourceOptions,
   SimulateTransformerOptions,
   SimulateDestinationOptions,
+  SimulateCollectorOptions,
 } from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';

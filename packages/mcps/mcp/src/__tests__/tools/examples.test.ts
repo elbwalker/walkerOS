@@ -6,6 +6,7 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
+  fetchPackage: jest.fn(),
   mcpResult: jest.fn((result, hints) => ({
     content: [
       {
@@ -33,7 +34,9 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { loadJsonConfig } from '@walkeros/cli';
+import { fetchPackage } from '@walkeros/core';
 const mockLoadJsonConfig = jest.mocked(loadJsonConfig);
+const mockFetchPackage = jest.mocked(fetchPackage);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -108,6 +111,7 @@ describe('flow_examples tool', () => {
     server = createMockServer();
     registerFlowExamplesTool(server as any);
     mockLoadJsonConfig.mockReset();
+    mockFetchPackage.mockReset();
   });
 
   it('registers with correct name, title, and annotations', () => {
@@ -356,5 +360,153 @@ describe('flow_examples tool', () => {
 
     expect(result.structuredContent.count).toBe(0);
     expect(result.structuredContent.examples).toEqual([]);
+  });
+
+  it('tags inline examples with source: "inline"', async () => {
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(
+      result.structuredContent.examples.every(
+        (e: any) => e.source === 'inline',
+      ),
+    ).toBe(true);
+  });
+
+  it('falls back to package-shipped examples when a step has no inline examples', async () => {
+    const configNoInline = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          transformers: {
+            ga4: { package: '@walkeros/transformer-ga4' },
+          },
+        },
+      },
+    };
+    mockLoadJsonConfig.mockResolvedValue(configNoInline as any);
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/transformer-ga4',
+      version: '1.0.0',
+      type: 'transformer',
+      schemas: {},
+      examples: {
+        step: {
+          addToCart: {
+            title: 'Add to cart',
+            in: { url: 'https://example.com/g/collect?en=add_to_cart' },
+            out: [['return', { name: 'product add' }]],
+          },
+          purchase: {
+            in: { url: 'https://example.com/g/collect?en=purchase' },
+            out: [['return', { name: 'order complete' }]],
+          },
+        },
+      },
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent.count).toBe(2);
+    expect(
+      result.structuredContent.examples.every(
+        (e: any) => e.source === 'package',
+      ),
+    ).toBe(true);
+    const names = result.structuredContent.examples.map(
+      (e: any) => e.exampleName,
+    );
+    expect(names).toContain('addToCart');
+    expect(names).toContain('purchase');
+    expect(mockFetchPackage).toHaveBeenCalledWith(
+      '@walkeros/transformer-ga4',
+      expect.any(Object),
+    );
+  });
+
+  it('prefers inline examples over package examples (no fallback, no duplicates)', async () => {
+    const configInline = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          transformers: {
+            ga4: {
+              package: '@walkeros/transformer-ga4',
+              examples: {
+                custom: { in: { name: 'custom event' } },
+              },
+            },
+          },
+        },
+      },
+    };
+    mockLoadJsonConfig.mockResolvedValue(configInline as any);
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(result.structuredContent.count).toBe(1);
+    expect(result.structuredContent.examples[0].exampleName).toBe('custom');
+    expect(result.structuredContent.examples[0].source).toBe('inline');
+    expect(mockFetchPackage).not.toHaveBeenCalled();
+  });
+
+  it('yields nothing for a step ref with no package and no inline examples', async () => {
+    const configNoPackage = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            custom: {},
+          },
+        },
+      },
+    };
+    mockLoadJsonConfig.mockResolvedValue(configNoPackage as any);
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(result.structuredContent.count).toBe(0);
+    expect(mockFetchPackage).not.toHaveBeenCalled();
+  });
+
+  it('does not crash when a package fetch fails; returns inline from other steps', async () => {
+    const configMixed = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            gtag: {
+              package: '@walkeros/web-destination-gtag',
+              examples: {
+                inlineOne: { in: { name: 'page view' } },
+              },
+            },
+            broken: { package: '@walkeros/web-destination-broken' },
+          },
+        },
+      },
+    };
+    mockLoadJsonConfig.mockResolvedValue(configMixed as any);
+    mockFetchPackage.mockRejectedValue(new Error('HTTP 404'));
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent.count).toBe(1);
+    expect(result.structuredContent.examples[0].exampleName).toBe('inlineOne');
+    expect(result.structuredContent.examples[0].source).toBe('inline');
   });
 });
