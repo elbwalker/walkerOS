@@ -153,6 +153,9 @@ function fromSerializable(value: unknown): unknown {
         for (const [k, v] of Object.entries(data)) out[k] = fromSerializable(v);
         return out;
       }
+      // Unrecognized tag (not 'buffer'/'escape'): fall through to default object
+      // traversal so a user object that merely carries the marker key, or a value
+      // from a future tag version, is preserved verbatim rather than coerced.
     }
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) out[k] = fromSerializable(v);

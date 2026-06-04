@@ -25,4 +25,4 @@ export type PushFn = (event: WalkerOS.Event, context: PushContext) => void;
 export type PushBatchFn = (
   batch: Destination.Batch<CodeMapping>,
   context: PushBatchContext,
-) => void;
+) => WalkerOS.PromiseOrValue<void>;

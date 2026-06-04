@@ -573,7 +573,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['Project'];
+            'application/json': components['schemas']['ProjectDetailResponse'];
           };
         };
         /** @description Unauthorized */
@@ -4584,8 +4584,25 @@ export interface components {
     CreateProjectRequest: {
       name: string;
     };
+    ProjectDetailResponse: {
+      /** @example proj_x7y8z9 */
+      id: string;
+      name: string;
+      /**
+       * Format: uri
+       * @example https://example.com
+       */
+      siteUrl?: string | null;
+      /** @enum {string} */
+      role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
+    };
     UpdateProjectRequest: {
       name?: string;
+      /**
+       * Format: uri
+       * @example https://example.com
+       */
+      siteUrl?: string | null;
     };
     ListMembersResponse: {
       members: components['schemas']['Member'][];

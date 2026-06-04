@@ -11,6 +11,7 @@ import {
   __getMockCalls,
   __resetMockCalls,
   __setNextAppendRowErrors,
+  __setNextAppendThrow,
   __setNextOpenWriterError,
 } from '@google-cloud/bigquery-storage';
 import {
@@ -307,7 +308,7 @@ describe('Server Destination BigQuery', () => {
       const data: Array<undefined> = events.map(() => undefined);
       const entries = events.map((event) => ({ event }));
 
-      destination.pushBatch(
+      await destination.pushBatch(
         { key: 'k', events, data, entries },
         createMockContext({
           config,
@@ -316,10 +317,6 @@ describe('Server Destination BigQuery', () => {
           id: 'test-bq',
         }),
       );
-
-      // pushBatch is synchronous and uses an IIFE for the async appendRows.
-      // Wait a tick to let the IIFE complete.
-      await new Promise((r) => setImmediate(r));
 
       const calls = __getMockCalls();
       const append = calls.find((c) => c.method === 'appendRows');
@@ -348,7 +345,7 @@ describe('Server Destination BigQuery', () => {
       const data = [mappedRow];
       const entries = [{ event: e0 }, { event: e1, data: mappedRow }];
 
-      destination.pushBatch(
+      await destination.pushBatch(
         { key: 'k', events, data, entries },
         createMockContext({
           config,
@@ -357,8 +354,6 @@ describe('Server Destination BigQuery', () => {
           id: 'test-bq',
         }),
       );
-
-      await new Promise((r) => setImmediate(r));
 
       const calls = __getMockCalls();
       const append = calls.find((c) => c.method === 'appendRows');
@@ -372,7 +367,7 @@ describe('Server Destination BigQuery', () => {
       expect(rowsArg[1]).toEqual(mappedRow);
     });
 
-    test('logs partial failures without throwing', async () => {
+    test('rejects when the batch has row errors', async () => {
       if (!destination.pushBatch) throw new Error('pushBatch missing');
 
       const config = await buildConfig();
@@ -386,23 +381,24 @@ describe('Server Destination BigQuery', () => {
       const data: Array<undefined> = events.map(() => undefined);
       const entries = events.map((event) => ({ event }));
 
-      // Synchronous call must not throw.
-      expect(() =>
-        destination.pushBatch!(
-          { key: 'k', events, data, entries },
-          createMockContext({
-            config,
-            env: testEnv,
-            logger,
-            id: 'test-bq',
-          }),
-        ),
-      ).not.toThrow();
+      // The batch path now propagates row errors so the collector flush
+      // boundary routes the batch to the DLQ.
+      const pending = destination.pushBatch!(
+        { key: 'k', events, data, entries },
+        createMockContext({
+          config,
+          env: testEnv,
+          logger,
+          id: 'test-bq',
+        }),
+      );
+      // Assert the summary framing, not just the row substring, so a future
+      // simplification of the thrown message is caught.
+      await expect(pending).rejects.toThrow('invalid row');
+      await expect(pending).rejects.toThrow(/of 3 rows/);
+      await expect(pending).rejects.toThrow(/code=3/);
 
-      // Wait for the IIFE async work to complete.
-      await new Promise((r) => setImmediate(r));
-
-      // INFO summary with ok/failed counts.
+      // INFO summary with ok/failed counts for operator visibility.
       expect(logger.info).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ ok: 2, failed: 1 }),
@@ -417,7 +413,63 @@ describe('Server Destination BigQuery', () => {
           message: 'invalid row',
         }),
       );
-      expect(logger.error).toHaveBeenCalledTimes(1);
+    });
+
+    test('rejects when appendRows throws', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+
+      const config = await buildConfig();
+      __resetMockCalls();
+
+      __setNextAppendThrow(new Error('append boom'));
+
+      const logger = createMockLogger();
+      const events = [createEvent(), createEvent()];
+      const data: Array<undefined> = events.map(() => undefined);
+      const entries = events.map((event) => ({ event }));
+
+      await expect(
+        destination.pushBatch!(
+          { key: 'k', events, data, entries },
+          createMockContext({
+            config,
+            env: testEnv,
+            logger,
+            id: 'test-bq',
+          }),
+        ),
+      ).rejects.toThrow('append boom');
+    });
+
+    test('rejects when init() has not run (writer missing)', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+
+      // Misconfigured destination: settings present but writer absent because
+      // init() never ran. The batch path must surface this like single-push.
+      const settings: Settings = {
+        client: new BigQuery({ projectId }),
+        projectId,
+        datasetId,
+        tableId,
+        location: 'EU',
+      };
+      const config: Config = { settings };
+
+      const logger = createMockLogger();
+      const events = [createEvent()];
+      const entries = events.map((event) => ({ event }));
+
+      await expect(
+        destination.pushBatch!(
+          { key: 'k', events, data: [undefined], entries },
+          createMockContext({
+            config,
+            env: testEnv,
+            logger,
+            id: 'test-bq',
+          }),
+        ),
+      ).rejects.toThrow('writer is missing');
     });
   });
 });

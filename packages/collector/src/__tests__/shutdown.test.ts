@@ -1,5 +1,33 @@
-import type { Destination, Source, Transformer } from '@walkeros/core';
+import type { Destination, Logger, Source, Transformer } from '@walkeros/core';
+import { Level } from '@walkeros/core';
 import { startFlow } from '..';
+
+// Build a single-entry batch registry whose flush() behaviour is supplied by
+// the test, so we can drive the fast-resolve and hang paths deterministically.
+function makeBatches(
+  flush: () => Promise<void>,
+): NonNullable<Destination.Instance['batches']> {
+  const batched: Destination.Instance['batches'] = {};
+  return {
+    default: {
+      batched: { key: 'default', entries: [], events: [], data: [] },
+      batchFn: () => {},
+      flush,
+    },
+  } satisfies typeof batched;
+}
+
+// Capture only ERROR-level log messages via a custom logger handler.
+function makeErrorCapture(): {
+  messages: string[];
+  handler: Logger.Handler;
+} {
+  const messages: string[] = [];
+  const handler: Logger.Handler = (level, message) => {
+    if (level === Level.ERROR) messages.push(message);
+  };
+  return { messages, handler };
+}
 
 describe('shutdown command', () => {
   it('calls destroy on all destinations', async () => {
@@ -155,5 +183,96 @@ describe('shutdown command', () => {
     await elb('walker shutdown');
 
     expect(order).toEqual(['source', 'destination', 'transformer']);
+  });
+
+  describe('timeout guards do not leak timers', () => {
+    const STEP_TIMEOUT = 5000;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    });
+
+    it('clears the flush timeout when batch flush resolves fast', async () => {
+      const { collector, elb } = await startFlow({});
+
+      const dest: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'test-dest',
+        batches: makeBatches(() => Promise.resolve()),
+      };
+      collector.destinations['fast'] = dest;
+
+      await elb('walker shutdown');
+
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('clears the destroy timeout when destroy resolves fast', async () => {
+      const { collector, elb } = await startFlow({});
+
+      const dest: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'test-dest',
+        destroy: jest.fn(() => Promise.resolve()),
+      };
+      collector.destinations['fast'] = dest;
+
+      await elb('walker shutdown');
+
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('times out and is caught when batch flush hangs', async () => {
+      const { messages, handler } = makeErrorCapture();
+      const { collector, elb } = await startFlow({ logger: { handler } });
+
+      const dest: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'test-dest',
+        batches: makeBatches(() => new Promise<void>(() => {})),
+      };
+      collector.destinations['hang'] = dest;
+
+      const shutdown = elb('walker shutdown');
+      await jest.advanceTimersByTimeAsync(STEP_TIMEOUT);
+      await shutdown; // resolves, does not hang
+
+      expect(
+        messages.some((m) =>
+          /destination 'hang' batch flush timed out/.test(m),
+        ),
+      ).toBe(true);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('times out and is caught when destroy hangs', async () => {
+      const { messages, handler } = makeErrorCapture();
+      const { collector, elb } = await startFlow({ logger: { handler } });
+
+      const dest: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'test-dest',
+        destroy: jest.fn(() => new Promise<void>(() => {})),
+      };
+      collector.destinations['hang'] = dest;
+
+      const shutdown = elb('walker shutdown');
+      await jest.advanceTimersByTimeAsync(STEP_TIMEOUT);
+      await shutdown; // resolves, does not hang
+
+      expect(
+        messages.some((m) => /destination 'hang' destroy timed out/.test(m)),
+      ).toBe(true);
+      expect(jest.getTimerCount()).toBe(0);
+    });
   });
 });

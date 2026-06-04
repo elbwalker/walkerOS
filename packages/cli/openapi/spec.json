@@ -1959,6 +1959,29 @@
         },
         "required": ["name"]
       },
+      "ProjectDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^proj_[a-zA-Z0-9_-]+$",
+            "example": "proj_x7y8z9"
+          },
+          "name": {
+            "type": "string"
+          },
+          "siteUrl": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "example": "https://example.com"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["owner", "admin", "member", "deployer", "viewer"]
+          }
+        },
+        "required": ["id", "name", "role"]
+      },
       "UpdateProjectRequest": {
         "type": "object",
         "properties": {
@@ -1966,6 +1989,12 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 255
+          },
+          "siteUrl": {
+            "type": ["string", "null"],
+            "maxLength": 2048,
+            "format": "uri",
+            "example": "https://example.com"
           }
         }
       },
@@ -2997,7 +3026,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Project"
+                  "$ref": "#/components/schemas/ProjectDetailResponse"
                 }
               }
             }

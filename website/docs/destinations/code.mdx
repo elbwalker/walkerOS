@@ -187,7 +187,10 @@ is routed to the destination's `dlq` (dead-letter queue) and
 `status.destinations[id].failed` is incremented by the batch size.
 Per-item retry logic is the destination SDK's responsibility (BigQuery,
 Kafka, HubSpot each have their own backoff semantics). The collector
-never drops batch failures silently.
+never drops batch failures silently. Batched delivery is asynchronous,
+so the originating `elb()` call's result cannot reflect a later
+batch-flush outcome; failures appear in the destination's `failed` count,
+dead-letter buffer, and logs.
 
 ### on
 

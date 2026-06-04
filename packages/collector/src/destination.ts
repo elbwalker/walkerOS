@@ -948,13 +948,14 @@ export async function destinationPush<Destination extends Destination.Instance>(
   }
 
   const eventMapping = processed.mapping;
-  const ruleHasBatch = Boolean(eventMapping?.batch);
+  // Presence, not truthiness: batch: 0 is a valid 0 ms wait, not "disabled".
+  const ruleHasBatch = eventMapping?.batch !== undefined;
   const mappingKey = ruleHasBatch
     ? processed.mappingKey || '* *'
     : BATCH_ALL_KEY;
 
   if (
-    (ruleHasBatch || config.batch) &&
+    (ruleHasBatch || config.batch !== undefined) &&
     destination.pushBatch &&
     config.mock === undefined
   ) {

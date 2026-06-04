@@ -34,19 +34,22 @@ async function flushDestinationBatches(
     if (!batches) return [];
     const logger = rootLogger.scope(dest.type || 'destination');
     return Object.values(batches).map(async (b) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         await Promise.race([
           b.flush(),
-          new Promise<void>((_, reject) =>
-            setTimeout(
+          new Promise<void>((_, reject) => {
+            timer = setTimeout(
               () =>
                 reject(new Error(`destination '${id}' batch flush timed out`)),
               STEP_TIMEOUT,
-            ),
-          ),
+            );
+          }),
         ]);
       } catch (err) {
         logger.error(`destination '${id}' batch flush failed: ${err}`);
+      } finally {
+        if (timer) clearTimeout(timer);
       }
     });
   });
@@ -81,18 +84,21 @@ async function destroyStepGroup<
       logger,
     };
 
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
         destroy(context),
-        new Promise<void>((_, reject) =>
-          setTimeout(
+        new Promise<void>((_, reject) => {
+          timer = setTimeout(
             () => reject(new Error(`${label} '${id}' destroy timed out`)),
             STEP_TIMEOUT,
-          ),
-        ),
+          );
+        }),
       ]);
     } catch (err) {
       logger.error(`${label} '${id}' destroy failed: ${err}`);
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   });
 

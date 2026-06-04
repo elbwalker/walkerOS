@@ -223,6 +223,112 @@ describe('Destination batch correctness (PROD-004)', () => {
     expect(recorded[0]).toBe(5);
   });
 
+  it('shutdown waits for an in-flight async batch append', async () => {
+    let resolveAppend: (() => void) | undefined;
+    let settled = false;
+    const mockPushBatch = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveAppend = () => {
+            settled = true;
+            resolve();
+          };
+        }),
+    );
+
+    const dest: Destination.Instance = {
+      type: 'async-batch',
+      push: jest.fn(),
+      pushBatch: mockPushBatch,
+      config: {
+        init: true,
+        mapping: { '*': { '*': { batch: 60_000 } } },
+      },
+    };
+
+    const { collector } = await startFlow({
+      destinations: { d: { code: dest } },
+    });
+
+    for (let i = 0; i < 3; i++) {
+      await pushToDestinations(
+        collector,
+        makeEvent(i),
+        { ingest: createIngest(`req-${i}`) },
+        collector.destinations,
+      );
+    }
+
+    // Start the flush but do not await it yet: the async pushBatch is in-flight.
+    let flushResolved = false;
+    const flushPromise = collector.destinations['d']
+      .batches!['* *'].flush()
+      .then(() => {
+        flushResolved = true;
+      });
+
+    // Let the pushBatch call begin and the await chain reach the pending promise.
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(mockPushBatch).toHaveBeenCalledTimes(1);
+    // flush() must not resolve while the append promise is still pending.
+    expect(settled).toBe(false);
+    expect(flushResolved).toBe(false);
+
+    // Resolve the in-flight append; now flush() should settle.
+    resolveAppend!();
+    await flushPromise;
+
+    expect(settled).toBe(true);
+    expect(flushResolved).toBe(true);
+  });
+
+  it('a rejected async pushBatch routes the batch to the DLQ and increments failed, not out', async () => {
+    const mockPushBatch = jest.fn(() =>
+      Promise.reject(new Error('async batch boom')),
+    );
+
+    const dest: Destination.Instance = {
+      type: 'async-rejecting',
+      push: jest.fn(),
+      pushBatch: mockPushBatch,
+      config: {
+        init: true,
+        mapping: { '*': { '*': { batch: 1 } } },
+      },
+    };
+
+    const { collector } = await startFlow({
+      destinations: { d: { code: dest } },
+    });
+
+    for (let i = 0; i < 5; i++) {
+      await pushToDestinations(
+        collector,
+        makeEvent(i),
+        { ingest: createIngest(`req-${i}`) },
+        collector.destinations,
+      );
+    }
+
+    await collector.destinations['d'].batches!['* *'].flush();
+
+    // Whole batch routed to DLQ as [event, error].
+    const dlq = collector.destinations['d'].dlq;
+    expect(dlq).toBeDefined();
+    expect(dlq!.length).toBe(5);
+    expect(dlq![0][0].id).toBe('e-0');
+    const firstError = dlq![0][1];
+    expect(firstError).toBeInstanceOf(Error);
+    if (!(firstError instanceof Error)) throw new Error('expected Error');
+    expect(firstError.message).toBe('async batch boom');
+
+    const destStatus = collector.status.destinations['d'];
+    // failed incremented by full batch size; success counters untouched.
+    expect(destStatus.failed).toBe(5);
+    expect(destStatus.count).toBe(0);
+  });
+
   it('routes batch failure to DLQ without leaking unhandled rejections', async () => {
     const unhandled: unknown[] = [];
     const onUnhandled = (err: unknown): void => {

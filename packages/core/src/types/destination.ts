@@ -239,7 +239,7 @@ export type PushFn<T extends TypesGeneric = Types> = (
 export type PushBatchFn<T extends TypesGeneric = Types> = (
   batch: Batch<Mapping<T>>,
   context: PushBatchContext<T>,
-) => void;
+) => WalkerOS.PromiseOrValue<void>;
 
 export type PushEvent<Mapping = unknown> = {
   event: WalkerOS.Event;

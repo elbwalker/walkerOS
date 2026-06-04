@@ -243,7 +243,9 @@ ingestion. This replaces the legacy `tabledata.insertAll` path.
 - **Batching**: `pushBatch` is implemented. Set `config.batch` on the
   destination (a bare number is the debounce `wait` in ms) to flush all events
   in a window as a single `appendRows` call. No `'* *'` wildcard mapping rule is
-  needed.
+  needed. The batch path awaits the write and surfaces row errors: a failed
+  append fails the batch, which routes the events to the dead-letter buffer and
+  the `failed` count rather than being logged and ignored.
 
 :::caution EXPERIMENTAL SDK
 The upstream `@google-cloud/bigquery-storage` package self-marks as
