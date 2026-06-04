@@ -367,7 +367,7 @@ describe('Server Destination BigQuery', () => {
       expect(rowsArg[1]).toEqual(mappedRow);
     });
 
-    test('rejects when the batch has row errors', async () => {
+    test('returns a per-row outcome on partial row errors instead of throwing', async () => {
       if (!destination.pushBatch) throw new Error('pushBatch missing');
 
       const config = await buildConfig();
@@ -381,9 +381,10 @@ describe('Server Destination BigQuery', () => {
       const data: Array<undefined> = events.map(() => undefined);
       const entries = events.map((event) => ({ event }));
 
-      // The batch path now propagates row errors so the collector flush
-      // boundary routes the batch to the DLQ.
-      const pending = destination.pushBatch!(
+      // Partial row errors no longer throw: the destination reports the failed
+      // rows via a BatchOutcome so the collector DLQs only those rows and counts
+      // the succeeded rows as delivered (avoids duplicates on DLQ retry).
+      const outcome = await destination.pushBatch!(
         { key: 'k', events, data, entries },
         createMockContext({
           config,
@@ -392,11 +393,18 @@ describe('Server Destination BigQuery', () => {
           id: 'test-bq',
         }),
       );
-      // Assert the summary framing, not just the row substring, so a future
-      // simplification of the thrown message is caught.
-      await expect(pending).rejects.toThrow('invalid row');
-      await expect(pending).rejects.toThrow(/of 3 rows/);
-      await expect(pending).rejects.toThrow(/code=3/);
+
+      expect(outcome).toEqual({
+        failed: [
+          {
+            index: 0,
+            error: expect.objectContaining({
+              code: 3,
+              message: 'invalid row',
+            }),
+          },
+        ],
+      });
 
       // INFO summary with ok/failed counts for operator visibility.
       expect(logger.info).toHaveBeenCalledWith(

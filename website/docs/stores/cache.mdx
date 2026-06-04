@@ -16,9 +16,9 @@ Store-level cache is different from the [event-level Cache](../collector/cache.m
 
 ## Request-cache values and TTL
 
-Request-cache values are serialized by the cache layer before they reach the backing store, so any store backend (filesystem, S3, GCS, in-memory) can hold structured HTTP responses, not just the in-memory tier. Cached entries honor their TTL: an expired entry is treated as a miss and re-fetched from the backing.
+Request-cache values are serialized by the cache layer before they reach the backing store, so a byte/string store backend that persists the encoded value can hold structured HTTP responses, not just the in-memory tier. The supported backends are filesystem, S3, GCS, and the in-memory tier. The Sheets store is not a request-cache backend: it stores a single JSON cell per key and cannot persist the encoded value, so wiring it as a request cache throws. Cached entries honor their TTL: an expired entry is treated as a miss and re-fetched from the backing.
 
-Cached values must be JSON-safe plus `Buffer` (a `Date` becomes a string, an `Error` loses its fields), which is fine for HTTP responses, events, and push results.
+Cached values must be JSON-safe plus binary bodies (`Buffer`, `Uint8Array`, `ArrayBuffer`), all of which are returned as a `Buffer` on read (a `Date` becomes a string, an `Error` loses its fields), which is fine for HTTP responses, events, and push results.
 
 The filesystem, S3, and GCS stores persist `Buffer` or `string` values only, so structured `state` payloads (which bypass the cache layer) need an object-capable store such as the default in-memory cache.
 

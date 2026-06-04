@@ -16,7 +16,14 @@ export type BundleTarget =
 export interface TargetPreset {
   /** If true, emit ESM skeleton. If false, emit IIFE via generateWebEntry. */
   skipWrapper: boolean;
-  /** If true, include @walkeros/*\/dev imports for schema validation. */
+  /**
+   * If true, the skeleton carries the lazy `/dev` registry
+   * (`'<pkg>': () => import('<pkg>/dev')`) so simulate/push can await schemas
+   * on demand. Every skeleton target sets this true: the registry is an
+   * unreferenced thunk, so the deploy wrap DCEs the whole /dev graph to zero
+   * bytes. Only the finished IIFE (`cdn`) sets this false, since it has no
+   * registry and needs none.
+   */
   withDev: boolean;
   /** Runtime platform — controls env injection and Node/browser codegen. */
   platform: 'browser' | 'node';
@@ -38,16 +45,20 @@ export const BUNDLE_TARGETS: Readonly<
   }),
   // skipWrapper emits the introspectable skeleton (not a finished bundle),
   // consumed by simulate/preview/deploy; node keeps step packages external for
-  // on-disk resolution (see the skeleton branch in bundler.ts).
+  // on-disk resolution (see the skeleton branch in bundler.ts). Every skeleton
+  // carries the lazy /dev registry (withDev:true); it is an unreferenced thunk
+  // the deploy wrap DCEs, so a skeleton with the registry is safe to deploy.
+  // The browser skeleton additionally externalizes each `<pkg>/dev` so the
+  // registry stays a literal `import()` rather than inlining the /dev graph.
   'cdn-skeleton': Object.freeze({
     skipWrapper: true,
-    withDev: false,
+    withDev: true,
     platform: 'browser',
     injectEnv: false,
   }),
   runner: Object.freeze({
     skipWrapper: true,
-    withDev: false,
+    withDev: true,
     platform: 'node',
     injectEnv: false,
   }),

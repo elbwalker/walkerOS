@@ -208,6 +208,17 @@
   </div>
 </div>
 
+<div id="scoped-nearest-scope" data-elb_="shared:S">
+  <div data-elb="outer" data-elb-outer="o:1">
+    <div data-elb="inner" data-elb-inner="i:1">
+      <button id="scoped-nearest" data-elbaction="click"></button>
+    </div>
+  </div>
+</div>
+<div data-elb="inner" data-elb-inner="i:1">
+  <button id="scoped-nearest-outside" data-elbaction="click"></button>
+</div>
+
 <div id="scoped-shadow-host" data-elb="sh" data-elb_="boundary:crossed"></div>
 
 <div id="scoped-link-wrap">

@@ -311,6 +311,17 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
     },
 
     async set(key: string, value: unknown): Promise<void> {
+      // The request-cache codec hands stores an encoded Buffer (via
+      // encodeCacheValue). Sheets would JSON.stringify it into
+      // {"type":"Buffer","data":[...]} and return that object as a HIT with no
+      // TTL check on read, serving silent stale garbage. Sheets is not a request-cache
+      // backend; reject the Buffer case loudly. Non-Buffer JSON values are
+      // unaffected.
+      if (Buffer.isBuffer(value)) {
+        throw new Error(
+          'Sheets store cannot be used as a request cache; use fs, s3, gcs, or an in-memory store',
+        );
+      }
       const serialized = JSON.stringify(value);
       const existingRow = keyToRow.get(key);
       if (existingRow === undefined) {

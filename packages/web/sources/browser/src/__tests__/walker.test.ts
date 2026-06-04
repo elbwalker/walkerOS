@@ -460,6 +460,28 @@ describe('Walker', () => {
     ]);
   });
 
+  test('Scoped composes with nearest-only action across a skipped outer entity', () => {
+    // data-elb_ scope wraps OUTER, which contains INNER; the trigger uses the
+    // nearest-only data-elbaction. Nearest selection must resolve to INNER only
+    // (outer is skipped), yet the scoped prop still bubbles up onto that event
+    // because the scope ancestor is on the trigger's path.
+    const events = getEvents(getElem('scoped-nearest'), Triggers.Click);
+    expect(events).toMatchObject([
+      { entity: 'inner', action: 'click', data: { i: 1, shared: 'S' } },
+    ]);
+    // Nearest-only did not bubble to the outer entity.
+    expect(events).toHaveLength(1);
+    expect(events.some((event) => event.entity === 'outer')).toBe(false);
+
+    // A same-named entity outside the scope branch gets no scoped prop.
+    const outside = getEvents(
+      getElem('scoped-nearest-outside'),
+      Triggers.Click,
+    );
+    expect(outside).toMatchObject([{ entity: 'inner', data: { i: 1 } }]);
+    expect(outside[0].data).not.toHaveProperty('shared');
+  });
+
   test('Scoped crosses the shadow host boundary going up', () => {
     const host = getElem('scoped-shadow-host');
     const root = host.attachShadow({ mode: 'open' });

@@ -13,19 +13,19 @@ describe('BundleTarget presets', () => {
     });
   });
 
-  it('cdn-skeleton: ESM skeleton for later IIFE wrap, no dev imports', () => {
+  it('cdn-skeleton: ESM skeleton for later IIFE wrap, carries lazy dev registry', () => {
     expect(resolveTarget('cdn-skeleton')).toEqual({
       skipWrapper: true,
-      withDev: false,
+      withDev: true,
       platform: 'browser',
       injectEnv: false, // injected during wrapSkeleton stage 2, not here
     });
   });
 
-  it('runner: server skeleton for Scaleway function runtime, no dev imports', () => {
+  it('runner: server skeleton for Scaleway function runtime, carries lazy dev registry', () => {
     expect(resolveTarget('runner')).toEqual({
       skipWrapper: true,
-      withDev: false,
+      withDev: true,
       platform: 'node',
       injectEnv: false,
     });

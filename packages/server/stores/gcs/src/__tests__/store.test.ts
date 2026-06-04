@@ -187,6 +187,18 @@ describe('storeGcsInit', () => {
       await store.set('../evil.txt', Buffer.from('bad'));
       expect(mockFetch).not.toHaveBeenCalled();
     });
+
+    // Regression lock: the request-cache codec hands stores an encoded Buffer.
+    // A non-Buffer value must be rejected with a clear error rather than being
+    // silently POSTed as a malformed body.
+    it('rejects a non-Buffer value with a clear error', async () => {
+      const store = await createStore();
+      const bad: unknown = { a: 1 };
+      await expect(store.set('x', bad)).rejects.toThrow(
+        /value must be a Buffer/,
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
   });
 
   describe('codec round-trip', () => {

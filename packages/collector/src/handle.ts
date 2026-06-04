@@ -158,7 +158,13 @@ export async function commonHandleCommand(
         break;
 
       case Const.Commands.Shutdown:
-        await destroyAllSteps(collector);
+        // Idempotency guard: re-entrancy must not re-run destroyAllSteps and
+        // double-close writers, destinations, or stores. The first shutdown
+        // sets the flag and runs the full sequence; a second command no-ops.
+        if (!collector.hasShutdown) {
+          collector.hasShutdown = true;
+          await destroyAllSteps(collector);
+        }
         break;
 
       case Const.Commands.User:

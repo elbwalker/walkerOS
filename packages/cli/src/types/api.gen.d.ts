@@ -676,7 +676,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['Project'];
+            'application/json': components['schemas']['UpdateProjectResponse'];
           };
         };
         /** @description Validation error */
@@ -4130,6 +4130,16 @@ export interface components {
        * @example 2026-01-26T14:30:00.000Z
        */
       createdAt: string;
+    };
+    UpdateProjectResponse: {
+      /** @example proj_x7y8z9 */
+      id: string;
+      name: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
     };
     DeploymentSummary: {
       /** @example dep_a1b2c3d4 */

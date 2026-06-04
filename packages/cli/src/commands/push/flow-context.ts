@@ -41,7 +41,13 @@ export interface FlowModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   startFlow: (config: unknown) => Promise<any>;
   __configData?: unknown;
-  __devExports?: Record<string, unknown>;
+  /**
+   * Registry of lazy /dev loaders, one per package that exposes a `./dev`
+   * export. Each entry is a thunk that dynamically imports the dev module on
+   * demand, so the deploy wrap can DCE the unreferenced /dev graph to zero
+   * bytes. Read sites must call and await the thunk, then narrow the result.
+   */
+  __devExports?: Record<string, () => Promise<unknown>>;
 }
 
 /**

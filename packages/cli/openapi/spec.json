@@ -770,6 +770,25 @@
         },
         "required": ["id", "name", "createdAt"]
       },
+      "UpdateProjectResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^proj_[a-zA-Z0-9_-]+$",
+            "example": "proj_x7y8z9"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": ["id", "name", "updatedAt"]
+      },
       "DeploymentSummary": {
         "type": "object",
         "properties": {
@@ -3084,7 +3103,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Project"
+                  "$ref": "#/components/schemas/UpdateProjectResponse"
                 }
               }
             }

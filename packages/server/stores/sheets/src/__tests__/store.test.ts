@@ -2,7 +2,11 @@ jest.mock('../auth', () => ({
   createTokenProvider: jest.fn(() => jest.fn().mockResolvedValue('mock-token')),
 }));
 
-import { createMockContext, createMockLogger } from '@walkeros/core';
+import {
+  createMockContext,
+  createMockLogger,
+  encodeCacheValue,
+} from '@walkeros/core';
 import type { Store } from '@walkeros/core';
 import type { SheetsStoreSettings } from '../types';
 import { storeSheetsInit, __resetSpreadsheetExistenceCache } from '../store';
@@ -249,6 +253,23 @@ describe('storeSheetsInit', () => {
           'https://sheets.googleapis.com/v4/spreadsheets/spreadsheet-id-123/values/Sheet1!B5',
         );
         expect(result).toEqual({ tier: 'silver' });
+      } finally {
+        restore();
+      }
+    });
+
+    it('rejects a Buffer value (request-cache wiring is not supported)', async () => {
+      const { restore } = installFetch([
+        probeOk(),
+        jsonResponse({ values: [['alice']] }),
+      ]);
+      try {
+        const store = await storeSheetsInit(createCtx());
+        const encoded = encodeCacheValue({ status: 200 }, 1000);
+
+        await expect(store.set('req-cache-key', encoded)).rejects.toThrow(
+          /Sheets store cannot be used as a request cache/,
+        );
       } finally {
         restore();
       }

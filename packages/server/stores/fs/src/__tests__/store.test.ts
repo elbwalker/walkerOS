@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import type { Collector, Logger } from '@walkeros/core';
+import { encodeCacheValue, decodeCacheValue } from '@walkeros/core';
 import { storeFsInit } from '../store';
 
 describe('FsStore', () => {
@@ -110,6 +111,60 @@ describe('FsStore', () => {
       await expect(store.set('x', { a: 1 })).rejects.toThrow(
         /Buffer or string/,
       );
+    });
+  });
+
+  describe('TTL expiry round-trip', () => {
+    // End-to-end lock: an encoded cache value written to the fs store reads
+    // back as a HIT before its TTL, and as expired afterwards. The codec
+    // stamps an absolute `Date.now() + ttlMs` expiry, so the clock is
+    // controlled with fake timers around the synchronous codec calls. The fs
+    // I/O itself runs under real time (writes/reads happen between the
+    // synchronous encode and decode steps), so no real sleep is needed.
+    const VALUE = { status: 200, body: 'cached-payload' };
+    const TTL_MS = 60_000;
+    const BASE = new Date('2026-06-04T00:00:00.000Z').getTime();
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('reads back a HIT within the TTL', async () => {
+      const store = await createStore(tmpDir);
+
+      jest.useFakeTimers();
+      jest.setSystemTime(BASE);
+      const encoded = encodeCacheValue(VALUE, TTL_MS);
+      jest.useRealTimers();
+
+      await store.set('cache/entry', encoded);
+      const raw = await store.get('cache/entry');
+
+      jest.useFakeTimers();
+      jest.setSystemTime(BASE + TTL_MS - 1);
+      const decoded = decodeCacheValue(raw);
+      jest.useRealTimers();
+
+      expect(decoded).toEqual({ value: VALUE });
+    });
+
+    it('reads back as expired once the TTL has passed', async () => {
+      const store = await createStore(tmpDir);
+
+      jest.useFakeTimers();
+      jest.setSystemTime(BASE);
+      const encoded = encodeCacheValue(VALUE, TTL_MS);
+      jest.useRealTimers();
+
+      await store.set('cache/entry', encoded);
+      const raw = await store.get('cache/entry');
+
+      jest.useFakeTimers();
+      jest.setSystemTime(BASE + TTL_MS + 1);
+      const decoded = decodeCacheValue(raw);
+      jest.useRealTimers();
+
+      expect(decoded).toEqual({ expired: true });
     });
   });
 

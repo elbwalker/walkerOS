@@ -4,7 +4,10 @@
  * Guards against two regressions at once:
  *   1. Size blow-up: the cdn IIFE must stay within the budget.
  *   2. Dev/zod leakage: the cdn and cdn-skeleton outputs must be free of any
- *      runtime-schema / zod markers that would indicate dev imports snuck in.
+ *      runtime-schema / zod markers that would indicate the /dev graph got
+ *      inlined. The cdn-skeleton legitimately carries the lazy `/dev` registry
+ *      as a literal `import('<pkg>/dev')`, but that subpath stays external, so
+ *      the zod/schema body must not appear inline.
  *
  * Baseline: CDN direct IIFE = 70,560 bytes. Budget = baseline × 1.10.
  */
@@ -70,7 +73,7 @@ describe('CDN bundle size budget', () => {
     expect(text).not.toMatch(/@walkeros\/[\w-]+\/dev/);
   }, 120000);
 
-  it('cdn-skeleton target is clean of the same markers', async () => {
+  it('cdn-skeleton carries the lazy /dev registry without inlining the zod graph', async () => {
     const out = join(tmpDir, 'skel.mjs');
     await bundle(MINIMAL_FLOW, {
       target: 'cdn-skeleton',
@@ -79,9 +82,15 @@ describe('CDN bundle size budget', () => {
     });
     const text = await readFile(out, 'utf8');
 
+    // The /dev subpath stays external, so the zod/schema body is NOT inlined.
     expect(text).not.toMatch(/\b_zod\b/);
     expect(text).not.toContain('toJSONSchema');
-    expect(text).not.toMatch(/@walkeros\/[\w-]+\/dev/);
+
+    // The lazy registry survives as a literal `import('<pkg>/dev')`; the deploy
+    // wrap DCEs it. The browser skeleton externalizes the subpath so the /dev
+    // graph never inlines.
+    expect(text).toContain('__devExports');
+    expect(text).toMatch(/import\(["']@walkeros\/[\w-]+\/dev["']\)/);
   }, 120000);
 
   it('simulate target DOES include dev schemas (regression guard)', async () => {

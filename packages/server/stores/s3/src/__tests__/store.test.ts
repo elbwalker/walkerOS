@@ -172,6 +172,18 @@ describe('storeS3Init', () => {
       await store.set('../evil.txt', Buffer.from('bad'));
       expect(mockPutObject).not.toHaveBeenCalled();
     });
+
+    // Regression lock: the request-cache codec hands stores an encoded Buffer.
+    // A non-Buffer value must be rejected with a clear error rather than being
+    // silently uploaded as a malformed object.
+    it('rejects a non-Buffer value with a clear error', async () => {
+      const store = await createStore();
+      const bad: unknown = { a: 1 };
+      await expect(store.set('x', bad)).rejects.toThrow(
+        /value must be a Buffer/,
+      );
+      expect(mockPutObject).not.toHaveBeenCalled();
+    });
   });
 
   describe('codec round-trip', () => {

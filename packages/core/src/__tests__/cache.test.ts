@@ -269,6 +269,31 @@ describe('storeCache', () => {
     expect(Buffer.isBuffer(encoded)).toBe(true);
     expect(decodeCacheValue(encoded)).toEqual({ value: { data: 'value' } });
   });
+
+  it('does not throw or leak an unhandled rejection when an async set rejects', async () => {
+    const store: Store.Instance = {
+      type: 'rejecting-mock',
+      config: {},
+      get: async () => undefined,
+      set: () => Promise.reject(new Error('backend down')),
+      delete: async () => undefined,
+    };
+
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    process.on('unhandledRejection', onRejection);
+    try {
+      // Must not throw synchronously: the HTTP response is already sent.
+      expect(() => storeCache(store, 'k', { status: 200 }, 60)).not.toThrow();
+      // Flush the microtask queue (timers are faked in this suite, so a
+      // real macrotask never fires). The rejection rides a real Promise, so
+      // microtask turns are enough for an escaped rejection to surface.
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+      expect(rejections).toHaveLength(0);
+    } finally {
+      process.off('unhandledRejection', onRejection);
+    }
+  });
 });
 
 describe('applyUpdate', () => {
@@ -430,6 +455,37 @@ describe('cache value codec', () => {
     expect(decodeCacheValue(Buffer.from([0x00, 0x01, 0x02]))).toBeUndefined();
     expect(decodeCacheValue(Buffer.from('not json'))).toBeUndefined();
     expect(decodeCacheValue(Buffer.from('{"x":1}'))).toBeUndefined();
+  });
+
+  it('round-trips a Uint8Array body to a byte-identical Buffer', () => {
+    const value = { status: 200, body: new Uint8Array([0xff, 0x00, 0x80]) };
+    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({
+      value: { status: 200, body: Buffer.from([0xff, 0x00, 0x80]) },
+    });
+  });
+
+  it('round-trips a Uint8Array view honoring byteOffset/length', () => {
+    const full = new Uint8Array([0x01, 0xff, 0x00, 0x80, 0x02]);
+    const view = full.subarray(1, 4); // [0xff, 0x00, 0x80]
+    const value = { body: view };
+    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({
+      value: { body: Buffer.from([0xff, 0x00, 0x80]) },
+    });
+  });
+
+  it('round-trips an ArrayBuffer body to a byte-identical Buffer', () => {
+    const source = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
+    const value = { body: source.buffer };
+    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({
+      value: { body: Buffer.from([0xde, 0xad, 0xbe, 0xef]) },
+    });
+  });
+
+  it('round-trips an empty Uint8Array to an empty Buffer', () => {
+    const value = { body: new Uint8Array([]) };
+    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({
+      value: { body: Buffer.alloc(0) },
+    });
   });
 });
 

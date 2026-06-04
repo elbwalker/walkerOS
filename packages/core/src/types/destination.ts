@@ -236,10 +236,50 @@ export type PushFn<T extends TypesGeneric = Types> = (
   context: PushContext<T>,
 ) => WalkerOS.PromiseOrValue<void | unknown>;
 
+/**
+ * Per-row outcome for a single failed batch entry.
+ *
+ * `index` is the position into the flushed batch's `entries` array (the same
+ * order `flushBatch` iterates), so the collector can route exactly that entry
+ * to the DLQ. `error` is the per-row failure carried into the DLQ pair; when
+ * omitted the collector substitutes a generic batch error.
+ */
+export interface BatchFailure {
+  index: number;
+  error?: unknown;
+}
+
+/**
+ * Partial-failure result of a `pushBatch` call.
+ *
+ * `failed` lists the entries (by index into the flushed batch's `entries`
+ * array) that did NOT succeed. Every other entry is treated as delivered.
+ */
+export interface BatchOutcome {
+  failed: BatchFailure[];
+}
+
+/**
+ * Pushes a batch of events to a destination.
+ *
+ * Return contract (backward-compatible, additive):
+ * - Resolve `void` (the historical contract): the WHOLE batch succeeded. The
+ *   collector counts every entry as delivered.
+ * - Throw / reject: the WHOLE batch failed. The collector routes every entry
+ *   to the DLQ and increments `failed` by the batch size. Unchanged.
+ * - Resolve a `BatchOutcome`: PARTIAL failure. Only the entries listed in
+ *   `outcome.failed` (by `index` into the flushed `entries` array) are routed
+ *   to the DLQ and counted as failed, each with its own `error`. The remaining
+ *   entries are counted as delivered. This lets a destination report row-level
+ *   failures without forcing already-succeeded rows onto the DLQ, which would
+ *   duplicate them on a later DLQ retry.
+ *
+ * Indices in `failed` must line up with the order of `batch.entries`.
+ */
 export type PushBatchFn<T extends TypesGeneric = Types> = (
   batch: Batch<Mapping<T>>,
   context: PushBatchContext<T>,
-) => WalkerOS.PromiseOrValue<void>;
+) => WalkerOS.PromiseOrValue<void | BatchOutcome>;
 
 export type PushEvent<Mapping = unknown> = {
   event: WalkerOS.Event;

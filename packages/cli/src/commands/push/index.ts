@@ -49,6 +49,87 @@ function isString(value: unknown): value is string {
 }
 
 /**
+ * The trigger instance a source's `createTrigger` resolves to. `trigger`
+ * fires a (type, options) trigger; the returned function takes the captured
+ * content. `flow.collector.command` lets the simulator request a shutdown.
+ * The bundle carries no compile-time types, so the simulator pins only the
+ * members it actually reads and keeps the rest opaque.
+ */
+interface TriggerInstance {
+  trigger: (
+    type?: string,
+    options?: unknown,
+  ) => (content?: unknown) => Promise<unknown>;
+  flow?: {
+    collector?: {
+      command?: (command: string) => Promise<unknown>;
+    };
+  };
+}
+
+/**
+ * Signature of a source package's `createTrigger`, narrowed off the awaited
+ * `/dev` module. The simulator only needs it to be callable and resolve to a
+ * `TriggerInstance`; the bundle carries no compile-time types so the
+ * parameters stay opaque.
+ */
+type CreateTrigger = (...args: unknown[]) => Promise<TriggerInstance>;
+
+/**
+ * Type predicate narrowing an opaque value to a callable. Used instead of a
+ * cast so `getCreateTrigger` can return a precisely typed function without
+ * the banned `Function` type or an `as` assertion.
+ */
+function isCallable(value: unknown): value is CreateTrigger {
+  return typeof value === 'function';
+}
+
+/**
+ * Narrow the awaited `/dev` module of a source package down to its
+ * `examples.createTrigger`, validating each hop with `in`/`typeof` instead of
+ * a cast. Returns `undefined` if any hop is missing or the wrong shape.
+ */
+function getCreateTrigger(devModule: unknown): CreateTrigger | undefined {
+  if (!isRecord(devModule) || !('examples' in devModule)) return undefined;
+  const examples = devModule.examples;
+  if (!isRecord(examples) || !('createTrigger' in examples)) return undefined;
+  const createTrigger = examples.createTrigger;
+  return isCallable(createTrigger) ? createTrigger : undefined;
+}
+
+/**
+ * Shape of a destination package's simulation `/dev` env, narrowed off the
+ * awaited `/dev` module. `push` is the env object handed to the destination;
+ * `simulation` lists `call:<fn>` markers the wrapper should track.
+ */
+interface DevEnv {
+  push?: Record<string, unknown>;
+  simulation?: string[];
+}
+
+/**
+ * Narrow the awaited `/dev` module of a destination package down to its
+ * `examples.env`, validating each hop with `in`/`typeof` instead of a cast.
+ * Returns `undefined` if any hop is missing or the wrong shape.
+ */
+function getDevEnv(devModule: unknown): DevEnv | undefined {
+  if (!isRecord(devModule) || !('examples' in devModule)) return undefined;
+  const examples = devModule.examples;
+  if (!isRecord(examples) || !('env' in examples)) return undefined;
+  const env = examples.env;
+  if (!isRecord(env)) return undefined;
+  const result: DevEnv = {};
+  if ('push' in env && isRecord(env.push)) result.push = env.push;
+  if ('simulation' in env && isStringArray(env.simulation))
+    result.simulation = env.simulation;
+  return result;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(isString);
+}
+
+/**
  * Walk a transformer chain via static `.next` links starting at `startId`.
  * Mirrors the collector's internal `walkChain` for the case where the
  * simulator already knows the entry-point id and the underlying chain is
@@ -618,11 +699,12 @@ export async function simulateSource(
         networkCalls,
       },
       async (module) => {
-        // Look up createTrigger from __devExports (bundled /dev export)
-        const devExports = module.__devExports?.[sourceConfig!.package!] as
-          | { examples?: { createTrigger?: Function } }
-          | undefined;
-        const createTrigger = devExports?.examples?.createTrigger;
+        // Look up createTrigger from the lazy __devExports registry: await the
+        // thunk to pull the /dev module in, then narrow without a cast.
+        const loadDev = module.__devExports?.[sourceConfig!.package!];
+        const devModule =
+          typeof loadDev === 'function' ? await loadDev() : undefined;
+        const createTrigger = getCreateTrigger(devModule);
         if (!createTrigger) {
           throw new Error(
             `Source package "${sourceConfig!.package}" has no createTrigger in /dev export`,
@@ -1035,17 +1117,11 @@ export async function simulateDestination(
         }> = [];
 
         if (destPkg?.package) {
-          const devExports = module.__devExports?.[destPkg.package] as
-            | {
-                examples?: {
-                  env?: {
-                    push?: Record<string, unknown>;
-                    simulation?: string[];
-                  };
-                };
-              }
-            | undefined;
-          const devEnv = devExports?.examples?.env;
+          // Await the lazy __devExports thunk, then narrow without a cast.
+          const loadDev = module.__devExports?.[destPkg.package];
+          const devModule =
+            typeof loadDev === 'function' ? await loadDev() : undefined;
+          const devEnv = getDevEnv(devModule);
 
           if (devEnv?.push) {
             const destinations = flowConfig.destinations as Record<

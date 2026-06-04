@@ -510,11 +510,8 @@ export async function bundleCore(
 
     // Step 4: Create split entry point (code skeleton + data payload)
     logger.debug('Creating entry point');
-    const { codeEntry, dataPayload, hasFlow } = await createEntryPoint(
-      flowSettings,
-      buildOptions,
-      packagePaths,
-    );
+    const { codeEntry, dataPayload, hasFlow, devPackages } =
+      await createEntryPoint(flowSettings, buildOptions, packagePaths);
 
     // outputPath was resolved at the top of bundleCore (alongside the stale
     // cleanup paths). Just ensure its directory exists.
@@ -530,7 +527,13 @@ export async function bundleCore(
     // dependency-version signal in `generateCacheKeyContent`). Reuse it here
     // so a transitive version bump busts both cache layers consistently.
     const codeKeyInputs: CodeCacheKeyInputs = {
-      externals: new Set(),
+      // Browser skeletons externalize each `<pkg>/dev` so the lazy registry is
+      // not inlined; record it so the L2 slot reflects the externalization.
+      externals: new Set(
+        buildOptions.platform === 'browser'
+          ? devPackages.map((p) => `${p}/dev`)
+          : [],
+      ),
       platform: buildOptions.platform === 'node' ? 'node' : 'browser',
       target: resolveTarget(buildOptions),
       nodeMajor: parseInt(process.versions.node.split('.')[0], 10),
@@ -570,6 +573,7 @@ export async function bundleCore(
         packagePaths,
         logger,
         expectedTopLevelPackages,
+        devPackages,
       );
 
       try {
@@ -816,6 +820,7 @@ function createEsbuildOptions(
   packagePaths: Map<string, string>,
   logger: Logger.Instance,
   stepPackageExternals: string[] = [],
+  devPackages: string[] = [],
 ): esbuild.BuildOptions {
   // Don't use aliases - they cause esbuild to bundle even external packages
   // Instead, use absWorkingDir to point to temp directory where node_modules is
@@ -853,8 +858,19 @@ function createEsbuildOptions(
       'process.env.NODE_ENV': '"production"',
       global: 'globalThis',
     };
-    // For browser bundles, let users handle Node.js built-ins as needed
-    baseOptions.external = buildOptions.external || [];
+    // For browser bundles, let users handle Node.js built-ins as needed.
+    // When the skeleton carries the lazy /dev registry (withDev), keep each
+    // `<pkg>/dev` external so the registry stays a literal `import('<pkg>/dev')`
+    // instead of inlining the /dev graph (zod schemas etc.) into the skeleton.
+    // The deploy wrap then DCEs the unreferenced registry to zero bytes, while
+    // simulate/preview can still resolve the dev module on demand. `devPackages`
+    // is empty for the finished IIFE (`cdn`, withDev:false), so this is a no-op
+    // there.
+    const devSubpathExternals = devPackages.map((p) => `${p}/dev`);
+    baseOptions.external = [
+      ...(buildOptions.external || []),
+      ...devSubpathExternals,
+    ];
   } else if (buildOptions.platform === 'node') {
     // Node builtins are always external. Step packages (sources, destinations,
     // transformers, stores resolved by pacote) are also externalized so the
@@ -1081,6 +1097,10 @@ export function detectNamedImports(
 interface ImportGenerationResult {
   importStatements: string[];
   devExportEntries: string[];
+  // Packages that received a lazy `/dev` registry entry. Exposed so a later
+  // browser-build step can externalize the same `<pkg>/dev` specifiers without
+  // recomputing the set (preventing drift between the registry and externals).
+  devPackages: string[];
 }
 
 /**
@@ -1165,36 +1185,50 @@ async function generateImportStatements(
     // Examples are no longer auto-imported - simulator loads them dynamically
   }
 
-  // Generate /dev imports for packages that expose a ./dev export.
-  // Only emitted when withDev is true (i.e., skipWrapper bundles consumed by
-  // push/simulate/flow-context). Production IIFE bundles skip this entirely —
-  // otherwise the dev graph (zod schemas, etc.) leaks into walker.js because
-  // stage 2 esbuild cannot tree-shake transitive imports out of the already-
-  // concatenated stage 1 file.
-  const devExportEntries: string[] = [];
-  if (withDev) {
-    for (const packageName of usedPackages) {
-      const localPath = packagePaths.get(packageName);
-      if (!localPath) continue;
+  // Register the /dev surface for packages that expose a ./dev export as a
+  // lazy dynamic import: `'<pkg>': () => import('<pkg>/dev')`. The specifier
+  // stays a literal so a node host can resolve it and esbuild can statically
+  // analyse it. Because the registry entry is an unreferenced thunk, the
+  // deploy wrap DCEs the whole /dev graph (zod schemas, etc.) to zero bytes,
+  // while simulate/push await the thunk to pull the dev module in on demand.
+  // The same dev-package set is reused for browser-build externals via
+  // computeDevPackages, so the registry and externals can never drift apart.
+  const devPackages = withDev
+    ? await computeDevPackages(usedPackages, packagePaths)
+    : [];
+  const devExportEntries = devPackages.map(
+    (packageName) => `'${packageName}': () => import('${packageName}/dev')`,
+  );
 
-      try {
-        const pkgJsonPath = path.join(localPath, 'package.json');
-        const pkgJson = await fs.readJSON(pkgJsonPath);
-        const exports = pkgJson.exports;
-        if (exports && typeof exports === 'object' && './dev' in exports) {
-          const varName = `__dev_${packageNameToVariable(packageName)}`;
-          importStatements.push(
-            `import * as ${varName} from '${packageName}/dev';`,
-          );
-          devExportEntries.push(`'${packageName}': ${varName}`);
-        }
-      } catch {
-        // Package doesn't have a readable package.json — skip gracefully
+  return { importStatements, devExportEntries, devPackages };
+}
+
+/**
+ * Resolves which of the given packages expose a `./dev` subpath export.
+ * Single source of truth for the lazy `/dev` registry codegen and for the
+ * browser build's `/dev` externals, keeping the two in lockstep.
+ */
+export async function computeDevPackages(
+  usedPackages: Iterable<string>,
+  packagePaths: Map<string, string>,
+): Promise<string[]> {
+  const devPackages: string[] = [];
+  for (const packageName of usedPackages) {
+    const localPath = packagePaths.get(packageName);
+    if (!localPath) continue;
+
+    try {
+      const pkgJsonPath = path.join(localPath, 'package.json');
+      const pkgJson = await fs.readJSON(pkgJsonPath);
+      const exports = pkgJson.exports;
+      if (exports && typeof exports === 'object' && './dev' in exports) {
+        devPackages.push(packageName);
       }
+    } catch {
+      // Package doesn't have a readable package.json, skip gracefully
     }
   }
-
-  return { importStatements, devExportEntries };
+  return devPackages;
 }
 
 const VALID_JS_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
@@ -1275,7 +1309,12 @@ export async function createEntryPoint(
   flowSettings: Flow,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
-): Promise<{ codeEntry: string; dataPayload: string; hasFlow: boolean }> {
+): Promise<{
+  codeEntry: string;
+  dataPayload: string;
+  hasFlow: boolean;
+  devPackages: string[];
+}> {
   // Detect packages used by all step types
   const sourcePackages = detectStepPackages(flowSettings, 'sources');
   const destinationPackages = detectStepPackages(flowSettings, 'destinations');
@@ -1306,16 +1345,17 @@ export async function createEntryPoint(
     buildOptions.withDev !== undefined
       ? buildOptions.withDev === true
       : buildOptions.skipWrapper === true;
-  const { importStatements, devExportEntries } = await generateImportStatements(
-    buildOptions.packages,
-    destinationPackages,
-    sourcePackages,
-    transformerPackages,
-    storePackages,
-    namedImports,
-    packagePaths,
-    withDev,
-  );
+  const { importStatements, devExportEntries, devPackages } =
+    await generateImportStatements(
+      buildOptions.packages,
+      destinationPackages,
+      sourcePackages,
+      transformerPackages,
+      storePackages,
+      namedImports,
+      packagePaths,
+      withDev,
+    );
 
   const importsCode = importStatements.join('\n');
   const hasFlow =
@@ -1333,6 +1373,7 @@ export async function createEntryPoint(
       codeEntry: importsCode ? `${importsCode}\n\n${userCode}` : userCode,
       dataPayload: '{}',
       hasFlow: false,
+      devPackages,
     };
   }
 
@@ -1359,7 +1400,7 @@ export async function createEntryPoint(
     ? `${importsCode}\n\n${fullModule}`
     : fullModule;
 
-  return { codeEntry, dataPayload, hasFlow: true };
+  return { codeEntry, dataPayload, hasFlow: true, devPackages };
 }
 
 interface EsbuildError {

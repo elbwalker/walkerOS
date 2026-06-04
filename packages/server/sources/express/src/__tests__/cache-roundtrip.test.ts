@@ -167,4 +167,137 @@ describe('Express source cache round-trip', () => {
     expect(second.captures).toHaveLength(1);
     expectAsset(second.captures[0], 'HIT');
   });
+
+  // Regression lock: two simultaneous MISSes for the same cache key both write
+  // without crashing, and a subsequent read returns a coherent HIT. This proves
+  // concurrent same-key cache writes are tolerated (last-writer-wins on a
+  // byte-backed store) and that the stored value still round-trips intact.
+  it('handles concurrent same-key MISSes without crashing and serves a coherent HIT afterwards', async () => {
+    const ASSET_BODY = Buffer.from('/* concurrent walker.js bytes */', 'utf8');
+    const destinationCalls: string[] = [];
+
+    const assetDestination: Destination.Instance<ResponderTypes> = {
+      type: 'asset',
+      config: {},
+      push: async (_event, ctx) => {
+        destinationCalls.push('asset');
+        ctx.env?.respond?.({
+          body: ASSET_BODY,
+          status: 200,
+          headers: { 'Content-Type': 'application/javascript' },
+        });
+      },
+    };
+
+    const { collector } = await startFlow({
+      consent: { functional: true },
+      sources: {
+        express: {
+          code: sourceExpress,
+          config: {
+            settings: { paths: ['/walker.js'] },
+            ingest: {
+              map: {
+                method: { key: 'method' },
+                path: { key: 'url' },
+              },
+            },
+          },
+          cache: {
+            stop: true,
+            rules: [
+              {
+                match: { key: 'ingest.method', operator: 'eq', value: 'GET' },
+                key: ['ingest.method', 'ingest.path'],
+                ttl: 300,
+                update: {
+                  'headers.X-Cache': { key: 'cache.status' },
+                },
+              },
+            ],
+          },
+        },
+      },
+      destinations: {
+        asset: { code: assetDestination },
+      },
+    });
+
+    const expressSource = Source.getSource<ExpressTypes>(collector, 'express');
+
+    type Capture = {
+      status: number;
+      body: unknown;
+      headers: Record<string, string>;
+    };
+
+    const mockRequest = (): Request =>
+      ({
+        method: 'GET',
+        url: '/walker.js?name=page%20view',
+        headers: {},
+        get: () => undefined,
+      }) as unknown as Request;
+
+    const mockResponse = () => {
+      const captures: Capture[] = [];
+      let status = 200;
+      const headers: Record<string, string> = {};
+      const res = {
+        status: (code: number) => {
+          status = code;
+          return res;
+        },
+        set: (key: string, value: string) => {
+          headers[key] = value;
+          return res;
+        },
+        send: (body?: unknown) => {
+          captures.push({ status, body, headers: { ...headers } });
+          return res;
+        },
+        json: (body: unknown) => {
+          captures.push({ status, body, headers: { ...headers } });
+          return res;
+        },
+      };
+      return { res: res as unknown as Response, captures };
+    };
+
+    const expectAsset = (capture: Capture) => {
+      expect(capture.status).toBe(200);
+      expect(Buffer.isBuffer(capture.body)).toBe(true);
+      if (!Buffer.isBuffer(capture.body))
+        throw new Error('body was not a Buffer');
+      expect(capture.body.equals(ASSET_BODY)).toBe(true);
+      expect(capture.headers['Content-Type']).toBe('application/javascript');
+    };
+
+    // Two simultaneous MISSes for the same key. Both run the pipeline (the
+    // cache is empty when each starts) and both write the structured response.
+    // Neither must crash, and both must serve the correct bytes/status.
+    const a = mockResponse();
+    const b = mockResponse();
+    await Promise.all([
+      expressSource.push(mockRequest(), a.res),
+      expressSource.push(mockRequest(), b.res),
+    ]);
+
+    expect(a.captures).toHaveLength(1);
+    expect(b.captures).toHaveLength(1);
+    expectAsset(a.captures[0]);
+    expectAsset(b.captures[0]);
+
+    const missCount = destinationCalls.length;
+
+    // A subsequent read returns a coherent HIT served from the value written by
+    // the concurrent writers; the destination is not invoked again.
+    const third = mockResponse();
+    await expressSource.push(mockRequest(), third.res);
+
+    expect(destinationCalls).toHaveLength(missCount); // no new pipeline run
+    expect(third.captures).toHaveLength(1);
+    expectAsset(third.captures[0]);
+    expect(third.captures[0].headers['X-Cache']).toBe('HIT');
+  });
 });

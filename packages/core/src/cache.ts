@@ -102,7 +102,17 @@ export function storeCache(
   ttlSeconds: number,
 ): void {
   // exp inside the value = uniform expiry for stores that ignore the ttl arg (fs/s3/gcs); the ttl arg lets honoring stores (in-memory) evict instead of retaining until read.
-  store.set(key, encodeCacheValue(value, ttlSeconds * 1000), ttlSeconds * 1000);
+  // `Store.SetFn` returns `void | Promise<void>`. The write is fire-and-forget
+  // (the HTTP response is sent before it lands), so an async store that rejects
+  // (network error, EACCES) would otherwise surface as an unhandled rejection
+  // and crash the process. Swallow it: a failed cache persist must never crash
+  // the request path. Matches the best-effort silent catch on the checkCache purge.
+  const result = store.set(
+    key,
+    encodeCacheValue(value, ttlSeconds * 1000),
+    ttlSeconds * 1000,
+  );
+  if (result instanceof Promise) result.catch(() => {});
 }
 
 // --- Cache value codec -------------------------------------------------------
@@ -123,10 +133,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 // Precondition: cache values are acyclic JSON-shaped data (RespondOptions /
-// events / push results / sentinel); Buffer is the only non-JSON leaf handled.
+// events / push results / sentinel); binary leaves are the only non-JSON
+// values handled. Node `Buffer`, any `Uint8Array` (e.g. a Fetch-sourced body),
+// and a raw `ArrayBuffer` all normalize to the same base64 'buffer' tag and
+// therefore all decode back as a Node `Buffer` (see fromSerializable). A
+// `Buffer` IS a `Uint8Array`, so the `Buffer.isBuffer` check stays first; the
+// `Uint8Array` branch then handles non-Buffer typed-array views by slicing on
+// byteOffset/byteLength so a subarray view contributes only its own bytes.
 function toSerializable(value: unknown): unknown {
   if (Buffer.isBuffer(value))
     return { [CACHE_MARKER]: 'buffer', d: value.toString('base64') };
+  if (value instanceof Uint8Array)
+    return {
+      [CACHE_MARKER]: 'buffer',
+      d: Buffer.from(value.buffer, value.byteOffset, value.byteLength).toString(
+        'base64',
+      ),
+    };
+  if (value instanceof ArrayBuffer)
+    return {
+      [CACHE_MARKER]: 'buffer',
+      d: Buffer.from(value).toString('base64'),
+    };
   if (Array.isArray(value)) return value.map(toSerializable);
   if (isRecord(value)) {
     if (CACHE_MARKER in value) {

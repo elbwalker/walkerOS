@@ -57,7 +57,11 @@ describe('projects (integration via MSW)', () => {
       projectId: 'proj_test123',
       name: 'Renamed',
     });
-    expect(result).toEqual({ ...mockProject, name: 'Renamed' });
+    expect(result).toEqual({
+      id: mockProject.id,
+      name: 'Renamed',
+      updatedAt: mockProject.updatedAt,
+    });
   });
 
   it('deleteProject returns success', async () => {

@@ -98,8 +98,9 @@ export const handlers = [
   http.patch('*/api/projects/:projectId', async ({ request }) => {
     const body = (await request.json()) as { name?: string };
     return HttpResponse.json({
-      ...mockProject,
-      ...(body.name && { name: body.name }),
+      id: mockProject.id,
+      name: body.name ?? mockProject.name,
+      updatedAt: mockProject.updatedAt,
     } satisfies UpdateProjectResponse);
   }),
   http.delete('*/api/projects/:projectId', () => {

@@ -5,9 +5,12 @@ import { eventToRow } from './eventToRow';
 /**
  * Batched push using a single appendRows call.
  *
- * Errors (row errors or a failed append call) propagate to the collector's
- * batch flush boundary, which routes the whole batch to the DLQ and increments
- * the failed counter.
+ * Per-row failures (BigQuery's `rowErrors`) are reported back to the collector
+ * as a BatchOutcome identifying the failed entries by index. The collector then
+ * DLQs only those rows and counts the rest as delivered, so a later DLQ retry
+ * does not re-write the already-succeeded rows (no duplicates). A whole-append
+ * failure (the appendRows call itself rejects, or the writer is missing) still
+ * throws, routing the entire batch to the DLQ.
  */
 export const pushBatch: PushBatchFn = async (batch, { config, logger }) => {
   const settings = config.settings;
@@ -48,14 +51,22 @@ export const pushBatch: PushBatchFn = async (batch, { config, logger }) => {
           message: re.message,
         });
       }
-      // Throw on any partial failure: the collector flush boundary is atomic
-      // per batch, so the WHOLE batch (succeeded rows included) routes to the
-      // DLQ and counts as failed. Precise per-row accounting would require a
-      // separate PushBatchFn->collector contract change.
-      const first = result.rowErrors[0];
-      throw new Error(
-        `BigQuery batch append failed: ${failed} of ${rows.length} rows, first error code=${first.code} message=${first.message}`,
-      );
+      // Report per-row failures so the collector DLQs only the failed rows and
+      // counts the succeeded rows as delivered. `re.index` is the row's
+      // position in `rows`, which is built 1:1 from `batch.entries`, so it maps
+      // directly to the collector's entry index. The per-row error preserves
+      // the original BigQuery `code` and `message` for debugging from the DLQ.
+      // The Storage Write SDK types `index` as a protobuf int64 (number, string,
+      // or Long) and `message` as a nullable string, so both are normalized to
+      // the strict BatchFailure shape here.
+      const failures = result.rowErrors.map((re) => ({
+        index: Number(re.index),
+        error: Object.assign(new Error(re.message ?? 'BigQuery row error'), {
+          code: re.code,
+        }),
+      }));
+
+      return { failed: failures };
     }
 
     // Full success: keep at DEBUG to avoid noise on every batch.

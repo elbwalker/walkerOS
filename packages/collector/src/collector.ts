@@ -69,6 +69,7 @@ export async function collector(
     user: initConfig.user || {},
     sources: {},
     pending: { destinations: {} },
+    hasShutdown: false,
     seenEvents: new Set(),
     push: undefined as unknown as Collector.PushFn, // Placeholder, will be set below
     command: undefined as unknown as Collector.CommandFn, // Placeholder, will be set below
