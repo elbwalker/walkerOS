@@ -8,6 +8,7 @@ describe('BundleTarget presets', () => {
     expect(resolveTarget('cdn')).toEqual({
       skipWrapper: false,
       withDev: false,
+      externalizeDev: false,
       platform: 'browser',
       injectEnv: true,
     });
@@ -17,6 +18,7 @@ describe('BundleTarget presets', () => {
     expect(resolveTarget('cdn-skeleton')).toEqual({
       skipWrapper: true,
       withDev: true,
+      externalizeDev: true,
       platform: 'browser',
       injectEnv: false, // injected during wrapSkeleton stage 2, not here
     });
@@ -26,6 +28,7 @@ describe('BundleTarget presets', () => {
     expect(resolveTarget('runner')).toEqual({
       skipWrapper: true,
       withDev: true,
+      externalizeDev: true,
       platform: 'node',
       injectEnv: false,
     });
@@ -35,6 +38,7 @@ describe('BundleTarget presets', () => {
     expect(resolveTarget('simulate')).toEqual({
       skipWrapper: true,
       withDev: true,
+      externalizeDev: false,
       platform: 'node',
       injectEnv: false,
     });
@@ -44,9 +48,18 @@ describe('BundleTarget presets', () => {
     expect(resolveTarget('push')).toEqual({
       skipWrapper: true,
       withDev: true,
+      externalizeDev: false,
       platform: 'node',
       injectEnv: false,
     });
+  });
+
+  it('externalizeDev: true for deploy skeletons, false for in-process and cdn', () => {
+    expect(resolveTarget('cdn-skeleton').externalizeDev).toBe(true);
+    expect(resolveTarget('runner').externalizeDev).toBe(true);
+    expect(resolveTarget('simulate').externalizeDev).toBe(false);
+    expect(resolveTarget('push').externalizeDev).toBe(false);
+    expect(resolveTarget('cdn').externalizeDev).toBe(false);
   });
 
   it('throws for unknown target', () => {

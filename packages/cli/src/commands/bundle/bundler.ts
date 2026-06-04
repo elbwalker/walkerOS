@@ -527,10 +527,14 @@ export async function bundleCore(
     // dependency-version signal in `generateCacheKeyContent`). Reuse it here
     // so a transitive version bump busts both cache layers consistently.
     const codeKeyInputs: CodeCacheKeyInputs = {
-      // Browser skeletons externalize each `<pkg>/dev` so the lazy registry is
-      // not inlined; record it so the L2 slot reflects the externalization.
+      // Deploy browser skeletons (externalizeDev) externalize each `<pkg>/dev`
+      // so the lazy registry is not inlined; in-process simulate/push inline it.
+      // Record the externals only when they are actually emitted, otherwise two
+      // builds with identical entry code but different inline/external `/dev`
+      // would alias the same L2 slot and one would receive the other's bytes.
       externals: new Set(
-        buildOptions.platform === 'browser'
+        buildOptions.platform === 'browser' &&
+          buildOptions.externalizeDev === true
           ? devPackages.map((p) => `${p}/dev`)
           : [],
       ),
@@ -624,7 +628,11 @@ export async function bundleCore(
       const esmOutput = `${banner}${compiledCode}\n${dataDeclaration}`;
       await fs.writeFile(outputPath, esmOutput);
     } else {
-      // Production path: stage 2 esbuild compilation
+      // Production path: stage 2 esbuild compilation. Reached only by `cdn`
+      // (withDev:false), which emits no `__devExports` registry, so there is no
+      // `import('<pkg>/dev')` to externalize here. A future registry-bearing
+      // non-skeleton browser target would need to externalize `<pkg>/dev` on the
+      // browser branch below (gated on `externalizeDev`) to stay dev-free.
       const stage2Entry =
         (buildOptions.platform || 'node') === 'browser'
           ? generateWebEntry(stage1Path, dataPayload, {
@@ -859,14 +867,21 @@ function createEsbuildOptions(
       global: 'globalThis',
     };
     // For browser bundles, let users handle Node.js built-ins as needed.
-    // When the skeleton carries the lazy /dev registry (withDev), keep each
-    // `<pkg>/dev` external so the registry stays a literal `import('<pkg>/dev')`
-    // instead of inlining the /dev graph (zod schemas etc.) into the skeleton.
-    // The deploy wrap then DCEs the unreferenced registry to zero bytes, while
-    // simulate/preview can still resolve the dev module on demand. `devPackages`
-    // is empty for the finished IIFE (`cdn`, withDev:false), so this is a no-op
-    // there.
-    const devSubpathExternals = devPackages.map((p) => `${p}/dev`);
+    // Externalize each `<pkg>/dev` ONLY for deploy skeletons
+    // (`externalizeDev: true`). Then the registry stays a literal
+    // `import('<pkg>/dev')` instead of inlining the /dev graph (zod schemas
+    // etc.), and the deploy wrap DCEs the unreferenced registry to zero bytes.
+    //
+    // For in-process simulate/push (`externalizeDev: false`/undefined), do NOT
+    // externalize: esbuild inlines the /dev graph back into the single ESM, so
+    // the lazy thunk resolves an already-bundled module. That is what lets the
+    // lean simulate-server (cli + core only, no sibling node_modules) resolve
+    // schemas host-free. `devPackages` is also empty for the finished IIFE
+    // (`cdn`, withDev:false), so the list is empty there regardless.
+    const devSubpathExternals =
+      buildOptions.externalizeDev === true
+        ? devPackages.map((p) => `${p}/dev`)
+        : [];
     baseOptions.external = [
       ...(buildOptions.external || []),
       ...devSubpathExternals,

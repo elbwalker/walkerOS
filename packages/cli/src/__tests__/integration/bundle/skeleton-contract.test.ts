@@ -145,6 +145,9 @@ describe('skeleton contract (one build, both contracts)', () => {
       buildOptions.format = 'esm';
       buildOptions.skipWrapper = true;
       buildOptions.withDev = true;
+      // Deploy skeletons (cdn-skeleton / runner) externalize `<pkg>/dev` so the
+      // browser registry stays a literal lazy import that the wrap DCEs.
+      buildOptions.externalizeDev = true;
       buildOptions.cache = false;
       buildOptions.minify = false;
 

@@ -152,6 +152,20 @@ export interface BuildOptions extends CLIBuildOptions {
   withDev?: boolean;
 
   /**
+   * Gates browser `<pkg>/dev` externalization. Derived from the resolved
+   * `BundleTarget` preset by `bundle()`.
+   *
+   * When `true` (deploy skeletons), each `<pkg>/dev` is externalized so the lazy
+   * registry stays a literal `import('<pkg>/dev')` and the deploy wrap DCEs the
+   * /dev graph to zero bytes. When `false`/undefined (in-process simulate/push),
+   * `<pkg>/dev` is inlined so the lazy thunk resolves an already-bundled module
+   * with no host node_modules lookup. Node platform ignores this flag (it always
+   * externalizes step packages, which prefix-covers `<pkg>/dev`).
+   * @internal
+   */
+  externalizeDev?: boolean;
+
+  /**
    * Folders to include in the output directory.
    * These folders are copied alongside the bundle for runtime access.
    * @default ["./shared"] if folder exists

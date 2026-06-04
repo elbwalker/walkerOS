@@ -25,6 +25,21 @@ export interface TargetPreset {
    * registry and needs none.
    */
   withDev: boolean;
+  /**
+   * Gates whether the browser build externalizes each `<pkg>/dev` subpath.
+   *
+   * Deploy skeletons (`cdn-skeleton`, `runner`) set this true: `<pkg>/dev` is
+   * externalized so the lazy registry stays a literal `import('<pkg>/dev')` and
+   * the deploy wrap DCEs the whole /dev graph to zero bytes.
+   *
+   * In-process targets (`simulate`, `push`) set this false: `<pkg>/dev` is NOT
+   * externalized, so esbuild inlines the /dev graph into the single ESM. The
+   * lazy thunk then resolves an already-bundled module, which is what lets the
+   * lean simulate-server (cli + core only, no sibling node_modules) resolve
+   * schemas host-free. Node platform is unaffected by this flag: it always keeps
+   * step packages external, and that bare external prefix-covers `<pkg>/dev`.
+   */
+  externalizeDev: boolean;
   /** Runtime platform — controls env injection and Node/browser codegen. */
   platform: 'browser' | 'node';
   /**
@@ -40,6 +55,7 @@ export const BUNDLE_TARGETS: Readonly<
   cdn: Object.freeze({
     skipWrapper: false,
     withDev: false,
+    externalizeDev: false,
     platform: 'browser',
     injectEnv: true,
   }),
@@ -53,24 +69,28 @@ export const BUNDLE_TARGETS: Readonly<
   'cdn-skeleton': Object.freeze({
     skipWrapper: true,
     withDev: true,
+    externalizeDev: true,
     platform: 'browser',
     injectEnv: false,
   }),
   runner: Object.freeze({
     skipWrapper: true,
     withDev: true,
+    externalizeDev: true,
     platform: 'node',
     injectEnv: false,
   }),
   simulate: Object.freeze({
     skipWrapper: true,
     withDev: true,
+    externalizeDev: false,
     platform: 'node',
     injectEnv: false,
   }),
   push: Object.freeze({
     skipWrapper: true,
     withDev: true,
+    externalizeDev: false,
     platform: 'node',
     injectEnv: false,
   }),

@@ -113,6 +113,23 @@ export interface TelemetryBundleOptions {
  * package — either via `node_modules/@walkeros/cli/dist/...` or directly
  * from the workspace source tree during tests.
  */
+/**
+ * Extracts the `<pkg>/dev` specifiers from a skeleton's lazy `__devExports`
+ * registry by reading its literal `import('<pkg>/dev')` thunks. The registry is
+ * the authoritative `/dev` list (it is codegen'd from the same `computeDevPackages`
+ * set), so deriving the externals from the skeleton text cannot drift from it.
+ * A skeleton with no registry (e.g. a `cdn`-shaped build) yields `[]`.
+ */
+export function extractDevExternals(skeletonText: string): string[] {
+  const pattern = /import\(\s*['"]([^'"]+\/dev)['"]\s*\)/g;
+  const found = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(skeletonText)) !== null) {
+    found.add(match[1]);
+  }
+  return Array.from(found);
+}
+
 function getNodeResolutionPaths(): string[] {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const candidates: string[] = [];
@@ -161,6 +178,16 @@ export async function wrapSkeleton(
   }
 
   const absoluteSkeletonPath = path.resolve(skeletonPath);
+
+  // The skeleton's lazy `__devExports` registry carries literal
+  // `import('<pkg>/dev')` thunks. The browser wrap inlines step packages, so
+  // without externalizing `<pkg>/dev` esbuild would resolve those literals while
+  // building the graph: it errors in a lean install where `<pkg>/dev` is absent,
+  // or inlines the /dev graph (a deploy-purity violation) where it resolves.
+  // Externalizing them makes the wrap skip resolution and lets DCE drop the
+  // unreferenced registry. A `cdn`-shaped skeleton has no registry, so this is [].
+  const skeletonText = await fs.readFile(absoluteSkeletonPath, 'utf-8');
+  const devExternals = extractDevExternals(skeletonText);
 
   // Normalize the telemetry options for the entry generator. Telemetry is
   // wired whenever an ingest token exists, even for an 'off' baseline: the
@@ -233,6 +260,11 @@ export async function wrapSkeleton(
         'process.env.NODE_ENV': '"production"',
         global: 'globalThis',
       };
+      // Externalize `<pkg>/dev` so the wrap skips resolving the lazy registry's
+      // literals and DCE drops the unreferenced registry (see above). The node
+      // branch needs no equivalent: it inlines step packages and tree-shakes the
+      // unreferenced registry away without re-inlining the /dev graph (verified).
+      esbuildOptions.external = devExternals;
       esbuildOptions.target = target ?? 'es2018';
     } else {
       // Match bundler.ts Stage 2 node config: externalize Node builtins,
