@@ -274,7 +274,7 @@ other columns are `NULLABLE` for resilience against partial events.
 | `entity` | STRING | NULLABLE |
 | `action` | STRING | NULLABLE |
 | `timestamp` | TIMESTAMP | NULLABLE |
-| `timing` | INT64 | NULLABLE |
+| `timing` | FLOAT64 | NULLABLE |
 | `source` | JSON | NULLABLE |
 
 There is no `createdAt` column. Use `timestamp` (event time) for partition
