@@ -64,6 +64,16 @@ export const ConfigSchema = z
       })
       .describe('Implementation-specific configuration')
       .optional(),
+    credentials: z
+      .any()
+      .meta({
+        id: 'DestinationCredentials',
+        title: 'Destination.Credentials',
+        description:
+          'Optional credentials slot (destination-defined shape); supports $env. The per-package shape is supplied via mergeConfigSchema.',
+      })
+      .describe('Optional credentials (destination-defined shape)')
+      .optional(),
     data: z
       .union([ValueSchema, ValuesSchema])
       .optional()

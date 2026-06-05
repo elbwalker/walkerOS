@@ -15,7 +15,7 @@ export const destinationDataManager: DestinationInterface = {
     const config = getConfig(partialConfig, logger);
 
     try {
-      const authClient = await createAuthClient(config.settings);
+      const authClient = await createAuthClient(config, logger);
       logger.debug('Auth client created');
 
       return {

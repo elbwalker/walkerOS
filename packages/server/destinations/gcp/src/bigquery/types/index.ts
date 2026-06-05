@@ -3,6 +3,8 @@ import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
   SetupFn as CoreSetupFn,
+  Credential,
+  ServiceAccount,
 } from '@walkeros/core';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 import type { managedwriter } from '@google-cloud/bigquery-storage';
@@ -32,6 +34,9 @@ export interface InitSettings {
 }
 
 export interface Mapping {}
+
+/** Credentials value for this destination: JSON string or service account object. */
+export type Credentials = Credential<ServiceAccount>;
 
 /**
  * Provisioning options for `walkeros setup destination.bigquery`.
@@ -77,7 +82,8 @@ export type Types = CoreDestination.Types<
   Mapping,
   Env,
   InitSettings,
-  Setup
+  Setup,
+  Credentials
 >;
 
 export interface Destination extends DestinationServer.Destination<Types> {

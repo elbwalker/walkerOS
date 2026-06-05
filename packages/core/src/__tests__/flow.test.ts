@@ -2741,3 +2741,112 @@ describe('$var unified resolver', () => {
     expect(flow.destinations?.d.config).toEqual({ v: { nested: true } });
   });
 });
+
+// ========================================
+// $env-in-credentials Resolution Tests
+// Locks the "no change needed" claim: resolvePatterns recurses the whole
+// config tree, so config.credentials (string or nested object) resolves like
+// any other field, on destinations, stores, and sources.
+// ========================================
+
+describe('getFlowSettings resolves $env inside config.credentials', () => {
+  const ENV_KEYS = ['SA', 'PK'] as const;
+  const saved: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const key of ENV_KEYS) saved[key] = process.env[key];
+    process.env.SA = '{"client_email":"svc@example.com"}';
+    process.env.PK = 'private-key-value';
+  });
+
+  afterEach(() => {
+    for (const key of ENV_KEYS) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+  });
+
+  it('resolves a string config.credentials on a destination', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          destinations: {
+            d: { config: { credentials: '$env.SA' } },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.destinations?.d.config).toEqual({
+      credentials: '{"client_email":"svc@example.com"}',
+    });
+  });
+
+  it('resolves a string config.credentials on a store', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          stores: {
+            s: { config: { credentials: '$env.SA' } },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.stores?.s.config).toEqual({
+      credentials: '{"client_email":"svc@example.com"}',
+    });
+  });
+
+  it('resolves a nested object config.credentials on a source', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          sources: {
+            src: {
+              config: { credentials: { private_key: '$env.PK' } },
+            },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.sources?.src.config).toEqual({
+      credentials: { private_key: 'private-key-value' },
+    });
+  });
+
+  it('resolves a nested object config.credentials on a destination', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          destinations: {
+            d: {
+              config: {
+                credentials: {
+                  client_email: '$env.SA',
+                  private_key: '$env.PK',
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.destinations?.d.config).toEqual({
+      credentials: {
+        client_email: '{"client_email":"svc@example.com"}',
+        private_key: 'private-key-value',
+      },
+    });
+  });
+});

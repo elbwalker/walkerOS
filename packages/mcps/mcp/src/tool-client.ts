@@ -8,6 +8,10 @@ import type {
   GetPreviewOptions,
   CreatePreviewOptions,
   DeletePreviewOptions,
+  ListSecretsOptions,
+  CreateSecretOptions,
+  UpdateSecretOptions,
+  DeleteSecretOptions,
   FeedbackOptions,
 } from '@walkeros/cli';
 
@@ -68,6 +72,12 @@ export interface ToolClient {
   getPreview(options: GetPreviewOptions): Promise<unknown>;
   createPreview(options: CreatePreviewOptions): Promise<unknown>;
   deletePreview(options: DeletePreviewOptions): Promise<unknown>;
+
+  // Secrets (per-flow; metadata only, values are write-only)
+  listSecrets(options: ListSecretsOptions): Promise<unknown>;
+  createSecret(options: CreateSecretOptions): Promise<unknown>;
+  updateSecret(options: UpdateSecretOptions): Promise<unknown>;
+  deleteSecret(options: DeleteSecretOptions): Promise<unknown>;
 
   // Deployments
   deploy(options: DeployOptions): Promise<unknown>;

@@ -58,6 +58,10 @@ function stubClient(): ToolClient {
     getPreview: notImpl,
     createPreview: notImpl,
     deletePreview: notImpl,
+    listSecrets: notImpl,
+    createSecret: notImpl,
+    updateSecret: notImpl,
+    deleteSecret: notImpl,
     deploy: notImpl,
     listDeployments: notImpl,
     getDeploymentBySlug: notImpl,
@@ -84,7 +88,7 @@ describe('createWalkerOSMcpServer', () => {
     expect(server.server).toBeDefined();
   });
 
-  it('registers all 14 tools', () => {
+  it('registers all 15 tools', () => {
     const server = createWalkerOSMcpServer({
       client: stubClient(),
       version: '0.0.0',
@@ -109,6 +113,7 @@ describe('createWalkerOSMcpServer', () => {
         'package_get',
         'package_search',
         'project_manage',
+        'secret_manage',
       ].sort(),
     );
   });

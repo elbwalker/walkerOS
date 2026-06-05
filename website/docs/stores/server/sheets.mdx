@@ -46,10 +46,10 @@ await startFlow({
     crm: {
       code: storeSheetsInit,
       config: {
+        // Omit config.credentials for ADC on Cloud Run/GKE
         settings: {
           id: '1AbCdEfGhIjKlMnOpQrStUvWxYz',
           sheet: 'Customers',
-          // Omit credentials for ADC on Cloud Run/GKE
         },
       },
     },
@@ -159,10 +159,13 @@ When running on GCP infrastructure, omit `credentials`. The store fetches access
 
 ### Non-GCP (service account)
 
-Pass a service account JSON via `$env.` reference. The store signs JWTs locally using `node:crypto` and exchanges them for access tokens via Google's OAuth2 endpoint.
+Pass a service account JSON via `config.credentials` with a `$env.` reference. The store signs JWTs locally using `node:crypto` and exchanges them for access tokens via Google's OAuth2 endpoint.
 
 <CodeSnippet
-  code={`"credentials": "$env.SHEETS_SA_KEY"`}
+  code={`"config": {
+  "credentials": "$env.SHEETS_SA_KEY",
+  "settings": { "id": "...", "sheet": "Customers" }
+}`}
   language="json"
 />
 

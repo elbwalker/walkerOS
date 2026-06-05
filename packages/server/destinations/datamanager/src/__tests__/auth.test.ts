@@ -1,15 +1,19 @@
 import { GoogleAuth, OAuth2Client } from 'google-auth-library';
+import { createMockLogger } from '@walkeros/core';
 import { createAuthClient, getAccessToken, AuthError } from '../auth';
-import type { Settings } from '../types';
+import type { Config } from '../types';
 
 jest.mock('google-auth-library');
 
 describe('Authentication', () => {
   let mockOAuth2Client: jest.Mocked<OAuth2Client>;
   let mockGoogleAuth: jest.Mocked<GoogleAuth>;
+  let logger: ReturnType<typeof createMockLogger>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    logger = createMockLogger();
 
     const getAccessTokenMock = jest
       .fn<Promise<{ token?: string | null; res?: any | null }>, []>()
@@ -27,32 +31,106 @@ describe('Authentication', () => {
   });
 
   describe('createAuthClient', () => {
-    test('creates client with inline credentials', async () => {
-      const settings: Settings = {
-        credentials: {
-          client_email: 'test@example.com',
-          private_key:
-            '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
-        },
-        destinations: [],
+    const serviceAccount = {
+      client_email: 'test@example.com',
+      private_key:
+        '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+    };
+
+    test('creates client with object credentials via config.credentials', async () => {
+      const config: Config = {
+        credentials: serviceAccount,
+        settings: { destinations: [] },
       };
 
-      const client = await createAuthClient(settings);
+      const client = await createAuthClient(config, logger);
 
       expect(GoogleAuth).toHaveBeenCalledWith({
-        credentials: settings.credentials,
+        credentials: serviceAccount,
         scopes: ['https://www.googleapis.com/auth/datamanager'],
       });
       expect(client).toBe(mockOAuth2Client);
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('parses string (JSON) credentials via config.credentials', async () => {
+      const config: Config = {
+        credentials: JSON.stringify(serviceAccount),
+        settings: { destinations: [] },
+      };
+
+      await createAuthClient(config, logger);
+
+      expect(GoogleAuth).toHaveBeenCalledWith({
+        credentials: serviceAccount,
+        scopes: ['https://www.googleapis.com/auth/datamanager'],
+      });
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('throws AuthError on invalid JSON string credentials', async () => {
+      const config: Config = {
+        credentials: 'not-json',
+        settings: { destinations: [] },
+      };
+
+      await expect(createAuthClient(config, logger)).rejects.toThrow(AuthError);
+      await expect(createAuthClient(config, logger)).rejects.toThrow(
+        'Invalid credentials',
+      );
+      expect(GoogleAuth).not.toHaveBeenCalled();
+    });
+
+    test('still reads settings.credentials and warns about deprecation', async () => {
+      const config: Config = {
+        settings: {
+          credentials: serviceAccount,
+          destinations: [],
+        },
+      };
+
+      const client = await createAuthClient(config, logger);
+
+      expect(GoogleAuth).toHaveBeenCalledWith({
+        credentials: serviceAccount,
+        scopes: ['https://www.googleapis.com/auth/datamanager'],
+      });
+      expect(client).toBe(mockOAuth2Client);
+      expect(logger.warn).toHaveBeenCalledWith(
+        'settings.credentials is deprecated, use config.credentials instead',
+      );
+    });
+
+    test('config.credentials takes precedence over settings.credentials', async () => {
+      const config: Config = {
+        credentials: serviceAccount,
+        settings: {
+          credentials: {
+            client_email: 'legacy@example.com',
+            private_key: 'legacy-key',
+          },
+          destinations: [],
+        },
+      };
+
+      await createAuthClient(config, logger);
+
+      expect(GoogleAuth).toHaveBeenCalledWith({
+        credentials: serviceAccount,
+        scopes: ['https://www.googleapis.com/auth/datamanager'],
+      });
+      expect(logger.warn).not.toHaveBeenCalled();
     });
 
     test('creates client with keyFilename', async () => {
-      const settings: Settings = {
-        keyFilename: '/path/to/key.json',
-        destinations: [],
+      const config: Config = {
+        settings: {
+          keyFilename: '/path/to/key.json',
+          destinations: [],
+        },
       };
 
-      const client = await createAuthClient(settings);
+      const client = await createAuthClient(config, logger);
 
       expect(GoogleAuth).toHaveBeenCalledWith({
         keyFilename: '/path/to/key.json',
@@ -62,11 +140,11 @@ describe('Authentication', () => {
     });
 
     test('uses ADC as fallback when no auth config provided', async () => {
-      const settings: Settings = {
-        destinations: [],
+      const config: Config = {
+        settings: { destinations: [] },
       };
 
-      const client = await createAuthClient(settings);
+      const client = await createAuthClient(config, logger);
 
       expect(GoogleAuth).toHaveBeenCalledWith({
         scopes: ['https://www.googleapis.com/auth/datamanager'],
@@ -75,36 +153,32 @@ describe('Authentication', () => {
     });
 
     test('supports custom scopes', async () => {
-      const settings: Settings = {
-        credentials: {
-          client_email: 'test@example.com',
-          private_key:
-            '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+      const config: Config = {
+        credentials: serviceAccount,
+        settings: {
+          scopes: ['https://www.googleapis.com/auth/custom-scope'],
+          destinations: [],
         },
-        scopes: ['https://www.googleapis.com/auth/custom-scope'],
-        destinations: [],
       };
 
-      await createAuthClient(settings);
+      await createAuthClient(config, logger);
 
       expect(GoogleAuth).toHaveBeenCalledWith({
-        credentials: settings.credentials,
+        credentials: serviceAccount,
         scopes: ['https://www.googleapis.com/auth/custom-scope'],
       });
     });
 
     test('credentials take priority over keyFilename', async () => {
-      const settings: Settings = {
-        credentials: {
-          client_email: 'test@example.com',
-          private_key:
-            '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+      const config: Config = {
+        credentials: serviceAccount,
+        settings: {
+          keyFilename: '/path/to/key.json',
+          destinations: [],
         },
-        keyFilename: '/path/to/key.json',
-        destinations: [],
       };
 
-      await createAuthClient(settings);
+      await createAuthClient(config, logger);
 
       const callArgs = (GoogleAuth as jest.Mock).mock.calls[0][0];
       expect(callArgs).toHaveProperty('credentials');
@@ -112,29 +186,29 @@ describe('Authentication', () => {
     });
 
     test('throws AuthError on failure', async () => {
-      const settings: Settings = {
-        destinations: [],
+      const config: Config = {
+        settings: { destinations: [] },
       };
 
       const error = new Error('Auth failed');
       mockGoogleAuth.getClient.mockRejectedValue(error);
 
-      await expect(createAuthClient(settings)).rejects.toThrow(AuthError);
-      await expect(createAuthClient(settings)).rejects.toThrow(
+      await expect(createAuthClient(config, logger)).rejects.toThrow(AuthError);
+      await expect(createAuthClient(config, logger)).rejects.toThrow(
         'Failed to create auth client',
       );
     });
 
     test('AuthError includes cause', async () => {
-      const settings: Settings = {
-        destinations: [],
+      const config: Config = {
+        settings: { destinations: [] },
       };
 
       const originalError = new Error('Original error');
       mockGoogleAuth.getClient.mockRejectedValue(originalError);
 
       try {
-        await createAuthClient(settings);
+        await createAuthClient(config, logger);
         fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(AuthError);

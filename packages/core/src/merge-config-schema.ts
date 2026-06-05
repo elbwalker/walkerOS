@@ -1,9 +1,10 @@
-import { SourceSchemas, DestinationSchemas } from './schemas';
+import { SourceSchemas, DestinationSchemas, StoreSchemas } from './schemas';
 
 type PackageType = 'source' | 'destination' | 'transformer' | 'store';
 
 interface PackageSchemas {
   settings?: Record<string, unknown>;
+  credentials?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -14,6 +15,7 @@ const RUNTIME_ONLY_FIELDS = new Set(['env', 'onError', 'onLog', 'primary']);
 const BASE_SCHEMAS: Partial<Record<PackageType, Record<string, unknown>>> = {
   source: SourceSchemas.configJsonSchema,
   destination: DestinationSchemas.configJsonSchema,
+  store: StoreSchemas.configJsonSchema,
 };
 
 export function mergeConfigSchema(
@@ -24,13 +26,19 @@ export function mergeConfigSchema(
   const baseSchema = resolveBaseSchema(rawBaseSchema);
 
   if (!baseSchema || !baseSchema.properties) {
+    const properties: Record<string, unknown> = {
+      settings: packageSchemas.settings
+        ? stripDollarSchema(packageSchemas.settings)
+        : { description: 'Implementation-specific configuration' },
+    };
+    // Defensive: surface package credentials even when no base schema exists
+    // (currently only transformer hits this branch, and it has no credentials).
+    if (packageSchemas.credentials) {
+      properties.credentials = stripDollarSchema(packageSchemas.credentials);
+    }
     const result: Record<string, unknown> = {
       type: 'object',
-      properties: {
-        settings: packageSchemas.settings
-          ? stripDollarSchema(packageSchemas.settings)
-          : { description: 'Implementation-specific configuration' },
-      },
+      properties,
     };
     return result;
   }
@@ -47,6 +55,10 @@ export function mergeConfigSchema(
 
   if (packageSchemas.settings) {
     props.settings = stripDollarSchema(packageSchemas.settings);
+  }
+
+  if (packageSchemas.credentials) {
+    props.credentials = stripDollarSchema(packageSchemas.credentials);
   }
 
   return merged;

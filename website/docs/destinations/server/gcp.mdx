@@ -214,12 +214,16 @@ See [Workload Identity documentation](https://cloud.google.com/iam/docs/workload
 </Tabs>
 
 :::tip Inline credentials
-Instead of relying on `GOOGLE_APPLICATION_CREDENTIALS`, you can pass auth
-options inline via `settings.bigquery` (for example `keyFilename` or
-`credentials`). These apply to both the control plane (setup, metadata) and the
-data plane (Storage Write API ingestion). A pre-built `settings.client`
-authenticates the control plane only; supply `settings.bigquery` for the data
-plane to use non-ADC credentials.
+Instead of relying on `GOOGLE_APPLICATION_CREDENTIALS`, set service account
+credentials on `config.credentials` (a JSON string or parsed object, `$env`
+-resolvable). These merge into the BigQuery client and apply to both the control
+plane (setup, metadata) and the data plane (Storage Write API ingestion).
+
+For lower-level control you can still pass auth options through the raw
+`settings.bigquery` passthrough (for example `keyFilename` or `credentials`). A
+pre-built `settings.client` authenticates the control plane only; supply
+`config.credentials` or `settings.bigquery` for the data plane to use non-ADC
+credentials.
 :::
 
 ## Environment variables

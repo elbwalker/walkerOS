@@ -148,6 +148,18 @@ export type {
   CreatePreviewOptions,
   DeletePreviewOptions,
 } from './commands/previews/index.js';
+export {
+  listSecrets,
+  createSecret,
+  updateSecret,
+  deleteSecret,
+} from './commands/secrets/index.js';
+export type {
+  ListSecretsOptions,
+  CreateSecretOptions,
+  UpdateSecretOptions,
+  DeleteSecretOptions,
+} from './commands/secrets/index.js';
 export type { FeedbackOptions } from './commands/feedback/index.js';
 export {
   readConfig,

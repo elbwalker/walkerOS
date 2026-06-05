@@ -7,9 +7,12 @@ import {
   createMockLogger,
   encodeCacheValue,
 } from '@walkeros/core';
-import type { Store } from '@walkeros/core';
-import type { SheetsStoreSettings } from '../types';
+import type { Credential, ServiceAccount, Store } from '@walkeros/core';
+import type { ServiceAccountCredentials, SheetsStoreSettings } from '../types';
 import { storeSheetsInit, __resetSpreadsheetExistenceCache } from '../store';
+import { createTokenProvider } from '../auth';
+
+const mockCreateTokenProvider = jest.mocked(createTokenProvider);
 
 interface FetchCall {
   url: string;
@@ -75,7 +78,11 @@ function installFetch(responses: FetchResponseShape[]): {
 
 const mockBase = createMockContext();
 
-function createCtx(overrides: Partial<SheetsStoreSettings> = {}, id = 'crm') {
+function createCtx(
+  overrides: Partial<SheetsStoreSettings> = {},
+  id = 'crm',
+  credentials?: Credential<ServiceAccount>,
+) {
   const settings: SheetsStoreSettings = {
     id: 'spreadsheet-id-123',
     ...overrides,
@@ -85,7 +92,7 @@ function createCtx(overrides: Partial<SheetsStoreSettings> = {}, id = 'crm') {
     logger: createMockLogger(),
     id,
     env: {},
-    config: { settings },
+    config: { settings, credentials },
   };
 }
 
@@ -100,6 +107,7 @@ function jsonResponse(value: unknown): FetchResponseShape {
 describe('storeSheetsInit', () => {
   beforeEach(() => {
     __resetSpreadsheetExistenceCache();
+    mockCreateTokenProvider.mockClear();
   });
 
   afterEach(() => {
@@ -347,6 +355,63 @@ describe('storeSheetsInit', () => {
         await store.delete('unknown');
 
         expect(calls).toHaveLength(initial);
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  describe('credential resolution', () => {
+    const configSa: ServiceAccountCredentials = {
+      client_email: 'config@example.com',
+      private_key: 'config-key',
+    };
+    const settingsSa: ServiceAccountCredentials = {
+      client_email: 'settings@example.com',
+      private_key: 'settings-key',
+    };
+
+    function initFetch() {
+      return installFetch([probeOk(), jsonResponse({ values: [['alice']] })]);
+    }
+
+    it('uses config.credentials when both config and settings are set', async () => {
+      const { restore } = initFetch();
+      try {
+        const ctx = createCtx({ credentials: settingsSa }, 'crm', configSa);
+        await storeSheetsInit(ctx);
+
+        expect(mockCreateTokenProvider).toHaveBeenCalledWith(configSa);
+        expect(ctx.logger.warn).not.toHaveBeenCalled();
+      } finally {
+        restore();
+      }
+    });
+
+    it('falls back to settings.credentials and warns once', async () => {
+      const { restore } = initFetch();
+      try {
+        const ctx = createCtx({ credentials: settingsSa });
+        await storeSheetsInit(ctx);
+
+        expect(mockCreateTokenProvider).toHaveBeenCalledWith(settingsSa);
+        expect(ctx.logger.warn).toHaveBeenCalledTimes(1);
+        expect(ctx.logger.warn).toHaveBeenCalledWith(
+          'settings.credentials is deprecated; use config.credentials',
+        );
+      } finally {
+        restore();
+      }
+    });
+
+    it('passes undefined (ADC) when no credentials are configured', async () => {
+      const { restore } = initFetch();
+      try {
+        const ctx = createCtx();
+        await storeSheetsInit(ctx);
+
+        expect(mockCreateTokenProvider).toHaveBeenCalledWith(undefined);
+        expect(ctx.logger.warn).not.toHaveBeenCalled();
       } finally {
         restore();
       }

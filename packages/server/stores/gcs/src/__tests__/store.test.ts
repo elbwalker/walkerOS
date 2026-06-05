@@ -22,7 +22,10 @@ const mockLogger: Logger.Instance = {
   scope: jest.fn().mockReturnThis(),
 };
 
-function createContext(settings: Record<string, unknown> = {}) {
+function createContext(
+  settings: Record<string, unknown> = {},
+  config: Record<string, unknown> = {},
+) {
   return {
     collector: {} as Collector.Instance,
     logger: mockLogger,
@@ -32,13 +35,17 @@ function createContext(settings: Record<string, unknown> = {}) {
         bucket: 'my-bucket',
         ...settings,
       },
+      ...config,
     },
     env: {},
   };
 }
 
-async function createStore(settings: Record<string, unknown> = {}) {
-  return await storeGcsInit(createContext(settings));
+async function createStore(
+  settings: Record<string, unknown> = {},
+  config: Record<string, unknown> = {},
+) {
+  return await storeGcsInit(createContext(settings, config));
 }
 
 describe('storeGcsInit', () => {
@@ -379,6 +386,62 @@ describe('storeGcsInit', () => {
       await createStore();
 
       expect(createTokenProvider).toHaveBeenCalledWith(undefined);
+    });
+
+    it('prefers config.credentials over settings.credentials', async () => {
+      const { createTokenProvider } = require('../auth');
+      createTokenProvider.mockClear();
+
+      const configCreds = {
+        client_email: 'config@project.iam.gserviceaccount.com',
+        private_key:
+          '-----BEGIN RSA PRIVATE KEY-----\nconfig\n-----END RSA PRIVATE KEY-----',
+      };
+      const settingsCreds = {
+        client_email: 'settings@project.iam.gserviceaccount.com',
+        private_key:
+          '-----BEGIN RSA PRIVATE KEY-----\nsettings\n-----END RSA PRIVATE KEY-----',
+      };
+
+      await createStore(
+        { credentials: settingsCreds },
+        { credentials: configCreds },
+      );
+
+      expect(createTokenProvider).toHaveBeenCalledWith(configCreds);
+      // config path wins, so the deprecation warning does not fire
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('reads config.credentials when settings.credentials is absent', async () => {
+      const { createTokenProvider } = require('../auth');
+      createTokenProvider.mockClear();
+
+      const configCreds = {
+        client_email: 'config@project.iam.gserviceaccount.com',
+        private_key:
+          '-----BEGIN RSA PRIVATE KEY-----\nconfig\n-----END RSA PRIVATE KEY-----',
+      };
+
+      await createStore({}, { credentials: configCreds });
+
+      expect(createTokenProvider).toHaveBeenCalledWith(configCreds);
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('warns once on the deprecated settings.credentials path', async () => {
+      const settingsCreds = {
+        client_email: 'settings@project.iam.gserviceaccount.com',
+        private_key:
+          '-----BEGIN RSA PRIVATE KEY-----\nsettings\n-----END RSA PRIVATE KEY-----',
+      };
+
+      await createStore({ credentials: settingsCreds });
+
+      expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('settings.credentials is deprecated'),
+      );
     });
   });
 });

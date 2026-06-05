@@ -1,24 +1,29 @@
-import type { GcsStoreSettings, ServiceAccountCredentials } from './types';
+import type { Store } from '@walkeros/core';
+import type { ServiceAccountCredentials, Types } from './types';
 
 /**
  * Resolves the GCP project ID used to create a bucket in the GCS JSON API.
  *
  * Resolution order:
  *   1. `setup.projectId` (explicit override).
- *   2. `settings.credentials.project_id` (when SA JSON is parsed and contains it).
+ *   2. the resolved credentials' `project_id` (when SA JSON is parsed and contains it).
  *   3. `process.env.GOOGLE_CLOUD_PROJECT` (Cloud Run / GKE convention).
  *   4. Throw with an actionable error message.
  *
  * `process.env.GOOGLE_CLOUD_PROJECT` is read at call time, not at module load,
  * so changes after import are honored.
+ *
+ * `credentials` is the already-resolved value (`config.credentials ??
+ * settings.credentials`), not read off settings here, so `config.credentials`
+ * is honored for project-id derivation.
  */
 export function resolveProjectId(
-  settings: GcsStoreSettings,
   setup: { projectId?: string },
+  credentials: Store.Credentials<Types> | undefined,
 ): string {
   if (setup.projectId) return setup.projectId;
 
-  const fromCreds = extractProjectIdFromCredentials(settings.credentials);
+  const fromCreds = extractProjectIdFromCredentials(credentials);
   if (fromCreds) return fromCreds;
 
   const fromEnv = process.env.GOOGLE_CLOUD_PROJECT;
@@ -40,7 +45,7 @@ export function resolveProjectId(
  *    fields the runtime needs (client_email, private_key).
  */
 function extractProjectIdFromCredentials(
-  credentials: GcsStoreSettings['credentials'],
+  credentials: Store.Credentials<Types> | undefined,
 ): string | undefined {
   if (!credentials) return undefined;
 

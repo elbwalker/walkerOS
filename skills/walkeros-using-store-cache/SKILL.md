@@ -44,10 +44,10 @@ in a session share the same key.
     "sessions": {
       "package": "@walkeros/server-store-sheets",
       "config": {
+        "credentials": "$var.sheetsCredentials",
         "settings": {
           "id": "1AbC...",
-          "sheet": "Sessions",
-          "credentials": "$var.sheetsCredentials"
+          "sheet": "Sessions"
         }
       },
       "cache": { "rules": [{ "ttl": 300 }] }

@@ -75,7 +75,7 @@ describe('public API surface', () => {
 
   it('exports TOOL_DEFINITIONS array', () => {
     expect(Array.isArray(api.TOOL_DEFINITIONS)).toBe(true);
-    expect(api.TOOL_DEFINITIONS.length).toBe(13);
+    expect(api.TOOL_DEFINITIONS.length).toBe(14);
   });
 
   it('exports createToolHandlers', () => {

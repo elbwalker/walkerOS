@@ -117,6 +117,25 @@ export const DEPLOY_MANAGE_REQUIREMENTS: ActionRequirementMap = {
   },
 };
 
+export const SECRET_MANAGE_REQUIREMENTS: ActionRequirementMap = {
+  list: {
+    required: ['flowId'],
+    hint: 'Use flow_manage action "list" to see available flows.',
+  },
+  set: {
+    required: ['flowId', 'name', 'value'],
+    hint: 'Use action "list" to see existing secret names for this flow.',
+  },
+  update: {
+    required: ['flowId', 'secretId', 'value'],
+    hint: 'Use action "list" to find the secretId.',
+  },
+  delete: {
+    required: ['flowId', 'secretId'],
+    hint: 'Use action "list" to find the secretId.',
+  },
+};
+
 export const PROJECT_MANAGE_REQUIREMENTS: ActionRequirementMap = {
   get: {
     required: ['projectId'],

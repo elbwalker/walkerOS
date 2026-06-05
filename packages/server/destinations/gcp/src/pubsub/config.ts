@@ -1,5 +1,6 @@
 import type {
   Config,
+  Credentials,
   Env,
   PartialConfig,
   ServiceAccountCredentials,
@@ -50,7 +51,10 @@ export function getConfig(
   if (!projectId) logger.throw('Config settings projectId missing');
   if (!topic) logger.throw('Config settings topic missing');
 
-  const credentials = parseCredentials(settings.credentials, logger);
+  const credentials = parseCredentials(
+    resolveCredentials(partialConfig, logger),
+    logger,
+  );
 
   // Build the client once: prefer pre-supplied settings.client, then env-
   // injected constructor (tests/DI), then the real SDK.
@@ -76,7 +80,28 @@ export function getConfig(
   return { ...partialConfig, settings: settingsConfig };
 }
 
-function parseCredentials(
+/**
+ * Resolve credentials with precedence `config.credentials ?? settings.credentials`.
+ *
+ * Uses `??` (not `||`) so an explicitly-set empty value surfaces as a misconfig
+ * rather than silently falling through. Warns once per instance when the
+ * deprecated `settings.credentials` path supplies the value; this runs at the
+ * init-time read site (`getConfig`), so no module-level once-flag is needed.
+ */
+export function resolveCredentials(
+  partialConfig: PartialConfig,
+  logger: Logger.Instance,
+): Credentials | undefined {
+  if (partialConfig.credentials !== undefined) return partialConfig.credentials;
+  const fromSettings = partialConfig.settings?.credentials;
+  if (fromSettings !== undefined) {
+    logger.warn('settings.credentials is deprecated; use config.credentials');
+    return fromSettings;
+  }
+  return undefined;
+}
+
+export function parseCredentials(
   raw: Settings['credentials'],
   logger: Logger.Instance,
 ): Settings['credentials'] {

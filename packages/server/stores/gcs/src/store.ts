@@ -5,6 +5,7 @@ import type {
   Types,
 } from './types';
 import { createTokenProvider } from './auth';
+import { resolveCredentials } from './credentials';
 import { setup as gcsSetup } from './setup';
 import { resolveProjectId } from './setup-helpers';
 
@@ -103,9 +104,11 @@ function assertGcsSettings(
  * resolution order as setup but never throws: returns "unknown" when no
  * source is available so the error message is still actionable.
  */
-function resolveProjectIdForMessage(settings: GcsStoreSettings): string {
+function resolveProjectIdForMessage(
+  credentials: Store.Credentials<Types> | undefined,
+): string {
   try {
-    return resolveProjectId(settings, {});
+    return resolveProjectId({}, credentials);
   } catch {
     return 'unknown';
   }
@@ -121,7 +124,7 @@ function resolveProjectIdForMessage(settings: GcsStoreSettings): string {
 async function ensureBucketExists(
   bucket: string,
   id: string,
-  settings: GcsStoreSettings,
+  credentials: Store.Credentials<Types> | undefined,
   getToken: () => Promise<string>,
   logger: Logger.Instance,
 ): Promise<void> {
@@ -149,7 +152,7 @@ async function ensureBucketExists(
     }
 
     if (res.status === 404) {
-      const projectId = resolveProjectIdForMessage(settings);
+      const projectId = resolveProjectIdForMessage(credentials);
       throw new Error(
         `GCS bucket not found: ${bucket} in project ${projectId}. Run "walkeros setup store.${id}" to create it.`,
       );
@@ -177,7 +180,8 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
   assertGcsSettings(context.config.settings);
   const settings: GcsStoreSettings = context.config.settings;
   const prefix = normalizePrefix(settings.prefix);
-  const creds = parseCredentials(settings.credentials);
+  const rawCreds = resolveCredentials(context.config, context.logger);
+  const creds = parseCredentials(rawCreds);
   const getToken = createTokenProvider(creds);
   const bucketRaw = settings.bucket;
   const bucket = encodeURIComponent(bucketRaw);
@@ -213,7 +217,7 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
       const gcsKey = resolveKey(key);
       if (!gcsKey) return undefined;
 
-      await ensureBucketExists(bucketRaw, id, settings, getToken, logger);
+      await ensureBucketExists(bucketRaw, id, rawCreds, getToken, logger);
 
       try {
         const token = await getToken();
@@ -238,7 +242,7 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
         );
       }
 
-      await ensureBucketExists(bucketRaw, id, settings, getToken, logger);
+      await ensureBucketExists(bucketRaw, id, rawCreds, getToken, logger);
 
       const token = await getToken();
       const url = `${GCS_BASE}/upload/storage/v1/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(gcsKey)}`;
@@ -256,7 +260,7 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
       const gcsKey = resolveKey(key);
       if (!gcsKey) return;
 
-      await ensureBucketExists(bucketRaw, id, settings, getToken, logger);
+      await ensureBucketExists(bucketRaw, id, rawCreds, getToken, logger);
 
       try {
         const token = await getToken();

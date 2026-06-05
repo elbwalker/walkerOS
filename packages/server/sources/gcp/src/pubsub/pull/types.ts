@@ -1,6 +1,8 @@
 import type {
   Source as CoreSource,
   SetupFn as CoreSetupFn,
+  Credential,
+  ServiceAccount,
 } from '@walkeros/core';
 import type { PubSub, Subscription } from '@google-cloud/pubsub';
 import type { Decoder, ServiceAccountCredentials } from '../shared/types';
@@ -20,6 +22,7 @@ export interface Settings {
   subscription: string;
   // Topic short name. Optional at runtime; required when setup.createTopic is true.
   topic?: string;
+  /** @deprecated Use `config.credentials` instead. Kept for back-compat. */
   credentials?: string | ServiceAccountCredentials;
   // SDK term, kept verbatim. Honors PUBSUB_EMULATOR_HOST automatically.
   apiEndpoint?: string;
@@ -45,6 +48,7 @@ export interface InitSettings {
   subscription: string;
   topic?: string;
   client?: PubSub;
+  /** @deprecated Use `config.credentials` instead. Kept for back-compat. */
   credentials?: string | ServiceAccountCredentials;
   apiEndpoint?: string;
   decoder?: Decoder;
@@ -121,14 +125,15 @@ export interface Setup {
   expirationPolicy?: { ttl?: { seconds: number } | null };
 }
 
-// Source.Types has 6 slots: <Settings, Mapping, Push, Env, InitSettings, Setup>.
+// Source.Types slots: <Settings, Mapping, Push, Env, InitSettings, Setup, Credentials>.
 export type Types = CoreSource.Types<
   Settings,
   Mapping,
   Push,
   Env,
   InitSettings,
-  Setup
+  Setup,
+  Credential<ServiceAccount>
 >;
 
 export type Config = CoreSource.Config<Types>;

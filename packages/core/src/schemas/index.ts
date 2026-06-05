@@ -92,6 +92,13 @@ export { ClickIdEntrySchema } from './marketing';
 // Logger schemas (shared config used by destination/source/transformer/store/collector)
 export { LoggerConfigSchema, LoggerHandlerSchema } from './logger';
 
+// Credentials schema (reusable strict shape for packages with service accounts)
+export {
+  CredentialsSchema,
+  ServiceAccountSchema,
+  credentialsJsonSchema,
+} from './credentials';
+
 // ========================================
 // Direct Exports (commonly used schemas)
 // ========================================

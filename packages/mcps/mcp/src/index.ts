@@ -11,6 +11,7 @@ import { createAuthToolSpec } from './tools/auth.js';
 import { createProjectManageToolSpec } from './tools/project-manage.js';
 import { createFlowManageToolSpec } from './tools/flow-manage.js';
 import { createDeployManageToolSpec } from './tools/deploy-manage.js';
+import { createSecretManageToolSpec } from './tools/secret-manage.js';
 import { createFeedbackToolSpec } from './tools/feedback.js';
 
 import { createFlowValidateToolSpec } from './tools/validate.js';
@@ -78,6 +79,7 @@ export function createToolHandlers(
     createProjectManageToolSpec(client),
     createFlowManageToolSpec(client),
     createDeployManageToolSpec(client),
+    createSecretManageToolSpec(client),
     createFeedbackToolSpec(client),
     createFlowValidateToolSpec(),
     createFlowBundleToolSpec(client),

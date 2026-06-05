@@ -51,7 +51,10 @@ export function getConfig(
   if (!projectId) logger.throw('Config settings projectId missing');
   if (!subscription) logger.throw('Config settings subscription missing');
 
-  const credentials = parseCredentials(settings.credentials, logger);
+  const credentials = parseCredentials(
+    resolveCredentials(partialConfig, logger),
+    logger,
+  );
 
   // Build the client once: prefer pre-supplied settings.client, then env-
   // injected constructor (tests/DI), then the real SDK.
@@ -87,6 +90,30 @@ export function getConfig(
   };
 
   return { ...partialConfig, settings: settingsConfig };
+}
+
+/**
+ * Resolve credentials with precedence `config.credentials ?? settings.credentials`.
+ *
+ * `??` (not `||`) so an empty-string `config.credentials` surfaces a misconfig
+ * rather than silently falling through to the deprecated settings path.
+ *
+ * Called once per source instance from `getConfig` (init read site), so the
+ * deprecation warning fires at most once per instance without a module-level
+ * flag that would wrongly suppress a second instance's warning.
+ */
+function resolveCredentials(
+  config: PartialConfig,
+  logger: Logger.Instance,
+): InitSettings['credentials'] {
+  if (config.credentials !== undefined) return config.credentials;
+  const fromSettings = config.settings?.credentials;
+  if (fromSettings !== undefined) {
+    logger.warn(
+      'settings.credentials is deprecated; use config.credentials instead',
+    );
+  }
+  return fromSettings;
 }
 
 function parseCredentials(

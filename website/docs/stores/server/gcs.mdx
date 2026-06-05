@@ -33,10 +33,10 @@ await startFlow({
     assets: {
       code: storeGcsInit,
       config: {
+        // Omit config.credentials for ADC on Cloud Run/GKE
         settings: {
           bucket: 'my-assets',
           prefix: 'public',
-          // Omit credentials for ADC on Cloud Run/GKE
         },
       },
     },
@@ -100,7 +100,7 @@ It never runs automatically and never alters an existing bucket.
 The GCS create call requires a project. Resolution order:
 
 1. Explicit `setup.projectId`.
-2. `project_id` field inside the `settings.credentials` service-account JSON.
+2. `project_id` field inside the `config.credentials` service-account JSON.
 3. `process.env.GOOGLE_CLOUD_PROJECT` (Cloud Run / GKE convention).
 4. Throws with an actionable error if none of the above is available.
 
@@ -129,10 +129,13 @@ When running on GCP infrastructure, omit `credentials`. The store fetches access
 
 ### Non-GCP (service account)
 
-Pass a service account JSON via `$env.` reference. The store signs JWTs locally using `node:crypto` and exchanges them for access tokens via Google's OAuth2 endpoint.
+Pass a service account JSON via `config.credentials` with a `$env.` reference. The store signs JWTs locally using `node:crypto` and exchanges them for access tokens via Google's OAuth2 endpoint.
 
 <CodeSnippet
-  code={`"credentials": "$env.GCS_SA_KEY"`}
+  code={`"config": {
+  "credentials": "$env.GCS_SA_KEY",
+  "settings": { "bucket": "my-assets", "prefix": "public" }
+}`}
   language="json"
 />
 

@@ -33,7 +33,7 @@ export const SettingsSchema = z.object({
     ])
     .optional()
     .describe(
-      'Service account JSON (string or object). Omit for ADC on Cloud Run/GKE',
+      'Service account JSON (string or object). Omit for ADC on Cloud Run/GKE (deprecated: use config.credentials)',
     ),
 });
 

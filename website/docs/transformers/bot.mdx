@@ -68,7 +68,9 @@ The transformer reads `userAgent` from `ctx.ingest` (default path `ingest.userAg
       "package": "@walkeros/server-source-express",
       "config": {
         "ingest": {
-          "userAgent": "req.headers.user-agent"
+          "map": {
+            "userAgent": { "key": "headers.user-agent" }
+          }
         }
       }
     }

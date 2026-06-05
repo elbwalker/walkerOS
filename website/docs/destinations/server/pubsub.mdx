@@ -99,10 +99,10 @@ Add to your `flow.json` destinations:
 Three modes, evaluated in order:
 
 1. **Application Default Credentials (ADC).** Nothing to configure beyond `projectId`. Works on GCP-native runtimes (Cloud Run, Cloud Functions, GKE, GCE) where the runtime service account is attached, and locally with `gcloud auth application-default login`.
-2. **Service account JSON.** Pass credentials via `settings.credentials`, either as a parsed object or a JSON string (the destination JSON-parses strings). Pair with `$env.NAME` to inject from an environment variable.
+2. **Service account JSON.** Pass credentials via `config.credentials`, either as a parsed object or a JSON string (the destination JSON-parses strings). Pair with `$env.NAME` to inject from an environment variable. (The package-specific `settings.credentials` still works but is deprecated.)
 3. **Pre-configured client.** Pass an existing `PubSub` SDK instance as `settings.client`. Useful for shared clients across destinations or custom transport configuration.
 
-When `settings.projectId` and `credentials.project_id` both resolve, the top-level `settings.projectId` wins. The runtime publish target stays unambiguous.
+When `settings.projectId` and the credentials' `project_id` both resolve, the top-level `settings.projectId` wins. The runtime publish target stays unambiguous.
 
 ## Ordering
 

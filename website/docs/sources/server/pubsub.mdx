@@ -80,7 +80,7 @@ The pull source is event-driven: `init()` opens the streaming subscription and f
 | `projectId`          | `string`                          | (required)                      | GCP project id.                                                          |
 | `subscription`       | `string`                          | (required)                      | Subscription short name.                                                 |
 | `topic`              | `string`                          | (optional)                      | Topic short name. Used by setup auto-create when `setup.createTopic` is on. |
-| `credentials`        | `string \| ServiceAccountCredentials` | (ADC fallback)              | Service account JSON (parsed object or JSON string).                     |
+| `credentials`        | `string \| ServiceAccountCredentials` | (ADC fallback)              | Service account JSON (parsed object or JSON string). Set on `config.credentials` (sibling of `settings`). |
 | `apiEndpoint`        | `string`                          | (SDK default)                   | Override for the emulator (e.g. `localhost:8085`).                       |
 | `decoder`            | `'json' \| 'text' \| 'raw'`       | `'json'`                        | How the subscriber decodes message bodies before forwarding.             |
 | `flowControl`        | `{ maxMessages?, maxBytes? }`     | `{ maxMessages: 100, maxBytes: 10 MB }` | Subscriber pull rate (in-flight cap).                            |
@@ -123,7 +123,7 @@ Pub/Sub posts each message envelope to the configured endpoint as a JSON body ma
 
 ### Push settings
 
-In addition to the shared base (`projectId`, `credentials`, `apiEndpoint`, `decoder`):
+In addition to the shared base (`projectId`, `apiEndpoint`, `decoder` in `settings`, plus `config.credentials`):
 
 | Field         | Type      | Default | Description                                                                |
 | ------------- | --------- | ------- | -------------------------------------------------------------------------- |
@@ -135,7 +135,7 @@ In addition to the shared base (`projectId`, `credentials`, `apiEndpoint`, `deco
 Three modes for the pull subscriber, evaluated in order:
 
 1. **Application Default Credentials (ADC).** Default. Works on GCP-native runtimes (Cloud Run, Cloud Functions, GKE) and locally with `gcloud auth application-default login`.
-2. **Service account JSON.** Pass `settings.credentials`, either parsed or as JSON string (the source JSON-parses strings). Combine with `$env.NAME` to inject from an environment variable.
+2. **Service account JSON.** Pass `config.credentials`, either parsed or as JSON string (the source JSON-parses strings). Combine with `$env.NAME` to inject from an environment variable. (The package-specific `settings.credentials` still works but is deprecated.)
 3. **Pre-configured client.** Pass an existing `PubSub` SDK instance as `settings.client`.
 
 For the push handler, auth is reversed: Pub/Sub holds the identity and signs requests with an OIDC token. The handler verifies the token against GCP public keys when `verifyOidc: true` and `audience` is set. Off by default because misconfigured OIDC silently rejects all messages, so opt in once your endpoint is publicly reachable.

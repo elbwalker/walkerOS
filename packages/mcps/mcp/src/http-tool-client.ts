@@ -17,6 +17,10 @@ import {
   getPreview,
   createPreview,
   deletePreview,
+  listSecrets,
+  createSecret,
+  updateSecret,
+  deleteSecret,
   deploy,
   listDeployments,
   getDeploymentBySlug,
@@ -41,6 +45,10 @@ import type {
   GetPreviewOptions,
   CreatePreviewOptions,
   DeletePreviewOptions,
+  ListSecretsOptions,
+  CreateSecretOptions,
+  UpdateSecretOptions,
+  DeleteSecretOptions,
   FeedbackOptions,
 } from '@walkeros/cli';
 
@@ -142,6 +150,19 @@ export class HttpToolClient implements ToolClient {
   }
   async deletePreview(options: DeletePreviewOptions): Promise<unknown> {
     return deletePreview(options);
+  }
+
+  async listSecrets(options: ListSecretsOptions): Promise<unknown> {
+    return listSecrets(options);
+  }
+  async createSecret(options: CreateSecretOptions): Promise<unknown> {
+    return createSecret(options);
+  }
+  async updateSecret(options: UpdateSecretOptions): Promise<unknown> {
+    return updateSecret(options);
+  }
+  async deleteSecret(options: DeleteSecretOptions): Promise<unknown> {
+    return deleteSecret(options);
   }
 
   async deploy(options: DeployOptions): Promise<unknown> {

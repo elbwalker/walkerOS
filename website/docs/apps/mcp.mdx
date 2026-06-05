@@ -342,6 +342,46 @@ When a flow has more than one active deployment and no `slug` is supplied, `get`
 }
 ```
 
+#### `secret_manage`
+
+Manage a flow's secrets, the `$env.<NAME>` values its steps reference at deploy
+and run time.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"list"` \| `"set"` \| `"update"` \| `"delete"` | Yes | Secret action |
+| `flowId` | string | Yes | Flow ID (`flow_...`) or config ID (`cfg_...`). Secrets are flow-scoped, so it is required for every action. |
+| `projectId` | string | No | Project ID. Optional; falls back to the default project. |
+| `name` | string | Conditional | Secret name (UPPER_SNAKE_CASE, referenced as `$env.<NAME>`). Required for `set`. |
+| `value` | string | Conditional | Secret value (1-65536 chars). Required for `set` and `update`. Write-only: never returned or logged. |
+| `secretId` | string | Conditional | Secret ID (`sec_...`). Required for `update` and `delete`. Use `list` to find it. |
+
+Required fields per action:
+
+| Action | Required fields | Effect |
+|--------|-----------------|--------|
+| `list` | `flowId` | Return secret metadata for the flow |
+| `set` | `flowId`, `name`, `value` | Create a new secret |
+| `update` | `flowId`, `secretId`, `value` | Rotate an existing secret's value |
+| `delete` | `flowId`, `secretId` | Remove a secret |
+
+Secrets are write-mostly. Values are encrypted at rest and are NEVER returned,
+listed, or echoed back: `set` and `update` respond with metadata only, and
+`list` returns names, ids, and timestamps but no values. The only way to learn a
+secret's value is to rotate it with a new one.
+
+Reference a secret from any flow step as `$env.<NAME>`, for example
+`$env.API_TOKEN`.
+
+```json
+{
+  "action": "set",
+  "flowId": "flow_abc",
+  "name": "API_TOKEN",
+  "value": "the-secret-value"
+}
+```
+
 ### Resources
 
 | URI | Description |

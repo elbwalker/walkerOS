@@ -4,12 +4,12 @@ import type { DestinationDataManager } from '..';
  * Minimal configuration for Google Data Manager with inline credentials
  */
 export const minimal: DestinationDataManager.Config = {
+  credentials: {
+    client_email: 'service-account@project.iam.gserviceaccount.com',
+    private_key:
+      '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n',
+  },
   settings: {
-    credentials: {
-      client_email: 'service-account@project.iam.gserviceaccount.com',
-      private_key:
-        '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n',
-    },
     destinations: [
       {
         operatingAccount: {
@@ -26,12 +26,12 @@ export const minimal: DestinationDataManager.Config = {
  * Complete configuration with all options
  */
 export const complete: DestinationDataManager.Config = {
+  credentials: {
+    client_email: 'service-account@project.iam.gserviceaccount.com',
+    private_key:
+      '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n',
+  },
   settings: {
-    credentials: {
-      client_email: 'service-account@project.iam.gserviceaccount.com',
-      private_key:
-        '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n',
-    },
     destinations: [
       {
         operatingAccount: {
