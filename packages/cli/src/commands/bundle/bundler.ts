@@ -7,6 +7,7 @@ import type { Flow, Transformer } from '@walkeros/core';
 import {
   packageNameToVariable,
   ENV_MARKER_PREFIX,
+  SECRET_MARKER_PREFIX,
   validateStepEntry,
   isPathStepEntry,
 } from '@walkeros/core';
@@ -1679,6 +1680,19 @@ ${destinationsEntries.join(',\n')}
 }
 
 /**
+ * Runtime guard emitted once into the bundle preamble. Deferred $secret
+ * references serialize to `__walkerosRequireSecret("KEY", process.env["KEY"])`;
+ * this helper throws a clear key-only error when the secret is absent or empty,
+ * instead of letting `undefined` flow downstream into a cryptic failure. It
+ * collapses missing and empty (no value oracle) and never logs or echoes the
+ * value.
+ */
+const SECRET_GUARD_HELPER = `function __walkerosRequireSecret(key, val) {
+  if (val == null || val === '') throw new Error('WalkerOS: required secret "' + key + '" is not set');
+  return val;
+}`;
+
+/**
  * Generate platform-agnostic ESM module with wireConfig(__data) and startFlow re-export.
  * This is the split variant — code skeleton receives data payload at runtime.
  */
@@ -1689,7 +1703,9 @@ export function generateSplitWireConfigModule(
 ): string {
   const codeSection = userCode ? `\n${userCode}\n` : '';
 
-  return `export function wireConfig(__data) {
+  return `${SECRET_GUARD_HELPER}
+
+export function wireConfig(__data) {
   ${storesDeclaration}
 
   const config = ${codeConfigObject};${codeSection}
@@ -2134,6 +2150,17 @@ export function serializeWithCode(value: unknown, indent: number): string {
 
     if (value.startsWith('$code:')) {
       return value.slice(6); // Strip prefix, output raw JS
+    }
+
+    // Deferred secret markers → guarded process.env read. The secret marker is
+    // ALWAYS a whole-string value (never embedded inline), so we match the full
+    // string. We wrap the read in __walkerosRequireSecret so an absent or empty
+    // secret fails with a clear key-only error at startup instead of surfacing
+    // later as a cryptic downstream failure (e.g. GCP ADC metadata lookup). The
+    // secret VALUE is never inlined — only the env read + guard are emitted.
+    if (value.startsWith(SECRET_MARKER_PREFIX)) {
+      const name = value.slice(SECRET_MARKER_PREFIX.length);
+      return `__walkerosRequireSecret(${JSON.stringify(name)}, process.env[${JSON.stringify(name)}])`;
     }
 
     // Deferred env markers → raw process.env expressions in bundle output

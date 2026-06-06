@@ -13,7 +13,10 @@ import type { IntelliSenseContext, PackageInfo } from './intellisense';
  * Returns errors, warnings, and extracted IntelliSenseContext as a byproduct.
  * Pure function: works in Node.js (CLI/MCP) and browser (CodeBox).
  */
-export function validateFlowConfig(json: string): ValidationResult {
+export function validateFlowConfig(
+  json: string,
+  options?: { secrets?: string[] },
+): ValidationResult {
   // 1. JSON parse
   let parsed: unknown;
   try {
@@ -55,8 +58,10 @@ export function validateFlowConfig(json: string): ValidationResult {
   // 3. Extract context + check references (only if JSON is an object with flows)
   const context = extractContext(parsed);
   if (context) {
-    const refWarnings = checkReferences(json, context);
-    warnings.push(...refWarnings);
+    // The set of registered secret names is not derivable from the flow JSON
+    // (it lives in the project's secrets service), so it is injected here.
+    if (options?.secrets) context.secrets = options.secrets;
+    checkReferences(json, context, errors, warnings);
   }
 
   return {
@@ -192,22 +197,63 @@ const FLOW_INLINE_REGEX =
 // (which has the dot before the colon, so it doesn't match this pattern).
 const COLON_TYPO_REGEX = /\$(var|store|flow|secret):([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
+// Inline variant of REF_SECRET for scanning anywhere in JSON text.
+// Source-of-truth REF_SECRET in references.ts is anchored (^...$).
+const SECRET_INLINE_REGEX = /\$secret\.([A-Z0-9_]+)/g;
+
 function checkReferences(
   text: string,
   context: Partial<IntelliSenseContext>,
-): ValidationIssue[] {
-  const issues: ValidationIssue[] = [];
-
+  errors: ValidationIssue[],
+  warnings: ValidationIssue[],
+): void {
   // Each check is independent. Order is irrelevant, issues are aggregated.
   // Run colon-typo scan first so the user sees the targeted suggestion
   // before any cascading "unknown" warnings from the per-type checks.
-  checkColonTypos(text, context, issues);
-  checkVarReferences(text, context, issues);
-  checkStoreReferences(text, context, issues);
-  checkEnvReferences(text, context, issues);
-  checkFlowReferences(text, context, issues);
+  checkColonTypos(text, context, warnings);
+  checkVarReferences(text, context, warnings);
+  checkStoreReferences(text, context, warnings);
+  checkEnvReferences(text, context, warnings);
+  checkFlowReferences(text, context, warnings);
+  checkSecretReferences(text, context, errors, warnings);
+}
 
-  return issues;
+function checkSecretReferences(
+  text: string,
+  context: Partial<IntelliSenseContext>,
+  errors: ValidationIssue[],
+  warnings: ValidationIssue[],
+): void {
+  const isWeb = context.platform === 'web';
+  // Only warn on unknown names when the project's registered set is available.
+  const known = context.secrets;
+
+  SECRET_INLINE_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = SECRET_INLINE_REGEX.exec(text)) !== null) {
+    const full = match[0];
+    const name = match[1];
+    const pos = offsetToPosition(text, match.index, full.length);
+
+    if (isWeb) {
+      errors.push({
+        message: `Secret "$secret.${name}" cannot be used in a web flow — secrets are never sent to the browser; use a server flow.`,
+        severity: 'error',
+        path: full,
+        ...pos,
+      });
+      continue;
+    }
+
+    if (known && !known.includes(name)) {
+      warnings.push({
+        message: `Unknown secret "$secret.${name}"; not in the project's registered secrets.`,
+        severity: 'warning',
+        path: full,
+        ...pos,
+      });
+    }
+  }
 }
 
 function checkColonTypos(

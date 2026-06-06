@@ -129,6 +129,32 @@ describe('serializeWithCode __WALKEROS_ENV marker', () => {
   });
 });
 
+describe('serializeWithCode __WALKEROS_SECRET marker', () => {
+  it('emits a guarded process.env read for a pure secret marker', () => {
+    expect(serializeWithCode('__WALKEROS_SECRET:GCP_SERVICE_ACCOUNT', 0)).toBe(
+      '__walkerosRequireSecret("GCP_SERVICE_ACCOUNT", process.env["GCP_SERVICE_ACCOUNT"])',
+    );
+  });
+
+  it('never bakes the marker string literally into the data payload', () => {
+    const result = serializeWithCode(
+      '__WALKEROS_SECRET:GCP_SERVICE_ACCOUNT',
+      0,
+    );
+    expect(result).not.toBe('"__WALKEROS_SECRET:GCP_SERVICE_ACCOUNT"');
+    expect(result).not.toContain('__WALKEROS_SECRET:');
+  });
+
+  it('reads through process.env and never inlines a value', () => {
+    const result = serializeWithCode(
+      '__WALKEROS_SECRET:GCP_SERVICE_ACCOUNT',
+      0,
+    );
+    expect(result).toContain('process.env["GCP_SERVICE_ACCOUNT"]');
+    expect(result).toContain('__walkerosRequireSecret');
+  });
+});
+
 describe('validateComponentNames', () => {
   it('should accept valid camelCase names', () => {
     expect(() =>

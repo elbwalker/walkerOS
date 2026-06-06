@@ -805,4 +805,141 @@ describe('validateFlowConfig', () => {
       ).toHaveLength(0);
     });
   });
+
+  // --- $secret. references ---
+
+  describe('$secret. references', () => {
+    it('errors when $secret. is used in a web flow', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'web' },
+              destinations: {
+                api: {
+                  config: { settings: { token: '$secret.API_TOKEN' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(result.valid).toBe(false);
+      const error = result.errors.find((e) =>
+        e.message.includes('$secret.API_TOKEN'),
+      );
+      expect(error).toBeDefined();
+      if (!error) throw new Error('error expected');
+      expect(error.severity).toBe('error');
+      expect(error.message).toMatch(/web flow/);
+      expect(error.line).toBeGreaterThan(0);
+    });
+
+    it('does not error for $secret. in a server flow', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: {
+                  config: { settings: { token: '$secret.API_TOKEN' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.errors.filter((e) => e.message.includes('$secret.')),
+      ).toHaveLength(0);
+    });
+
+    it('warns when $secret. references a name not in the known set', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: {
+                  config: { settings: { token: '$secret.UNKNOWN' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json, { secrets: ['API_TOKEN'] });
+      const warning = result.warnings.find((w) =>
+        w.message.includes('$secret.UNKNOWN'),
+      );
+      expect(warning).toBeDefined();
+      if (!warning) throw new Error('warning expected');
+      expect(warning.severity).toBe('warning');
+      expect(warning.message).toMatch(/registered secrets/);
+    });
+
+    it('does not warn for a known $secret. name in a server flow', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: {
+                  config: { settings: { token: '$secret.API_TOKEN' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json, { secrets: ['API_TOKEN'] });
+      expect(
+        result.warnings.filter((w) => w.message.includes('$secret.')),
+      ).toHaveLength(0);
+      expect(
+        result.errors.filter((e) => e.message.includes('$secret.')),
+      ).toHaveLength(0);
+    });
+
+    it('does not warn for unknown $secret. name when no known set is provided', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              destinations: {
+                api: {
+                  config: { settings: { token: '$secret.WHATEVER' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.filter((w) => w.message.includes('$secret.')),
+      ).toHaveLength(0);
+    });
+  });
 });

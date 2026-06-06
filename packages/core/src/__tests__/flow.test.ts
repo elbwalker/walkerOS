@@ -1820,6 +1820,60 @@ describe('deferred env resolution', () => {
   });
 });
 
+describe('deferred secret resolution', () => {
+  const makeSetup = (collector: Record<string, unknown>) => ({
+    version: 4 as const,
+    flows: {
+      test: {
+        config: { platform: 'server' as const },
+        collector,
+        destinations: {},
+      },
+    },
+  });
+
+  it('returns __WALKEROS_SECRET: marker for $secret.NAME when deferred', () => {
+    const setup = makeSetup({
+      credentials: '$secret.GCP_SERVICE_ACCOUNT',
+    });
+    const config = getFlowSettings(setup, 'test', { deferred: true });
+    expect(config.collector).toEqual({
+      credentials: '__WALKEROS_SECRET:GCP_SERVICE_ACCOUNT',
+    });
+  });
+
+  it('throws for $secret.NAME when not deferred (web path)', () => {
+    process.env.GCP_SERVICE_ACCOUNT = 'should-never-be-read';
+    const setup = makeSetup({ credentials: '$secret.GCP_SERVICE_ACCOUNT' });
+    expect(() => getFlowSettings(setup, 'test', { deferred: false })).toThrow(
+      'GCP_SERVICE_ACCOUNT',
+    );
+    delete process.env.GCP_SERVICE_ACCOUNT;
+  });
+
+  it('throws a key-only message that never includes a secret value', () => {
+    process.env.GCP_SERVICE_ACCOUNT = 'super-secret-value';
+    const setup = makeSetup({ credentials: '$secret.GCP_SERVICE_ACCOUNT' });
+    let message = '';
+    try {
+      getFlowSettings(setup, 'test', { deferred: false });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toContain('GCP_SERVICE_ACCOUNT');
+    expect(message).not.toContain('super-secret-value');
+    delete process.env.GCP_SERVICE_ACCOUNT;
+  });
+
+  it('leaves non-$secret strings unaffected', () => {
+    const setup = makeSetup({ url: 'https://api.example.com/path' });
+    const config = getFlowSettings(setup, 'test', { deferred: true });
+    expect(config.collector).toEqual({
+      url: 'https://api.example.com/path',
+    });
+  });
+});
+
 // ========================================
 // getPlatform Tests
 // ========================================

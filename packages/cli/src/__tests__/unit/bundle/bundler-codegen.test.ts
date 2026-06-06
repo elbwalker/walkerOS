@@ -855,6 +855,21 @@ describe('generateSplitWireConfigModule', () => {
     expect(configIdx).toBeGreaterThan(-1);
     expect(storesIdx).toBeLessThan(configIdx);
   });
+
+  it('injects the __walkerosRequireSecret guard helper in scope', () => {
+    const result = generateSplitWireConfigModule(
+      'const stores = {};',
+      '{ sources: {} }',
+      '',
+    );
+    // Helper present, declared before wireConfig so the body can reference it
+    expect(result).toContain('function __walkerosRequireSecret');
+    expect(result).toContain('is not set');
+    const helperIdx = result.indexOf('function __walkerosRequireSecret');
+    const wireIdx = result.indexOf('export function wireConfig');
+    expect(helperIdx).toBeGreaterThan(-1);
+    expect(helperIdx).toBeLessThan(wireIdx);
+  });
 });
 
 describe('generateWrapEntry preview preflight', () => {
