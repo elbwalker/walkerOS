@@ -5,6 +5,8 @@ jest.mock('../../../runtime/health-server.js', () => ({
   createHealthServer: jest.fn().mockResolvedValue({
     server: {},
     setFlowHandler: jest.fn(),
+    setReady: jest.fn(),
+    setFailed: jest.fn(),
     close: jest.fn().mockResolvedValue(undefined),
   }),
 }));
@@ -162,16 +164,23 @@ describe('runPipeline', () => {
     );
   });
 
-  it('closes health server if loadFlow fails', async () => {
+  it('marks readiness failed and closes health server if loadFlow fails', async () => {
     const mockClose = jest.fn().mockResolvedValue(undefined);
+    const mockSetFailed = jest.fn();
+    const mockSetReady = jest.fn();
     (createHealthServer as jest.Mock).mockResolvedValue({
       server: {},
       setFlowHandler: jest.fn(),
+      setReady: mockSetReady,
+      setFailed: mockSetFailed,
       close: mockClose,
     });
     (loadFlow as jest.Mock).mockRejectedValue(new Error('bad bundle'));
 
     await expect(runPipeline(baseOptions)).rejects.toThrow('bad bundle');
+    // Fail-fast: /ready must not flip to 200 when construction fails.
+    expect(mockSetFailed).toHaveBeenCalledWith('bad bundle');
+    expect(mockSetReady).not.toHaveBeenCalledWith(true);
     expect(mockClose).toHaveBeenCalled();
   });
 });

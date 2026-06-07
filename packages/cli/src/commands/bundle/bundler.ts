@@ -8,13 +8,26 @@ import {
   packageNameToVariable,
   ENV_MARKER_PREFIX,
   SECRET_MARKER_PREFIX,
-  validateStepEntry,
   isPathStepEntry,
 } from '@walkeros/core';
 import {
   classifyStepProperties,
   containsCodeMarkers,
 } from './config-classifier.js';
+import {
+  validateComponentNames,
+  validateReference,
+  validateStoreReferences,
+} from './structural-validators.js';
+
+// Re-export the structural validators so existing import sites (and the public
+// package entry) keep resolving them from `./bundler`. The implementations live
+// in `./structural-validators` so they can run without loading esbuild.
+export {
+  validateComponentNames,
+  validateReference,
+  validateStoreReferences,
+} from './structural-validators.js';
 
 /**
  * Type guard to check if a code value is an InlineCode object.
@@ -60,37 +73,11 @@ function getFlowSection(
 }
 
 /**
- * Validates that a reference has either package XOR code, not both or neither.
- * Throws descriptive error for invalid configurations.
+ * A reference carries inline code when it is an InlineCode object or (legacy)
+ * a string. Used by the codegen step-filtering below.
  */
 function hasCodeReference(code: unknown): boolean {
   return isInlineCode(code) || typeof code === 'string';
-}
-
-function validateReference(
-  type: Flow.StepKind,
-  name: string,
-  ref: Flow.Step,
-): void {
-  if (type === 'Transformer') {
-    const r = validateStepEntry({ ...ref }, 'Transformer');
-    if (!r.ok) {
-      throw new Error(`Transformer "${name}": ${r.reason ?? 'invalid entry.'}`);
-    }
-    return;
-  }
-  // Sources / Destinations / Stores keep their existing two-rule check
-  const hasPackage = !!ref.package;
-  const hasInlineCode = isInlineCode(ref.code);
-  const hasCode = hasCodeReference(ref.code);
-  if (hasPackage && hasInlineCode) {
-    throw new Error(
-      `${type} "${name}": Cannot specify both package and code. Use one or the other.`,
-    );
-  }
-  if (!hasPackage && !hasCode) {
-    throw new Error(`${type} "${name}": Must specify either package or code.`);
-  }
 }
 
 /**
@@ -1229,76 +1216,6 @@ export async function computeDevPackages(
     }
   }
   return devPackages;
-}
-
-const VALID_JS_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
-
-/**
- * Validates that component names are valid JavaScript identifiers.
- * The bundler generates JS where flow config keys become property names,
- * so keys like "gtag-wrapper" would cause esbuild syntax errors.
- * Catches this early with a helpful error message suggesting camelCase.
- */
-export function validateComponentNames(
-  components: Record<string, unknown>,
-  section: string,
-): void {
-  for (const name of Object.keys(components)) {
-    if (!VALID_JS_IDENTIFIER.test(name)) {
-      throw new Error(
-        `Invalid ${section} name "${name}": must be a valid JavaScript identifier (use camelCase, e.g., "${name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())}")`,
-      );
-    }
-  }
-}
-
-/**
- * Validates all $store. references point to defined stores.
- * Throws descriptive error on mismatch.
- */
-function validateStoreReferences(
-  flowSettings: Flow,
-  storeIds: Set<string>,
-): void {
-  const refs: Array<{ ref: string; location: string }> = [];
-
-  function collectRefs(obj: unknown, path: string) {
-    if (typeof obj === 'string' && obj.startsWith('$store.')) {
-      refs.push({ ref: obj.slice(7), location: path });
-      return;
-    }
-    if (obj === null || typeof obj !== 'object') return;
-    // Boundary: walker traverses arbitrary JSON. After typeof === 'object'
-    // narrowing, indexing as a Record<string, unknown> is the typed way
-    // to enumerate keys.
-    for (const [key, val] of Object.entries(obj)) {
-      collectRefs(val, `${path}.${key}`);
-    }
-  }
-
-  // Scan all component env/config values
-  const sectionMap = {
-    sources: flowSettings.sources || {},
-    destinations: flowSettings.destinations || {},
-    transformers: flowSettings.transformers || {},
-  };
-  for (const [section, components] of Object.entries(sectionMap)) {
-    for (const [id, component] of Object.entries(components)) {
-      collectRefs(component, `${section}.${id}`);
-    }
-  }
-
-  for (const { ref, location } of refs) {
-    if (!storeIds.has(ref)) {
-      const available =
-        storeIds.size > 0
-          ? `Available stores: ${Array.from(storeIds).join(', ')}`
-          : 'No stores defined';
-      throw new Error(
-        `Store reference "$store.${ref}" in ${location} — store "${ref}" not found. ${available}`,
-      );
-    }
-  }
 }
 
 /**

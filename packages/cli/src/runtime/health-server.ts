@@ -4,6 +4,18 @@ import type { Logger } from '@walkeros/core';
 export interface HealthServer {
   server: http.Server;
   setFlowHandler(handler: http.RequestListener | null): void;
+  /**
+   * Mark the flow as genuinely ready to serve traffic. Set this only after the
+   * bundle has been parsed and the collector constructed successfully. `/ready`
+   * returns 200 exclusively while ready is true.
+   */
+  setReady(ready: boolean): void;
+  /**
+   * Mark readiness as failed with a short reason (e.g. a construction error).
+   * `/ready` returns 503 and surfaces the reason. Clearing it requires a
+   * subsequent successful `setReady(true)`.
+   */
+  setFailed(reason: string): void;
   close(): Promise<void>;
 }
 
@@ -13,6 +25,11 @@ export function createHealthServer(
 ): Promise<HealthServer> {
   return new Promise((resolve, reject) => {
     let flowHandler: http.RequestListener | null = null;
+    // Functional readiness, independent of the flow's HTTP handler: 200 only
+    // after the collector is constructed. Orchestrators (Scaleway) gate traffic
+    // on /ready, so this closes the pre-ready functional window at the source.
+    let ready = false;
+    let failureReason: string | null = null;
 
     const server = http.createServer((req, res) => {
       // Runner-owned health routes — always available
@@ -23,10 +40,15 @@ export function createHealthServer(
       }
 
       if (req.url === '/ready' && req.method === 'GET') {
-        const code = flowHandler ? 200 : 503;
+        const code = ready ? 200 : 503;
+        const status = ready ? 'ready' : failureReason ? 'failed' : 'not_ready';
         res.writeHead(code, { 'Content-Type': 'application/json' });
         res.end(
-          JSON.stringify({ status: flowHandler ? 'ready' : 'not_ready' }),
+          JSON.stringify(
+            failureReason && !ready
+              ? { status, reason: failureReason }
+              : { status },
+          ),
         );
         return;
       }
@@ -51,6 +73,14 @@ export function createHealthServer(
         server,
         setFlowHandler(handler) {
           flowHandler = handler;
+        },
+        setReady(value) {
+          ready = value;
+          if (value) failureReason = null;
+        },
+        setFailed(reason) {
+          ready = false;
+          failureReason = reason;
         },
         close: () =>
           new Promise<void>((res, rej) => {

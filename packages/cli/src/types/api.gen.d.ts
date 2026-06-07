@@ -7291,6 +7291,7 @@ export interface components {
       platform: 'web' | 'server';
       deploymentStatus: string | null;
       deploymentUrl: string | null;
+      deployedAt: string | null;
     };
     Version: {
       /** @example 1 */
@@ -7591,6 +7592,7 @@ export interface components {
         | 'stopped'
         | 'failed';
       currentVersion: components['schemas']['DeploymentVersionDetail'];
+      versions: components['schemas']['DeploymentVersionHistoryEntry'][];
       error: components['schemas']['DeploymentError'];
       url: string | null;
       selfHosted: {
@@ -7622,6 +7624,17 @@ export interface components {
       publishedAt: string;
       publishedBy: string | null;
     } | null;
+    DeploymentVersionHistoryEntry: {
+      versionNumber: number;
+      status: string;
+      source: string;
+      errorCode: string | null;
+      errorMessage: string | null;
+      errorPhase: string | null;
+      errorDetail?: string | null;
+      /** Format: date-time */
+      publishedAt: string;
+    };
     DeploymentError: {
       code: string;
       message: string;

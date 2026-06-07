@@ -103,9 +103,17 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
       telemetryObservers,
     );
   } catch (error) {
+    // Collector construction failed: keep /ready non-200 so an orchestrator
+    // (Scaleway) does not shift traffic to this revision before we exit.
+    healthServer.setFailed(
+      error instanceof Error ? error.message : String(error),
+    );
     await healthServer.close();
     throw error;
   }
+
+  // Collector constructed successfully — flow is genuinely ready to serve.
+  healthServer.setReady(true);
 
   logger.info('Flow running');
   logger.info(`Port: ${port}`);
@@ -193,6 +201,9 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
             flowName: api.flowName,
           });
 
+          // Keep /ready honest across the swap: not ready until the new
+          // collector is constructed. If swapFlow throws, readiness stays off.
+          healthServer.setReady(false);
           handle = await swapFlow(
             handle,
             newBundleResult.bundlePath,
@@ -202,6 +213,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
             healthServer,
             telemetryObservers,
           );
+          healthServer.setReady(true);
 
           writeCache(
             api.cacheDir,
