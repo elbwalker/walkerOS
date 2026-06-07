@@ -10,7 +10,7 @@ import type { Types } from '../types';
 import { examples } from '../dev';
 
 function createMockStore(): Store.Instance {
-  const data = new Map<string, unknown>();
+  const data = new Map<string, Store.StoreValue>();
   return {
     type: 'mock',
     config: {},
