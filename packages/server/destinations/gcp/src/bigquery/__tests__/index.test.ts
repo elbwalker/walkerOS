@@ -11,6 +11,7 @@ import {
   __getMockCalls,
   __resetMockCalls,
   __setNextAppendRowErrors,
+  __setNextAppendThrow,
   __setNextOpenWriterError,
 } from '@google-cloud/bigquery-storage';
 import {
@@ -21,6 +22,7 @@ import {
 } from '@walkeros/core';
 import type { MockLogger } from '@walkeros/core';
 import * as examples from '../examples';
+import { eventToRow } from '../eventToRow';
 import { openWriter } from '../writer';
 
 jest.mock('@google-cloud/bigquery');
@@ -306,7 +308,7 @@ describe('Server Destination BigQuery', () => {
       const data: Array<undefined> = events.map(() => undefined);
       const entries = events.map((event) => ({ event }));
 
-      destination.pushBatch(
+      await destination.pushBatch(
         { key: 'k', events, data, entries },
         createMockContext({
           config,
@@ -315,10 +317,6 @@ describe('Server Destination BigQuery', () => {
           id: 'test-bq',
         }),
       );
-
-      // pushBatch is synchronous and uses an IIFE for the async appendRows.
-      // Wait a tick to let the IIFE complete.
-      await new Promise((r) => setImmediate(r));
 
       const calls = __getMockCalls();
       const append = calls.find((c) => c.method === 'appendRows');
@@ -330,7 +328,46 @@ describe('Server Destination BigQuery', () => {
       expect(rowsArg).toHaveLength(3);
     });
 
-    test('logs partial failures without throwing', async () => {
+    test('uses entry data when present and eventToRow otherwise per entry', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+
+      const config = await buildConfig();
+      __resetMockCalls();
+
+      const e0 = createEvent();
+      const e1 = createEvent();
+      const mappedRow = { custom: 'mapped-row' };
+      const events = [e0, e1];
+      // Entry 1 carries mapped data, entry 0 does not. The derived `data` array
+      // is compacted (only defined entries), so `data[0]` is the mapped row and
+      // `data[1]` is undefined -- misaligned with `events`. Reading `entries`
+      // keeps each event's data correct.
+      const data = [mappedRow];
+      const entries = [{ event: e0 }, { event: e1, data: mappedRow }];
+
+      await destination.pushBatch(
+        { key: 'k', events, data, entries },
+        createMockContext({
+          config,
+          env: testEnv,
+          logger: createMockLogger(),
+          id: 'test-bq',
+        }),
+      );
+
+      const calls = __getMockCalls();
+      const append = calls.find((c) => c.method === 'appendRows');
+      expect(append).toBeDefined();
+      if (!append) return;
+      const rowsArg = append.args[0];
+      expect(Array.isArray(rowsArg)).toBe(true);
+      if (!Array.isArray(rowsArg)) return;
+      expect(rowsArg).toHaveLength(2);
+      expect(rowsArg[0]).toEqual(eventToRow(e0));
+      expect(rowsArg[1]).toEqual(mappedRow);
+    });
+
+    test('returns a per-row outcome on partial row errors instead of throwing', async () => {
       if (!destination.pushBatch) throw new Error('pushBatch missing');
 
       const config = await buildConfig();
@@ -344,23 +381,32 @@ describe('Server Destination BigQuery', () => {
       const data: Array<undefined> = events.map(() => undefined);
       const entries = events.map((event) => ({ event }));
 
-      // Synchronous call must not throw.
-      expect(() =>
-        destination.pushBatch!(
-          { key: 'k', events, data, entries },
-          createMockContext({
-            config,
-            env: testEnv,
-            logger,
-            id: 'test-bq',
-          }),
-        ),
-      ).not.toThrow();
+      // Partial row errors no longer throw: the destination reports the failed
+      // rows via a BatchOutcome so the collector DLQs only those rows and counts
+      // the succeeded rows as delivered (avoids duplicates on DLQ retry).
+      const outcome = await destination.pushBatch!(
+        { key: 'k', events, data, entries },
+        createMockContext({
+          config,
+          env: testEnv,
+          logger,
+          id: 'test-bq',
+        }),
+      );
 
-      // Wait for the IIFE async work to complete.
-      await new Promise((r) => setImmediate(r));
+      expect(outcome).toEqual({
+        failed: [
+          {
+            index: 0,
+            error: expect.objectContaining({
+              code: 3,
+              message: 'invalid row',
+            }),
+          },
+        ],
+      });
 
-      // INFO summary with ok/failed counts.
+      // INFO summary with ok/failed counts for operator visibility.
       expect(logger.info).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ ok: 2, failed: 1 }),
@@ -375,7 +421,63 @@ describe('Server Destination BigQuery', () => {
           message: 'invalid row',
         }),
       );
-      expect(logger.error).toHaveBeenCalledTimes(1);
+    });
+
+    test('rejects when appendRows throws', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+
+      const config = await buildConfig();
+      __resetMockCalls();
+
+      __setNextAppendThrow(new Error('append boom'));
+
+      const logger = createMockLogger();
+      const events = [createEvent(), createEvent()];
+      const data: Array<undefined> = events.map(() => undefined);
+      const entries = events.map((event) => ({ event }));
+
+      await expect(
+        destination.pushBatch!(
+          { key: 'k', events, data, entries },
+          createMockContext({
+            config,
+            env: testEnv,
+            logger,
+            id: 'test-bq',
+          }),
+        ),
+      ).rejects.toThrow('append boom');
+    });
+
+    test('rejects when init() has not run (writer missing)', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+
+      // Misconfigured destination: settings present but writer absent because
+      // init() never ran. The batch path must surface this like single-push.
+      const settings: Settings = {
+        client: new BigQuery({ projectId }),
+        projectId,
+        datasetId,
+        tableId,
+        location: 'EU',
+      };
+      const config: Config = { settings };
+
+      const logger = createMockLogger();
+      const events = [createEvent()];
+      const entries = events.map((event) => ({ event }));
+
+      await expect(
+        destination.pushBatch!(
+          { key: 'k', events, data: [undefined], entries },
+          createMockContext({
+            config,
+            env: testEnv,
+            logger,
+            id: 'test-bq',
+          }),
+        ),
+      ).rejects.toThrow('writer is missing');
     });
   });
 });

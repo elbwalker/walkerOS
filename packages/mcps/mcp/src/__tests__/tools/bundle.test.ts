@@ -44,6 +44,7 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { bundle } from '@walkeros/cli';
+import { stubClient } from '../support/stub-client.js';
 const mockBundle = jest.mocked(bundle);
 
 function createMockServer() {
@@ -60,10 +61,12 @@ function createMockServer() {
 
 describe('flow_bundle tool', () => {
   let server: ReturnType<typeof createMockServer>;
+  let getFlow: jest.Mock;
 
   beforeEach(() => {
     server = createMockServer();
-    registerFlowBundleTool(server as any);
+    getFlow = jest.fn();
+    registerFlowBundleTool(server as any, stubClient({ getFlow }));
   });
 
   it('registers with correct name, title, and annotations', () => {
@@ -164,5 +167,77 @@ describe('flow_bundle tool', () => {
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBe('Build failed');
+  });
+
+  it('resolves a cloud flow id (flow_…) via the client and passes the config inline', async () => {
+    const cloudConfig = { version: 4, flows: { default: {} } };
+    getFlow.mockResolvedValue({ config: cloudConfig });
+    mockBundle.mockResolvedValue({
+      totalSize: 256,
+      buildTime: 10,
+      packages: [],
+      treeshakingEffective: false,
+    });
+
+    const tool = server.getTool('flow_bundle');
+    await tool.handler({
+      configPath: 'flow_abc123',
+      flow: undefined,
+      stats: undefined,
+      output: undefined,
+    });
+
+    expect(getFlow).toHaveBeenCalledWith({ flowId: 'flow_abc123' });
+    expect(mockBundle).toHaveBeenCalledWith(JSON.stringify(cloudConfig), {
+      flowName: undefined,
+      stats: true,
+      buildOverrides: undefined,
+    });
+  });
+
+  it('resolves a cloud config id (cfg_…) via the client', async () => {
+    const cloudConfig = { version: 4, flows: { default: {} } };
+    getFlow.mockResolvedValue({ config: cloudConfig });
+    mockBundle.mockResolvedValue({
+      totalSize: 256,
+      buildTime: 10,
+      packages: [],
+      treeshakingEffective: false,
+    });
+
+    const tool = server.getTool('flow_bundle');
+    await tool.handler({
+      configPath: 'cfg_xyz789',
+      flow: undefined,
+      stats: undefined,
+      output: undefined,
+    });
+
+    expect(getFlow).toHaveBeenCalledWith({ flowId: 'cfg_xyz789' });
+    expect(mockBundle).toHaveBeenCalledWith(JSON.stringify(cloudConfig), {
+      flowName: undefined,
+      stats: true,
+      buildOverrides: undefined,
+    });
+  });
+
+  it('passes a local file path through unchanged (no client call)', async () => {
+    mockBundle.mockResolvedValue({
+      totalSize: 256,
+      buildTime: 10,
+      packages: [],
+      treeshakingEffective: false,
+    });
+
+    const tool = server.getTool('flow_bundle');
+    await tool.handler({
+      configPath: './flow.json',
+      flow: undefined,
+      stats: undefined,
+      output: undefined,
+    });
+
+    expect(getFlow).not.toHaveBeenCalled();
+    expect(mockBundle).toHaveBeenCalledWith('./flow.json', expect.anything());
   });
 });

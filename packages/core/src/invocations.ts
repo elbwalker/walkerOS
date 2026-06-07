@@ -151,7 +151,13 @@ export function debounce<P extends unknown[], R>(
 
   debounced.flush = (): Promise<R | undefined> => {
     if (!lastArgs && pending.length === 0) {
-      return Promise.resolve(undefined);
+      // Nothing buffered, but an autonomous fire (wait/age/size cap) may have
+      // already drained the window and left its `fn` return in `result`. For a
+      // batch flush whose `fn` is async, that promise can still be in flight.
+      // Return it so a caller like graceful shutdown awaits the in-flight work
+      // instead of racing teardown (e.g. closing a writer mid-append). When
+      // the last fire was sync/settled, awaiting a resolved value is a no-op.
+      return Promise.resolve(result);
     }
     return new Promise<R | undefined>((resolve) => {
       pending.push(resolve);
@@ -163,6 +169,9 @@ export function debounce<P extends unknown[], R>(
     const settle = pending;
     pending = [];
     reset();
+    // Drop the last fire's retained return so a later empty flush() cannot
+    // surface a stale, cancelled-context result instead of undefined.
+    result = undefined;
     settle.forEach((r) => r(undefined));
   };
 

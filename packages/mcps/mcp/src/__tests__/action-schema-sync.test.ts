@@ -57,6 +57,7 @@ import {
   FLOW_MANAGE_REQUIREMENTS,
   DEPLOY_MANAGE_REQUIREMENTS,
   PROJECT_MANAGE_REQUIREMENTS,
+  SECRET_MANAGE_REQUIREMENTS,
 } from '../action-requirements.js';
 import type {
   ActionRequirementMap,
@@ -65,6 +66,7 @@ import type {
 import { createFlowManageToolSpec } from '../tools/flow-manage.js';
 import { createDeployManageToolSpec } from '../tools/deploy-manage.js';
 import { createProjectManageToolSpec } from '../tools/project-manage.js';
+import { createSecretManageToolSpec } from '../tools/secret-manage.js';
 import { createFlowSimulateToolSpec } from '../tools/simulate.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { stubClient } from './support/stub-client.js';
@@ -133,6 +135,17 @@ const mapDrivenTools: MapDrivenTool[] = [
       name: 'My Project',
     },
   },
+  {
+    name: 'secret_manage',
+    spec: createSecretManageToolSpec(stubClient()),
+    map: SECRET_MANAGE_REQUIREMENTS,
+    satisfied: {
+      flowId: 'flow_1',
+      name: 'SLACK_WEBHOOK_URL',
+      value: 'https://example.test/hook',
+      secretId: 'sec_1',
+    },
+  },
 ];
 
 /** Build a base input that satisfies every map-required param of an action, so
@@ -195,7 +208,7 @@ describe('action ↔ schema ↔ handler contract is in sync', () => {
   }
 
   describe('flow_simulate.step', () => {
-    const spec = createFlowSimulateToolSpec();
+    const spec = createFlowSimulateToolSpec(stubClient());
 
     it('registers step as a required (non-optional) zod string', () => {
       const stepSchema = spec.inputSchema.step as z.ZodType;

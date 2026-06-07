@@ -1,6 +1,8 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  Credential,
+  ServiceAccount,
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
 import type { OAuth2Client } from 'google-auth-library';
@@ -9,6 +11,9 @@ export interface Settings {
   /**
    * Service account credentials (client_email + private_key)
    * Recommended for serverless environments (AWS Lambda, Docker, etc.)
+   *
+   * @deprecated Use `config.credentials` instead. This field still works but
+   * will be removed in a future major version.
    */
   credentials?: {
     client_email: string;
@@ -88,7 +93,14 @@ export interface Env extends DestinationServer.Env {
 
 export type InitSettings = Partial<Settings>;
 
-export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
+export type Types = CoreDestination.Types<
+  Settings,
+  Mapping,
+  Env,
+  InitSettings,
+  unknown,
+  Credential<ServiceAccount>
+>;
 
 export interface DestinationInterface extends DestinationServer.Destination<Types> {
   init: DestinationServer.InitFn<Types>;

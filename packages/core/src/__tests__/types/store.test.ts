@@ -8,6 +8,7 @@ describe('Store types', () => {
         initSettings: undefined,
         env: {},
         setup: undefined,
+        credentials: undefined,
       };
       expect(types).toBeDefined();
     });
@@ -30,6 +31,7 @@ describe('Store types', () => {
         initSettings: { host: 'localhost' },
         env: { redis: {} },
         setup: undefined,
+        credentials: undefined,
       };
       expect(types.settings.host).toBe('localhost');
     });

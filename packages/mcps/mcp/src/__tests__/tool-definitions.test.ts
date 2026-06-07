@@ -1,7 +1,7 @@
 import { TOOL_DEFINITIONS } from '../tool-definitions.js';
 
 describe('TOOL_DEFINITIONS', () => {
-  it('lists all 13 tools by name', () => {
+  it('lists all 14 tools by name', () => {
     const names = TOOL_DEFINITIONS.map((d) => d.name).sort();
     expect(names).toEqual(
       [
@@ -18,6 +18,7 @@ describe('TOOL_DEFINITIONS', () => {
         'package_get',
         'package_search',
         'project_manage',
+        'secret_manage',
       ].sort(),
     );
   });

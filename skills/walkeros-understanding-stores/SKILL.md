@@ -219,11 +219,14 @@ import { storeGcsInit } from '@walkeros/server-store-gcs';
 
 **Settings:**
 
-| Setting       | Type               | Required | Default | Purpose                  |
-| ------------- | ------------------ | -------- | ------- | ------------------------ |
-| `bucket`      | `string`           | Yes      | —       | GCS bucket name          |
-| `prefix`      | `string`           | No       | —       | Key prefix for scoping   |
-| `credentials` | `string \| object` | No       | ADC     | SA JSON for non-GCP envs |
+| Setting  | Type     | Required | Default | Purpose                |
+| -------- | -------- | -------- | ------- | ---------------------- |
+| `bucket` | `string` | Yes      | —       | GCS bucket name        |
+| `prefix` | `string` | No       | —       | Key prefix for scoping |
+
+Credentials live at `config.credentials` (sibling of `settings`):
+`string | object` SA JSON for non-GCP envs, `$env`-resolvable; omit for ADC. The
+deprecated `settings.credentials` still works.
 
 **Primary use case:** Serving static files on GCP infrastructure (Cloud Run,
 GKE) where ADC provides seamless authentication.
@@ -240,14 +243,17 @@ import { storeSheetsInit } from '@walkeros/server-store-sheets';
 
 **Settings:**
 
-| Setting       | Type               | Required | Default    | Purpose                          |
-| ------------- | ------------------ | -------- | ---------- | -------------------------------- |
-| `id`          | `string`           | Yes      | —          | Spreadsheet ID (segment in URL)  |
-| `sheet`       | `string`           | No       | `'Sheet1'` | Sheet (tab) name                 |
-| `key`         | `string`           | No       | `'A'`      | Column letter for keys           |
-| `value`       | `string`           | No       | `'B'`      | Column letter for JSON values    |
-| `headerRows`  | `number`           | No       | `1`        | Header rows to skip when reading |
-| `credentials` | `string \| object` | No       | ADC        | SA JSON for non-GCP envs         |
+| Setting      | Type     | Required | Default    | Purpose                          |
+| ------------ | -------- | -------- | ---------- | -------------------------------- |
+| `id`         | `string` | Yes      | —          | Spreadsheet ID (segment in URL)  |
+| `sheet`      | `string` | No       | `'Sheet1'` | Sheet (tab) name                 |
+| `key`        | `string` | No       | `'A'`      | Column letter for keys           |
+| `value`      | `string` | No       | `'B'`      | Column letter for JSON values    |
+| `headerRows` | `number` | No       | `1`        | Header rows to skip when reading |
+
+Credentials live at `config.credentials` (sibling of `settings`):
+`string | object` SA JSON for non-GCP envs, `$env`-resolvable; omit for ADC. The
+deprecated `settings.credentials` still works.
 
 **Primary use case:** Demos and small prototypes where the spreadsheet is the
 operator-facing UI for tweaking lookup data. Quota: 60 reads/min and 60

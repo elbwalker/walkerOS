@@ -338,11 +338,23 @@ mapping: {
 
 ### Batch Processing
 
+To batch **all** of a destination's events, set `config.batch` (no mapping rule
+needed):
+
+```typescript
+config: {
+  batch: { size: 5 },  // Flush after every 5 events (a bare number is the wait window in ms)
+}
+```
+
+A rule-level `batch` batches only that entity-action into its own buffer and
+overrides `config.batch` per field:
+
 ```typescript
 mapping: {
-  '*': {
-    '*': {
-      batch: 5,  // Send after 5 events
+  order: {
+    complete: {
+      batch: { wait: 1000 },  // Only order complete batches, with a 1s debounce
     }
   }
 }

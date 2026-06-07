@@ -1,7 +1,13 @@
 import type { Collector } from '@walkeros/core';
 import type { Destination, WalkerOS } from '@walkeros/core';
 import { startFlow } from '..';
-import { commonHandleCommand } from '../handle';
+import { collector } from '../collector';
+import {
+  commonHandleCommand,
+  createEvent,
+  enrichEvent,
+  prepareEvent,
+} from '../handle';
 
 describe('Handle Commands', () => {
   let mockDestinationPush: jest.Mock;
@@ -319,5 +325,50 @@ describe('Handle Commands', () => {
 
       expect(collector.hooks).toEqual(hooksBefore);
     });
+  });
+});
+
+describe('prepareEvent', () => {
+  it('injects timing and collector source meta; event-provided values win', async () => {
+    const c = await collector({});
+    c.timing = Date.now() - 100;
+    const out = prepareEvent(c, { name: 'page view' });
+    expect(out.source).toMatchObject({ type: 'collector', schema: '4' });
+    expect(typeof out.timing).toBe('number');
+    const overridden = prepareEvent(c, {
+      source: { type: 'ga4', schema: '4' },
+    });
+    expect(overridden.source).toEqual({ type: 'ga4', schema: '4' });
+  });
+
+  it('feeds createEvent so enrichment is unchanged', async () => {
+    const c = await collector({});
+    const event = createEvent(c, prepareEvent(c, { name: 'page view' }));
+    expect(event.entity).toBe('page');
+    expect(event.action).toBe('view');
+    expect(event.source).toMatchObject({ type: 'collector', schema: '4' });
+  });
+});
+
+describe('enrichEvent', () => {
+  it('enriches a partial event with entity, action, id, timestamp, and source', async () => {
+    const c = await collector({});
+    const event = enrichEvent(c, { name: 'page view' });
+    expect(event.entity).toBe('page');
+    expect(event.action).toBe('view');
+    expect(typeof event.id).toBe('string');
+    expect(typeof event.timestamp).toBe('number');
+    expect(event.source).toMatchObject({ type: 'collector', schema: '4' });
+  });
+
+  it('equals createEvent(collector, prepareEvent(collector, ...))', async () => {
+    const c = await collector({});
+    const partial: WalkerOS.DeepPartialEvent = {
+      name: 'page view',
+      id: 'fixed',
+    };
+    expect(enrichEvent(c, partial)).toEqual(
+      createEvent(c, prepareEvent(c, partial)),
+    );
   });
 });

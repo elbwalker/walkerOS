@@ -66,11 +66,13 @@ export {
   simulateSource,
   simulateTransformer,
   simulateDestination,
+  simulateCollector,
 } from './commands/push/index.js';
 export type {
   SimulateSourceOptions,
   SimulateTransformerOptions,
   SimulateDestinationOptions,
+  SimulateCollectorOptions,
 } from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
@@ -146,6 +148,18 @@ export type {
   CreatePreviewOptions,
   DeletePreviewOptions,
 } from './commands/previews/index.js';
+export {
+  listSecrets,
+  createSecret,
+  updateSecret,
+  deleteSecret,
+} from './commands/secrets/index.js';
+export type {
+  ListSecretsOptions,
+  CreateSecretOptions,
+  UpdateSecretOptions,
+  DeleteSecretOptions,
+} from './commands/secrets/index.js';
 export type { FeedbackOptions } from './commands/feedback/index.js';
 export {
   readConfig,

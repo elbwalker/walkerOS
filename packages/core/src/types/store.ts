@@ -6,11 +6,18 @@ export interface BaseEnv {
   [key: string]: unknown;
 }
 
-export interface Types<S = unknown, E = BaseEnv, I = S, U = unknown> {
+export interface Types<
+  S = unknown,
+  E = BaseEnv,
+  I = S,
+  U = unknown,
+  C = unknown,
+> {
   settings: S;
   initSettings: I;
   env: E;
   setup: U;
+  credentials: C;
 }
 
 export type TypesGeneric = {
@@ -18,17 +25,25 @@ export type TypesGeneric = {
   initSettings: any;
   env: any;
   setup: any;
+  credentials: any;
 };
 
 export type Settings<T extends TypesGeneric = Types> = T['settings'];
 export type InitSettings<T extends TypesGeneric = Types> = T['initSettings'];
 export type Env<T extends TypesGeneric = Types> = T['env'];
 export type SetupOptions<T extends TypesGeneric = Types> = T['setup'];
+export type Credentials<T extends TypesGeneric = Types> = T['credentials'];
 
 export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
 export interface Config<T extends TypesGeneric = Types> {
   settings?: InitSettings<T>;
+  /**
+   * Optional, strictly-typed credentials slot ($env-resolved). The package
+   * defines the shape via `Types['credentials']`. `settings.<sdk>` stays the
+   * escape hatch for raw SDK options.
+   */
+  credentials?: Credentials<T>;
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
@@ -44,7 +59,8 @@ export type PartialConfig<T extends TypesGeneric = Types> = Config<
     Partial<Settings<T>> | Settings<T>,
     Env<T>,
     InitSettings<T>,
-    SetupOptions<T>
+    SetupOptions<T>,
+    Credentials<T>
   >
 >;
 

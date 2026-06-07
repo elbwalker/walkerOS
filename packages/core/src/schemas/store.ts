@@ -35,6 +35,16 @@ export const ConfigSchema = z
       })
       .describe('Implementation-specific configuration')
       .optional(),
+    credentials: z
+      .unknown()
+      .meta({
+        id: 'StoreCredentials',
+        title: 'Store.Credentials',
+        description:
+          'Optional credentials slot (store-defined shape); supports $env. The per-package shape is supplied via mergeConfigSchema.',
+      })
+      .describe('Optional credentials (store-defined shape)')
+      .optional(),
     env: z
       .unknown()
       .meta({

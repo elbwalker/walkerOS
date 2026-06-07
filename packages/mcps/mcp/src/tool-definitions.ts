@@ -130,6 +130,28 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     },
   },
   {
+    name: 'secret_manage',
+    title: 'Secret Management',
+    description:
+      'Manage a flow’s secrets (the $env.<NAME> values its steps reference at deploy/run time). ' +
+      'Actions: list (metadata only), set (create), update (rotate value), delete. ' +
+      'Secrets are write-mostly: values are encrypted at rest and are NEVER returned, listed, or echoed.',
+    inputSchema: {
+      action: z.enum(['list', 'set', 'update', 'delete']),
+      projectId: z.string().optional(),
+      flowId: z.string(),
+      name: z.string().optional(),
+      value: z.string().optional(),
+      secretId: z.string().optional(),
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
     name: 'flow_validate',
     title: 'Validate Flow',
     description:

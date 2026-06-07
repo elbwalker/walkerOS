@@ -20,6 +20,9 @@ import { reconcilePending } from './pending';
 import { destroyAllSteps } from './shutdown';
 import type { RunState } from './types/collector';
 
+// Replaced at build time by tsup's `define` (see packages/config/tsup).
+declare const __VERSION__: string;
+
 /**
  * Record a reactive-state mutation: bump the global `stateVersion` and stamp the
  * changed cell's own version. The per-cell stamp lets delivery dedup be per-cell
@@ -158,7 +161,13 @@ export async function commonHandleCommand(
         break;
 
       case Const.Commands.Shutdown:
-        await destroyAllSteps(collector);
+        // Idempotency guard: re-entrancy must not re-run destroyAllSteps and
+        // double-close writers, destinations, or stores. The first shutdown
+        // sets the flag and runs the full sequence; a second command no-ops.
+        if (!collector.hasShutdown) {
+          collector.hasShutdown = true;
+          await destroyAllSteps(collector);
+        }
         break;
 
       case Const.Commands.User:
@@ -179,6 +188,26 @@ export async function commonHandleCommand(
 
     return result || createPushResult({ ok: true });
   }
+}
+
+/**
+ * Builds the partial event handed to `createEvent`, injecting the default
+ * `timing` (elapsed since the collector started) and the collector `source`
+ * meta. Event-provided values override the defaults.
+ *
+ * @param collector The walkerOS collector instance.
+ * @param event The incoming partial event.
+ * @returns The partial event with defaults applied.
+ */
+export function prepareEvent(
+  collector: Collector.Instance,
+  event: WalkerOS.DeepPartialEvent,
+): WalkerOS.PartialEvent {
+  return {
+    timing: Math.round((Date.now() - collector.timing) / 10) / 100,
+    source: { type: 'collector', schema: '4', version: __VERSION__ },
+    ...event,
+  } as WalkerOS.PartialEvent;
 }
 
 /**
@@ -232,6 +261,23 @@ export function createEvent(
     timing,
     source,
   };
+}
+
+/**
+ * Enriches a partial event into a full event by applying the collector defaults
+ * (`prepareEvent`) and then building the complete event (`createEvent`). This is
+ * the single enrichment entry point shared by the production push path and
+ * simulation, so both produce identical events.
+ *
+ * @param collector The walkerOS collector instance.
+ * @param event The incoming partial event.
+ * @returns The full event.
+ */
+export function enrichEvent(
+  collector: Collector.Instance,
+  event: WalkerOS.DeepPartialEvent,
+): WalkerOS.Event {
+  return createEvent(collector, prepareEvent(collector, event));
 }
 
 /**

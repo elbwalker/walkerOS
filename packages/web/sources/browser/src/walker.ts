@@ -291,6 +291,7 @@ function getEntity(
     dataSelector,
     prefix,
     entity,
+    true, // collect scoped generic (data-elb_) for real entities
   );
 
   // Add linked elements (data-elblink)
@@ -390,6 +391,7 @@ function getThisAndParentProperties(
   entitySelector: string,
   prefix: string,
   type: string,
+  collectScoped = false,
 ): [data: WalkerOS.Properties, context: WalkerOS.OrderedProperties] {
   let data: WalkerOS.Properties = {};
   const context: WalkerOS.OrderedProperties = {};
@@ -399,10 +401,20 @@ function getThisAndParentProperties(
     Const.Commands.Context,
     false,
   )}]`;
+  const scopedName = Const.Commands.Scoped; // '_' -> data-elb_
+  const scopedSelector = `[${getElbAttributeName(prefix, scopedName, false)}]`;
 
   // Get all bubbling-up properties with decreasing priority
   let contextI = 0; // Context counter
   while (parent) {
+    // Scoped generic (data-elb_): same generic tier, bubble-up only.
+    // The synthetic page entity ignores generics, so it skips scoped too.
+    // Guard on scopedName so a falsy command constant degrades to "no scoped
+    // collection" instead of an empty suffix that would match the bare prefix.
+    if (collectScoped && scopedName && parent.matches(scopedSelector)) {
+      data = assign(getElbValues(prefix, parent, scopedName, false), data);
+    }
+
     // Properties
     if (parent.matches(entitySelector)) {
       // Get higher properties first

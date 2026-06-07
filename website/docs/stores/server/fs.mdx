@@ -76,7 +76,9 @@ await store.delete('old-file.txt');               // void`}
   language="typescript"
 />
 
-`get()` returns `Buffer` for compatibility with the file transformer, which uses `content instanceof Buffer` for Content-Length calculation.
+`get()` returns `Buffer` for raw files, for compatibility with the file transformer, which uses `content instanceof Buffer` for Content-Length calculation.
+
+The fs store is a byte/string store. `get()` returns a `Buffer`; `set()` accepts a `Buffer` or `string` and writes it raw, and rejects other value types with a clear error. Served assets stay intact byte-for-byte. Structured request-cache values are serialized by the cache layer in `@walkeros/core` before they reach the store, so the store never sees a non-`Buffer`, non-`string` value when backing a request cache.
 
 ## File serving pattern
 

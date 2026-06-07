@@ -5,6 +5,7 @@ import type {
   Types,
 } from './types';
 import { createTokenProvider, type TokenProvider } from './auth';
+import { resolveCredentials } from './credentials';
 import { setup as sheetsSetup } from './setup';
 import {
   SHEETS_BASE,
@@ -50,7 +51,7 @@ function isServiceAccountShape(
 }
 
 function parseCredentials(
-  credentials?: string | ServiceAccountCredentials,
+  credentials?: unknown,
 ): ServiceAccountCredentials | undefined {
   if (!credentials) return undefined;
   if (typeof credentials === 'string') {
@@ -63,7 +64,8 @@ function parseCredentials(
     if (isServiceAccountShape(parsed)) return parsed;
     return undefined;
   }
-  return credentials;
+  if (isServiceAccountShape(credentials)) return credentials;
+  return undefined;
 }
 
 function assertSheetsSettings(
@@ -265,7 +267,7 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
   const settings: SheetsStoreSettings = context.config.settings;
   const { logger } = context;
   const id = context.id;
-  const creds = parseCredentials(settings.credentials);
+  const creds = parseCredentials(resolveCredentials(context.config, logger));
   const getToken = createTokenProvider(creds);
   const sheet = resolveSheet(settings);
   const keyCol = resolveKeyColumn(settings);
@@ -311,6 +313,17 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
     },
 
     async set(key: string, value: unknown): Promise<void> {
+      // The request-cache codec hands stores an encoded Buffer (via
+      // encodeCacheValue). Sheets would JSON.stringify it into
+      // {"type":"Buffer","data":[...]} and return that object as a HIT with no
+      // TTL check on read, serving silent stale garbage. Sheets is not a request-cache
+      // backend; reject the Buffer case loudly. Non-Buffer JSON values are
+      // unaffected.
+      if (Buffer.isBuffer(value)) {
+        throw new Error(
+          'Sheets store cannot be used as a request cache; use fs, s3, gcs, or an in-memory store',
+        );
+      }
       const serialized = JSON.stringify(value);
       const existingRow = keyToRow.get(key);
       if (existingRow === undefined) {

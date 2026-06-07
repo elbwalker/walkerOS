@@ -327,6 +327,14 @@ export interface Instance {
     destinations: Destination.InitDestinations;
   };
   /**
+   * Set true on the first `shutdown` command, guarding re-entrancy: a second
+   * `walker shutdown` must not re-run `destroyAllSteps` and double-close
+   * writers, destinations, or stores. Subsequent shutdown commands no-op.
+   * Initialized to `false` by the collector factory; absence (`undefined`)
+   * is treated as "not yet shut down", so the first shutdown still runs.
+   */
+  hasShutdown?: boolean;
+  /**
    * Every event type ever broadcast through `onApply` (state, lifecycle, and
    * arbitrary). Lets a `require:[<arbitrary>]` gate be satisfied by the current
    * recorded state for events that have no backing cell, including a broadcast

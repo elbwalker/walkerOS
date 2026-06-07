@@ -2,7 +2,7 @@ import type { Hint } from '@walkeros/core';
 
 export const hints: Hint.Hints = {
   'ingest-prerequisite': {
-    text: 'The bot transformer reads userAgent from ctx.ingest (path "ingest.userAgent" by default). The upstream server source must populate it via config.ingest mapping, otherwise the UA is empty and every event scores 70 (baseline for missing UA).',
+    text: 'The bot transformer reads userAgent from ctx.ingest (path "ingest.userAgent" by default). The upstream server source must populate it via config.ingest, which MUST use the map operator with direct request field paths (no req. prefix); a bare object like { userAgent: "req.headers.user-agent" } is silently inert and leaves ingest empty. Without populated ingest the UA is empty and every event scores 70 (baseline for missing UA).',
     code: [
       {
         lang: 'json',
@@ -13,7 +13,9 @@ export const hints: Hint.Hints = {
                 package: '@walkeros/server-source-express',
                 config: {
                   ingest: {
-                    userAgent: 'req.headers.user-agent',
+                    map: {
+                      userAgent: { key: 'headers.user-agent' },
+                    },
                   },
                 },
               },

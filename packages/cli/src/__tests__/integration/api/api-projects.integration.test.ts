@@ -26,7 +26,11 @@ import {
   updateProject,
   deleteProject,
 } from '../../../commands/projects/index.js';
-import { mockProject } from '../../helpers/msw-handlers.js';
+import {
+  mockProject,
+  mockProjectDetail,
+  mockCreatedProject,
+} from '../../helpers/msw-handlers.js';
 
 describe('projects (integration via MSW)', () => {
   it('listProjects returns typed project list', async () => {
@@ -40,12 +44,12 @@ describe('projects (integration via MSW)', () => {
 
   it('getProject returns a single project', async () => {
     const result = await getProject({ projectId: 'proj_test123' });
-    expect(result).toEqual(mockProject);
+    expect(result).toEqual(mockProjectDetail);
   });
 
   it('createProject sends name and returns project', async () => {
     const result = await createProject({ name: 'New Project' });
-    expect(result).toEqual({ ...mockProject, name: 'New Project' });
+    expect(result).toEqual({ ...mockCreatedProject, name: 'New Project' });
   });
 
   it('updateProject patches and returns updated project', async () => {
@@ -53,7 +57,11 @@ describe('projects (integration via MSW)', () => {
       projectId: 'proj_test123',
       name: 'Renamed',
     });
-    expect(result).toEqual({ ...mockProject, name: 'Renamed' });
+    expect(result).toEqual({
+      id: mockProject.id,
+      name: 'Renamed',
+      updatedAt: mockProject.updatedAt,
+    });
   });
 
   it('deleteProject returns success', async () => {

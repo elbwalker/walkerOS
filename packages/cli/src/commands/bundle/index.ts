@@ -467,6 +467,7 @@ export async function bundle(
     ...(options.buildOverrides ?? {}),
     skipWrapper: preset.skipWrapper,
     withDev: preset.withDev,
+    externalizeDev: preset.externalizeDev,
   };
   const { flowSettings, buildOptions } = loadBundleConfig(rawConfig, {
     configPath,

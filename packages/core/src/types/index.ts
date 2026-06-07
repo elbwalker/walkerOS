@@ -5,6 +5,7 @@ export * as Collector from './collector';
 export { stepId } from './collector';
 export type { StepKind, DroppedCounters } from './collector';
 export * as Context from './context';
+export type { ServiceAccount, Credential } from './credentials';
 export * as Destination from './destination';
 export * as Elb from './elb';
 export type { Flow } from './flow';

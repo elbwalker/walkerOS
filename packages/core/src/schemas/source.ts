@@ -122,6 +122,16 @@ export const ConfigSchema = MappingConfigSchema.extend({
     })
     .describe('Implementation-specific configuration')
     .optional(),
+  credentials: z
+    .any()
+    .meta({
+      id: 'SourceCredentials',
+      title: 'Source.Credentials',
+      description:
+        'Optional credentials slot (source-defined shape); supports $env. The per-package shape is supplied via mergeConfigSchema.',
+    })
+    .describe('Optional credentials (source-defined shape)')
+    .optional(),
   env: BaseEnvSchema.optional().describe(
     'Environment dependencies (platform-specific)',
   ),

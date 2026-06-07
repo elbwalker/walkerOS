@@ -6,11 +6,11 @@ import type { DestinationDataManager } from '..';
  * Best for: AWS Lambda, Docker, Kubernetes, any serverless environment
  */
 export const awsLambda: DestinationDataManager.Config = {
+  credentials: {
+    client_email: process.env.GOOGLE_CLIENT_EMAIL || '',
+    private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+  },
   settings: {
-    credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL || '',
-      private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-    },
     destinations: [
       {
         operatingAccount: {
@@ -93,11 +93,11 @@ export const dockerKubernetes: DestinationDataManager.Config = {
  * For specific use cases requiring different OAuth scopes
  */
 export const customScopes: DestinationDataManager.Config = {
+  credentials: {
+    client_email: process.env.GOOGLE_CLIENT_EMAIL || '',
+    private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+  },
   settings: {
-    credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL || '',
-      private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-    },
     scopes: ['https://www.googleapis.com/auth/datamanager'],
     destinations: [
       {

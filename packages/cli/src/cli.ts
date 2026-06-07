@@ -614,6 +614,10 @@ program
   .option('--flow-id <id>', 'API flow ID (enables heartbeat, polling, secrets)')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
+  .option(
+    '--env-file <path>',
+    'load environment variables from a dotenv file (opt-in; existing env wins; refuses group/other-readable files)',
+  )
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
@@ -627,6 +631,7 @@ program
       flowId: options.flowId ?? process.env.WALKEROS_FLOW_ID,
       deploymentId: process.env.WALKEROS_DEPLOYMENT_ID,
       project: options.project ?? process.env.WALKEROS_PROJECT_ID,
+      envFile: options.envFile,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,

@@ -1,5 +1,39 @@
-import type { Destination, Source, Transformer } from '@walkeros/core';
+import type {
+  Destination,
+  Logger,
+  Source,
+  Store,
+  Transformer,
+} from '@walkeros/core';
+import { Level } from '@walkeros/core';
 import { startFlow } from '..';
+
+// Build a single-entry batch registry whose flush() behaviour is supplied by
+// the test, so we can drive the fast-resolve and hang paths deterministically.
+function makeBatches(
+  flush: () => Promise<void>,
+): NonNullable<Destination.Instance['batches']> {
+  const batched: Destination.Instance['batches'] = {};
+  return {
+    default: {
+      batched: { key: 'default', entries: [], events: [], data: [] },
+      batchFn: () => {},
+      flush,
+    },
+  } satisfies typeof batched;
+}
+
+// Capture only ERROR-level log messages via a custom logger handler.
+function makeErrorCapture(): {
+  messages: string[];
+  handler: Logger.Handler;
+} {
+  const messages: string[] = [];
+  const handler: Logger.Handler = (level, message) => {
+    if (level === Level.ERROR) messages.push(message);
+  };
+  return { messages, handler };
+}
 
 describe('shutdown command', () => {
   it('calls destroy on all destinations', async () => {
@@ -105,6 +139,51 @@ describe('shutdown command', () => {
     await elb('walker shutdown');
   });
 
+  it('flushes pending destination batches on shutdown', async () => {
+    const mockPushBatch = jest.fn();
+    const dest: Destination.Instance = {
+      push: jest.fn(),
+      pushBatch: mockPushBatch,
+      config: { init: true, batch: { wait: 60_000 } }, // wait long; only shutdown can flush
+    };
+    const { elb } = await startFlow({ destinations: { d: { code: dest } } });
+    await elb('page view');
+    expect(mockPushBatch).not.toHaveBeenCalled(); // still buffered
+
+    await elb('walker shutdown');
+    expect(mockPushBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('is idempotent: a second shutdown does not re-destroy or throw', async () => {
+    const destDestroy = jest.fn();
+    const storeDestroy = jest.fn();
+    const { collector, elb } = await startFlow({});
+
+    const dest: Destination.Instance = {
+      config: {},
+      push: jest.fn(),
+      type: 'test-dest',
+      destroy: destDestroy,
+    };
+    collector.destinations['test'] = dest;
+    const store: Store.Instance = {
+      type: 'memory',
+      config: {},
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: jest.fn(),
+      destroy: storeDestroy,
+    };
+    collector.stores['kv'] = store;
+
+    await elb('walker shutdown');
+    // Second shutdown must be a clean no-op: never throws, never re-destroys.
+    await expect(elb('walker shutdown')).resolves.toBeDefined();
+
+    expect(destDestroy).toHaveBeenCalledTimes(1);
+    expect(storeDestroy).toHaveBeenCalledTimes(1);
+  });
+
   it('respects shutdown order: sources before destinations before transformers', async () => {
     const order: string[] = [];
     const { collector, elb } = await startFlow({});
@@ -140,5 +219,164 @@ describe('shutdown command', () => {
     await elb('walker shutdown');
 
     expect(order).toEqual(['source', 'destination', 'transformer']);
+  });
+
+  describe('timeout guards do not leak timers', () => {
+    const STEP_TIMEOUT = 5000;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    });
+
+    it('clears the flush timeout when batch flush resolves fast', async () => {
+      const { collector, elb } = await startFlow({});
+
+      const dest: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'test-dest',
+        batches: makeBatches(() => Promise.resolve()),
+      };
+      collector.destinations['fast'] = dest;
+
+      await elb('walker shutdown');
+
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('clears the destroy timeout when destroy resolves fast', async () => {
+      const { collector, elb } = await startFlow({});
+
+      const dest: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'test-dest',
+        destroy: jest.fn(() => Promise.resolve()),
+      };
+      collector.destinations['fast'] = dest;
+
+      await elb('walker shutdown');
+
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('times out and is caught when batch flush hangs', async () => {
+      const { messages, handler } = makeErrorCapture();
+      const { collector, elb } = await startFlow({ logger: { handler } });
+
+      const dest: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'test-dest',
+        batches: makeBatches(() => new Promise<void>(() => {})),
+      };
+      collector.destinations['hang'] = dest;
+
+      const shutdown = elb('walker shutdown');
+      await jest.advanceTimersByTimeAsync(STEP_TIMEOUT);
+      await shutdown; // resolves, does not hang
+
+      expect(
+        messages.some((m) =>
+          /destination 'hang' batch flush timed out/.test(m),
+        ),
+      ).toBe(true);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('times out and is caught when destroy hangs', async () => {
+      const { messages, handler } = makeErrorCapture();
+      const { collector, elb } = await startFlow({ logger: { handler } });
+
+      const dest: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'test-dest',
+        destroy: jest.fn(() => new Promise<void>(() => {})),
+      };
+      collector.destinations['hang'] = dest;
+
+      const shutdown = elb('walker shutdown');
+      await jest.advanceTimersByTimeAsync(STEP_TIMEOUT);
+      await shutdown; // resolves, does not hang
+
+      expect(
+        messages.some((m) => /destination 'hang' destroy timed out/.test(m)),
+      ).toBe(true);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('isolates a slow destination: fast one flushes, slow one times out independently', async () => {
+      const { messages, handler } = makeErrorCapture();
+      const { collector, elb } = await startFlow({ logger: { handler } });
+
+      let fastFlushed = false;
+      const fast: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'fast',
+        batches: makeBatches(async () => {
+          fastFlushed = true;
+        }),
+      };
+      const slow: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'slow',
+        batches: makeBatches(() => new Promise<void>(() => {})), // never resolves
+      };
+      collector.destinations['fast'] = fast;
+      collector.destinations['slow'] = slow;
+
+      const shutdown = elb('walker shutdown');
+      // Drive the slow destination to its timeout; the fast one resolved already.
+      await jest.advanceTimersByTimeAsync(STEP_TIMEOUT);
+      await shutdown; // resolves even though one destination hung
+
+      // Fast destination completed its flush within budget.
+      expect(fastFlushed).toBe(true);
+      // Slow destination timed out independently, without blocking the fast one.
+      expect(
+        messages.some((m) =>
+          /destination 'slow' batch flush timed out/.test(m),
+        ),
+      ).toBe(true);
+      expect(
+        messages.some((m) =>
+          /destination 'fast' batch flush timed out/.test(m),
+        ),
+      ).toBe(false);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('empty-batch shutdown is a clean no-op for a destination with zero buffered entries', async () => {
+      const { messages, handler } = makeErrorCapture();
+      const { collector, elb } = await startFlow({ logger: { handler } });
+
+      // Batch registry present, but the single batch has zero buffered entries
+      // and a flush that resolves immediately (nothing to send).
+      let flushCalls = 0;
+      const dest: Destination.Instance = {
+        config: {},
+        push: jest.fn(),
+        type: 'empty',
+        batches: makeBatches(async () => {
+          flushCalls++;
+        }),
+      };
+      collector.destinations['empty'] = dest;
+
+      await expect(elb('walker shutdown')).resolves.toBeDefined();
+
+      // Flush ran and resolved cleanly; no error logged, no timer leaked.
+      expect(flushCalls).toBe(1);
+      expect(messages).toEqual([]);
+      expect(jest.getTimerCount()).toBe(0);
+    });
   });
 });

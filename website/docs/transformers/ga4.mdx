@@ -45,8 +45,12 @@ The transformer reads `ctx.ingest.url` (required) and `ctx.ingest.body` (optiona
           "package": "@walkeros/server-source-express",
           "config": {
             "ingest": {
-              "url": "req.url",
-              "body": "req.body"
+              "map": {
+                "url": { "key": "url" },
+                "path": { "key": "path" },
+                "method": { "key": "method" },
+                "body": { "key": "body" }
+              }
             }
           },
           "before": "ga4"
@@ -77,7 +81,14 @@ await startFlow({
     http: {
       code: sourceExpress,
       config: {
-        ingest: { url: 'req.url', body: 'req.body' },
+        ingest: {
+          map: {
+            url: { key: 'url' },
+            path: { key: 'path' },
+            method: { key: 'method' },
+            body: { key: 'body' },
+          },
+        },
       },
       before: 'ga4',
     },
@@ -101,7 +112,10 @@ The transformer expects the source to populate `ctx.ingest` with these keys:
 | Key    | Type     | Required | Notes                                                |
 | ------ | -------- | -------- | ---------------------------------------------------- |
 | `url`  | `string` | yes      | Full request URL including the query string.        |
+| `path` | `string` | yes      | Request path, drives the `/g/collect` `before` match. |
 | `body` | `string` | no       | Raw POST body. Multi-event batches are `\n`-separated lines. |
+
+`config.ingest` must use the `map` operator with **direct `req` field paths** (no `req.` prefix), as shown above. A bare object like `{ "url": "req.url" }` is silently inert: without an operator the source returns `req` itself, `ctx.ingest` stays empty, and raw GA4 params reach the collector as a nameless event.
 
 If `url` is missing or not a string the transformer drops the event silently. If `body` is JSON-parsed by the source before reaching the transformer, pass the original raw string through or skip the transformer.
 

@@ -7,6 +7,7 @@ import {
   buildCacheContext,
 } from '@walkeros/core';
 import {
+  enrichEvent,
   transformerInit,
   transformerPush,
   runTransformerChain,
@@ -20,7 +21,13 @@ import {
   type Platform,
 } from '../../core/index.js';
 
-import type { Flow, Logger, Simulation, WalkerOS } from '@walkeros/core';
+import type {
+  Flow,
+  Ingest,
+  Logger,
+  Simulation,
+  WalkerOS,
+} from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonConfig } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
@@ -46,6 +53,87 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';
+}
+
+/**
+ * The trigger instance a source's `createTrigger` resolves to. `trigger`
+ * fires a (type, options) trigger; the returned function takes the captured
+ * content. `flow.collector.command` lets the simulator request a shutdown.
+ * The bundle carries no compile-time types, so the simulator pins only the
+ * members it actually reads and keeps the rest opaque.
+ */
+interface TriggerInstance {
+  trigger: (
+    type?: string,
+    options?: unknown,
+  ) => (content?: unknown) => Promise<unknown>;
+  flow?: {
+    collector?: {
+      command?: (command: string) => Promise<unknown>;
+    };
+  };
+}
+
+/**
+ * Signature of a source package's `createTrigger`, narrowed off the awaited
+ * `/dev` module. The simulator only needs it to be callable and resolve to a
+ * `TriggerInstance`; the bundle carries no compile-time types so the
+ * parameters stay opaque.
+ */
+type CreateTrigger = (...args: unknown[]) => Promise<TriggerInstance>;
+
+/**
+ * Type predicate narrowing an opaque value to a callable. Used instead of a
+ * cast so `getCreateTrigger` can return a precisely typed function without
+ * the banned `Function` type or an `as` assertion.
+ */
+function isCallable(value: unknown): value is CreateTrigger {
+  return typeof value === 'function';
+}
+
+/**
+ * Narrow the awaited `/dev` module of a source package down to its
+ * `examples.createTrigger`, validating each hop with `in`/`typeof` instead of
+ * a cast. Returns `undefined` if any hop is missing or the wrong shape.
+ */
+function getCreateTrigger(devModule: unknown): CreateTrigger | undefined {
+  if (!isRecord(devModule) || !('examples' in devModule)) return undefined;
+  const examples = devModule.examples;
+  if (!isRecord(examples) || !('createTrigger' in examples)) return undefined;
+  const createTrigger = examples.createTrigger;
+  return isCallable(createTrigger) ? createTrigger : undefined;
+}
+
+/**
+ * Shape of a destination package's simulation `/dev` env, narrowed off the
+ * awaited `/dev` module. `push` is the env object handed to the destination;
+ * `simulation` lists `call:<fn>` markers the wrapper should track.
+ */
+interface DevEnv {
+  push?: Record<string, unknown>;
+  simulation?: string[];
+}
+
+/**
+ * Narrow the awaited `/dev` module of a destination package down to its
+ * `examples.env`, validating each hop with `in`/`typeof` instead of a cast.
+ * Returns `undefined` if any hop is missing or the wrong shape.
+ */
+function getDevEnv(devModule: unknown): DevEnv | undefined {
+  if (!isRecord(devModule) || !('examples' in devModule)) return undefined;
+  const examples = devModule.examples;
+  if (!isRecord(examples) || !('env' in examples)) return undefined;
+  const env = examples.env;
+  if (!isRecord(env)) return undefined;
+  const result: DevEnv = {};
+  if ('push' in env && isRecord(env.push)) result.push = env.push;
+  if ('simulation' in env && isStringArray(env.simulation))
+    result.simulation = env.simulation;
+  return result;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(isString);
 }
 
 /**
@@ -618,11 +706,12 @@ export async function simulateSource(
         networkCalls,
       },
       async (module) => {
-        // Look up createTrigger from __devExports (bundled /dev export)
-        const devExports = module.__devExports?.[sourceConfig!.package!] as
-          | { examples?: { createTrigger?: Function } }
-          | undefined;
-        const createTrigger = devExports?.examples?.createTrigger;
+        // Look up createTrigger from the lazy __devExports registry: await the
+        // thunk to pull the /dev module in, then narrow without a cast.
+        const loadDev = module.__devExports?.[sourceConfig!.package!];
+        const devModule =
+          typeof loadDev === 'function' ? await loadDev() : undefined;
+        const createTrigger = getCreateTrigger(devModule);
         if (!createTrigger) {
           throw new Error(
             `Source package "${sourceConfig!.package}" has no createTrigger in /dev export`,
@@ -705,6 +794,12 @@ export interface SimulateTransformerOptions {
   silent?: boolean;
   verbose?: boolean;
   snapshot?: string;
+  /**
+   * Pipeline context the transformer reads via `ctx.ingest` (e.g. a decoder
+   * reads `ingest.url`). Merged onto a fresh ingest so `_meta` is always
+   * present; provide only the keys the step reads.
+   */
+  ingest?: Omit<Ingest, '_meta'>;
 }
 
 /**
@@ -825,7 +920,10 @@ export async function simulateTransformer(
         }
 
         const inputEvent = event;
-        const ingest = createIngest(options.transformerId);
+        const ingest = {
+          ...createIngest(options.transformerId),
+          ...options.ingest,
+        };
         // Output events only: each entry is a transformer output, or `null`
         // when the event was dropped. `buildSimulationResult` drops null
         // entries so a drop yields `events: []` and a passthrough yields
@@ -921,6 +1019,164 @@ export async function simulateTransformer(
     return buildSimulationResult({
       step: 'transformer',
       name: options.transformerId,
+      startTime,
+      error,
+    });
+  } finally {
+    await prepared.cleanup();
+  }
+}
+
+export interface SimulateCollectorOptions {
+  collectorName: string;
+  bundlePath?: string;
+  flow?: string;
+  silent?: boolean;
+  verbose?: boolean;
+  snapshot?: string;
+  state?: {
+    consent?: WalkerOS.Consent;
+    user?: WalkerOS.User;
+    globals?: WalkerOS.Properties;
+    timing?: number; // sets collector.timing, the base from which prepareEvent computes the relative event.timing
+  };
+}
+
+/**
+ * Self-contained collector enrichment simulation.
+ *
+ * Takes a post-next `DeepPartialEvent` and an optional collector-state
+ * snapshot, then returns the fully enriched event the runtime produces between
+ * the pre-collector `next` chain and the post-collector `before` chain. Reuses
+ * the runtime's own enrichment (`enrichEvent`); it does not reimplement it.
+ */
+export async function simulateCollector(
+  configOrPath: string | Flow.Json,
+  event: WalkerOS.DeepPartialEvent,
+  options: SimulateCollectorOptions,
+): Promise<Simulation.Result> {
+  const startTime = Date.now();
+
+  // Validate event with Zod
+  const parsed = schemas.PartialEventSchema.safeParse(event);
+  if (!parsed.success) {
+    return buildSimulationResult({
+      step: 'collector',
+      name: options.collectorName,
+      startTime,
+      error: parsed.error.message,
+    });
+  }
+
+  // Resolve config: accept either file path or config object
+  let config: Flow.Json;
+  if (typeof configOrPath === 'string') {
+    config = (await loadJsonConfig(configOrPath)) as Flow.Json;
+  } else {
+    config = configOrPath;
+  }
+
+  const prepareInput = options.bundlePath
+    ? {
+        mode: 'prebuilt' as const,
+        bundlePath: options.bundlePath,
+        config,
+        flow: options.flow,
+        simulate: ['collector.' + options.collectorName],
+        silent: options.silent,
+        verbose: options.verbose,
+      }
+    : {
+        mode: 'build' as const,
+        config,
+        flow: options.flow,
+        simulate: ['collector.' + options.collectorName],
+        silent: options.silent,
+        verbose: options.verbose,
+      };
+
+  const prepared = await prepareFlow(prepareInput);
+
+  try {
+    const logger = createCLILogger({
+      silent: options.silent,
+      verbose: options.verbose,
+    });
+
+    // Load snapshot code if provided
+    let snapshotCode: string | undefined;
+    if (options.snapshot) {
+      snapshotCode = (await loadConfig(options.snapshot, {
+        json: false,
+      })) as string;
+      logger.debug(`Snapshot loaded (${snapshotCode.length} bytes)`);
+    }
+
+    const networkCalls: NetworkCall[] = [];
+
+    return await withFlowContext<Simulation.Result>(
+      {
+        esmPath: prepared.bundlePath,
+        platform: prepared.platform,
+        logger,
+        snapshotCode,
+        networkCalls,
+      },
+      async (module) => {
+        const flowConfig = module.wireConfig(module.__configData ?? undefined);
+        applyOverrides(flowConfig, prepared.overrides);
+
+        // Don't initialize sources or destinations during collector enrichment.
+        if (flowConfig.sources) flowConfig.sources = {};
+        if (flowConfig.destinations) flowConfig.destinations = {};
+
+        const result = await module.startFlow(flowConfig);
+        if (!result?.collector)
+          throw new Error('Invalid bundle: collector not available');
+
+        const collector = result.collector;
+
+        // Seed collector state from the snapshot. These are plain mutable
+        // instance props; pure enrichment needs no `run()`.
+        if (options.state) {
+          if (options.state.consent !== undefined)
+            collector.consent = options.state.consent;
+          if (options.state.user !== undefined)
+            collector.user = options.state.user;
+          if (options.state.globals !== undefined)
+            collector.globals = options.state.globals;
+          if (options.state.timing !== undefined)
+            collector.timing = options.state.timing;
+        }
+
+        const enriched = enrichEvent(collector, event);
+
+        const captured: Array<{
+          event: WalkerOS.DeepPartialEvent | null;
+          timestamp: number;
+        }> = [{ event: enriched, timestamp: Date.now() }];
+
+        await collector.command('shutdown');
+
+        return buildSimulationResult({
+          step: 'collector',
+          name: options.collectorName,
+          startTime,
+          captured,
+        });
+      },
+      (error) =>
+        buildSimulationResult({
+          step: 'collector',
+          name: options.collectorName,
+          startTime,
+          error,
+        }),
+    );
+  } catch (error) {
+    return buildSimulationResult({
+      step: 'collector',
+      name: options.collectorName,
       startTime,
       error,
     });
@@ -1035,17 +1291,11 @@ export async function simulateDestination(
         }> = [];
 
         if (destPkg?.package) {
-          const devExports = module.__devExports?.[destPkg.package] as
-            | {
-                examples?: {
-                  env?: {
-                    push?: Record<string, unknown>;
-                    simulation?: string[];
-                  };
-                };
-              }
-            | undefined;
-          const devEnv = devExports?.examples?.env;
+          // Await the lazy __devExports thunk, then narrow without a cast.
+          const loadDev = module.__devExports?.[destPkg.package];
+          const devModule =
+            typeof loadDev === 'function' ? await loadDev() : undefined;
+          const devEnv = getDevEnv(devModule);
 
           if (devEnv?.push) {
             const destinations = flowConfig.destinations as Record<

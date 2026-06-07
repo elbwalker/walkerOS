@@ -195,14 +195,27 @@ Step: destinations.gtag
 From an AI assistant the equivalent tool is `flow_simulate`. A few specifics:
 
 - **`step` is required.** Pass the target as `"type.name"`, e.g.
-  `"source.browser"`, `"destination.gtag"`, or `"transformer.router"`. There is
-  no all-steps mode.
-- **Source-step `event` shape is `{ content, trigger? }`**, where `content` is
-  the walkerOS event `{ name, data }` and `trigger` is optional
+  `"source.browser"`, `"collector.default"`, `"destination.gtag"`, or
+  `"transformer.router"`. There is no all-steps mode.
+- **Four step types: `source`, `collector`, `transformer`, `destination`.**
+  Source-step `event` shape is `{ content, trigger? }`, where `content` is the
+  walkerOS event `{ name, data }` and `trigger` is optional
   `{ type?, options? }`. There is no `env` field. Destination and transformer
   steps take a plain walkerOS event `{ name, data, consent? }`.
+- **`collector` is the enrichment step.** It takes a post-`next` partial event
+  plus an optional state snapshot `{ consent?, user?, globals?, timing? }`,
+  applies the collector's `createEvent`, and returns the fully enriched event.
+- **`transformer` steps accept an optional `ingest`** (a raw ingest without
+  `_meta`). Supply it to test a request decoder standalone, for example a GA4
+  decoder reading `ctx.ingest.url`: pass `ingest: { url: "..." }` with the
+  event.
 - **Sources are simulatable as a step**, including the `@walkeros/source-demo`
   demo source.
+- **`configPath` accepts a cloud flow id** (`flow_...` / `cfg_...`), resolved
+  the same way `flow_load` does, so you can simulate a saved flow without a file
+  round-trip. Repeated simulations of the same configuration reuse a prebuilt
+  bundle for faster runs; local file paths always rebuild. `flow_bundle` accepts
+  a cloud flow id the same way.
 
 `flow_load` loads a flow from a local path, URL, inline JSON, or a cloud
 flow/config ID (`flow_...` / `cfg_...`). Configs returned by `flow_load` and

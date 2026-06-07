@@ -227,4 +227,9 @@ describe('setup', () => {
     expect(required).toHaveLength(1);
     expect(required[0].name).toBe('name');
   });
+
+  test('DEFAULT_SCHEMA types timing as FLOAT64', () => {
+    const timing = DEFAULT_SCHEMA.find((f) => f.name === 'timing');
+    expect(timing?.type).toBe('FLOAT64');
+  });
 });

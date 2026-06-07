@@ -144,6 +144,8 @@ Health check endpoints (`/health` and `/ready`) are provided by the [runner](/do
 
 Extract request metadata (IP, user agent, headers) and forward it through the pipeline to transformers and destinations.
 
+`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the request scope (no `req.` prefix). A bare object like `{ ip: 'ip' }` is silently inert: without the `map` operator the source passes the whole request through and no field is extracted.
+
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceExpress } from '@walkeros/server-source-express';
@@ -155,10 +157,12 @@ const { collector } = await startFlow({
       config: {
         settings: { port: 8080 },
         ingest: {
-          ip: 'ip',
-          ua: 'headers.user-agent',
-          origin: 'headers.origin',
-          referer: 'headers.referer',
+          map: {
+            ip: { key: 'ip' },
+            ua: { key: 'headers.user-agent' },
+            origin: { key: 'headers.origin' },
+            referer: { key: 'headers.referer' },
+          },
         },
       },
     },
@@ -184,23 +188,25 @@ Use walkerOS mapping features for complex extraction:
 
 <CodeSnippet
   code={`ingest: {
-  // Simple path
-  ip: 'ip',
+  map: {
+    // Simple path
+    ip: { key: 'ip' },
 
-  // Custom function
-  country: { fn: (req) => geoip.lookup(req.ip)?.country },
+    // Custom function
+    country: { fn: (req) => geoip.lookup(req.ip)?.country },
 
-  // Conditional extraction
-  devMode: {
-    key: 'headers.x-debug',
-    condition: (req) => req.hostname === 'localhost',
-  },
+    // Conditional extraction
+    devMode: {
+      key: 'headers.x-debug',
+      condition: (req) => req.hostname === 'localhost',
+    },
 
-  // Nested structure
-  request: {
-    map: {
-      ua: 'headers.user-agent',
-      origin: 'headers.origin',
+    // Nested structure
+    request: {
+      map: {
+        ua: { key: 'headers.user-agent' },
+        origin: { key: 'headers.origin' },
+      },
     },
   },
 }`}

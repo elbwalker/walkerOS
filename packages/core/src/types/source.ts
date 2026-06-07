@@ -45,6 +45,7 @@ export interface Types<
   E = BaseEnv,
   I = S,
   U = unknown,
+  C = unknown,
 > {
   settings: S;
   initSettings: I;
@@ -52,6 +53,7 @@ export interface Types<
   push: P;
   env: E;
   setup: U;
+  credentials: C;
 }
 
 /**
@@ -64,6 +66,7 @@ export type TypesGeneric = {
   push: any;
   env: any;
   setup: any;
+  credentials: any;
 };
 
 /**
@@ -75,6 +78,7 @@ export type Mapping<T extends TypesGeneric = Types> = T['mapping'];
 export type Push<T extends TypesGeneric = Types> = T['push'];
 export type Env<T extends TypesGeneric = Types> = T['env'];
 export type SetupOptions<T extends TypesGeneric = Types> = T['setup'];
+export type Credentials<T extends TypesGeneric = Types> = T['credentials'];
 
 /**
  * Inference helper: Extract Types from Instance
@@ -86,6 +90,12 @@ export interface Config<
 > extends WalkerOSMapping.Config<Mapping<T>> {
   /** Implementation-specific configuration passed to the init function. */
   settings?: InitSettings<T>;
+  /**
+   * Optional, strictly-typed credentials slot ($env-resolved). The package
+   * defines the shape via `Types['credentials']`. `settings.<sdk>` stays the
+   * escape hatch for raw SDK options.
+   */
+  credentials?: Credentials<T>;
   /** Runtime dependencies injected by the collector (push, command, logger, etc.). */
   env?: Env<T>;
   /** Source identifier; defaults to the InitSources object key. */
@@ -134,7 +144,8 @@ export type PartialConfig<T extends TypesGeneric = Types> = Config<
     Push<T>,
     Env<T>,
     InitSettings<T>,
-    SetupOptions<T>
+    SetupOptions<T>,
+    Credentials<T>
   >
 >;
 

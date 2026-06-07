@@ -7,6 +7,7 @@ interface MockRowError {
 }
 
 let nextAppendRowErrors: MockRowError[] | null = null;
+let nextAppendThrow: unknown = null;
 let nextCreateStreamConnectionError: unknown = null;
 
 class MockJSONWriter {
@@ -15,6 +16,11 @@ class MockJSONWriter {
   }
   appendRows(rows: unknown[], offsetValue?: unknown) {
     calls.push({ method: 'appendRows', args: [rows, offsetValue] });
+    const queuedThrow = nextAppendThrow;
+    if (queuedThrow !== null) {
+      nextAppendThrow = null;
+      throw queuedThrow;
+    }
     const queuedErrors = nextAppendRowErrors;
     nextAppendRowErrors = null;
     return {
@@ -115,6 +121,7 @@ function __getMockCalls() {
 function __resetMockCalls() {
   calls.length = 0;
   nextAppendRowErrors = null;
+  nextAppendThrow = null;
   nextCreateStreamConnectionError = null;
 }
 
@@ -124,6 +131,14 @@ function __resetMockCalls() {
  */
 function __setNextAppendRowErrors(errors: MockRowError[]): void {
   nextAppendRowErrors = errors;
+}
+
+/**
+ * Test-only: make the next appendRows() throw synchronously, simulating a
+ * Storage Write API call failure. Auto-resets after one use.
+ */
+function __setNextAppendThrow(err: unknown): void {
+  nextAppendThrow = err;
 }
 
 /**
@@ -142,5 +157,6 @@ export {
   __getMockCalls,
   __resetMockCalls,
   __setNextAppendRowErrors,
+  __setNextAppendThrow,
   __setNextOpenWriterError,
 };

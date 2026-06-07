@@ -1,7 +1,10 @@
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as os from 'os';
-import { wrapSkeleton } from '../../../commands/bundle/wrap.js';
+import {
+  wrapSkeleton,
+  extractDevExternals,
+} from '../../../commands/bundle/wrap.js';
 
 /**
  * wrapSkeleton consumes a Stage 1 skeleton ESM file that exports
@@ -217,5 +220,28 @@ export const __configData = { test: true };
         outputPath,
       }),
     ).rejects.toThrow(/skeleton not found/i);
+  });
+});
+
+describe('extractDevExternals', () => {
+  it('returns the unique `<pkg>/dev` specifiers from a two-entry registry', () => {
+    const skeleton = `
+export const __devExports = {
+  '@walkeros/web-source-browser': () => import('@walkeros/web-source-browser/dev'),
+  "@walkeros/destination-demo": () => import("@walkeros/destination-demo/dev"),
+};
+`;
+    expect(extractDevExternals(skeleton).sort()).toEqual([
+      '@walkeros/destination-demo/dev',
+      '@walkeros/web-source-browser/dev',
+    ]);
+  });
+
+  it('returns [] for a cdn-shaped skeleton with no registry', () => {
+    const skeleton = `
+export function wireConfig(d) { return d; }
+export const __configData = { test: true };
+`;
+    expect(extractDevExternals(skeleton)).toEqual([]);
   });
 });

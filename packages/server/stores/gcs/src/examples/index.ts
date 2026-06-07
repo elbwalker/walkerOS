@@ -13,8 +13,8 @@ export const serviceAccount: Store.Config = {
   settings: {
     bucket: 'my-assets',
     prefix: 'public',
-    credentials: '$env.GCS_SA_KEY',
   },
+  credentials: '$env.GCS_SA_KEY',
 };
 
 export * as step from './step';

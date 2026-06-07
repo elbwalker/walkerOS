@@ -23,6 +23,7 @@ jest.mock('@walkeros/collector', () => ({
       Globals: 'globals',
       Link: 'link',
       Prefix: 'data-elb',
+      Scoped: '_',
     },
   },
   onApply: jest.fn(),

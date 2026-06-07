@@ -1,7 +1,12 @@
 import type { Flow } from '@walkeros/core';
 import { parseComponentRef } from '../../core/parse-component-ref.js';
 
-const STEP_KINDS = ['source', 'destination', 'transformer'] as const;
+const STEP_KINDS = [
+  'source',
+  'destination',
+  'transformer',
+  'collector',
+] as const;
 
 /**
  * Overrides structure for destination config properties.
@@ -70,7 +75,10 @@ export function buildOverrides(
   // Parse --simulate flags
   for (const step of simulateFlags) {
     const { type, name } = parseStep(step);
-    if (type === 'destination') {
+    if (type === 'collector') {
+      // Collector enrichment carries no per-step overrides.
+      continue;
+    } else if (type === 'destination') {
       simulateNames.add(name);
       if (!overrides.destinations) overrides.destinations = {};
       overrides.destinations[name] = { simulate: true };
@@ -175,7 +183,7 @@ export function buildOverrides(
 }
 
 export interface ParsedStep {
-  type: 'source' | 'destination' | 'transformer';
+  type: 'source' | 'destination' | 'transformer' | 'collector';
   name: string;
   chainType?: 'before' | 'next';
   transformerId?: string;

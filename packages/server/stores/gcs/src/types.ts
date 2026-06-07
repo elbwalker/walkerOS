@@ -1,4 +1,4 @@
-import type { Store } from '@walkeros/core';
+import type { Credential, ServiceAccount, Store } from '@walkeros/core';
 
 export interface GcsStoreSettings {
   /** GCS bucket name */
@@ -16,6 +16,9 @@ export interface GcsStoreSettings {
    * Service account credentials for non-GCP environments.
    * Pass a JSON string (e.g., from $env.GCS_SA_KEY) or the parsed object.
    * When omitted, uses Application Default Credentials (ADC) via the metadata server.
+   *
+   * @deprecated Use `config.credentials` instead. Kept for back-compat;
+   * removal is a future major. `config.credentials` takes precedence.
    */
   credentials?: string | ServiceAccountCredentials;
 }
@@ -36,7 +39,7 @@ export interface ServiceAccountCredentials {
  * `projectId` lives here because the package's Settings does not currently carry one.
  */
 export interface Setup {
-  /** GCS project to create the bucket in. Resolution order: this, settings.credentials.project_id, GOOGLE_CLOUD_PROJECT env, then throw. */
+  /** GCS project to create the bucket in. Resolution order: this, the resolved credentials' project_id, GOOGLE_CLOUD_PROJECT env, then throw. */
   projectId?: string;
   /** Geographic location. Default: 'EU' (multi-region). */
   location?: string;
@@ -56,5 +59,6 @@ export type Types = Store.Types<
   GcsStoreSettings,
   Store.BaseEnv,
   GcsStoreSettings,
-  Setup
+  Setup,
+  Credential<ServiceAccount>
 >;

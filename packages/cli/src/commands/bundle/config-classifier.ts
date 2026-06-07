@@ -1,16 +1,20 @@
+import { SECRET_MARKER_PREFIX } from '@walkeros/core';
+
 /**
  * Check if a config value contains code markers that require esbuild compilation.
  * Returns true if the value (or any nested value) contains:
  * - $code: prefix (raw JS expression)
  * - $store. prefix (JS variable reference)
  * - __WALKEROS_ENV: prefix (process.env expression)
+ * - __WALKEROS_SECRET: prefix (guarded process.env read for a deferred secret)
  */
 export function containsCodeMarkers(value: unknown): boolean {
   if (typeof value === 'string') {
     return (
       value.startsWith('$code:') ||
       value.startsWith('$store.') ||
-      value.includes('__WALKEROS_ENV:')
+      value.includes('__WALKEROS_ENV:') ||
+      value.includes(SECRET_MARKER_PREFIX)
     );
   }
   if (Array.isArray(value)) {

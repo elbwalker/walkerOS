@@ -22,7 +22,10 @@ const mockLogger: Logger.Instance = {
   scope: jest.fn().mockReturnThis(),
 };
 
-function createContext(settings: Record<string, unknown> = {}) {
+function createContext(
+  settings: Record<string, unknown> = {},
+  config: Record<string, unknown> = {},
+) {
   return {
     collector: {} as Collector.Instance,
     logger: mockLogger,
@@ -32,13 +35,17 @@ function createContext(settings: Record<string, unknown> = {}) {
         bucket: 'my-bucket',
         ...settings,
       },
+      ...config,
     },
     env: {},
   };
 }
 
-async function createStore(settings: Record<string, unknown> = {}) {
-  return await storeGcsInit(createContext(settings));
+async function createStore(
+  settings: Record<string, unknown> = {},
+  config: Record<string, unknown> = {},
+) {
+  return await storeGcsInit(createContext(settings, config));
 }
 
 describe('storeGcsInit', () => {
@@ -187,6 +194,67 @@ describe('storeGcsInit', () => {
       await store.set('../evil.txt', Buffer.from('bad'));
       expect(mockFetch).not.toHaveBeenCalled();
     });
+
+    // Regression lock: the request-cache codec hands stores an encoded Buffer.
+    // A non-Buffer value must be rejected with a clear error rather than being
+    // silently POSTed as a malformed body.
+    it('rejects a non-Buffer value with a clear error', async () => {
+      const store = await createStore();
+      const bad: unknown = { a: 1 };
+      await expect(store.set('x', bad)).rejects.toThrow(
+        /value must be a Buffer/,
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('codec round-trip', () => {
+    // Characterization test: locks in that an arbitrary Buffer (such as the
+    // base64-JSON payload the request cache codec produces) survives a
+    // set -> get cycle byte-for-byte through the GCS HTTP client.
+    it('round-trips an arbitrary Buffer byte-identically', async () => {
+      const original = Buffer.from(
+        JSON.stringify({
+          __walkeros_cache_v__: {
+            status: 200,
+            body: {
+              __walkeros_cache__: 'buffer',
+              d: Buffer.from([0, 1, 2, 255, 254, 0x7f, 0x80]).toString(
+                'base64',
+              ),
+            },
+          },
+        }),
+      );
+
+      // Capture the body bytes uploaded on set, then replay them as the GET
+      // response's arrayBuffer so the test mirrors a real backing store.
+      let storedBody: ArrayBuffer | undefined;
+      mockFetch.mockImplementation((_url: string, init?: RequestInit) => {
+        if (init?.method === 'POST' && init.body instanceof Uint8Array) {
+          // Copy into a fresh ArrayBuffer-backed view so the stored bytes are
+          // independent of the upload view's (possibly SharedArrayBuffer)
+          // backing store.
+          const view = init.body;
+          const copy = new ArrayBuffer(view.byteLength);
+          new Uint8Array(copy).set(view);
+          storedBody = copy;
+          return Promise.resolve({ ok: true });
+        }
+        // GET (download) path
+        return Promise.resolve({
+          ok: true,
+          arrayBuffer: () => Promise.resolve(storedBody ?? new ArrayBuffer(0)),
+        });
+      });
+
+      const store = await createStore();
+      await store.set('cache/entry', original);
+      const result = await store.get('cache/entry');
+
+      expect(result).toBeInstanceOf(Buffer);
+      expect((result as Buffer).equals(original)).toBe(true);
+    });
   });
 
   describe('delete', () => {
@@ -318,6 +386,62 @@ describe('storeGcsInit', () => {
       await createStore();
 
       expect(createTokenProvider).toHaveBeenCalledWith(undefined);
+    });
+
+    it('prefers config.credentials over settings.credentials', async () => {
+      const { createTokenProvider } = require('../auth');
+      createTokenProvider.mockClear();
+
+      const configCreds = {
+        client_email: 'config@project.iam.gserviceaccount.com',
+        private_key:
+          '-----BEGIN RSA PRIVATE KEY-----\nconfig\n-----END RSA PRIVATE KEY-----',
+      };
+      const settingsCreds = {
+        client_email: 'settings@project.iam.gserviceaccount.com',
+        private_key:
+          '-----BEGIN RSA PRIVATE KEY-----\nsettings\n-----END RSA PRIVATE KEY-----',
+      };
+
+      await createStore(
+        { credentials: settingsCreds },
+        { credentials: configCreds },
+      );
+
+      expect(createTokenProvider).toHaveBeenCalledWith(configCreds);
+      // config path wins, so the deprecation warning does not fire
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('reads config.credentials when settings.credentials is absent', async () => {
+      const { createTokenProvider } = require('../auth');
+      createTokenProvider.mockClear();
+
+      const configCreds = {
+        client_email: 'config@project.iam.gserviceaccount.com',
+        private_key:
+          '-----BEGIN RSA PRIVATE KEY-----\nconfig\n-----END RSA PRIVATE KEY-----',
+      };
+
+      await createStore({}, { credentials: configCreds });
+
+      expect(createTokenProvider).toHaveBeenCalledWith(configCreds);
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('warns once on the deprecated settings.credentials path', async () => {
+      const settingsCreds = {
+        client_email: 'settings@project.iam.gserviceaccount.com',
+        private_key:
+          '-----BEGIN RSA PRIVATE KEY-----\nsettings\n-----END RSA PRIVATE KEY-----',
+      };
+
+      await createStore({ credentials: settingsCreds });
+
+      expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('settings.credentials is deprecated'),
+      );
     });
   });
 });

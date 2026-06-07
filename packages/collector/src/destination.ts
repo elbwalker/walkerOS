@@ -64,6 +64,27 @@ function isBatchedResult(value: unknown): boolean {
 }
 
 /**
+ * Narrows a `pushBatch` return value to a {@link Destination.BatchOutcome}.
+ * A destination returning `void` (the historical contract) yields whole-batch
+ * semantics and never enters the partial-failure path.
+ */
+function isBatchOutcome(value: unknown): value is Destination.BatchOutcome {
+  return (
+    isObject(value) && Array.isArray((value as { failed?: unknown }).failed)
+  );
+}
+
+/**
+ * Reserved buffer key for the destination-wide default batch created by
+ * `config.batch`. A produced mappingKey is `"<entity> <action>"` with both
+ * segments guaranteed non-empty (getMappingEvent returns no key when either
+ * is empty, packages/core/src/mapping.ts:24-25), so no event-derived key can
+ * begin with a space. The leading space here therefore never collides with a
+ * rule buffer or the `'* *'` fallback.
+ */
+const BATCH_ALL_KEY = ' batch-all';
+
+/**
  * Normalize a batch config value to the canonical `{ wait?, size?, age? }`
  * shape. A bare number is treated as `wait` (legacy form). `undefined`
  * normalizes to an empty object so callers can chain `??` lookups.
@@ -938,10 +959,14 @@ export async function destinationPush<Destination extends Destination.Instance>(
   }
 
   const eventMapping = processed.mapping;
-  const mappingKey = processed.mappingKey || '* *';
+  // Presence, not truthiness: batch: 0 is a valid 0 ms wait, not "disabled".
+  const ruleHasBatch = eventMapping?.batch !== undefined;
+  const mappingKey = ruleHasBatch
+    ? processed.mappingKey || '* *'
+    : BATCH_ALL_KEY;
 
   if (
-    eventMapping?.batch &&
+    (ruleHasBatch || config.batch !== undefined) &&
     destination.pushBatch &&
     config.mock === undefined
   ) {
@@ -960,7 +985,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
       // Resolve scheduling options: mapping-level overrides destination-level.
       // Mapping rule `batch` (number form = wait; object = wait/size/age).
       // Destination config `batch` (number = wait; object = wait/size/age).
-      const ruleOpts = normalizeBatchOptions(eventMapping.batch);
+      const ruleOpts = normalizeBatchOptions(eventMapping?.batch);
       const destOpts = normalizeBatchOptions(config.batch);
       const wait =
         ruleOpts.wait ??
@@ -998,7 +1023,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
           id: destId,
           config,
           data: undefined,
-          rule: rep.rule,
+          rule: batchState.isDefault ? undefined : rep.rule,
           ingest: rep.ingest!,
           env: {
             ...baseEnv,
@@ -1022,8 +1047,52 @@ export async function destinationPush<Destination extends Destination.Instance>(
         flushState.batch = { size: snapshot.entries.length, index: 0 };
         emitStep(collector, flushState);
 
-        let succeeded = true;
-        await tryCatchAsync(
+        // Routes a set of [event, error] pairs to this destination's DLQ,
+        // applying the bound and emitting the overflow warning once. Shared by
+        // the whole-batch failure path (pushBatch threw) and the partial-row
+        // failure path (pushBatch returned a BatchOutcome).
+        const routeToDlq = (failures: Array<[WalkerOS.Event, unknown]>) => {
+          const dlq = (destination.dlq = destination.dlq || []);
+          const dlqBound = {
+            max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX,
+          };
+          let totalDropped = 0;
+          for (const pair of failures) {
+            const r = pushBounded(dlq, pair, dlqBound);
+            totalDropped += r.dropped;
+          }
+          if (totalDropped > 0) {
+            const droppedCount = bumpDropped(
+              collector.status,
+              stepId('destination', destIdResolved),
+              'dlq',
+              totalDropped,
+            );
+            warnOverflowOnce(
+              dlq,
+              destLogger,
+              'destination.dlq overflow; oldest entries dropped',
+              {
+                buffer: 'dlq',
+                destination: destIdResolved,
+                cap: dlqBound.max,
+                droppedCount,
+              },
+            );
+          } else if (dlq.length < dlqBound.max) {
+            resetOverflowFlag(dlq);
+          }
+          destStatus.failed += failures.length;
+          destStatus.dlqSize = dlq.length;
+          collector.status.failed += failures.length;
+        };
+
+        // Number of entries treated as delivered after the flush settles.
+        // Whole-batch success (void) = all; whole-batch failure (throw) = 0;
+        // partial outcome = total minus the entries reported failed.
+        let succeededCount = snapshot.entries.length;
+
+        const outcome = await tryCatchAsync(
           useHooks(
             destination.pushBatch!,
             'DestinationPushBatch',
@@ -1031,7 +1100,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
             collector.logger,
           ),
           (err) => {
-            succeeded = false;
+            succeededCount = 0;
             const errFinished = Date.now();
             const batchErrState = buildBaseState(collector, {
               stepId: stepId('destination', destId),
@@ -1050,40 +1119,8 @@ export async function destinationPush<Destination extends Destination.Instance>(
               index: 0,
             };
             emitStep(collector, batchErrState);
-            // Defect 2 fix: route the entire batch to DLQ on failure.
-            const dlq = (destination.dlq = destination.dlq || []);
-            const dlqBound = {
-              max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX,
-            };
-            let totalDropped = 0;
-            for (const entry of snapshot.entries) {
-              const r = pushBounded(dlq, [entry.event, err], dlqBound);
-              totalDropped += r.dropped;
-            }
-            if (totalDropped > 0) {
-              const droppedCount = bumpDropped(
-                collector.status,
-                stepId('destination', destIdResolved),
-                'dlq',
-                totalDropped,
-              );
-              warnOverflowOnce(
-                dlq,
-                destLogger,
-                'destination.dlq overflow; oldest entries dropped',
-                {
-                  buffer: 'dlq',
-                  destination: destIdResolved,
-                  cap: dlqBound.max,
-                  droppedCount,
-                },
-              );
-            } else if (dlq.length < dlqBound.max) {
-              resetOverflowFlag(dlq);
-            }
-            destStatus.failed += snapshot.entries.length;
-            destStatus.dlqSize = dlq.length;
-            collector.status.failed += snapshot.entries.length;
+            // Route the entire batch to DLQ on a thrown/whole-batch failure.
+            routeToDlq(snapshot.entries.map((entry) => [entry.event, err]));
             destLogger.error('Push batch failed', {
               error: err instanceof Error ? err.message : String(err),
               entries: snapshot.entries.length,
@@ -1091,6 +1128,38 @@ export async function destinationPush<Destination extends Destination.Instance>(
             return undefined;
           },
         )(snapshot, batchContext);
+
+        // Partial-failure path: pushBatch resolved a BatchOutcome listing the
+        // entries that did not succeed. DLQ and fail-count only those; the rest
+        // are delivered. Out-of-range indices are ignored defensively.
+        if (isBatchOutcome(outcome) && outcome.failed.length > 0) {
+          const failedPairs: Array<[WalkerOS.Event, unknown]> = [];
+          const seen = new Set<number>();
+          for (const failure of outcome.failed) {
+            const entry = snapshot.entries[failure.index];
+            if (!entry || seen.has(failure.index)) continue;
+            seen.add(failure.index);
+            failedPairs.push([
+              entry.event,
+              failure.error ??
+                new Error(
+                  `Push batch entry ${failure.index} failed (no per-row error provided)`,
+                ),
+            ]);
+          }
+          if (failedPairs.length > 0) {
+            routeToDlq(failedPairs);
+            succeededCount = Math.max(
+              0,
+              snapshot.entries.length - failedPairs.length,
+            );
+            destLogger.error('Push batch partial failure', {
+              failed: failedPairs.length,
+              delivered: succeededCount,
+              entries: snapshot.entries.length,
+            });
+          }
+        }
 
         destLogger.debug('push batch done');
 
@@ -1100,10 +1169,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
           (destStatus.inFlightBatch ?? 0) - snapshot.entries.length,
         );
 
-        if (succeeded) {
-          destStatus.count += snapshot.entries.length;
+        if (succeededCount > 0) {
+          destStatus.count += succeededCount;
           destStatus.lastAt = Date.now();
-          collector.status.out += snapshot.entries.length;
+          collector.status.out += succeededCount;
         }
       };
 
@@ -1115,6 +1184,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
 
       destination.batches[mappingKey] = {
         batched,
+        isDefault: !ruleHasBatch, // created via config.batch, not a rule's own batch
         batchFn: () => {
           void scheduler();
         },

@@ -25,7 +25,7 @@ export const DEFAULT_SCHEMA: SetupSchemaField[] = [
   { name: 'entity', type: 'STRING', mode: 'NULLABLE' },
   { name: 'action', type: 'STRING', mode: 'NULLABLE' },
   { name: 'timestamp', type: 'TIMESTAMP', mode: 'NULLABLE' },
-  { name: 'timing', type: 'INT64', mode: 'NULLABLE' },
+  { name: 'timing', type: 'FLOAT64', mode: 'NULLABLE' },
   { name: 'source', type: 'JSON', mode: 'NULLABLE' },
 ];
 

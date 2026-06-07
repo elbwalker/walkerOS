@@ -650,14 +650,30 @@ export interface Setup {
   partitioning?: { field: string; type: 'DAY' | 'HOUR' };
 }
 
+// Service-account / key-pair credentials. Becomes the trailing C slot of Types;
+// surfaces as the optional top-level `config.credentials` (sibling of `settings`),
+// $env-resolvable and validated per package.
+export type Credentials =
+  CoreDestination.Credential<CoreDestination.ServiceAccount>;
+
 export type Types = CoreDestination.Types<
   Settings,
   Mapping,
   Env,
   InitSettings,
-  Setup
+  Setup,
+  Credentials
 >;
 ```
+
+**Where credentials belong.** Put service-account / key-pair credentials (the
+kind paired with `$env.NAME` to inject a secret) on the strictly-typed top-level
+`config.credentials`, not inside `settings`. Read them via
+`config.credentials ?? settings.credentials ?? ADC` so existing flows keep
+working, and omit them to fall back to Application Default Credentials. The raw
+`settings.<sdk>` passthrough (e.g. `settings.bigquery`) stays as the lower-level
+escape hatch for SDK-specific auth options. The package-specific
+`settings.credentials` still works but is deprecated.
 
 ### Implementation
 

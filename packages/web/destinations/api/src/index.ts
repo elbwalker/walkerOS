@@ -52,7 +52,9 @@ export const destinationAPI: Destination = {
       return;
     }
 
-    const items = batch.data.length ? batch.data : batch.events;
+    const items = batch.entries.map((e) =>
+      isDefined(e.data) ? e.data : e.event,
+    );
 
     // Apply transform to each item if defined, then stringify array
     const payload = transform
