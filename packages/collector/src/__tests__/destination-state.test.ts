@@ -6,13 +6,16 @@ import type { Destination, Store, WalkerOS } from '@walkeros/core';
  * directly observable. Registered under a named id and targeted via
  * `state.store`.
  */
-function makeBackedStore(): { code: Store.Init; data: Map<string, unknown> } {
-  const data = new Map<string, unknown>();
+function makeBackedStore(): {
+  code: Store.Init;
+  data: Map<string, Store.StoreValue>;
+} {
+  const data = new Map<string, Store.StoreValue>();
   const code: Store.Init = (context) => ({
     type: 'kv',
     config: context.config as Store.Config,
     get: async (key: string) => data.get(key),
-    set: async (key: string, value: unknown) => {
+    set: async (key: string, value: Store.StoreValue) => {
       data.set(key, value);
     },
     delete: async (key: string) => {

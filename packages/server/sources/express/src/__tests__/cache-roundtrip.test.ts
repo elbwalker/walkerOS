@@ -300,4 +300,80 @@ describe('Express source cache round-trip', () => {
     expectAsset(third.captures[0]);
     expect(third.captures[0].headers['X-Cache']).toBe('HIT');
   });
+
+  // A decoded cache value surfaces a binary body as a plain Uint8Array,
+  // not a Node Buffer. The respond callback must send it as bytes (res.send),
+  // never JSON-stringify it (res.json would corrupt the payload).
+  it('sends a Uint8Array body as bytes (res.send), not JSON-stringified', async () => {
+    const BODY = new Uint8Array([0xff, 0x00, 0x80, 0x01]);
+    const responder: Destination.Instance<ResponderTypes> = {
+      type: 'responder',
+      config: {},
+      push: async (_event, ctx) => {
+        ctx.env?.respond?.({
+          body: BODY,
+          status: 200,
+          headers: { 'Content-Type': 'application/octet-stream' },
+        });
+      },
+    };
+
+    const { collector } = await startFlow({
+      consent: { functional: true },
+      sources: {
+        express: {
+          code: sourceExpress,
+          config: {
+            settings: { paths: ['/asset'] },
+            ingest: {
+              map: { method: { key: 'method' }, path: { key: 'url' } },
+            },
+          },
+        },
+      },
+      destinations: {
+        responder: { code: responder },
+      },
+    });
+
+    const expressSource = Source.getSource<ExpressTypes>(collector, 'express');
+
+    const mockRequest = (): Request =>
+      ({
+        method: 'GET',
+        url: '/asset?name=page%20view',
+        headers: {},
+        get: () => undefined,
+      }) as unknown as Request;
+
+    const calls: { method: 'send' | 'json'; body: unknown; status: number }[] =
+      [];
+    let status = 200;
+    const res = {
+      status: (code: number) => {
+        status = code;
+        return res;
+      },
+      set: () => res,
+      send: (body?: unknown) => {
+        calls.push({ method: 'send', body, status });
+        return res;
+      },
+      json: (body: unknown) => {
+        calls.push({ method: 'json', body, status });
+        return res;
+      },
+    };
+
+    await expressSource.push(mockRequest(), res as unknown as Response);
+
+    // The binary body is sent via res.send as a Buffer (bytes), not res.json.
+    const binarySends = calls.filter((c) => c.method === 'send');
+    expect(binarySends).toHaveLength(1);
+    const sent = binarySends[0].body;
+    expect(Buffer.isBuffer(sent)).toBe(true);
+    if (!Buffer.isBuffer(sent)) throw new Error('body was not sent as bytes');
+    expect(sent.equals(Buffer.from(BODY))).toBe(true);
+    expect(calls.some((c) => c.method === 'json')).toBe(false);
+  });
 });

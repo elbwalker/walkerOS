@@ -52,6 +52,15 @@ export interface Config<T extends TypesGeneric = Types> {
    * Triggered only by explicit CLI invocation; never automatic.
    */
   setup?: boolean | SetupOptions<T>;
+  /**
+   * Persist values as raw bytes, byte-exact, bypassing the structured codec.
+   * Default false: values are structured `StoreValue` and pass through the
+   * shared core serialization codec. Set true only on byte-native backends
+   * (fs/s3/gcs) whose consumer needs the exact bytes back, e.g. serving an
+   * asset such as walker.js. Structured-only backends (sheets) reject `file:
+   * true` at init. One store instance is exactly one mode.
+   */
+  file?: boolean;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -70,13 +79,33 @@ export interface Context<
   id: string;
 }
 
-export type GetFn<T = unknown> = (
+/**
+ * Canonical structured value persisted by a store. Includes `null`, but
+ * EXCLUDES `undefined`: `undefined` is the reserved "miss" sentinel returned
+ * by `GetFn` for an absent key, so it must never be a stored value.
+ * `Uint8Array` is the platform-neutral binary leaf (never Node `Buffer`).
+ */
+export type StoreValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Uint8Array
+  | StoreValue[]
+  | { [key: string]: StoreValue };
+
+export type GetFn<T extends StoreValue = StoreValue> = (
   key: string,
 ) => T | undefined | Promise<T | undefined>;
 
-export type SetFn<T = unknown> = (
+export type SetFn<T extends StoreValue = StoreValue> = (
   key: string,
   value: T,
+  /**
+   * Optional expiry hint in ms; honored only by TTL-native backends
+   * (in-memory, Redis). Byte/JSON backends may ignore it. Authoritative cache
+   * expiry lives in the cache wrapper's {value, exp} payload.
+   */
   ttl?: number,
 ) => void | Promise<void>;
 
@@ -137,4 +166,20 @@ export function getStore<T extends TypesGeneric = Types>(
     throw new Error(`Store not found: ${id}`);
   }
   return store as unknown as Instance<T>;
+}
+
+/**
+ * Read-site narrowing helper for store values.
+ *
+ * `Instance.get`/`set` stay value-agnostic at `StoreValue`, so callers
+ * that know the concrete shape narrow here instead of threading a value type
+ * through `Store.Types`. The single narrow `as` cast is justified: the store
+ * channel is structurally `StoreValue`, and the caller asserts the concrete
+ * sub-shape it stored. `undefined` is preserved as the miss sentinel.
+ */
+export async function getStoreValue<V extends StoreValue = StoreValue>(
+  store: Instance,
+  key: string,
+): Promise<V | undefined> {
+  return (await store.get(key)) as V | undefined;
 }

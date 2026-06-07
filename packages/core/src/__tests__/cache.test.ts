@@ -4,9 +4,8 @@ import {
   storeCache,
   applyUpdate,
   buildCacheContext,
-  encodeCacheValue,
-  decodeCacheValue,
 } from '../cache';
+import { serializeStoreValue, deserializeStoreValue } from '../store/codec';
 import {
   createMockCollector,
   createMockStore,
@@ -115,8 +114,8 @@ describe('checkCache', () => {
   });
 
   it('returns HIT when store has entry', async () => {
-    // Covers decodeCacheValue's live-value tolerance branch (a store returning
-    // a non-encoded live value), NOT the production HIT path; that is covered
+    // Covers readCacheEnvelope's live-value tolerance branch (a store returning
+    // a non-enveloped live value), NOT the production HIT path; that is covered
     // by the byte-store round-trip tests in 'request-cache codec wiring'.
     const store = createMockStore();
     store._data.set('express:GET:/api/data', { body: 'cached' });
@@ -215,8 +214,8 @@ describe('checkCache', () => {
   });
 
   it('awaits async store.get for HIT path', async () => {
-    // Covers decodeCacheValue's live-value tolerance branch (a store returning
-    // a non-encoded live value), NOT the production HIT path; that is covered
+    // Covers readCacheEnvelope's live-value tolerance branch (a store returning
+    // a non-enveloped live value), NOT the production HIT path; that is covered
     // by the byte-store round-trip tests in 'request-cache codec wiring'.
     const store = createAsyncMockStore();
     store._data.set('express:GET:/api/data', { body: 'cached' });
@@ -256,18 +255,23 @@ describe('checkCache', () => {
 });
 
 describe('storeCache', () => {
-  it('stores an encoded Buffer with TTL in milliseconds', () => {
+  it('stores a structured envelope (not a Buffer) with TTL in milliseconds', () => {
     const store = createMockStore();
     const setSpy = jest.spyOn(store, 'set');
 
     storeCache(store, 'mykey', { data: 'value' }, 300);
 
     expect(setSpy).toHaveBeenCalledTimes(1);
-    const [key, encoded, ttlMs] = setSpy.mock.calls[0];
+    const [key, stored, ttlMs] = setSpy.mock.calls[0];
     expect(key).toBe('mykey');
     expect(ttlMs).toBe(300000);
-    expect(Buffer.isBuffer(encoded)).toBe(true);
-    expect(decodeCacheValue(encoded)).toEqual({ value: { data: 'value' } });
+    // The cache no longer pre-serializes to a Buffer; it stores a plain
+    // {value, exp} envelope and lets the backing store serialize it.
+    expect(Buffer.isBuffer(stored)).toBe(false);
+    expect(stored).toEqual({
+      __walkeros_cache_v__: { data: 'value' },
+      __walkeros_cache_exp__: expect.any(Number),
+    });
   });
 
   it('does not throw or leak an unhandled rejection when an async set rejects', async () => {
@@ -400,112 +404,45 @@ describe('buildCacheContext', () => {
   });
 });
 
-describe('cache value codec', () => {
-  it('round-trips a RespondOptions object with a Buffer body', () => {
-    const value = {
-      status: 200,
-      headers: { 'Content-Type': 'application/javascript' },
-      body: Buffer.from('var walkerOS = 1;'),
-    };
-    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({ value });
-  });
+/**
+ * A byte/JSON store that serializes every value through the shared store
+ * codec, mirroring a real fs/s3/gcs backing. The cache stores a plain
+ * {value, exp} envelope; this store serializes it, so binary leaves decode
+ * back as platform-neutral `Uint8Array`, never a Node `Buffer`.
+ */
+function codecStore(): Store.Instance & { bytes: Map<string, Uint8Array> } {
+  const bytes = new Map<string, Uint8Array>();
+  return {
+    type: 'mem-codec',
+    config: { settings: {} },
+    bytes,
+    get: (k) => {
+      const raw = bytes.get(k);
+      return raw === undefined ? undefined : deserializeStoreValue(raw);
+    },
+    set: (k, v) => {
+      bytes.set(k, serializeStoreValue(v));
+    },
+    delete: (k) => void bytes.delete(k),
+  };
+}
 
-  it('round-trips the boolean sentinel', () => {
-    expect(decodeCacheValue(encodeCacheValue(true))).toEqual({ value: true });
-  });
-
-  it('round-trips a processed event object (transformer cache payload)', () => {
-    const event = {
-      name: 'page view',
-      data: { id: '/x', count: 3 },
-      nested: [],
-    };
-    expect(decodeCacheValue(encodeCacheValue(event))).toEqual({ value: event });
-  });
-
-  it('does not coerce a user object shaped like the marker', () => {
-    const value = { note: { __walkeros_cache__: 'not-a-real-tag', d: 'x' } };
-    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({ value });
-  });
-
-  it('does not mistake a user object for the envelope', () => {
-    const value = { __walkeros_cache_v__: 'user-data', other: 1 };
-    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({ value });
-  });
-
-  it('reports an expired entry as expired', () => {
-    expect(decodeCacheValue(encodeCacheValue('x', -1))).toEqual({
-      expired: true,
-    });
-  });
-
-  it('treats undefined (missing) as undefined', () => {
-    expect(decodeCacheValue(undefined)).toBeUndefined();
-  });
-
-  it('rehydrates a Buffer nested inside an escaped marker object', () => {
-    const value = {
-      __walkeros_cache__: 'user-supplied',
-      items: [{ body: Buffer.from('payload') }],
-    };
-    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({ value });
-  });
-
-  it('decodes corrupt/non-envelope bytes as a miss', () => {
-    expect(decodeCacheValue(Buffer.from([0x00, 0x01, 0x02]))).toBeUndefined();
-    expect(decodeCacheValue(Buffer.from('not json'))).toBeUndefined();
-    expect(decodeCacheValue(Buffer.from('{"x":1}'))).toBeUndefined();
-  });
-
-  it('round-trips a Uint8Array body to a byte-identical Buffer', () => {
-    const value = { status: 200, body: new Uint8Array([0xff, 0x00, 0x80]) };
-    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({
-      value: { status: 200, body: Buffer.from([0xff, 0x00, 0x80]) },
-    });
-  });
-
-  it('round-trips a Uint8Array view honoring byteOffset/length', () => {
-    const full = new Uint8Array([0x01, 0xff, 0x00, 0x80, 0x02]);
-    const view = full.subarray(1, 4); // [0xff, 0x00, 0x80]
-    const value = { body: view };
-    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({
-      value: { body: Buffer.from([0xff, 0x00, 0x80]) },
-    });
-  });
-
-  it('round-trips an ArrayBuffer body to a byte-identical Buffer', () => {
-    const source = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
-    const value = { body: source.buffer };
-    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({
-      value: { body: Buffer.from([0xde, 0xad, 0xbe, 0xef]) },
-    });
-  });
-
-  it('round-trips an empty Uint8Array to an empty Buffer', () => {
-    const value = { body: new Uint8Array([]) };
-    expect(decodeCacheValue(encodeCacheValue(value))).toEqual({
-      value: { body: Buffer.alloc(0) },
-    });
-  });
-});
-
-describe('request-cache codec wiring', () => {
-  function byteStore(): Store.Instance {
-    const map = new Map<string, Buffer>();
-    return {
-      type: 'mem-bytes',
-      config: { settings: {} },
-      get: (k) => map.get(k),
-      set: (k, v) => {
-        if (!Buffer.isBuffer(v)) throw new Error('byte store needs a Buffer');
-        map.set(k, v);
-      },
-      delete: (k) => void map.delete(k),
-    };
+/** Recursively assert no Node `Buffer` survives in a decoded cache value. */
+function assertNoBufferLeak(value: unknown): void {
+  expect(Buffer.isBuffer(value)).toBe(false);
+  if (value instanceof Uint8Array) return;
+  if (Array.isArray(value)) {
+    value.forEach(assertNoBufferLeak);
+    return;
   }
+  if (value !== null && typeof value === 'object') {
+    Object.values(value).forEach(assertNoBufferLeak);
+  }
+}
 
-  it('round-trips a Buffer-bodied response through a byte store (MISS then HIT)', async () => {
-    const store = byteStore();
+describe('request-cache envelope wiring', () => {
+  it('round-trips a response through a codec store (MISS then HIT)', async () => {
+    const store = codecStore();
     const compiled = compileCache({
       stop: true,
       store: 'cache',
@@ -519,7 +456,7 @@ describe('request-cache codec wiring', () => {
     const response = {
       status: 200,
       headers: { 'Content-Type': 'application/javascript' },
-      body: Buffer.from('var walkerOS = 1;'),
+      body: new Uint8Array(Buffer.from('var walkerOS = 1;')),
     };
     storeCache(store, miss!.key, response, miss!.rule.ttl);
     const hit = await checkCache(compiled, store, ctx);
@@ -527,22 +464,8 @@ describe('request-cache codec wiring', () => {
     expect(hit?.value).toEqual(response);
   });
 
-  function asyncByteStore(): Store.Instance {
-    const map = new Map<string, Buffer>();
-    return {
-      type: 'mem-bytes-async',
-      config: { settings: {} },
-      get: async (k) => map.get(k),
-      set: async (k, v) => {
-        if (!Buffer.isBuffer(v)) throw new Error('byte store needs a Buffer');
-        map.set(k, v);
-      },
-      delete: async (k) => void map.delete(k),
-    };
-  }
-
-  it('decodes an encoded Buffer to a HIT through an async byte store', async () => {
-    const store = asyncByteStore();
+  it('surfaces binary leaves as Uint8Array, never a Node Buffer', async () => {
+    const store = codecStore();
     const compiled = compileCache({
       stop: true,
       store: 'cache',
@@ -550,15 +473,50 @@ describe('request-cache codec wiring', () => {
     });
     const ctx = { ingest: { path: '/walker.js' } };
     const miss = await checkCache(compiled, store, ctx);
-    const response = { status: 200, headers: {}, body: Buffer.from('js') };
-    await store.set(miss!.key, encodeCacheValue(response, 3600_000), 3600_000);
+
+    const response = {
+      status: 200,
+      headers: {},
+      body: new Uint8Array([0xff, 0x00, 0x80]),
+      nested: [{ chunk: new Uint8Array([0x01, 0x02]) }],
+    };
+    storeCache(store, miss!.key, response, 3600);
+
+    const hit = await checkCache(compiled, store, ctx);
+    expect(hit?.status).toBe('HIT');
+    assertNoBufferLeak(hit?.value);
+    expect(hit?.value).toEqual(response);
+  });
+
+  it('round-trips through an async codec store', async () => {
+    const sync = codecStore();
+    const store: Store.Instance = {
+      type: 'mem-codec-async',
+      config: { settings: {} },
+      get: async (k) => sync.get(k),
+      set: async (k, v) => void sync.set(k, v),
+      delete: async (k) => void sync.delete(k),
+    };
+    const compiled = compileCache({
+      stop: true,
+      store: 'cache',
+      rules: [{ key: ['ingest.path'], ttl: 3600 }],
+    });
+    const ctx = { ingest: { path: '/walker.js' } };
+    const miss = await checkCache(compiled, store, ctx);
+    const response = {
+      status: 200,
+      headers: {},
+      body: new Uint8Array(Buffer.from('js')),
+    };
+    storeCache(store, miss!.key, response, 3600);
     const hit = await checkCache(compiled, store, ctx);
     expect(hit?.status).toBe('HIT');
     expect(hit?.value).toEqual(response);
   });
 
   it('expired entry reads as MISS and is purged', async () => {
-    const store = byteStore();
+    const store = codecStore();
     const compiled = compileCache({
       stop: true,
       store: 'cache',
@@ -569,5 +527,67 @@ describe('request-cache codec wiring', () => {
     storeCache(store, m!.key, { status: 200 }, m!.rule.ttl);
     const again = await checkCache(compiled, store, ctx);
     expect(again?.status).toBe('MISS');
+  });
+
+  it('does not mistake a user object shaped like the envelope for one', async () => {
+    const store = codecStore();
+    const compiled = compileCache({
+      stop: true,
+      store: 'cache',
+      rules: [{ key: ['ingest.path'], ttl: 3600 }],
+    });
+    const ctx = { ingest: { path: '/x' } };
+    const miss = await checkCache(compiled, store, ctx);
+    // A user value that itself carries the envelope value key must round-trip
+    // verbatim, not be unwrapped as an envelope.
+    const value = { __walkeros_cache_v__: 'user-data', other: 1 };
+    storeCache(store, miss!.key, value, 3600);
+    const hit = await checkCache(compiled, store, ctx);
+    expect(hit?.status).toBe('HIT');
+    expect(hit?.value).toEqual(value);
+  });
+
+  // The storeCache gate (isStoreValue) must accept a value with an
+  // undefined-valued property: JSON.stringify drops it, so it serializes
+  // fine. Rejecting it would silently never cache RespondOptions/events that
+  // carry optional-undefined fields (a stealth regression). The property is
+  // dropped on round-trip, like JSON.
+  it('caches a value with an undefined-valued property (dropped on round-trip, like JSON)', async () => {
+    const store = codecStore();
+    const compiled = compileCache({
+      stop: true,
+      store: 'cache',
+      rules: [{ key: ['ingest.path'], ttl: 3600 }],
+    });
+    const ctx = { ingest: { path: '/x' } };
+    const miss = await checkCache(compiled, store, ctx);
+
+    const respondOptions = { body: 'x', status: 200, headers: undefined };
+    storeCache(store, miss!.key, respondOptions, 3600);
+
+    const hit = await checkCache(compiled, store, ctx);
+    expect(hit?.status).toBe('HIT');
+    // The undefined `headers` is dropped on serialize, matching JSON semantics.
+    expect(hit?.value).toEqual({ body: 'x', status: 200 });
+  });
+
+  // An undefined array element serializes to null (JSON semantics), so it does
+  // not disqualify the value at the gate.
+  it('caches an array with an undefined element (element becomes null on round-trip)', async () => {
+    const store = codecStore();
+    const compiled = compileCache({
+      stop: true,
+      store: 'cache',
+      rules: [{ key: ['ingest.path'], ttl: 3600 }],
+    });
+    const ctx = { ingest: { path: '/x' } };
+    const miss = await checkCache(compiled, store, ctx);
+
+    const value = { items: ['a', undefined, 'c'] };
+    storeCache(store, miss!.key, value, 3600);
+
+    const hit = await checkCache(compiled, store, ctx);
+    expect(hit?.status).toBe('HIT');
+    expect(hit?.value).toEqual({ items: ['a', null, 'c'] });
   });
 });

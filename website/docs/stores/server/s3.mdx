@@ -102,7 +102,7 @@ Unlike the AWS SDK, `s3mini` has no implicit credential chain: `accessKeyId` and
 
 ## File serving pattern
 
-The primary use case is serving static files via the file transformer. This is the recommended pattern for managed deployments (Mode D) where files live in a bucket rather than needing to be baked into a Docker image:
+The primary use case is serving static files via the file transformer. This is the recommended pattern for managed deployments (Mode D) where files live in a bucket rather than needing to be baked into a Docker image. Set `file: true` so the store persists and returns bytes byte-exact:
 
 <CodeSnippet
   code={`{
@@ -116,7 +116,8 @@ The primary use case is serving static files via the file transformer. This is t
           "accessKeyId": "$env.S3_ACCESS_KEY",
           "secretAccessKey": "$env.S3_SECRET_KEY",
           "prefix": "public"
-        }
+        },
+        "file": true
       }
     }
   },
@@ -131,7 +132,7 @@ The primary use case is serving static files via the file transformer. This is t
   language="json"
 />
 
-A request to `/static/walker.js` looks up `public/walker.js` in the `my-assets` bucket.
+A request to `/static/walker.js` looks up `public/walker.js` in the `my-assets` bucket. Omit `file` for a structured key-value store instead.
 
 ## Provisioning
 
@@ -203,13 +204,23 @@ Run `walkeros setup store.<id>` once to provision the bucket, then redeploy.
 - **Prefix scoping**: The `prefix` setting restricts all operations to a subdirectory
 - **No credential chain**: Credentials must be explicitly provided (no ambient AWS credentials)
 
+## Structured vs file mode
+
+The S3 store has two modes, decided once at init by `config.file`:
+
+- **Structured (default):** values are structured `StoreValue` data, serialized by the shared core codec and stored with `Content-Type: application/json`. Use for session state, lookups, and cached responses.
+- **File (`file: true`):** values persist as raw bytes byte-exact, stored with the real mime derived from the key (or `application/octet-stream` when unknown). `set()` accepts a `Uint8Array` or `string`; `get()` hands the exact bytes back. Use for serving assets such as walker.js.
+
+One store instance is exactly one mode.
+
 ## API
 
 <CodeSnippet
-  code={`const file = await store.get('walker.js');    // Buffer | undefined
-await store.set('data.json', Buffer.from('{}')); // void
-await store.delete('old-file.txt');               // void`}
+  code={`const file = await store.get('walker.js');           // StoreValue | undefined
+await store.set('data.json', { ok: true });          // structured value
+await store.set('walker.js', new Uint8Array([/*…*/])); // file mode: raw bytes
+await store.delete('old-file.txt');                   // void`}
   language="typescript"
 />
 
-`get()` returns `Buffer` for compatibility with the file transformer, which uses `content instanceof Buffer` for Content-Length calculation.
+In file mode, `get()` returns the bytes as a `Uint8Array` leaf and `set()` rejects non-`Uint8Array`, non-`string` values with a clear error.

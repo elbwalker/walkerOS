@@ -7625,6 +7625,12 @@ export interface components {
     DeploymentError: {
       code: string;
       message: string;
+      /**
+       * @example bundle
+       * @enum {string}
+       */
+      phase: 'preflight' | 'deploy' | 'bundle' | 'publish' | 'provision';
+      detail?: string;
     } | null;
     CreateDeploymentResponse: {
       /** @example dep_a1b2c3d4 */

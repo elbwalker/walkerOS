@@ -1,11 +1,11 @@
 import type { Flow } from '@walkeros/core';
 
-/** Read a file that exists in the store directory. */
+/** Read a file that exists in the store directory (file mode, byte-exact). */
 export const readExistingFile: Flow.StepExample = {
   title: 'Read file',
-  description: 'Read an existing file and receive its contents as a Buffer',
+  description: 'Read an existing file and receive its raw bytes byte-exact',
   in: { operation: 'get', key: 'walker.js' },
-  out: [['get', 'walker.js', 'Buffer<console.log("walkerOS")>']],
+  out: [['get', 'walker.js', 'Bytes<console.log("walkerOS")>']],
 };
 
 /** Write a file with auto-created parent directories. */

@@ -1,0 +1,273 @@
+---
+title: Deploy to Bunny Magic Containers
+sidebar_label: Bunny Magic Containers
+description: Deploy walkerOS to Bunny Magic Containers with BigQuery destination
+---
+
+# Deploy walkerOS to Bunny Magic Containers
+
+This guide deploys a walkerOS event collector to [Bunny Magic Containers](https://bunny.net/magic-containers/), forwarding events to BigQuery. We use GitHub Container Registry (GHCR) to store the Docker image privately.
+
+## Prerequisites
+
+- [GitHub account](https://github.com/) (for private container registry)
+- [Bunny.net account](https://bunny.net/) with Magic Containers access
+- [Docker](https://docs.docker.com/get-docker/) installed
+- [Node.js 18+](https://nodejs.org/) installed
+
+## 1. Set Up BigQuery
+
+Follow the [GCP BigQuery setup](/docs/destinations/server/gcp#gcp-setup) to:
+
+- Create a BigQuery dataset
+- Create a service account with write permissions
+- [Download a service account key](/docs/destinations/server/gcp#service-account-key) (`sa-bigquery.json`)
+
+:::caution
+The key file will be baked into your Docker image. Keep the image in a **private** registry only.
+:::
+
+## 2. Bundle the Flow
+
+Install the CLI and bundle the flow:
+
+```bash
+npm install -g @walkeros/cli
+
+# Set your environment variables
+export GCP_PROJECT_ID="your-project-id"
+export BQ_DATASET="walkerOS"
+export BQ_TABLE="events"
+export BQ_LOCATION="EU"
+
+# Use the container path - variables are substituted at bundle time
+export SA_KEY_PATH="/app/sa-bigquery.json"
+
+# Bundle the flow
+walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json
+```
+
+This creates `dist/bundle.mjs` with the credentials path baked in.
+
+:::tip[Quick Local Test]
+Test your flow before building Docker using `simulate` with a local credentials path:
+
+```bash
+export SA_KEY_PATH="./sa-bigquery.json"
+walkeros simulate https://www.walkeros.io/flows/gcp-bigquery.json \
+  -e '{"name": "test", "data": {}}'
+```
+:::
+
+## 3. Build Docker Image
+
+Create a `Dockerfile`:
+
+```dockerfile
+FROM walkeros/flow:latest
+
+# Copy pre-built flow bundle
+COPY dist/bundle.mjs /app/flow/bundle.mjs
+
+# Copy service account credentials
+COPY sa-bigquery.json /app/sa-bigquery.json
+
+# Configure runtime
+ENV FLOW=/app/flow/bundle.mjs
+
+EXPOSE 8080
+```
+
+Build the image with your GitHub Container Registry tag:
+
+```bash
+# Replace YOUR_GITHUB_USERNAME with your GitHub username (lowercase)
+docker build -t ghcr.io/YOUR_GITHUB_USERNAME/walkeros-collector:latest .
+```
+
+## 4. Test Locally
+
+Run the container locally to verify everything works:
+
+```bash
+docker run --rm -p 8080:8080 ghcr.io/YOUR_GITHUB_USERNAME/walkeros-collector:latest
+```
+
+In another terminal, send a test event:
+
+```bash
+curl -X POST http://localhost:8080/collect \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "page view",
+    "data": {
+      "title": "Local Test",
+      "path": "/test"
+    }
+  }'
+```
+
+Expected response:
+
+```json
+{ "success": true, "timestamp": 1234567890 }
+```
+
+Verify in BigQuery:
+
+```bash
+bq query --use_legacy_sql=false \
+  "SELECT * FROM walkerOS.events ORDER BY timestamp DESC LIMIT 5"
+```
+
+## 5. Push to Private GHCR
+
+### Create GitHub Personal Access Token
+
+1. Go to [GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)](https://github.com/settings/tokens)
+2. Click **Generate new token (classic)**
+3. Name it `ghcr-walkeros`
+4. Select scopes:
+   - `write:packages` (to push images)
+   - `read:packages` (to pull images)
+   - `delete:packages` (optional, for cleanup)
+5. Click **Generate token**
+6. Copy the token (you won't see it again)
+
+### Login and Push
+
+```bash
+# Login to GHCR
+echo YOUR_GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+
+# Push the image
+docker push ghcr.io/YOUR_GITHUB_USERNAME/walkeros-collector:latest
+```
+
+### Verify Image is Private
+
+1. Go to `https://github.com/YOUR_GITHUB_USERNAME?tab=packages`
+2. Find `walkeros-collector`
+3. Confirm visibility is **Private** (default for new packages)
+
+:::tip
+If the package is public, click **Package settings** → **Change visibility** → **Private**.
+:::
+
+## 6. Connect GHCR to Bunny
+
+### Create Read-Only Token for Bunny
+
+For security, create a separate token with read-only access:
+
+1. Go to [GitHub Settings → Personal access tokens](https://github.com/settings/tokens)
+2. Generate new token with only `read:packages` scope
+3. Name it `bunny-ghcr-readonly`
+
+### Add Registry to Bunny
+
+1. Log in to [bunny.net dashboard](https://dash.bunny.net/)
+2. Navigate to **Magic Containers** → **Image Registries**
+3. Click **Add Image Registry**
+4. Select **GitHub** from the dropdown
+5. Enter:
+   - **Username**: Your GitHub username
+   - **Personal Access Token**: The read-only token from above
+6. Click **Save**
+
+## 7. Deploy to Bunny Magic Containers
+
+### Create New App
+
+1. In Bunny dashboard, go to **Magic Containers**
+2. Click **Add App**
+3. Enter app name: `walkeros-collector`
+4. Select deployment type:
+   - **Magic** (recommended) - AI auto-scales across regions
+   - **Single Region** - Deploy to one region
+5. Click **Next**
+
+### Add Container
+
+1. Click **Add Container**
+2. Enter container name: `collector`
+3. Select your GitHub registry
+4. Select image: `walkeros-collector`
+5. Select tag: `latest`
+6. Click **Next**
+
+### Configure Endpoint
+
+1. Click **Add New Endpoint**
+2. Enter endpoint name: `collect`
+3. Select exposure method:
+   - **CDN** - Routes through Bunny CDN (recommended for caching static responses)
+   - **Anycast** - Direct routing to container ($2/month for anycast IP)
+4. Set container port: `8080`
+5. Enable SSL
+6. Click **Next**
+
+### Deploy
+
+1. Review your configuration
+2. Click **Confirm and Create**
+3. Wait for deployment (typically 1-2 minutes)
+4. Note the endpoint URL (e.g., `https://walkeros-collector-xxxxx.b-cdn.net`)
+
+## 8. Verify Deployment
+
+### Health Check
+
+```bash
+curl https://YOUR_BUNNY_ENDPOINT/health
+```
+
+### Send Test Event
+
+```bash
+curl -X POST https://YOUR_BUNNY_ENDPOINT/collect \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "page view",
+    "data": {
+      "title": "Bunny Production Test",
+      "path": "/"
+    }
+  }'
+```
+
+### Query BigQuery
+
+```bash
+bq query --use_legacy_sql=false \
+  "SELECT name, data, timestamp FROM walkerOS.events ORDER BY timestamp DESC LIMIT 5"
+```
+
+## Updating Your Deployment
+
+When you need to update your flow or configuration:
+
+```bash
+# 1. Make changes and rebuild
+docker build -t ghcr.io/YOUR_GITHUB_USERNAME/walkeros-collector:latest .
+
+# 2. Push new image
+docker push ghcr.io/YOUR_GITHUB_USERNAME/walkeros-collector:latest
+
+# 3. In Bunny dashboard: Magic Containers → Your App → Redeploy
+```
+
+## Next Steps
+
+- [Configure event mapping](/docs/mapping) to transform events before sending to BigQuery
+- [Add more destinations](/docs/destinations) to forward events to multiple services
+- Set up [Bunny monitoring](https://docs.bunny.net/docs/magic-containers-overview) for your deployment
+
+## Cleanup
+
+To remove all created resources:
+
+- Delete the Bunny Magic Container app from the dashboard
+- Delete the GHCR image from your GitHub packages
+- [Clean up BigQuery resources](/docs/destinations/server/gcp#cleanup)
+- Delete local files (`dist/bundle.mjs`, `sa-bigquery.json`, `Dockerfile`)

@@ -79,10 +79,15 @@ export const sourceExpress = async (
           }
         }
         res.status(status);
-        if (typeof options.body === 'string' || Buffer.isBuffer(options.body)) {
-          res.send(options.body);
+        const body = options.body;
+        if (typeof body === 'string' || Buffer.isBuffer(body)) {
+          res.send(body);
+        } else if (body instanceof Uint8Array) {
+          // A decoded cache value surfaces binary as a plain Uint8Array,
+          // not a Node Buffer; send it as bytes (res.json would corrupt it).
+          res.send(Buffer.from(body));
         } else {
-          res.json(options.body);
+          res.json(body);
         }
       });
 

@@ -51,7 +51,7 @@ export interface CacheStoreCounters {
 }
 
 interface CacheEntry {
-  value: unknown;
+  value: Store.StoreValue;
   expires?: number;
 }
 
@@ -139,7 +139,7 @@ export function createCacheStore(options: CacheStoreOptions = {}): CacheStore {
     type: 'memory',
     config: {},
 
-    get(key: string): unknown {
+    get(key: string): Store.StoreValue | undefined {
       const entry = entries.get(key);
       if (!entry) {
         counters.misses++;
@@ -160,7 +160,7 @@ export function createCacheStore(options: CacheStoreOptions = {}): CacheStore {
       return entry.value;
     },
 
-    set(key: string, value: unknown, ttl?: number): void {
+    set(key: string, value: Store.StoreValue, ttl?: number): void {
       const isNew = !entries.has(key);
       // Always delete first so re-insert puts the entry at the
       // most-recently-used position regardless of overwrite or new.

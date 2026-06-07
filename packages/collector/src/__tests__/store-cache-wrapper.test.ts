@@ -1,4 +1,5 @@
 import type { Cache, Logger, Store } from '@walkeros/core';
+import { serializeStoreValue, deserializeStoreValue } from '@walkeros/core';
 import { createCacheStore } from '../cache-store';
 import { wrapStoreWithCache } from '../store-cache-wrapper';
 
@@ -42,9 +43,9 @@ function createMockLogger(): MockLogger {
  */
 function createBackingStore(): Store.Instance & {
   calls: { get: number; set: number; delete: number };
-  data: Map<string, unknown>;
+  data: Map<string, Store.StoreValue>;
 } {
-  const data = new Map<string, unknown>();
+  const data = new Map<string, Store.StoreValue>();
   const calls = { get: 0, set: 0, delete: 0 };
   return {
     type: 'test-backing',
@@ -55,7 +56,7 @@ function createBackingStore(): Store.Instance & {
       calls.get++;
       return data.get(key);
     },
-    set(key: string, value: unknown) {
+    set(key: string, value: Store.StoreValue) {
       calls.set++;
       data.set(key, value);
     },
@@ -115,9 +116,15 @@ describe('store-cache wrapper: read path', () => {
       expect(value).toBe('alice');
       expect(backing.calls.get).toBe(1);
 
-      // The cache layer should now hold the value under the namespaced key.
-      // ttl=60s, cacheStore stores ms internally.
-      expect(cacheStore.get('foo:user')).toBe('alice');
+      // The cache layer now holds the value wrapped in a `{value, exp}`
+      // envelope under the namespaced key (the wrapper unwraps it on read).
+      expect(cacheStore.get('foo:user')).toEqual({
+        __walkeros_cache_v__: 'alice',
+        __walkeros_cache_exp__: expect.any(Number),
+      });
+      // A subsequent wrapped read is a HIT that decodes the envelope.
+      expect(await wrapped.get('user')).toBe('alice');
+      expect(backing.calls.get).toBe(1);
     } finally {
       cacheStore.destroy();
     }
@@ -207,7 +214,11 @@ describe('store-cache wrapper: read path', () => {
 
       const userVal = await wrapped.get('user:alice');
       expect(userVal).toEqual({ id: 'alice' });
-      expect(cacheStore.get('foo:user:alice')).toEqual({ id: 'alice' });
+      // The matching key populated the cache with an enveloped value.
+      expect(cacheStore.get('foo:user:alice')).toEqual({
+        __walkeros_cache_v__: { id: 'alice' },
+        __walkeros_cache_exp__: expect.any(Number),
+      });
 
       const accountVal = await wrapped.get('account:42');
       expect(accountVal).toEqual({ id: 42 });
@@ -226,14 +237,14 @@ describe('store-cache wrapper: read path', () => {
  * the "cache is advisory" policy from the design doc.
  */
 function createMockCacheStore(): Store.Instance & {
-  store: Map<string, unknown>;
+  store: Map<string, Store.StoreValue>;
   get: jest.Mock;
   set: jest.Mock;
   delete: jest.Mock;
 } {
-  const store = new Map<string, unknown>();
+  const store = new Map<string, Store.StoreValue>();
   const get = jest.fn((key: string) => store.get(key));
-  const set = jest.fn((key: string, value: unknown) => {
+  const set = jest.fn((key: string, value: Store.StoreValue) => {
     store.set(key, value);
   });
   const del = jest.fn((key: string) => {
@@ -270,7 +281,15 @@ describe('store-cache wrapper: write path', () => {
     expect(backing.calls.set).toBe(1);
     expect(backing.data.get('user')).toBe('alice');
     expect(cacheStore.set).toHaveBeenCalledTimes(1);
-    expect(cacheStore.set).toHaveBeenCalledWith('foo:user', 'alice', 60 * 1000);
+    // Dual-write: the `{value, exp}` envelope plus the ttl eviction hint (ms).
+    expect(cacheStore.set).toHaveBeenCalledWith(
+      'foo:user',
+      {
+        __walkeros_cache_v__: 'alice',
+        __walkeros_cache_exp__: expect.any(Number),
+      },
+      60 * 1000,
+    );
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
@@ -786,5 +805,210 @@ describe('store-cache wrapper: counters', () => {
     } finally {
       cacheStore.destroy();
     }
+  });
+});
+
+/**
+ * A structured cache tier that round-trips its values through the shared
+ * core codec, mirroring a byte/JSON backing (fs/s3/gcs): it holds serialized
+ * bytes in a Map and does NOT honor the `ttl` arg natively. Expiry therefore
+ * MUST be carried by the wrapper's `{value, exp}` envelope. This is the tier
+ * the wrapper was previously broken against (it wrote raw objects with no
+ * envelope, so a byte backing either threw or held the value forever).
+ */
+function createStructuredCacheStore(): Store.Instance & {
+  bytes: Map<string, Uint8Array>;
+  ttlArgs: number[];
+} {
+  const bytes = new Map<string, Uint8Array>();
+  const ttlArgs: number[] = [];
+  return {
+    type: 'structured-cache',
+    config: {},
+    bytes,
+    ttlArgs,
+    get(key: string): Store.StoreValue | undefined {
+      const raw = bytes.get(key);
+      if (raw === undefined) return undefined;
+      return deserializeStoreValue(raw);
+    },
+    set(key: string, value: Store.StoreValue, ttl?: number): void {
+      if (ttl !== undefined) ttlArgs.push(ttl);
+      // A byte backing only persists serialized bytes; a raw object would
+      // have thrown before the envelope unification.
+      bytes.set(key, serializeStoreValue(value));
+    },
+    delete(key: string): void {
+      bytes.delete(key);
+    },
+  };
+}
+
+describe('store-cache wrapper: byte/JSON-backed cache tier (envelope)', () => {
+  it('populates and reads back through a structured (byte-serialized) cache tier', async () => {
+    const backing = createBackingStore();
+    const cacheStore = createStructuredCacheStore();
+    const cacheConfig: Cache.Cache<Cache.StoreCacheRule> = {
+      rules: [{ ttl: 60 }],
+    };
+    const wrapped = wrapStoreWithCache(backing, {
+      storeId: 'api',
+      cacheConfig,
+      cacheStore,
+      namespace: 'api',
+    });
+
+    backing.data.set('user', { id: 'alice', roles: ['admin'] });
+
+    // MISS: backing read, envelope serialized into the byte tier.
+    const first = await wrapped.get('user');
+    expect(first).toEqual({ id: 'alice', roles: ['admin'] });
+    expect(backing.calls.get).toBe(1);
+    // The tier holds serialized bytes (an envelope), not a raw object.
+    expect(cacheStore.bytes.has('api:user')).toBe(true);
+
+    // HIT: value comes from the byte tier, decoded back, backing not re-read.
+    const second = await wrapped.get('user');
+    expect(second).toEqual({ id: 'alice', roles: ['admin'] });
+    expect(backing.calls.get).toBe(1);
+  });
+
+  it('round-trips a Uint8Array value through the byte tier on HIT', async () => {
+    const backing = createBackingStore();
+    const cacheStore = createStructuredCacheStore();
+    const cacheConfig: Cache.Cache<Cache.StoreCacheRule> = {
+      rules: [{ ttl: 60 }],
+    };
+    const wrapped = wrapStoreWithCache(backing, {
+      storeId: 'api',
+      cacheConfig,
+      cacheStore,
+      namespace: 'api',
+    });
+
+    backing.data.set('blob', { body: new Uint8Array([0xff, 0x00, 0x80]) });
+    await wrapped.get('blob'); // MISS, populate
+    const hit = await wrapped.get('blob');
+    expect(hit).toEqual({ body: new Uint8Array([0xff, 0x00, 0x80]) });
+    expect(backing.calls.get).toBe(1);
+  });
+
+  it('expired envelope reads as MISS and best-effort purges, then re-fetches backing', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(0);
+    try {
+      const backing = createBackingStore();
+      const cacheStore = createStructuredCacheStore();
+      const cacheConfig: Cache.Cache<Cache.StoreCacheRule> = {
+        rules: [{ ttl: 60 }], // exp = now + 60_000 ms
+      };
+      const wrapped = wrapStoreWithCache(backing, {
+        storeId: 'api',
+        cacheConfig,
+        cacheStore,
+        namespace: 'api',
+      });
+
+      backing.data.set('user', 'alice');
+      await wrapped.get('user'); // populate at t=0, exp=60_000
+      expect(backing.calls.get).toBe(1);
+      expect(cacheStore.bytes.has('api:user')).toBe(true);
+
+      // Advance past expiry. The byte tier does not evict on its own (no
+      // native TTL), so the envelope `exp` is the only thing that can expire.
+      jest.setSystemTime(61_000);
+
+      const afterExpiry = await wrapped.get('user');
+      // MISS path re-read the backing.
+      expect(afterExpiry).toBe('alice');
+      expect(backing.calls.get).toBe(2);
+      // Expired entry was purged (then re-populated by the fresh MISS).
+      expect(wrapped.counters.hits).toBe(0);
+      expect(wrapped.counters.misses).toBe(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('dual-write: passes the ttl arg AND stores the envelope', async () => {
+    const backing = createBackingStore();
+    const cacheStore = createStructuredCacheStore();
+    const cacheConfig: Cache.Cache<Cache.StoreCacheRule> = {
+      rules: [{ ttl: 30 }],
+    };
+    const wrapped = wrapStoreWithCache(backing, {
+      storeId: 'api',
+      cacheConfig,
+      cacheStore,
+      namespace: 'api',
+    });
+
+    backing.data.set('user', 'alice');
+    await wrapped.get('user');
+    // ttl arg is the eviction hint (ms), present alongside the envelope exp.
+    expect(cacheStore.ttlArgs).toEqual([30_000]);
+  });
+
+  it('does not double-envelope: a value shaped {value} survives a round-trip', async () => {
+    // A backing value that itself looks like an envelope payload must not be
+    // mistaken for an already-wrapped envelope on read.
+    const backing = createBackingStore();
+    const cacheStore = createStructuredCacheStore();
+    const cacheConfig: Cache.Cache<Cache.StoreCacheRule> = {
+      rules: [{ ttl: 60 }],
+    };
+    const wrapped = wrapStoreWithCache(backing, {
+      storeId: 'api',
+      cacheConfig,
+      cacheStore,
+      namespace: 'api',
+    });
+
+    const userShaped = { value: 'inner', exp: 12345 };
+    backing.data.set('k', userShaped);
+    await wrapped.get('k'); // populate
+    const hit = await wrapped.get('k');
+    expect(hit).toEqual(userShaped);
+    expect(backing.calls.get).toBe(1);
+  });
+});
+
+describe('store-cache wrapper: multi-tier single-wrap', () => {
+  it('value composes correctly through two structured tiers (no double-strip)', async () => {
+    // Simulate `api.cache.store = redis`, `redis.cache.store = __cache` by
+    // hand-wiring: the inner tier is itself a wrapped structured store.
+    const innerBacking = createBackingStore();
+    const innerCacheTier = createStructuredCacheStore();
+    const innerWrapped = wrapStoreWithCache(innerBacking, {
+      storeId: 'redis',
+      cacheConfig: { rules: [{ ttl: 120 }] },
+      cacheStore: innerCacheTier,
+      namespace: 'redis',
+    });
+
+    // The outer store uses the (already-wrapped) inner store as its cache tier,
+    // mirroring store.ts phase-2 topo wrapping.
+    const outerBacking = createBackingStore();
+    const outerWrapped = wrapStoreWithCache(outerBacking, {
+      storeId: 'api',
+      cacheConfig: { rules: [{ ttl: 60 }] },
+      cacheStore: innerWrapped,
+      namespace: 'api',
+    });
+
+    outerBacking.data.set('user', { id: 'alice' });
+
+    // MISS at the outer tier: reads outer backing, populates the inner-wrapped
+    // tier (which in turn writes its own backing + its own cache tier).
+    const first = await outerWrapped.get('user');
+    expect(first).toEqual({ id: 'alice' });
+    expect(outerBacking.calls.get).toBe(1);
+
+    // HIT at the outer tier: value flows back through the inner wrapper,
+    // each layer stripping exactly its own envelope. The outer backing is not
+    // re-read.
+    const second = await outerWrapped.get('user');
+    expect(second).toEqual({ id: 'alice' });
+    expect(outerBacking.calls.get).toBe(1);
   });
 });

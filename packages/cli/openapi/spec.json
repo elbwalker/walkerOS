@@ -1072,9 +1072,17 @@
           },
           "message": {
             "type": "string"
+          },
+          "phase": {
+            "type": "string",
+            "enum": ["preflight", "deploy", "bundle", "publish", "provision"],
+            "example": "bundle"
+          },
+          "detail": {
+            "type": "string"
           }
         },
-        "required": ["code", "message"]
+        "required": ["code", "message", "phase"]
       },
       "CreateDeploymentResponse": {
         "type": "object",

@@ -3,57 +3,59 @@ import {
   buildCacheContext,
   checkCache,
   compileCache,
-  decodeCacheValue,
-  encodeCacheValue,
+  serializeStoreValue,
+  deserializeStoreValue,
   storeCache,
+  wrapCacheEnvelope,
+  readCacheEnvelope,
 } from '@walkeros/core';
 import { createCacheStore } from '../cache-store';
 import type { Store, Transformer, WalkerOS } from '@walkeros/core';
 
 /**
- * Regression sweep for the cache-boundary serialization codec
- * (`encodeCacheValue` / `decodeCacheValue` in `@walkeros/core`).
+ * Regression sweep for the unified cache envelope discipline. The request
+ * cache stores a plain `{value, exp}` envelope (`wrapCacheEnvelope` /
+ * `readCacheEnvelope` in `@walkeros/core`); the backing store is responsible
+ * for serializing it. There is exactly ONE discipline: the cache no longer
+ * pre-serializes to a Buffer.
  *
  * The request-cache has three kinds of callers that store DIFFERENT
- * payloads — all must survive a MISS→HIT round-trip:
+ * payloads, all of which must survive a MISS->HIT round-trip:
  *  - transformer.ts storeCache: a processed event object
  *  - destination.ts storeCache: a push result (`SendResponse` shape) or `true`
  *  - source.ts: RespondOptions + the `true` sentinel (covered elsewhere)
  *
- * These tests route the cache through a BYTE-ONLY store (mirroring the fs
- * store's `set` guard: Buffer or string only) so a HIT is only possible if
- * the codec genuinely serialized the value to bytes and decoded it back.
- * A plain Map store would pass even without the codec, so it would not
- * prove serialization. The `__cache` (in-memory, by-reference) path is
- * exercised separately below.
+ * These tests route the cache through a CODEC store (mirroring a real
+ * fs/s3/gcs backing): every value is serialized to bytes via the shared store
+ * codec on `set` and restored on `get`, so a HIT is only possible if the
+ * envelope genuinely round-trips through serialization. Binary leaves come
+ * back as platform-neutral `Uint8Array`, never a Node `Buffer`. The `__cache`
+ * (in-memory, by-reference) path is exercised separately below.
  */
 
-interface ByteStoreCounters {
-  rejected: number;
+interface CodecStoreCounters {
+  writes: number;
 }
 
 /**
- * A store that persists ONLY Buffer or string values, like the production
- * fs/s3/gcs stores. Any other `set` payload throws — this is what forces
- * the cache codec to do real serialization for transformer/destination
- * cache writes.
+ * A store that serializes every value to bytes via the shared store codec,
+ * like the production fs/s3/gcs stores. Forces the cache envelope through a
+ * real serialize/deserialize cycle for transformer/destination cache writes.
  */
-function createByteStore(
-  data: Map<string, unknown>,
-  counters: ByteStoreCounters,
+function createCodecStore(
+  data: Map<string, Uint8Array>,
+  counters: CodecStoreCounters,
 ): Store.Init {
   return (context) => ({
-    type: 'byte-only',
+    type: 'codec-store',
     config: context.config as Store.Config,
-    get: async (key: string) => data.get(key),
-    set: async (key: string, value: unknown) => {
-      if (!Buffer.isBuffer(value) && typeof value !== 'string') {
-        counters.rejected++;
-        throw new Error(
-          `byte store persists Buffer or string values only, received ${typeof value}`,
-        );
-      }
-      data.set(key, value);
+    get: async (key: string) => {
+      const raw = data.get(key);
+      return raw === undefined ? undefined : deserializeStoreValue(raw);
+    },
+    set: async (key: string, value: Store.StoreValue) => {
+      counters.writes++;
+      data.set(key, serializeStoreValue(value));
     },
     delete: async (key: string) => {
       data.delete(key);
@@ -61,11 +63,11 @@ function createByteStore(
   });
 }
 
-describe('cache codec round-trip (request-cache callers)', () => {
-  // A. Transformer event-object round-trip through a byte-only store.
-  it('round-trips a processed event object through a byte-only cache store', async () => {
-    const data = new Map<string, unknown>();
-    const counters: ByteStoreCounters = { rejected: 0 };
+describe('cache envelope round-trip (request-cache callers)', () => {
+  // A. Transformer event-object round-trip through a codec store.
+  it('round-trips a processed event object through a codec cache store', async () => {
+    const data = new Map<string, Uint8Array>();
+    const counters: CodecStoreCounters = { writes: 0 };
     let enricherCalls = 0;
     const destinationEvents: WalkerOS.DeepPartialEvent[] = [];
 
@@ -79,7 +81,7 @@ describe('cache codec round-trip (request-cache callers)', () => {
 
     const { elb } = await startFlow({
       stores: {
-        byteCache: { code: createByteStore(data, counters) },
+        codecCache: { code: createCodecStore(data, counters) },
       },
       transformers: {
         enricher: {
@@ -92,7 +94,7 @@ describe('cache codec round-trip (request-cache callers)', () => {
             },
           }),
           cache: {
-            store: 'byteCache',
+            store: 'codecCache',
             rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
@@ -111,17 +113,17 @@ describe('cache codec round-trip (request-cache callers)', () => {
       },
     });
 
-    // First push: MISS — enricher runs, processed event is encoded to bytes.
+    // First push: MISS : enricher runs, processed event serialized to bytes.
     await elb({ name: 'page view', data: {} });
     expect(enricherCalls).toBe(1);
-    expect(counters.rejected).toBe(0); // codec produced a Buffer, store accepted it
+    expect(counters.writes).toBe(1); // envelope serialized to bytes
     expect(destinationEvents).toHaveLength(1);
 
-    // The byte store now holds a Buffer (the encoded envelope), not a raw object.
+    // The codec store holds serialized bytes (the envelope), not a raw object.
     const stored = [...data.values()][0];
-    expect(Buffer.isBuffer(stored)).toBe(true);
+    expect(stored).toBeInstanceOf(Uint8Array);
 
-    // Second push same name: HIT — enricher skipped, event decoded from bytes.
+    // Second push same name: HIT : enricher skipped, event decoded from bytes.
     destinationEvents.length = 0;
     await elb({ name: 'page view', data: {} });
     expect(enricherCalls).toBe(1); // cached, not re-run
@@ -137,10 +139,10 @@ describe('cache codec round-trip (request-cache callers)', () => {
     expect(destinationEvents[0].context).toEqual({ stage: ['checkout', 1] });
   });
 
-  // B. Destination push-result round-trip through a byte-only store.
-  it('round-trips a destination push result (SendResponse) through a byte-only cache store', async () => {
-    const data = new Map<string, unknown>();
-    const counters: ByteStoreCounters = { rejected: 0 };
+  // B. Destination push-result round-trip through a codec store.
+  it('round-trips a destination push result (SendResponse) through a codec cache store', async () => {
+    const data = new Map<string, Uint8Array>();
+    const counters: CodecStoreCounters = { writes: 0 };
     let pushCount = 0;
 
     // Canonical SendResponse: { ok, data, error? }. `data` is JSON-safe
@@ -150,7 +152,7 @@ describe('cache codec round-trip (request-cache callers)', () => {
 
     const { elb } = await startFlow({
       stores: {
-        byteCache: { code: createByteStore(data, counters) },
+        codecCache: { code: createCodecStore(data, counters) },
       },
       destinations: {
         api: {
@@ -163,40 +165,40 @@ describe('cache codec round-trip (request-cache callers)', () => {
             },
           },
           cache: {
-            store: 'byteCache',
+            store: 'codecCache',
             rules: [{ key: ['event.name'], ttl: 60 }],
           },
         },
       },
     });
 
-    // First push: MISS — destination push runs, result encoded to bytes.
+    // First push: MISS : destination push runs, result serialized to bytes.
     await elb({ name: 'page view', data: {} });
     expect(pushCount).toBe(1);
-    expect(counters.rejected).toBe(0); // result serialized to a Buffer
+    expect(counters.writes).toBe(1); // result serialized
 
     const stored = [...data.values()][0];
-    expect(Buffer.isBuffer(stored)).toBe(true);
+    expect(stored).toBeInstanceOf(Uint8Array);
 
-    // Second push: HIT — push skipped (deduplicated). The cached result is
+    // Second push: HIT : push skipped (deduplicated). The cached result is
     // never re-emitted downstream, but it must DECODE without error so the
-    // HIT path resolves. We assert the stored bytes decode back to the
-    // original push result structurally.
+    // HIT path resolves.
     await elb({ name: 'page view', data: {} });
     expect(pushCount).toBe(1); // deduplicated via cached result
   });
 
-  // B (codec unit-level): prove a SendResponse round-trips byte-for-byte
-  // through the public codec, including a nested Buffer in `data`.
-  it('codec round-trips a SendResponse with a nested Buffer in data', () => {
+  // B (codec unit-level): prove a SendResponse round-trips through the public
+  // envelope + store codec, including a nested binary leaf in `data` that
+  // surfaces back as a Uint8Array (not a Node Buffer).
+  it('envelope + codec round-trips a SendResponse with a nested binary leaf in data', () => {
     const result = {
       ok: false,
-      data: { raw: Buffer.from('body-bytes'), nested: { n: 1 } },
+      data: { raw: new Uint8Array([0x62, 0x6f, 0x64, 0x79]), nested: { n: 1 } },
       error: '500 Internal Server Error',
     };
-    const encoded = encodeCacheValue(result, 60_000);
-    expect(Buffer.isBuffer(encoded)).toBe(true);
-    const decoded = decodeCacheValue(encoded);
+    const bytes = serializeStoreValue(wrapCacheEnvelope(result, 60_000));
+    expect(bytes).toBeInstanceOf(Uint8Array);
+    const decoded = readCacheEnvelope(deserializeStoreValue(bytes));
     expect(decoded).toBeDefined();
     if (!decoded || 'expired' in decoded) throw new Error('unexpected decode');
     expect(decoded.value).toEqual(result);
@@ -204,46 +206,52 @@ describe('cache codec round-trip (request-cache callers)', () => {
     if (
       value === null ||
       typeof value !== 'object' ||
+      Array.isArray(value) ||
+      value instanceof Uint8Array ||
       !('data' in value) ||
       value.data === null ||
       typeof value.data !== 'object' ||
+      Array.isArray(value.data) ||
+      value.data instanceof Uint8Array ||
       !('raw' in value.data)
     ) {
       throw new Error('decoded shape mismatch');
     }
-    expect(Buffer.isBuffer(value.data.raw)).toBe(true);
+    expect(value.data.raw).toBeInstanceOf(Uint8Array);
+    expect(Buffer.isBuffer(value.data.raw)).toBe(false);
   });
 
-  // C. In-memory `__cache` (default) round-trips a Buffer body on HIT.
-  // The default store keeps the encoded Buffer by reference; `decodeCacheValue`
-  // inside `checkCache` restores the original Buffer body. This mirrors the
-  // source.ts caller, which caches RespondOptions whose `body` is a Buffer.
-  it('round-trips a RespondOptions Buffer body through the default in-memory __cache on HIT', async () => {
+  // C. In-memory `__cache` (default) round-trips a binary body on HIT.
+  // The default store keeps the envelope (and its live binary leaf) by
+  // reference; `readCacheEnvelope` inside `checkCache` strips the envelope and
+  // returns the value verbatim. This mirrors the source.ts caller, which
+  // caches RespondOptions whose `body` is binary.
+  it('round-trips a RespondOptions binary body through the default in-memory __cache on HIT', async () => {
     const store = createCacheStore();
     const compiled = compileCache({
       rules: [{ key: ['event.name'], ttl: 60 }],
     });
     const context = buildCacheContext({}, { name: 'page view' });
 
-    // Cold: MISS — store does not yet hold the key.
+    // Cold: MISS : store does not yet hold the key.
     const miss = await checkCache(compiled, store, context);
     expect(miss?.status).toBe('MISS');
     if (!miss || miss.status !== 'MISS') throw new Error('expected MISS');
 
-    // Cache a RespondOptions-shaped value with a Buffer body (the source path).
+    // Cache a RespondOptions-shaped value with a binary body (the source path).
     const respondOptions = {
       status: 200,
       headers: { 'content-type': 'application/json' },
-      body: Buffer.from('cached-body-bytes'),
+      body: new Uint8Array(Buffer.from('cached-body-bytes')),
     };
     storeCache(store, miss.key, respondOptions, miss.rule.ttl);
 
-    // The default __cache holds the encoded envelope Buffer by reference.
+    // The default __cache holds the plain {value, exp} envelope by reference.
     const rawStored = store.get(miss.key);
-    expect(Buffer.isBuffer(rawStored)).toBe(true);
+    expect(Buffer.isBuffer(rawStored)).toBe(false);
 
-    // Warm: HIT — checkCache decodes the envelope and restores the structure,
-    // including the Buffer body as a real Buffer (not a base64 string).
+    // Warm: HIT : checkCache strips the envelope and returns the value,
+    // including the binary body as a Uint8Array.
     const hit = await checkCache(compiled, store, context);
     expect(hit?.status).toBe('HIT');
     if (!hit || hit.status !== 'HIT') throw new Error('expected HIT');
@@ -252,31 +260,28 @@ describe('cache codec round-trip (request-cache callers)', () => {
     if (
       value === null ||
       typeof value !== 'object' ||
+      Array.isArray(value) ||
+      value instanceof Uint8Array ||
       !('body' in value) ||
       !('status' in value)
     ) {
       throw new Error('decoded RespondOptions shape mismatch');
     }
     expect(value.status).toBe(200);
-    expect(Buffer.isBuffer(value.body)).toBe(true);
-    if (!Buffer.isBuffer(value.body)) throw new Error('body not a Buffer');
-    expect(value.body.toString()).toBe('cached-body-bytes');
+    expect(value.body).toBeInstanceOf(Uint8Array);
     expect(value).toEqual(respondOptions);
   });
 
-  // E. State-to-byte-store limitation: `applyState` writes payloads DIRECTLY
-  // (no codec), so a `state[set]` of a plain object to a byte-only store
-  // throws at the store and the fail-open state handler swallows it. The
-  // object is NOT persisted. This documents that fs/s3/gcs persist
-  // Buffer/string only; structured state payloads need an object-capable
-  // store like the default in-memory `__cache`.
-  it('state[set] of a plain object to a byte-only store is rejected (codec bypassed)', async () => {
-    const data = new Map<string, unknown>();
-    const counters: ByteStoreCounters = { rejected: 0 };
+  // E. State-to-codec-store: `applyState` writes payloads DIRECTLY through the
+  // store's own `set`, which serializes via the store codec. A structured
+  // `state[set]` payload persists byte-exact and reads back structurally.
+  it('state[set] of a plain object persists through a codec store', async () => {
+    const data = new Map<string, Uint8Array>();
+    const counters: CodecStoreCounters = { writes: 0 };
 
-    const { elb } = await startFlow({
+    const { elb, collector } = await startFlow({
       stores: {
-        byteStore: { code: createByteStore(data, counters) },
+        codecStore: { code: createCodecStore(data, counters) },
       },
       transformers: {
         writer: {
@@ -291,9 +296,9 @@ describe('cache codec round-trip (request-cache callers)', () => {
           state: [
             {
               mode: 'set',
-              store: 'byteStore',
+              store: 'codecStore',
               key: { value: 'profile' },
-              value: { map: { id: 'event.data.id' } },
+              value: { value: { id: 'u-1', roles: ['admin'] } },
             },
           ],
         },
@@ -308,9 +313,12 @@ describe('cache codec round-trip (request-cache callers)', () => {
 
     await elb({ name: 'page view', data: { id: 'u-1' } });
 
-    // The byte store rejected the object payload (no codec on the state path)
-    // and nothing was persisted; the failure was fail-open (no throw to caller).
-    expect(counters.rejected).toBe(1);
-    expect(data.size).toBe(0);
+    // The codec store serialized and persisted the object payload.
+    expect(counters.writes).toBe(1);
+    expect(data.size).toBe(1);
+
+    const store = collector.stores.codecStore;
+    const stored = await store.get('profile');
+    expect(stored).toEqual({ id: 'u-1', roles: ['admin'] });
   });
 });

@@ -23,12 +23,12 @@ interface TestPushFn {
 
 type TestSourceTypes = Source.Types<unknown, unknown, TestPushFn>;
 
-function createAsyncStoreInit(data: Map<string, unknown>): Store.Init {
+function createAsyncStoreInit(data: Map<string, Store.StoreValue>): Store.Init {
   return (context) => ({
     type: 'async-mock',
     config: context.config as Store.Config,
     get: async (key: string) => data.get(key),
-    set: async (key: string, value: unknown) => {
+    set: async (key: string, value: Store.StoreValue) => {
       data.set(key, value);
     },
     delete: async (key: string) => {
@@ -52,7 +52,7 @@ function createRespondingDestination(
 
 describe('source cache with async backing store', () => {
   it('returns cached respond body (not a Promise) on HIT', async () => {
-    const cacheData = new Map<string, unknown>();
+    const cacheData = new Map<string, Store.StoreValue>();
     // Pre-seed the async cache store with a cached respond payload
     // under the namespaced key that the cache rule will compute.
     // The source's namespace is undefined and the rule keys on
@@ -127,7 +127,7 @@ describe('source cache with async backing store', () => {
   });
 
   it('falls through to pipeline on MISS', async () => {
-    const cacheData = new Map<string, unknown>();
+    const cacheData = new Map<string, Store.StoreValue>();
     const allResponses: RespondOptions[] = [];
 
     const { collector } = await startFlow({

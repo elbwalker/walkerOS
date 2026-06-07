@@ -2,7 +2,6 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import type { Collector, Logger } from '@walkeros/core';
-import { encodeCacheValue, decodeCacheValue } from '@walkeros/core';
 import { storeFsInit } from '../store';
 
 describe('FsStore', () => {
@@ -20,11 +19,11 @@ describe('FsStore', () => {
 
   const mockCollector = {} as Collector.Instance;
 
-  async function createStore(basePath: string) {
+  async function createStore(basePath: string, file?: boolean) {
     return await storeFsInit({
       collector: mockCollector,
       logger: mockLogger,
-      config: { settings: { basePath } },
+      config: { settings: { basePath }, file },
       env: {},
       id: 'test-fs',
     });
@@ -39,192 +38,168 @@ describe('FsStore', () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
-  describe('get', () => {
-    it('should return Buffer for existing files', async () => {
-      await fs.writeFile(path.join(tmpDir, 'test.txt'), 'hello');
+  describe('structured mode (default)', () => {
+    it('round-trips a structured object as utf8 JSON on disk', async () => {
       const store = await createStore(tmpDir);
-      const result = await store.get('test.txt');
-      expect(Buffer.isBuffer(result)).toBe(true);
-      expect(result!.toString()).toBe('hello');
+      const value = { tier: 'gold', count: 3, nested: { ok: true } };
+      await store.set('crm/alice', value);
+
+      // On-disk file is utf8 JSON, not an opaque binary blob.
+      const onDisk = await fs.readFile(path.join(tmpDir, 'crm/alice'), 'utf-8');
+      expect(JSON.parse(onDisk)).toEqual(value);
+
+      const result = await store.get('crm/alice');
+      expect(result).toEqual(value);
     });
 
-    it('should return undefined for missing files', async () => {
+    it('round-trips a string value', async () => {
       const store = await createStore(tmpDir);
-      const result = await store.get('missing.txt');
-      expect(result).toBeUndefined();
+      await store.set('greeting', 'hello world');
+      expect(await store.get('greeting')).toBe('hello world');
     });
 
-    it('should read from subdirectories', async () => {
-      await fs.mkdir(path.join(tmpDir, 'js'), { recursive: true });
-      await fs.writeFile(
-        path.join(tmpDir, 'js', 'walker.js'),
-        'console.log("hi")',
+    it('round-trips a binary leaf to a Uint8Array', async () => {
+      const store = await createStore(tmpDir);
+      const bytes = new Uint8Array([0, 1, 2, 255, 254, 0x7f, 0x80]);
+      await store.set('asset', { name: 'logo', body: bytes });
+
+      const result = await store.get('asset');
+      // toEqual asserts the decoded leaf is a Uint8Array with the exact bytes:
+      // Jest distinguishes a Uint8Array from a plain array or object, so a
+      // base64 string or number[] leaf would fail this assertion.
+      expect(result).toEqual({ name: 'logo', body: bytes });
+    });
+
+    it('returns undefined for a missing key', async () => {
+      const store = await createStore(tmpDir);
+      expect(await store.get('missing')).toBeUndefined();
+    });
+
+    it('degrades to undefined on an empty file (does not throw)', async () => {
+      const store = await createStore(tmpDir);
+      await fs.writeFile(path.join(tmpDir, 'empty'), '');
+      await expect(store.get('empty')).resolves.toBeUndefined();
+    });
+
+    it('degrades to undefined on corrupt non-JSON bytes (does not throw)', async () => {
+      const store = await createStore(tmpDir);
+      await fs.writeFile(path.join(tmpDir, 'corrupt'), 'not valid json {');
+      await expect(store.get('corrupt')).resolves.toBeUndefined();
+    });
+
+    it('creates intermediate directories', async () => {
+      const store = await createStore(tmpDir);
+      await store.set('deep/nested/file', { a: 1 });
+      const onDisk = await fs.readFile(
+        path.join(tmpDir, 'deep', 'nested', 'file'),
+        'utf-8',
       );
-      const store = await createStore(tmpDir);
-      const result = await store.get('js/walker.js');
-      expect(result!.toString()).toBe('console.log("hi")');
+      expect(JSON.parse(onDisk)).toEqual({ a: 1 });
     });
   });
 
-  describe('set', () => {
-    it('should write a file', async () => {
-      const store = await createStore(tmpDir);
-      await store.set('output.txt', Buffer.from('written'));
-      const content = await fs.readFile(
-        path.join(tmpDir, 'output.txt'),
-        'utf-8',
-      );
-      expect(content).toBe('written');
-    });
-
-    it('should create intermediate directories', async () => {
-      const store = await createStore(tmpDir);
-      await store.set('deep/nested/file.txt', Buffer.from('deep'));
-      const content = await fs.readFile(
-        path.join(tmpDir, 'deep', 'nested', 'file.txt'),
-        'utf-8',
-      );
-      expect(content).toBe('deep');
-    });
-  });
-
-  describe('raw byte persistence', () => {
-    it('writes a Buffer raw and get returns a Buffer with the same bytes', async () => {
-      const store = await createStore(tmpDir);
-      const bytes = Buffer.from('var x = 1;');
+  describe('file mode (file: true)', () => {
+    it('writes a Buffer byte-exact with no inflation', async () => {
+      const store = await createStore(tmpDir, true);
+      const bytes = Buffer.from([0, 1, 2, 255, 254, 0x7f, 0x80]);
       await store.set('buf', bytes);
+
+      // On-disk file equals the input bytes exactly, identical length, no
+      // base64 inflation or JSON wrapping.
+      const onDisk = await fs.readFile(path.join(tmpDir, 'buf'));
+      expect(onDisk.length).toBe(bytes.length);
+      expect(onDisk.equals(bytes)).toBe(true);
+
       const result = await store.get('buf');
       if (!Buffer.isBuffer(result)) throw new Error('expected Buffer');
       expect(result.equals(bytes)).toBe(true);
     });
 
-    it('writes a string raw and get returns a Buffer with the same bytes', async () => {
-      const store = await createStore(tmpDir);
-      await store.set('str', 'hello world');
-      const result = await store.get('str');
-      if (!Buffer.isBuffer(result)) throw new Error('expected Buffer');
-      expect(result.toString()).toBe('hello world');
+    it('writes a Uint8Array byte-exact', async () => {
+      const store = await createStore(tmpDir, true);
+      const bytes = new Uint8Array([10, 20, 30, 40]);
+      await store.set('u8', bytes);
+
+      const onDisk = await fs.readFile(path.join(tmpDir, 'u8'));
+      expect(onDisk.length).toBe(bytes.length);
+      expect(Array.from(onDisk)).toEqual([10, 20, 30, 40]);
     });
 
-    it('rejects a non-Buffer/string value with a clear error', async () => {
-      const store = await createStore(tmpDir);
+    it('writes a string byte-exact and get returns the raw bytes', async () => {
+      const store = await createStore(tmpDir, true);
+      await store.set('str', 'console.log("hi")');
+
+      const onDisk = await fs.readFile(path.join(tmpDir, 'str'), 'utf-8');
+      expect(onDisk).toBe('console.log("hi")');
+
+      const result = await store.get('str');
+      if (!Buffer.isBuffer(result)) throw new Error('expected Buffer');
+      expect(result.toString()).toBe('console.log("hi")');
+    });
+
+    it('rejects a structured object with a clear error', async () => {
+      const store = await createStore(tmpDir, true);
       await expect(store.set('x', { a: 1 })).rejects.toThrow(
-        /Buffer or string/,
+        /Uint8Array or string/,
       );
     });
   });
 
-  describe('TTL expiry round-trip', () => {
-    // End-to-end lock: an encoded cache value written to the fs store reads
-    // back as a HIT before its TTL, and as expired afterwards. The codec
-    // stamps an absolute `Date.now() + ttlMs` expiry, so the clock is
-    // controlled with fake timers around the synchronous codec calls. The fs
-    // I/O itself runs under real time (writes/reads happen between the
-    // synchronous encode and decode steps), so no real sleep is needed.
-    const VALUE = { status: 200, body: 'cached-payload' };
-    const TTL_MS = 60_000;
-    const BASE = new Date('2026-06-04T00:00:00.000Z').getTime();
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it('reads back a HIT within the TTL', async () => {
-      const store = await createStore(tmpDir);
-
-      jest.useFakeTimers();
-      jest.setSystemTime(BASE);
-      const encoded = encodeCacheValue(VALUE, TTL_MS);
-      jest.useRealTimers();
-
-      await store.set('cache/entry', encoded);
-      const raw = await store.get('cache/entry');
-
-      jest.useFakeTimers();
-      jest.setSystemTime(BASE + TTL_MS - 1);
-      const decoded = decodeCacheValue(raw);
-      jest.useRealTimers();
-
-      expect(decoded).toEqual({ value: VALUE });
-    });
-
-    it('reads back as expired once the TTL has passed', async () => {
-      const store = await createStore(tmpDir);
-
-      jest.useFakeTimers();
-      jest.setSystemTime(BASE);
-      const encoded = encodeCacheValue(VALUE, TTL_MS);
-      jest.useRealTimers();
-
-      await store.set('cache/entry', encoded);
-      const raw = await store.get('cache/entry');
-
-      jest.useFakeTimers();
-      jest.setSystemTime(BASE + TTL_MS + 1);
-      const decoded = decodeCacheValue(raw);
-      jest.useRealTimers();
-
-      expect(decoded).toEqual({ expired: true });
-    });
-  });
-
   describe('delete', () => {
-    it('should remove a file', async () => {
-      await fs.writeFile(path.join(tmpDir, 'remove.txt'), 'bye');
+    it('removes a file', async () => {
       const store = await createStore(tmpDir);
-      await store.delete('remove.txt');
-      await expect(
-        fs.access(path.join(tmpDir, 'remove.txt')),
-      ).rejects.toThrow();
+      await store.set('remove', { bye: true });
+      await store.delete('remove');
+      await expect(fs.access(path.join(tmpDir, 'remove'))).rejects.toThrow();
     });
 
-    it('should be a no-op for missing files', async () => {
+    it('is a no-op for a missing file', async () => {
       const store = await createStore(tmpDir);
-      await expect(store.delete('nonexistent.txt')).resolves.toBeUndefined();
+      await expect(store.delete('nonexistent')).resolves.toBeUndefined();
     });
   });
 
   describe('path traversal protection', () => {
-    it('should reject .. segments', async () => {
+    it('rejects .. segments', async () => {
       const store = await createStore(tmpDir);
       const result = await store.get('../etc/passwd');
       expect(result).toBeUndefined();
       expect(mockLogger.warn).toHaveBeenCalled();
     });
 
-    it('should reject absolute paths', async () => {
+    it('rejects absolute paths', async () => {
       const store = await createStore(tmpDir);
       const result = await store.get('/etc/passwd');
       expect(result).toBeUndefined();
       expect(mockLogger.warn).toHaveBeenCalled();
     });
 
-    it('should reject backslash traversal', async () => {
+    it('rejects backslash traversal', async () => {
       const store = await createStore(tmpDir);
       const result = await store.get('..\\etc\\passwd');
       expect(result).toBeUndefined();
       expect(mockLogger.warn).toHaveBeenCalled();
     });
 
-    it('should reject set with path traversal', async () => {
+    it('rejects set with path traversal', async () => {
       const store = await createStore(tmpDir);
-      await store.set('../outside.txt', Buffer.from('bad'));
+      await store.set('../outside', { bad: true });
       const exists = await fs
-        .access(path.join(tmpDir, '..', 'outside.txt'))
+        .access(path.join(tmpDir, '..', 'outside'))
         .then(() => true)
         .catch(() => false);
       expect(exists).toBe(false);
     });
 
-    it('should reject delete with path traversal', async () => {
+    it('rejects delete with path traversal', async () => {
       const store = await createStore(tmpDir);
-      await store.delete('../outside.txt');
+      await store.delete('../outside');
       expect(mockLogger.warn).toHaveBeenCalled();
     });
   });
 
   describe('type and config', () => {
-    it('should expose type as fs', async () => {
+    it('exposes type as fs', async () => {
       const store = await createStore(tmpDir);
       expect(store.type).toBe('fs');
     });

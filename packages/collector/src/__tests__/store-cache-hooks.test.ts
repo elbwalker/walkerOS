@@ -31,10 +31,10 @@ function createMockCollector(): Collector.Instance {
  */
 function createBackingInit(): {
   init: Store.Init;
-  data: Map<string, unknown>;
+  data: Map<string, Store.StoreValue>;
   calls: { get: number; set: number; delete: number };
 } {
-  const data = new Map<string, unknown>();
+  const data = new Map<string, Store.StoreValue>();
   const calls = { get: 0, set: 0, delete: 0 };
   const init: Store.Init = (context) => ({
     type: 'backing',
@@ -43,7 +43,7 @@ function createBackingInit(): {
       calls.get++;
       return data.get(key);
     },
-    set(key: string, value: unknown) {
+    set(key: string, value: Store.StoreValue) {
       calls.set++;
       data.set(key, value);
     },
