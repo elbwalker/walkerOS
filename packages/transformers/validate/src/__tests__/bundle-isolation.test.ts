@@ -50,15 +50,24 @@ function readSourceTree(absDir: string, skipDir?: string): string {
   return combined;
 }
 
-/** Bundles a TS snippet in os.tmpdir(), resolving deps via the repo node_modules. */
-async function bundleSnippet(contents: string): Promise<string> {
+/**
+ * Bundles a package's own TypeScript SOURCE entry by absolute path. All
+ * `@walkeros/*` workspace deps are marked external so esbuild never resolves
+ * them: this keeps the test hermetic (it does NOT depend on any built `dist/`,
+ * which does not exist in CI before the `test` task runs). The only runtime
+ * non-`@walkeros` dep that matters here is `@cfworker/json-schema`, a real
+ * `node_modules` package and a direct dependency of validate, which stays
+ * bundled. Local relative imports (e.g. `./event-format.schema`) also stay.
+ */
+async function bundleSource(entryPath: string): Promise<string> {
   const result = await build({
-    stdin: { contents, resolveDir: os.tmpdir(), loader: 'ts' },
+    entryPoints: [entryPath],
     bundle: true,
     treeShaking: true,
-    platform: 'node',
+    platform: 'neutral',
     format: 'esm',
     write: false,
+    external: ['@walkeros/*'],
     nodePaths: [nodeModules],
     logLevel: 'silent',
   });
@@ -66,6 +75,33 @@ async function bundleSnippet(contents: string): Promise<string> {
   if (!out) throw new Error('esbuild produced no output');
   return out.text;
 }
+
+/** Bundles a TS snippet in os.tmpdir(), resolving deps via the repo node_modules. */
+async function bundleSnippet(contents: string): Promise<string> {
+  const result = await build({
+    stdin: { contents, resolveDir: os.tmpdir(), loader: 'ts' },
+    bundle: true,
+    treeShaking: true,
+    platform: 'neutral',
+    format: 'esm',
+    write: false,
+    external: ['@walkeros/*'],
+    nodePaths: [nodeModules],
+    logLevel: 'silent',
+  });
+  const out = result.outputFiles[0];
+  if (!out) throw new Error('esbuild produced no output');
+  return out.text;
+}
+
+const VALIDATE_SRC_ENTRY = path.resolve(
+  repoRoot,
+  'packages/transformers/validate/src/index.ts',
+);
+const FINGERPRINT_SRC_ENTRY = path.resolve(
+  repoRoot,
+  'packages/server/transformers/fingerprint/src/index.ts',
+);
 
 const gzipBytes = (source: string): number =>
   zlib.gzipSync(Buffer.from(source, 'utf8')).length;
@@ -95,19 +131,13 @@ describe('bundle isolation: @cfworker/json-schema stays in the validate transfor
 
   describe('positive isolation (tree-shaking keeps the engine scoped)', () => {
     test('fingerprint-only bundle excludes the cfworker engine', async () => {
-      const bundle = await bundleSnippet(
-        "import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';\n" +
-          'globalThis.__keep = transformerFingerprint;\n',
-      );
+      const bundle = await bundleSource(FINGERPRINT_SRC_ENTRY);
       expect(CFWORKER_PATTERN.test(bundle)).toBe(false);
       expect(ZOD_PATTERN.test(bundle)).toBe(false);
     });
 
     test('validate bundle includes the cfworker engine and stays under 20KB gzipped', async () => {
-      const validateBundle = await bundleSnippet(
-        "import { transformerValidate } from '@walkeros/transformer-validate';\n" +
-          'globalThis.__keep = transformerValidate;\n',
-      );
+      const validateBundle = await bundleSource(VALIDATE_SRC_ENTRY);
       expect(CFWORKER_PATTERN.test(validateBundle)).toBe(true);
       // The runtime validate bundle must contain ZERO zod tokens: the canonical
       // event schema is the pre-serialized static event-format.schema.ts.

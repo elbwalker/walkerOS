@@ -229,9 +229,29 @@ function generateCacheKeyContent(
       tempDir: undefined,
       output: undefined,
     },
+    // The format the served artifact is emitted in, derived from `platform`
+    // (browser=iife, node=esm) rather than the declared `buildOptions.format`.
+    // Including it in the key one-time-invalidates any cache entry written by an
+    // older CLI that emitted ESM for a browser build, so a stale ESM artifact is
+    // never served. It does NOT detect a runtime divergence: because it is
+    // re-derived from `platform`, removing the `format:'iife'` line below would
+    // not change this key. The durable cross-version cache bust is the
+    // version/toolchain hash, not this field.
+    emittedFormat: resolveEmittedFormat(buildOptions),
     versionsHash,
   };
   return JSON.stringify(configForCache);
+}
+
+/**
+ * The format the served (stage-2 / wrap) artifact is emitted in, derived from
+ * platform. Browser artifacts are IIFE-wrapped so internal declarations stay
+ * private; node/server artifacts stay ESM (they rely on a `createRequire`
+ * banner and bare ESM imports). Stage-1 skeletons are always ESM and are not
+ * served, so they are not represented here.
+ */
+function resolveEmittedFormat(buildOptions: BuildOptions): 'iife' | 'esm' {
+  return buildOptions.platform === 'browser' ? 'iife' : 'esm';
 }
 
 export async function bundleCore(
@@ -653,6 +673,15 @@ export async function bundleCore(
 
       // Platform-specific stage 2 options
       if (buildOptions.platform === 'browser') {
+        // Emit the final browser artifact as an IIFE. The served bundle runs
+        // as a classic <script> at global scope, so an ESM body would leak its
+        // minified top-level declarations (e.g. `ga`) onto `window` and collide
+        // with globals like Google Analytics. The IIFE wraps everything in a
+        // private closure; the intentional `window.elb`/`window.walkerOS`
+        // assignments live inside the entry's own async IIFE and reference
+        // `window` explicitly, so they still run. The browser entry has zero
+        // exports, so no `globalName` is needed (one would add a window var).
+        stage2Options.format = 'iife';
         stage2Options.define = {
           'process.env.NODE_ENV': '"production"',
           global: 'globalThis',
@@ -809,7 +838,11 @@ function createEsbuildOptions(
   const baseOptions: esbuild.BuildOptions = {
     entryPoints: [entryPath],
     bundle: true,
-    format: 'esm' as esbuild.Format, // Always ESM — platform wrapper handles final format
+    // MUST stay ESM: the stage-1 skeleton is imported (via `await import`) for
+    // its named exports (`wireConfig`/`startFlow`/`__configData`/`__devExports`)
+    // by simulate/preview/push and the wrap step. esbuild's `iife` format
+    // silently drops exports, which would break those consumers.
+    format: 'esm' as esbuild.Format,
     platform: buildOptions.platform as esbuild.Platform,
     outfile: outputPath,
     absWorkingDir: tempDir, // Resolve modules from temp directory
