@@ -1,0 +1,67 @@
+{
+  "name": "@walkeros/transformer-validate",
+  "description": "JSON Schema contract validation transformer for walkerOS",
+  "version": "4.1.2",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./walkerOS.json": "./dist/walkerOS.json",
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    }
+  },
+  "files": [
+    "dist/**",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf dist",
+    "generate:format-schema": "node scripts/generate-format-schema.mjs",
+    "dev": "jest --watchAll --colors",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@walkeros/core": "4.1.2",
+    "@cfworker/json-schema": "^4.1.1"
+  },
+  "devDependencies": {
+    "@walkeros/core": "4.1.2"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/transformers/validate"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "walkerOS": {
+    "type": "transformer",
+    "docs": "https://www.walkeros.io/docs/transformers/validate",
+    "platform": [
+      "server",
+      "web"
+    ]
+  },
+  "keywords": [
+    "walkerOS",
+    "walkerOS-transformer",
+    "transformer",
+    "validate",
+    "json-schema",
+    "contract"
+  ]
+}

@@ -40,7 +40,7 @@
 import type { Collector } from '.';
 import type { Cache, EventCacheRule, StoreCacheRule } from './cache';
 import type { Route } from './transformer';
-import type { Validate, ValidateEvents, JsonSchema } from './validate';
+import type { ValidateEvents, JsonSchema } from './validate';
 
 /**
  * Single flow configuration.
@@ -413,7 +413,6 @@ export namespace Flow {
 
     /** Cache configuration for this source. */
     cache?: Cache<EventCacheRule>;
-    validate?: Validate;
 
     /**
      * Source-level variables (highest priority in cascade).
@@ -489,7 +488,6 @@ export namespace Flow {
 
     /** Cache configuration for this destination. */
     cache?: Cache<EventCacheRule>;
-    validate?: Validate;
 
     /** Destination-level variables (highest priority in cascade). */
     variables?: Variables;
@@ -559,7 +557,6 @@ export namespace Flow {
 
     /** Cache configuration for this transformer. */
     cache?: Cache<EventCacheRule>;
-    validate?: Validate;
 
     /** Transformer-level variables (highest priority in cascade). */
     variables?: Variables;

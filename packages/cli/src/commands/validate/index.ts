@@ -31,7 +31,7 @@ import type {
 export async function validate(
   type: ValidationType,
   input: unknown,
-  options: { flow?: string; path?: string } = {},
+  options: { flow?: string; path?: string; strict?: boolean } = {},
 ): Promise<ValidateResult> {
   // Resolve string inputs (file paths, URLs, JSON strings) to parsed objects
   let resolved = input;
@@ -53,7 +53,10 @@ export async function validate(
     case 'event':
       return validateEvent(resolved);
     case 'flow':
-      return validateFlow(resolved, { flow: options.flow });
+      return validateFlow(resolved, {
+        flow: options.flow,
+        strict: options.strict,
+      });
     case 'mapping':
       return validateMapping(resolved);
     default:
@@ -141,6 +144,7 @@ export async function validateCommand(
     const result = await validate(options.type, input, {
       flow: options.flow,
       path: options.path,
+      strict: options.strict,
     });
 
     // Format and write result

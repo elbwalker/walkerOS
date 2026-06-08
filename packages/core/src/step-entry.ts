@@ -43,7 +43,6 @@ export const STEP_OPERATIVE_FIELDS: Record<Flow.StepKind, readonly string[]> = {
 const COMMON_NON_OPERATIVE = [
   'config',
   'env',
-  'validate',
   'variables',
   'examples',
   'disabled',

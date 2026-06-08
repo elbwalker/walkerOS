@@ -25,6 +25,28 @@ or deliver (destinations)—they modify events in-flight.
 | **Enrich**   | Add server-side data to events            | User segments, geo data  |
 | **Redact**   | Remove sensitive data before destinations | Strip PII, anonymize IPs |
 
+## Available Packages
+
+| Package                                    | Env    | Purpose                                            |
+| ------------------------------------------ | ------ | -------------------------------------------------- |
+| `@walkeros/transformer-validate`           | both   | Enforce JSON Schema contracts on events at runtime |
+| `@walkeros/transformer-ga4`                | server | Decode GA4 Measurement Protocol hits into events   |
+| `@walkeros/server-transformer-bot`         | server | Annotate bot / AI-agent scores                     |
+| `@walkeros/server-transformer-fingerprint` | server | Derive a stable visitor fingerprint                |
+
+### Contract validation
+
+`@walkeros/transformer-validate` is the runtime arm of a
+[contract](../../website/docs/getting-started/flow/contract.mdx). Event shapes
+live in the top-level `contract` block; the transformer references one via
+`$contract.<name>` in its `contract` setting and validates the canonical event.
+`mode: "strict"` drops invalid events (chain-stop); `mode: "pass"` (default)
+annotates `event.source.valid` and continues so a downstream step can route on
+the verdict. `format: true` additionally checks the canonical `WalkerOS.Event`
+structure. Filtering is the same mechanism: an inline schema that rejects the
+unwanted events plus `mode: "strict"`, there is no separate `ignore` field. See
+[Website: Validate transformer](../../website/docs/transformers/validate.mdx).
+
 ## Transformer Interface
 
 See

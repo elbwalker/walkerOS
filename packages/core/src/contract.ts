@@ -9,16 +9,33 @@ const ANNOTATION_KEYS = new Set([
   '$comment',
 ]);
 
+/** Options for {@link resolveContracts}. */
+export interface ResolveContractsOptions {
+  /**
+   * When true (default), annotation keys (`description`, `examples`, `title`,
+   * `$comment`) are stripped from event schemas so the result is AJV-clean for
+   * runtime validation. Set to false to keep annotations (e.g. for IntelliSense
+   * that surfaces property descriptions).
+   */
+  stripAnnotations?: boolean;
+}
+
 /**
  * Resolve all named contracts: process extend chains, expand wildcards,
  * strip annotations from event schemas.
  *
  * Returns a fully resolved map where each contract entry has inherited
  * properties merged in and wildcards expanded into concrete actions.
+ *
+ * By default annotations are stripped (AJV-clean). Pass
+ * `{ stripAnnotations: false }` to preserve `description`/`examples`/`title`
+ * on event schemas.
  */
 export function resolveContracts(
   contracts: Flow.Contract,
+  options?: ResolveContractsOptions,
 ): Record<string, Flow.ContractRule> {
+  const strip = options?.stripAnnotations !== false;
   const resolved: Record<string, Flow.ContractRule> = {};
   const resolving = new Set<string>(); // Circular detection
 
@@ -56,8 +73,9 @@ export function resolveContracts(
       result.events = expandWildcards(result.events);
     }
 
-    // 3. Strip annotations from event schemas (not from section schemas)
-    if (result.events) {
+    // 3. Strip annotations from event schemas (not from section schemas).
+    //    Skipped when stripAnnotations is false (annotation-preserving view).
+    if (result.events && strip) {
       const stripped: Flow.ContractEvents = {};
       for (const [entity, actions] of Object.entries(result.events)) {
         stripped[entity] = {};

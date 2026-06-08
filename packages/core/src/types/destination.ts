@@ -202,7 +202,6 @@ export type Init<T extends TypesGeneric = Types> = {
   next?: Transformer.Route;
   cache?: import('./cache').Cache;
   state?: import('./state').State | import('./state').State[];
-  validate?: import('./validate').Validate;
 };
 
 export interface InitDestinations {

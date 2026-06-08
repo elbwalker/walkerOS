@@ -247,7 +247,6 @@ export type InitSource<T extends TypesGeneric = Types> = {
   before?: Route;
   cache?: import('./cache').Cache;
   state?: import('./state').State | import('./state').State[];
-  validate?: import('./validate').Validate;
 };
 
 /**

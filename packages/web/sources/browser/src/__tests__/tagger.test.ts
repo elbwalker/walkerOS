@@ -299,6 +299,54 @@ describe('Tagger', () => {
     });
   });
 
+  describe('Scoped Method', () => {
+    test('single key-value', () => {
+      const result = createTagger()().scoped('size', 'L').get();
+      expect(result).toMatchObject({ 'data-elb_': 'size:L' });
+    });
+
+    test('object with multiple scoped properties', () => {
+      const result = createTagger()().scoped({ size: 'L', color: 'red' }).get();
+      expect(result).toMatchObject({ 'data-elb_': 'size:L;color:red' });
+    });
+
+    test('accumulates multiple scoped calls', () => {
+      const result = createTagger()()
+        .scoped('size', 'L')
+        .scoped({ color: 'red' })
+        .scoped('fit', 'slim')
+        .get();
+      expect(result).toMatchObject({
+        'data-elb_': 'size:L;color:red;fit:slim',
+      });
+    });
+
+    test('is entity-agnostic (coexists with entity and data)', () => {
+      const result = createTagger()()
+        .entity('product')
+        .data('name', 'A')
+        .scoped('size', 'L')
+        .get();
+      expect(result).toMatchObject({
+        'data-elb': 'product',
+        'data-elb-product': 'name:A',
+        'data-elb_': 'size:L',
+      });
+    });
+
+    test('respects custom prefix', () => {
+      const result = createTagger({ prefix: 'custom-prefix' })()
+        .scoped('size', 'L')
+        .get();
+      expect(result).toMatchObject({ 'custom-prefix_': 'size:L' });
+    });
+
+    test('escapes special characters like other methods', () => {
+      const result = createTagger()().scoped('k', "a;b:c'd\\e").get();
+      expect(result).toMatchObject({ 'data-elb_': "k:a\\;b\\:c\\'d\\\\e" });
+    });
+  });
+
   describe('Link Method', () => {
     test('single id and type', () => {
       const result = createTagger()().link('details', 'parent').get();
@@ -405,6 +453,22 @@ describe('Tagger', () => {
         'data-elbaction': 'load:view;impression:view',
         'data-elbcontext': 'test:a/b;position:header',
         'data-elbglobals': 'lang:en;plan:paid',
+      });
+    });
+
+    test('full chain including scoped generic', () => {
+      const result = createTagger()()
+        .entity('product')
+        .data('name', 'A')
+        .scoped('size', 'L')
+        .action('click', 'select')
+        .get();
+
+      expect(result).toMatchObject({
+        'data-elb': 'product',
+        'data-elb-product': 'name:A',
+        'data-elb_': 'size:L',
+        'data-elbaction': 'click:select',
       });
     });
 
