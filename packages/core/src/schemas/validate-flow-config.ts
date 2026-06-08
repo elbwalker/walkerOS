@@ -61,7 +61,7 @@ export function validateFlowConfig(
     // The set of registered secret names is not derivable from the flow JSON
     // (it lives in the project's secrets service), so it is injected here.
     if (options?.secrets) context.secrets = options.secrets;
-    checkReferences(json, context, errors, warnings);
+    checkReferences(json, parsed, context, errors, warnings);
   }
 
   // Structural checks over the parsed object (store file/cache contract).
@@ -206,6 +206,7 @@ const SECRET_INLINE_REGEX = /\$secret\.([A-Z0-9_]+)/g;
 
 function checkReferences(
   text: string,
+  parsed: unknown,
   context: Partial<IntelliSenseContext>,
   errors: ValidationIssue[],
   warnings: ValidationIssue[],
@@ -218,7 +219,7 @@ function checkReferences(
   checkStoreReferences(text, context, warnings);
   checkEnvReferences(text, context, warnings);
   checkFlowReferences(text, context, warnings);
-  checkSecretReferences(text, context, errors, warnings);
+  checkSecretReferences(text, parsed, context, errors, warnings);
 }
 
 // Packages that persist raw bytes (byte-native), the only stores where
@@ -333,38 +334,63 @@ function positionForKey(
 
 function checkSecretReferences(
   text: string,
+  parsed: unknown,
   context: Partial<IntelliSenseContext>,
   errors: ValidationIssue[],
   warnings: ValidationIssue[],
 ): void {
-  const isWeb = context.platform === 'web';
   // Only warn on unknown names when the project's registered set is available.
   const known = context.secrets;
+  if (!isObject(parsed) || !isObject(parsed.flows)) return;
 
-  SECRET_INLINE_REGEX.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = SECRET_INLINE_REGEX.exec(text)) !== null) {
-    const full = match[0];
-    const name = match[1];
-    const pos = offsetToPosition(text, match.index, full.length);
+  // Scope the check PER FLOW, not over the whole config text. A $secret
+  // reference is a hard error only inside a WEB-platform flow (a secret must
+  // never reach the browser). Server flows resolve $secret to a runtime env
+  // read, so they are allowed; there we only warn when the name is not in the
+  // project's registered set. This is what makes a valid multi-flow config (a
+  // web flow forwarding to a server flow that holds the secret) pass instead of
+  // having the server flow's secret wrongly flagged as a web violation.
+  for (const flow of Object.values(parsed.flows)) {
+    if (!isObject(flow)) continue;
+    const cfg = flow.config;
+    const platform =
+      isObject(cfg) && (cfg.platform === 'web' || cfg.platform === 'server')
+        ? cfg.platform
+        : undefined;
 
-    if (isWeb) {
-      errors.push({
-        message: `Secret "$secret.${name}" cannot be used in a web flow — secrets are never sent to the browser; use a server flow.`,
-        severity: 'error',
-        path: full,
-        ...pos,
-      });
-      continue;
-    }
+    const flowText = JSON.stringify(flow);
+    SECRET_INLINE_REGEX.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = SECRET_INLINE_REGEX.exec(flowText)) !== null) {
+      const full = match[0];
+      const name = match[1];
+      // Best-effort position against the original text (first occurrence of the
+      // ref), mirroring positionForKey's indexOf approach; flowText offsets do
+      // not map to the original document.
+      const idx = text.indexOf(full);
+      const pos =
+        idx === -1
+          ? { line: 1, column: 1 }
+          : offsetToPosition(text, idx, full.length);
 
-    if (known && !known.includes(name)) {
-      warnings.push({
-        message: `Unknown secret "$secret.${name}"; not in the project's registered secrets.`,
-        severity: 'warning',
-        path: full,
-        ...pos,
-      });
+      if (platform === 'web') {
+        errors.push({
+          message: `Secret "$secret.${name}" cannot be used in a web flow — secrets are never sent to the browser; use a server flow.`,
+          severity: 'error',
+          path: full,
+          ...pos,
+        });
+        continue;
+      }
+
+      if (known && !known.includes(name)) {
+        warnings.push({
+          message: `Unknown secret "$secret.${name}"; not in the project's registered secrets.`,
+          severity: 'warning',
+          path: full,
+          ...pos,
+        });
+      }
     }
   }
 }

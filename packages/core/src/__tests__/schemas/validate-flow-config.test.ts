@@ -1089,6 +1089,82 @@ describe('validateFlowConfig', () => {
       ).toHaveLength(0);
     });
 
+    it('does not error for $secret. in the server flow of a multi-flow config (web flow first)', () => {
+      // A valid web -> server forwarding config: the web flow holds no secret,
+      // the server flow holds the secret. The secret check must scope per flow,
+      // not flag the server secret just because a web flow appears first.
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            web: {
+              config: { platform: 'web' },
+              destinations: {
+                api: {
+                  config: { settings: { url: '$flow.ingest.url' } },
+                },
+              },
+            },
+            ingest: {
+              config: { platform: 'server' },
+              destinations: {
+                bq: {
+                  config: { settings: { projectId: '$secret.GCP_PROJECT_ID' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.errors.filter((e) => e.message.includes('$secret.')),
+      ).toHaveLength(0);
+      expect(result.valid).toBe(true);
+    });
+
+    it('still errors for $secret. in the web flow of a multi-flow config', () => {
+      // The protection must survive per-flow scoping: a secret in the WEB flow
+      // is still a hard error even when a server flow is present.
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            web: {
+              config: { platform: 'web' },
+              destinations: {
+                api: {
+                  config: { settings: { token: '$secret.LEAKED' } },
+                },
+              },
+            },
+            ingest: {
+              config: { platform: 'server' },
+              destinations: {
+                bq: {
+                  config: { settings: { projectId: '$secret.GCP_PROJECT_ID' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(result.valid).toBe(false);
+      const leaked = result.errors.find((e) =>
+        e.message.includes('$secret.LEAKED'),
+      );
+      expect(leaked).toBeDefined();
+      // The server flow's secret must NOT be flagged.
+      expect(
+        result.errors.find((e) => e.message.includes('$secret.GCP_PROJECT_ID')),
+      ).toBeUndefined();
+    });
+
     it('warns when $secret. references a name not in the known set', () => {
       const json = JSON.stringify(
         {
