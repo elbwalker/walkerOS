@@ -1,6 +1,8 @@
 import { JsonSchema } from './flow';
 import type { ValidationIssue, ValidationResult } from './validate';
 import type { IntelliSenseContext, PackageInfo } from './intellisense';
+import type { Flow } from '../types';
+import { resolveContracts } from '../contract';
 
 /**
  * Validate a Flow.Config JSON string.
@@ -92,7 +94,7 @@ function extractContext(
   const transformers: string[] = [];
   const stores: string[] = [];
   const packages: PackageInfo[] = [];
-  const contractEntities: Array<{ entity: string; actions: string[] }> = [];
+  const contractEntities: ContractEntity[] = [];
   let platform: 'web' | 'server' | undefined;
 
   const flowNames = Object.keys(parsed.flows);
@@ -466,28 +468,86 @@ function mergeVars(target: Record<string, unknown>, source: unknown): void {
   }
 }
 
+type ContractEntity = NonNullable<IntelliSenseContext['contract']>[number];
+type ContractProperty = {
+  type?: string;
+  description?: string;
+  required?: boolean;
+};
+
+/**
+ * Derive per-action `data` property info from a resolved action schema.
+ *
+ * Event contract schemas describe the full event; the user-authored payload
+ * lives under `properties.data`. We surface those `data` property names with
+ * their type/description (for IntelliSense) and whether they are required.
+ */
+function extractActionProperties(
+  schema: unknown,
+): Record<string, ContractProperty> {
+  const result: Record<string, ContractProperty> = {};
+  if (!isObject(schema)) return result;
+
+  const data = isObject(schema.properties) ? schema.properties.data : undefined;
+  if (!isObject(data)) return result;
+
+  const required = Array.isArray(data.required)
+    ? data.required.filter((r): r is string => typeof r === 'string')
+    : [];
+
+  const props = data.properties;
+  if (!isObject(props)) return result;
+
+  for (const [name, propSchema] of Object.entries(props)) {
+    const info: ContractProperty = {};
+    if (isObject(propSchema)) {
+      if (typeof propSchema.type === 'string') info.type = propSchema.type;
+      if (typeof propSchema.description === 'string')
+        info.description = propSchema.description;
+    }
+    if (required.includes(name)) info.required = true;
+    result[name] = info;
+  }
+
+  return result;
+}
+
 function extractContractEntities(
-  target: Array<{ entity: string; actions: string[] }>,
+  target: ContractEntity[],
   contract: unknown,
 ): void {
   if (!isObject(contract)) return;
 
-  // Named contracts: iterate each named entry
-  for (const [, entry] of Object.entries(contract)) {
-    if (!isObject(entry)) continue;
+  // Resolve extend chains + wildcards with annotations preserved, so property
+  // descriptions survive for IntelliSense. Resolution can throw on malformed
+  // contracts (circular extend, unknown ref); the surrounding context
+  // extraction is best-effort, so fall back to the raw shape on failure.
+  let resolved: Record<string, Flow.ContractRule>;
+  try {
+    resolved = resolveContracts(contract as Flow.Contract, {
+      stripAnnotations: false,
+    });
+  } catch {
+    return;
+  }
+
+  // Named contracts: iterate each resolved named entry
+  for (const entry of Object.values(resolved)) {
     const events = entry.events;
     if (!isObject(events)) continue;
 
     for (const [entity, actions] of Object.entries(events)) {
       if (!isObject(actions)) continue;
-      const existing = target.find((e) => e.entity === entity);
-      const actionNames = Object.keys(actions);
-      if (existing) {
-        for (const a of actionNames) {
-          if (!existing.actions.includes(a)) existing.actions.push(a);
-        }
-      } else {
-        target.push({ entity, actions: actionNames });
+      let existing = target.find((e) => e.entity === entity);
+      if (!existing) {
+        existing = { entity, actions: [], properties: {} };
+        target.push(existing);
+      }
+      if (!existing.properties) existing.properties = {};
+
+      for (const [action, schema] of Object.entries(actions)) {
+        if (!existing.actions.includes(action)) existing.actions.push(action);
+        existing.properties[action] = extractActionProperties(schema);
       }
     }
   }

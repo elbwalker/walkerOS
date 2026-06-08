@@ -237,8 +237,54 @@ describe('validateFlowConfig', () => {
     );
     const result = validateFlowConfig(json);
     expect(result.context?.contract).toEqual([
-      { entity: 'page', actions: ['view', 'read'] },
+      {
+        entity: 'page',
+        actions: ['view', 'read'],
+        properties: { view: {}, read: {} },
+      },
     ]);
+  });
+
+  it('returns context contract with typed property info and descriptions', () => {
+    const json = JSON.stringify(
+      {
+        version: 4,
+        contract: {
+          default: {
+            events: {
+              order: {
+                complete: {
+                  type: 'object',
+                  properties: {
+                    data: {
+                      type: 'object',
+                      required: ['total'],
+                      properties: {
+                        total: {
+                          type: 'number',
+                          description: 'Order total in EUR',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        flows: { default: { config: { platform: 'server' } } },
+      },
+      null,
+      2,
+    );
+    const result = validateFlowConfig(json);
+    const order = result.context?.contract?.find((c) => c.entity === 'order');
+    expect(order?.actions).toEqual(['complete']);
+    expect(order?.properties?.complete?.total).toEqual({
+      type: 'number',
+      description: 'Order total in EUR',
+      required: true,
+    });
   });
 
   it('returns empty context for invalid JSON', () => {

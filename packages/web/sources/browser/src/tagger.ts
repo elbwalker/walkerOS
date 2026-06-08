@@ -9,6 +9,8 @@ export interface TaggerInstance {
   entity: (name: string) => TaggerInstance;
   data: ((key: string, value: WalkerOS.Property) => TaggerInstance) &
     ((data: WalkerOS.Properties) => TaggerInstance);
+  scoped: ((key: string, value: WalkerOS.Property) => TaggerInstance) &
+    ((scoped: WalkerOS.Properties) => TaggerInstance);
   action: ((trigger: string, action?: string) => TaggerInstance) &
     ((actions: Record<string, string>) => TaggerInstance);
   actions: ((trigger: string, action?: string) => TaggerInstance) &
@@ -38,6 +40,7 @@ export function createTagger(
     let currentEntity: string | undefined = undefined; // Only set via .entity() method
     let namingEntity: string | undefined = entity; // Used for data attribute naming
     const dataProperties: Record<string, WalkerOS.Properties> = {};
+    const scopedProperties: WalkerOS.Properties = {};
     const actionProperties: Record<string, string> = {};
     const actionsProperties: Record<string, string> = {};
     const contextProperties: WalkerOS.Properties = {};
@@ -87,6 +90,19 @@ export function createTagger(
           dataProperties[entityKey][keyOrData] = value;
         } else {
           Object.assign(dataProperties[entityKey], keyOrData);
+        }
+
+        return instance;
+      },
+
+      scoped(
+        keyOrScoped: string | WalkerOS.Properties,
+        value?: WalkerOS.Property,
+      ): TaggerInstance {
+        if (isString(keyOrScoped)) {
+          scopedProperties[keyOrScoped] = value;
+        } else {
+          Object.assign(scopedProperties, keyOrScoped);
         }
 
         return instance;
@@ -196,6 +212,12 @@ export function createTagger(
             attributes[attrName] = serializeKeyValue(props);
           }
         });
+
+        // Add scoped generic attribute (data-elb_): branch-scoped, bubble-up
+        // only. Suffix must match Const.Commands.Scoped ('_').
+        if (Object.keys(scopedProperties).length > 0) {
+          attributes[`${prefix}_`] = serializeKeyValue(scopedProperties);
+        }
 
         // Add action attributes
         if (Object.keys(actionProperties).length > 0) {
