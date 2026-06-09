@@ -1,161 +1,157 @@
-// Utilities for building and managing attribute trees
+// Builds an entity-centric "skeleton" tree: each node is a data-elb entity, with
+// generic (data-elb-), scoped (data-elb_), and explicit (data-elb-<entity>)
+// values resolved onto it and tagged by origin. Interim addon-local
+// approximation of the walker's resolution (see the design doc for fidelity
+// limits: cross-DOM links, shadow piercing, exact collision priority, and
+// context ordering index are out of scope for Phase 1).
 
 import type { WalkerOS } from '@walkeros/core';
-import type { AttributeNode } from '../types';
+import { Const } from '@walkeros/collector';
 import {
-  getElbAttributeName,
   getElbValues,
+  getElbAttributeName,
+  getGlobals,
 } from '@walkeros/web-source-browser';
+import type { AttributeNode, ResolvedProperty } from '../types';
 import { getElementPath } from './domUtils';
 
-// Utility to generate clean HTML markup from an element
-const generateElementHTML = (element: Element): string => {
-  if (!element) return '';
-
+const generateElementHTML = (element: Element, prefix: string): string => {
   const tagName = element.tagName.toLowerCase();
-  const allAttribs: string[] = [];
-
-  // Collect ALL attributes as they are
-  Array.from(element.attributes).forEach((attr) => {
-    allAttribs.push(`${attr.name}="${attr.value}"`);
-  });
-
-  // If no attributes, return basic element
-  if (allAttribs.length === 0) {
-    return `<${tagName}></${tagName}>`;
-  }
-
-  // Format attributes nicely for display
-  if (allAttribs.length === 1) {
-    return `<${tagName} ${allAttribs[0]}></${tagName}>`;
-  }
-
-  // Multiple attributes - format with line breaks like dev tools
-  const formattedAttribs = allAttribs.map((attr) => `  ${attr}`).join('\n');
-  return `<${tagName}\n${formattedAttribs}\n></${tagName}>`;
+  // Hide the synthetic highlight marker (data-elbproperty) that
+  // enhanceProperties stamps on the live DOM; it is an internal helper, not
+  // author-written tagging, so it must not appear in the displayed markup.
+  const propertyMarker = getElbAttributeName(prefix, 'property', false);
+  const attribs = Array.from(element.attributes)
+    .filter((a) => a.name !== propertyMarker)
+    .map((a) => `${a.name}="${a.value}"`);
+  if (attribs.length === 0) return `<${tagName}></${tagName}>`;
+  if (attribs.length === 1) return `<${tagName} ${attribs[0]}></${tagName}>`;
+  return `<${tagName}\n${attribs.map((a) => `  ${a}`).join('\n')}\n></${tagName}>`;
 };
 
-// Convert a Properties map (values may be undefined) into a Property
-// object shape (values are all defined). Used when nesting a Properties
-// result as a single value in another Properties map.
-const toPropertyObject = (props: WalkerOS.Properties): WalkerOS.Property => {
-  const out: { [key: string]: WalkerOS.Property } = {};
-  for (const key of Object.keys(props)) {
-    const value = props[key];
-    if (value !== undefined) out[key] = value;
-  }
-  return out;
+// Origin priority for same-key collisions (highest first). Approximate; real
+// walker priority is documented as out of scope for Phase 1.
+const PRIORITY: Record<ResolvedProperty['origin'], number> = {
+  data: 3,
+  scoped: 2,
+  generic: 1,
 };
 
-// Build attribute tree structure
+const addProperty = (
+  acc: Map<string, ResolvedProperty>,
+  key: string,
+  value: WalkerOS.Property | undefined,
+  origin: ResolvedProperty['origin'],
+) => {
+  if (!key) return; // never store the blank-key generic
+  if (value === undefined || value === null || value === '') return;
+  const existing = acc.get(key);
+  if (!existing || PRIORITY[origin] > PRIORITY[existing.origin]) {
+    acc.set(key, { key, value, origin });
+  }
+};
+
+const collectValues = (
+  acc: Map<string, ResolvedProperty>,
+  prefix: string,
+  el: Element,
+  name: string, // '' for generic, entity name for explicit
+  origin: ResolvedProperty['origin'],
+) => {
+  const values = getElbValues(prefix, el, name, true);
+  Object.entries(values).forEach(([k, v]) => addProperty(acc, k, v, origin));
+};
+
 export const buildAttributeTree = (
   scope: Element,
-  prefix: string = 'data-elb',
-): AttributeNode[] => {
-  const tree: AttributeNode[] = [];
+  prefix: string = Const.Commands.Prefix,
+): { nodes: AttributeNode[]; globals: ResolvedProperty[] } => {
+  const entityAttr = getElbAttributeName(prefix); // data-elb
+  const scopedName = Const.Commands.Scoped; // '_'
+
+  // All entity elements (self + descendants).
+  const entityEls: Element[] = [];
+  if (scope.matches(`[${entityAttr}]`)) entityEls.push(scope);
+  scope.querySelectorAll(`[${entityAttr}]`).forEach((el) => entityEls.push(el));
+  const entitySet = new Set(entityEls);
+
+  // Nearest ancestor-or-self entity for any element (DOM ancestry).
+  const owningEntity = (el: Element): Element | null => {
+    let cur: Element | null = el;
+    while (cur) {
+      if (entitySet.has(cur)) return cur;
+      cur = cur.parentElement;
+    }
+    return null;
+  };
+
   const nodeMap = new Map<Element, AttributeNode>();
 
-  // Build selectors for all walker attributes
-  const entityAttr = getElbAttributeName(prefix);
-  const actionAttr = getElbAttributeName(prefix, 'action', false);
-  const contextAttr = getElbAttributeName(prefix, 'context', false);
-  const globalsAttr = getElbAttributeName(prefix, 'globals', false);
+  entityEls.forEach((el) => {
+    const entity = el.getAttribute(entityAttr) || '';
+    const props = new Map<string, ResolvedProperty>();
 
-  // Find all elements with walker attributes
-  const allElements = Array.from(scope.querySelectorAll('*'));
-  const walkerElements = allElements.filter((el) => {
-    return Array.from(el.attributes).some(
-      (attr) =>
-        attr.name === entityAttr ||
-        attr.name === actionAttr ||
-        attr.name === contextAttr ||
-        attr.name === globalsAttr ||
-        attr.name.startsWith(`${prefix}-`),
-    );
-  });
-
-  // Build nodes for each element
-  walkerElements.forEach((el) => {
-    if (nodeMap.has(el)) return; // Already processed
-
-    const node: AttributeNode = {
-      element: el.tagName.toLowerCase(),
-      path: getElementPath(el),
-      htmlMarkup: generateElementHTML(el),
-      attributes: {},
-      children: [],
-    };
-
-    // Collect all walker attributes on this element
-    if (el.hasAttribute(entityAttr)) {
-      node.attributes.entity = el.getAttribute(entityAttr) || '';
-    }
-
-    if (el.hasAttribute(actionAttr)) {
-      node.attributes.action = el.getAttribute(actionAttr) || '';
-    }
-
-    try {
-      const contextValues = getElbValues(prefix, el, 'context', false);
-      if (Object.keys(contextValues).length > 0) {
-        node.attributes.context = contextValues;
-      }
-    } catch (e) {
-      // Skip context if parsing fails
-    }
-
-    try {
-      const globalsValues = getElbValues(prefix, el, 'globals', false);
-      if (Object.keys(globalsValues).length > 0) {
-        node.attributes.globals = globalsValues;
-      }
-    } catch (e) {
-      // Skip globals if parsing fails
-    }
-
-    // Collect property attributes
-    const properties: WalkerOS.Properties = {};
-    Array.from(el.attributes).forEach((attr) => {
-      if (attr.name.startsWith(`${prefix}-`)) {
-        const propName = attr.name.substring(prefix.length + 1);
-        try {
-          properties[propName] = toPropertyObject(
-            getElbValues(prefix, el, propName, true),
-          );
-        } catch (e) {
-          // If parsing fails, just store the raw value
-          properties[propName] = attr.value;
-        }
-      }
+    // Own + owned descendants: explicit (data-elb-<entity>) and generic (data-elb-)
+    const owned: Element[] = [el];
+    el.querySelectorAll('*').forEach((child) => {
+      if (owningEntity(child) === el) owned.push(child);
+    });
+    owned.forEach((o) => {
+      collectValues(props, prefix, o, entity, 'data');
+      collectValues(props, prefix, o, '', 'generic');
     });
 
-    if (Object.keys(properties).length > 0) {
-      node.attributes.properties = properties;
+    // Ancestors (incl. self start): explicit, generic, and scoped (data-elb_)
+    let anc: Element | null = el;
+    while (anc) {
+      collectValues(props, prefix, anc, entity, 'data');
+      collectValues(props, prefix, anc, '', 'generic');
+      // scoped uses isProperty=false (suffix '_' with no dash)
+      Object.entries(getElbValues(prefix, anc, scopedName, false)).forEach(
+        ([k, v]) => addProperty(props, k, v, 'scoped'),
+      );
+      anc = anc.parentElement;
     }
 
-    nodeMap.set(el, node);
+    nodeMap.set(el, {
+      element: el.tagName.toLowerCase(),
+      path: getElementPath(el),
+      htmlMarkup: generateElementHTML(el, prefix),
+      attributes: {
+        entity,
+        action:
+          el.getAttribute(
+            getElbAttributeName(prefix, Const.Commands.Action, false),
+          ) || undefined,
+        context: (() => {
+          const c = getElbValues(prefix, el, Const.Commands.Context, false);
+          return Object.keys(c).length ? c : undefined;
+        })(),
+        globals: (() => {
+          const g = getElbValues(prefix, el, Const.Commands.Globals, false);
+          return Object.keys(g).length ? g : undefined;
+        })(),
+        properties: Array.from(props.values()),
+      },
+      children: [],
+    });
   });
 
-  // Build tree structure
-  nodeMap.forEach((node, element) => {
-    let parent = element.parentElement;
-    let parentNode = null;
-
-    // Find nearest parent with walker attributes
-    while (parent && parent !== scope) {
-      if (nodeMap.has(parent)) {
-        parentNode = nodeMap.get(parent);
-        break;
-      }
-      parent = parent.parentElement;
-    }
-
-    if (parentNode) {
-      parentNode.children.push(node);
-    } else {
-      tree.push(node);
-    }
+  // Nest by nearest ancestor entity.
+  const roots: AttributeNode[] = [];
+  nodeMap.forEach((node, el) => {
+    const parentEl = el.parentElement ? owningEntity(el.parentElement) : null;
+    const parentNode = parentEl ? nodeMap.get(parentEl) : undefined;
+    if (parentNode) parentNode.children.push(node);
+    else roots.push(node);
   });
 
-  return tree;
+  const globalsValues = getGlobals(prefix, scope);
+  const globals: ResolvedProperty[] = [];
+  Object.entries(globalsValues).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '')
+      globals.push({ key, value, origin: 'data' });
+  });
+
+  return { nodes: roots, globals };
 };

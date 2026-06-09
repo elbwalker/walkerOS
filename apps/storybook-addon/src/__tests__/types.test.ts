@@ -1,4 +1,4 @@
-import { DataElb } from '../types';
+import { DataElb, ResolvedProperty, PropertyOrigin } from '../types';
 
 describe('walkerOS types', () => {
   test('DataElb interface should work correctly', () => {
@@ -32,5 +32,26 @@ describe('walkerOS types', () => {
     expect(dataElb.context).toEqual({ page: 'home' });
     expect(dataElb.globals).toEqual({ userId: '123' });
     expect(dataElb.link).toEqual({ parent: 'section1' });
+  });
+});
+
+describe('ResolvedProperty', () => {
+  test('carries key, value, and origin', () => {
+    const generic: ResolvedProperty = {
+      key: 'color',
+      value: 'red',
+      origin: 'generic',
+    };
+    const scoped: ResolvedProperty = {
+      key: 'currency',
+      value: 'EUR',
+      origin: 'scoped',
+    };
+    const explicit: ResolvedProperty = { key: 'id', value: 1, origin: 'data' };
+    expect(generic.origin).toBe('generic');
+    expect(scoped.origin).toBe('scoped');
+    expect(explicit.value).toBe(1);
+    const origins: PropertyOrigin[] = ['data', 'generic', 'scoped'];
+    expect(origins).toHaveLength(3);
   });
 });

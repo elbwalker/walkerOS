@@ -1,4 +1,4 @@
-import type { AttributeNode } from '../types';
+import type { AttributeNode, ResolvedProperty } from '../types';
 import type { WalkerOS } from '@walkeros/core';
 import React, { Fragment, memo, useCallback, useEffect, useState } from 'react';
 import {
@@ -53,7 +53,10 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
 
   const [events, setState] = useState<WalkerOS.Event[]>([]);
   const [liveEvents, setLiveEvents] = useState<WalkerOS.Event[]>([]);
-  const [attributeTree, setAttributeTree] = useState<AttributeNode[]>([]);
+  const [skeleton, setSkeleton] = useState<{
+    nodes: AttributeNode[];
+    globals: ResolvedProperty[];
+  }>({ nodes: [], globals: [] });
 
   const toggleHighlight = (type: keyof typeof highlights) => {
     const newHighlights = {
@@ -76,8 +79,11 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
         [{ ...event, timestamp: Date.now() }].concat(prev).slice(0, 50),
       );
     },
-    [EVENTS.ATTRIBUTES_RESULT]: (tree: AttributeNode[]) => {
-      setAttributeTree(tree);
+    [EVENTS.ATTRIBUTES_RESULT]: (result: {
+      nodes: AttributeNode[];
+      globals: ResolvedProperty[];
+    }) => {
+      setSkeleton(result);
     },
   });
 
@@ -121,15 +127,10 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
     return () => storyEvents.forEach((event) => api.off(event, updateAll));
   }, [api, updateEvents, updateAttributes, config.autoRefresh]);
 
-  const getEventTitle = (events: WalkerOS.Event[]) => {
-    const form = events.length == 1 ? 'Event' : 'Events';
-    return `${events.length} ${form}`;
-  };
+  const getEventTitle = (events: WalkerOS.Event[]) =>
+    `Events (${events.length})`;
 
-  const getLiveEventTitle = () => {
-    const form = liveEvents.length == 1 ? 'Event' : 'Events';
-    return `${liveEvents.length} Live ${form}`;
-  };
+  const getLiveEventTitle = () => `Live Events (${liveEvents.length})`;
 
   const clearLiveEvents = () => {
     setLiveEvents([]);
@@ -139,54 +140,26 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
     return new Date(timestamp).toLocaleTimeString();
   };
 
-  const getAttributeTitle = () => {
-    // Count all walker attributes (badges) across all nodes
-    const countAttributes = (nodes: AttributeNode[]): number => {
-      return nodes.reduce((total, node) => {
-        let nodeAttributeCount = 0;
-
-        // Count entity, action, context, globals
-        if (node.attributes.entity) nodeAttributeCount++;
-        if (node.attributes.action) nodeAttributeCount++;
+  const getSkeletonTitle = () => {
+    const count = (nodes: AttributeNode[]): number =>
+      nodes.reduce((total, node) => {
+        let n = 0;
+        if (node.attributes.entity) n++;
+        if (node.attributes.action) n++;
         if (
           node.attributes.context &&
-          Object.keys(node.attributes.context).length > 0
-        ) {
-          nodeAttributeCount++; // Count context as 1 attribute
-        }
+          Object.keys(node.attributes.context).length
+        )
+          n++;
         if (
           node.attributes.globals &&
-          Object.keys(node.attributes.globals).length > 0
-        ) {
-          nodeAttributeCount++; // Count globals as 1 attribute
-        }
-
-        // Count data properties (ignore custom properties like data-elbproperty)
-        if (node.attributes.properties) {
-          const validProperties = Object.entries(
-            node.attributes.properties,
-          ).filter(([key, value]) => {
-            // Skip empty objects and null/undefined values
-            if (
-              typeof value === 'object' &&
-              value !== null &&
-              Object.keys(value).length === 0
-            )
-              return false;
-            return value !== null && value !== undefined && value !== '';
-          });
-          nodeAttributeCount += validProperties.length;
-        }
-
-        return (
-          total + nodeAttributeCount + countAttributes(node.children || [])
-        );
+          Object.keys(node.attributes.globals).length
+        )
+          n++;
+        n += node.attributes.properties?.length ?? 0;
+        return total + n + count(node.children || []);
       }, 0);
-    };
-
-    const attributeCount = countAttributes(attributeTree);
-    const form = attributeCount === 1 ? 'Attribute' : 'Attributes';
-    return `${attributeCount} ${form}`;
+    return `Skeleton (${count(skeleton.nodes)})`;
   };
 
   return (
@@ -203,6 +176,8 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px',
                   marginBottom: '12px',
                   padding: '8px',
                   backgroundColor: theme.background.app,
@@ -248,6 +223,8 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px',
                   marginBottom: '12px',
                   padding: '8px',
                   backgroundColor: theme.background.app,
@@ -307,7 +284,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
             )}
           </Placeholder>
         </div>
-        <div id="attributes" title={getAttributeTitle()}>
+        <div id="attributes" title={getSkeletonTitle()}>
           <Placeholder>
             <Fragment>
               <div
@@ -315,6 +292,8 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px',
                   marginBottom: '12px',
                   padding: '8px',
                   backgroundColor: theme.background.app,
@@ -322,14 +301,14 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                   border: `1px solid ${theme.color.border}`,
                 }}
               >
-                <Button onClick={updateAttributes}>Update attributes</Button>
+                <Button onClick={updateAttributes}>Update skeleton</Button>
                 <HighlightButtons
                   highlights={highlights}
                   toggleHighlight={toggleHighlight}
                 />
               </div>
             </Fragment>
-            <AttributeTreeView tree={attributeTree} />
+            <AttributeTreeView tree={skeleton.nodes} />
           </Placeholder>
         </div>
       </TabsState>

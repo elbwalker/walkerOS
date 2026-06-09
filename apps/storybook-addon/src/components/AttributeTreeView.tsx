@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { SyntaxHighlighter } from 'storybook/internal/components';
 import { useTheme } from 'storybook/theming';
-import type { AttributeNode } from '../types';
+import type { AttributeNode, PropertyOrigin } from '../types';
 import type { WalkerOS } from '@walkeros/core';
+import { originLabel } from './origin-chip';
 
 // Utility to format complex values for display in badges
 const formatValueForBadge = (value: unknown): string => {
@@ -36,12 +37,14 @@ interface AttributeBadgeProps {
   type: 'entity' | 'action' | 'context' | 'globals' | 'data';
   label: string;
   value?: string;
+  origin?: PropertyOrigin;
 }
 
 const AttributeBadge: React.FC<AttributeBadgeProps> = ({
   type,
   label,
   value,
+  origin,
 }) => {
   const colors = {
     entity: '#00ca4e',
@@ -51,7 +54,24 @@ const AttributeBadge: React.FC<AttributeBadgeProps> = ({
     data: '#ff605c',
   };
 
-  const displayText = value ? `${label}: ${value}` : label;
+  const suffix = origin ? originLabel(origin) : '';
+  const base = value ? `${label}: ${value}` : label;
+  const displayText = suffix ? `${base} (${suffix})` : base;
+
+  // Thin, muted "(generic)" / "(scoped)" suffix appended after the value.
+  const suffixNode = suffix ? (
+    <span
+      style={{
+        fontSize: '10px',
+        fontWeight: 400,
+        fontStyle: 'italic',
+        opacity: 0.65,
+        marginLeft: '4px',
+      }}
+    >
+      ({suffix})
+    </span>
+  ) : null;
 
   return (
     <span
@@ -63,7 +83,7 @@ const AttributeBadge: React.FC<AttributeBadgeProps> = ({
         color: 'black',
         backgroundColor: colors[type],
         borderRadius: '3px',
-        maxWidth: '200px',
+        maxWidth: '240px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -75,9 +95,13 @@ const AttributeBadge: React.FC<AttributeBadgeProps> = ({
           value ? (
             <>
               <strong>{label}:</strong> {value}
+              {suffixNode}
             </>
           ) : (
-            <strong>{label}</strong>
+            <>
+              <strong>{label}</strong>
+              {suffixNode}
+            </>
           )
         ) : (
           <>
@@ -102,7 +126,7 @@ const AttributeNodeComponent: React.FC<{
     node.attributes.action ||
     node.attributes.context ||
     node.attributes.globals ||
-    node.attributes.properties;
+    node.attributes.properties?.length;
 
   const hasChildren = node.children.length > 0;
 
@@ -151,8 +175,11 @@ const AttributeNodeComponent: React.FC<{
           style={{
             display: 'flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
+            rowGap: '4px',
             cursor: hasAttributes ? 'pointer' : 'default',
             flex: 1,
+            minWidth: 0,
           }}
           onClick={
             hasAttributes ? () => setShowDetails(!showDetails) : undefined
@@ -184,36 +211,27 @@ const AttributeNodeComponent: React.FC<{
               />
             )}
 
-          {node.attributes.properties &&
-            (() => {
-              const properties = node.attributes.properties;
-              const validEntries = Object.entries(properties).filter(
-                ([key, value]) => {
-                  // Skip empty objects and null/undefined values
-                  if (
-                    typeof value === 'object' &&
-                    value !== null &&
-                    Object.keys(value).length === 0
-                  )
-                    return false;
-                  return value !== null && value !== undefined && value !== '';
-                },
+          {node.attributes.properties
+            ?.filter((p) => {
+              if (
+                typeof p.value === 'object' &&
+                p.value !== null &&
+                Object.keys(p.value).length === 0
+              )
+                return false;
+              return (
+                p.value !== null && p.value !== undefined && p.value !== ''
               );
-
-              return validEntries.map(([key, value]) => {
-                // If key is empty/generic, name it "generic", otherwise use "data-{key}"
-                const displayLabel = key ? `data-${key}` : 'data-generic';
-                const displayValue = formatValueForBadge(value);
-                return (
-                  <AttributeBadge
-                    key={`data-${key}`}
-                    type="data"
-                    label={displayLabel}
-                    value={displayValue}
-                  />
-                );
-              });
-            })()}
+            })
+            .map((p) => (
+              <AttributeBadge
+                key={`data-${p.key}-${p.origin}`}
+                type="data"
+                label={`data-${p.key}`}
+                value={formatValueForBadge(p.value)}
+                origin={p.origin}
+              />
+            ))}
         </div>
       </div>
 
