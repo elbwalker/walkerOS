@@ -45,11 +45,13 @@ export function validateReference(
     }
     return;
   }
-  // Sources / Destinations / Stores keep their existing two-rule check
+  // Sources / Destinations / Stores keep their existing two-rule check.
+  // The conflict check uses hasCodeReference so the bare string `code`
+  // form is also rejected when combined with a package, matching the
+  // presence check below.
   const hasPackage = !!ref.package;
-  const hasInlineCode = isInlineCode(ref.code);
   const hasCode = hasCodeReference(ref.code);
-  if (hasPackage && hasInlineCode) {
+  if (hasPackage && hasCode) {
     throw new Error(
       `${type} "${name}": Cannot specify both package and code. Use one or the other.`,
     );
@@ -116,15 +118,18 @@ export function validateStoreReferences(
     }
   }
 
-  for (const { ref, location } of refs) {
-    if (!storeIds.has(ref)) {
-      const available =
-        storeIds.size > 0
-          ? `Available stores: ${Array.from(storeIds).join(', ')}`
-          : 'No stores defined';
-      throw new Error(
-        `Store reference "$store.${ref}" in ${location} — store "${ref}" not found. ${available}`,
-      );
-    }
+  const missing = refs.filter(({ ref }) => !storeIds.has(ref));
+  if (missing.length > 0) {
+    const available =
+      storeIds.size > 0
+        ? `Available stores: ${Array.from(storeIds).join(', ')}`
+        : 'No stores defined';
+    const details = missing
+      .map(
+        ({ ref, location }) =>
+          `"$store.${ref}" in ${location} (store "${ref}" not found)`,
+      )
+      .join('; ');
+    throw new Error(`Invalid store references: ${details}. ${available}`);
   }
 }

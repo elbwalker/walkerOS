@@ -88,6 +88,30 @@ describe('validateFlowStructure', () => {
     expect(error?.message).toMatch(/Must specify either package or code/);
   });
 
+  it('reports every dangling $store. reference, not just the first', () => {
+    const config = flow({
+      default: {
+        config: { platform: 'server' },
+        destinations: {
+          api: {
+            package: '@walkeros/server-destination-api',
+            config: { token: '$store.alpha', extra: '$store.beta' },
+          },
+        },
+      },
+    });
+
+    const result = validateFlowStructure(config);
+
+    expect(result.valid).toBe(false);
+    const error = result.errors.find(
+      (e) => e.code === 'STORE_REFERENCE_NOT_FOUND',
+    );
+    expect(error).toBeDefined();
+    expect(error?.message).toMatch(/alpha/);
+    expect(error?.message).toMatch(/beta/);
+  });
+
   it('flags a dangling $store. reference', () => {
     const config = flow({
       default: {

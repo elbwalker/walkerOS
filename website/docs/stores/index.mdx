@@ -63,6 +63,7 @@ await startFlow({
     assets: {
       code: storeS3Init,
       config: {
+        file: true,
         settings: {
           bucket: 'my-assets',
           endpoint: 'https://s3.eu-west-1.amazonaws.com',
@@ -92,6 +93,7 @@ await startFlow({
     "assets": {
       "package": "@walkeros/server-store-s3",
       "config": {
+        "file": true,
         "settings": {
           "bucket": "my-assets",
           "endpoint": "https://s3.eu-west-1.amazonaws.com",
