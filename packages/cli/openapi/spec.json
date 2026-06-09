@@ -349,6 +349,9 @@
           },
           "deploymentUrl": {
             "type": ["string", "null"]
+          },
+          "deployedAt": {
+            "type": ["string", "null"]
           }
         },
         "required": [
@@ -356,7 +359,8 @@
           "name",
           "platform",
           "deploymentStatus",
-          "deploymentUrl"
+          "deploymentUrl",
+          "deployedAt"
         ]
       },
       "Version": {
@@ -952,6 +956,12 @@
           "currentVersion": {
             "$ref": "#/components/schemas/DeploymentVersionDetail"
           },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeploymentVersionHistoryEntry"
+            }
+          },
           "error": {
             "$ref": "#/components/schemas/DeploymentError"
           },
@@ -1004,6 +1014,7 @@
           "origin",
           "status",
           "currentVersion",
+          "versions",
           "error",
           "url",
           "selfHosted",
@@ -1064,6 +1075,46 @@
           "publishedBy"
         ]
       },
+      "DeploymentVersionHistoryEntry": {
+        "type": "object",
+        "properties": {
+          "versionNumber": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "status": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": ["string", "null"]
+          },
+          "errorMessage": {
+            "type": ["string", "null"]
+          },
+          "errorPhase": {
+            "type": ["string", "null"]
+          },
+          "errorDetail": {
+            "type": ["string", "null"]
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "versionNumber",
+          "status",
+          "source",
+          "errorCode",
+          "errorMessage",
+          "errorPhase",
+          "publishedAt"
+        ]
+      },
       "DeploymentError": {
         "type": ["object", "null"],
         "properties": {
@@ -1072,9 +1123,17 @@
           },
           "message": {
             "type": "string"
+          },
+          "phase": {
+            "type": "string",
+            "enum": ["preflight", "deploy", "bundle", "publish", "provision"],
+            "example": "bundle"
+          },
+          "detail": {
+            "type": "string"
           }
         },
-        "required": ["code", "message"]
+        "required": ["code", "message", "phase"]
       },
       "CreateDeploymentResponse": {
         "type": "object",

@@ -1,5 +1,5 @@
 import { startFlow } from '..';
-import type { Store, WalkerOS } from '@walkeros/core';
+import type { Store } from '@walkeros/core';
 
 /**
  * A `cache.store` wired to an async backing store must read through
@@ -17,12 +17,12 @@ import type { Store, WalkerOS } from '@walkeros/core';
  * because collector integration tests stay self-contained per repo
  * policy.
  */
-function createAsyncStoreInit(data: Map<string, unknown>): Store.Init {
+function createAsyncStoreInit(data: Map<string, Store.StoreValue>): Store.Init {
   return (context) => ({
     type: 'async-mock',
     config: context.config as Store.Config,
     get: async (key: string) => data.get(key),
-    set: async (key: string, value: unknown) => {
+    set: async (key: string, value: Store.StoreValue) => {
       data.set(key, value);
     },
     delete: async (key: string) => {
@@ -33,28 +33,22 @@ function createAsyncStoreInit(data: Map<string, unknown>): Store.Init {
 
 describe('destination cache with async backing store', () => {
   it('full-cache HIT skips destination push and returns cached value (stop: true)', async () => {
-    const cacheData = new Map<string, unknown>();
+    const cacheData = new Map<string, Store.StoreValue>();
     // Pre-seed the async store with a cached event under the key the
     // cache rule will compute. With namespace defaulted to the cache
     // wrapper's host store id, raw backing receives `<ns>:<key>` — but
     // for `cache.store: 'asyncCache'` wired directly (no nested wrapper),
     // the namespace comes from `compiled.namespace`, which is undefined,
     // so the key is just `event.name` joined.
-    const seededEvent: WalkerOS.Event = {
+    // The seeded value is only a HIT sentinel keyed by `event.name`; the test
+    // asserts the push count, not the cached payload. Seed a plain structured
+    // `StoreValue` so the async backing's contract holds without a cast.
+    const seededEvent: Store.StoreValue = {
       name: 'page view',
       data: { cached: true },
-      context: {},
-      globals: {},
-      custom: {},
-      user: {},
-      nested: [],
-      consent: {},
       id: 'cached-id',
-      trigger: '',
       entity: 'page',
       action: 'view',
-      timestamp: 0,
-      timing: 0,
       source: { type: 'collector' },
     };
     cacheData.set('page view', seededEvent);
@@ -93,7 +87,7 @@ describe('destination cache with async backing store', () => {
   });
 
   it('step-cache HIT skips push but transformer ran (stop: false)', async () => {
-    const cacheData = new Map<string, unknown>();
+    const cacheData = new Map<string, Store.StoreValue>();
     cacheData.set('page view', { sentinel: 'cached' });
 
     let pushCount = 0;

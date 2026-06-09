@@ -63,6 +63,34 @@ describe('Bundle → Run Integration', () => {
     expect(content).not.toContain('@types/');
   });
 
+  it('keeps the server bundle as ESM with no IIFE wrapper', () => {
+    // Counter-assertion to the browser IIFE change: the server/runner artifact
+    // MUST stay an ESM module. The runtime container imports `module.default`
+    // (a factory), the bundle carries a `createRequire` banner that is illegal
+    // outside an ES module, and step packages stay as bare ESM imports for nft
+    // tracing. esbuild's `iife` format would drop the default export and break
+    // all three, so the browser format override must not bleed into the server
+    // branch.
+    const content = fs.readFileSync(bundlePath, 'utf-8');
+
+    // Default factory export survives (minifiers may emit `export{x as default}`
+    // or `export default`).
+    expect(content).toMatch(/export\s*(\{[^}]*\bas default\b[^}]*\}|default)/);
+
+    // The createRequire banner is present (ESM-only construct).
+    expect(content).toContain('createRequire');
+
+    // No esbuild IIFE wrapper opener. esbuild wraps iife output as
+    // `(()=>{...})();` or `var X=(()=>{...})();`; an ESM module never opens with
+    // a top-level IIFE.
+    expect(content.trimStart()).not.toMatch(
+      /^(var\s+\w+\s*=\s*)?\(\s*\(\s*\)\s*=>/,
+    );
+
+    // Externalized step package stays a bare ESM import.
+    expect(content).toMatch(/from\s*['"]@walkeros\/server-source-express['"]/);
+  });
+
   it('should not inline step package source into the entry bundle', () => {
     // Decision #9 (bundler-nft-redesign): esbuild externalizes ALL step
     // packages so the entry bundle stays small. nft traces the bare

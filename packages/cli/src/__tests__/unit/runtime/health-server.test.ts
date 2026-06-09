@@ -38,18 +38,54 @@ describe('createHealthServer', () => {
     expect(JSON.parse(res.body)).toEqual({ status: 'ok' });
   });
 
-  it('responds 503 to GET /ready when no flow handler set', async () => {
+  it('responds 503 to GET /ready before the collector is constructed', async () => {
     const res = await fetch(port, '/ready');
     expect(res.status).toBe(503);
+    expect(JSON.parse(res.body)).toEqual({ status: 'not_ready' });
   });
 
-  it('responds 200 to GET /ready when flow handler is set', async () => {
+  it('responds 200 to GET /ready after setReady(true)', async () => {
+    server.setReady(true);
+    const res = await fetch(port, '/ready');
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body)).toEqual({ status: 'ready' });
+  });
+
+  it('stays 503 to GET /ready when only the flow handler is set (no readiness)', async () => {
+    // Mounting an HTTP handler is not the readiness signal — collector
+    // construction is. Without setReady, /ready must not flip to 200.
     server.setFlowHandler((_req, res) => {
       res.writeHead(200);
       res.end('flow');
     });
     const res = await fetch(port, '/ready');
+    expect(res.status).toBe(503);
+  });
+
+  it('responds 503 with a reason to GET /ready when construction failed', async () => {
+    server.setFailed('WebSecretRefError: missing secret API_KEY');
+    const res = await fetch(port, '/ready');
+    expect(res.status).toBe(503);
+    expect(JSON.parse(res.body)).toEqual({
+      status: 'failed',
+      reason: 'WebSecretRefError: missing secret API_KEY',
+    });
+  });
+
+  it('clears the failure reason once setReady(true) is called', async () => {
+    server.setFailed('transient failure');
+    server.setReady(true);
+    const res = await fetch(port, '/ready');
     expect(res.status).toBe(200);
+    expect(JSON.parse(res.body)).toEqual({ status: 'ready' });
+  });
+
+  it('returns to 503 after setReady(false) (e.g. during hot-swap)', async () => {
+    server.setReady(true);
+    server.setReady(false);
+    const res = await fetch(port, '/ready');
+    expect(res.status).toBe(503);
+    expect(JSON.parse(res.body)).toEqual({ status: 'not_ready' });
   });
 
   it('delegates non-health requests to flow handler', async () => {

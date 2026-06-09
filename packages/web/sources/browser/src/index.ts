@@ -8,6 +8,7 @@ import type {
   BrowserArguments,
 } from './types/elb';
 import { isString } from '@walkeros/core';
+import { createPushResult } from '@walkeros/collector';
 import {
   initTriggers,
   initScopeTrigger,
@@ -23,11 +24,56 @@ import { getConfig } from './config';
 
 export * as SourceBrowser from './types';
 
-let instanceCount = 0;
+/**
+ * Window-scoped single-instance sentinel. The browser source must be
+ * single-instance per window: one elbLayer adoption, one set of DOM
+ * listeners, one `window.elb`. A second/synchronous load of the tag on the
+ * same page is a SEPARATE module instance, so a module-scoped counter cannot
+ * see it (each load starts at 0). The marker therefore lives on the window
+ * itself. A Symbol key avoids collision with page globals and is
+ * non-enumerable by nature.
+ */
+const SINGLE_INSTANCE_KEY = Symbol.for('@walkeros/web-source-browser:instance');
 
-/** For tests only. Resets the single-instance invariant. */
+type EnvWindow = Window & typeof globalThis;
+
+function resolveGuardWindow(
+  envWindow: EnvWindow | undefined,
+): EnvWindow | undefined {
+  return (
+    envWindow ||
+    (typeof globalThis.window !== 'undefined' ? globalThis.window : undefined)
+  );
+}
+
+/** For tests only. Clears the window-scoped single-instance sentinel. */
 export function __resetInstanceCountForTests(): void {
-  instanceCount = 0;
+  const win = resolveGuardWindow(undefined);
+  if (win) Reflect.deleteProperty(win, SINGLE_INSTANCE_KEY);
+}
+
+/**
+ * Inert source instance returned on a second load within the same window.
+ * It satisfies the `Source.Instance` contract but performs no side effects:
+ * `init` does not adopt elbLayer or bind DOM triggers, `push` resolves to a
+ * successful no-op result, and `on`/`destroy` do nothing. This keeps a double
+ * load from re-adopting `window.elbLayer` (the production crash vector)
+ * without surfacing an error to the host page.
+ */
+function createInertInstance(): Source.Instance<Types> {
+  const fullConfig: Source.Config<Types> = {
+    settings: getConfig({}, undefined),
+  };
+  const push: BrowserPush = ((..._args: Parameters<BrowserArguments>) =>
+    Promise.resolve(createPushResult({ ok: true }))) satisfies BrowserPush;
+  return {
+    type: 'browser',
+    config: fullConfig,
+    push,
+    on: async () => {},
+    init: async () => {},
+    destroy: async () => {},
+  };
 }
 
 // Export walker utility functions
@@ -54,14 +100,6 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  * in `instance.queueOn` until the source is started.
  */
 export const sourceBrowser: Source.Init<Types> = async (context) => {
-  if (instanceCount > 0 && typeof globalThis.window !== 'undefined') {
-    throw new Error(
-      'walker.js browser source is single-instance per window. ' +
-        'See packages/web/sources/browser/src/trigger.ts for the invariant note.',
-    );
-  }
-  instanceCount += 1;
-
   const { config, env, logger } = context;
   const { elb, command, window, document } = env;
 
@@ -74,6 +112,23 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     (typeof globalThis.document !== 'undefined'
       ? globalThis.document
       : undefined);
+
+  // Single-instance per window. A second load on the same page is a separate
+  // module instance, so the marker lives on the window, not in module scope.
+  // Window-less environments (SSR/node/test without a window) are not guarded.
+  const guardWindow = resolveGuardWindow(actualWindow);
+  if (guardWindow) {
+    if (Reflect.get(guardWindow, SINGLE_INSTANCE_KEY))
+      return createInertInstance();
+    // Set before init() runs so a synchronous second load is caught before
+    // this first instance performs its own factory/init side effects.
+    Object.defineProperty(guardWindow, SINGLE_INSTANCE_KEY, {
+      value: true,
+      enumerable: false,
+      configurable: true,
+      writable: false,
+    });
+  }
 
   const settings: Source.Settings<Types> = getConfig(
     userSettings,

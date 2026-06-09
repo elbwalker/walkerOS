@@ -61,8 +61,11 @@ export function validateFlowConfig(
     // The set of registered secret names is not derivable from the flow JSON
     // (it lives in the project's secrets service), so it is injected here.
     if (options?.secrets) context.secrets = options.secrets;
-    checkReferences(json, context, errors, warnings);
+    checkReferences(json, parsed, context, errors, warnings);
   }
+
+  // Structural checks over the parsed object (store file/cache contract).
+  checkStoreContract(json, parsed, warnings);
 
   return {
     valid: errors.length === 0,
@@ -203,6 +206,7 @@ const SECRET_INLINE_REGEX = /\$secret\.([A-Z0-9_]+)/g;
 
 function checkReferences(
   text: string,
+  parsed: unknown,
   context: Partial<IntelliSenseContext>,
   errors: ValidationIssue[],
   warnings: ValidationIssue[],
@@ -215,43 +219,178 @@ function checkReferences(
   checkStoreReferences(text, context, warnings);
   checkEnvReferences(text, context, warnings);
   checkFlowReferences(text, context, warnings);
-  checkSecretReferences(text, context, errors, warnings);
+  checkSecretReferences(text, parsed, context, errors, warnings);
+}
+
+// Packages that persist raw bytes (byte-native), the only stores where
+// `config.file: true` is meaningful and that transformer-file consumes.
+const BYTE_NATIVE_STORE_PACKAGES = [
+  '@walkeros/server-store-fs',
+  '@walkeros/server-store-s3',
+  '@walkeros/server-store-gcs',
+];
+
+const TRANSFORMER_FILE_PACKAGE = '@walkeros/server-transformer-file';
+
+// Anchored $store.<id> matcher to read a single env.store reference value.
+const STORE_REF_ANCHORED = /^\$store\.([a-zA-Z_][a-zA-Z0-9_]*)$/;
+
+/**
+ * Structural checks for the store file/cache contract.
+ *
+ * 1. WARN: a store with both `config.file: true` and `cache` (caching a
+ *    byte-serving store offers no benefit, the cache holds structured values).
+ * 2. WARN: a transformer-file wired to a byte-native store via `env.store`
+ *    whose store does not set `config.file: true` (it would receive parsed
+ *    objects, not bytes, so byte-exact serving is broken).
+ *
+ * Best-effort and non-crashing: malformed shapes are skipped silently.
+ */
+function checkStoreContract(
+  text: string,
+  parsed: unknown,
+  warnings: ValidationIssue[],
+): void {
+  if (!isObject(parsed) || !isObject(parsed.flows)) return;
+
+  for (const flow of Object.values(parsed.flows)) {
+    if (!isObject(flow)) continue;
+    const stores = isObject(flow.stores) ? flow.stores : undefined;
+    if (stores) checkStoreFileCache(text, stores, warnings);
+    if (stores && isObject(flow.transformers)) {
+      checkTransformerFileStore(text, flow.transformers, stores, warnings);
+    }
+  }
+}
+
+function storeHasFile(store: Record<string, unknown>): boolean {
+  return isObject(store.config) && store.config.file === true;
+}
+
+function checkStoreFileCache(
+  text: string,
+  stores: Record<string, unknown>,
+  warnings: ValidationIssue[],
+): void {
+  for (const [id, store] of Object.entries(stores)) {
+    if (!isObject(store)) continue;
+    if (storeHasFile(store) && store.cache !== undefined) {
+      warnings.push({
+        message: `Store "${id}" sets file: true and cache. The cache holds structured values; caching a byte-serving store offers no benefit. Remove cache or unset file.`,
+        severity: 'warning',
+        path: `stores.${id}`,
+        ...positionForKey(text, id),
+      });
+    }
+  }
+}
+
+function checkTransformerFileStore(
+  text: string,
+  transformers: Record<string, unknown>,
+  stores: Record<string, unknown>,
+  warnings: ValidationIssue[],
+): void {
+  for (const transformer of Object.values(transformers)) {
+    if (!isObject(transformer)) continue;
+    if (transformer.package !== TRANSFORMER_FILE_PACKAGE) continue;
+    if (!isObject(transformer.env)) continue;
+
+    const ref = transformer.env.store;
+    if (typeof ref !== 'string') continue;
+    const refMatch = STORE_REF_ANCHORED.exec(ref);
+    if (!refMatch) continue;
+
+    const storeId = refMatch[1];
+    const store = stores[storeId];
+    if (!isObject(store)) continue;
+
+    // Only flag stores whose package is DEFINITIVELY byte-native. A warning
+    // fails `--strict`, so it must not false-positive on a store whose package
+    // is missing or unresolvable (we cannot confirm it serves bytes).
+    const pkg = store.package;
+    if (typeof pkg !== 'string' || !BYTE_NATIVE_STORE_PACKAGES.includes(pkg))
+      continue;
+
+    if (!storeHasFile(store)) {
+      warnings.push({
+        message: `transformer-file serves byte-exact assets; set config.file: true on store "${storeId}".`,
+        severity: 'warning',
+        path: `stores.${storeId}`,
+        ...positionForKey(text, storeId),
+      });
+    }
+  }
+}
+
+function positionForKey(
+  text: string,
+  key: string,
+): { line: number; column: number } {
+  const idx = text.indexOf(`"${key}"`);
+  if (idx === -1) return { line: 1, column: 1 };
+  return offsetToLineCol(text, idx);
 }
 
 function checkSecretReferences(
   text: string,
+  parsed: unknown,
   context: Partial<IntelliSenseContext>,
   errors: ValidationIssue[],
   warnings: ValidationIssue[],
 ): void {
-  const isWeb = context.platform === 'web';
   // Only warn on unknown names when the project's registered set is available.
   const known = context.secrets;
+  if (!isObject(parsed) || !isObject(parsed.flows)) return;
 
-  SECRET_INLINE_REGEX.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = SECRET_INLINE_REGEX.exec(text)) !== null) {
-    const full = match[0];
-    const name = match[1];
-    const pos = offsetToPosition(text, match.index, full.length);
+  // Scope the check PER FLOW, not over the whole config text. A $secret
+  // reference is a hard error only inside a WEB-platform flow (a secret must
+  // never reach the browser). Server flows resolve $secret to a runtime env
+  // read, so they are allowed; there we only warn when the name is not in the
+  // project's registered set. This is what makes a valid multi-flow config (a
+  // web flow forwarding to a server flow that holds the secret) pass instead of
+  // having the server flow's secret wrongly flagged as a web violation.
+  for (const flow of Object.values(parsed.flows)) {
+    if (!isObject(flow)) continue;
+    const cfg = flow.config;
+    const platform =
+      isObject(cfg) && (cfg.platform === 'web' || cfg.platform === 'server')
+        ? cfg.platform
+        : undefined;
 
-    if (isWeb) {
-      errors.push({
-        message: `Secret "$secret.${name}" cannot be used in a web flow — secrets are never sent to the browser; use a server flow.`,
-        severity: 'error',
-        path: full,
-        ...pos,
-      });
-      continue;
-    }
+    const flowText = JSON.stringify(flow);
+    SECRET_INLINE_REGEX.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = SECRET_INLINE_REGEX.exec(flowText)) !== null) {
+      const full = match[0];
+      const name = match[1];
+      // Best-effort position against the original text (first occurrence of the
+      // ref), mirroring positionForKey's indexOf approach; flowText offsets do
+      // not map to the original document.
+      const idx = text.indexOf(full);
+      const pos =
+        idx === -1
+          ? { line: 1, column: 1 }
+          : offsetToPosition(text, idx, full.length);
 
-    if (known && !known.includes(name)) {
-      warnings.push({
-        message: `Unknown secret "$secret.${name}"; not in the project's registered secrets.`,
-        severity: 'warning',
-        path: full,
-        ...pos,
-      });
+      if (platform === 'web') {
+        errors.push({
+          message: `Secret "$secret.${name}" cannot be used in a web flow — secrets are never sent to the browser; use a server flow.`,
+          severity: 'error',
+          path: full,
+          ...pos,
+        });
+        continue;
+      }
+
+      if (known && !known.includes(name)) {
+        warnings.push({
+          message: `Unknown secret "$secret.${name}"; not in the project's registered secrets.`,
+          severity: 'warning',
+          path: full,
+          ...pos,
+        });
+      }
     }
   }
 }

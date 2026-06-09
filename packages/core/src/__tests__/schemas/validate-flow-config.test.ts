@@ -806,6 +806,232 @@ describe('validateFlowConfig', () => {
     });
   });
 
+  // --- store file/cache diagnostics ---
+
+  describe('store file: true with cache', () => {
+    it('warns when a store sets both file: true and cache', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: {
+                assets: {
+                  package: '@walkeros/server-store-fs',
+                  config: { file: true },
+                  cache: { rules: [{ ttl: 60 }] },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      const warning = result.warnings.find(
+        (w) =>
+          w.message.includes('"assets"') &&
+          /file: true and cache/.test(w.message),
+      );
+      expect(warning).toBeDefined();
+      if (!warning) throw new Error('warning expected');
+      expect(warning.severity).toBe('warning');
+      expect(warning.message).toMatch(/no benefit/);
+    });
+
+    it('does not warn when a store sets file: true without cache', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: {
+                assets: {
+                  package: '@walkeros/server-store-fs',
+                  config: { file: true },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.filter((w) => /file: true and cache/.test(w.message)),
+      ).toHaveLength(0);
+    });
+
+    it('does not warn when a store sets cache without file: true', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: {
+                kv: {
+                  package: '@walkeros/server-store-fs',
+                  cache: { rules: [{ ttl: 60 }] },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings.filter((w) => /file: true and cache/.test(w.message)),
+      ).toHaveLength(0);
+    });
+  });
+
+  describe('transformer-file wired to a non-file store', () => {
+    it('warns when transformer-file points at a byte-native store without file: true', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: {
+                assets: { package: '@walkeros/server-store-fs' },
+              },
+              transformers: {
+                serve: {
+                  package: '@walkeros/server-transformer-file',
+                  env: { store: '$store.assets' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      const warning = result.warnings.find(
+        (w) =>
+          w.message.includes('"assets"') &&
+          /transformer-file serves byte-exact assets/.test(w.message),
+      );
+      expect(warning).toBeDefined();
+      if (!warning) throw new Error('warning expected');
+      expect(warning.severity).toBe('warning');
+      expect(warning.message).toMatch(/config\.file: true/);
+    });
+
+    it('does not inform when transformer-file points at a store with file: true', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: {
+                assets: {
+                  package: '@walkeros/server-store-fs',
+                  config: { file: true },
+                },
+              },
+              transformers: {
+                serve: {
+                  package: '@walkeros/server-transformer-file',
+                  env: { store: '$store.assets' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings
+          .concat(result.errors)
+          .filter((i) =>
+            /transformer-file serves byte-exact assets/.test(i.message),
+          ),
+      ).toHaveLength(0);
+    });
+
+    it('does not inform when a non-file-transformer points at a byte-native store', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: {
+                assets: { package: '@walkeros/server-store-fs' },
+              },
+              transformers: {
+                redact: {
+                  package: '@walkeros/transformer-redact',
+                  env: { store: '$store.assets' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings
+          .concat(result.errors)
+          .filter((i) =>
+            /transformer-file serves byte-exact assets/.test(i.message),
+          ),
+      ).toHaveLength(0);
+    });
+
+    it('does not warn when transformer-file points at a store with a missing/unknown package', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'server' },
+              stores: {
+                assets: { config: {} },
+                other: { package: '@walkeros/server-store-sheets' },
+              },
+              transformers: {
+                serve: {
+                  package: '@walkeros/server-transformer-file',
+                  env: { store: '$store.assets' },
+                },
+                serve2: {
+                  package: '@walkeros/server-transformer-file',
+                  env: { store: '$store.other' },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.warnings
+          .concat(result.errors)
+          .filter((i) =>
+            /transformer-file serves byte-exact assets/.test(i.message),
+          ),
+      ).toHaveLength(0);
+    });
+  });
+
   // --- $secret. references ---
 
   describe('$secret. references', () => {
@@ -861,6 +1087,82 @@ describe('validateFlowConfig', () => {
       expect(
         result.errors.filter((e) => e.message.includes('$secret.')),
       ).toHaveLength(0);
+    });
+
+    it('does not error for $secret. in the server flow of a multi-flow config (web flow first)', () => {
+      // A valid web -> server forwarding config: the web flow holds no secret,
+      // the server flow holds the secret. The secret check must scope per flow,
+      // not flag the server secret just because a web flow appears first.
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            web: {
+              config: { platform: 'web' },
+              destinations: {
+                api: {
+                  config: { settings: { url: '$flow.ingest.url' } },
+                },
+              },
+            },
+            ingest: {
+              config: { platform: 'server' },
+              destinations: {
+                bq: {
+                  config: { settings: { projectId: '$secret.GCP_PROJECT_ID' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(
+        result.errors.filter((e) => e.message.includes('$secret.')),
+      ).toHaveLength(0);
+      expect(result.valid).toBe(true);
+    });
+
+    it('still errors for $secret. in the web flow of a multi-flow config', () => {
+      // The protection must survive per-flow scoping: a secret in the WEB flow
+      // is still a hard error even when a server flow is present.
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            web: {
+              config: { platform: 'web' },
+              destinations: {
+                api: {
+                  config: { settings: { token: '$secret.LEAKED' } },
+                },
+              },
+            },
+            ingest: {
+              config: { platform: 'server' },
+              destinations: {
+                bq: {
+                  config: { settings: { projectId: '$secret.GCP_PROJECT_ID' } },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(result.valid).toBe(false);
+      const leaked = result.errors.find((e) =>
+        e.message.includes('$secret.LEAKED'),
+      );
+      expect(leaked).toBeDefined();
+      // The server flow's secret must NOT be flagged.
+      expect(
+        result.errors.find((e) => e.message.includes('$secret.GCP_PROJECT_ID')),
+      ).toBeUndefined();
     });
 
     it('warns when $secret. references a name not in the known set', () => {

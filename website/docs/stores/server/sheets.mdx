@@ -171,10 +171,14 @@ Pass a service account JSON via `config.credentials` with a `$env.` reference. T
 
 The `SHEETS_SA_KEY` environment variable should contain the full service account JSON (with `client_email` and `private_key` fields). Share the spreadsheet with the service account email before running setup.
 
+## Structured only
+
+The Sheets store is structured-only. Cells hold structured `StoreValue` JSON; there is no byte-native mode. Setting `file: true` is a hard error at init (use fs, S3, or GCS for byte-exact serving), and a value containing a binary (`Uint8Array`) leaf is rejected, since a spreadsheet cell cannot hold raw bytes.
+
 ## API
 
 <CodeSnippet
-  code={`const value = await store.get('alice');           // unknown | undefined (parsed JSON)
+  code={`const value = await store.get('alice');           // StoreValue | undefined (parsed JSON)
 await store.set('bob', { tier: 'silver' });        // void
 await store.delete('charlie');                     // void`}
   language="typescript"

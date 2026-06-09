@@ -2,11 +2,7 @@ jest.mock('../auth', () => ({
   createTokenProvider: jest.fn(() => jest.fn().mockResolvedValue('mock-token')),
 }));
 
-import {
-  createMockContext,
-  createMockLogger,
-  encodeCacheValue,
-} from '@walkeros/core';
+import { createMockContext, createMockLogger } from '@walkeros/core';
 import type { Credential, ServiceAccount, Store } from '@walkeros/core';
 import type { ServiceAccountCredentials, SheetsStoreSettings } from '../types';
 import { storeSheetsInit, __resetSpreadsheetExistenceCache } from '../store';
@@ -151,6 +147,27 @@ describe('storeSheetsInit', () => {
         restore();
       }
     });
+
+    it('rejects file: true at init (sheets is structured-only)', async () => {
+      // No fetch should fire: the file-mode guard runs before the existence
+      // probe.
+      const { calls, restore } = installFetch([]);
+      try {
+        const ctx = {
+          collector: mockBase.collector,
+          logger: createMockLogger(),
+          id: 'crm',
+          env: {},
+          config: { settings: { id: 'spreadsheet-id-123' }, file: true },
+        };
+        await expect(storeSheetsInit(ctx)).rejects.toThrow(
+          /does not support file mode/,
+        );
+        expect(calls).toHaveLength(0);
+      } finally {
+        restore();
+      }
+    });
   });
 
   describe('get', () => {
@@ -266,18 +283,38 @@ describe('storeSheetsInit', () => {
       }
     });
 
-    it('rejects a Buffer value (request-cache wiring is not supported)', async () => {
+    it('rejects a top-level binary value (request-cache wiring is not supported)', async () => {
       const { restore } = installFetch([
         probeOk(),
         jsonResponse({ values: [['alice']] }),
       ]);
       try {
         const store = await storeSheetsInit(createCtx());
-        const encoded = encodeCacheValue({ status: 200 }, 1000);
+        const binary = new Uint8Array([0x00, 0x01, 0x02]);
 
-        await expect(store.set('req-cache-key', encoded)).rejects.toThrow(
-          /Sheets store cannot be used as a request cache/,
+        await expect(store.set('req-cache-key', binary)).rejects.toThrow(
+          /cannot persist binary values/,
         );
+      } finally {
+        restore();
+      }
+    });
+
+    it('rejects a nested binary leaf anywhere in the value', async () => {
+      const { calls, restore } = installFetch([
+        probeOk(),
+        jsonResponse({ values: [['alice']] }),
+      ]);
+      try {
+        const store = await storeSheetsInit(createCtx());
+        const initial = calls.length;
+
+        await expect(
+          store.set('dave', { meta: { blob: new Uint8Array([1, 2, 3]) } }),
+        ).rejects.toThrow(/cannot persist binary values/);
+
+        // No write fires when the value is rejected.
+        expect(calls).toHaveLength(initial);
       } finally {
         restore();
       }

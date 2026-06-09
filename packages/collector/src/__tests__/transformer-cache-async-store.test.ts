@@ -8,12 +8,12 @@ import type { Store, Transformer, WalkerOS } from '@walkeros/core';
  * object downstream, not a Promise.
  */
 
-function createAsyncStoreInit(data: Map<string, unknown>): Store.Init {
+function createAsyncStoreInit(data: Map<string, Store.StoreValue>): Store.Init {
   return (context) => ({
     type: 'async-mock',
     config: context.config as Store.Config,
     get: async (key: string) => data.get(key),
-    set: async (key: string, value: unknown) => {
+    set: async (key: string, value: Store.StoreValue) => {
       data.set(key, value);
     },
     delete: async (key: string) => {
@@ -24,7 +24,7 @@ function createAsyncStoreInit(data: Map<string, unknown>): Store.Init {
 
 describe('transformer cache with async backing store', () => {
   it('delivers the cached event object (not a Promise) on HIT', async () => {
-    const cacheData = new Map<string, unknown>();
+    const cacheData = new Map<string, Store.StoreValue>();
     // Pre-seed the async cache store with a cached event under the key
     // the cache rule will compute. The rule keys on `event.name` and
     // the transformer applies no namespace, so the raw key is
@@ -84,7 +84,7 @@ describe('transformer cache with async backing store', () => {
   });
 
   it('runs the transformer chain on MISS', async () => {
-    const cacheData = new Map<string, unknown>();
+    const cacheData = new Map<string, Store.StoreValue>();
     let enricherCalls = 0;
     const destinationEvents: WalkerOS.Event[] = [];
 

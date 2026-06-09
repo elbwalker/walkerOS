@@ -127,7 +127,7 @@ describe('getStore', () => {
   type MyStoreTypes = Store.Types<{ host: string }>;
 
   function buildStore(): Store.Instance<MyStoreTypes> {
-    const data: Record<string, unknown> = {};
+    const data: Record<string, Store.StoreValue> = {};
     return {
       type: 'memory',
       config: { settings: { host: 'localhost' } },

@@ -30,7 +30,7 @@ const mockLogger: Logger.Instance = {
   scope: jest.fn().mockReturnThis(),
 };
 
-function createContext(settings: Record<string, unknown> = {}) {
+function createContext(settings: Record<string, unknown> = {}, file?: boolean) {
   return {
     collector: {} as Collector.Instance,
     logger: mockLogger,
@@ -43,13 +43,17 @@ function createContext(settings: Record<string, unknown> = {}) {
         secretAccessKey: 'secret',
         ...settings,
       },
+      file,
     },
     env: {},
   };
 }
 
-async function createStore(settings: Record<string, unknown> = {}) {
-  return await storeS3Init(createContext(settings));
+async function createStore(
+  settings: Record<string, unknown> = {},
+  file?: boolean,
+) {
+  return await storeS3Init(createContext(settings, file));
 }
 
 describe('storeS3Init', () => {
@@ -80,24 +84,27 @@ describe('storeS3Init', () => {
     );
   });
 
-  describe('get', () => {
-    it('should return Buffer for existing key', async () => {
-      const content = Buffer.from('hello world');
-      mockGetObjectArrayBuffer.mockResolvedValue(
-        content.buffer.slice(
-          content.byteOffset,
-          content.byteOffset + content.byteLength,
-        ),
+  // Connect the put/get mocks into a single in-memory backing store so a
+  // set -> get cycle replays the exact bytes the store handed the client.
+  function wireBackingStore(): { reads: () => Buffer | undefined } {
+    let stored: Buffer | undefined;
+    mockPutObject.mockImplementation(
+      async (_key: string, value: Uint8Array | string) => {
+        stored = Buffer.from(value);
+        return { ok: true };
+      },
+    );
+    mockGetObjectArrayBuffer.mockImplementation(async () => {
+      if (!stored) return null;
+      return stored.buffer.slice(
+        stored.byteOffset,
+        stored.byteOffset + stored.byteLength,
       );
-
-      const store = await createStore();
-      const result = await store.get('test.txt');
-
-      expect(result).toBeInstanceOf(Buffer);
-      expect(Buffer.from(result as Buffer).toString()).toBe('hello world');
-      expect(mockGetObjectArrayBuffer).toHaveBeenCalledWith('test.txt');
     });
+    return { reads: () => stored };
+  }
 
+  describe('get', () => {
     it('should return undefined for missing key (null response)', async () => {
       mockGetObjectArrayBuffer.mockResolvedValue(null);
 
@@ -117,8 +124,13 @@ describe('storeS3Init', () => {
     });
 
     it('should prepend prefix to key', async () => {
-      const content = Buffer.from('data');
-      mockGetObjectArrayBuffer.mockResolvedValue(content.buffer);
+      const content = Buffer.from('{}');
+      mockGetObjectArrayBuffer.mockResolvedValue(
+        content.buffer.slice(
+          content.byteOffset,
+          content.byteOffset + content.byteLength,
+        ),
+      );
 
       const store = await createStore({ prefix: 'assets/v1' });
       await store.get('walker.js');
@@ -144,88 +156,103 @@ describe('storeS3Init', () => {
     });
   });
 
-  describe('set', () => {
-    it('should upload Buffer content', async () => {
-      mockPutObject.mockResolvedValue({ ok: true });
+  describe('structured mode (default)', () => {
+    it('round-trips an object and stores it as application/json', async () => {
+      wireBackingStore();
 
       const store = await createStore();
-      const content = Buffer.from('file content');
-      await store.set('test.txt', content);
-
-      expect(mockPutObject).toHaveBeenCalledWith('test.txt', content);
-    });
-
-    it('should prepend prefix to key', async () => {
-      mockPutObject.mockResolvedValue({ ok: true });
-
-      const store = await createStore({ prefix: 'uploads' });
-      await store.set('file.txt', Buffer.from('data'));
+      const value = { tier: 'gold', count: 3, nested: { ok: true } };
+      await store.set('crm/alice', value);
 
       expect(mockPutObject).toHaveBeenCalledWith(
-        'uploads/file.txt',
-        expect.any(Buffer),
+        'crm/alice',
+        expect.any(Uint8Array),
+        'application/json',
       );
+
+      const result = await store.get('crm/alice');
+      expect(result).toEqual(value);
     });
 
-    it('should reject path traversal keys', async () => {
+    it('round-trips a binary leaf to a Uint8Array', async () => {
+      wireBackingStore();
+
       const store = await createStore();
-      await store.set('../evil.txt', Buffer.from('bad'));
-      expect(mockPutObject).not.toHaveBeenCalled();
+      const bytes = new Uint8Array([0, 1, 2, 255, 254, 0x7f, 0x80]);
+      await store.set('asset', { name: 'logo', body: bytes });
+
+      const result = await store.get('asset');
+      // toEqual asserts the decoded leaf is a Uint8Array with the exact bytes:
+      // Jest distinguishes a Uint8Array from a plain array or object.
+      expect(result).toEqual({ name: 'logo', body: bytes });
     });
 
-    // Regression lock: the request-cache codec hands stores an encoded Buffer.
-    // A non-Buffer value must be rejected with a clear error rather than being
-    // silently uploaded as a malformed object.
-    it('rejects a non-Buffer value with a clear error', async () => {
+    it('degrades to undefined on an empty object (does not throw)', async () => {
+      mockGetObjectArrayBuffer.mockResolvedValue(new ArrayBuffer(0));
       const store = await createStore();
-      const bad: unknown = { a: 1 };
-      await expect(store.set('x', bad)).rejects.toThrow(
-        /value must be a Buffer/,
+      await expect(store.get('empty')).resolves.toBeUndefined();
+    });
+
+    it('degrades to undefined on corrupt non-JSON bytes (does not throw)', async () => {
+      const corrupt = Buffer.from('not valid json {');
+      mockGetObjectArrayBuffer.mockResolvedValue(
+        corrupt.buffer.slice(
+          corrupt.byteOffset,
+          corrupt.byteOffset + corrupt.byteLength,
+        ),
       );
+      const store = await createStore();
+      await expect(store.get('corrupt')).resolves.toBeUndefined();
+    });
+
+    it('reject path traversal keys', async () => {
+      const store = await createStore();
+      await store.set('../evil.txt', { a: 1 });
       expect(mockPutObject).not.toHaveBeenCalled();
     });
   });
 
-  describe('codec round-trip', () => {
-    // Characterization test: locks in that an arbitrary Buffer (such as the
-    // base64-JSON payload the request cache codec produces) survives a
-    // set -> get cycle byte-for-byte through the s3mini client.
-    it('round-trips an arbitrary Buffer byte-identically', async () => {
-      const original = Buffer.from(
-        JSON.stringify({
-          __walkeros_cache_v__: {
-            status: 200,
-            body: {
-              __walkeros_cache__: 'buffer',
-              d: Buffer.from([0, 1, 2, 255, 254, 0x7f, 0x80]).toString(
-                'base64',
-              ),
-            },
-          },
-        }),
+  describe('file mode (file: true)', () => {
+    it('uploads a Buffer byte-exact with a real mime derived from the key', async () => {
+      const { reads } = wireBackingStore();
+
+      const store = await createStore({}, true);
+      const bytes = Buffer.from('(function(){...})()');
+      await store.set('js/walker.js', bytes);
+
+      expect(mockPutObject).toHaveBeenCalledWith(
+        'js/walker.js',
+        bytes,
+        'application/javascript',
       );
+      const stored = reads();
+      if (!stored) throw new Error('expected stored bytes');
+      expect(stored.equals(bytes)).toBe(true);
 
-      // Capture the bytes handed to the client on set, then replay them as
-      // the client's get response so the test mirrors a real backing store.
-      let stored: Buffer | undefined;
-      mockPutObject.mockImplementation(async (_key: string, value: Buffer) => {
-        stored = value;
-        return { ok: true };
-      });
-      mockGetObjectArrayBuffer.mockImplementation(async () => {
-        if (!stored) return null;
-        return stored.buffer.slice(
-          stored.byteOffset,
-          stored.byteOffset + stored.byteLength,
-        );
-      });
+      const result = await store.get('js/walker.js');
+      if (!Buffer.isBuffer(result)) throw new Error('expected Buffer');
+      expect(result.equals(bytes)).toBe(true);
+    });
 
-      const store = await createStore();
-      await store.set('cache/entry', original);
-      const result = await store.get('cache/entry');
+    it('falls back to application/octet-stream for an unknown extension', async () => {
+      wireBackingStore();
 
-      expect(result).toBeInstanceOf(Buffer);
-      expect((result as Buffer).equals(original)).toBe(true);
+      const store = await createStore({}, true);
+      await store.set('blob', Buffer.from([1, 2, 3]));
+
+      expect(mockPutObject).toHaveBeenCalledWith(
+        'blob',
+        expect.any(Buffer),
+        'application/octet-stream',
+      );
+    });
+
+    it('rejects a structured object with a clear error', async () => {
+      const store = await createStore({}, true);
+      await expect(store.set('x', { a: 1 })).rejects.toThrow(
+        /must be Uint8Array or string/,
+      );
+      expect(mockPutObject).not.toHaveBeenCalled();
     });
   });
 

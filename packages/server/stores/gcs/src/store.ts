@@ -1,4 +1,5 @@
 import type { Logger, Store } from '@walkeros/core';
+import { serializeStoreValue, deserializeStoreValue } from '@walkeros/core';
 import type {
   GcsStoreSettings,
   ServiceAccountCredentials,
@@ -10,6 +11,37 @@ import { setup as gcsSetup } from './setup';
 import { resolveProjectId } from './setup-helpers';
 
 const GCS_BASE = 'https://storage.googleapis.com';
+
+const JSON_CONTENT_TYPE = 'application/json';
+const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
+
+// Minimal extension to content-type map for the file-mode asset-serving use
+// case (serving walker.js and friends back with a correct mime). Anything not
+// listed falls back to application/octet-stream.
+const MIME_BY_EXT: Readonly<Record<string, string>> = {
+  js: 'application/javascript',
+  mjs: 'application/javascript',
+  json: 'application/json',
+  css: 'text/css',
+  html: 'text/html',
+  txt: 'text/plain',
+  svg: 'image/svg+xml',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  ico: 'image/x-icon',
+  wasm: 'application/wasm',
+  map: 'application/json',
+};
+
+function mimeFromKey(key: string): string {
+  const dot = key.lastIndexOf('.');
+  if (dot < 0 || dot === key.length - 1) return DEFAULT_CONTENT_TYPE;
+  const ext = key.slice(dot + 1).toLowerCase();
+  return MIME_BY_EXT[ext] ?? DEFAULT_CONTENT_TYPE;
+}
 
 /**
  * Module-level cache for the bucket existence pre-check. Keyed by bucket
@@ -68,17 +100,14 @@ function parseCredentials(
   return credentials;
 }
 
-function isBufferLike(value: unknown): value is Buffer {
-  return Buffer.isBuffer(value);
-}
-
 /**
- * Wrap a Buffer in a fresh Uint8Array backed by a plain ArrayBuffer so it
- * satisfies fetch's BodyInit contract. Avoids type casts: Node's Buffer
+ * Wrap bytes in a fresh Uint8Array backed by a plain ArrayBuffer so they
+ * satisfy fetch's BodyInit contract. Avoids type casts: Node's Buffer
  * type is `Buffer<ArrayBufferLike>`, while the DOM's BodyInit (used by
- * fetch's RequestInit) expects `ArrayBufferView<ArrayBuffer>`.
+ * fetch's RequestInit) expects `ArrayBufferView<ArrayBuffer>`. Accepts any
+ * Uint8Array (Buffer included, plus the codec's plain Uint8Array output).
  */
-function bufferToBody(buf: Buffer): Uint8Array<ArrayBuffer> {
+function bufferToBody(buf: Uint8Array): Uint8Array<ArrayBuffer> {
   const out = new ArrayBuffer(buf.byteLength);
   const view = new Uint8Array(out);
   view.set(buf);
@@ -187,6 +216,10 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
   const bucket = encodeURIComponent(bucketRaw);
   const id = context.id;
   const { logger } = context;
+  // One mode per instance, decided at init. file:true persists raw bytes
+  // byte-exact with a real mime; structured mode round-trips StoreValue
+  // through the shared core codec, stored as application/json.
+  const fileMode = context.config.file === true;
 
   function resolveKey(key: string): string | undefined {
     if (!isValidKey(key)) {
@@ -213,12 +246,13 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
     config,
     setup: gcsSetup,
 
-    async get(key: string): Promise<Buffer | undefined> {
+    async get(key: string): Promise<Store.StoreValue | undefined> {
       const gcsKey = resolveKey(key);
       if (!gcsKey) return undefined;
 
       await ensureBucketExists(bucketRaw, id, rawCreds, getToken, logger);
 
+      let bytes: Buffer;
       try {
         const token = await getToken();
         const url = `${GCS_BASE}/download/storage/v1/b/${bucket}/o/${encodeURIComponent(gcsKey)}?alt=media`;
@@ -226,20 +260,49 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return undefined;
-        return Buffer.from(await res.arrayBuffer());
+        bytes = Buffer.from(await res.arrayBuffer());
       } catch {
+        return undefined;
+      }
+      // File mode hands the raw bytes back untouched (Buffer is a Uint8Array,
+      // a valid StoreValue leaf). Structured mode decodes the utf8-JSON payload.
+      // A corrupt or empty payload (GCS can return ok:true with an empty body)
+      // degrades to a miss rather than throwing a raw SyntaxError.
+      if (fileMode) return bytes;
+      try {
+        return deserializeStoreValue(bytes);
+      } catch (err) {
+        logger.debug('structured decode failed, degrading to miss', {
+          key,
+          error: err instanceof Error ? err.message : String(err),
+        });
         return undefined;
       }
     },
 
-    async set(key: string, value: unknown): Promise<void> {
+    async set(key: string, value: Store.StoreValue): Promise<void> {
       const gcsKey = resolveKey(key);
       if (!gcsKey) return;
 
-      if (!isBufferLike(value)) {
-        throw new Error(
-          'storeGcsInit.set: value must be a Buffer; got ' + typeof value,
-        );
+      let body: Uint8Array<ArrayBuffer>;
+      let contentType: string;
+      if (fileMode) {
+        // Byte-exact passthrough: accept Uint8Array (Buffer included) or string.
+        if (typeof value === 'string') {
+          body = bufferToBody(Buffer.from(value));
+        } else if (value instanceof Uint8Array) {
+          body = bufferToBody(value);
+        } else {
+          throw new Error(
+            'storeGcsInit.set: in file mode value must be Uint8Array or string; got ' +
+              typeof value,
+          );
+        }
+        contentType = mimeFromKey(key);
+      } else {
+        // Structured mode: serialize to utf8-JSON bytes, uploaded as JSON.
+        body = bufferToBody(serializeStoreValue(value));
+        contentType = JSON_CONTENT_TYPE;
       }
 
       await ensureBucketExists(bucketRaw, id, rawCreds, getToken, logger);
@@ -250,9 +313,9 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/octet-stream',
+          'Content-Type': contentType,
         },
-        body: bufferToBody(value),
+        body,
       });
     },
 

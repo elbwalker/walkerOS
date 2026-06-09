@@ -20,11 +20,13 @@ describe('Step Examples', () => {
 
   const mockCollector = {} as Collector.Instance;
 
+  // The fs step examples document the byte-serving use case (serving a
+  // walker.js asset back byte-exact), which is file mode. Read/write raw bytes.
   async function createStore(basePath: string) {
     return await storeFsInit({
       collector: mockCollector,
       logger: mockLogger,
-      config: { settings: { basePath } },
+      config: { settings: { basePath }, file: true },
       env: {},
       id: 'test-fs',
     });

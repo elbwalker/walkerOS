@@ -256,6 +256,15 @@ export async function wrapSkeleton(
     };
 
     if (platform === 'browser') {
+      // Emit the final browser artifact as an IIFE. The deployed bundle is
+      // served as a classic <script> at global scope, so an ESM body would leak
+      // its minified top-level declarations (e.g. `ga`) onto `window` and
+      // collide with globals like Google Analytics. The IIFE wraps everything
+      // in a private closure; the intentional `window.elb`/`window.walkerOS`
+      // assignments live inside the entry's own async IIFE and reference
+      // `window` explicitly, so they still run. The entry has zero exports, so
+      // no `globalName` is needed.
+      esbuildOptions.format = 'iife';
       esbuildOptions.define = {
         'process.env.NODE_ENV': '"production"',
         global: 'globalThis',

@@ -17,7 +17,9 @@ export const storeConfig = omitSchemaProperties(
 
 Without stores, each event in a flow is processed in isolation: no shared state, no caching, no persisted data between requests. Stores add a **shared memory layer** that any component in your flow (transformers, destinations) can read from and write to.
 
-A common example: serving the walker.js script from your own infrastructure. The file lives in a store (S3 or filesystem), and a transformer reads it on each request: no hardcoded paths, no rebuilds needed to swap the file.
+A common example: serving the walker.js script from your own infrastructure. The file lives in a store (S3 or filesystem) with `file: true`, and a transformer reads it on each request: no hardcoded paths, no rebuilds needed to swap the file.
+
+Stores hold one canonical value type: structured data, with binary as a first-class leaf. By default a store is a structured key-value store (sessions, lookups, cached responses). Set `file: true` on a byte-native backend (filesystem, S3, GCS) to make it persist raw bytes byte-exact instead, the mode for serving assets such as walker.js. The Sheets store is structured-only and rejects `file: true`. The `file` flag is documented in the [Configuration](#configuration) table below.
 
 ## When stores are active
 
@@ -61,6 +63,7 @@ await startFlow({
     assets: {
       code: storeS3Init,
       config: {
+        file: true,
         settings: {
           bucket: 'my-assets',
           endpoint: 'https://s3.eu-west-1.amazonaws.com',
@@ -90,6 +93,7 @@ await startFlow({
     "assets": {
       "package": "@walkeros/server-store-s3",
       "config": {
+        "file": true,
         "settings": {
           "bucket": "my-assets",
           "endpoint": "https://s3.eu-west-1.amazonaws.com",
@@ -119,7 +123,7 @@ Stores are rarely used alone. They work together with transformers to enable ana
 
 | Pattern | Store | Transformer | What it enables |
 |---------|-------|-------------|-----------------|
-| **Self-hosted tag delivery** | S3 or Filesystem | [File](/docs/transformers/file) | Serve walker.js and tracking pixels from your own infrastructure |
+| **Self-hosted tag delivery** | S3 or Filesystem (`file: true`) | [File](/docs/transformers/file) | Serve walker.js and tracking pixels byte-exact from your own infrastructure |
 | **Cookie-free user identification** | Built-in cache tier | [Fingerprint](/docs/transformers/fingerprint) | Store session hashes server-side, identify users without cookies or PII |
 | **Response caching** | Built-in cache tier | [Cache](/docs/collector/cache) | Deduplicate identical requests, reduce load on downstream analytics APIs |
 | **Quota-friendly Sheets lookups** | Sheets + [cache tier](./cache.mdx) | Any transformer | Memoize slow API reads, absorb rate limits via TTL |

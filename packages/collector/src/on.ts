@@ -12,6 +12,38 @@ import { mergeEnvironments } from './destination';
 import { reconcilePending } from './pending';
 import { flushSourceQueueOn, isSourceStarted } from './source';
 
+/**
+ * Type guard: is `value` a genuine collector instance? A real collector ALWAYS
+ * carries a `.logger` with a `.scope` function (see `collector.ts`, which
+ * assigns `logger: createLogger(...)` unconditionally; `createLogger` never
+ * returns undefined). So a value that fails this check can ONLY be a
+ * foreign/non-collector caller; it can never be a real internal dispatch.
+ * Cast-free: narrows via `typeof`/`in` only.
+ */
+function isCollectorInstance(value: unknown): value is Collector.Instance {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('logger' in value)) return false;
+  const logger = value.logger;
+  if (typeof logger !== 'object' || logger === null) return false;
+  return 'scope' in logger && typeof logger.scope === 'function';
+}
+
+/**
+ * One-time, logger-less warning for a foreign dispatch. There is no collector
+ * (hence no scoped logger) to use, so fall back to `console.warn`, guarded for
+ * environments without a console, and fire at most once total to avoid spamming
+ * a host page that may be calling a leaked global repeatedly.
+ */
+let warnedForeignDispatch = false;
+function warnForeignDispatch(): void {
+  if (warnedForeignDispatch) return;
+  warnedForeignDispatch = true;
+  if (typeof console !== 'undefined' && typeof console.warn === 'function')
+    console.warn(
+      'walkerOS: ignored an on-dispatch call with a non-collector argument',
+    );
+}
+
 type OnCallbackKind =
   | 'destination'
   | 'generic'
@@ -306,6 +338,16 @@ export async function on(
   type: On.Types,
   option: WalkerOS.SingleOrArray<On.Subscription>,
 ) {
+  // Fail closed against a FOREIGN/non-collector caller (see fireCallbacks and
+  // isCollectorInstance). `on` dereferences `collector.on` immediately, so it
+  // would throw before reaching the dispatch; guard at the top, no state
+  // mutated. A real collector always has `.logger`, so this only ever catches a
+  // foreign caller.
+  if (!isCollectorInstance(collector)) {
+    warnForeignDispatch();
+    return;
+  }
+
   const on = collector.on;
   const onType: Array<On.Subscription> = on[type] || [];
   const options = isArray(option) ? option : [option];
@@ -361,12 +403,25 @@ export function callDestinationOn(
  * which would cause infinite recursion if a source's `on` handler registers
  * another callback of the same type.
  */
-function fireCallbacks(
+export function fireCallbacks(
   collector: Collector.Instance,
   type: On.Types,
   options: Array<On.Subscription>,
   config?: unknown,
 ): void {
+  // Fail closed against a FOREIGN/non-collector caller. Threat: a minified
+  // build can leak this helper onto a global that collides with another
+  // library's API (e.g. a global named `ga`), which then invokes it with
+  // foreign args like `("sent","event")`. The string "sent" would arrive here
+  // as `collector` and crash on `"sent".logger.scope`. A genuine collector
+  // ALWAYS has `.logger` (collector.ts assigns `logger: createLogger(...)`
+  // unconditionally and createLogger never returns undefined), so this guard
+  // can ONLY catch a foreign caller; it can never mask a real internal dispatch.
+  if (!isCollectorInstance(collector)) {
+    warnForeignDispatch();
+    return;
+  }
+
   // Calculate context data once for all sources and destinations.
   const contextData = resolveDeliveryData(collector, type, config);
 
@@ -498,6 +553,15 @@ async function deliverStateToSource(
 export async function redeliverStateAtRun(
   collector: Collector.Instance,
 ): Promise<void> {
+  // Fail closed against a FOREIGN/non-collector caller (see fireCallbacks and
+  // isCollectorInstance). This dereferences the collector's state cells, so
+  // guard at the top, no state mutated, neutral void return. A real collector
+  // always has `.logger`, so this only ever catches a foreign caller.
+  if (!isCollectorInstance(collector)) {
+    warnForeignDispatch();
+    return;
+  }
+
   for (const type of STATE_CELLS) {
     if (!isStatePresent(collector, type)) continue;
 
@@ -535,6 +599,16 @@ export async function onApply(
   options?: Array<On.Subscription>,
   config?: unknown,
 ): Promise<boolean> {
+  // Fail closed against a FOREIGN/non-collector caller (see fireCallbacks and
+  // isCollectorInstance). `onApply` dereferences `collector.seenEvents`
+  // immediately, so it would throw before reaching the dispatch; guard at the
+  // top, no state mutated. Return the neutral not-vetoed result (`true`). A real
+  // collector always has `.logger`, so this only ever catches a foreign caller.
+  if (!isCollectorInstance(collector)) {
+    warnForeignDispatch();
+    return true;
+  }
+
   // Record every broadcast type so a `require:[<arbitrary>]` gate stays
   // satisfiable from current state (incl. a broadcast that fired before the
   // requiring step registered). Cell-backed types are level-checked separately.

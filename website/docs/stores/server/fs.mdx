@@ -67,22 +67,30 @@ Add to your `flow.json`:
 
 <Configuration type="store" data={data} />
 
+## Structured vs file mode
+
+The fs store has two modes, decided once at init by `config.file`:
+
+- **Structured (default):** values are structured `StoreValue` data, serialized to and from disk by the shared core codec. Use for session state, lookups, and cached responses.
+- **File (`file: true`):** values persist as raw bytes byte-exact. `set()` accepts a `Uint8Array` or `string` and writes it untouched; `get()` hands the exact bytes back. Use for serving assets such as walker.js, where byte fidelity matters.
+
+One store instance is exactly one mode. Set `file: true` on the store declaration to opt into byte-exact serving.
+
 ## API
 
 <CodeSnippet
-  code={`const file = await store.get('walker.js');       // Buffer | undefined
-await store.set('data.json', Buffer.from('{}')); // void
-await store.delete('old-file.txt');               // void`}
+  code={`const file = await store.get('walker.js');           // StoreValue | undefined
+await store.set('data.json', { ok: true });          // structured value
+await store.set('walker.js', new Uint8Array([/*…*/])); // file mode: raw bytes
+await store.delete('old-file.txt');                   // void`}
   language="typescript"
 />
 
-`get()` returns `Buffer` for raw files, for compatibility with the file transformer, which uses `content instanceof Buffer` for Content-Length calculation.
-
-The fs store is a byte/string store. `get()` returns a `Buffer`; `set()` accepts a `Buffer` or `string` and writes it raw, and rejects other value types with a clear error. Served assets stay intact byte-for-byte. Structured request-cache values are serialized by the cache layer in `@walkeros/core` before they reach the store, so the store never sees a non-`Buffer`, non-`string` value when backing a request cache.
+In file mode, `get()` returns the bytes as a `Uint8Array` leaf and `set()` rejects non-`Uint8Array`, non-`string` values with a clear error, so served assets stay intact byte-for-byte.
 
 ## File serving pattern
 
-Use with the file transformer to serve static assets from the local filesystem:
+Use with the file transformer to serve static assets from the local filesystem. Set `file: true` so the store persists and returns bytes byte-exact:
 
 <CodeSnippet
   code={`{
@@ -90,7 +98,8 @@ Use with the file transformer to serve static assets from the local filesystem:
     "assets": {
       "package": "@walkeros/server-store-fs",
       "config": {
-        "settings": { "basePath": "./public" }
+        "settings": { "basePath": "./public" },
+        "file": true
       }
     }
   },
@@ -105,7 +114,7 @@ Use with the file transformer to serve static assets from the local filesystem:
   language="json"
 />
 
-A request to `/static/walker.js` reads `./public/walker.js` from disk.
+A request to `/static/walker.js` reads `./public/walker.js` from disk. Omit `file` (or set it false) for a structured key-value store instead.
 
 ## Security
 

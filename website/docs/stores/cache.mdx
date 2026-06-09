@@ -14,13 +14,13 @@ The wrapping is transparent: a transformer wired to `$store.crm` does not know w
 Store-level cache is different from the [event-level Cache](../collector/cache.mdx) configured on sources, transformers, and destinations. Event cache short-circuits the pipeline on hit. Store cache memoizes `get`/`set`/`delete` calls on a single store. Both can be used in the same flow.
 :::
 
-## Request-cache values and TTL
+## Values and TTL
 
-Request-cache values are serialized by the cache layer before they reach the backing store, so a byte/string store backend that persists the encoded value can hold structured HTTP responses, not just the in-memory tier. The supported backends are filesystem, S3, GCS, and the in-memory tier. The Sheets store is not a request-cache backend: it stores a single JSON cell per key and cannot persist the encoded value, so wiring it as a request cache throws. Cached entries honor their TTL: an expired entry is treated as a miss and re-fetched from the backing.
+Stores hold one canonical value type: structured data (`StoreValue`), with binary (`Uint8Array`) as a first-class leaf. A shared core serialization codec round-trips that value to and from each backing, so any store can hold structured HTTP responses, events, push results, and binary bodies. JSON-shaped data (strings, numbers, booleans, `null`, arrays, objects) and `Uint8Array` survive a round-trip exactly; a `Date` becomes a string and an `Error` loses its fields.
 
-Cached values must be JSON-safe plus binary bodies (`Buffer`, `Uint8Array`, `ArrayBuffer`), all of which are returned as a `Buffer` on read (a `Date` becomes a string, an `Error` loses its fields), which is fine for HTTP responses, events, and push results.
+The cache layer owns TTL, not the store. The store persists values; the cache wraps a store and manages expiry. An expired entry is treated as a miss and re-fetched from the backing. The supported cache backends are the filesystem, S3, GCS, and the in-memory tier. The Sheets store is not a cache backend: it stores a single JSON cell per key and cannot persist the cache envelope, so wiring it as a cache backing throws.
 
-The filesystem, S3, and GCS stores persist `Buffer` or `string` values only, so structured `state` payloads (which bypass the cache layer) need an object-capable store such as the default in-memory cache.
+A store's byte-native [`file` mode](./index.mdx) (`config.file: true`) is for serving raw assets byte-exact, not for caching. The cache wraps structured stores; a store in `file` mode and a `cache` on the same store is flagged by `flow_validate`.
 
 ## Minimal example
 
