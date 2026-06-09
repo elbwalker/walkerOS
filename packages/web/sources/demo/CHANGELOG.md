@@ -1,5 +1,36 @@
 # @walkeros/source-demo
 
+## 4.2.0
+
+### Patch Changes
+
+- 9d066cc: The MCP now loads flows by ID, requires the `flow_simulate` `step`
+  parameter it always enforced, and adds a `diagnostics` tool reporting client
+  and CLI versions plus backend reachability. Package discovery returns a
+  complete catalog with a warning when a source degrades, instead of silently
+  caching partial results, and returned flow configs are round-trip safe
+  (structural values stay literal). The demo source can now be simulated as a
+  source step; the CLI also exports `VERSION` and `resolveAppUrl` and clears a
+  deleted default project.
+- 776e5f9: Step examples are no longer bundled into production output. They were
+  accidentally exported from the production entry of these packages and pulled
+  into bundled JS. Examples remain available via the package `./dev` subpath for
+  simulation and testing.
+- Updated dependencies [76d32c1]
+- Updated dependencies [908d6f0]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [e8f6909]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [654ba38]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes

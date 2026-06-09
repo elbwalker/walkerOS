@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-cmp-cookiepro",
   "description": "CookiePro/OneTrust consent management source for walkerOS",
-  "version": "4.1.2",
+  "version": "4.2.0",
   "license": "MIT",
   "walkerOS": {
     "type": "source",
@@ -46,8 +46,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.1.2",
-    "@walkeros/collector": "4.1.2"
+    "@walkeros/core": "4.2.0",
+    "@walkeros/collector": "4.2.0"
   },
   "devDependencies": {},
   "repository": {

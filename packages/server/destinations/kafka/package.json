@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-kafka",
   "description": "Apache Kafka server destination for walkerOS (kafkajs, JSON serialization, GZIP compression)",
-  "version": "4.1.2",
+  "version": "4.2.0",
   "license": "MIT",
   "exports": {
     ".": {
@@ -36,11 +36,11 @@
   },
   "dependencies": {
     "kafkajs": "^2.2.4",
-    "@walkeros/core": "4.1.2",
-    "@walkeros/server-core": "4.1.2"
+    "@walkeros/core": "4.2.0",
+    "@walkeros/server-core": "4.2.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "4.1.2"
+    "@walkeros/collector": "4.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

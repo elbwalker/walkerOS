@@ -1,5 +1,31 @@
 # @walkeros/web-core
 
+## 4.2.0
+
+### Minor Changes
+
+- d65bbde: `getEnv` is now generic over a destination's `Env`. Passing your env
+  type (`getEnv<Env>(env)`) returns `window`/`document` as the real DOM globals
+  merged with your declared SDK shape, so destinations no longer need to cast
+  browser globals (`as Window`/`as Document`) at the call site.
+
+### Patch Changes
+
+- Updated dependencies [76d32c1]
+- Updated dependencies [908d6f0]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [e8f6909]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [654ba38]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes

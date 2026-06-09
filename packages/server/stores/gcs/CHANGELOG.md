@@ -1,5 +1,38 @@
 # @walkeros/server-store-gcs
 
+## 4.2.0
+
+### Minor Changes
+
+- e8f6909: Add an optional, strictly-typed `config.credentials` field to
+  destinations, stores, and sources. Service-account credentials now configure
+  under `config.credentials`, validated per package and resolved from `$env`.
+  The package-specific `settings.credentials` still works but is deprecated, so
+  move credentials to `config.credentials`. The raw `settings.<sdk>` passthrough
+  (e.g. `settings.bigquery`) is unchanged.
+
+### Patch Changes
+
+- 5b1a134: Stores now use one structured value type with binary (`Uint8Array`)
+  as a first-class leaf, serialized by a shared codec. A new `file: true` store
+  option serves byte-exact assets such as walker.js (default is structured
+  key-value). TTL is owned by the cache layer, not the store. Sheets is
+  structured-only and rejects `file: true`.
+- Updated dependencies [76d32c1]
+- Updated dependencies [908d6f0]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [e8f6909]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [654ba38]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes

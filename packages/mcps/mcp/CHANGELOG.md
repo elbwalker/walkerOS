@@ -1,5 +1,71 @@
 # @walkeros/mcp
 
+## 4.2.0
+
+### Minor Changes
+
+- 9d066cc: The MCP now loads flows by ID, requires the `flow_simulate` `step`
+  parameter it always enforced, and adds a `diagnostics` tool reporting client
+  and CLI versions plus backend reachability. Package discovery returns a
+  complete catalog with a warning when a source degrades, instead of silently
+  caching partial results, and returned flow configs are round-trip safe
+  (structural values stay literal). The demo source can now be simulated as a
+  source step; the CLI also exports `VERSION` and `resolveAppUrl` and clears a
+  deleted default project.
+- 6a72a32: The MCP `flow_simulate` and `flow_bundle` tools now accept a cloud
+  flow id as `configPath`, so you can simulate or bundle a saved flow without a
+  manual file round-trip, and repeated simulations reuse a prebuilt bundle for
+  faster runs. Loading or fetching a flow with no default project set now
+  returns a clear "no default project" error, and `flow_examples` surfaces a
+  referenced package's shipped examples when a step has none inline. Bundle
+  stats now report the real total bundle size and list package names instead of
+  a per-package estimate, and the GA4 transformer documents its wiring contract
+  via package hints.
+- 9d066cc: Preview creation can now target a deployed version: pass
+  `source: { kind: 'deployment-version', deploymentVersionId }` to
+  `createPreview` (CLI) or the MCP `flow_manage` `preview_create` action to
+  preview what's live instead of the flow's draft. Deleting a preview no longer
+  errors on the empty `204 No Content` response and resolves to a confirmation
+  record.
+- e8f6909: Add a `secret_manage` MCP tool (and matching CLI functions) to manage
+  a flow's secrets. List secret metadata, create, rotate, and delete secrets
+  that flow steps reference as `$env.<NAME>`. Values are write-only: encrypted
+  at rest and never returned or logged.
+
+### Patch Changes
+
+- 6a72a32: Source simulation gains a `collector` step that runs the real
+  collector enrichment and returns the fully enriched event. Transformer
+  simulation now accepts an optional raw `ingest` so request decoders like GA4
+  can be tested standalone by supplying a `url`. The `flow_simulate` MCP tool
+  accepts the new collector step and the transformer `ingest` input.
+- Updated dependencies [e8f6909]
+- Updated dependencies [76d32c1]
+- Updated dependencies [654ba38]
+- Updated dependencies [5b1a134]
+- Updated dependencies [908d6f0]
+- Updated dependencies [e8f6909]
+- Updated dependencies [b98474f]
+- Updated dependencies [59aa9e1]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [e8f6909]
+- Updated dependencies [d39a6a1]
+- Updated dependencies [9d066cc]
+- Updated dependencies [6a72a32]
+- Updated dependencies [9d066cc]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [654ba38]
+- Updated dependencies [e8f6909]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [e2a60ae]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/cli@4.2.0
+  - @walkeros/core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes

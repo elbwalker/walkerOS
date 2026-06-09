@@ -1,5 +1,49 @@
 # @walkeros/web-source-browser
 
+## 4.2.0
+
+### Minor Changes
+
+- 21ac669: Add the `data-elb_` scoped generic attribute. It carries the same
+  `key:value` properties as the blanket `data-elb-` generic, but only events
+  whose triggered element is nested below the `data-elb_` element receive them.
+  The `createTagger()` API gains a `scoped()` method and the `generate_tagging`
+  MCP tool gains a `scoped` input to produce it. Use `data-elb-` for properties
+  every trigger in an entity should carry, and `data-elb_` when only triggers
+  within a specific branch should.
+
+### Patch Changes
+
+- 5b1a134: The single-instance guard is now scoped to the window instead of the
+  module, so loading the tag more than once on the same page is inert rather
+  than re-initializing. A second load no longer re-binds DOM triggers, re-adopts
+  the event layer, or surfaces an error to the host page.
+- 776e5f9: Step examples are no longer bundled into production output. They were
+  accidentally exported from the production entry of these packages and pulled
+  into bundled JS. Examples remain available via the package `./dev` subpath for
+  simulation and testing.
+- Updated dependencies [76d32c1]
+- Updated dependencies [5b1a134]
+- Updated dependencies [908d6f0]
+- Updated dependencies [654ba38]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [d65bbde]
+- Updated dependencies [e8f6909]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [126c0f1]
+- Updated dependencies [654ba38]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/core@4.2.0
+  - @walkeros/collector@4.2.0
+  - @walkeros/web-core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes
