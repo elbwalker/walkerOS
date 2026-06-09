@@ -7,13 +7,27 @@ import type { Flow, Transformer } from '@walkeros/core';
 import {
   packageNameToVariable,
   ENV_MARKER_PREFIX,
-  validateStepEntry,
+  SECRET_MARKER_PREFIX,
   isPathStepEntry,
 } from '@walkeros/core';
 import {
   classifyStepProperties,
   containsCodeMarkers,
 } from './config-classifier.js';
+import {
+  validateComponentNames,
+  validateReference,
+  validateStoreReferences,
+} from './structural-validators.js';
+
+// Re-export the structural validators so existing import sites (and the public
+// package entry) keep resolving them from `./bundler`. The implementations live
+// in `./structural-validators` so they can run without loading esbuild.
+export {
+  validateComponentNames,
+  validateReference,
+  validateStoreReferences,
+} from './structural-validators.js';
 
 /**
  * Type guard to check if a code value is an InlineCode object.
@@ -59,37 +73,11 @@ function getFlowSection(
 }
 
 /**
- * Validates that a reference has either package XOR code, not both or neither.
- * Throws descriptive error for invalid configurations.
+ * A reference carries inline code when it is an InlineCode object or (legacy)
+ * a string. Used by the codegen step-filtering below.
  */
 function hasCodeReference(code: unknown): boolean {
   return isInlineCode(code) || typeof code === 'string';
-}
-
-function validateReference(
-  type: Flow.StepKind,
-  name: string,
-  ref: Flow.Step,
-): void {
-  if (type === 'Transformer') {
-    const r = validateStepEntry({ ...ref }, 'Transformer');
-    if (!r.ok) {
-      throw new Error(`Transformer "${name}": ${r.reason ?? 'invalid entry.'}`);
-    }
-    return;
-  }
-  // Sources / Destinations / Stores keep their existing two-rule check
-  const hasPackage = !!ref.package;
-  const hasInlineCode = isInlineCode(ref.code);
-  const hasCode = hasCodeReference(ref.code);
-  if (hasPackage && hasInlineCode) {
-    throw new Error(
-      `${type} "${name}": Cannot specify both package and code. Use one or the other.`,
-    );
-  }
-  if (!hasPackage && !hasCode) {
-    throw new Error(`${type} "${name}": Must specify either package or code.`);
-  }
 }
 
 /**
@@ -175,7 +163,7 @@ import type { CodeCacheKeyInputs } from '../../core/build-cache.js';
 
 export interface BundleStats {
   totalSize: number;
-  packages: { name: string; size: number }[];
+  packages: { name: string }[];
   buildTime: number;
   treeshakingEffective: boolean;
 }
@@ -241,9 +229,29 @@ function generateCacheKeyContent(
       tempDir: undefined,
       output: undefined,
     },
+    // The format the served artifact is emitted in, derived from `platform`
+    // (browser=iife, node=esm) rather than the declared `buildOptions.format`.
+    // Including it in the key one-time-invalidates any cache entry written by an
+    // older CLI that emitted ESM for a browser build, so a stale ESM artifact is
+    // never served. It does NOT detect a runtime divergence: because it is
+    // re-derived from `platform`, removing the `format:'iife'` line below would
+    // not change this key. The durable cross-version cache bust is the
+    // version/toolchain hash, not this field.
+    emittedFormat: resolveEmittedFormat(buildOptions),
     versionsHash,
   };
   return JSON.stringify(configForCache);
+}
+
+/**
+ * The format the served (stage-2 / wrap) artifact is emitted in, derived from
+ * platform. Browser artifacts are IIFE-wrapped so internal declarations stay
+ * private; node/server artifacts stay ESM (they rely on a `createRequire`
+ * banner and bare ESM imports). Stage-1 skeletons are always ESM and are not
+ * served, so they are not represented here.
+ */
+function resolveEmittedFormat(buildOptions: BuildOptions): 'iife' | 'esm' {
+  return buildOptions.platform === 'browser' ? 'iife' : 'esm';
 }
 
 export async function bundleCore(
@@ -482,7 +490,6 @@ export async function bundleCore(
             const packageStats = Object.entries(buildOptions.packages).map(
               ([name, pkg]) => ({
                 name: `${name}@${pkg.version || 'latest'}`,
-                size: 0, // Size estimation not available for cached builds
               }),
             );
             const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(
@@ -510,11 +517,8 @@ export async function bundleCore(
 
     // Step 4: Create split entry point (code skeleton + data payload)
     logger.debug('Creating entry point');
-    const { codeEntry, dataPayload, hasFlow } = await createEntryPoint(
-      flowSettings,
-      buildOptions,
-      packagePaths,
-    );
+    const { codeEntry, dataPayload, hasFlow, devPackages } =
+      await createEntryPoint(flowSettings, buildOptions, packagePaths);
 
     // outputPath was resolved at the top of bundleCore (alongside the stale
     // cleanup paths). Just ensure its directory exists.
@@ -530,7 +534,17 @@ export async function bundleCore(
     // dependency-version signal in `generateCacheKeyContent`). Reuse it here
     // so a transitive version bump busts both cache layers consistently.
     const codeKeyInputs: CodeCacheKeyInputs = {
-      externals: new Set(),
+      // Deploy browser skeletons (externalizeDev) externalize each `<pkg>/dev`
+      // so the lazy registry is not inlined; in-process simulate/push inline it.
+      // Record the externals only when they are actually emitted, otherwise two
+      // builds with identical entry code but different inline/external `/dev`
+      // would alias the same L2 slot and one would receive the other's bytes.
+      externals: new Set(
+        buildOptions.platform === 'browser' &&
+          buildOptions.externalizeDev === true
+          ? devPackages.map((p) => `${p}/dev`)
+          : [],
+      ),
       platform: buildOptions.platform === 'node' ? 'node' : 'browser',
       target: resolveTarget(buildOptions),
       nodeMajor: parseInt(process.versions.node.split('.')[0], 10),
@@ -570,6 +584,7 @@ export async function bundleCore(
         packagePaths,
         logger,
         expectedTopLevelPackages,
+        devPackages,
       );
 
       try {
@@ -601,6 +616,14 @@ export async function bundleCore(
       codeKeyInputs,
     );
 
+    // The skeleton is the build-once, introspectable currency every downstream
+    // consumer shares: it exports wireConfig/startFlow/__configData (+__devExports)
+    // so simulate and preview can introspect and re-wire it, while web/server
+    // deploy wrap or run it. One artifact, many targets, so do NOT collapse it into
+    // a finished bundle here. For node, step packages stay EXTERNAL on purpose so
+    // nft materializes them into a sibling node_modules/ the host resolves on disk
+    // (the only way native addons like sqlite .node files can ship); inlining here
+    // would break server simulate and native destinations.
     if (buildOptions.skipWrapper || !hasFlow) {
       // Simulation path or no-flow path: concatenate code + data (no wrapper, no stage 2 esbuild)
       const dataDeclaration = `const __configData = ${dataPayload};\nexport { __configData };`;
@@ -612,7 +635,11 @@ export async function bundleCore(
       const esmOutput = `${banner}${compiledCode}\n${dataDeclaration}`;
       await fs.writeFile(outputPath, esmOutput);
     } else {
-      // Production path: stage 2 esbuild compilation
+      // Production path: stage 2 esbuild compilation. Reached only by `cdn`
+      // (withDev:false), which emits no `__devExports` registry, so there is no
+      // `import('<pkg>/dev')` to externalize here. A future registry-bearing
+      // non-skeleton browser target would need to externalize `<pkg>/dev` on the
+      // browser branch below (gated on `externalizeDev`) to stay dev-free.
       const stage2Entry =
         (buildOptions.platform || 'node') === 'browser'
           ? generateWebEntry(stage1Path, dataPayload, {
@@ -646,6 +673,15 @@ export async function bundleCore(
 
       // Platform-specific stage 2 options
       if (buildOptions.platform === 'browser') {
+        // Emit the final browser artifact as an IIFE. The served bundle runs
+        // as a classic <script> at global scope, so an ESM body would leak its
+        // minified top-level declarations (e.g. `ga`) onto `window` and collide
+        // with globals like Google Analytics. The IIFE wraps everything in a
+        // private closure; the intentional `window.elb`/`window.walkerOS`
+        // assignments live inside the entry's own async IIFE and reference
+        // `window` explicitly, so they still run. The browser entry has zero
+        // exports, so no `globalName` is needed (one would add a window var).
+        stage2Options.format = 'iife';
         stage2Options.define = {
           'process.env.NODE_ENV': '"production"',
           global: 'globalThis',
@@ -695,6 +731,9 @@ export async function bundleCore(
     if (buildOptions.platform === 'node') {
       // Server path: trace the just-emitted bundle, copy used files into
       // `outDir/node_modules/`, write an informational sidecar package.json.
+      // This emits the sibling node_modules/ that every server host (deploy
+      // container, simulate-server) resolves the external @walkeros/* from.
+      // Load-bearing, do not remove.
       await runNftServerPath(
         outputPath,
         flowSettings,
@@ -750,27 +789,12 @@ async function collectBundleStats(
   const totalSize = stats.size;
   const buildTime = Date.now() - startTime;
 
-  // Estimate package sizes by analyzing imports in entry content
-  const packageStats = Object.entries(packages).map(([name, pkg]) => {
-    const importPattern = new RegExp(`from\\s+['"]${name}['"]`, 'g');
-    const namedImportPattern = new RegExp(
-      `import\\s+\\{[^}]*\\}\\s+from\\s+['"]${name}['"]`,
-      'g',
-    );
-    const hasImports =
-      importPattern.test(entryContent) || namedImportPattern.test(entryContent);
-
-    // Rough estimation: if package is imported, assign proportional size
-    const packagesCount = Object.keys(packages).length;
-    const estimatedSize = hasImports
-      ? Math.floor(totalSize / packagesCount)
-      : 0;
-
-    return {
-      name: `${name}@${pkg.version || 'latest'}`,
-      size: estimatedSize,
-    };
-  });
+  // Report the packages bundled. Per-package byte attribution is not available
+  // without the esbuild metafile, which this two-stage pipeline does not
+  // capture, so the breakdown is names only — never a synthesized size.
+  const packageStats = Object.entries(packages).map(([name, pkg]) => ({
+    name: `${name}@${pkg.version || 'latest'}`,
+  }));
 
   // Tree-shaking is effective if we use named imports (not wildcard imports)
   const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(entryContent);
@@ -805,6 +829,7 @@ function createEsbuildOptions(
   packagePaths: Map<string, string>,
   logger: Logger.Instance,
   stepPackageExternals: string[] = [],
+  devPackages: string[] = [],
 ): esbuild.BuildOptions {
   // Don't use aliases - they cause esbuild to bundle even external packages
   // Instead, use absWorkingDir to point to temp directory where node_modules is
@@ -813,7 +838,11 @@ function createEsbuildOptions(
   const baseOptions: esbuild.BuildOptions = {
     entryPoints: [entryPath],
     bundle: true,
-    format: 'esm' as esbuild.Format, // Always ESM — platform wrapper handles final format
+    // MUST stay ESM: the stage-1 skeleton is imported (via `await import`) for
+    // its named exports (`wireConfig`/`startFlow`/`__configData`/`__devExports`)
+    // by simulate/preview/push and the wrap step. esbuild's `iife` format
+    // silently drops exports, which would break those consumers.
+    format: 'esm' as esbuild.Format,
     platform: buildOptions.platform as esbuild.Platform,
     outfile: outputPath,
     absWorkingDir: tempDir, // Resolve modules from temp directory
@@ -842,8 +871,26 @@ function createEsbuildOptions(
       'process.env.NODE_ENV': '"production"',
       global: 'globalThis',
     };
-    // For browser bundles, let users handle Node.js built-ins as needed
-    baseOptions.external = buildOptions.external || [];
+    // For browser bundles, let users handle Node.js built-ins as needed.
+    // Externalize each `<pkg>/dev` ONLY for deploy skeletons
+    // (`externalizeDev: true`). Then the registry stays a literal
+    // `import('<pkg>/dev')` instead of inlining the /dev graph (zod schemas
+    // etc.), and the deploy wrap DCEs the unreferenced registry to zero bytes.
+    //
+    // For in-process simulate/push (`externalizeDev: false`/undefined), do NOT
+    // externalize: esbuild inlines the /dev graph back into the single ESM, so
+    // the lazy thunk resolves an already-bundled module. That is what lets the
+    // lean simulate-server (cli + core only, no sibling node_modules) resolve
+    // schemas host-free. `devPackages` is also empty for the finished IIFE
+    // (`cdn`, withDev:false), so the list is empty there regardless.
+    const devSubpathExternals =
+      buildOptions.externalizeDev === true
+        ? devPackages.map((p) => `${p}/dev`)
+        : [];
+    baseOptions.external = [
+      ...(buildOptions.external || []),
+      ...devSubpathExternals,
+    ];
   } else if (buildOptions.platform === 'node') {
     // Node builtins are always external. Step packages (sources, destinations,
     // transformers, stores resolved by pacote) are also externalized so the
@@ -851,8 +898,10 @@ function createEsbuildOptions(
     // emitted bundle and copies the actual code from `tempDir/node_modules/`
     // into the sibling `dist/node_modules/`. Without this, esbuild would
     // inline every step package's source into flow.mjs and we would ship
-    // both the inline copy and the nft-traced copy. Decision #9 in the
-    // bundler-nft-redesign plan.
+    // both the inline copy and the nft-traced copy. Keeping step packages
+    // external (not inlined) is what lets the host resolve them from the
+    // nft-traced sibling node_modules/, which is what makes server simulate
+    // and native-addon destinations work; inlining would regress both.
     const nodeExternals = getNodeExternals();
     const externalsParts = [nodeExternals, stepPackageExternals];
     if (buildOptions.external) externalsParts.push(buildOptions.external);
@@ -1068,6 +1117,10 @@ export function detectNamedImports(
 interface ImportGenerationResult {
   importStatements: string[];
   devExportEntries: string[];
+  // Packages that received a lazy `/dev` registry entry. Exposed so a later
+  // browser-build step can externalize the same `<pkg>/dev` specifiers without
+  // recomputing the set (preventing drift between the registry and externals).
+  devPackages: string[];
 }
 
 /**
@@ -1152,106 +1205,50 @@ async function generateImportStatements(
     // Examples are no longer auto-imported - simulator loads them dynamically
   }
 
-  // Generate /dev imports for packages that expose a ./dev export.
-  // Only emitted when withDev is true (i.e., skipWrapper bundles consumed by
-  // push/simulate/flow-context). Production IIFE bundles skip this entirely —
-  // otherwise the dev graph (zod schemas, etc.) leaks into walker.js because
-  // stage 2 esbuild cannot tree-shake transitive imports out of the already-
-  // concatenated stage 1 file.
-  const devExportEntries: string[] = [];
-  if (withDev) {
-    for (const packageName of usedPackages) {
-      const localPath = packagePaths.get(packageName);
-      if (!localPath) continue;
+  // Register the /dev surface for packages that expose a ./dev export as a
+  // lazy dynamic import: `'<pkg>': () => import('<pkg>/dev')`. The specifier
+  // stays a literal so a node host can resolve it and esbuild can statically
+  // analyse it. Because the registry entry is an unreferenced thunk, the
+  // deploy wrap DCEs the whole /dev graph (zod schemas, etc.) to zero bytes,
+  // while simulate/push await the thunk to pull the dev module in on demand.
+  // The same dev-package set is reused for browser-build externals via
+  // computeDevPackages, so the registry and externals can never drift apart.
+  const devPackages = withDev
+    ? await computeDevPackages(usedPackages, packagePaths)
+    : [];
+  const devExportEntries = devPackages.map(
+    (packageName) => `'${packageName}': () => import('${packageName}/dev')`,
+  );
 
-      try {
-        const pkgJsonPath = path.join(localPath, 'package.json');
-        const pkgJson = await fs.readJSON(pkgJsonPath);
-        const exports = pkgJson.exports;
-        if (exports && typeof exports === 'object' && './dev' in exports) {
-          const varName = `__dev_${packageNameToVariable(packageName)}`;
-          importStatements.push(
-            `import * as ${varName} from '${packageName}/dev';`,
-          );
-          devExportEntries.push(`'${packageName}': ${varName}`);
-        }
-      } catch {
-        // Package doesn't have a readable package.json — skip gracefully
+  return { importStatements, devExportEntries, devPackages };
+}
+
+/**
+ * Resolves which of the given packages expose a `./dev` subpath export.
+ * Single source of truth for the lazy `/dev` registry codegen and for the
+ * browser build's `/dev` externals, keeping the two in lockstep.
+ */
+export async function computeDevPackages(
+  usedPackages: Iterable<string>,
+  packagePaths: Map<string, string>,
+): Promise<string[]> {
+  const devPackages: string[] = [];
+  for (const packageName of usedPackages) {
+    const localPath = packagePaths.get(packageName);
+    if (!localPath) continue;
+
+    try {
+      const pkgJsonPath = path.join(localPath, 'package.json');
+      const pkgJson = await fs.readJSON(pkgJsonPath);
+      const exports = pkgJson.exports;
+      if (exports && typeof exports === 'object' && './dev' in exports) {
+        devPackages.push(packageName);
       }
+    } catch {
+      // Package doesn't have a readable package.json, skip gracefully
     }
   }
-
-  return { importStatements, devExportEntries };
-}
-
-const VALID_JS_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
-
-/**
- * Validates that component names are valid JavaScript identifiers.
- * The bundler generates JS where flow config keys become property names,
- * so keys like "gtag-wrapper" would cause esbuild syntax errors.
- * Catches this early with a helpful error message suggesting camelCase.
- */
-export function validateComponentNames(
-  components: Record<string, unknown>,
-  section: string,
-): void {
-  for (const name of Object.keys(components)) {
-    if (!VALID_JS_IDENTIFIER.test(name)) {
-      throw new Error(
-        `Invalid ${section} name "${name}": must be a valid JavaScript identifier (use camelCase, e.g., "${name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())}")`,
-      );
-    }
-  }
-}
-
-/**
- * Validates all $store. references point to defined stores.
- * Throws descriptive error on mismatch.
- */
-function validateStoreReferences(
-  flowSettings: Flow,
-  storeIds: Set<string>,
-): void {
-  const refs: Array<{ ref: string; location: string }> = [];
-
-  function collectRefs(obj: unknown, path: string) {
-    if (typeof obj === 'string' && obj.startsWith('$store.')) {
-      refs.push({ ref: obj.slice(7), location: path });
-      return;
-    }
-    if (obj === null || typeof obj !== 'object') return;
-    // Boundary: walker traverses arbitrary JSON. After typeof === 'object'
-    // narrowing, indexing as a Record<string, unknown> is the typed way
-    // to enumerate keys.
-    for (const [key, val] of Object.entries(obj)) {
-      collectRefs(val, `${path}.${key}`);
-    }
-  }
-
-  // Scan all component env/config values
-  const sectionMap = {
-    sources: flowSettings.sources || {},
-    destinations: flowSettings.destinations || {},
-    transformers: flowSettings.transformers || {},
-  };
-  for (const [section, components] of Object.entries(sectionMap)) {
-    for (const [id, component] of Object.entries(components)) {
-      collectRefs(component, `${section}.${id}`);
-    }
-  }
-
-  for (const { ref, location } of refs) {
-    if (!storeIds.has(ref)) {
-      const available =
-        storeIds.size > 0
-          ? `Available stores: ${Array.from(storeIds).join(', ')}`
-          : 'No stores defined';
-      throw new Error(
-        `Store reference "$store.${ref}" in ${location} — store "${ref}" not found. ${available}`,
-      );
-    }
-  }
+  return devPackages;
 }
 
 /**
@@ -1262,7 +1259,12 @@ export async function createEntryPoint(
   flowSettings: Flow,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
-): Promise<{ codeEntry: string; dataPayload: string; hasFlow: boolean }> {
+): Promise<{
+  codeEntry: string;
+  dataPayload: string;
+  hasFlow: boolean;
+  devPackages: string[];
+}> {
   // Detect packages used by all step types
   const sourcePackages = detectStepPackages(flowSettings, 'sources');
   const destinationPackages = detectStepPackages(flowSettings, 'destinations');
@@ -1293,16 +1295,17 @@ export async function createEntryPoint(
     buildOptions.withDev !== undefined
       ? buildOptions.withDev === true
       : buildOptions.skipWrapper === true;
-  const { importStatements, devExportEntries } = await generateImportStatements(
-    buildOptions.packages,
-    destinationPackages,
-    sourcePackages,
-    transformerPackages,
-    storePackages,
-    namedImports,
-    packagePaths,
-    withDev,
-  );
+  const { importStatements, devExportEntries, devPackages } =
+    await generateImportStatements(
+      buildOptions.packages,
+      destinationPackages,
+      sourcePackages,
+      transformerPackages,
+      storePackages,
+      namedImports,
+      packagePaths,
+      withDev,
+    );
 
   const importsCode = importStatements.join('\n');
   const hasFlow =
@@ -1320,6 +1323,7 @@ export async function createEntryPoint(
       codeEntry: importsCode ? `${importsCode}\n\n${userCode}` : userCode,
       dataPayload: '{}',
       hasFlow: false,
+      devPackages,
     };
   }
 
@@ -1346,7 +1350,7 @@ export async function createEntryPoint(
     ? `${importsCode}\n\n${fullModule}`
     : fullModule;
 
-  return { codeEntry, dataPayload, hasFlow: true };
+  return { codeEntry, dataPayload, hasFlow: true, devPackages };
 }
 
 interface EsbuildError {
@@ -1626,6 +1630,19 @@ ${destinationsEntries.join(',\n')}
 }
 
 /**
+ * Runtime guard emitted once into the bundle preamble. Deferred $secret
+ * references serialize to `__walkerosRequireSecret("KEY", process.env["KEY"])`;
+ * this helper throws a clear key-only error when the secret is absent or empty,
+ * instead of letting `undefined` flow downstream into a cryptic failure. It
+ * collapses missing and empty (no value oracle) and never logs or echoes the
+ * value.
+ */
+const SECRET_GUARD_HELPER = `function __walkerosRequireSecret(key, val) {
+  if (val == null || val === '') throw new Error('WalkerOS: required secret "' + key + '" is not set');
+  return val;
+}`;
+
+/**
  * Generate platform-agnostic ESM module with wireConfig(__data) and startFlow re-export.
  * This is the split variant — code skeleton receives data payload at runtime.
  */
@@ -1636,7 +1653,9 @@ export function generateSplitWireConfigModule(
 ): string {
   const codeSection = userCode ? `\n${userCode}\n` : '';
 
-  return `export function wireConfig(__data) {
+  return `${SECRET_GUARD_HELPER}
+
+export function wireConfig(__data) {
   ${storesDeclaration}
 
   const config = ${codeConfigObject};${codeSection}
@@ -1782,9 +1801,20 @@ const __configData = ${dataPayload};
  */
 export interface WrapEntryTelemetry {
   observerUrl: string;
+  /**
+   * Full deployment-scoped trace endpoint, e.g.
+   * `https://observer.example.com/trace/<deploymentId>`. Baked verbatim and
+   * polled by the browser; the bundle never constructs it from a base.
+   *
+   * Optional: when omitted, the bundle installs the observer at a fixed
+   * `level` with no polling. Suits short-lived, URL-opted-in sessions (e.g.
+   * a preview at `level: 'trace'`) where the opt-in is the URL itself and
+   * there is nothing to poll for.
+   */
+  traceUrl?: string;
   ingestToken: string;
   flowId: string;
-  level?: 'standard' | 'trace';
+  level?: 'off' | 'standard' | 'trace';
   sample?: number;
 }
 
@@ -1895,17 +1925,88 @@ export function generateWrapEntry(
 
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
-  // Telemetry block: when telemetry options are present, import the two
-  // helpers from @walkeros/core and install the observer on
-  // collector.observers AFTER startFlow returns. The bundle ships the
-  // plaintext ingest token; the operator-controlled traceUntil debug flag
-  // is resolved server-side and would be rotated via redeploy until the
-  // poll-and-update plumbing lands.
+  // Telemetry block: when telemetry options are present, import the helpers
+  // from @walkeros/core and install the observer on collector.observers AFTER
+  // startFlow returns.
+  //
+  // Two shapes, picked by whether a `traceUrl` is baked:
+  //  - POLL form (traceUrl present): the observer is wired as a SUPPLIER so the
+  //    operator's runtime trace flag reaches each emit: a module-level
+  //    `__traceUntil` is refreshed by polling the baked full `traceUrl`, and
+  //    `resolveTelemetryOptions` re-resolves the projection per emit. This lets
+  //    a deploy-time `level: 'off'` baseline be flipped to trace by the poll
+  //    without a redeploy.
+  //  - STATIC form (traceUrl omitted): a fixed-level observer with no poll,
+  //    mirroring `generateWebEntry`. The session opts in via its URL and emits
+  //    for the session's life; there is nothing to poll for.
+  const hasPoll = !!options.telemetry?.traceUrl;
   const telemetryImport = options.telemetry
-    ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
+    ? hasPoll
+      ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto, resolveTelemetryOptions as __cto_resolve } from '@walkeros/core';`
+      : `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
     : '';
+  const telemetryPoller =
+    options.telemetry && hasPoll
+      ? `
+let __traceUntil = null;
+let __tracePollInFlight = false;
+function __pollTrace() {
+  if (typeof fetch === 'undefined' || __tracePollInFlight) return;
+  __tracePollInFlight = true;
+  // Bound each poll so a stalled trace endpoint can't pin the in-flight guard
+  // forever (and stack concurrent fetches via setInterval).
+  var __ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var __t = __ctrl ? setTimeout(function () { __ctrl.abort(); }, 10000) : null;
+  fetch(${JSON.stringify(options.telemetry.traceUrl)}, {
+    headers: { Authorization: ${JSON.stringify(`Bearer ${options.telemetry.ingestToken}`)} },
+    signal: __ctrl ? __ctrl.signal : undefined,
+  })
+    .then(function (__res) {
+      if (!__res || __res.status !== 200) return;
+      return __res.json().then(function (__body) {
+        if (!__body || typeof __body !== 'object') return;
+        var __value = __body.traceUntil;
+        // Mirror the server poller: set on a non-empty string, clear on null,
+        // leave unchanged on anything else. The null path is the disable case
+        // (stop a trace early) and MUST be honored so web deployments can be
+        // turned off without waiting for the old timestamp to lapse.
+        if (typeof __value === 'string' && __value.length > 0) {
+          __traceUntil = __value;
+        } else if (__value === null) {
+          __traceUntil = null;
+        }
+      });
+    })
+    .catch(function () {})
+    .finally(function () {
+      if (__t) clearTimeout(__t);
+      __tracePollInFlight = false;
+    });
+}
+`
+      : '';
   const telemetryBlock = options.telemetry
-    ? `
+    ? hasPoll
+      ? `
+  // --- Telemetry wiring ---
+  {
+    const __emit = __cbp({
+      url: ${JSON.stringify(options.telemetry.observerUrl)},
+      token: ${JSON.stringify(options.telemetry.ingestToken)},
+    });
+    const __observer = __cto(__emit, () => __cto_resolve({
+      flowId: ${JSON.stringify(options.telemetry.flowId)},
+      observe: {
+        level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
+        sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
+      },
+      traceUntil: __traceUntil,
+    }));
+    collector.observers.add(__observer);
+    __pollTrace();
+    setInterval(__pollTrace, 15000 + Math.floor(Math.random() * 5000));
+  }`
+      : `
   // --- Telemetry wiring ---
   {
     const __emit = __cbp({
@@ -1922,7 +2023,7 @@ export function generateWrapEntry(
     : '';
 
   return `import { startFlow, wireConfig, __configData } from '${stage1Specifier}';${telemetryImport}
-
+${telemetryPoller}
 (async () => {${preflightBlock}
   const config = wireConfig(__configData);${envBlock}
   const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}
@@ -1999,6 +2100,17 @@ export function serializeWithCode(value: unknown, indent: number): string {
 
     if (value.startsWith('$code:')) {
       return value.slice(6); // Strip prefix, output raw JS
+    }
+
+    // Deferred secret markers → guarded process.env read. The secret marker is
+    // ALWAYS a whole-string value (never embedded inline), so we match the full
+    // string. We wrap the read in __walkerosRequireSecret so an absent or empty
+    // secret fails with a clear key-only error at startup instead of surfacing
+    // later as a cryptic downstream failure (e.g. GCP ADC metadata lookup). The
+    // secret VALUE is never inlined — only the env read + guard are emitted.
+    if (value.startsWith(SECRET_MARKER_PREFIX)) {
+      const name = value.slice(SECRET_MARKER_PREFIX.length);
+      return `__walkerosRequireSecret(${JSON.stringify(name)}, process.env[${JSON.stringify(name)}])`;
     }
 
     // Deferred env markers → raw process.env expressions in bundle output

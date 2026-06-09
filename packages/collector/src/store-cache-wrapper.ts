@@ -1,5 +1,10 @@
 import type { Cache, Collector, Logger, Store } from '@walkeros/core';
-import { compileMatcher, emitStep } from '@walkeros/core';
+import {
+  compileMatcher,
+  emitStep,
+  readCacheEnvelope,
+  wrapCacheEnvelope,
+} from '@walkeros/core';
 import { buildBaseState } from './observerEmit';
 
 /**
@@ -86,11 +91,23 @@ export interface WrappedStoreInstance extends Store.Instance {
  * Wrap a backing `Store.Instance` with a read-through cache layer.
  *
  * Read semantics:
- *   1. Probe the cache at `namespace:key`. Any non-undefined value is a HIT.
+ *   1. Probe the cache at `namespace:key` and interpret the stored
+ *      `{value, exp}` envelope via `readCacheEnvelope`. A live envelope is a
+ *      HIT. An expired envelope is best-effort purged and treated as a MISS.
  *   2. On MISS, delegate to `backing.get(key)`.
  *   3. If the backing returned a defined value AND a rule matches the
- *      `{ key, value }` context, populate the cache with `rule.ttl * 1000` ms.
+ *      `{ key, value }` context, populate the cache with the value wrapped in
+ *      a `{value, exp}` envelope (exp = now + `rule.ttl * 1000` ms) AND pass
+ *      the `ttl` arg so a TTL-native tier can proactively evict (dual-write).
+ *      The envelope `exp` is authoritative; the `ttl` arg is an eviction hint.
  *      Negative caching (caching `undefined`) is intentionally not supported.
+ *
+ * Multi-tier: each wrapper wraps independently. When the cache tier is itself
+ * a wrapped store, the value is enveloped once per tier (nested envelopes), and
+ * each tier strips exactly its own outer envelope on read, so the read chain
+ * unwraps as many layers as it wrapped. Nesting depth and payload grow with the
+ * number of tiers (negligible for the typical 2-3 tier chain). Each tier owns
+ * its own `exp` from its own rule, so the staleness bound is per tier.
  *
  * Write semantics (`set` / `delete`) follow the "cache is advisory" policy
  * documented in `docs/plans/2026-05-13-store-cache-design.md` (Write path and
@@ -100,7 +117,7 @@ export interface WrappedStoreInstance extends Store.Instance {
  *     of truth and its failures must surface to the caller.
  *   - Cache best-effort. After a successful backing write, attempt the cache
  *     write. A throwing cache layer is logged via `logger.warn` and swallowed
- *     so the wrapper still resolves successfully — the next read will MISS
+ *     so the wrapper still resolves successfully, the next read will MISS
  *     and re-populate. Failed cache deletes leave a stale entry that serves
  *     until TTL; the warning lets operators react.
  */
@@ -159,7 +176,7 @@ export function wrapStoreWithCache(
 
   function findMatchingRule(
     key: string,
-    value: unknown,
+    value: Store.StoreValue | undefined,
   ): CompiledStoreCacheRule | undefined {
     // Store-cache context shape is `{ key, value? }` — no `ingest`. The value
     // is omitted when the caller has not yet read from the backing (e.g.
@@ -174,7 +191,7 @@ export function wrapStoreWithCache(
   // backing keys never collide. The entry is removed in `finally` so a
   // settled (resolved or rejected) Promise never lingers — a subsequent get
   // either hits the now-populated cache or retries the backing.
-  const inFlight = new Map<string, Promise<unknown>>();
+  const inFlight = new Map<string, Promise<Store.StoreValue | undefined>>();
 
   return {
     type: backing.type,
@@ -188,13 +205,26 @@ export function wrapStoreWithCache(
       return { ...counters };
     },
 
-    async get(key: string): Promise<unknown> {
+    async get(key: string): Promise<Store.StoreValue | undefined> {
       const ns = prefixed(key);
-      const cached = await cacheStore.get(ns);
-      if (cached !== undefined) {
-        counters.hits++;
-        reportCacheStatus(key, 'hit');
-        return cached;
+      const stored = await cacheStore.get(ns);
+      const envelope = readCacheEnvelope(stored);
+      if (envelope !== undefined) {
+        if ('expired' in envelope) {
+          // Expired entry: best-effort purge from the cache tier, then fall
+          // through to the backing as a MISS. A throwing delete must not
+          // surface to the caller; a stale entry serving until the next read
+          // is acceptable.
+          try {
+            await cacheStore.delete(ns);
+          } catch (error) {
+            warnCacheFailure('delete', key, error);
+          }
+        } else {
+          counters.hits++;
+          reportCacheStatus(key, 'hit');
+          return envelope.value;
+        }
       }
 
       // Single-flight: if another caller is already fetching this key, join
@@ -218,15 +248,20 @@ export function wrapStoreWithCache(
 
           const rule = findMatchingRule(key, value);
           if (rule) {
-            // Best-effort cache populate. Mirrors the Task 8 write-path
+            // Best-effort cache populate. Mirrors the write-path
             // policy: backing has already returned, so a throwing cache layer
             // must not surface as an unhandled rejection on the shared
             // Promise that other concurrent callers are awaiting.
             try {
-              // `cache.ttl` is documented in seconds; the underlying cache
-              // store accepts ms. Multiply once at the boundary to keep the
-              // rest of the pipeline consistent with EventCache semantics.
-              await cacheStore.set(ns, value, rule.ttl * 1000);
+              // `cache.ttl` is documented in seconds; the envelope `exp` and
+              // the TTL-native eviction hint both want ms. Multiply once at the
+              // boundary to keep the rest of the pipeline consistent with
+              // EventCache semantics. Dual-write: the `{value, exp}` envelope
+              // is authoritative for expiry (every backing tier honors it),
+              // and the `ttl` arg lets a TTL-native tier (`__cache`, Redis)
+              // proactively evict.
+              const ttlMs = rule.ttl * 1000;
+              await cacheStore.set(ns, wrapCacheEnvelope(value, ttlMs), ttlMs);
               // Count the populate only after the cache write resolves so a
               // failed populate (logged below) does not inflate the counter.
               counters.populates++;
@@ -246,7 +281,11 @@ export function wrapStoreWithCache(
       return promise;
     },
 
-    async set(key: string, value: unknown, ttl?: number): Promise<void> {
+    async set(
+      key: string,
+      value: Store.StoreValue,
+      ttl?: number,
+    ): Promise<void> {
       // Count every set the moment the wrapper is entered, before any IO.
       // The counter reflects intent (how many writes the wrapper has been
       // asked to perform), independent of backing or cache success.
@@ -261,9 +300,15 @@ export function wrapStoreWithCache(
 
       // Best-effort cache populate. Wrap only the cache-side call: backing
       // errors above have already propagated, so this try/catch is scoped to
-      // the advisory layer.
+      // the advisory layer. Same dual-write as the read-path populate: store
+      // the `{value, exp}` envelope and pass the `ttl` eviction hint.
       try {
-        await cacheStore.set(prefixed(key), value, rule.ttl * 1000);
+        const ttlMs = rule.ttl * 1000;
+        await cacheStore.set(
+          prefixed(key),
+          wrapCacheEnvelope(value, ttlMs),
+          ttlMs,
+        );
       } catch (error) {
         warnCacheFailure('set', key, error);
       }

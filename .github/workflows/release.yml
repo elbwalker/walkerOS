@@ -28,7 +28,7 @@ jobs:
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
 
@@ -46,15 +46,6 @@ jobs:
 
       - name: Clean
         run: npm run clean
-
-      - name: Build
-        # Needed for test/typecheck/lint/integration. A second rebuild runs
-        # after `changeset version` so the published dist embeds the bumped
-        # __VERSION__ (see walkerOS/packages/config/tsup/index.mjs).
-        run: npx turbo run build --filter='!@walkeros/website'
-
-      - name: Test, typecheck, lint, integration
-        run: npx turbo run test typecheck lint test:integration
 
       - name: Capture changeset info
         id: changesets
@@ -99,6 +90,11 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
           echo "release_needed=$RELEASE_NEEDED" >> $GITHUB_OUTPUT
 
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Version packages (stable)
         if: inputs.release_type == 'stable release'
         run: |
@@ -110,11 +106,6 @@ jobs:
           fi
           npx changeset version
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Version packages (pre-release)
         if: inputs.release_type == 'pre-release (next)'
         run: npx changeset version --snapshot next
@@ -122,8 +113,14 @@ jobs:
       - name: Update lock file
         run: npm install --package-lock-only
 
-      - name: Rebuild packages with bumped versions
+      - name: Build
+        # Bump runs first so this single build embeds the bumped __VERSION__
+        # (see walkerOS/packages/config/tsup/index.mjs). The dist produced here
+        # is exactly what the gate below tests and what publish ships.
         run: npx turbo run build --filter='!@walkeros/website'
+
+      - name: Test, typecheck, lint, integration
+        run: npx turbo run test typecheck lint test:integration
 
       # Trusted Publishing: npm exchanges the GitHub OIDC token at publish time.
       # No NPM_TOKEN. Provenance attestations are generated automatically.
@@ -210,7 +207,7 @@ jobs:
         if:
           steps.check-flow.outputs.exists == 'false' ||
           steps.check-cli.outputs.exists == 'false'
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

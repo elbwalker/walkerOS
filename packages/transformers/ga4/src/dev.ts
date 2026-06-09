@@ -27,3 +27,4 @@ export type {
 } from './types';
 
 export * as examples from './examples';
+export { hints } from './hints';

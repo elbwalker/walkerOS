@@ -17,6 +17,10 @@ import {
   getPreview,
   createPreview,
   deletePreview,
+  listSecrets,
+  createSecret,
+  updateSecret,
+  deleteSecret,
   deploy,
   listDeployments,
   getDeploymentBySlug,
@@ -25,6 +29,7 @@ import {
   pollForToken,
   whoami,
   resolveToken,
+  resolveAppUrl,
   deleteConfig,
   feedback,
   getFeedbackPreference,
@@ -40,6 +45,10 @@ import type {
   GetPreviewOptions,
   CreatePreviewOptions,
   DeletePreviewOptions,
+  ListSecretsOptions,
+  CreateSecretOptions,
+  UpdateSecretOptions,
+  DeleteSecretOptions,
   FeedbackOptions,
 } from '@walkeros/cli';
 
@@ -143,6 +152,19 @@ export class HttpToolClient implements ToolClient {
     return deletePreview(options);
   }
 
+  async listSecrets(options: ListSecretsOptions): Promise<unknown> {
+    return listSecrets(options);
+  }
+  async createSecret(options: CreateSecretOptions): Promise<unknown> {
+    return createSecret(options);
+  }
+  async updateSecret(options: UpdateSecretOptions): Promise<unknown> {
+    return updateSecret(options);
+  }
+  async deleteSecret(options: DeleteSecretOptions): Promise<unknown> {
+    return deleteSecret(options);
+  }
+
   async deploy(options: DeployOptions): Promise<unknown> {
     return deploy(options);
   }
@@ -179,6 +201,37 @@ export class HttpToolClient implements ToolClient {
   }
   deleteConfig(): boolean {
     return deleteConfig();
+  }
+
+  /**
+   * Unauthenticated reachability probe of the app's PUBLIC `/api/health`
+   * route. Uses a plain `fetch` (no `createApiClient`, which throws when no
+   * token is set) so diagnostics works logged-out. Resolves
+   * `{ reachable: false }` only on a real network/timeout failure.
+   */
+  async checkHealth(): Promise<{
+    reachable: boolean;
+    status?: string;
+    version?: string;
+  }> {
+    try {
+      const res = await fetch(`${resolveAppUrl()}/api/health`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      // A non-2xx status still means the app is reachable; only network or
+      // timeout errors (the catch below) mark it unreachable.
+      const body: unknown = await res.json().catch(() => undefined);
+      const result: { reachable: boolean; status?: string; version?: string } =
+        { reachable: true };
+      if (body && typeof body === 'object') {
+        const record = body as Record<string, unknown>;
+        if (typeof record.status === 'string') result.status = record.status;
+        if (typeof record.version === 'string') result.version = record.version;
+      }
+      return result;
+    } catch {
+      return { reachable: false };
+    }
   }
 
   async submitFeedback(text: string, options?: FeedbackOptions): Promise<void> {

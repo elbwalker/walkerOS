@@ -36,12 +36,14 @@ export interface Types<
   E = BaseEnv,
   I = S,
   U = unknown,
+  C = unknown,
 > {
   settings: S;
   initSettings: I;
   mapping: M;
   env: E;
   setup: U;
+  credentials: C;
 }
 
 /**
@@ -53,6 +55,7 @@ export type TypesGeneric = {
   mapping: any;
   env: any;
   setup: any;
+  credentials: any;
 };
 
 /**
@@ -63,6 +66,7 @@ export type InitSettings<T extends TypesGeneric = Types> = T['initSettings'];
 export type Mapping<T extends TypesGeneric = Types> = T['mapping'];
 export type Env<T extends TypesGeneric = Types> = T['env'];
 export type SetupOptions<T extends TypesGeneric = Types> = T['setup'];
+export type Credentials<T extends TypesGeneric = Types> = T['credentials'];
 
 /**
  * Inference helper: Extract Types from Instance
@@ -90,6 +94,12 @@ export interface Config<T extends TypesGeneric = Types> {
   consent?: WalkerOS.Consent;
   /** Implementation-specific configuration passed to the init function. */
   settings?: InitSettings<T>;
+  /**
+   * Optional, strictly-typed credentials slot ($env-resolved). The package
+   * defines the shape via `Types['credentials']`. `settings.<sdk>` stays the
+   * escape hatch for raw SDK options.
+   */
+  credentials?: Credentials<T>;
   /** Global data transformation applied to all events; result passed as context.data to push. */
   data?: WalkerOSMapping.Value | WalkerOSMapping.Values;
   /** Event sections to flatten into context.data. */
@@ -140,9 +150,11 @@ export interface Config<T extends TypesGeneric = Types> {
    */
   dlqMax?: number;
   /**
-   * Per-destination batch upper bounds. Supplements the mapping-level
-   * `batch` setting on individual rules. A bare number is treated as
-   * the debounce `wait` window (legacy compat).
+   * Enables batching for ALL of this destination's events into one shared
+   * default buffer. A mapping rule's own `batch` splits that entity-action
+   * into its own buffer and overrides per field (`rule ?? config ?? default`).
+   * Batching stays off when neither is set. A bare number is treated as the
+   * debounce `wait` window.
    *
    * - `wait`: debounce window in ms; the timer resets on every push.
    * - `size`: hard count cap; flush immediately when entries reach this number. Default 1000 when batching is enabled.
@@ -171,7 +183,8 @@ export type PartialConfig<T extends TypesGeneric = Types> = Config<
     Partial<Mapping<T>> | Mapping<T>,
     Env<T>,
     InitSettings<T>,
-    SetupOptions<T>
+    SetupOptions<T>,
+    Credentials<T>
   >
 >;
 
@@ -189,7 +202,6 @@ export type Init<T extends TypesGeneric = Types> = {
   next?: Transformer.Route;
   cache?: import('./cache').Cache;
   state?: import('./state').State | import('./state').State[];
-  validate?: import('./validate').Validate;
 };
 
 export interface InitDestinations {
@@ -234,10 +246,50 @@ export type PushFn<T extends TypesGeneric = Types> = (
   context: PushContext<T>,
 ) => WalkerOS.PromiseOrValue<void | unknown>;
 
+/**
+ * Per-row outcome for a single failed batch entry.
+ *
+ * `index` is the position into the flushed batch's `entries` array (the same
+ * order `flushBatch` iterates), so the collector can route exactly that entry
+ * to the DLQ. `error` is the per-row failure carried into the DLQ pair; when
+ * omitted the collector substitutes a generic batch error.
+ */
+export interface BatchFailure {
+  index: number;
+  error?: unknown;
+}
+
+/**
+ * Partial-failure result of a `pushBatch` call.
+ *
+ * `failed` lists the entries (by index into the flushed batch's `entries`
+ * array) that did NOT succeed. Every other entry is treated as delivered.
+ */
+export interface BatchOutcome {
+  failed: BatchFailure[];
+}
+
+/**
+ * Pushes a batch of events to a destination.
+ *
+ * Return contract (backward-compatible, additive):
+ * - Resolve `void` (the historical contract): the WHOLE batch succeeded. The
+ *   collector counts every entry as delivered.
+ * - Throw / reject: the WHOLE batch failed. The collector routes every entry
+ *   to the DLQ and increments `failed` by the batch size. Unchanged.
+ * - Resolve a `BatchOutcome`: PARTIAL failure. Only the entries listed in
+ *   `outcome.failed` (by `index` into the flushed `entries` array) are routed
+ *   to the DLQ and counted as failed, each with its own `error`. The remaining
+ *   entries are counted as delivered. This lets a destination report row-level
+ *   failures without forcing already-succeeded rows onto the DLQ, which would
+ *   duplicate them on a later DLQ retry.
+ *
+ * Indices in `failed` must line up with the order of `batch.entries`.
+ */
 export type PushBatchFn<T extends TypesGeneric = Types> = (
   batch: Batch<Mapping<T>>,
   context: PushBatchContext<T>,
-) => void;
+) => WalkerOS.PromiseOrValue<void | BatchOutcome>;
 
 export type PushEvent<Mapping = unknown> = {
   event: WalkerOS.Event;
@@ -271,6 +323,12 @@ export interface Batch<Mapping> {
 export interface BatchRegistry<Mapping> {
   [mappingKey: string]: {
     batched: Batch<Mapping>;
+    /**
+     * Marks a buffer created by `config.batch` (the destination-wide default
+     * batch) rather than a mapping rule's own `batch`. The default buffer is
+     * heterogeneous, so its flush reports `rule: undefined` to consumers.
+     */
+    isDefault?: boolean;
     batchFn: () => void;
     /**
      * Force a flush of the current batch immediately. Used by shutdown

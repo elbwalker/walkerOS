@@ -1,4 +1,4 @@
-import type { DestinationWeb } from '@walkeros/web-core';
+import type { Env, SnowplowFunction } from './types';
 import { getEnv } from '@walkeros/web-core';
 
 /**
@@ -19,43 +19,33 @@ export function resetLoadedScripts(): void {
 
 export function addScript(
   collectorUrl: string,
-  env?: DestinationWeb.Env,
+  env?: Env,
   src = DEFAULT_SCRIPT_URL,
 ): void {
   // Prevent loading the same script multiple times
   if (loadedScripts.has(collectorUrl)) return;
 
-  const { document } = getEnv(env);
-  const script = (document as Document).createElement('script');
+  const { document } = getEnv<Env>(env);
+  const script = document.createElement('script');
   script.src = src;
   script.async = true;
-  (document as Document).head.appendChild(script);
+  document.head.appendChild(script);
   loadedScripts.add(collectorUrl);
 }
 
-// Snowplow function interface
-interface SnowplowFunction {
-  (...args: unknown[]): void;
-  q?: unknown[];
-}
-
-export function setup(env?: DestinationWeb.Env): SnowplowFunction | undefined {
-  const { window } = getEnv(env);
-  const w = window as unknown as {
-    snowplow?: SnowplowFunction;
-    GlobalSnowplowNamespace?: string[];
-  };
+export function setup(env?: Env): SnowplowFunction | undefined {
+  const { window } = getEnv<Env>(env);
 
   // Setup snowplow function if not exists
-  if (!w.snowplow) {
-    const sp = function (...args: unknown[]): void {
+  if (!window.snowplow) {
+    const sp: SnowplowFunction = function (...args: unknown[]): void {
       (sp.q = sp.q || []).push(args);
-    } as SnowplowFunction;
+    };
 
     sp.q = [];
-    w.snowplow = sp;
-    w.GlobalSnowplowNamespace = ['snowplow'];
+    window.snowplow = sp;
+    window.GlobalSnowplowNamespace = ['snowplow'];
   }
 
-  return w.snowplow;
+  return window.snowplow;
 }

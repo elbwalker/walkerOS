@@ -23,6 +23,10 @@ function makeCollector(observers: Set<ObserverFn>): Collector.Instance {
     on: {},
     queue: [],
     round: 0,
+    stateVersion: 0,
+    cellVersion: {},
+    delivery: new WeakMap(),
+    seenEvents: new Set(),
     session: undefined,
     status: {
       startedAt: 1000,

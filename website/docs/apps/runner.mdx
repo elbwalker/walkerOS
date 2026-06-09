@@ -202,6 +202,34 @@ All other requests are delegated to the flow's HTTP handler (e.g., Express sourc
 
 The Docker image includes a built-in `HEALTHCHECK` that polls `/health` every 30 seconds with a 30-second start period.
 
+## Observability and runtime tracing
+
+A flow's baseline observability is set by the `flow.<name>.config.observe` block:
+
+| Level | What the runtime emits |
+|-------|------------------------|
+| `off` | No baseline records are emitted. In a managed deployment the observer and trace poll stay wired, so runtime trace can still elevate to `trace`; a self-hosted bundle built with no telemetry option makes no fetches at all. |
+| `standard` (default) | Structural FlowState records, without inbound or outbound event payloads. |
+| `trace` | Full payloads on every hop (inbound and outbound), sample rate `1`. |
+
+When `observe` is omitted, managed deployments default to `standard`.
+
+### Activating trace at runtime (no redeploy)
+
+Trace can be turned on and off for a running deployment without rebuilding or redeploying. The mechanism is a poll, not the heartbeat:
+
+1. The deployment carries a trace window timestamp (`traceUntil`).
+2. The observer exposes `GET /trace/:deploymentId` (authenticated with the ingest token), returning `{ "traceUntil": "<ISO timestamp>" | null }`.
+3. Both the server runtime (`@walkeros/cli run`) and the deployed browser bundle poll that endpoint about every 15 seconds and feed the returned value into `resolveTelemetryOptions({ traceUntil })` in `@walkeros/core`.
+
+The resolver applies the value per emit:
+
+- A `traceUntil` that parses to a **future** ISO timestamp forces `level: trace` with full inbound and outbound payloads and `sample: 1`, overriding the flow's `observe` block.
+- A `null` or **past** value reverts to the flow's `observe` baseline.
+- The window self-expires once the timestamp passes, so trace stops on its own with no further action.
+
+Only a `200` with a parseable body changes the active trace state. A network error, a non-200, or an unparseable response leaves the current window untouched, so a transient observer outage never silently disables (or enables) tracing.
+
 <details>
 <summary>Docker Compose examples</summary>
 

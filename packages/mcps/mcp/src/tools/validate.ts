@@ -4,7 +4,6 @@ import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { ValidateOutputShape } from '../schemas/output.js';
-import { wrapUserData } from '../user-data.js';
 
 import type { ToolSpec } from '../tool-spec.js';
 
@@ -49,20 +48,6 @@ function detectDeprecatedStorePackages(
     }
   }
   return errors;
-}
-
-function wrapIssueMessages(result: ValidateResult): ValidateResult {
-  return {
-    ...result,
-    errors: result.errors.map((e) => ({
-      ...e,
-      message: wrapUserData(e.message),
-    })),
-    warnings: result.warnings.map((w) => ({
-      ...w,
-      message: wrapUserData(w.message),
-    })),
-  };
 }
 
 const TITLE = 'Validate Flow';
@@ -143,7 +128,9 @@ async function flowValidateHandlerBody(input: unknown) {
             'Read walkeros://reference/flow-schema for correct structure',
           ],
         };
-    return mcpResult(wrapIssueMessages(augmented), hints);
+    // Validation `message` and `path` are tool-generated, not echoed user
+    // input — both stay literal, never wrapped in <user_data>.
+    return mcpResult(augmented, hints);
   } catch (error) {
     return mcpError(
       error,

@@ -608,37 +608,123 @@ describe('validateFlow', () => {
 
       expect(result.valid).toBe(true);
     });
+  });
 
-    it('warns about contract compliance', () => {
-      const result = validateFlow({
-        version: 4,
-        contract: {
-          default: {
-            events: {
-              page: {
-                view: {
+  describe('contract compliance (example vs resolved contract)', () => {
+    const contractRequiringTotal = {
+      default: {
+        events: {
+          order: {
+            complete: {
+              type: 'object',
+              properties: {
+                data: {
                   type: 'object',
-                  properties: { title: { type: 'string' } },
+                  required: ['total'],
+                  properties: { total: { type: 'number' } },
                 },
               },
             },
           },
         },
+      },
+    };
+
+    it('warns when a destination example violates the contract (non-strict)', () => {
+      const result = validateFlow({
+        version: 4,
+        contract: contractRequiringTotal,
         flows: {
           default: {
             config: { platform: 'web' },
             destinations: {
-              gtag: {
-                package: '@walkeros/web-destination-gtag',
+              api: {
+                package: '@walkeros/web-destination-api',
                 examples: {
-                  pageview: {
+                  order: {
                     in: {
-                      name: 'page view',
-                      entity: 'page',
-                      action: 'view',
-                      data: { title: 'Home' },
+                      name: 'order complete',
+                      entity: 'order',
+                      action: 'complete',
+                      data: { id: 'A1' }, // missing required `total`
                     },
-                    out: ['event', 'page_view'],
+                    out: ['event', 'purchase'],
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Non-strict: violation is a warning, validation stays valid.
+      expect(result.valid).toBe(true);
+      expect(result.warnings).toContainEqual(
+        expect.objectContaining({
+          path: 'destination.api.examples.order.in',
+          message: expect.stringContaining('violates contract'),
+        }),
+      );
+    });
+
+    it('errors when a destination example violates the contract (strict)', () => {
+      const result = validateFlow(
+        {
+          version: 4,
+          contract: contractRequiringTotal,
+          flows: {
+            default: {
+              config: { platform: 'web' },
+              destinations: {
+                api: {
+                  package: '@walkeros/web-destination-api',
+                  examples: {
+                    order: {
+                      in: {
+                        name: 'order complete',
+                        entity: 'order',
+                        action: 'complete',
+                        data: { id: 'A1' },
+                      },
+                      out: ['event', 'purchase'],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        { strict: true },
+      );
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          path: 'destination.api.examples.order.in',
+          code: 'CONTRACT_VIOLATION',
+        }),
+      );
+    });
+
+    it('does not flag a compliant example', () => {
+      const result = validateFlow({
+        version: 4,
+        contract: contractRequiringTotal,
+        flows: {
+          default: {
+            config: { platform: 'web' },
+            destinations: {
+              api: {
+                package: '@walkeros/web-destination-api',
+                examples: {
+                  order: {
+                    in: {
+                      name: 'order complete',
+                      entity: 'order',
+                      action: 'complete',
+                      data: { total: 9.99 },
+                    },
+                    out: ['event', 'purchase'],
                   },
                 },
               },
@@ -648,12 +734,60 @@ describe('validateFlow', () => {
       });
 
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContainEqual(
-        expect.objectContaining({
-          path: 'destination.gtag.examples.pageview',
-          message: expect.stringContaining('contract'),
-        }),
+      expect(
+        result.warnings.some((w) => w.path.includes('destination.api')),
+      ).toBe(false);
+      expect(result.errors.some((e) => e.code === 'CONTRACT_VIOLATION')).toBe(
+        false,
       );
+    });
+
+    const uncoveredEventFlow = {
+      version: 4,
+      contract: contractRequiringTotal,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            api: {
+              package: '@walkeros/web-destination-api',
+              examples: {
+                page: {
+                  in: {
+                    name: 'page view',
+                    entity: 'page',
+                    action: 'view',
+                    data: { title: 'Home' },
+                  },
+                  out: ['event', 'page_view'],
+                },
+              },
+            },
+          },
+        },
+      },
+    } as const;
+
+    it('produces no diagnostic when an example matches no contract entry', () => {
+      const result = validateFlow(uncoveredEventFlow);
+
+      expect(result.valid).toBe(true);
+      expect(
+        result.warnings.some((w) => w.path.includes('destination.api')),
+      ).toBe(false);
+      expect(result.errors.some((e) => e.code === 'CONTRACT_VIOLATION')).toBe(
+        false,
+      );
+    });
+
+    it('does not fail --strict on an uncovered event type', () => {
+      const result = validateFlow(uncoveredEventFlow, { strict: true });
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+      expect(
+        result.warnings.some((w) => w.path.includes('destination.api')),
+      ).toBe(false);
     });
   });
 });

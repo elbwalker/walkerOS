@@ -18,7 +18,7 @@ const CredentialsSchema = z.object({
 
 export const SettingsSchema = z.object({
   credentials: CredentialsSchema.optional().describe(
-    'Service account credentials (client_email + private_key). Recommended for serverless environments.',
+    'Service account credentials (client_email + private_key). Recommended for serverless environments. (deprecated: use config.credentials)',
   ),
   keyFilename: z
     .string()

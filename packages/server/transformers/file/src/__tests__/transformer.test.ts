@@ -9,7 +9,7 @@ import { transformerFile } from '../transformer';
 import type { FileSettings, Types } from '../types';
 
 function createMockStore(): Store.Instance {
-  const data = new Map<string, unknown>();
+  const data = new Map<string, Store.StoreValue>();
   return {
     type: 'mock',
     config: {},

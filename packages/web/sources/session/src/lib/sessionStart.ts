@@ -2,7 +2,7 @@ import type { Collector, WalkerOS, On, ClickIdEntry } from '@walkeros/core';
 import type { SessionStorageConfig } from './sessionStorage';
 import { sessionStorage } from './sessionStorage';
 import { sessionWindow } from './sessionWindow';
-import { getGrantedConsent, isArray, isDefined } from '@walkeros/core';
+import { getGrantedConsent, isArray } from '@walkeros/core';
 
 export interface SessionConfig extends SessionStorageConfig {
   clickIds?: ClickIdEntry[];
@@ -60,21 +60,8 @@ function onConsentFn(
   config: SessionConfig,
   cb?: SessionCallback | false,
 ): On.ConsentFn {
-  // Track the last processed round to prevent duplicate processing
-  let lastProcessedRound: number | undefined;
-
   const func: On.ConsentFn = (consent, context) => {
     const collector = context.collector;
-
-    // Skip if we've already processed this round
-    if (
-      isDefined(lastProcessedRound) &&
-      lastProcessedRound === collector?.round
-    )
-      return;
-
-    // Remember this round has been processed
-    lastProcessedRound = collector?.round;
 
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 

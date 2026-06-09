@@ -29,26 +29,39 @@ export const destinationAPI: Destination = {
     const { settings } = config;
     const { url, transform } = settings || {};
 
+    if (!url) {
+      logger.throw('Config settings url missing');
+      return;
+    }
+
     const eventData = isDefined(data) ? data : event;
     // Transform returns body directly, otherwise stringify
     const body = transform
       ? transform(eventData, config, rule)
       : JSON.stringify(eventData);
 
-    send(body, settings as Settings, env.sendWeb || sendWeb);
+    send(body, { ...settings, url }, env.sendWeb || sendWeb);
   },
 
-  pushBatch(batch, { config, rule, env }) {
-    const settings = config.settings as Settings;
-    const { transform } = settings;
-    const items = batch.data.length ? batch.data : batch.events;
+  pushBatch(batch, { config, rule, env, logger }) {
+    const { settings } = config;
+    const { url, transform } = settings || {};
+
+    if (!url) {
+      logger.throw('Config settings url missing');
+      return;
+    }
+
+    const items = batch.entries.map((e) =>
+      isDefined(e.data) ? e.data : e.event,
+    );
 
     // Apply transform to each item if defined, then stringify array
     const payload = transform
       ? items.map((item) => transform(item, config, rule))
       : items;
 
-    send(JSON.stringify(payload), settings, env.sendWeb || sendWeb);
+    send(JSON.stringify(payload), { ...settings, url }, env.sendWeb || sendWeb);
   },
 };
 

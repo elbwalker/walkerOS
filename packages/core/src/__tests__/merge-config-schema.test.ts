@@ -17,10 +17,13 @@ interface MergedSchema {
     mapping?: unknown;
     data?: unknown;
     env?: unknown;
+    id?: unknown;
+    setup?: unknown;
     onError?: unknown;
     onLog?: unknown;
     primary?: unknown;
     settings?: SettingsSchema;
+    credentials?: SettingsSchema;
   };
 }
 
@@ -131,14 +134,77 @@ describe('mergeConfigSchema', () => {
     expect(props?.consent).toBeUndefined();
   });
 
-  it('should handle store type', () => {
+  it('should merge store base config (not settings-only)', () => {
     const merged = asMergedSchema(mergeConfigSchema('store', {}));
     const props = merged.properties;
 
+    // Store now has a real base schema: the full store config fields appear,
+    // not just settings.
     expect(props?.settings).toBeDefined();
+    expect(props?.id).toBeDefined();
+    expect(props?.logger).toBeDefined();
+    expect(props?.setup).toBeDefined();
+
+    // Runtime-only fields excluded (env is stripped like for source/destination)
+    expect(props?.env).toBeUndefined();
+
+    // Non-store fields absent
     expect(props?.ingest).toBeUndefined();
     expect(props?.queue).toBeUndefined();
     expect(props?.consent).toBeUndefined();
+  });
+
+  it('overrides store props.credentials with the package shape (not a $ref)', () => {
+    const packageSettings = {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      type: 'object',
+      properties: { spreadsheetId: { type: 'string' } },
+      additionalProperties: false,
+    };
+    const packageCredentials = {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      type: 'object',
+      properties: {
+        client_email: { type: 'string' },
+        private_key: { type: 'string' },
+      },
+      additionalProperties: false,
+    };
+
+    const merged = asMergedSchema(
+      mergeConfigSchema('store', {
+        settings: packageSettings,
+        credentials: packageCredentials,
+      }),
+    );
+    const credentials = merged.properties?.credentials;
+
+    // Merged credentials are the package object shape, with $schema stripped —
+    // not the loose $ref/placeholder from the base store schema.
+    expect(credentials?.type).toBe('object');
+    expect(credentials?.$schema).toBeUndefined();
+    expect(credentials?.properties?.client_email).toBeDefined();
+  });
+
+  it('overrides destination props.credentials with the package shape (not a $ref)', () => {
+    const packageCredentials = {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      type: 'object',
+      properties: {
+        client_email: { type: 'string' },
+        private_key: { type: 'string' },
+      },
+      additionalProperties: false,
+    };
+
+    const merged = asMergedSchema(
+      mergeConfigSchema('destination', { credentials: packageCredentials }),
+    );
+    const credentials = merged.properties?.credentials;
+
+    expect(credentials?.type).toBe('object');
+    expect(credentials?.$schema).toBeUndefined();
+    expect(credentials?.properties?.client_email).toBeDefined();
   });
 });
 

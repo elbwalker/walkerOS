@@ -1,43 +1,44 @@
-import type { WalkerOS, Destination as CoreDestination } from '@walkeros/core';
+import type {
+  Mapping as WalkerOSMapping,
+  Destination as CoreDestination,
+} from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
+
+/**
+ * Declare the vendor's SDK global so `window.vendorSdk` is typed everywhere
+ * without casting. Mirror your vendor's real call signature.
+ */
+declare global {
+  interface Window {
+    vendorSdk?: VendorSdk & { q?: IArguments[] };
+  }
+}
+
+export type VendorSdk = (method: string, ...args: unknown[]) => void;
 
 /**
  * Type definitions for a simple destination.
  * Customize Settings for your vendor's requirements.
  */
-
-/**
- * Declare the vendor SDK on `Window` as OPTIONAL via `declare global`.
- * This makes `window.vendorSdk` typed and cast-free at the access site.
- * Only declare the methods this destination actually calls.
- */
-declare global {
-  interface Window {
-    vendorSdk?: VendorSdk;
-  }
-}
-
-export interface VendorSdk {
-  (method: string, name: string, params?: WalkerOS.AnyObject): void;
-}
-
 export interface Settings {
   apiKey?: string;
   // Add vendor-specific settings
 }
 
+// InitSettings: user input (all optional)
 export type InitSettings = Partial<Settings>;
 
 export interface Mapping {}
 
 /**
- * Narrow the destination Env so `env.window?.vendorSdk` is typed concretely.
- * Extending `DestinationWeb.Env` keeps the rest of the env contract intact and
- * threads this concrete type through the init/push context (see Types below).
+ * Narrow the destination's environment to the globals it touches. The SDK
+ * global is optional because `init` installs it when missing. Because
+ * `getEnv<Env>(env)` returns this narrowed shape intersected with the DOM
+ * globals, no `window`/`document` cast is ever needed in index.ts.
  */
 export interface Env extends DestinationWeb.Env {
-  window?: {
-    vendorSdk?: VendorSdk;
+  window: {
+    vendorSdk?: VendorSdk & { q?: IArguments[] };
   };
 }
 
@@ -45,3 +46,6 @@ export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
 
 export type Destination = DestinationWeb.Destination<Types>;
 export type Config = DestinationWeb.Config<Types>;
+
+export type Rule = WalkerOSMapping.Rule<Mapping>;
+export type Rules = WalkerOSMapping.Rules<Rule>;

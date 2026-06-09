@@ -22,6 +22,17 @@ whether reads hit a memory cache, a Redis tier, or the underlying API.
 **Core principle:** the cache is advisory. Backing is the source of truth.
 Failed cache operations degrade performance, never correctness.
 
+**TTL is owned by the cache layer, not the store.** The store persists
+structured values; the cache wrapper manages expiry via the per-rule `ttl`. An
+expired entry is treated as a miss and re-fetched from the backing. Caching
+works over any structured backing.
+
+A store's byte-native `file` mode (`config.file: true`) is for serving raw
+assets byte-exact, not for caching. The cache wraps structured stores, so
+`flow_validate` warns when a store sets both `file: true` and `cache`. Drop one:
+serve bytes with `file: true` and no cache, or cache a structured store with no
+`file`.
+
 ## When to use this skill
 
 - A transformer reads the same key many times across events (sessions, user
@@ -44,10 +55,10 @@ in a session share the same key.
     "sessions": {
       "package": "@walkeros/server-store-sheets",
       "config": {
+        "credentials": "$var.sheetsCredentials",
         "settings": {
           "id": "1AbC...",
-          "sheet": "Sessions",
-          "credentials": "$var.sheetsCredentials"
+          "sheet": "Sessions"
         }
       },
       "cache": { "rules": [{ "ttl": 300 }] }

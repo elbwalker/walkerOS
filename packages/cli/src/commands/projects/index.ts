@@ -2,6 +2,10 @@ import { createApiClient } from '../../core/api-client.js';
 import { handleCliError } from '../../core/api-error.js';
 import { requireProjectId } from '../../core/auth.js';
 import { writeResult } from '../../core/output.js';
+import {
+  getDefaultProject,
+  clearDefaultProject,
+} from '../../lib/config-file.js';
 import type { GlobalOptions } from '../../types/global.js';
 
 // === Programmatic API ===
@@ -63,6 +67,10 @@ export async function deleteProject(options: { projectId?: string } = {}) {
   });
   if (error)
     throw new Error(error.error?.message || 'Failed to delete project');
+  // Drop a now-stale default. Compare against the resolved `id`, not
+  // `options.projectId`, so deleting the default with no explicit id (resolved
+  // via requireProjectId()) still clears it.
+  if (getDefaultProject() === id) clearDefaultProject();
   return data ?? { success: true };
 }
 

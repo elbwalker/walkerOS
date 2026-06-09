@@ -16,8 +16,8 @@ Every store implements four operations:
   code={`interface Store.Instance {
   type: string;
   config: Store.Config;
-  get(key: string): T | undefined | Promise<T | undefined>;
-  set(key: string, value: T, ttl?: number): void | Promise<void>;
+  get(key: string): StoreValue | undefined | Promise<StoreValue | undefined>;
+  set(key: string, value: StoreValue, ttl?: number): void | Promise<void>;
   delete(key: string): void | Promise<void>;
   destroy?(): void | Promise<void>;
 }`}
@@ -25,6 +25,8 @@ Every store implements four operations:
 />
 
 Stores can be synchronous or asynchronous. The interface supports both.
+
+Stores hold one canonical value type: structured data (`StoreValue`), with binary (`Uint8Array`) as a first-class leaf. A shared core codec serializes that value to and from each backing. By default a store is a structured key-value store. Set `file: true` on a byte-native backend (filesystem, S3, GCS) to make it persist raw bytes byte-exact instead, the mode for serving assets such as walker.js. The Sheets store is structured-only and rejects `file: true`.
 
 ## Available implementations
 

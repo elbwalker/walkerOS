@@ -1,5 +1,9 @@
 import { requireProjectId } from '../../../core/auth.js';
 import {
+  getDefaultProject,
+  clearDefaultProject,
+} from '../../../lib/config-file.js';
+import {
   listProjects,
   getProject,
   createProject,
@@ -13,6 +17,14 @@ jest.mock('../../../core/auth.js', () => ({
   ...jest.requireActual('../../../core/auth.js'),
   requireProjectId: jest.fn().mockReturnValue('proj_default'),
 }));
+jest.mock('../../../lib/config-file.js', () => ({
+  ...jest.requireActual('../../../lib/config-file.js'),
+  getDefaultProject: jest.fn().mockReturnValue(null),
+  clearDefaultProject: jest.fn(),
+}));
+
+const mockGetDefaultProject = jest.mocked(getDefaultProject);
+const mockClearDefaultProject = jest.mocked(clearDefaultProject);
 
 const {
   GET: mockGet,
@@ -108,6 +120,37 @@ describe('projects', () => {
         params: { path: { projectId: 'proj_123' } },
       });
       expect(result).toEqual({ success: true });
+    });
+
+    it('clears the default when deleting it via an explicit projectId', async () => {
+      mockDelete.mockResolvedValue({ data: undefined });
+      mockGetDefaultProject.mockReturnValue('proj_123');
+
+      await deleteProject({ projectId: 'proj_123' });
+
+      expect(mockClearDefaultProject).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears the default when deleting it via requireProjectId fallback', async () => {
+      mockDelete.mockResolvedValue({ data: undefined });
+      // No explicit projectId: resolved via requireProjectId() => 'proj_default'.
+      mockGetDefaultProject.mockReturnValue('proj_default');
+
+      await deleteProject();
+
+      expect(mockDelete).toHaveBeenCalledWith('/api/projects/{projectId}', {
+        params: { path: { projectId: 'proj_default' } },
+      });
+      expect(mockClearDefaultProject).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the default intact when deleting a non-default project', async () => {
+      mockDelete.mockResolvedValue({ data: undefined });
+      mockGetDefaultProject.mockReturnValue('proj_default');
+
+      await deleteProject({ projectId: 'proj_other' });
+
+      expect(mockClearDefaultProject).not.toHaveBeenCalled();
     });
   });
 });

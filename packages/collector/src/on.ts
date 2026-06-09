@@ -1,10 +1,48 @@
-import type { Collector, On, WalkerOS, Destination } from '@walkeros/core';
+import type {
+  Collector,
+  On,
+  WalkerOS,
+  Destination,
+  Source,
+} from '@walkeros/core';
 import { isArray, FatalError } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
 import { mergeEnvironments } from './destination';
-import { activatePending } from './pending';
+import { reconcilePending } from './pending';
 import { flushSourceQueueOn, isSourceStarted } from './source';
+
+/**
+ * Type guard: is `value` a genuine collector instance? A real collector ALWAYS
+ * carries a `.logger` with a `.scope` function (see `collector.ts`, which
+ * assigns `logger: createLogger(...)` unconditionally; `createLogger` never
+ * returns undefined). So a value that fails this check can ONLY be a
+ * foreign/non-collector caller; it can never be a real internal dispatch.
+ * Cast-free: narrows via `typeof`/`in` only.
+ */
+function isCollectorInstance(value: unknown): value is Collector.Instance {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('logger' in value)) return false;
+  const logger = value.logger;
+  if (typeof logger !== 'object' || logger === null) return false;
+  return 'scope' in logger && typeof logger.scope === 'function';
+}
+
+/**
+ * One-time, logger-less warning for a foreign dispatch. There is no collector
+ * (hence no scoped logger) to use, so fall back to `console.warn`, guarded for
+ * environments without a console, and fire at most once total to avoid spamming
+ * a host page that may be calling a leaked global repeatedly.
+ */
+let warnedForeignDispatch = false;
+function warnForeignDispatch(): void {
+  if (warnedForeignDispatch) return;
+  warnedForeignDispatch = true;
+  if (typeof console !== 'undefined' && typeof console.warn === 'function')
+    console.warn(
+      'walkerOS: ignored an on-dispatch call with a non-collector argument',
+    );
+}
 
 type OnCallbackKind =
   | 'destination'
@@ -41,6 +79,240 @@ function logOnCallbackError(
 }
 
 /**
+ * The reactive state cells: the only commands that bump `collector.stateVersion`
+ * and carry the per-subscriber exactly-once + `allowed` gate. Single source of
+ * truth for "which types are state cells" — every list/membership check derives
+ * from here, so adding a cell is a one-line change (no silently-missed site).
+ */
+const STATE_CELLS: readonly On.Types[] = [
+  Const.Commands.Consent,
+  Const.Commands.User,
+  Const.Commands.Globals,
+  Const.Commands.Custom,
+];
+
+/**
+ * State-delivery event types: the reactive-state commands that bump
+ * `collector.stateVersion` (see handle.ts). These are the only deliveries
+ * subject to the per-subscriber high-water-mark + `allowed` gate. Lifecycle
+ * types (ready/run/session) and non-reactive config keep their own gating
+ * (onReady/onRun check `allowed`, onSession checks `session`).
+ */
+export function isStateDelivery(type: On.Types): boolean {
+  return STATE_CELLS.includes(type);
+}
+
+/**
+ * Is a recorded state CELL present (non-empty)? The single source of truth for
+ * "cell X has a value", shared by `isRequireSatisfied` (require gating) and
+ * `redeliverStateAtRun` (run-barrier re-delivery) so the presence semantics
+ * never drift between the two. PRESENCE, not grant: a denied consent
+ * (`{marketing:false}`) counts as present. Non-cell types return `false` here;
+ * their satisfaction (session/run/ready/arbitrary) is handled by the callers.
+ *
+ * Note: `globals` is seeded from `config.globalsStatic` at construction, so it
+ * reads present whenever a static global exists, before any `command('globals')`
+ * fires. That is intentional and presence-based.
+ */
+export function isStatePresent(
+  collector: Collector.Instance,
+  type: On.Types,
+): boolean {
+  switch (type) {
+    case Const.Commands.Consent:
+      return Object.keys(collector.consent).length > 0;
+    case Const.Commands.User:
+      return Object.keys(collector.user).length > 0;
+    case Const.Commands.Globals:
+      return Object.keys(collector.globals).length > 0;
+    case Const.Commands.Custom:
+      return Object.keys(collector.custom).length > 0;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Predicate: is a `require` entry satisfied by the collector's CURRENT recorded
+ * state? This is the level-not-edge core of order-independent activation: a
+ * step's gate is checked against the present state, not against whether the
+ * required type fired before or after the step registered.
+ *
+ * Cell-backed types defer to `isStatePresent` (presence, not grant — the
+ * destination send-gate `getGrantedConsent` remains a separate concern).
+ * `run`/`ready` map to `allowed`. Any other type (including `session`) is
+ * satisfied once it has been broadcast (recorded in `seenEvents`), which also
+ * recovers a broadcast that fired before the requiring step registered.
+ *
+ * `session` deliberately uses the `seenEvents` path, not a cell check:
+ * `collector.session` is vestigial (never written), so gating on it would park
+ * a `require:["session"]` step forever. The session source signals via
+ * `command('session', …)`, which records `session` in `seenEvents`, so this
+ * keeps `session` order-independent like every other type.
+ */
+export function isRequireSatisfied(
+  collector: Collector.Instance,
+  type: On.Types,
+): boolean {
+  switch (type) {
+    case Const.Commands.Consent:
+    case Const.Commands.User:
+    case Const.Commands.Globals:
+    case Const.Commands.Custom:
+      return isStatePresent(collector, type);
+    case Const.Commands.Run:
+    case Const.Commands.Ready:
+      return collector.allowed === true;
+    default:
+      return collector.seenEvents.has(String(type));
+  }
+}
+
+/**
+ * Read a subscriber's high-water mark FOR A CELL. A subscriber that has never
+ * been delivered that cell has no entry; we read that as the sentinel -1
+ * ("-infinity"). Since `stateVersion` starts at 0, the sentinel makes
+ * registration catch-up fire (`stateVersion(0) > -1`) even when no version bump
+ * has occurred yet.
+ *
+ * Marks are per `(subscriber, cell-type)`: a subscriber owed two distinct cells
+ * at the same `stateVersion` must receive both, so each cell carries its own
+ * mark. Subscriber identity keys are objects: a `ConsentRule` object (marked per
+ * rule-OBJECT, coarser than per-key but sufficient for single-grant
+ * exactly-once), a generic-fn, or a source instance.
+ */
+function getMark(
+  collector: Collector.Instance,
+  subscriber: object,
+  type: On.Types,
+): number {
+  const marks = collector.delivery.get(subscriber);
+  const mark = marks?.[String(type)];
+  return mark === undefined ? -1 : mark;
+}
+
+/**
+ * The version at which a CELL last changed. A single global `stateVersion`
+ * cannot gate per-cell delivery: a later bump to cell B would make an
+ * already-delivered cell A look stale. `cellVersion[type]` advances only when
+ * that cell changes, so each cell's freshness is independent. A cell never
+ * mutated via a command (e.g. `globalsStatic` seeded at construction) reads 0,
+ * the construction baseline, so it still delivers once at the run barrier.
+ */
+function cellVersionOf(collector: Collector.Instance, type: On.Types): number {
+  return collector.cellVersion[String(type)] ?? 0;
+}
+
+/**
+ * Advance a subscriber's mark for a cell to that cell's current version after
+ * an invocation. Only the delivered cell's mark moves; other cells stay owed.
+ */
+export function setMark(
+  collector: Collector.Instance,
+  subscriber: object,
+  type: On.Types,
+): void {
+  let marks = collector.delivery.get(subscriber);
+  if (!marks) {
+    marks = {};
+    collector.delivery.set(subscriber, marks);
+  }
+  marks[String(type)] = cellVersionOf(collector, type);
+}
+
+/**
+ * A subscriber is invoked for a state delivery iff that CELL has advanced past
+ * its per-cell mark AND the collector is allowed. While `!allowed`, deliveries
+ * are deferred (not fired, mark not advanced) so the subscriber stays "owed".
+ */
+export function shouldDeliver(
+  collector: Collector.Instance,
+  subscriber: object,
+  type: On.Types,
+): boolean {
+  return (
+    collector.allowed &&
+    cellVersionOf(collector, type) > getMark(collector, subscriber, type)
+  );
+}
+
+/**
+ * Bounded recursion guard. A state-delivery callback may emit a new state
+ * command, re-entering the cascade. A cyclic cascade (A reacts to user by
+ * emitting consent, B reacts to consent by emitting user, with ever-changing
+ * values that keep bumping `stateVersion`) would recurse until stack overflow.
+ *
+ * This is a terminate-and-log bound, NOT a fixpoint: when a single
+ * `(subscriber, cell-type)` pair would be delivered more than
+ * `MAX_DELIVERY_REVISIONS` times within ONE top-level command's cascade, the
+ * pair stops delivering and a single non-convergence error is logged. State is
+ * left at its last recorded value (no rollback); the outer command finishes and
+ * flushes once. Legitimate wide fan-out does not trip: only the SAME
+ * `(subscriber, cell-type)` revisited past the bound bails.
+ */
+const MAX_DELIVERY_REVISIONS = 8;
+
+/**
+ * Open the cascade-tracking structure for the OUTERMOST top-level state command
+ * and return a teardown that clears it. Nested commands emitted by reacting
+ * callbacks find `collector.cascade` already set and reuse it (teardown is a
+ * no-op for them), so the counters are scoped to the originating command and
+ * reset when it returns. Re-entrancy is detected by the presence of
+ * `collector.cascade`.
+ *
+ * Assumes top-level state commands run serially on a given collector;
+ * concurrent overlapping state commands on one shared collector are not
+ * supported (web is serial; the server per-request path is event push, not
+ * state commands).
+ */
+export function enterCascade(collector: Collector.Instance): () => void {
+  if (collector.cascade) return () => undefined;
+  collector.cascade = { counts: new WeakMap() };
+  return () => {
+    collector.cascade = undefined;
+  };
+}
+
+/**
+ * Check-and-increment the per-`(subscriber, cell-type)` delivery count for the
+ * current cascade. Returns `true` when the delivery is allowed, `false` when the
+ * pair has exceeded `MAX_DELIVERY_REVISIONS` (the caller must then skip the
+ * delivery). On the single bailing transition, logs the non-convergence error
+ * once per pair. Outside a cascade (no `collector.cascade`) it always allows.
+ *
+ * `subscriber` is the identity object (an `on()` rule, generic-fn, or source
+ * instance); `type` is the cell type (consent/user/globals/custom).
+ */
+function cascadeAllow(
+  collector: Collector.Instance,
+  subscriber: object,
+  type: On.Types,
+): boolean {
+  const cascade = collector.cascade;
+  if (!cascade) return true;
+
+  let byType = cascade.counts.get(subscriber);
+  if (!byType) {
+    byType = {};
+    cascade.counts.set(subscriber, byType);
+  }
+
+  const key = String(type);
+  const next = (byType[key] || 0) + 1;
+  byType[key] = next;
+
+  if (next <= MAX_DELIVERY_REVISIONS) return true;
+
+  // Past the bound: skip the delivery. Log exactly once per `(subscriber,
+  // cell-type)`: the count crosses `MAX + 1` exactly once, so logging on that
+  // single transition avoids spam without a separate bail flag.
+  if (next === MAX_DELIVERY_REVISIONS + 1)
+    collector.logger.error('state delivery did not converge', { type: key });
+
+  return false;
+}
+
+/**
  * Build the unified On.Context passed to every subscription callback.
  * Mirrors the Mapping.Context posture: collector + scoped logger only.
  */
@@ -66,6 +338,16 @@ export async function on(
   type: On.Types,
   option: WalkerOS.SingleOrArray<On.Subscription>,
 ) {
+  // Fail closed against a FOREIGN/non-collector caller (see fireCallbacks and
+  // isCollectorInstance). `on` dereferences `collector.on` immediately, so it
+  // would throw before reaching the dispatch; guard at the top, no state
+  // mutated. A real collector always has `.logger`, so this only ever catches a
+  // foreign caller.
+  if (!isCollectorInstance(collector)) {
+    warnForeignDispatch();
+    return;
+  }
+
   const on = collector.on;
   const onType: Array<On.Subscription> = on[type] || [];
   const options = isArray(option) ? option : [option];
@@ -121,40 +403,27 @@ export function callDestinationOn(
  * which would cause infinite recursion if a source's `on` handler registers
  * another callback of the same type.
  */
-function fireCallbacks(
+export function fireCallbacks(
   collector: Collector.Instance,
   type: On.Types,
   options: Array<On.Subscription>,
   config?: unknown,
 ): void {
-  // Calculate context data once for all sources and destinations
-  let contextData: unknown;
-
-  switch (type) {
-    case Const.Commands.Consent:
-      contextData = config || collector.consent;
-      break;
-    case Const.Commands.Session:
-      contextData = collector.session;
-      break;
-    case Const.Commands.User:
-      contextData = config || collector.user;
-      break;
-    case Const.Commands.Custom:
-      contextData = config || collector.custom;
-      break;
-    case Const.Commands.Globals:
-      contextData = config || collector.globals;
-      break;
-    case Const.Commands.Config:
-      contextData = config || collector.config;
-      break;
-    case Const.Commands.Ready:
-    case Const.Commands.Run:
-    default:
-      contextData = undefined;
-      break;
+  // Fail closed against a FOREIGN/non-collector caller. Threat: a minified
+  // build can leak this helper onto a global that collides with another
+  // library's API (e.g. a global named `ga`), which then invokes it with
+  // foreign args like `("sent","event")`. The string "sent" would arrive here
+  // as `collector` and crash on `"sent".logger.scope`. A genuine collector
+  // ALWAYS has `.logger` (collector.ts assigns `logger: createLogger(...)`
+  // unconditionally and createLogger never returns undefined), so this guard
+  // can ONLY catch a foreign caller; it can never mask a real internal dispatch.
+  if (!isCollectorInstance(collector)) {
+    warnForeignDispatch();
+    return;
   }
+
+  // Calculate context data once for all sources and destinations.
+  const contextData = resolveDeliveryData(collector, type, config);
 
   if (!options.length) return;
 
@@ -178,14 +447,140 @@ function fireCallbacks(
     default: {
       // Generic handler for user, custom, globals, config, and arbitrary events
       const ctx = buildOnContext(collector, type);
+      const gated = isStateDelivery(type);
       options.forEach((func) => {
-        if (typeof func === 'function') {
-          tryCatch(func as On.GenericFn, (err) =>
-            logOnCallbackError(collector, 'generic', err, { type }),
-          )(contextData, ctx);
-        }
+        if (typeof func !== 'function') return;
+        // State-delivery generics (user/custom/globals) carry the per-subscriber
+        // exactly-once + `allowed` gate. Non-reactive generics (config, arbitrary
+        // events) keep their previous unconditional behavior.
+        if (gated && !shouldDeliver(collector, func, type)) return;
+        // Bounded recursion guard: a reacting generic that re-emits state could
+        // cascade cyclically. Stop delivering this (func, cell-type) past the
+        // bound (logs once); leave state at its last value.
+        if (gated && !cascadeAllow(collector, func, type)) return;
+        tryCatch(func as On.GenericFn, (err) =>
+          logOnCallbackError(collector, 'generic', err, { type }),
+        )(contextData, ctx);
+        if (gated) setMark(collector, func, type);
       });
       break;
+    }
+  }
+}
+
+/**
+ * Resolve the broadcast payload for a state/lifecycle delivery. An explicit
+ * `config` (the command's update payload) wins; otherwise the current cell on
+ * the collector is read. Shared by `onApply` and the run-barrier re-delivery so
+ * both broadcast identical data.
+ */
+function resolveDeliveryData(
+  collector: Collector.Instance,
+  type: On.Types,
+  config?: unknown,
+): unknown {
+  switch (type) {
+    case Const.Commands.Consent:
+      return config || collector.consent;
+    case Const.Commands.Session:
+      return collector.session;
+    case Const.Commands.User:
+      return config || collector.user;
+    case Const.Commands.Custom:
+      return config || collector.custom;
+    case Const.Commands.Globals:
+      return config || collector.globals;
+    case Const.Commands.Config:
+      return config || collector.config;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Deliver a single state/lifecycle event to one started source's `on` handler,
+ * carrying the per-subscriber exactly-once + `allowed` gate for state
+ * deliveries. Returns `true` when the handler vetoed (returned `false`).
+ *
+ * Shared by the live `onApply` broadcast and the run-barrier re-delivery. It
+ * does NOT touch `config.require` or `queueOn`: those belong to the live
+ * command path's unstarted-source handling, not the barrier.
+ */
+async function deliverStateToSource(
+  collector: Collector.Instance,
+  source: Source.Instance,
+  sourceId: string,
+  type: On.Types,
+  contextData: unknown,
+): Promise<boolean> {
+  if (!source.on) return false;
+
+  // State deliveries (consent/user/globals/custom) carry the per-subscriber
+  // exactly-once + `allowed` gate keyed by the source instance. While !allowed
+  // a state delivery is deferred (not invoked, mark not advanced). Lifecycle
+  // deliveries (ready/run/session/config) are not gated here.
+  if (isStateDelivery(type) && !shouldDeliver(collector, source, type))
+    return false;
+
+  // Bounded recursion guard: a source `on` handler that re-emits state could
+  // cascade cyclically. Stop delivering this (source, cell-type) past the bound
+  // (logs once); leave state at its last value.
+  if (isStateDelivery(type) && !cascadeAllow(collector, source, type))
+    return false;
+
+  const result = await tryCatchAsync(source.on, (err) =>
+    logOnCallbackError(collector, 'source', err, { sourceId, type }),
+  )(type, contextData);
+
+  if (isStateDelivery(type)) setMark(collector, source, type);
+
+  return result === false;
+}
+
+/**
+ * Run-barrier re-delivery. Called once from `runCollector` after the collector
+ * becomes `allowed` and the RunState merge has bumped `stateVersion` for any
+ * merged cells. Re-broadcasts each non-empty recorded state cell to its OWED
+ * subscribers (mark < stateVersion) exactly once, so reactions deferred while
+ * `!allowed` now emit into the open, consent-gated pipeline.
+ *
+ * Narrow path: it fires `collector.on` rules/fns via `fireCallbacks` and the
+ * gated `source.on` loop via `deliverStateToSource`. It deliberately skips the
+ * `require`-decrement and `queueOn`-flush machinery in `onApply` (those are
+ * live-command concerns). Exactly-once is free from the `shouldDeliver` gate:
+ * already-delivered subscribers (mark == stateVersion) are skipped.
+ */
+export async function redeliverStateAtRun(
+  collector: Collector.Instance,
+): Promise<void> {
+  // Fail closed against a FOREIGN/non-collector caller (see fireCallbacks and
+  // isCollectorInstance). This dereferences the collector's state cells, so
+  // guard at the top, no state mutated, neutral void return. A real collector
+  // always has `.logger`, so this only ever catches a foreign caller.
+  if (!isCollectorInstance(collector)) {
+    warnForeignDispatch();
+    return;
+  }
+
+  for (const type of STATE_CELLS) {
+    if (!isStatePresent(collector, type)) continue;
+
+    const contextData = resolveDeliveryData(collector, type);
+
+    // Re-deliver to registered collector.on rules/fns. fireCallbacks carries
+    // the same per-subscriber gate, so owed rules fire once and advance.
+    fireCallbacks(collector, type, collector.on[type] || []);
+
+    // Re-deliver to started sources' on handlers via the gated helper.
+    for (const [sourceId, source] of Object.entries(collector.sources)) {
+      if (!isSourceStarted(source)) continue;
+      await deliverStateToSource(
+        collector,
+        source,
+        sourceId,
+        type,
+        contextData,
+      );
     }
   }
 }
@@ -204,6 +599,21 @@ export async function onApply(
   options?: Array<On.Subscription>,
   config?: unknown,
 ): Promise<boolean> {
+  // Fail closed against a FOREIGN/non-collector caller (see fireCallbacks and
+  // isCollectorInstance). `onApply` dereferences `collector.seenEvents`
+  // immediately, so it would throw before reaching the dispatch; guard at the
+  // top, no state mutated. Return the neutral not-vetoed result (`true`). A real
+  // collector always has `.logger`, so this only ever catches a foreign caller.
+  if (!isCollectorInstance(collector)) {
+    warnForeignDispatch();
+    return true;
+  }
+
+  // Record every broadcast type so a `require:[<arbitrary>]` gate stays
+  // satisfiable from current state (incl. a broadcast that fired before the
+  // requiring step registered). Cell-backed types are level-checked separately.
+  collector.seenEvents.add(String(type));
+
   // Use the optionally provided options
   let onConfig = options || [];
 
@@ -212,34 +622,8 @@ export async function onApply(
     onConfig = collector.on[type] || [];
   }
 
-  // Calculate context data once for source/destination broadcast
-  let contextData: unknown;
-
-  switch (type) {
-    case Const.Commands.Consent:
-      contextData = config || collector.consent;
-      break;
-    case Const.Commands.Session:
-      contextData = collector.session;
-      break;
-    case Const.Commands.User:
-      contextData = config || collector.user;
-      break;
-    case Const.Commands.Custom:
-      contextData = config || collector.custom;
-      break;
-    case Const.Commands.Globals:
-      contextData = config || collector.globals;
-      break;
-    case Const.Commands.Config:
-      contextData = config || collector.config;
-      break;
-    case Const.Commands.Ready:
-    case Const.Commands.Run:
-    default:
-      contextData = undefined;
-      break;
-  }
+  // Calculate context data once for source/destination broadcast.
+  const contextData = resolveDeliveryData(collector, type, config);
 
   let vetoed = false;
   // Per-source require decrement + gated on() delivery.
@@ -255,10 +639,14 @@ export async function onApply(
     if (!source.on) continue;
 
     if (isSourceStarted(source)) {
-      const result = await tryCatchAsync(source.on, (err) =>
-        logOnCallbackError(collector, 'source', err, { sourceId, type }),
-      )(type, contextData);
-      if (result === false) vetoed = true;
+      const sourceVetoed = await deliverStateToSource(
+        collector,
+        source,
+        sourceId,
+        type,
+        contextData,
+      );
+      if (sourceVetoed) vetoed = true;
     } else {
       source.queueOn = source.queueOn || [];
       source.queueOn.push({ type, data: contextData });
@@ -286,11 +674,23 @@ export async function onApply(
     }
   }
 
-  // Activate pending destinations whose require conditions are met.
-  // (Pending sources are gone — their require is tracked in source.config.require
-  // and gated via queueOn above.)
-  if (Object.keys(collector.pending.destinations).length > 0) {
-    await activatePending(collector, type);
+  // Activate any pending source/destination whose require is now satisfied by
+  // current state. Level-based and additive: the per-source broadcast decrement
+  // above still handles started-source delivery + queueOn buffering; reconcile
+  // additionally activates steps satisfied by the recorded cell (or by an
+  // arbitrary type already in `seenEvents`), so order does not matter.
+  //
+  // Gate the await on there being actual pending work: with nothing to
+  // reconcile this is a no-op, and skipping the await preserves the
+  // synchronous microtask ordering the bounded-recursion cascade relies on.
+  const hasUnstartedSource = Object.values(collector.sources).some(
+    (source) => !isSourceStarted(source) && source.config.require?.length,
+  );
+  if (
+    Object.keys(collector.pending.destinations).length > 0 ||
+    hasUnstartedSource
+  ) {
+    await reconcilePending(collector);
   }
 
   fireCallbacks(collector, type, onConfig, config);
@@ -307,6 +707,16 @@ function onConsent(
   const ctx = buildOnContext(collector, Const.Commands.Consent);
 
   onConfig.forEach((rule) => {
+    // Per-subscriber exactly-once gate, keyed by the rule OBJECT (coarser than
+    // per-key, but sufficient for single-grant exactly-once). While !allowed
+    // the delivery is deferred: don't invoke, don't advance the mark.
+    if (!shouldDeliver(collector, rule, Const.Commands.Consent)) return;
+
+    // Bounded recursion guard: a consent rule that re-emits state could cascade
+    // cyclically. Stop delivering this (rule, consent) past the bound (logs
+    // once); leave state at its last value.
+    if (!cascadeAllow(collector, rule, Const.Commands.Consent)) return;
+
     // Execute every handler whose consent key is present in the current state.
     Object.keys(consentState)
       .filter((key) => key in rule)
@@ -315,6 +725,9 @@ function onConsent(
           logOnCallbackError(collector, 'consent', err, { key }),
         )(consentState, ctx);
       });
+
+    // Advance the mark after an allowed invocation.
+    setMark(collector, rule, Const.Commands.Consent);
   });
 }
 

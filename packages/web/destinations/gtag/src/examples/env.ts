@@ -12,7 +12,7 @@ const noop = () => {};
 
 export const init: Env | undefined = {
   window: {
-    gtag: undefined as unknown as Env['window']['gtag'],
+    // gtag absent: initializeGtag() installs it during init.
     dataLayer: [],
   },
   document: {
@@ -29,8 +29,8 @@ export const push: Env = {
   window: {
     gtag: Object.assign(noop, {
       // Add any gtag-specific properties if needed
-    }) as unknown as Env['window']['gtag'],
-    dataLayer: [] as unknown[],
+    }),
+    dataLayer: [],
   },
   document: {
     createElement: () => ({

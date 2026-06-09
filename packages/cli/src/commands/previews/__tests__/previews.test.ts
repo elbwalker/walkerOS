@@ -127,6 +127,46 @@ describe('previews', () => {
       expect(mockGetFlow).not.toHaveBeenCalled();
     });
 
+    it('forwards source in the POST body when provided', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify({ id: 'prv_x' }), { status: 201 }),
+      );
+      await createPreview({
+        projectId: 'proj_x',
+        flowId: 'fl_y',
+        flowSettingsId: 'fs_a',
+        source: { kind: 'deployment-version', deploymentVersionId: 'dpv_1' },
+      });
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_x/flows/fl_y/previews',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            flowSettingsId: 'fs_a',
+            source: {
+              kind: 'deployment-version',
+              deploymentVersionId: 'dpv_1',
+            },
+          }),
+        }),
+      );
+    });
+
+    it('omits source from the POST body when not provided', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify({ id: 'prv_x' }), { status: 201 }),
+      );
+      await createPreview({
+        projectId: 'proj_x',
+        flowId: 'fl_y',
+        flowSettingsId: 'fs_a',
+      });
+      const [, init] = mockApiFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(init.body as string)).toEqual({
+        flowSettingsId: 'fs_a',
+      });
+    });
+
     it('resolves flowName via getFlow then POSTs with resolved settingsId', async () => {
       mockGetFlow.mockResolvedValue({
         id: 'fl_y',
@@ -194,7 +234,7 @@ describe('previews', () => {
   });
 
   describe('deletePreview', () => {
-    it('DELETEs /previews/{previewId} and returns null on 204 No Content', async () => {
+    it('DELETEs /previews/{previewId} and returns a confirmation record on 204 No Content', async () => {
       mockApiFetch.mockResolvedValue(new Response(null, { status: 204 }));
       const result = await deletePreview({
         projectId: 'proj_x',
@@ -205,7 +245,7 @@ describe('previews', () => {
         '/api/projects/proj_x/flows/fl_y/previews/prv_x',
         expect.objectContaining({ method: 'DELETE' }),
       );
-      expect(result).toBeNull();
+      expect(result).toEqual({ deleted: true, previewId: 'prv_x' });
     });
 
     it('returns parsed body when server replies with JSON 200', async () => {
@@ -218,6 +258,16 @@ describe('previews', () => {
         previewId: 'prv_x',
       });
       expect(result).toEqual({ deleted: true });
+    });
+
+    it('returns a confirmation record when a JSON surface yields no body', async () => {
+      mockApiFetch.mockResolvedValue(new Response('', { status: 200 }));
+      const result = await deletePreview({
+        projectId: 'proj_x',
+        flowId: 'fl_y',
+        previewId: 'prv_x',
+      });
+      expect(result).toEqual({ deleted: true, previewId: 'prv_x' });
     });
 
     it('throws on error', async () => {

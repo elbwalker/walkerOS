@@ -25,16 +25,41 @@ for the canonical interface.
 
 ### Instance
 
-| Property  | Type                         | Purpose                      | Required     |
-| --------- | ---------------------------- | ---------------------------- | ------------ |
-| `type`    | `string`                     | Store type identifier        | **Required** |
-| `config`  | `Store.Config`               | Settings and env             | **Required** |
-| `get`     | `(key) => T \| undefined`    | Read a value                 | **Required** |
-| `set`     | `(key, value, ttl?) => void` | Write a value (optional TTL) | **Required** |
-| `delete`  | `(key) => void`              | Remove a value               | **Required** |
-| `destroy` | `DestroyFn`                  | Cleanup on shutdown          | Optional     |
+| Property  | Type                               | Purpose                      | Required     |
+| --------- | ---------------------------------- | ---------------------------- | ------------ |
+| `type`    | `string`                           | Store type identifier        | **Required** |
+| `config`  | `Store.Config`                     | Settings and env             | **Required** |
+| `get`     | `(key) => StoreValue \| undefined` | Read a value                 | **Required** |
+| `set`     | `(key, value, ttl?) => void`       | Write a value (optional TTL) | **Required** |
+| `delete`  | `(key) => void`                    | Remove a value               | **Required** |
+| `destroy` | `DestroyFn`                        | Cleanup on shutdown          | Optional     |
 
 All methods can be sync or async (return `Promise`).
+
+### Value type and `file` mode
+
+Stores hold one canonical value type: structured data (`StoreValue`), with
+binary (`Uint8Array`) as a first-class leaf. `StoreValue` is
+`string | number | boolean | null | Uint8Array | StoreValue[] | { [key: string]: StoreValue }`
+(`undefined` is reserved as the "miss" sentinel and is never a stored value). A
+shared core codec (`serializeStoreValue` / `deserializeStoreValue`) round-trips
+that value to and from each backing.
+
+`Store.Config.file?: boolean` (default `false`) picks the mode, decided once at
+init:
+
+- **Structured (default):** values are `StoreValue` data, serialized by the
+  shared codec.
+- **File (`file: true`):** a byte-native backend (fs, S3, GCS) persists raw
+  bytes byte-exact. `set()` accepts a `Uint8Array` or `string` and stores it
+  untouched; `get()` hands the exact bytes back. Use for serving assets such as
+  walker.js. The Sheets store is structured-only and rejects `file: true` at
+  init.
+
+TTL is owned by the cache layer, not the store. The store persists values; a
+`cache` wrapper manages expiry. `flow_validate` warns when a store sets both
+`file: true` and `cache`, and when a `@walkeros/server-transformer-file` is
+wired to a byte-native store that does not set `file: true`.
 
 ### Init function (context pattern)
 
@@ -187,8 +212,8 @@ import { storeFsInit } from '@walkeros/server-store-fs';
 
 S3-compatible store using `s3mini` (~20 KB, zero dependencies). Works with AWS
 S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2, MinIO, and any
-S3-compatible provider. Returns `Buffer` from `get()` for file transformer
-compatibility. Server-only.
+S3-compatible provider. Structured by default (stored as `application/json`);
+set `file: true` to serve raw bytes byte-exact with the real mime. Server-only.
 
 ```typescript
 import { storeS3Init } from '@walkeros/server-store-s3';
@@ -219,11 +244,14 @@ import { storeGcsInit } from '@walkeros/server-store-gcs';
 
 **Settings:**
 
-| Setting       | Type               | Required | Default | Purpose                  |
-| ------------- | ------------------ | -------- | ------- | ------------------------ |
-| `bucket`      | `string`           | Yes      | —       | GCS bucket name          |
-| `prefix`      | `string`           | No       | —       | Key prefix for scoping   |
-| `credentials` | `string \| object` | No       | ADC     | SA JSON for non-GCP envs |
+| Setting  | Type     | Required | Default | Purpose                |
+| -------- | -------- | -------- | ------- | ---------------------- |
+| `bucket` | `string` | Yes      | —       | GCS bucket name        |
+| `prefix` | `string` | No       | —       | Key prefix for scoping |
+
+Credentials live at `config.credentials` (sibling of `settings`):
+`string | object` SA JSON for non-GCP envs, `$env`-resolvable; omit for ADC. The
+deprecated `settings.credentials` still works.
 
 **Primary use case:** Serving static files on GCP infrastructure (Cloud Run,
 GKE) where ADC provides seamless authentication.
@@ -232,7 +260,9 @@ GKE) where ADC provides seamless authentication.
 
 Zero-dependency Google Sheets store using raw `fetch` + Sheets v4 REST API. One
 row per key, one cell per value (JSON-serialized). Built-in auth shared with the
-GCS store. Server-only.
+GCS store. Server-only. Structured-only: cells hold structured JSON, so it
+rejects `file: true` at init and rejects values carrying a binary (`Uint8Array`)
+leaf. Use fs, S3, or GCS for byte-exact serving.
 
 ```typescript
 import { storeSheetsInit } from '@walkeros/server-store-sheets';
@@ -240,14 +270,17 @@ import { storeSheetsInit } from '@walkeros/server-store-sheets';
 
 **Settings:**
 
-| Setting       | Type               | Required | Default    | Purpose                          |
-| ------------- | ------------------ | -------- | ---------- | -------------------------------- |
-| `id`          | `string`           | Yes      | —          | Spreadsheet ID (segment in URL)  |
-| `sheet`       | `string`           | No       | `'Sheet1'` | Sheet (tab) name                 |
-| `key`         | `string`           | No       | `'A'`      | Column letter for keys           |
-| `value`       | `string`           | No       | `'B'`      | Column letter for JSON values    |
-| `headerRows`  | `number`           | No       | `1`        | Header rows to skip when reading |
-| `credentials` | `string \| object` | No       | ADC        | SA JSON for non-GCP envs         |
+| Setting      | Type     | Required | Default    | Purpose                          |
+| ------------ | -------- | -------- | ---------- | -------------------------------- |
+| `id`         | `string` | Yes      | —          | Spreadsheet ID (segment in URL)  |
+| `sheet`      | `string` | No       | `'Sheet1'` | Sheet (tab) name                 |
+| `key`        | `string` | No       | `'A'`      | Column letter for keys           |
+| `value`      | `string` | No       | `'B'`      | Column letter for JSON values    |
+| `headerRows` | `number` | No       | `1`        | Header rows to skip when reading |
+
+Credentials live at `config.credentials` (sibling of `settings`):
+`string | object` SA JSON for non-GCP envs, `$env`-resolvable; omit for ADC. The
+deprecated `settings.credentials` still works.
 
 **Primary use case:** Demos and small prototypes where the spreadsheet is the
 operator-facing UI for tweaking lookup data. Quota: 60 reads/min and 60

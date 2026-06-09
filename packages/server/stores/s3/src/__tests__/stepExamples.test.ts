@@ -30,6 +30,8 @@ const mockLogger: Logger.Instance = {
   scope: jest.fn().mockReturnThis(),
 };
 
+// The s3 step examples document the byte-serving use case (reading a
+// walker.js asset back as a Buffer), which is file mode.
 function createContext(settings: Record<string, unknown> = {}) {
   return {
     collector: {} as Collector.Instance,
@@ -43,6 +45,7 @@ function createContext(settings: Record<string, unknown> = {}) {
         secretAccessKey: 'secret',
         ...settings,
       },
+      file: true,
     },
     env: {},
   };

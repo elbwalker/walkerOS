@@ -286,17 +286,6 @@
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
-          "validate": {
-            "events": {
-              "order": {
-                "complete": {
-                  "properties": {
-                    "data": { "required": ["id", "total"] }
-                  }
-                }
-              }
-            }
-          },
           "config": {
             "require": ["consent", "user"],
             "consent": {
@@ -629,13 +618,21 @@
               "healthCheck": true
             },
             "ingest": {
-              "context.ip": "ip",
-              "context.userAgent": "headers.user-agent",
-              "context.language": "headers.accept-language",
-              "context.referer": "headers.referer",
-              "context.anonymizedIp": {
-                "key": "ip",
-                "fn": "$code:(ip) => ip ? ip.replace(/\\.\\d+$/, '.0') : ''"
+              "map": {
+                "method": { "key": "method" },
+                "path": { "key": "path" },
+                "context": {
+                  "map": {
+                    "ip": { "key": "ip" },
+                    "userAgent": { "key": "headers.user-agent" },
+                    "language": { "key": "headers.accept-language" },
+                    "referer": { "key": "headers.referer" },
+                    "anonymizedIp": {
+                      "key": "ip",
+                      "fn": "$code:(ip) => ip ? ip.replace(/\\.\\d+$/, '.0') : ''"
+                    }
+                  }
+                }
               }
             }
           },

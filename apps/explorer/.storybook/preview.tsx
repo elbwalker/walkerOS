@@ -6,9 +6,21 @@ import './monaco-setup';
 const withTheme: Decorator = (Story, context) => {
   const theme = context.globals.theme || 'light';
 
+  // data-theme must sit on an ancestor of .elb-explorer: the dark rules are
+  // `[data-theme='dark'] .elb-explorer`, so theme vars only flip when the
+  // attribute is on a parent (this mirrors how the app/website apply it).
   return (
-    <div className="elb-explorer" data-theme={theme}>
-      <Story />
+    <div data-theme={theme}>
+      <div
+        className="elb-explorer"
+        style={{
+          background: 'var(--bg-header)',
+          minHeight: '100vh',
+          padding: 24,
+        }}
+      >
+        <Story />
+      </div>
     </div>
   );
 };

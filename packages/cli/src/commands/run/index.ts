@@ -48,6 +48,15 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   const logger = createCLILogger(options);
 
   try {
+    // Opt-in dotenv: load BEFORE config resolution/bundling so $env/$secret
+    // runtime reads see the values. No auto-discovery; only when --env-file is
+    // passed. Existing process.env keys are never overridden.
+    if (options.envFile) {
+      const { loadEnvFile } = await import('./env-file.js');
+      loadEnvFile(options.envFile);
+      logger.debug(`Loaded env file: ${options.envFile}`);
+    }
+
     // Resolve port
     const port = options.port ?? 8080;
     if (options.port !== undefined) {
@@ -184,6 +193,23 @@ async function resolveBundlePath(
       flowName: apiConfig?.flowName,
     });
     return result.bundlePath;
+  }
+
+  // Runner guard: managed flow containers are started with
+  // WALKEROS_CLIENT_TYPE=runner and MUST receive a prebuilt BUNDLE. With no
+  // prebuilt bundle (handled by Case 1 above), the only remaining paths are an
+  // in-container boot-build (Case 2) or a default-file lookup (Case 3). Both
+  // exceed the container health-check window and get killed with no log. Refuse
+  // fast with a clear fatal instead. Local, non-runner `walkeros run` keeps the
+  // fallback below.
+  if (process.env.WALKEROS_CLIENT_TYPE === 'runner') {
+    logger.error(
+      'Managed runner started without a BUNDLE artifact; refusing to self-bundle. ' +
+        'A prebuilt BUNDLE is required in runner mode.',
+    );
+    throw new Error(
+      'Managed runner started without a BUNDLE artifact; refusing to self-bundle',
+    );
   }
 
   // Case 2: Remote config fetch (no local file, but API config with flowId)

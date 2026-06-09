@@ -100,6 +100,8 @@ Server sources require platform-specific handlers. For containerized deployments
 
 Extract request metadata and forward it through the pipeline.
 
+`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the `Request` (no `req.` prefix), or `{ fn }` for header access via `.get()`. A bare object like `{ url: 'url' }` is silently inert: without the `map` operator the source passes the whole request through and no field is extracted.
+
 <CodeSnippet
   code={`const { sources } = await startFlow({
   sources: {
@@ -108,9 +110,11 @@ Extract request metadata and forward it through the pipeline.
       config: {
         settings: { cors: true },
         ingest: {
-          ua: { fn: (req) => req.headers.get('user-agent') },
-          origin: { fn: (req) => req.headers.get('origin') },
-          url: 'url',
+          map: {
+            ua: { fn: (req) => req.headers.get('user-agent') },
+            origin: { fn: (req) => req.headers.get('origin') },
+            url: { key: 'url' },
+          },
         },
       },
     },

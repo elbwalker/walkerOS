@@ -1,4 +1,5 @@
 import { registerFlowLoadTool } from '../../tools/flow-load.js';
+import { stubClient } from '../support/stub-client.js';
 
 jest.mock('@walkeros/cli', () => ({
   loadJsonConfig: jest.fn(),
@@ -56,7 +57,7 @@ describe('flow_load tool', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     server = createMockServer();
-    registerFlowLoadTool(server as any);
+    registerFlowLoadTool(server as any, stubClient());
   });
 
   it('registers with correct name and annotations', () => {
@@ -142,6 +143,39 @@ describe('flow_load tool', () => {
     expect(result.structuredContent).toMatchObject(mockConfig);
   });
 
+  it('redacts loaded config identically to flow_manage get (structural keys literal, values wrapped)', async () => {
+    const loaded = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            demo: {
+              package: '@walkeros/destination-demo',
+              config: { settings: { apiKey: 'secret' } },
+            },
+          },
+        },
+      },
+    };
+    mockLoadJsonConfig.mockResolvedValue(loaded);
+
+    const tool = server.getTool('flow_load');
+    const result = await tool.handler({ source: './flow.json' });
+    const out = result.structuredContent;
+
+    // Structural keys literal — same rule as flow_manage get.
+    expect(out.version).toBe(4);
+    expect(out.flows.default.config.platform).toBe('web');
+    expect(out.flows.default.destinations.demo.package).toBe(
+      '@walkeros/destination-demo',
+    );
+    // User VALUES wrapped.
+    expect(out.flows.default.destinations.demo.config.settings.apiKey).toBe(
+      '<user_data>secret</user_data>',
+    );
+  });
+
   it('flow_load skeleton round-trips through v4 schema', async () => {
     const tool = server.getTool('flow_load');
 
@@ -162,5 +196,151 @@ describe('flow_load tool', () => {
       console.error(JSON.stringify(serverParse.error.issues, null, 2));
     }
     expect(serverParse.success).toBe(true);
+  });
+
+  describe('load by flow/cfg ID via ToolClient', () => {
+    it('routes a cfg_ source through client.getFlow, not loadJsonConfig', async () => {
+      const getFlow = jest.fn().mockResolvedValue({
+        id: 'cfg_abc',
+        name: 'My Flow',
+        config: { version: 4, flows: {} },
+      });
+      server = createMockServer();
+      registerFlowLoadTool(
+        server as any,
+        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_load');
+      const result = await tool.handler({ source: 'cfg_abc' });
+
+      expect(getFlow).toHaveBeenCalledTimes(1);
+      expect(getFlow).toHaveBeenCalledWith({
+        flowId: 'cfg_abc',
+        projectId: 'proj_default',
+      });
+      expect(mockLoadJsonConfig).not.toHaveBeenCalled();
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).toMatchObject({
+        version: 4,
+        flows: {},
+      });
+    });
+
+    it('routes a flow_ source through client.getFlow, not loadJsonConfig', async () => {
+      const getFlow = jest.fn().mockResolvedValue({
+        id: 'flow_xyz',
+        config: { version: 4, flows: {} },
+      });
+      server = createMockServer();
+      registerFlowLoadTool(
+        server as any,
+        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_load');
+      const result = await tool.handler({ source: 'flow_xyz' });
+
+      expect(getFlow).toHaveBeenCalledTimes(1);
+      expect(getFlow).toHaveBeenCalledWith({
+        flowId: 'flow_xyz',
+        projectId: 'proj_default',
+      });
+      expect(mockLoadJsonConfig).not.toHaveBeenCalled();
+      expect(result.isError).toBeUndefined();
+    });
+
+    it.each([
+      ['./flow.json', './flow.json'],
+      ['https://example.com/flow.json', 'https://example.com/flow.json'],
+      ['{"version":4,"flows":{}}', '{"version":4,"flows":{}}'],
+    ])('routes non-ID source %s to loadJsonConfig', async (source) => {
+      const getFlow = jest.fn();
+      mockLoadJsonConfig.mockResolvedValue({ version: 4, flows: {} });
+      server = createMockServer();
+      registerFlowLoadTool(server as any, stubClient({ getFlow }));
+
+      const tool = server.getTool('flow_load');
+      await tool.handler({ source });
+
+      expect(mockLoadJsonConfig).toHaveBeenCalledWith(source);
+      expect(getFlow).not.toHaveBeenCalled();
+    });
+
+    it('errors with NO_DEFAULT_PROJECT message when no default project and an ID source', async () => {
+      const getFlow = jest.fn();
+      server = createMockServer();
+      registerFlowLoadTool(
+        server as never,
+        stubClient({ getFlow, getDefaultProject: () => null }),
+      );
+
+      const tool = server.getTool('flow_load');
+      const result = await tool.handler({ source: 'cfg_abc' });
+
+      expect(result.isError).toBe(true);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).not.toContain('Flow not found');
+      expect(getFlow).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a NOT_FOUND-style error for a non-existent ID, not a file-not-found message', async () => {
+      const getFlow = jest
+        .fn()
+        .mockRejectedValue(new Error('Flow not found: cfg_missing'));
+      server = createMockServer();
+      registerFlowLoadTool(
+        server as any,
+        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_load');
+      const result = await tool.handler({ source: 'cfg_missing' });
+
+      expect(result.isError).toBe(true);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.error).toContain('Flow not found');
+      expect(parsed.error).not.toContain('Configuration file not found');
+      expect(parsed.hint ?? '').not.toContain('configPath');
+    });
+
+    it('redacts the ID-loaded config: structural keys literal, values wrapped', async () => {
+      const getFlow = jest.fn().mockResolvedValue({
+        id: 'cfg_abc',
+        config: {
+          version: 4,
+          flows: {
+            default: {
+              config: { platform: 'web' },
+              destinations: {
+                demo: {
+                  package: '@walkeros/destination-demo',
+                  config: { settings: { apiKey: 'secret' } },
+                },
+              },
+            },
+          },
+        },
+      });
+      server = createMockServer();
+      registerFlowLoadTool(
+        server as any,
+        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_load');
+      const result = await tool.handler({ source: 'cfg_abc' });
+      const out = result.structuredContent;
+
+      expect(out.version).toBe(4);
+      expect(out.flows.default.config.platform).toBe('web');
+      expect(out.flows.default.destinations.demo.package).toBe(
+        '@walkeros/destination-demo',
+      );
+      expect(out.flows.default.destinations.demo.config.settings.apiKey).toBe(
+        '<user_data>secret</user_data>',
+      );
+    });
   });
 });

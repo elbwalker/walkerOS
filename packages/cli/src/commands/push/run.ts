@@ -1,5 +1,6 @@
 import {
   push,
+  simulateCollector,
   simulateDestination,
   simulateSource,
   simulateTransformer,
@@ -103,6 +104,23 @@ export async function runPushCommand(
               transformerId: plan.ids[0],
               flow: options.flow,
               mock: options.mock,
+              ingest: options.ingest,
+              silent: options.silent,
+              verbose: options.verbose,
+              snapshot: options.snapshot,
+            },
+          ),
+        );
+        break;
+
+      case 'collector':
+        result = simulationToPushResult(
+          await simulateCollector(
+            config,
+            resolvedEvent as WalkerOS.DeepPartialEvent,
+            {
+              collectorName: plan.ids[0],
+              flow: options.flow,
               silent: options.silent,
               verbose: options.verbose,
               snapshot: options.snapshot,

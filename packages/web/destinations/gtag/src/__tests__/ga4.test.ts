@@ -1,6 +1,6 @@
 import { initGA4, pushGA4Event } from '../ga4';
 import { examples } from '../dev';
-import { clone, createMockLogger } from '@walkeros/core';
+import { clone, createMockLogger, getEvent } from '@walkeros/core';
 import type { GA4Settings } from '../types';
 
 describe('GA4 Implementation', () => {
@@ -82,12 +82,10 @@ describe('GA4 Implementation', () => {
   });
 
   describe('pushGA4Event', () => {
-    const mockEvent = {
-      name: 'page view',
-      data: {},
+    const mockEvent = getEvent('page view', {
       timestamp: 1234567890,
       id: 'test-id',
-    } as any;
+    });
 
     it('should throw error if no measurementId', () => {
       const settings: GA4Settings = { measurementId: '' };

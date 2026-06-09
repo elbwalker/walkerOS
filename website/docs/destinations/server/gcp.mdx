@@ -214,12 +214,16 @@ See [Workload Identity documentation](https://cloud.google.com/iam/docs/workload
 </Tabs>
 
 :::tip Inline credentials
-Instead of relying on `GOOGLE_APPLICATION_CREDENTIALS`, you can pass auth
-options inline via `settings.bigquery` (for example `keyFilename` or
-`credentials`). These apply to both the control plane (setup, metadata) and the
-data plane (Storage Write API ingestion). A pre-built `settings.client`
-authenticates the control plane only; supply `settings.bigquery` for the data
-plane to use non-ADC credentials.
+Instead of relying on `GOOGLE_APPLICATION_CREDENTIALS`, set service account
+credentials on `config.credentials` (a JSON string or parsed object, `$env`
+-resolvable). These merge into the BigQuery client and apply to both the control
+plane (setup, metadata) and the data plane (Storage Write API ingestion).
+
+For lower-level control you can still pass auth options through the raw
+`settings.bigquery` passthrough (for example `keyFilename` or `credentials`). A
+pre-built `settings.client` authenticates the control plane only; supply
+`config.credentials` or `settings.bigquery` for the data plane to use non-ADC
+credentials.
 :::
 
 ## Environment variables
@@ -240,9 +244,12 @@ ingestion. This replaces the legacy `tabledata.insertAll` path.
 
 - **Cost**: $25/TB after the 2 TiB/month free tier (vs ~$50/TB for the legacy
   path). Most low-volume deployments fit entirely in the free tier.
-- **Batching**: `pushBatch` is implemented. Set the collector's `batch: <ms>`
-  mapping setting to flush all events in a window as a single `appendRows`
-  call.
+- **Batching**: `pushBatch` is implemented. Set `config.batch` on the
+  destination (a bare number is the debounce `wait` in ms) to flush all events
+  in a window as a single `appendRows` call. No `'* *'` wildcard mapping rule is
+  needed. The batch path awaits the write and surfaces row errors: a failed
+  append fails the batch, which routes the events to the dead-letter buffer and
+  the `failed` count rather than being logged and ignored.
 
 :::caution EXPERIMENTAL SDK
 The upstream `@google-cloud/bigquery-storage` package self-marks as
@@ -271,7 +278,7 @@ other columns are `NULLABLE` for resilience against partial events.
 | `entity` | STRING | NULLABLE |
 | `action` | STRING | NULLABLE |
 | `timestamp` | TIMESTAMP | NULLABLE |
-| `timing` | INT64 | NULLABLE |
+| `timing` | FLOAT64 | NULLABLE |
 | `source` | JSON | NULLABLE |
 
 There is no `createdAt` column. Use `timestamp` (event time) for partition

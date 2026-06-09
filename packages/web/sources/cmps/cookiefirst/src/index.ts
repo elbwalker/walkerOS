@@ -9,9 +9,6 @@ import type {
 // Export types for external usage
 export * as SourceCookieFirst from './types';
 
-// Export examples
-export * from './examples';
-
 /**
  * Default category mapping from CookieFirst to walkerOS consent groups.
  *
@@ -75,8 +72,13 @@ export const sourceCookieFirst: Source.Init<Types> = async (context) => {
   let initListener: (() => void) | undefined;
   let consentListener: ((e: Event) => void) | undefined;
 
-  // Only setup if in browser environment
-  if (actualWindow) {
+  // Attach the CMP listeners and perform the static consent read. Deferred to
+  // init() (Pass 2 of initSources) so the factory (Pass 1) stays side-effect
+  // free: no listener registration and no `elb('walker consent')` emit during
+  // construction, which would race source merge order.
+  const init = async (): Promise<void> => {
+    // Only setup if in browser environment
+    if (!actualWindow) return;
     /**
      * Handle consent state from CookieFirst.
      * Maps CookieFirst categories to walkerOS consent groups and calls elb.
@@ -126,12 +128,13 @@ export const sourceCookieFirst: Source.Init<Types> = async (context) => {
       handleConsent(customEvent.detail);
     };
     actualWindow.addEventListener('cf_consent', consentListener);
-  }
+  };
 
   return {
     type: 'cookiefirst',
     config: fullConfig,
     push: elb,
+    init,
     destroy: async (_context) => {
       // Remove event listeners on cleanup
       if (actualWindow && initListener) {

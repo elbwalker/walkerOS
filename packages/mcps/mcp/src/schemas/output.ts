@@ -41,11 +41,10 @@ export const BundleOutputShape = {
     .array(
       z.object({
         name: z.string(),
-        size: z.number(),
       }),
     )
     .optional()
-    .describe('Per-package size breakdown'),
+    .describe('Names of packages included in the bundle'),
   treeshakingEffective: z
     .boolean()
     .optional()
@@ -100,6 +99,11 @@ export const ExamplesListOutputShape = {
           .describe('Step type'),
         stepName: z.string().describe('Step name'),
         exampleName: z.string().describe('Example name'),
+        source: z
+          .enum(['inline', 'package'])
+          .describe(
+            'Where the example came from: "inline" (defined in the flow step) or "package" (shipped by the referenced package)',
+          ),
         title: z.string().optional().describe('Human-readable title if set'),
         description: z
           .string()

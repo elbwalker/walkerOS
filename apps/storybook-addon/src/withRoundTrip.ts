@@ -50,18 +50,18 @@ channel.addListener(EVENTS.HIGHLIGHT, (config: WalkerOSAddon) => {
 channel.addListener(EVENTS.ATTRIBUTES_REQUEST, (config: WalkerOSAddon) => {
   const storyRoot = getStoryRootElement();
   if (!storyRoot) {
-    channel.emit(EVENTS.ATTRIBUTES_RESULT, []);
+    channel.emit(EVENTS.ATTRIBUTES_RESULT, { nodes: [], globals: [] });
     return;
   }
 
-  // Build the attribute tree
-  const attributeTree = buildAttributeTree(
+  // Build the skeleton tree ({ nodes, globals })
+  const result = buildAttributeTree(
     storyRoot as Element,
     config.prefix || 'data-elb',
   );
 
   // Send the result back to the manager
-  channel.emit(EVENTS.ATTRIBUTES_RESULT, attributeTree);
+  channel.emit(EVENTS.ATTRIBUTES_RESULT, result);
 });
 
 export const withRoundTrip: DecoratorFunction = (storyFn, context) => {

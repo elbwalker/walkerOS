@@ -16,6 +16,11 @@ describe('containsCodeMarkers', () => {
   it('detects __WALKEROS_ENV: in middle of string', () => {
     expect(containsCodeMarkers('prefix__WALKEROS_ENV:KEY')).toBe(true);
   });
+  it('detects __WALKEROS_SECRET: marker', () => {
+    expect(containsCodeMarkers('__WALKEROS_SECRET:GCP_SERVICE_ACCOUNT')).toBe(
+      true,
+    );
+  });
   it('returns false for plain string', () => {
     expect(containsCodeMarkers('G-ABC123')).toBe(false);
   });

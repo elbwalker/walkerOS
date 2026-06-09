@@ -59,6 +59,7 @@ export {
 // === Programmatic API ===
 // High-level functions for library usage
 export { bundle } from './commands/bundle/index.js';
+export { validateFlowStructure } from './commands/bundle/validate-structure.js';
 export { wrapSkeleton } from './commands/bundle/wrap.js';
 export type { WrapSkeletonOptions } from './commands/bundle/wrap.js';
 export {
@@ -66,11 +67,13 @@ export {
   simulateSource,
   simulateTransformer,
   simulateDestination,
+  simulateCollector,
 } from './commands/push/index.js';
 export type {
   SimulateSourceOptions,
   SimulateTransformerOptions,
   SimulateDestinationOptions,
+  SimulateCollectorOptions,
 } from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
@@ -82,6 +85,20 @@ export {
   mergeAuthHeaders,
 } from './core/http.js';
 export { createApiClient } from './core/api-client.js';
+export {
+  fetchHealth,
+  compareContract,
+  annotateErrorWithDrift,
+  canonicalContractHash,
+  bakedContractVersion,
+  bakedContractHash,
+} from './core/contract.js';
+export type {
+  HealthResult,
+  ContractVerdict,
+  ContractComparison,
+  CompareContractInput,
+} from './core/contract.js';
 export { ApiError, throwApiError } from './core/api-error.js';
 export type { ApiErrorDetail } from './core/api-error.js';
 export {
@@ -132,17 +149,31 @@ export type {
   CreatePreviewOptions,
   DeletePreviewOptions,
 } from './commands/previews/index.js';
+export {
+  listSecrets,
+  createSecret,
+  updateSecret,
+  deleteSecret,
+} from './commands/secrets/index.js';
+export type {
+  ListSecretsOptions,
+  CreateSecretOptions,
+  UpdateSecretOptions,
+  DeleteSecretOptions,
+} from './commands/secrets/index.js';
 export type { FeedbackOptions } from './commands/feedback/index.js';
 export {
   readConfig,
   writeConfig,
   deleteConfig,
   resolveToken,
+  resolveAppUrl,
   setDefaultProject,
   getDefaultProject,
   setFeedbackPreference,
   getFeedbackPreference,
 } from './lib/config-file.js';
+export { VERSION } from './version.js';
 export type { WalkerOSConfig } from './lib/config-file.js';
 export type { ListFlowsOptions, ProjectFlows } from './commands/flows/index.js';
 export type { DeployOptions } from './commands/deploy/index.js';

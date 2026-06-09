@@ -33,6 +33,7 @@ jest.mock('@walkeros/collector', () => ({
       Context: 'context',
       Link: 'link',
       Prefix: 'data-elb',
+      Scoped: '_',
     },
   },
   onApply: jest.fn(),

@@ -1,11 +1,11 @@
 import type { Flow } from '@walkeros/core';
 
-/** Read an object from an AWS S3 bucket. */
+/** Read an object from an AWS S3 bucket (file mode, byte-exact). */
 export const readAwsS3: Flow.StepExample = {
   title: 'Read from S3',
-  description: 'Read object from S3 and receive its contents as a Buffer',
+  description: 'Read object from S3 and receive its raw bytes byte-exact',
   in: { operation: 'get', key: 'walker.js' },
-  out: [['get', 'walker.js', 'Buffer<(function(){...})()>']],
+  out: [['get', 'walker.js', 'Bytes<(function(){...})()>']],
 };
 
 /** Key is scoped to the configured prefix subdirectory. */
@@ -18,5 +18,5 @@ export const prefixScoping: Flow.StepExample = {
     key: 'walker.js',
     settings: { bucket: 'my-assets', prefix: 'public' },
   },
-  out: [['get', 'public/walker.js', 'Buffer<...>']],
+  out: [['get', 'public/walker.js', 'Bytes<...>']],
 };

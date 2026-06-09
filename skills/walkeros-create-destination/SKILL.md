@@ -216,88 +216,9 @@ described as separate `events.ts` / `outputs.ts` / `mapping.ts` files.
   not a local `FbqCall` interface).
 - **Step entries** are typed `Flow.StepExample` from `@walkeros/core`.
 - **Mock env** is typed against the destination's local `Env` type from
-  `../types`. No `as any`, no untyped `{}`, **no `as unknown as Window` /
-  `as Document` casts**. Because the SDK is declared OPTIONAL on the narrowed
-  `Env` (see §3.3.1), a mock satisfies `Env` directly: `{ window: {} }` when the
-  SDK is absent, `{ window: { vendorSdk } }` when present.
+  `../types`. No `as any`, no untyped `{}`.
 - Vendor SDK types come from the SDK you installed in Phase 1 — reuse them
   rather than duplicating shapes.
-
-### 3.3.1 Access the SDK cast-free (declare global + narrow `Env`)
-
-The base `DestinationWeb.Env` types `window` and `document` as
-`Record<string, unknown>`, so `getEnv(env).window.<sdk>` forces a cast such as
-`(window as Window).vendorSdk`. **Do not add that cast.** Instead, declare the
-SDK on the typed globals and narrow your local `Env` so every access site is
-already typed. This compiles today with zero casts.
-
-> The broader root cause (a generic `getEnv`) is tracked separately in
-> `docs/plans/2026-06-01-destination-policy-hardening.md`. The author pattern
-> below is the cast-free solution you use now — never add casts "for now".
-
-**1. Declare the SDK on `Window` as OPTIONAL, in `types/index.ts`:**
-
-```typescript
-declare global {
-  interface Window {
-    vendorSdk?: VendorSdk; // optional — present only after the SDK loads
-  }
-}
-
-export interface VendorSdk {
-  // Only the methods this destination actually calls.
-  (method: string, name: string, params?: WalkerOS.AnyObject): void;
-}
-```
-
-**2. Narrow the destination `Env` to the concrete SDK type, extending the base
-`DestinationWeb.Env`, and thread it through `Types`:**
-
-```typescript
-export interface Env extends DestinationWeb.Env {
-  window?: {
-    vendorSdk?: VendorSdk;
-  };
-}
-
-export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
-export type Destination = DestinationWeb.Destination<Types>;
-export type Config = DestinationWeb.Config<Types>;
-```
-
-Threading `Env` through `Types` makes `context.env` inside `init`/`push` typed
-as your narrowed `Env`, so `env.window?.vendorSdk` is typed with no cast.
-
-**3. Resolve the SDK cast-free — prefer the injected `env` (tests, simulation),
-fall back to the typed global:**
-
-```typescript
-function resolveSdk(env: Env): VendorSdk | undefined {
-  return (
-    env.window?.vendorSdk ??
-    (typeof window !== 'undefined' ? window.vendorSdk : undefined)
-  );
-}
-```
-
-`env.window?.vendorSdk` is typed by the narrowed `Env`; `window.vendorSdk` is
-typed by the `declare global` augmentation. No `getEnv(env)` +
-`(window as Window)` is needed for the SDK.
-
-**4. Load scripts via the real global `document`, guarded, cast-free:**
-
-```typescript
-function addScript(src: string) {
-  if (typeof document === 'undefined') return;
-  const script = document.createElement('script'); // typed HTMLScriptElement
-  script.src = src;
-  document.head.appendChild(script);
-}
-```
-
-See `packages/web/destinations/piano/src/types/index.ts` and `src/index.ts` for
-a complete reference using exactly this pattern. The
-[simple template](./templates/simple/) mirrors it.
 
 ### 3.4 Code Template — `examples/step.ts`
 
@@ -646,10 +567,15 @@ Use these templates as your starting point:
    context
 2. **Push receives context**: Includes `data`, `rule` (renamed from `mapping`),
    `ingest`
-3. **Resolve the SDK cast-free**: Prefer the injected `env`, fall back to the
-   typed `window` global (declare the SDK on `Window`, narrow `Env` — see
-   §3.3.1). For script loading, use the guarded global `document`. Never cast
-   (`as Window` / `as Document` / `as unknown as`).
+3. **Use `getEnv<Env>(env)`**: Never access `window`/`document` directly, and
+   never cast them. Declare your SDK global
+   (`declare global { interface Window { vendorSdk?: ... } }`) and narrow
+   `Env['window']` to the SDK shape in `types.ts`. The generic
+   `getEnv<Env>(env)` then returns your narrowed env intersected with the real
+   DOM globals, so `window.vendorSdk` and `document.createElement` are fully
+   typed with zero casts. No `as any`, `as unknown`, `as Window`, `as Document`,
+   `@ts-ignore`, or `@ts-expect-error` is allowed in production **or** test
+   code, ever. If something will not type check, fix the types, do not cast.
 4. **Return config from init**: Allows updating config during initialization
 5. **Optional `destroy` method**: Implement if the destination holds resources
    (DB connections, SDK clients, timers) that need cleanup on shutdown. Call
@@ -724,14 +650,30 @@ export interface Setup {
   partitioning?: { field: string; type: 'DAY' | 'HOUR' };
 }
 
+// Service-account / key-pair credentials. Becomes the trailing C slot of Types;
+// surfaces as the optional top-level `config.credentials` (sibling of `settings`),
+// $env-resolvable and validated per package.
+export type Credentials =
+  CoreDestination.Credential<CoreDestination.ServiceAccount>;
+
 export type Types = CoreDestination.Types<
   Settings,
   Mapping,
   Env,
   InitSettings,
-  Setup
+  Setup,
+  Credentials
 >;
 ```
+
+**Where credentials belong.** Put service-account / key-pair credentials (the
+kind paired with `$env.NAME` to inject a secret) on the strictly-typed top-level
+`config.credentials`, not inside `settings`. Read them via
+`config.credentials ?? settings.credentials ?? ADC` so existing flows keep
+working, and omit them to fall back to Application Default Credentials. The raw
+`settings.<sdk>` passthrough (e.g. `settings.bigquery`) stays as the lower-level
+escape hatch for SDK-specific auth options. The package-specific
+`settings.credentials` still works but is deprecated.
 
 ### Implementation
 
@@ -867,8 +809,8 @@ Beyond
 [understanding-development](../walkeros-understanding-development/SKILL.md)
 requirements (build, test, lint, no `any`):
 
-- [ ] SDK access is cast-free (declare global + narrowed `Env`, env-first
-      resolve — §3.3.1). No `as Window` / `as Document` / `as unknown as` casts
+- [ ] Uses `getEnv<Env>(env)` pattern (never direct `window`/`document` access,
+      never `as Window`/`as Document`/`as unknown` casts in src or tests)
 - [ ] `dev.ts` exports `schemas` and `examples`
 - [ ] Examples match type signatures
 - [ ] Tests use examples for assertions (not hardcoded values)

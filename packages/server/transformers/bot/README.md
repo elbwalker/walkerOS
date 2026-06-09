@@ -25,7 +25,9 @@ await startFlow({
       package: '@walkeros/server-source-express',
       config: {
         ingest: {
-          userAgent: 'req.headers.user-agent',
+          map: {
+            userAgent: { key: 'headers.user-agent' },
+          },
         },
       },
     },

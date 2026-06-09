@@ -117,17 +117,24 @@ AI SDK), import \`TOOL_DEFINITIONS\` and provide your own \`ToolClient\`
 implementation. The stdio binary stays available via \`@walkeros/mcp/stdio\`
 and the \`walkeros-mcp\` bin entry, unchanged for end users.
 
-### Tools (12)
+### Tools
 
 #### `flow_load`
 
-Load an existing flow configuration from a local file path, URL, or walkerOS API,
-or create a new empty flow by specifying a platform.
+Load an existing flow configuration from a local file path, URL, inline JSON, or
+the walkerOS API, or create a new empty flow by specifying a platform.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `source` | string | No | Flow source: file path, URL, or API flow ID. Omit to create new. |
+| `source` | string | No | Flow source: file path, URL, inline JSON, or API flow/config ID (`flow_...` / `cfg_...`). Omit to create new. |
 | `platform` | `"web"` \| `"server"` | No | Platform for new flows. Required when source is omitted. |
+
+Passing a `flow_...` or `cfg_...` ID loads that flow from the API (the same
+source `flow_manage` reads from). Returned configs are round-trip safe:
+structural values such as package names, platform, and IDs come back literally,
+so a loaded config can be edited and sent straight back to
+`flow_manage({ action: "update" })` without altering anything you did not
+change.
 
 #### `flow_validate`
 
@@ -146,10 +153,14 @@ Bundle a walkerOS flow configuration into deployable JavaScript.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `configPath` | string | Yes | Path to flow configuration file |
+| `configPath` | string | Yes | Flow source: file path, or an API flow/config ID (`flow_...` / `cfg_...`) resolved like `flow_load` |
 | `flow` | string | No | Flow name for multi-flow configs |
 | `stats` | boolean | No | Return bundle statistics (default: `true`) |
 | `output` | string | No | Output file path |
+
+`configPath` accepts a cloud flow id, so you can bundle a saved flow directly
+without loading it to a file first. Bundle stats report the real total bundle
+size and the included package names (no per-package size estimate).
 
 #### `flow_simulate`
 
@@ -158,12 +169,38 @@ Returns summarized per-destination results.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `configPath` | string | Yes | Path to flow configuration file |
-| `event` | string | No | Event as JSON string, file path, or URL |
+| `configPath` | string | Yes | Flow source: file path, or an API flow/config ID (`flow_...` / `cfg_...`) resolved like `flow_load` |
+| `event` | string \| object | Yes | Event input (see shapes below). JSON string, file path, or URL also accepted. |
+| `step` | string | Yes | Target step as `"type.name"` (e.g. `"source.demo"`, `"collector.default"`, `"destination.gtag"`, `"transformer.router"`) |
 | `flow` | string | No | Flow name for multi-flow configs |
 | `platform` | `"web"` \| `"server"` | No | Override platform detection |
-| `example` | string | No | Load event from a step example |
-| `step` | string | No | Step to use with example parameter |
+| `verbose` | boolean | No | Include full payload per destination (default: `false`) |
+
+There are four step types: `source`, `collector`, `transformer`, and
+`destination`. The `event` shape depends on the step type:
+
+- **Destinations / transformers:** a walkerOS event, `{ name: "entity action",
+  data: {...} }`. Add `consent` (e.g. `{ marketing: true }`) when the
+  destination requires it.
+- **Collector:** the enrichment step. It takes a post-`next` partial event plus
+  an optional state snapshot `{ consent?, user?, globals?, timing? }`, applies
+  the collector's `createEvent`, and returns the fully enriched event.
+- **Sources:** `{ content, trigger? }`, where `content` is the walkerOS event
+  `{ name, data }` and the optional `trigger` is `{ type?, options? }`. There is
+  no `env` field in the source-step event.
+
+Sources can be simulated as a step, including the `@walkeros/source-demo` demo
+source.
+
+When `configPath` is a cloud flow id, you can simulate a saved flow without a
+manual file round-trip. Repeated simulations of the same configuration reuse a
+prebuilt bundle, so successive calls run faster (local file paths always
+rebuild).
+
+A `transformer` step also accepts an optional `ingest` field, a raw ingest
+without `_meta`. Supply it to test a request decoder standalone, for example a
+GA4 decoder that reads `ctx.ingest.url`: pass `ingest: { url: "..." }` alongside
+the event.
 
 #### `flow_push`
 
@@ -184,10 +221,14 @@ List all step examples in a walkerOS flow configuration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `configPath` | string | Yes | Path to flow configuration file |
+| `configPath` | string | Yes | Flow source: file path, or an API flow/config ID (`flow_...` / `cfg_...`) resolved like `flow_load` |
 | `flow` | string | No | Flow name for multi-flow configs |
 | `step` | string | No | Filter to a specific step (e.g., `"destination.gtag"`) |
 | `full` | boolean | No | Return full in/out/mapping data (default: `false`, metadata only) |
+
+When a step has no inline examples, `flow_examples` falls back to the examples
+shipped with that step's package, tagged by source so you can tell inline
+examples from package-provided ones.
 
 #### `package_search`
 
@@ -201,6 +242,10 @@ catalog filtered by type/platform. With package name: returns metadata.
 | `platform` | `"web"` \| `"server"` | No | Filter by platform (browse) |
 | `version` | string | No | Package version (default: latest) |
 
+In browse mode the tool returns the complete catalog. If it has to fall back to
+a partial source or omit packages, the response includes a `warnings` array
+explaining what is incomplete rather than silently returning a partial list.
+
 #### `package_get`
 
 Fetch walkerOS package details from npm. By default returns schemas + hint texts +
@@ -211,6 +256,17 @@ example summaries. Use `section` parameter for full content.
 | `package` | string | Yes | Exact npm package name |
 | `version` | string | No | Package version (default: latest) |
 | `section` | `"hints"` \| `"examples"` \| `"all"` | No | Section to expand with full content |
+
+#### `diagnostics`
+
+Report the MCP runtime surface. Read-only, takes no parameters, and works even
+when logged out. Reach for it when a request fails, to see which versions and
+backend you are on. The response includes the MCP version, the CLI version, the
+resolved app URL and whether it came from `WALKEROS_APP_URL` or the default, app
+`/api/health` reachability, the bundled OpenAPI contract version, and which
+source served the last package catalog lookup.
+
+This tool has no parameters.
 
 #### `auth`
 
@@ -251,7 +307,12 @@ Manage walkerOS flow configurations and previews in the cloud.
 | `previewId` | string | No | Preview ID (`prv_...`). Required for: preview_get, preview_delete. |
 | `flowName` | string | No | Flow settings name. Used by preview_create as an alternative to `flowSettingsId`. |
 | `flowSettingsId` | string | No | Flow settings ID. Used by preview_create as an alternative to `flowName`. |
+| `source` | object | No | What preview_create should run: `{ "kind": "draft" }` (default) or `{ "kind": "deployment-version", "deploymentVersionId": "..." }` to preview a deployed version's stored config ("preview what's live"). |
 | `siteUrl` | string | No | Optional site URL for preview_create. When provided, the response includes full `activationUrl` and `deactivationUrl` the user can click. |
+
+Configs returned by `get` are round-trip safe: structural values (package
+names, platform, IDs) are returned literally, so a returned config can be edited
+and sent back to `update` unchanged.
 
 #### `deploy_manage`
 
@@ -278,6 +339,46 @@ When a flow has more than one active deployment and no `slug` is supplied, `get`
     { "slug": "abc123456789", "type": "web", "status": "active", "updatedAt": "2026-04-20T00:00:00.000Z" },
     { "slug": "def987654321", "type": "web", "status": "active", "updatedAt": "2026-04-21T00:00:00.000Z" }
   ]
+}
+```
+
+#### `secret_manage`
+
+Manage a flow's secrets, the `$env.<NAME>` values its steps reference at deploy
+and run time.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"list"` \| `"set"` \| `"update"` \| `"delete"` | Yes | Secret action |
+| `flowId` | string | Yes | Flow ID (`flow_...`) or config ID (`cfg_...`). Secrets are flow-scoped, so it is required for every action. |
+| `projectId` | string | No | Project ID. Optional; falls back to the default project. |
+| `name` | string | Conditional | Secret name (UPPER_SNAKE_CASE, referenced as `$env.<NAME>`). Required for `set`. |
+| `value` | string | Conditional | Secret value (1-65536 chars). Required for `set` and `update`. Write-only: never returned or logged. |
+| `secretId` | string | Conditional | Secret ID (`sec_...`). Required for `update` and `delete`. Use `list` to find it. |
+
+Required fields per action:
+
+| Action | Required fields | Effect |
+|--------|-----------------|--------|
+| `list` | `flowId` | Return secret metadata for the flow |
+| `set` | `flowId`, `name`, `value` | Create a new secret |
+| `update` | `flowId`, `secretId`, `value` | Rotate an existing secret's value |
+| `delete` | `flowId`, `secretId` | Remove a secret |
+
+Secrets are write-mostly. Values are encrypted at rest and are NEVER returned,
+listed, or echoed back: `set` and `update` respond with metadata only, and
+`list` returns names, ids, and timestamps but no values. The only way to learn a
+secret's value is to rotate it with a new one.
+
+Reference a secret from any flow step as `$env.<NAME>`, for example
+`$env.API_TOKEN`.
+
+```json
+{
+  "action": "set",
+  "flowId": "flow_abc",
+  "name": "API_TOKEN",
+  "value": "the-secret-value"
 }
 ```
 

@@ -1,8 +1,13 @@
 import { destinationGtag, resetConsentState } from '../index';
 import { examples } from '../dev';
 import type { Settings, Rule } from '../types';
-import { type WalkerOS, type Collector } from '@walkeros/core';
-import { clone, createMockContext, createMockLogger } from '@walkeros/core';
+import { type Collector } from '@walkeros/core';
+import {
+  clone,
+  createMockContext,
+  createMockLogger,
+  getEvent,
+} from '@walkeros/core';
 
 // Mock all tool implementations
 jest.mock('../ga4', () => ({
@@ -210,10 +215,9 @@ describe('Unified Gtag Destination', () => {
   });
 
   describe('push', () => {
-    const mockEvent = {
-      name: 'product view',
+    const mockEvent = getEvent('product view', {
       data: { id: 'product-1', name: 'Test Product' },
-    } as any;
+    });
 
     const mockData = { custom_param: 'custom_value' };
 
@@ -544,9 +548,9 @@ describe('Unified Gtag Destination', () => {
         });
 
         // Call a regular event
-        const event = { name: 'button click', data: { id: 'test-btn' } };
+        const event = getEvent('button click', { data: { id: 'test-btn' } });
         destination.push(
-          event as any,
+          event,
           createMockContext({
             config: destination.config,
             data: {},
@@ -600,9 +604,9 @@ describe('Unified Gtag Destination', () => {
         });
 
         // Call a regular event
-        const event = { name: 'page view', data: { title: 'Test Page' } };
+        const event = getEvent('page view', { data: { title: 'Test Page' } });
         await destination.push(
-          event as any,
+          event,
           createMockContext({
             config: destination.config,
             data: {},
@@ -713,9 +717,9 @@ describe('Unified Gtag Destination', () => {
         });
 
         // Call a regular event
-        const event = { name: 'order complete', data: { value: 99.99 } };
+        const event = getEvent('order complete', { data: { value: 99.99 } });
         await destination.push(
-          event as any,
+          event,
           createMockContext({
             config: destination.config,
             data: {},

@@ -150,10 +150,13 @@ describe('Server Destination Data Manager', () => {
 
       expect(createAuthClient).toHaveBeenCalledWith(
         expect.objectContaining({
-          credentials: expect.objectContaining({
-            client_email: 'test@example.com',
+          settings: expect.objectContaining({
+            credentials: expect.objectContaining({
+              client_email: 'test@example.com',
+            }),
           }),
         }),
+        expect.anything(), // logger
       );
     });
   });

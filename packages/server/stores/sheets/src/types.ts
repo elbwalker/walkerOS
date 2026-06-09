@@ -1,4 +1,4 @@
-import type { Store } from '@walkeros/core';
+import type { Credential, ServiceAccount, Store } from '@walkeros/core';
 
 export interface SheetsStoreSettings {
   /** Spreadsheet ID, the path segment between /d/ and /edit in the URL. */
@@ -19,6 +19,8 @@ export interface SheetsStoreSettings {
   /**
    * Service account credentials for non-GCP environments. JSON string or
    * parsed object. Omit for ADC via the GCP metadata server (Cloud Run, GKE).
+   *
+   * @deprecated Use `config.credentials` instead. Still read as a fallback.
    */
   credentials?: string | ServiceAccountCredentials;
 }
@@ -51,5 +53,6 @@ export type Types = Store.Types<
   SheetsStoreSettings,
   Store.BaseEnv,
   SheetsStoreSettings,
-  Setup
+  Setup,
+  Credential<ServiceAccount>
 >;

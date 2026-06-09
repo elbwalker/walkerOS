@@ -16,6 +16,18 @@ import { getId } from '@walkeros/core';
 const projectRoot = resolve(__dirname, '..', '..', '..');
 const cliPath = join(projectRoot, 'dist/cli.js');
 
+// Every test here spawns a real `node dist/cli.js` subprocess. Under full-suite
+// CPU contention, even `--version` can exceed Jest's 5000ms default once Node
+// cold-start + loading the bundled CLI is queued behind other workers. Two
+// separate timeout sources bite: (1) the cli project's `testTimeout: 30000` is
+// NOT propagated to the per-test default when this file runs via the repo-root
+// `projects` aggregator, so un-annotated tests fall back to Jest's 5000ms global
+// default; (2) tests with a tight explicit override carry their own 5000ms. Give
+// every test an explicit, generous budget that matches `runCLI`'s own 120s kill
+// timer, so no test depends on contended config propagation. This is the same
+// budget the bundling tests have always used reliably.
+const CLI_TEST_TIMEOUT = 120000;
+
 // Skip when dist/ doesn't exist (turbo runs test without build).
 // These tests run via `npm run test:integration` which builds first.
 const describeIfBuilt = existsSync(cliPath) ? describe : describe.skip;
@@ -73,6 +85,11 @@ function runCLI(
 }
 
 describeIfBuilt('CLI E2E', () => {
+  // Belt-and-suspenders default for any test that forgets an explicit budget.
+  // Not sufficient on its own under the root `projects` aggregator, so every
+  // test below also passes CLI_TEST_TIMEOUT explicitly.
+  jest.setTimeout(CLI_TEST_TIMEOUT);
+
   const testOutputDir = join(
     projectRoot,
     '.tmp',
@@ -89,202 +106,242 @@ describeIfBuilt('CLI E2E', () => {
   });
 
   describe('bundle command', () => {
-    it('should bundle a server config', async () => {
-      const configPath = join(projectRoot, 'examples/server-collect.json');
+    it(
+      'should bundle a server config',
+      async () => {
+        const configPath = join(projectRoot, 'examples/server-collect.json');
 
-      const result = await runCLI(['bundle', configPath]);
+        const result = await runCLI(['bundle', configPath]);
 
-      expect(result.code).toBe(0);
+        expect(result.code).toBe(0);
 
-      const outputPath = join(projectRoot, 'examples/server-collect.mjs');
-      expect(existsSync(outputPath)).toBe(true);
-    }, 120000);
+        const outputPath = join(projectRoot, 'examples/server-collect.mjs');
+        expect(existsSync(outputPath)).toBe(true);
+      },
+      CLI_TEST_TIMEOUT,
+    );
 
-    it('should output JSON format for successful bundle', async () => {
-      const testConfig = {
-        version: 4,
-        flows: {
-          default: {
-            config: {
-              platform: 'web',
-              bundle: {
-                packages: {
-                  '@walkeros/core': { imports: ['getId'] },
-                },
-              },
-            },
-          },
-        },
-      };
-
-      await fs.writeJson(testConfigPath, testConfig);
-
-      const result = await runCLI(['bundle', testConfigPath, '--json']);
-
-      expect(result.code).toBe(0);
-
-      const output = JSON.parse(result.stdout);
-      expect(output).toMatchObject({
-        success: true,
-        data: {
-          flows: expect.arrayContaining([
-            {
-              flowName: 'default',
-              success: true,
-              stats: {
-                totalSize: expect.any(Number),
-                packages: expect.any(Array),
-                buildTime: expect.any(Number),
-                treeshakingEffective: expect.any(Boolean),
-              },
-            },
-          ]),
-          summary: {
-            total: 1,
-            success: 1,
-            failed: 0,
-          },
-        },
-        duration: expect.any(Number),
-      });
-
-      expect(output.data.flows[0].stats.packages).toHaveLength(1);
-      expect(output.data.flows[0].stats.packages[0].name).toBe(
-        '@walkeros/core@latest',
-      );
-    }, 120000);
-
-    it('should output JSON format for failed bundle', async () => {
-      const testConfig = {
-        version: 4,
-        flows: {
-          default: {
-            config: {
-              platform: 'web',
-              bundle: {
-                packages: {
-                  '@walkeros/nonexistent-package-xyz': {
-                    imports: ['nonexistent'],
+    it(
+      'should output JSON format for successful bundle',
+      async () => {
+        const testConfig = {
+          version: 4,
+          flows: {
+            default: {
+              config: {
+                platform: 'web',
+                bundle: {
+                  packages: {
+                    '@walkeros/core': { imports: ['getId'] },
                   },
                 },
               },
             },
           },
-        },
-      };
+        };
 
-      await fs.writeJson(testConfigPath, testConfig);
+        await fs.writeJson(testConfigPath, testConfig);
 
-      const result = await runCLI(['bundle', testConfigPath, '--json']);
+        const result = await runCLI(['bundle', testConfigPath, '--json']);
 
-      expect(result.code).toBe(1);
+        expect(result.code).toBe(0);
 
-      const output = JSON.parse(result.stdout);
-      expect(output).toMatchObject({
-        success: false,
-        error: expect.any(String),
-        duration: expect.any(Number),
-      });
-    });
+        const output = JSON.parse(result.stdout);
+        expect(output).toMatchObject({
+          success: true,
+          data: {
+            flows: expect.arrayContaining([
+              {
+                flowName: 'default',
+                success: true,
+                stats: {
+                  totalSize: expect.any(Number),
+                  packages: expect.any(Array),
+                  buildTime: expect.any(Number),
+                  treeshakingEffective: expect.any(Boolean),
+                },
+              },
+            ]),
+            summary: {
+              total: 1,
+              success: 1,
+              failed: 0,
+            },
+          },
+          duration: expect.any(Number),
+        });
 
-    it('should handle --stats flag', async () => {
-      const configPath = join(projectRoot, 'examples/server-collect.json');
+        expect(output.data.flows[0].stats.packages).toHaveLength(1);
+        expect(output.data.flows[0].stats.packages[0].name).toBe(
+          '@walkeros/core@latest',
+        );
+      },
+      CLI_TEST_TIMEOUT,
+    );
 
-      const result = await runCLI(['bundle', configPath, '--stats']);
-
-      expect(result.code).toBe(0);
-      expect(result.stderr).toContain('Bundle Statistics');
-    }, 120000);
-
-    it('should suppress decorative output in JSON mode', async () => {
-      const testConfig = {
-        version: 4,
-        flows: {
-          default: {
-            config: {
-              platform: 'web',
-              bundle: {
-                packages: {
-                  '@walkeros/core': { imports: ['getId'] },
+    it(
+      'should output JSON format for failed bundle',
+      async () => {
+        const testConfig = {
+          version: 4,
+          flows: {
+            default: {
+              config: {
+                platform: 'web',
+                bundle: {
+                  packages: {
+                    '@walkeros/nonexistent-package-xyz': {
+                      imports: ['nonexistent'],
+                    },
+                  },
                 },
               },
             },
           },
-        },
-      };
+        };
 
-      await fs.writeJson(testConfigPath, testConfig);
+        await fs.writeJson(testConfigPath, testConfig);
 
-      const result = await runCLI(['bundle', testConfigPath, '--json']);
+        const result = await runCLI(['bundle', testConfigPath, '--json']);
 
-      expect(result.code).toBe(0);
-      expect(result.stdout).not.toContain('Reading configuration');
-      expect(result.stdout).not.toContain('Starting bundle process');
-      expect(result.stdout).not.toContain('Bundle created successfully');
+        expect(result.code).toBe(1);
 
-      const output = JSON.parse(result.stdout);
-      expect(output.success).toBe(true);
-    });
+        const output = JSON.parse(result.stdout);
+        expect(output).toMatchObject({
+          success: false,
+          error: expect.any(String),
+          duration: expect.any(Number),
+        });
+      },
+      CLI_TEST_TIMEOUT,
+    );
 
-    it('should reject invalid config format', async () => {
-      const testConfig = {
-        flow: { platform: 'web' },
-        build: { packages: {} },
-      };
+    it(
+      'should handle --stats flag',
+      async () => {
+        const configPath = join(projectRoot, 'examples/server-collect.json');
 
-      await fs.writeJson(testConfigPath, testConfig);
+        const result = await runCLI(['bundle', configPath, '--stats']);
 
-      const result = await runCLI(['bundle', testConfigPath, '--json']);
+        expect(result.code).toBe(0);
+        expect(result.stderr).toContain('Bundle Statistics');
+      },
+      CLI_TEST_TIMEOUT,
+    );
 
-      expect(result.code).toBe(1);
+    it(
+      'should suppress decorative output in JSON mode',
+      async () => {
+        const testConfig = {
+          version: 4,
+          flows: {
+            default: {
+              config: {
+                platform: 'web',
+                bundle: {
+                  packages: {
+                    '@walkeros/core': { imports: ['getId'] },
+                  },
+                },
+              },
+            },
+          },
+        };
 
-      const output = JSON.parse(result.stdout);
-      expect(output.success).toBe(false);
-      expect(output.error).toContain('Invalid configuration');
-    });
+        await fs.writeJson(testConfigPath, testConfig);
 
-    it('should show error for missing config file', async () => {
-      const result = await runCLI([
-        'bundle',
-        'nonexistent-config-file.json',
-        '--json',
-      ]);
+        const result = await runCLI(['bundle', testConfigPath, '--json']);
 
-      expect(result.code).toBe(1);
+        expect(result.code).toBe(0);
+        expect(result.stdout).not.toContain('Reading configuration');
+        expect(result.stdout).not.toContain('Starting bundle process');
+        expect(result.stdout).not.toContain('Bundle created successfully');
 
-      const output = JSON.parse(result.stdout);
-      expect(output).toMatchObject({
-        success: false,
-        error: expect.stringContaining('Configuration file not found'),
-      });
-    });
+        const output = JSON.parse(result.stdout);
+        expect(output.success).toBe(true);
+      },
+      CLI_TEST_TIMEOUT,
+    );
+
+    it(
+      'should reject invalid config format',
+      async () => {
+        const testConfig = {
+          flow: { platform: 'web' },
+          build: { packages: {} },
+        };
+
+        await fs.writeJson(testConfigPath, testConfig);
+
+        const result = await runCLI(['bundle', testConfigPath, '--json']);
+
+        expect(result.code).toBe(1);
+
+        const output = JSON.parse(result.stdout);
+        expect(output.success).toBe(false);
+        expect(output.error).toContain('Invalid configuration');
+      },
+      CLI_TEST_TIMEOUT,
+    );
+
+    it(
+      'should show error for missing config file',
+      async () => {
+        const result = await runCLI([
+          'bundle',
+          'nonexistent-config-file.json',
+          '--json',
+        ]);
+
+        expect(result.code).toBe(1);
+
+        const output = JSON.parse(result.stdout);
+        expect(output).toMatchObject({
+          success: false,
+          error: expect.stringContaining('Configuration file not found'),
+        });
+      },
+      CLI_TEST_TIMEOUT,
+    );
   });
 
   describe('help and version', () => {
-    it('should show help with --help', async () => {
-      const result = await runCLI(['--help']);
+    it(
+      'should show help with --help',
+      async () => {
+        const result = await runCLI(['--help']);
 
-      expect(result.code).toBe(0);
-      expect(result.stdout).toContain('Usage');
-      expect(result.stdout).toContain('bundle');
-      expect(result.stdout).toContain('push');
-      expect(result.stdout).toContain('run');
-    }, 5000);
+        expect(result.code).toBe(0);
+        expect(result.stdout).toContain('Usage');
+        expect(result.stdout).toContain('bundle');
+        expect(result.stdout).toContain('push');
+        expect(result.stdout).toContain('run');
+      },
+      CLI_TEST_TIMEOUT,
+    );
 
-    it('should show version with --version', async () => {
-      const result = await runCLI(['--version']);
+    it(
+      'should show version with --version',
+      async () => {
+        const result = await runCLI(['--version']);
 
-      expect(result.code).toBe(0);
-      expect(result.stdout).toMatch(/\d+\.\d+\.\d+/);
-    }, 5000);
+        expect(result.code).toBe(0);
+        expect(result.stdout).toMatch(/\d+\.\d+\.\d+/);
+      },
+      CLI_TEST_TIMEOUT,
+    );
   });
 
   describe('error handling', () => {
-    it('should show error for unknown command', async () => {
-      const result = await runCLI(['unknown-command']);
+    it(
+      'should show error for unknown command',
+      async () => {
+        const result = await runCLI(['unknown-command']);
 
-      expect(result.code).not.toBe(0);
-      expect(result.stderr || result.stdout).toContain('unknown');
-    }, 5000);
+        expect(result.code).not.toBe(0);
+        expect(result.stderr || result.stdout).toContain('unknown');
+      },
+      CLI_TEST_TIMEOUT,
+    );
   });
 });

@@ -26,6 +26,8 @@ export const HighlightButtons: React.FC<HighlightButtonsProps> = ({
         display: 'flex',
         gap: '4px',
         alignItems: 'center',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-end',
       }}
     >
       <span

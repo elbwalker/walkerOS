@@ -33,6 +33,9 @@ function createContext(settings: Record<string, unknown> = {}) {
         bucket: 'my-bucket',
         ...settings,
       },
+      // The gcs step examples document the byte-serving use case (reading a
+      // walker.js asset back as a Buffer), which is file mode.
+      file: true,
     },
     env: {},
   };

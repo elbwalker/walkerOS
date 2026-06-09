@@ -42,12 +42,12 @@ await startFlow({
     datamanager: {
       code: destinationDataManager,
       config: {
+        // Service account credentials
+        credentials: {
+          client_email: process.env.GOOGLE_CLIENT_EMAIL,
+          private_key: process.env.GOOGLE_PRIVATE_KEY,
+        },
         settings: {
-          // Service account credentials
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY,
-          },
           destinations: [
             {
               operatingAccount: {
@@ -78,8 +78,8 @@ mapping:
     datamanager: {
       code: destinationDataManager,
       config: {
+        credentials: { /* ... */ },
         settings: {
-          credentials: { /* ... */ },
           destinations: [...],
 
           // Guided helpers (apply to all events)

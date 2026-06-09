@@ -8,7 +8,7 @@ import { LoggerConfigSchema } from './logger';
  * Mirrors: types/store.ts
  * Purpose: Runtime validation and JSON Schema generation for store configurations
  *
- * Stores are the 4th component type — passive key-value infrastructure that
+ * Stores are the 4th component type, passive key-value infrastructure that
  * other components consume via `env`. They are referenced via `$store.storeId`
  * in `env` values. Init first, destroy last. No chains.
  */
@@ -35,6 +35,16 @@ export const ConfigSchema = z
       })
       .describe('Implementation-specific configuration')
       .optional(),
+    credentials: z
+      .unknown()
+      .meta({
+        id: 'StoreCredentials',
+        title: 'Store.Credentials',
+        description:
+          'Optional credentials slot (store-defined shape); supports $env. The per-package shape is supplied via mergeConfigSchema.',
+      })
+      .describe('Optional credentials (store-defined shape)')
+      .optional(),
     env: z
       .unknown()
       .meta({
@@ -56,12 +66,18 @@ export const ConfigSchema = z
       .describe(
         'One-time setup options applied during store registration (boolean enables defaults, object configures specifics)',
       ),
+    file: z
+      .boolean()
+      .optional()
+      .describe(
+        'Persist values as raw bytes (byte-exact), bypassing the structured codec. Default false (structured). Set true only on byte-native stores for asset serving; sheets rejects it.',
+      ),
   })
   .meta({
     id: 'StoreConfig',
     title: 'Store.Config',
     description:
-      'Store configuration (settings, env, logger) — key-value infrastructure component.',
+      'Store configuration (settings, env, logger): key-value infrastructure component.',
   })
   .describe('Store configuration');
 

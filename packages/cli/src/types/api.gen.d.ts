@@ -231,7 +231,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/sessions/{sessionId}': {
+  '/api/sessions/{id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -250,7 +250,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          sessionId: string;
+          id: string;
         };
         cookie?: never;
       };
@@ -573,7 +573,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['Project'];
+            'application/json': components['schemas']['ProjectDetailResponse'];
           };
         };
         /** @description Unauthorized */
@@ -676,7 +676,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['Project'];
+            'application/json': components['schemas']['UpdateProjectResponse'];
           };
         };
         /** @description Validation error */
@@ -1045,7 +1045,7 @@ export interface paths {
     put?: never;
     /**
      * Create flow
-     * @description Create a new flow in the project. Requires owner role.
+     * @description Create a new flow in the project. Requires member role.
      */
     post: {
       parameters: {
@@ -1174,7 +1174,7 @@ export interface paths {
     post?: never;
     /**
      * Soft-delete flow
-     * @description Soft delete a flow (sets deleted_at timestamp). Requires owner role.
+     * @description Soft delete a flow (sets deleted_at timestamp). Requires member role.
      */
     delete: {
       parameters: {
@@ -1238,7 +1238,7 @@ export interface paths {
     head?: never;
     /**
      * Update flow
-     * @description Update an existing flow. Creates a version snapshot before applying changes. Requires owner role. Use Content-Type: application/merge-patch+json to send only changed fields (RFC 7386).
+     * @description Update an existing flow. Creates a version snapshot before applying changes. Requires member role. Use Content-Type: application/merge-patch+json to send only changed fields (RFC 7386).
      */
     patch: {
       parameters: {
@@ -1336,7 +1336,7 @@ export interface paths {
     put?: never;
     /**
      * Duplicate flow
-     * @description Create a copy of an existing flow with a new ID and no version history. Requires owner role.
+     * @description Create a copy of an existing flow with a new ID and no version history. Requires member role.
      */
     post: {
       parameters: {
@@ -1411,6 +1411,590 @@ export interface paths {
       };
     };
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/secrets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List secrets
+     * @description List a flow's secrets as metadata only (name, id, timestamps). Values are never returned. Requires member role and the secrets entitlement.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Secret metadata list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              secrets: {
+                id: string;
+                name: string;
+                flowId: string;
+                /** Format: date-time */
+                createdAt: string | null;
+                /** Format: date-time */
+                updatedAt: string | null;
+              }[];
+            };
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Create secret
+     * @description Create a secret for a flow. The value is encrypted at rest and never returned. Requires member role and the secrets entitlement.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            name: string;
+            value: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Secret created (metadata only) */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              id: string;
+              name: string;
+              flowId: string;
+              /** Format: date-time */
+              createdAt: string | null;
+              /** Format: date-time */
+              updatedAt: string | null;
+            };
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/secrets/{secretId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Update secret value
+     * @description Rotate a secret's value (re-encrypts). The value is never returned. Requires member role and the secrets entitlement.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          secretId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            value: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Secret updated (metadata only) */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              id: string;
+              name: string;
+              flowId: string;
+              /** Format: date-time */
+              createdAt: string | null;
+              /** Format: date-time */
+              updatedAt: string | null;
+            };
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    /**
+     * Delete secret
+     * @description Soft-delete a secret. Idempotent: deleting a missing secret returns 204. Requires member role and the secrets entitlement.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          secretId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Secret deleted */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/secrets/values': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get decrypted secret values
+     * @description Return decrypted secret values for a flow as a name-to-value map. Dual auth: a runtime container Bearer token bound to (projectId, flowId) with the `runner:read-secrets` scope returns only the bundle-referenced subset; a session cookie with member role returns all of the flow's secrets for administration. Responses are never cached.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Decrypted secret values keyed by name */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              values: {
+                [key: string]: string;
+              };
+            };
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/steps/{stepPath}/examples': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Edit step example
+     * @description Edit an existing named example in place, merging provided fields onto the stored entry. Returns 404 when the named example does not exist.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Dot-segmented step path (sectionKey.stepName), e.g. "destinations.gtag". */
+          stepPath: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['EditStepExampleRequest'];
+        };
+      };
+      responses: {
+        /** @description Updated examples object map */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StepExamplesResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unprocessable entity */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Add step example
+     * @description Add a named example to a step. Examples are stored as an object map keyed by name. Rejects duplicate names with 409.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Dot-segmented step path (sectionKey.stepName), e.g. "destinations.gtag". */
+          stepPath: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateStepExampleRequest'];
+        };
+      };
+      responses: {
+        /** @description Updated examples object map */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StepExamplesResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unprocessable entity */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Remove step example
+     * @description Remove a named example from a step. Returns 404 when the named example does not exist.
+     */
+    delete: {
+      parameters: {
+        query: {
+          /** @description Name of the example to remove. */
+          name: string;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Dot-segmented step path (sectionKey.stepName), e.g. "destinations.gtag". */
+          stepPath: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Updated examples object map */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StepExamplesResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unprocessable entity */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
     options?: never;
     head?: never;
     patch?: never;
@@ -1661,80 +2245,6 @@ export interface paths {
         };
       };
     };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/deploy/{deploymentId}/advance': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Advance deployment
-     * @description Advance the deployment state machine. Checks bundle/container status and transitions accordingly.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Current deployment state after advancement */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              id: string;
-              flowId: string;
-              /** @enum {string} */
-              type: 'web' | 'server';
-              status: string;
-              containerUrl: string | null;
-              publicUrl?: string | null;
-              errorMessage: string | null;
-              /** Format: date-time */
-              createdAt: string;
-              /** Format: date-time */
-              updatedAt: string;
-            };
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -2185,68 +2695,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deployments/{deploymentId}/advance': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Advance settings deployment
-     * @description Advance the deployment state machine for a per-settings deployment.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          settingsId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Current deployment state after advancement */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['AdvanceSettingsDeploymentResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/projects/{projectId}/flows/{flowId}/previews': {
     parameters: {
       query?: never;
@@ -2636,7 +3084,7 @@ export interface paths {
     put?: never;
     /**
      * Restore version
-     * @description Restore a flow to a specific version. Creates a new version snapshot. Requires owner role.
+     * @description Restore a flow to a specific version. Creates a new version snapshot. Requires member role.
      */
     post: {
       parameters: {
@@ -3058,7 +3506,93 @@ export interface paths {
       };
     };
     put?: never;
-    post?: never;
+    /**
+     * Create deployment
+     * @description Create a new deployment slot. Supports an Idempotency-Key header — a repeated key returns the original deployment id with status `already_created`. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description Optional client key to make creation idempotent. */
+          'idempotency-key'?: string;
+        };
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @example web
+             * @enum {string}
+             */
+            type: 'web' | 'server';
+            label?: string;
+            flowId?: string;
+            flowSettingsId?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Deployment created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CreateDeploymentResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;
@@ -3561,6 +4095,3068 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/projects/{projectId}/service-accounts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List service accounts
+     * @description List service accounts for a project. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description List of service accounts */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListServiceAccountsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Create service account
+     * @description Create a service account and its first token. The raw token is returned once and cannot be retrieved again. Requires admin role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateServiceAccountRequest'];
+        };
+      };
+      responses: {
+        /** @description Service account created (raw token shown once) */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CreateServiceAccountResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/service-accounts/{serviceAccountId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get service account
+     * @description Get a single service account by ID. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          serviceAccountId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Service account details */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ServiceAccountSummary'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    /**
+     * Delete service account
+     * @description Soft-delete a service account and revoke all its tokens. Requires admin role.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          serviceAccountId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Service account deleted */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    /**
+     * Update service account
+     * @description Update a service account's name, description, or role. Requires admin role.
+     */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          serviceAccountId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['UpdateServiceAccountRequest'];
+        };
+      };
+      responses: {
+        /** @description Service account updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ServiceAccountSummary'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    trace?: never;
+  };
+  '/api/projects/{projectId}/service-accounts/{serviceAccountId}/tokens': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List service account tokens
+     * @description List tokens for a service account. Returns summaries (no raw token values). Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          serviceAccountId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description List of tokens */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListSaTokensResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Create service account token
+     * @description Create a new token for a service account. The raw token is returned once and cannot be retrieved again. Requires admin role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          serviceAccountId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateSaTokenRequest'];
+        };
+      };
+      responses: {
+        /** @description Token created (raw token shown once) */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CreateSaTokenResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/service-accounts/{serviceAccountId}/tokens/{tokenId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Revoke service account token
+     * @description Revoke a service account token. Requires admin role.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          serviceAccountId: string;
+          tokenId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Token revoked */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/invitations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List invitations
+     * @description List invitations for a project. Defaults to pending; pass ?status=all for every status. Requires admin role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          status?:
+            | 'pending'
+            | 'accepted'
+            | 'declined'
+            | 'expired'
+            | 'cancelled'
+            | 'all';
+        };
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description List of invitations */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListInvitationsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Create invitation
+     * @description Create an invitation and send the invite email. Requires admin role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateInvitationRequest'];
+        };
+      };
+      responses: {
+        /** @description Invitation created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CreateInvitationResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Invitation limit reached */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/invitations/{inviteId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Cancel invitation
+     * @description Cancel a pending invitation. Requires admin role.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          inviteId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Invitation cancelled */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/invitations/{token}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Preview invitation
+     * @description Preview invitation details. No authentication required — the token is the credential.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description Opaque invitation token (the credential). */
+          token: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Invitation preview */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['InvitationPreview'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/invitations/{token}/accept': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Accept invitation
+     * @description Accept an invitation. Requires authentication; the authenticated user's email must match the invitation email.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description Opaque invitation token (the credential). */
+          token: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Invitation accepted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['AcceptInvitationResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/invitations/{token}/decline': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Decline invitation
+     * @description Decline an invitation. No authentication required — the token is the credential.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description Opaque invitation token (the credential). */
+          token: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Invitation declined */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeclineInvitationResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/telemetry': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Submit telemetry event
+     * @description Accept a single walkerOS v4 event from the CLI or MCP telemetry emitter. Public endpoint — no authentication. `source.type` is constrained to `cli` or `mcp`.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['TelemetryEvent'];
+        };
+      };
+      responses: {
+        /** @description Telemetry event accepted */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/billing': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get billing details
+     * @description Get billing details for a project, or null when none are set. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Billing details (or null when unset) */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['BillingDetailsResponse'] &
+              (Record<string, never> | null);
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Upsert billing details
+     * @description Create or update billing details for a project. Requires owner role.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['UpsertBillingDetailsRequest'];
+        };
+      };
+      responses: {
+        /** @description Billing details saved */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['BillingDetailsResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/deployments/{deploymentId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get deployment detail
+     * @description Get deployment detail. Accepts a dep_ID or a slug. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deployment detail */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeploymentDetailResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    /**
+     * Delete deployment
+     * @description Tear down and soft-delete a deployment. Idempotent. Requires owner role.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deployment deleted (or already absent) */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    /**
+     * Update deployment
+     * @description Update a deployment's label, or stop/resume it. Stop and resume require admin role; label updates require member role.
+     */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            label?: string;
+            /** @enum {string} */
+            action?: 'stop' | 'resume';
+          };
+        };
+      };
+      responses: {
+        /** @description Deployment updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['UpdateDeploymentResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Deployment state changed concurrently */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    trace?: never;
+  };
+  '/api/projects/{projectId}/deployments/{deploymentId}/publish': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Publish deployment version
+     * @description Push a new version to a deployment, either from an existing flow setting or from a direct config upload. Bundles in-process and transitions the deployment to `deploying`. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description Optional client key to make publishing idempotent. */
+          'idempotency-key'?: string;
+        };
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json':
+            | {
+                /** @enum {string} */
+                source: 'flow';
+                flowId: string;
+                flowSettingsName: string;
+              }
+            | {
+                /** @enum {string} */
+                source: 'config';
+                config: {
+                  [key: string]: unknown;
+                };
+              };
+        };
+      };
+      responses: {
+        /** @description Version published (bundling/deploying) */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PublishVersionResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Publish already in progress */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited or concurrent deploy limit */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Build service unavailable */
+        503: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/deployments/{deploymentId}/versions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List deployment versions
+     * @description List the version history for a deployment, paginated. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+          offset?: number | null;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Version history */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListDeploymentVersionsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/deployments/{deploymentId}/versions/current/content': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get current deployed content
+     * @description Get the active deployed per-setting content for a deployment, used to diff changes since deploy. Content is masked and display-only; every field is null when there is no deployed baseline. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deployed content (or a null baseline) */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeployedContentResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/deployments/{deploymentId}/heartbeats': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List deployment heartbeats
+     * @description List heartbeat records for a deployment with optional from/to time-range filtering and pagination. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description ISO start of the time range. */
+          from?: string;
+          /** @description ISO end of the time range. */
+          to?: string;
+          limit?: number;
+          offset?: number | null;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Heartbeat history */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListHeartbeatsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/deployments/{deploymentId}/rotate-ingest-token': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rotate ingest token
+     * @description Rotate the ingest token for a deployment. Owner-only. No grace window: the previous token is immediately invalidated and the new token is returned once.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description New ingest token */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['RotateIngestTokenResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/deployments/{deploymentId}/trace': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Toggle debug tracing
+     * @description Enable or disable debug tracing for a deployment. Owner-only, gated by the debugTrace feature. `minutes` of 0 disables; allowed values are 0, 15, 30, 60. An absent body defaults to 15 minutes.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['TraceDeploymentRequest'];
+        };
+      };
+      responses: {
+        /** @description Updated trace window */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['TraceDeploymentResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/deployments/{deploymentId}/usage': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Deployment usage
+     * @description Aggregate usage summary plus bucketed chart data for a deployment over the requested period. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Time window for the usage summary. */
+          period?: '1h' | '24h' | '7d' | '30d';
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Usage summary and chart buckets */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeploymentUsageResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/custom-domains': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List custom domains
+     * @description List custom domains attached to any deployment of this flow. Requires member role and the customDomains feature.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Custom domains for the flow */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListCustomDomainsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Attach custom domain
+     * @description Attach a custom domain to the flow's latest server deployment, or to an explicit deployment supplied in the body. Requires member role and the customDomains feature.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateCustomDomainRequest'];
+        };
+      };
+      responses: {
+        /** @description Custom domain attached */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CustomDomain'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/custom-domains/{domainId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Detach custom domain
+     * @description Detach a custom domain from its deployment and remove the Scaleway record. Idempotent: a missing domain still returns 204.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          domainId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Custom domain detached */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy-token': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Self-hosted deploy-token status
+     * @description Report whether a self-hosted deploy token exists for this config, plus the deployment health summary when present. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          settingsId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deploy-token status */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeployTokenStatusResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Mint self-hosted deploy token
+     * @description Create a self-hosted deployment (if none exists) and mint a flow+deployment-bound runner token. Admin-only. The raw token is returned once and never stored in plaintext.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          settingsId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deploy token minted */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CreateDeployTokenResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/entitlements': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Resolved entitlements
+     * @description Return resolved feature entitlements for the authenticated user and project. Used by CLI/API clients; the web UI uses SSR-resolved entitlements. Requires viewer role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Resolved entitlements */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['EntitlementsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/settings/llm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Active LLM provider
+     * @description Report which LLM provider is currently active for the project and where billing is sourced. Never returns the apiKey. Requires member role and the chat feature.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Active LLM provider status */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['LlmConfigStatusResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description No platform LLM provider configured */
+        503: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['LlmConfigStatusResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Set LLM provider
+     * @description Set or clear the project LLM provider override. Admin-only, gated by the chat feature. The apiKey is write-only: it is encrypted and never returned.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['SetLlmConfigRequest'];
+        };
+      };
+      responses: {
+        /** @description LLM config saved or cleared */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['SetLlmConfigResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/chat/sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List chat sessions
+     * @description List the caller's recent chat sessions for a project, ordered by last activity. Requires member role and the chat feature.
+     */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+          offset?: number | null;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Chat session list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListChatSessionsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/chat/sessions/{sessionId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get chat session
+     * @description Return a chat session and its full message history when the caller owns it. Foreign or unknown sessions return 404 (never 403) so existence is not leaked. Requires member role and the chat feature.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          sessionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Chat session with messages */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ChatSessionDetailResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/chat/elicit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Answer elicitation prompt
+     * @description Answer a pending MCP elicitation prompt (accept, decline, or cancel), unblocking the waiting tool invocation. Requires member role and the chat feature.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['ElicitRequest'];
+        };
+      };
+      responses: {
+        /** @description Elicitation resolved */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ElicitResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/mcp/tokens': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List MCP tokens
+     * @description List the authenticated user's personal MCP tokens. No secret material is returned.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description MCP token list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListMcpTokensResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Issue MCP token
+     * @description Issue a personal MCP token. The raw token is returned exactly once and is never retrievable afterwards.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateMcpTokenRequest'];
+        };
+      };
+      responses: {
+        /** @description MCP token issued */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CreateMcpTokenResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/mcp/tokens/{tokenId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Revoke MCP token
+     * @description Revoke a personal MCP token by id.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          tokenId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description MCP token revoked */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/runners': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List runners (deprecated)
+     * @description Deprecated: runners migrated to deployments (origin=self-hosted). Always returns an empty list for backward compatibility. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Empty runner list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListRunnersResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/runners/heartbeat': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Runner heartbeat
+     * @description Accept a self-hosted runner heartbeat with usage counters. Authenticated by a flow+deployment-bound runner token. Updates deployment liveness and records an immutable usage row.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['HeartbeatRequest'];
+        };
+      };
+      responses: {
+        /** @description Heartbeat accepted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['RunnerHeartbeatResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/packages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Package catalog
+     * @description Resolved `@walkeros/*` package catalog for the add-step picker, optionally filtered by type and platform.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by package type. */
+          type?: string;
+          /** @description Filter by platform. */
+          platform?: string;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Package catalog */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PackageCatalogResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Package catalog unavailable */
+        502: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/packages/search': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Search packages
+     * @description Search the npm registry for `@walkeros/*` packages. An empty query returns popular scope packages.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Search query. */
+          q?: string;
+          /** @description Filter by platform. */
+          platform?: string;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Search results */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PackageSearchResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Package search unavailable */
+        502: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/observe/timing': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Report connect timing
+     * @description Fire-and-forget beacon for client-side connect timing SLIs. No auth required; carries no secrets. Returns 204.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['ObserveTimingRequest'];
+        };
+      };
+      responses: {
+        /** @description Timing recorded */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3695,6 +7291,7 @@ export interface components {
       platform: 'web' | 'server';
       deploymentStatus: string | null;
       deploymentUrl: string | null;
+      deployedAt: string | null;
     };
     Version: {
       /** @example 1 */
@@ -3738,6 +7335,8 @@ export interface components {
       flowCount: number;
       /** @example 2 */
       deploymentCount: number;
+      /** @example false */
+      isDemo: boolean;
     };
     Member: {
       userId: string;
@@ -3910,6 +7509,16 @@ export interface components {
        */
       createdAt: string;
     };
+    UpdateProjectResponse: {
+      /** @example proj_x7y8z9 */
+      id: string;
+      name: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
     DeploymentSummary: {
       /** @example dep_a1b2c3d4 */
       id: string;
@@ -3947,6 +7556,8 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+      /** Format: date-time */
+      traceUntil: string | null;
       usageSummary?: {
         eventsIn24h: number;
         healthy: boolean;
@@ -3981,6 +7592,8 @@ export interface components {
         | 'stopped'
         | 'failed';
       currentVersion: components['schemas']['DeploymentVersionDetail'];
+      versions: components['schemas']['DeploymentVersionHistoryEntry'][];
+      error: components['schemas']['DeploymentError'];
       url: string | null;
       selfHosted: {
         /** Format: date-time */
@@ -3989,6 +7602,8 @@ export interface components {
         cliVersion: string | null;
         healthy: boolean;
       } | null;
+      /** Format: date-time */
+      traceUntil: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -4003,9 +7618,32 @@ export interface components {
         flowSettingsId?: string;
         configHash?: string;
       };
+      errorMessage: string | null;
+      errorCode: string | null;
       /** Format: date-time */
       publishedAt: string;
       publishedBy: string | null;
+    } | null;
+    DeploymentVersionHistoryEntry: {
+      versionNumber: number;
+      status: string;
+      source: string;
+      errorCode: string | null;
+      errorMessage: string | null;
+      errorPhase: string | null;
+      errorDetail?: string | null;
+      /** Format: date-time */
+      publishedAt: string;
+    };
+    DeploymentError: {
+      code: string;
+      message: string;
+      /**
+       * @example bundle
+       * @enum {string}
+       */
+      phase: 'preflight' | 'deploy' | 'bundle' | 'publish' | 'provision';
+      detail?: string;
     } | null;
     CreateDeploymentResponse: {
       /** @example dep_a1b2c3d4 */
@@ -4044,6 +7682,8 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+      /** Format: date-time */
+      traceUntil: string | null;
       usageSummary?: {
         eventsIn24h: number;
         healthy: boolean;
@@ -4132,6 +7772,8 @@ export interface components {
           flowSettingsId?: string;
           configHash?: string;
         };
+        errorMessage: string | null;
+        errorCode: string | null;
         bundlePath: string | null;
         /** Format: date-time */
         publishedAt: string;
@@ -4178,6 +7820,44 @@ export interface components {
     };
     CreatePreviewRequest: {
       flowSettingsId: string;
+      source?:
+        | {
+            /** @enum {string} */
+            kind: 'draft';
+          }
+        | {
+            /** @enum {string} */
+            kind: 'deployment-version';
+            deploymentVersionId: string;
+          };
+    };
+    SecretName: string;
+    CreateSecretRequest: {
+      name: string;
+      value: string;
+    };
+    UpdateSecretRequest: {
+      value: string;
+    };
+    SecretSummary: {
+      id: string;
+      name: string;
+      flowId: string;
+      /** Format: date-time */
+      createdAt: string | null;
+      /** Format: date-time */
+      updatedAt: string | null;
+    };
+    SecretListResponse: {
+      secrets: {
+        id: string;
+        name: string;
+        flowId: string;
+        /** Format: date-time */
+        createdAt: string | null;
+        /** Format: date-time */
+        updatedAt: string | null;
+      }[];
     };
     FeedbackRequest: {
       /** @example The MCP flow_bundle tool is great but slow on large configs. */
@@ -4197,6 +7877,649 @@ export interface components {
       ok: true;
       /** @example fb_abcdef1234567890 */
       id: string;
+    };
+    StepExample: {
+      title?: string;
+      description?: string;
+      public?: boolean;
+      trigger?: {
+        type?: string;
+        options?: unknown;
+      };
+      mapping?: unknown;
+      command?: string;
+      in: components['schemas']['StepExampleEvent'];
+      out?: unknown[][];
+    };
+    StepExampleEvent: {
+      entity?: string;
+      action?: string;
+      data?: {
+        [key: string]: unknown;
+      };
+      context?: {
+        [key: string]: unknown;
+      };
+      globals?: {
+        [key: string]: unknown;
+      };
+      custom?: {
+        [key: string]: unknown;
+      };
+      id?: string;
+      timestamp?: string;
+      timing?: {
+        [key: string]: unknown;
+      };
+      user?: {
+        [key: string]: unknown;
+      };
+      version?: string;
+      source?: string;
+      trigger?: string;
+    };
+    CreateStepExampleRequest: {
+      title?: string;
+      description?: string;
+      public?: boolean;
+      trigger?: {
+        type?: string;
+        options?: unknown;
+      };
+      mapping?: unknown;
+      command?: string;
+      name: string;
+      event: components['schemas']['StepExampleEvent'];
+      out?: unknown[][];
+    };
+    EditStepExampleRequest: {
+      title?: string;
+      description?: string;
+      public?: boolean;
+      trigger?: {
+        type?: string;
+        options?: unknown;
+      };
+      mapping?: unknown;
+      command?: string;
+      name: string;
+      event?: components['schemas']['StepExampleEvent'];
+      out?: unknown[][];
+    };
+    StepExamplesResponse: {
+      examples: {
+        [key: string]: components['schemas']['StepExample'];
+      };
+    };
+    SecretValuesResponse: {
+      values: {
+        [key: string]: string;
+      };
+    };
+    ServiceAccountSummary: {
+      id: string;
+      name: string;
+      /** @enum {string} */
+      role: 'member' | 'deployer' | 'viewer';
+      email: string;
+      description: string | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+    };
+    CreateServiceAccountRequest: {
+      name: string;
+      /** @enum {string} */
+      role: 'member' | 'deployer' | 'viewer';
+      description?: string;
+    };
+    UpdateServiceAccountRequest: {
+      name?: string;
+      description?: string;
+      /** @enum {string} */
+      role?: 'member' | 'deployer' | 'viewer';
+    };
+    CreateServiceAccountResponse: {
+      id: string;
+      name: string;
+      /** @enum {string} */
+      role: 'member' | 'deployer' | 'viewer';
+      email: string;
+      token: string;
+      tokenId: string;
+      tokenPrefix: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+    };
+    ListServiceAccountsResponse: {
+      serviceAccounts: components['schemas']['ServiceAccountSummary'][];
+      total: number;
+    };
+    CreateSaTokenRequest: {
+      name: string;
+      expiresInDays?: number;
+    };
+    SaTokenSummary: {
+      id: string;
+      name: string;
+      prefix: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      lastUsedAt: string | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      expiresAt: string | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      revokedAt: string | null;
+    };
+    CreateSaTokenResponse: {
+      id: string;
+      name: string;
+      token: string;
+      prefix: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      expiresAt: string | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+    };
+    ListSaTokensResponse: {
+      tokens: components['schemas']['SaTokenSummary'][];
+      total: number;
+    };
+    Invitation: {
+      id: string;
+      /**
+       * Format: email
+       * @example user@example.com
+       */
+      email: string;
+      /**
+       * @default member
+       * @example member
+       * @enum {string}
+       */
+      role: 'admin' | 'member' | 'deployer' | 'viewer';
+      /** @enum {string} */
+      status: 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
+      invitedBy: string | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      expiresAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+    };
+    CreateInvitationRequest: {
+      /**
+       * Format: email
+       * @example user@example.com
+       */
+      email: string;
+      /**
+       * @default member
+       * @example member
+       * @enum {string}
+       */
+      role: 'admin' | 'member' | 'deployer' | 'viewer';
+    };
+    CreateInvitationResponse: {
+      id: string;
+      /**
+       * Format: email
+       * @example user@example.com
+       */
+      email: string;
+      /**
+       * @default member
+       * @example member
+       * @enum {string}
+       */
+      role: 'admin' | 'member' | 'deployer' | 'viewer';
+      /** @enum {string} */
+      status: 'pending';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      expiresAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+    };
+    ListInvitationsResponse: {
+      invitations: components['schemas']['Invitation'][];
+      total: number;
+    };
+    InvitationPreview: {
+      projectName: string;
+      /**
+       * Format: email
+       * @example user@example.com
+       */
+      email: string;
+      /**
+       * @default member
+       * @example member
+       * @enum {string}
+       */
+      role: 'admin' | 'member' | 'deployer' | 'viewer';
+      /** @enum {string} */
+      status: 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      expiresAt: string;
+      /**
+       * Format: email
+       * @example user@example.com
+       */
+      invitedByEmail: string;
+    };
+    AcceptInvitationResponse: {
+      projectId: string;
+      projectName: string;
+      /**
+       * @default member
+       * @example member
+       * @enum {string}
+       */
+      role: 'admin' | 'member' | 'deployer' | 'viewer';
+      alreadyMember: boolean;
+    };
+    TelemetryEvent: {
+      id: string;
+      name: string;
+      entity: string;
+      action: string;
+      data: {
+        [key: string]: unknown;
+      };
+      context: {
+        [key: string]: unknown;
+      };
+      globals: {
+        [key: string]: unknown;
+      };
+      custom: {
+        [key: string]: unknown;
+      };
+      user: {
+        device: string;
+        session?: string;
+        os: string;
+        osVersion: string;
+        node: string;
+        language: string;
+        timezone: string;
+      } & {
+        [key: string]: unknown;
+      };
+      nested: unknown[];
+      consent: {
+        [key: string]: boolean;
+      };
+      trigger: string;
+      timestamp: number;
+      timing: number;
+      source: {
+        /** @enum {string} */
+        type: 'cli' | 'mcp';
+        platform?: string;
+        version?: string;
+        schema?: string;
+        tool?: string;
+        command?: string;
+      } & {
+        [key: string]: unknown;
+      };
+    };
+    UpsertBillingDetailsRequest: {
+      companyName: string;
+      address: string;
+      address2?: string;
+      postalCode: string;
+      city: string;
+      country: string;
+      vatId?: string;
+      /** Format: email */
+      invoiceEmail: string;
+      contactName?: string;
+    };
+    BillingDetailsResponse: {
+      id: string;
+      projectId: string;
+      companyName: string;
+      address: string;
+      address2: string | null;
+      postalCode: string;
+      city: string;
+      country: string;
+      vatId: string | null;
+      invoiceEmail: string;
+      contactName: string | null;
+      /** @enum {string} */
+      taxTreatment: 'reverse_charge' | 'domestic' | 'export' | 'eu_standard';
+      /** @enum {string} */
+      viesStatus: 'verified' | 'invalid' | 'unavailable' | 'not_checked';
+      viesCompanyName: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    DeployedContentResponse: {
+      deploymentId: string | null;
+      versionNumber: number | null;
+      status: string | null;
+      flowSettingsName: string | null;
+      /** Format: date-time */
+      publishedAt: string | null;
+      content?: unknown;
+    };
+    ListHeartbeatsResponse: {
+      records: components['schemas']['HeartbeatRecord'][];
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    HeartbeatRecord: {
+      id: string;
+      instanceId: string | null;
+      cliVersion: string | null;
+      configVersion: number | null;
+      mode: string | null;
+      uptime: number | null;
+      eventsIn: number | null;
+      eventsOut: number | null;
+      eventsFailed: number | null;
+      perDestinationBreakdown?: unknown;
+      /** Format: date-time */
+      receivedAt: string;
+    };
+    RotateIngestTokenResponse: {
+      ingestToken: string;
+    };
+    TraceDeploymentRequest: {
+      minutes?: number;
+    };
+    TraceDeploymentResponse: {
+      /** Format: date-time */
+      traceUntil: string | null;
+      minutes: number;
+    };
+    DeploymentUsageResponse: {
+      totalEventsIn: number;
+      totalEventsOut: number;
+      totalEventsFailed: number;
+      totalInstances: number;
+      heartbeatCount: number;
+      /** Format: date-time */
+      from: string;
+      /** Format: date-time */
+      to: string;
+      averageThroughputPerHour: number;
+      period: string;
+      buckets: components['schemas']['UsageBucket'][];
+    };
+    UsageBucket: {
+      /** Format: date-time */
+      bucket: string;
+      eventsIn: number;
+      eventsOut: number;
+      eventsFailed: number;
+      instances: number;
+    };
+    CreateCustomDomainRequest: {
+      hostname: string;
+      deploymentId?: string;
+    };
+    CustomDomain: {
+      id: string;
+      deploymentId: string;
+      hostname: string;
+      kind: string;
+      status: string;
+      scwResourceId: string | null;
+      certStatus: string;
+      /** Format: date-time */
+      verifiedAt: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    ListCustomDomainsResponse: {
+      domains: components['schemas']['CustomDomain'][];
+    };
+    DeployTokenStatusResponse:
+      | {
+          /** @enum {boolean} */
+          hasToken: false;
+        }
+      | {
+          /** @enum {boolean} */
+          hasToken: true;
+          deploymentId: string;
+          status: string;
+          healthy: boolean;
+          /** Format: date-time */
+          lastHeartbeatAt: string | null;
+          instanceId: string | null;
+          cliVersion: string | null;
+        };
+    CreateDeployTokenResponse: {
+      token: string;
+      deploymentId: string;
+      projectId: string;
+      flowId: string;
+      configName: string;
+    };
+    EntitlementsResponse: {
+      planId: string;
+      role: string;
+      entitlements: {
+        [key: string]: boolean | number;
+      };
+    };
+    SetLlmConfigRequest:
+      | {
+          /** @enum {string} */
+          action: 'clear';
+        }
+      | {
+          /** @enum {string} */
+          action: 'set';
+          config:
+            | {
+                /** @enum {string} */
+                provider: 'mistral';
+                modelId: string;
+                apiKey: string;
+              }
+            | {
+                /** @enum {string} */
+                provider: 'anthropic';
+                modelId: string;
+                apiKey: string;
+              }
+            | {
+                /** @enum {string} */
+                provider: 'openai';
+                modelId: string;
+                apiKey: string;
+              }
+            | {
+                /** @enum {string} */
+                provider: 'google';
+                modelId: string;
+                apiKey: string;
+              }
+            | {
+                /** @enum {string} */
+                provider: 'openai-compatible';
+                modelId: string;
+                apiKey: string;
+                /** Format: uri */
+                baseURL: string;
+              };
+        };
+    SetLlmConfigResponse:
+      | {
+          /** @enum {boolean} */
+          cleared: true;
+        }
+      | {
+          /** @enum {boolean} */
+          saved: true;
+        };
+    LlmConfigStatusResponse: {
+      provider: string;
+      /** @enum {string} */
+      source: 'platform' | 'byok' | 'byom';
+    };
+    ListChatSessionsResponse: {
+      sessions: components['schemas']['ChatSessionSummary'][];
+      total: number;
+    };
+    ChatSessionSummary: {
+      id: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      lastActiveAt: string;
+      messageCount: number;
+      firstUserMessage?: string;
+    };
+    ChatSessionDetailResponse: {
+      id: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      lastActiveAt: string;
+      messages: components['schemas']['ChatSessionMessage'][];
+    };
+    ChatSessionMessage: {
+      seq: number;
+      role: string;
+      content?: unknown;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    ElicitRequest: {
+      sessionId: string;
+      elicitationId: string;
+      result:
+        | {
+            /** @enum {string} */
+            action: 'accept';
+            content?: {
+              [key: string]: string | number | boolean | string[];
+            };
+          }
+        | {
+            /** @enum {string} */
+            action: 'decline';
+          }
+        | {
+            /** @enum {string} */
+            action: 'cancel';
+          };
+    };
+    ElicitResponse: {
+      /** @enum {boolean} */
+      ok: true;
+    };
+    CreateMcpTokenRequest: {
+      name: string;
+      ttlSeconds?: number;
+    };
+    CreateMcpTokenResponse: {
+      id: string;
+      name: string;
+      token: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    ListMcpTokensResponse: {
+      tokens: components['schemas']['McpTokenSummary'][];
+    };
+    McpTokenSummary: {
+      id: string;
+      name: string;
+      audience: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      lastUsedAt: string | null;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    PackageCatalogResponse: {
+      catalog: components['schemas']['PackageCatalogEntry'][];
+      count: number;
+    };
+    PackageCatalogEntry: {
+      name: string;
+      version: string;
+      description?: string;
+      type: string;
+      platform: string[];
+    };
+    PackageSearchResponse: {
+      packages: components['schemas']['PackageSearchHit'][];
+      count: number;
+    };
+    PackageSearchHit: {
+      name: string;
+      version: string;
+      description: string;
+    };
+    ListRunnersResponse: {
+      runners: unknown[];
+      total: number;
+    };
+    RunnerHeartbeatResponse: {
+      id: string;
+      instanceId: string;
+      deploymentId: string;
+    };
+    ObserveTimingRequest: {
+      connectId: string;
+      ticketMs: number;
+      sseMs: number;
+      totalMs: number;
     };
     MagicLinkResponse: {
       /** @example true */
@@ -4265,8 +8588,25 @@ export interface components {
     CreateProjectRequest: {
       name: string;
     };
+    ProjectDetailResponse: {
+      /** @example proj_x7y8z9 */
+      id: string;
+      name: string;
+      /**
+       * Format: uri
+       * @example https://example.com
+       */
+      siteUrl?: string | null;
+      /** @enum {string} */
+      role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
+    };
     UpdateProjectRequest: {
       name?: string;
+      /**
+       * Format: uri
+       * @example https://example.com
+       */
+      siteUrl?: string | null;
     };
     ListMembersResponse: {
       members: components['schemas']['Member'][];
@@ -4360,25 +8700,14 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
-    AdvanceSettingsDeploymentResponse: {
-      id: string;
-      flowId: string;
-      /** @enum {string} */
-      type: 'web' | 'server';
-      status: string;
-      containerUrl: string | null;
-      publicUrl?: string | null;
-      errorMessage: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-    };
     ListVersionsResponse: {
       data: components['schemas']['Version'][];
       /** @example flow_a1b2c3d4 */
       flowId: string;
       total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
     };
     GetVersionResponse: {
       /** @example 1 */
@@ -4472,6 +8801,53 @@ export interface components {
     HealthResponse: {
       /** @example ok */
       status: string;
+      /**
+       * @description Build identity of the running app (git short hash injected at build time).
+       * @example a1b2c3d
+       */
+      appVersion: string;
+      /**
+       * @description Semver of the API contract the server implements.
+       * @example 1.0.0
+       */
+      contractVersion: string;
+      /**
+       * @description Deterministic sha256 of the OpenAPI contract content.
+       * @example e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+       */
+      contractHash: string;
+    };
+    DeclineInvitationResponse: {
+      message: string;
+    };
+    HeartbeatRequest: {
+      /** @example a1b2c3d4e5f6 */
+      instanceId: string;
+      /** @example flow_abc123 */
+      flowId: string;
+      configVersion?: string;
+      /** @enum {string} */
+      mode?: 'local' | 'collect' | 'serve';
+      /** @example 1.3.0 */
+      cliVersion?: string;
+      uptime?: number;
+      metadata?: {
+        [key: string]: unknown;
+      };
+      /** @example dpl_abc123 */
+      deploymentId?: string;
+      counters?: {
+        eventsIn: number;
+        eventsOut: number;
+        eventsFailed: number;
+        destinations: {
+          [key: string]: {
+            count: number;
+            failed: number;
+            duration: number;
+          };
+        };
+      };
     };
   };
   responses: never;

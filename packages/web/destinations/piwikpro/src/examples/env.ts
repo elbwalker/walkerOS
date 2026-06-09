@@ -9,7 +9,7 @@ import type { Env } from '../types';
 
 export const init: Env | undefined = {
   window: {
-    _paq: undefined as unknown as Env['window']['_paq'],
+    // _paq absent: init() is expected to install the queue.
   },
   document: {
     createElement: () => ({
@@ -24,7 +24,7 @@ export const init: Env | undefined = {
 
 export const push: Env = {
   window: {
-    _paq: [] as unknown[],
+    _paq: [],
   },
   document: {
     createElement: () => ({

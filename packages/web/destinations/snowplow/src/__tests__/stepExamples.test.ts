@@ -4,7 +4,7 @@ import type {
   Mapping as WalkerOSMapping,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, createLogger } from '@walkeros/core';
 import { examples } from '../dev';
 import type { Env } from '../types';
 
@@ -13,15 +13,7 @@ type CallRecord = [string, ...unknown[]];
 const initConfig = examples.step.init.in as Destination.Config;
 const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
 
-const noopLogger = {
-  log: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  throw: (msg: string) => {
-    throw new Error(msg);
-  },
-} as unknown as Destination.Context['logger'];
+const noopLogger = createLogger();
 
 /**
  * Snowplow's queue API is `window.snowplow(method, ...args)`. We record

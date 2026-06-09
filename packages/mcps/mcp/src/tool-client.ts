@@ -8,6 +8,10 @@ import type {
   GetPreviewOptions,
   CreatePreviewOptions,
   DeletePreviewOptions,
+  ListSecretsOptions,
+  CreateSecretOptions,
+  UpdateSecretOptions,
+  DeleteSecretOptions,
   FeedbackOptions,
 } from '@walkeros/cli';
 
@@ -69,6 +73,12 @@ export interface ToolClient {
   createPreview(options: CreatePreviewOptions): Promise<unknown>;
   deletePreview(options: DeletePreviewOptions): Promise<unknown>;
 
+  // Secrets (per-flow; metadata only, values are write-only)
+  listSecrets(options: ListSecretsOptions): Promise<unknown>;
+  createSecret(options: CreateSecretOptions): Promise<unknown>;
+  updateSecret(options: UpdateSecretOptions): Promise<unknown>;
+  deleteSecret(options: DeleteSecretOptions): Promise<unknown>;
+
   // Deployments
   deploy(options: DeployOptions): Promise<unknown>;
   listDeployments(options: ListDeploymentsOptions): Promise<unknown>;
@@ -90,6 +100,17 @@ export interface ToolClient {
   whoami(): Promise<unknown>;
   resolveToken(): { token: string; source: 'env' | 'config' } | null;
   deleteConfig(): boolean;
+
+  // Diagnostics: unauthenticated reachability probe of the app's public
+  // `/api/health` route. Resolves `{ reachable: false }` only on a real
+  // network/timeout failure, never on "not authenticated". Optional: clients
+  // that cannot probe reachability (e.g. in-process hosts) may omit it, and
+  // diagnostics degrades to `app.reachable: false`.
+  checkHealth?(): Promise<{
+    reachable: boolean;
+    status?: string;
+    version?: string;
+  }>;
 
   // Feedback
   submitFeedback(text: string, options?: FeedbackOptions): Promise<void>;

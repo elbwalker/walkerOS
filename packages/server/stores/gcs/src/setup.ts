@@ -7,6 +7,7 @@ import type {
   Types,
 } from './types';
 import { createTokenProvider } from './auth';
+import { resolveCredentials } from './credentials';
 import { resolveProjectId } from './setup-helpers';
 
 const GCS_BASE = 'https://storage.googleapis.com';
@@ -53,8 +54,9 @@ export const setup: SetupFn<GcsStoreConfig, Store.BaseEnv> = async (
     throw new Error('setup: settings.bucket is required');
   }
 
-  const projectId = resolveProjectId(settings, options);
-  const creds = parseCredentials(settings.credentials);
+  const rawCreds = resolveCredentials(config, logger);
+  const projectId = resolveProjectId(options, rawCreds);
+  const creds = parseCredentials(rawCreds);
   const getToken = createTokenProvider(creds);
   const token = await getToken();
 

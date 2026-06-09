@@ -4,6 +4,7 @@ declare module '@google-cloud/bigquery-storage' {
   export function __setNextAppendRowErrors(
     errors: Array<{ index: number; code: number; message: string }>,
   ): void;
+  export function __setNextAppendThrow(err: unknown): void;
   export function __setNextOpenWriterError(err: unknown): void;
 }
 

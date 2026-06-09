@@ -2,15 +2,33 @@
  * Resolve bundle input to a local file path
  *
  * Priority order:
- * 1. File path (exists) - BUNDLE points to an existing local file
- * 2. URL                - BUNDLE is an http(s) URL → fetch and write to writePath
+ * 1. Local file (exists) - BUNDLE points to an existing local file
+ *    - `.tar.gz`/`.tgz` archives are extracted (gzip is not ESM)
+ *    - everything else is imported directly
+ * 2. URL                - BUNDLE is an http(s) URL
+ *    - archive content (extension or content-type) is streamed and extracted
+ *    - text content is fetched and written to writePath
  * 3. Stdin              - data piped into the process
  * 4. File path (fallback) - BUNDLE path that doesn't exist yet
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { dirname } from 'path';
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+} from 'fs';
+import { dirname, join } from 'path';
+import { Readable } from 'stream';
+import { x as tarExtract } from 'tar';
 import { isStdinPiped, readStdin } from '../core/stdin.js';
+
+/** Entry the runtime expects at the root of an extracted archive. */
+const ARCHIVE_ENTRY = 'flow.mjs';
+
+/** Request timeout for the URL fetch headers (not the streaming extract). */
+const FETCH_TIMEOUT_MS = 30_000;
 
 /**
  * Determine where to write fetched/stdin bundles.
@@ -22,7 +40,7 @@ function getDefaultWritePath(): string {
   return '/tmp/walkeros-flow.mjs';
 }
 
-export type BundleSource = 'stdin' | 'url' | 'file';
+export type BundleSource = 'stdin' | 'url' | 'file' | 'archive';
 
 export interface ResolvedBundle {
   /** Absolute file path to the bundle (ready for import()) */
@@ -39,6 +57,23 @@ function isUrl(value: string): boolean {
 }
 
 /**
+ * Detect whether a bundle reference points at a gzip tar archive.
+ * Matches on the path part (query/hash stripped so presigned URLs work) or on
+ * an explicit gzip/x-tar content-type.
+ */
+export function isArchive(value: string, contentType?: string | null): boolean {
+  const path = value.split('?')[0].split('#')[0].toLowerCase();
+  if (path.endsWith('.tar.gz') || path.endsWith('.tgz')) return true;
+
+  if (contentType) {
+    const type = contentType.toLowerCase();
+    if (type.includes('gzip') || type.includes('x-tar')) return true;
+  }
+
+  return false;
+}
+
+/**
  * Write bundle content to disk, ensuring parent directory exists.
  */
 function writeBundleToDisk(writePath: string, content: string): void {
@@ -50,11 +85,14 @@ function writeBundleToDisk(writePath: string, content: string): void {
 }
 
 /**
- * Fetch bundle from URL and write to disk.
- * Uses a 30s timeout to prevent silent container hangs on unresponsive URLs.
+ * Perform the HTTP request and return the Response.
+ * A 30s timeout guards against silent container hangs while waiting on
+ * headers; it is intentionally NOT applied to body streaming downstream.
  */
-async function fetchBundle(url: string, writePath: string): Promise<string> {
-  const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+async function fetchOk(url: string): Promise<Response> {
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -62,14 +100,90 @@ async function fetchBundle(url: string, writePath: string): Promise<string> {
     );
   }
 
+  return response;
+}
+
+/**
+ * Read a text response body and write it to disk as the bundle.
+ */
+async function fetchTextToDisk(
+  response: Response,
+  writePath: string,
+): Promise<string> {
   const content = await response.text();
 
   if (!content.trim()) {
-    throw new Error(`Bundle fetched from ${url} is empty`);
+    throw new Error(`Bundle is empty`);
   }
 
   writeBundleToDisk(writePath, content);
   return writePath;
+}
+
+/**
+ * Pipe a Node readable through tar extraction into destDir and await
+ * completion, then assert the expected entry landed.
+ *
+ * The 30s request timeout (fetchOk) only covers obtaining the response; the
+ * extract itself is deliberately left unbounded. A multi-MB node_modules on a
+ * cold container can take longer than 30s to unpack, and no abort signal is
+ * wired into this pipe, so the body stream runs to completion regardless of
+ * the header timeout that already fired and settled.
+ */
+async function extractToDir(
+  source: Readable,
+  destDir: string,
+): Promise<string> {
+  if (!existsSync(destDir)) {
+    mkdirSync(destDir, { recursive: true });
+  }
+
+  // destDir is stable across runs (e.g. /app/flow in a long-lived container).
+  // Wipe the full extracted footprint first so a prior run's node_modules/ or
+  // package.json can't shadow the new archive, and the post-extract existence
+  // check proves THIS archive delivered flow.mjs, not a leftover.
+  const entryPath = join(destDir, ARCHIVE_ENTRY);
+  for (const member of [ARCHIVE_ENTRY, 'node_modules', 'package.json']) {
+    rmSync(join(destDir, member), { recursive: true, force: true });
+  }
+
+  const extract = tarExtract({ cwd: destDir });
+
+  await new Promise<void>((resolve, reject) => {
+    source.on('error', reject);
+    extract.on('error', reject);
+    // 'close' is the reliable terminal event for the tar write stream; 'finish'
+    // can fire before all entries are flushed in some tar versions.
+    extract.on('close', resolve);
+    source.pipe(extract);
+  });
+
+  if (!existsSync(entryPath)) {
+    throw new Error(
+      `Archive did not contain ${ARCHIVE_ENTRY} after extraction to ${destDir}`,
+    );
+  }
+
+  return entryPath;
+}
+
+/**
+ * Stream a gzip tar response body and extract it into destDir.
+ */
+async function fetchArchive(
+  response: Response,
+  destDir: string,
+): Promise<string> {
+  if (!response.body) {
+    throw new Error('Archive response has no body to extract');
+  }
+
+  // Readable.fromWeb's web-stream param type differs across lib versions
+  // (DOM ReadableStream vs node:stream/web ReadableStream); they are the same
+  // object at runtime. Anchor to fromWeb's own declared parameter type rather
+  // than reaching for `any`.
+  const webStream = response.body as Parameters<typeof Readable.fromWeb>[0];
+  return extractToDir(Readable.fromWeb(webStream), destDir);
 }
 
 /**
@@ -91,16 +205,33 @@ export async function resolveBundle(
   bundleEnv: string,
 ): Promise<ResolvedBundle> {
   const writePath = getDefaultWritePath();
-  // 1. If BUNDLE points to an existing file, use it directly
-  //    This prevents false stdin detection in Docker detached mode
+  const archiveDestDir = dirname(writePath);
+
+  // 1. If BUNDLE points to an existing local file, use it directly.
+  //    This prevents false stdin detection in Docker detached mode.
+  //    A local archive must be extracted (gzip is not ESM), not imported.
   if (!isUrl(bundleEnv) && existsSync(bundleEnv)) {
+    if (isArchive(bundleEnv)) {
+      const path = await extractToDir(
+        createReadStream(bundleEnv),
+        archiveDestDir,
+      );
+      return { path, source: 'archive' };
+    }
     return { path: bundleEnv, source: 'file' };
   }
 
   // 2. URL — check before stdin to avoid false stdin detection in containers
   //    (process.stdin.isTTY is undefined in non-interactive shells/Docker)
   if (isUrl(bundleEnv)) {
-    const path = await fetchBundle(bundleEnv, writePath);
+    const response = await fetchOk(bundleEnv);
+
+    if (isArchive(bundleEnv, response.headers.get('content-type'))) {
+      const path = await fetchArchive(response, archiveDestDir);
+      return { path, source: 'archive' };
+    }
+
+    const path = await fetchTextToDisk(response, writePath);
     return { path, source: 'url' };
   }
 

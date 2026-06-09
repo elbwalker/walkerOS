@@ -1,5 +1,8 @@
 // DOM utilities for working with story elements
 
+import { Const } from '@walkeros/collector';
+import { getElbAttributeName } from '@walkeros/web-source-browser';
+
 // Function to get the story document (either iframe or main document)
 export const getStoryDocument = (): Document => {
   // Try to find story iframe
@@ -63,25 +66,33 @@ export const enhanceProperties = (
   // Find all elements with any attributes starting with prefix-
   const allElements = Array.from(storyRoot.querySelectorAll('*'));
 
-  allElements.forEach((el) => {
-    const attributes = Array.from(el.attributes);
-    let hasProperties = false;
+  const scopedAttr = getElbAttributeName(prefix, Const.Commands.Scoped, false); // data-elb_
+  const actionAttr = getElbAttributeName(prefix, Const.Commands.Action, false);
+  const contextAttr = getElbAttributeName(
+    prefix,
+    Const.Commands.Context,
+    false,
+  );
+  const globalsAttr = getElbAttributeName(
+    prefix,
+    Const.Commands.Globals,
+    false,
+  );
 
-    attributes.forEach((attr) => {
-      // Check if attribute starts with prefix- (e.g., data-elb-button, data-elb-product)
-      if (
+  allElements.forEach((el) => {
+    const hasProperties = Array.from(el.attributes).some((attr) => {
+      if (attr.name === scopedAttr) return true; // scoped generic data-elb_
+      return (
         attr.name.startsWith(`${prefix}-`) &&
-        attr.name !== `${prefix}action` &&
-        attr.name !== `${prefix}context` &&
-        attr.name !== `${prefix}globals`
-      ) {
-        hasProperties = true;
-      }
+        attr.name !== actionAttr &&
+        attr.name !== contextAttr &&
+        attr.name !== globalsAttr
+      );
     });
 
     // Mark elements with property attributes
     if (hasProperties) {
-      el.setAttribute(`${prefix}property`, '');
+      el.setAttribute(getElbAttributeName(prefix, 'property', false), '');
     }
   });
 };

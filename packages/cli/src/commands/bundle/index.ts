@@ -18,6 +18,9 @@ import {
   readStdin,
   writeResult,
 } from '../../core/index.js';
+import { packBundleDir } from './archive.js';
+import type { Flow, Logger } from '@walkeros/core';
+import type { BundleStats } from './bundler.js';
 import {
   loadJsonConfig,
   loadBundleConfig,
@@ -72,6 +75,85 @@ export function resolveOutputPath(
   return resolved;
 }
 
+/** Recognizes the packed-archive output extensions. */
+function isArchiveOutput(output: string): boolean {
+  const lower = output.toLowerCase();
+  return lower.endsWith('.tar.gz') || lower.endsWith('.tgz');
+}
+
+/**
+ * Run the core bundler, transparently producing a packed `.tar.gz`/`.tgz`
+ * artifact when `buildOptions.output` carries an archive extension.
+ *
+ * For a `.tar.gz`/`.tgz` output on the node platform, the build is redirected
+ * into a temp directory so `runNftServerPath` populates `flow.mjs` +
+ * `node_modules/` + `package.json` there; the directory is then packed into
+ * the archive at the user's output path and the temp dir is removed. Non
+ * archive outputs (`.mjs`, directory, stdout, web `.js`) pass straight through
+ * to `bundleCore` unchanged.
+ *
+ * Web bundles are single-file IIFEs with no sibling `node_modules` to pack, so
+ * requesting an archive extension for a web/browser platform is an error.
+ */
+async function runBundleCoreWithArchive(
+  flowSettings: Flow,
+  buildOptions: BuildOptions,
+  logger: Logger.Instance,
+  showStats = false,
+): Promise<BundleStats | void> {
+  if (!isArchiveOutput(buildOptions.output)) {
+    return bundleCore(flowSettings, buildOptions, logger, showStats);
+  }
+
+  if (buildOptions.platform !== 'node') {
+    throw new Error(
+      `Archive output (${path.extname(buildOptions.output)}) is only supported for server (node) flows. ` +
+        'Web bundles are a single-file IIFE with no node_modules to pack — use a .js output instead.',
+    );
+  }
+
+  const archivePath = path.resolve(buildOptions.output);
+  // mkdtemp guarantees a unique dir even for same-millisecond parallel node
+  // archive builds (e.g. --all), which a Date.now() suffix cannot.
+  const tempDir = await fs.mkdtemp(
+    path.join(getTmpPath(), 'walkeros-archive-'),
+  );
+
+  try {
+    const stats = await bundleCore(
+      flowSettings,
+      { ...buildOptions, output: path.join(tempDir, 'flow.mjs') },
+      logger,
+      showStats,
+    );
+
+    // node_modules/ is only present when nft copied ≥1 traced file. A flow
+    // whose deps esbuild fully inlines emits flow.mjs + package.json only, so
+    // pack just the entries that exist (tar.c throws ENOENT on a missing path).
+    // flow.mjs and package.json are mandatory; their absence is a real error.
+    for (const required of ['flow.mjs', 'package.json']) {
+      if (!(await fs.pathExists(path.join(tempDir, required)))) {
+        throw new Error(
+          `Bundle archive build is missing ${required}; cannot pack ${archivePath}.`,
+        );
+      }
+    }
+    const candidates = ['flow.mjs', 'node_modules', 'package.json'];
+    const entries: string[] = [];
+    for (const entry of candidates) {
+      if (await fs.pathExists(path.join(tempDir, entry))) entries.push(entry);
+    }
+
+    await fs.ensureDir(path.dirname(archivePath));
+    await packBundleDir(tempDir, archivePath, entries);
+    logger.debug(`Packed bundle archive: ${archivePath}`);
+
+    return stats;
+  } finally {
+    await fs.remove(tempDir).catch(() => {});
+  }
+}
+
 export async function bundleCommand(
   options: BundleCommandOptions,
 ): Promise<void> {
@@ -93,6 +175,11 @@ export async function bundleCommand(
     if (options.all && writingToStdout) {
       throw new Error(
         'Cannot use --all without --output (multiple bundles need file output)',
+      );
+    }
+    if (options.all && options.output && isArchiveOutput(options.output)) {
+      throw new Error(
+        'Cannot use --all with an archive output (.tar.gz/.tgz). Archive packing produces one file per flow; point -o at a directory instead.',
       );
     }
 
@@ -177,7 +264,7 @@ export async function bundleCommand(
 
         // Run bundler
         const shouldCollectStats = options.stats || options.json;
-        const stats = await bundleCore(
+        const stats = await runBundleCoreWithArchive(
           flowSettings,
           buildOptions,
           logger,
@@ -380,6 +467,7 @@ export async function bundle(
     ...(options.buildOverrides ?? {}),
     skipWrapper: preset.skipWrapper,
     withDev: preset.withDev,
+    externalizeDev: preset.externalizeDev,
   };
   const { flowSettings, buildOptions } = loadBundleConfig(rawConfig, {
     configPath,
@@ -395,8 +483,8 @@ export async function bundle(
   // 4. Create logger internally
   const logger = createCLILogger(options);
 
-  // 5. Call core bundler
-  return await bundleCore(
+  // 5. Call core bundler (packs a .tar.gz/.tgz artifact when output requests it)
+  return await runBundleCoreWithArchive(
     flowSettings,
     buildOptions,
     logger,

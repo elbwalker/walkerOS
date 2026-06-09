@@ -77,6 +77,8 @@ const baseSettings: GcsStoreSettings = {
   bucket: 'my-bucket',
 };
 
+// Deprecated path: credential under settings.credentials. Used by the
+// dedicated deprecation-warn test, which intentionally exercises the warn.
 const settingsWithProject: GcsStoreSettings = {
   bucket: 'my-bucket',
   credentials: JSON.stringify({
@@ -86,9 +88,18 @@ const settingsWithProject: GcsStoreSettings = {
   }),
 };
 
+// Supported path: credential at top-level config.credentials, so the default
+// config provisions a project without tripping the deprecation warn.
+const credentialsWithProject: string = JSON.stringify({
+  client_email: 'sa@example.iam.gserviceaccount.com',
+  private_key: '-----BEGIN PRIVATE KEY-----\nx\n-----END PRIVATE KEY-----',
+  project_id: 'my-project',
+});
+
 function createConfig(overrides: Partial<GcsStoreConfig> = {}): GcsStoreConfig {
   return {
-    settings: settingsWithProject,
+    settings: baseSettings,
+    credentials: credentialsWithProject,
     setup: true,
     ...overrides,
   };
@@ -165,6 +176,71 @@ describe('setup (GCS bucket)', () => {
           publicAccessPrevention: 'enforced',
         },
       });
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves the project from config.credentials (precedence over settings)', async () => {
+    const { calls, restore } = installFetch([{ status: 200 }]);
+    try {
+      const logger = createMockLogger();
+      const ctx = {
+        id: 'gcs-store',
+        env: {},
+        logger,
+        config: createConfig({
+          settings: {
+            bucket: 'my-bucket',
+            credentials: JSON.stringify({
+              client_email: 'sa@example.iam.gserviceaccount.com',
+              private_key:
+                '-----BEGIN PRIVATE KEY-----\nx\n-----END PRIVATE KEY-----',
+              project_id: 'settings-project',
+            }),
+          },
+          credentials: JSON.stringify({
+            client_email: 'sa@example.iam.gserviceaccount.com',
+            private_key:
+              '-----BEGIN PRIVATE KEY-----\nx\n-----END PRIVATE KEY-----',
+            project_id: 'config-project',
+          }),
+        }),
+      };
+
+      const result = await setup(ctx);
+
+      expect(result).toEqual({ bucketCreated: true });
+      expect(calls[0].url).toBe(
+        'https://storage.googleapis.com/storage/v1/b?project=config-project',
+      );
+      // config.credentials wins, so the deprecated settings path is not used
+      expect(logger.warn).not.toHaveBeenCalled();
+    } finally {
+      restore();
+    }
+  });
+
+  it('warns once when only the deprecated settings.credentials is set', async () => {
+    const { restore } = installFetch([{ status: 200 }]);
+    try {
+      const logger = createMockLogger();
+      const ctx = {
+        id: 'gcs-store',
+        env: {},
+        logger,
+        config: createConfig({
+          settings: settingsWithProject,
+          credentials: undefined,
+        }),
+      };
+
+      await setup(ctx);
+
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('settings.credentials is deprecated'),
+      );
     } finally {
       restore();
     }
@@ -399,6 +475,7 @@ describe('setup (GCS bucket)', () => {
       const ctx = createCtx(
         createConfig({
           settings: baseSettings,
+          credentials: undefined,
           setup: true,
         }),
       );

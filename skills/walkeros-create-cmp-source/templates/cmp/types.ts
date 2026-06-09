@@ -54,9 +54,25 @@ export interface Mapping {}
 /** Push function type -- uses elb for consent commands */
 export type Push = Elb.Fn;
 
+/**
+ * Window surface the CMP source touches: the CMP global (looked up by name),
+ * plus event registration. An index signature keeps the dynamic
+ * `window[globalName]` lookup typed without a cast.
+ *
+ * Narrowing the env window here (instead of `Window & typeof globalThis`) lets
+ * test mocks satisfy `Env['window']` directly, with no `as unknown as Window`
+ * cast. See create-destination §3.3.1 for the same declare-global +
+ * narrowed-`Env` pattern.
+ */
+export interface CmpWindow {
+  addEventListener: Window['addEventListener'];
+  removeEventListener: Window['removeEventListener'];
+  [key: string]: CmpAPI | unknown;
+}
+
 /** Environment interface for CMP source */
 export interface Env extends Source.BaseEnv {
-  window?: Window & typeof globalThis;
+  window?: CmpWindow;
 }
 
 /** Types bundle -- InitSettings as 5th param makes config.settings partial */

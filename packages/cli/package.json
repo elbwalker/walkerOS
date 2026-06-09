@@ -19,7 +19,8 @@
       "types": "./dist/examples/index.d.ts",
       "default": "./dist/examples/index.js"
     },
-    "./examples/*": "./examples/*"
+    "./examples/*": "./examples/*",
+    "./openapi/spec.json": "./openapi/spec.json"
   },
   "bin": {
     "walkeros": "./dist/cli.js"
@@ -27,6 +28,7 @@
   "files": [
     "dist/**",
     "examples/**",
+    "openapi/spec.json",
     "src/telemetry/flow.json",
     "README.md",
     "CHANGELOG.md"
@@ -38,7 +40,7 @@
     "test": "jest --colors --testPathIgnorePatterns '__tests__/e2e/'",
     "test:debug": "jest --colors --detectOpenHandles --testPathIgnorePatterns '__tests__/e2e/'",
     "test:integration": "jest --colors --testPathPatterns='__tests__/e2e/'",
-    "generate:types": "openapi-typescript ${OPENAPI_SPEC:-./openapi/spec.json} -o src/types/api.gen.d.ts",
+    "generate:types": "openapi-typescript ${OPENAPI_SPEC:-./openapi/spec.json} -o src/types/api.gen.d.ts && prettier --write src/types/api.gen.d.ts ./openapi/spec.json",
     "generate:types:local": "OPENAPI_SPEC=${WALKEROS_APP_URL:-http://localhost:3000}/api/openapi.json npm run generate:types",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts*\"",
@@ -54,6 +56,7 @@
     "@walkeros/core": "4.1.2",
     "@walkeros/server-core": "4.1.2",
     "@walkeros/server-destination-api": "4.1.2",
+    "@walkeros/transformer-validate": "4.1.2",
     "ajv": "^8.17.1",
     "chalk": "^5.6.2",
     "ci-info": "^4.4.0",
@@ -69,6 +72,7 @@
     "pacote": "^21.0.4",
     "picomatch": "^4.0.4",
     "semver": "^7.7.4",
+    "tar": "^7.4.0",
     "zod": "^4.0"
   },
   "devDependencies": {

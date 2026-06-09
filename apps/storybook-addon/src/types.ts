@@ -14,6 +14,14 @@ export interface WalkerOSAddon {
   };
 }
 
+export type PropertyOrigin = 'data' | 'generic' | 'scoped';
+
+export interface ResolvedProperty {
+  key: string;
+  value: WalkerOS.Property;
+  origin: PropertyOrigin;
+}
+
 export interface AttributeNode {
   element: string;
   path: string;
@@ -23,7 +31,7 @@ export interface AttributeNode {
     action?: string;
     context?: WalkerOS.Properties;
     globals?: WalkerOS.Properties;
-    properties?: WalkerOS.Properties;
+    properties?: ResolvedProperty[];
   };
   children: AttributeNode[];
 }

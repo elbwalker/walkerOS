@@ -35,9 +35,9 @@ function createMockCollector(): MockCollectorWithLogger {
 }
 
 interface TrackedBacking {
-  data: Map<string, unknown>;
-  get: jest.Mock<unknown, [string]>;
-  set: jest.Mock<void, [string, unknown, number | undefined]>;
+  data: Map<string, Store.StoreValue>;
+  get: jest.Mock<Store.StoreValue | undefined, [string]>;
+  set: jest.Mock<void, [string, Store.StoreValue, number | undefined]>;
   delete: jest.Mock<void, [string]>;
 }
 
@@ -52,10 +52,12 @@ function createTrackedStoreLayer(typeName: string): {
   backing: TrackedBacking;
   init: Store.Init;
 } {
-  const data = new Map<string, unknown>();
-  const get = jest.fn<unknown, [string]>((key: string) => data.get(key));
-  const set = jest.fn<void, [string, unknown, number | undefined]>(
-    (key: string, value: unknown) => {
+  const data = new Map<string, Store.StoreValue>();
+  const get = jest.fn<Store.StoreValue | undefined, [string]>((key: string) =>
+    data.get(key),
+  );
+  const set = jest.fn<void, [string, Store.StoreValue, number | undefined]>(
+    (key: string, value: Store.StoreValue) => {
       data.set(key, value);
     },
   );
@@ -110,9 +112,12 @@ describe('store-cache: namespace defaulting + startup log', () => {
 
     // The wrapped-api forwarded its set to wrapped-memory using `api:K` as the
     // key. Since memory has no cache wrapper of its own, the raw backing map
-    // records the same key directly. This proves the namespace defaulted to
-    // the host store id.
-    expect(memory.backing.data.get('api:K')).toBe('V');
+    // records the same key directly, now holding the `{value, exp}` envelope.
+    // This proves the namespace defaulted to the host store id.
+    expect(memory.backing.data.get('api:K')).toEqual({
+      __walkeros_cache_v__: 'V',
+      __walkeros_cache_exp__: expect.any(Number),
+    });
     expect(memory.backing.data.get('K')).toBeUndefined();
   });
 
@@ -136,7 +141,10 @@ describe('store-cache: namespace defaulting + startup log', () => {
     api.backing.data.set('K', 'V');
     await stores.api.get('K');
 
-    expect(memory.backing.data.get('custom:K')).toBe('V');
+    expect(memory.backing.data.get('custom:K')).toEqual({
+      __walkeros_cache_v__: 'V',
+      __walkeros_cache_exp__: expect.any(Number),
+    });
     // Neither the default (storeId) nor the bare key should be set.
     expect(memory.backing.data.get('api:K')).toBeUndefined();
     expect(memory.backing.data.get('K')).toBeUndefined();

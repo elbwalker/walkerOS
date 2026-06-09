@@ -83,11 +83,24 @@ export interface WrapSkeletonOptions {
 export interface TelemetryBundleOptions {
   /** Absolute ingest URL. POST receives JSON array of FlowState. */
   observerUrl: string;
+  /**
+   * Full deployment-scoped trace endpoint, e.g.
+   * `https://observer.example.com/trace/<deploymentId>`. Baked into the bundle
+   * and polled verbatim; the browser never constructs it from a base.
+   *
+   * Optional: when omitted, the bundle wires the observer at a fixed `level`
+   * with no polling. Suits short-lived, URL-opted-in sessions (e.g. a preview
+   * at `level: 'trace'`).
+   */
+  traceUrl?: string;
   /** Deployment-scoped plaintext token. Sent as `Authorization: Bearer`. */
   ingestToken: string;
   /** Used as the `flowId` on every emitted FlowState. */
   flowId: string;
-  /** Verbosity. Default 'standard'. 'off' suppresses the entire wiring. */
+  /**
+   * Baseline verbosity. Default 'standard'. Even an 'off' baseline is wired
+   * (as a supplier) so the runtime trace poll can flip it to trace.
+   */
   level?: 'off' | 'standard' | 'trace';
   /** Deterministic sample fraction in [0, 1]. Default 1. */
   sample?: number;
@@ -100,6 +113,23 @@ export interface TelemetryBundleOptions {
  * package — either via `node_modules/@walkeros/cli/dist/...` or directly
  * from the workspace source tree during tests.
  */
+/**
+ * Extracts the `<pkg>/dev` specifiers from a skeleton's lazy `__devExports`
+ * registry by reading its literal `import('<pkg>/dev')` thunks. The registry is
+ * the authoritative `/dev` list (it is codegen'd from the same `computeDevPackages`
+ * set), so deriving the externals from the skeleton text cannot drift from it.
+ * A skeleton with no registry (e.g. a `cdn`-shaped build) yields `[]`.
+ */
+export function extractDevExternals(skeletonText: string): string[] {
+  const pattern = /import\(\s*['"]([^'"]+\/dev)['"]\s*\)/g;
+  const found = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(skeletonText)) !== null) {
+    found.add(match[1]);
+  }
+  return Array.from(found);
+}
+
 function getNodeResolutionPaths(): string[] {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const candidates: string[] = [];
@@ -149,21 +179,31 @@ export async function wrapSkeleton(
 
   const absoluteSkeletonPath = path.resolve(skeletonPath);
 
-  // Normalize the telemetry options for the entry generator: drop 'off'
-  // and narrow the level union so generateWrapEntry's `WrapEntryTelemetry`
-  // shape (which has no 'off' member) accepts the value.
+  // The skeleton's lazy `__devExports` registry carries literal
+  // `import('<pkg>/dev')` thunks. The browser wrap inlines step packages, so
+  // without externalizing `<pkg>/dev` esbuild would resolve those literals while
+  // building the graph: it errors in a lean install where `<pkg>/dev` is absent,
+  // or inlines the /dev graph (a deploy-purity violation) where it resolves.
+  // Externalizing them makes the wrap skip resolution and lets DCE drop the
+  // unreferenced registry. A `cdn`-shaped skeleton has no registry, so this is [].
+  const skeletonText = await fs.readFile(absoluteSkeletonPath, 'utf-8');
+  const devExternals = extractDevExternals(skeletonText);
+
+  // Normalize the telemetry options for the entry generator. Telemetry is
+  // wired whenever an ingest token exists, even for an 'off' baseline: the
+  // observer is a supplier and the runtime trace poll can flip 'off' to trace.
   const tInput = options.telemetry;
   const tLevel = tInput?.level ?? 'standard';
-  const telemetry =
-    tInput && tLevel !== 'off'
-      ? {
-          observerUrl: tInput.observerUrl,
-          ingestToken: tInput.ingestToken,
-          flowId: tInput.flowId,
-          level: tLevel,
-          ...(tInput.sample !== undefined ? { sample: tInput.sample } : {}),
-        }
-      : undefined;
+  const telemetry = tInput
+    ? {
+        observerUrl: tInput.observerUrl,
+        ingestToken: tInput.ingestToken,
+        flowId: tInput.flowId,
+        level: tLevel,
+        ...(tInput.traceUrl !== undefined ? { traceUrl: tInput.traceUrl } : {}),
+        ...(tInput.sample !== undefined ? { sample: tInput.sample } : {}),
+      }
+    : undefined;
 
   // Stage 2 entry imports from the skeleton via an absolute path.
   const entryText =
@@ -216,10 +256,24 @@ export async function wrapSkeleton(
     };
 
     if (platform === 'browser') {
+      // Emit the final browser artifact as an IIFE. The deployed bundle is
+      // served as a classic <script> at global scope, so an ESM body would leak
+      // its minified top-level declarations (e.g. `ga`) onto `window` and
+      // collide with globals like Google Analytics. The IIFE wraps everything
+      // in a private closure; the intentional `window.elb`/`window.walkerOS`
+      // assignments live inside the entry's own async IIFE and reference
+      // `window` explicitly, so they still run. The entry has zero exports, so
+      // no `globalName` is needed.
+      esbuildOptions.format = 'iife';
       esbuildOptions.define = {
         'process.env.NODE_ENV': '"production"',
         global: 'globalThis',
       };
+      // Externalize `<pkg>/dev` so the wrap skips resolving the lazy registry's
+      // literals and DCE drops the unreferenced registry (see above). The node
+      // branch needs no equivalent: it inlines step packages and tree-shakes the
+      // unreferenced registry away without re-inlining the /dev graph (verified).
+      esbuildOptions.external = devExternals;
       esbuildOptions.target = target ?? 'es2018';
     } else {
       // Match bundler.ts Stage 2 node config: externalize Node builtins,

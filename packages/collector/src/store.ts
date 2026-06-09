@@ -60,7 +60,7 @@ function applyStoreHooks(
     collector.logger,
   );
 
-  instance.get = async (key: string): Promise<unknown> => {
+  instance.get = async (key: string): Promise<Store.StoreValue | undefined> => {
     const started = Date.now();
     const inState = buildBaseState(collector, {
       stepId: stepIdFor,
@@ -108,7 +108,7 @@ function applyStoreHooks(
 
   instance.set = async (
     key: string,
-    value: unknown,
+    value: Store.StoreValue,
     ttl?: number,
   ): Promise<void> => {
     const started = Date.now();

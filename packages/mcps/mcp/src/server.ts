@@ -12,10 +12,12 @@ import {
 } from './tools/package.js';
 import { registerFlowLoadTool } from './tools/flow-load.js';
 import { registerFeedbackTool } from './tools/feedback.js';
+import { registerDiagnosticsTool } from './tools/diagnostics.js';
 import { registerAuthTool } from './tools/auth.js';
 import { registerProjectManageTool } from './tools/project-manage.js';
 import { registerFlowManageTool } from './tools/flow-manage.js';
 import { registerDeployTool } from './tools/deploy-manage.js';
+import { registerSecretManageTool } from './tools/secret-manage.js';
 import { registerPackageSchemaResources } from './resources/package-schemas.js';
 import { registerReferenceResources } from './resources/references.js';
 import { registerAddStepPrompt } from './prompts/add-step.js';
@@ -121,14 +123,16 @@ export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   registerProjectManageTool(server, opts.client);
   registerFlowManageTool(server, opts.client);
   registerDeployTool(server, opts.client);
+  registerSecretManageTool(server, opts.client);
   registerFeedbackTool(server, opts.client);
+  registerDiagnosticsTool(server, opts.client, packageVersion);
 
   registerFlowValidateTool(server);
-  registerFlowBundleTool(server);
-  registerFlowSimulateTool(server);
+  registerFlowBundleTool(server, opts.client);
+  registerFlowSimulateTool(server, opts.client);
   registerFlowPushTool(server);
   registerFlowExamplesTool(server);
-  registerFlowLoadTool(server);
+  registerFlowLoadTool(server, opts.client);
 
   registerPackageSearchTool(server);
   registerGetPackageSchemaTool(server);

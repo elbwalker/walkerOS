@@ -5,6 +5,7 @@ import type {
   Types,
 } from './types';
 import { createTokenProvider, type TokenProvider } from './auth';
+import { resolveCredentials } from './credentials';
 import { setup as sheetsSetup } from './setup';
 import {
   SHEETS_BASE,
@@ -50,7 +51,7 @@ function isServiceAccountShape(
 }
 
 function parseCredentials(
-  credentials?: string | ServiceAccountCredentials,
+  credentials?: unknown,
 ): ServiceAccountCredentials | undefined {
   if (!credentials) return undefined;
   if (typeof credentials === 'string') {
@@ -63,7 +64,8 @@ function parseCredentials(
     if (isServiceAccountShape(parsed)) return parsed;
     return undefined;
   }
-  return credentials;
+  if (isServiceAccountShape(credentials)) return credentials;
+  return undefined;
 }
 
 function assertSheetsSettings(
@@ -260,12 +262,51 @@ async function appendRow(
   return parseRowFromRange(updatedRange);
 }
 
+/**
+ * Recursive type guard: a JSON-derived value is structurally a `StoreValue`.
+ * Sheets cells hold JSON only, so a parsed cell never carries a `Uint8Array`
+ * leaf; the guard narrows the `JSON.parse` result cast-free at the boundary.
+ */
+function isStoreValue(value: unknown): value is Store.StoreValue {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  )
+    return true;
+  if (Array.isArray(value)) return value.every(isStoreValue);
+  if (typeof value === 'object')
+    return Object.values(value).every(isStoreValue);
+  return false;
+}
+
+/**
+ * Recursively detect any binary leaf (Uint8Array, Buffer, or ArrayBuffer)
+ * anywhere in a structured value. Buffer is a Uint8Array subclass, so the
+ * single `instanceof Uint8Array` check covers it.
+ */
+function hasBinaryLeaf(value: unknown): boolean {
+  if (value instanceof Uint8Array || value instanceof ArrayBuffer) return true;
+  if (Array.isArray(value)) return value.some(hasBinaryLeaf);
+  if (typeof value === 'object' && value !== null)
+    return Object.values(value).some(hasBinaryLeaf);
+  return false;
+}
+
 export const storeSheetsInit: Store.Init<Types> = async (context) => {
   assertSheetsSettings(context.config.settings);
+  // Sheets stores structured JSON per cell; it cannot serve byte-exact raw
+  // bytes. file:true is a hard error at init: pick fs, s3, or gcs instead.
+  if (context.config.file) {
+    throw new Error(
+      'Sheets store does not support file mode (file: true). Sheets stores structured JSON values per cell. Use fs, s3, or gcs for byte-exact serving.',
+    );
+  }
   const settings: SheetsStoreSettings = context.config.settings;
   const { logger } = context;
   const id = context.id;
-  const creds = parseCredentials(settings.credentials);
+  const creds = parseCredentials(resolveCredentials(context.config, logger));
   const getToken = createTokenProvider(creds);
   const sheet = resolveSheet(settings);
   const keyCol = resolveKeyColumn(settings);
@@ -294,13 +335,14 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
     config,
     setup: sheetsSetup,
 
-    async get(key: string): Promise<unknown> {
+    async get(key: string): Promise<Store.StoreValue | undefined> {
       const row = keyToRow.get(key);
       if (row === undefined) return undefined;
       const cell = await readCell(settings.id, sheet, valueCol, row, getToken);
       if (cell === undefined || cell === '') return undefined;
+      let parsed: unknown;
       try {
-        return JSON.parse(cell);
+        parsed = JSON.parse(cell);
       } catch (err) {
         logger.debug('storeSheets.get: JSON parse failed', {
           key,
@@ -308,9 +350,19 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
         });
         return undefined;
       }
+      return isStoreValue(parsed) ? parsed : undefined;
     },
 
-    async set(key: string, value: unknown): Promise<void> {
+    async set(key: string, value: Store.StoreValue): Promise<void> {
+      // Sheets cells hold structured JSON only. A binary leaf anywhere in the
+      // value (e.g. a request-cache encoded Buffer) would JSON.stringify into a
+      // base64 blob, and the 50k-character cell limit makes that unsafe. Reject
+      // any binary leaf, at any depth, loudly. Plain JSON values are unaffected.
+      if (hasBinaryLeaf(value)) {
+        throw new Error(
+          'Sheets store cannot persist binary values (Uint8Array). Cells hold structured JSON only; the 50k-character cell limit makes base64 binary unsafe. Use fs, s3, or gcs.',
+        );
+      }
       const serialized = JSON.stringify(value);
       const existingRow = keyToRow.get(key);
       if (existingRow === undefined) {

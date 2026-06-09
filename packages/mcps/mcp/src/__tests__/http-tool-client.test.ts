@@ -17,6 +17,10 @@ jest.mock('@walkeros/cli', () => ({
   getPreview: jest.fn(),
   createPreview: jest.fn(),
   deletePreview: jest.fn(),
+  listSecrets: jest.fn(),
+  createSecret: jest.fn(),
+  updateSecret: jest.fn(),
+  deleteSecret: jest.fn(),
   deploy: jest.fn(),
   listDeployments: jest.fn(),
   getDeploymentBySlug: jest.fn(),
@@ -25,6 +29,7 @@ jest.mock('@walkeros/cli', () => ({
   pollForToken: jest.fn(),
   whoami: jest.fn(),
   resolveToken: jest.fn(),
+  resolveAppUrl: jest.fn(),
   deleteConfig: jest.fn(),
   feedback: jest.fn(),
   getFeedbackPreference: jest.fn(),
@@ -57,6 +62,35 @@ describe('HttpToolClient', () => {
     const client = new HttpToolClient();
     await client.submitFeedback('hello', { anonymous: true });
     expect(cli.feedback).toHaveBeenCalledWith('hello', { anonymous: true });
+  });
+
+  it('checkHealth returns reachable true with NO token set (tokenless probe)', async () => {
+    // resolveToken returns null → logged out; checkHealth must not require auth.
+    (cli.resolveToken as jest.Mock).mockReturnValue(null);
+    (cli.resolveAppUrl as jest.Mock).mockReturnValue('https://app.test');
+    const mockFetch = jest
+      .fn()
+      .mockResolvedValue({ json: async () => ({ status: 'ok' }) });
+    global.fetch = mockFetch;
+
+    const client = new HttpToolClient();
+    const result = await client.checkHealth();
+
+    expect(result.reachable).toBe(true);
+    expect(result.status).toBe('ok');
+    // Probes the public /api/health route with a plain fetch (no Authorization).
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://app.test/api/health');
+    expect(init.headers).toBeUndefined();
+  });
+
+  it('checkHealth returns reachable false on a network/timeout failure', async () => {
+    (cli.resolveAppUrl as jest.Mock).mockReturnValue('https://app.test');
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
+
+    const client = new HttpToolClient();
+    const result = await client.checkHealth();
+    expect(result.reachable).toBe(false);
   });
 
   it('delegates sync config helpers without awaiting', () => {

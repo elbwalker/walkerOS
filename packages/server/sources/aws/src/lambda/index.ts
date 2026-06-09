@@ -14,9 +14,6 @@ import { processEvent } from './push';
 
 export * as SourceLambda from './types';
 
-// Export examples
-export * as examples from './examples';
-
 export const sourceLambda: Source.Init<Types> = async (context) => {
   const { config = {}, env } = context;
 

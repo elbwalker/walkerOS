@@ -12,12 +12,13 @@ import { createToolHandlers } from '../index.js';
 import { stubClient } from './support/stub-client.js';
 
 describe('createToolHandlers', () => {
-  it('returns specs for all 13 tools keyed by name', () => {
+  it('returns specs for all 15 tools keyed by name', () => {
     const specs = createToolHandlers(stubClient());
     expect(Object.keys(specs).sort()).toEqual(
       [
         'auth',
         'deploy_manage',
+        'diagnostics',
         'feedback',
         'flow_bundle',
         'flow_examples',
@@ -29,6 +30,7 @@ describe('createToolHandlers', () => {
         'package_get',
         'package_search',
         'project_manage',
+        'secret_manage',
       ].sort(),
     );
   });

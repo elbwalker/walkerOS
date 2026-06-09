@@ -6,6 +6,7 @@ export const SERVER_INSTRUCTIONS = `walkerOS is an open-source, privacy-first ev
 - **Never construct flow configs from memory.** Read \`walkeros://reference/flow-schema\` and use \`package_get\` for package-specific schemas.
 - **Always validate.** Run \`flow_validate\` after every config change. If validation fails, fix and re-validate.
 - **Simulate before deploying.** Use \`flow_simulate\` to test with mocked API calls before \`flow_bundle\` or \`flow_push\`.
+- **When a request fails,** call \`diagnostics\` to see which MCP/CLI versions, app URL, and backend you are on, plus whether the app is reachable.
 
 ## Workflow
 

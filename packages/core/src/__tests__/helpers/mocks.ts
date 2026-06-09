@@ -82,15 +82,15 @@ export function createMockLogger(
  * that need to pre-seed entries or assert on raw state.
  */
 export function createMockStore(): Store.Instance & {
-  _data: Map<string, unknown>;
+  _data: Map<string, Store.StoreValue>;
 } {
-  const data = new Map<string, unknown>();
+  const data = new Map<string, Store.StoreValue>();
   return {
     type: 'mock',
     config: {},
     _data: data,
     get: (key: string) => data.get(key),
-    set: (key: string, value: unknown) => {
+    set: (key: string, value: Store.StoreValue) => {
       data.set(key, value);
     },
     delete: (key: string) => {
@@ -108,15 +108,15 @@ export function createMockStore(): Store.Instance & {
  * result instead of treating the returned Promise as a value.
  */
 export function createAsyncMockStore(): Store.Instance & {
-  _data: Map<string, unknown>;
+  _data: Map<string, Store.StoreValue>;
 } {
-  const data = new Map<string, unknown>();
+  const data = new Map<string, Store.StoreValue>();
   return {
     type: 'async-mock',
     config: {},
     _data: data,
     get: async (key: string) => data.get(key),
-    set: async (key: string, value: unknown) => {
+    set: async (key: string, value: Store.StoreValue) => {
       data.set(key, value);
     },
     delete: async (key: string) => {

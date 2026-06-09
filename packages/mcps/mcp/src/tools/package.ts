@@ -2,21 +2,19 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
 import { mergeConfigSchema } from '@walkeros/core/dev';
-import { fetchCatalog, normalizePlatform, CLIENT_HEADER } from '../catalog.js';
+import {
+  fetchCatalog,
+  normalizePlatform,
+  getPackageBaseUrl,
+  CLIENT_HEADER,
+} from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
 
-/**
- * Resolve the walkerOS app base URL for MCP outbound calls.
- *
- * Env-only by design: the MCP runs in an editor with explicit `.mcp.json`
- * env. No config-file precedence (which is what `@walkeros/cli`'s
- * `resolveAppUrl()` does for the `walkeros` CLI binary). Hard-cut:
- * `APP_URL` is no longer recognized.
- */
-export function getPackageBaseUrl(): string | undefined {
-  return process.env.WALKEROS_APP_URL || undefined;
-}
+// `getPackageBaseUrl` lives in ../catalog.js because both these tools and the
+// catalog resources resolve the same app-primary base URL. Re-exported here so
+// existing importers of `tools/package.js` keep working.
+export { getPackageBaseUrl };
 
 // ---------- package_search ----------
 
@@ -82,10 +80,15 @@ async function packageSearchHandlerBody(input: unknown) {
 
   // Browse mode: no package specified → return catalog
   if (!packageName) {
-    const catalog = await fetchCatalog({ type, platform, baseUrl });
-    const result = { catalog, count: catalog.length };
+    const { entries, warnings } = await fetchCatalog({
+      type,
+      platform,
+      baseUrl,
+    });
+    const result = { catalog: entries, count: entries.length };
     return mcpResult(result, {
       next: ['Use package_get for schemas and examples'],
+      ...(warnings.length > 0 ? { warnings } : {}),
     });
   }
 

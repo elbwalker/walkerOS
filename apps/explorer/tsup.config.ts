@@ -21,6 +21,12 @@ export default defineConfig([
       '@walkeros/web-source-browser',
     ],
     noExternal: ['clsx', 'tailwind-merge', '@iconify/react'],
+    // Explorer ships React client components, so the bundle is marked with a
+    // top-of-file "use client" directive (see esbuildOptions banner below).
+    // Terser's compress pass drops any directive prologue it doesn't recognise
+    // (it keeps only "use strict"), which would strip our banner. Disabling
+    // `directives` preserves it so Next.js treats the package as a client boundary.
+    terserOptions: { compress: { directives: false } },
     esbuildPlugins: [
       {
         name: 'virtual-walkeros-types',

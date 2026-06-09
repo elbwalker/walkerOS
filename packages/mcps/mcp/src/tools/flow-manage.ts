@@ -2,7 +2,11 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
-import { wrapUserData, redactNestedStrings } from '../user-data.js';
+import {
+  wrapUserData,
+  redactNestedStrings,
+  keepStructural,
+} from '../user-data.js';
 import { flowCanvasResult } from '../ui-parts.js';
 
 /** Peek at a Flow.Json root (v4) and decide whether the bubble should render
@@ -30,22 +34,15 @@ function pickPlatform(content: unknown): 'web' | 'server' {
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
-
-// Keys whose string values must remain literal so the LLM can reference them
-// (ids, dates, immutable identifiers). Everything else that's a string goes
-// through wrapUserData.
-const KEEP_LITERAL = new Set([
-  'id',
-  'flowId',
-  'projectId',
-  'previewId',
-  'version',
-  'slug',
-  'createdAt',
-  'updatedAt',
-  'deletedAt',
-]);
-const keepLiteral = (key: string) => KEEP_LITERAL.has(key);
+import {
+  validateActionInput,
+  assertParam,
+  FLOW_MANAGE_REQUIREMENTS,
+} from '../action-requirements.js';
+import {
+  NO_DEFAULT_PROJECT_ERROR,
+  resolveDefaultProject,
+} from './project-context.js';
 
 function safeSummary<T extends { name?: string }>(flow: T): T {
   return flow.name !== undefined
@@ -61,7 +58,7 @@ function safeDetail<T extends { name?: string; config?: unknown }>(flow: T): T {
   if (flow.config !== undefined) {
     (withName as { config?: unknown }).config = redactNestedStrings(
       flow.config,
-      { skip: keepLiteral },
+      { skip: keepStructural },
     );
   }
   return withName as T;
@@ -90,7 +87,7 @@ const inputSchema = {
     .string()
     .optional()
     .describe(
-      'Flow ID (flow_...) or config ID (cfg_...). Required for get, update, delete, duplicate.',
+      'Flow ID (flow_...) or config ID (cfg_...). Required for get, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete.',
     ),
   projectId: z
     .string()
@@ -144,19 +141,31 @@ const inputSchema = {
     .string()
     .optional()
     .describe(
-      'Preview ID (prv_...). Required for preview_get and preview_delete.',
+      'Preview ID (prv_...). Required for preview_get and preview_delete (both also require flowId).',
     ),
   flowName: z
     .string()
     .optional()
     .describe(
-      'Flow settings name. Used by preview_create as an alternative to flowSettingsId.',
+      'Used by preview_create — provide one of flowName or flowSettingsId (preview_create also requires flowId).',
     ),
   flowSettingsId: z
     .string()
     .optional()
     .describe(
-      'Flow settings ID. Used by preview_create as an alternative to flowName.',
+      'Used by preview_create — provide one of flowName or flowSettingsId (preview_create also requires flowId).',
+    ),
+  source: z
+    .discriminatedUnion('kind', [
+      z.object({ kind: z.literal('draft') }),
+      z.object({
+        kind: z.literal('deployment-version'),
+        deploymentVersionId: z.string(),
+      }),
+    ])
+    .optional()
+    .describe(
+      "What the preview should run, for preview_create: the flow's draft (default) or a deployed version's stored config (kind 'deployment-version' with its deploymentVersionId).",
     ),
   siteUrl: z
     .string()
@@ -201,6 +210,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
     previewId,
     flowName,
     flowSettingsId,
+    source,
     siteUrl,
   } = (input ?? {}) as {
     action?:
@@ -228,8 +238,18 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
     previewId?: string;
     flowName?: string;
     flowSettingsId?: string;
+    source?:
+      | { kind: 'draft' }
+      | { kind: 'deployment-version'; deploymentVersionId: string };
     siteUrl?: string;
   };
+  const validationError = validateActionInput(
+    'flow_manage',
+    action ?? '',
+    { flowId, projectId, name, previewId, flowName, flowSettingsId },
+    FLOW_MANAGE_REQUIREMENTS,
+  );
+  if (validationError) return mcpError(new Error(validationError));
   try {
     switch (action) {
       case 'list': {
@@ -271,14 +291,16 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'get': {
-        if (!flowId) {
-          return mcpError(
-            new Error(
-              'flowId is required for get action. Use action "list" to see available flows.',
-            ),
-          );
+        assertParam(flowId, 'flowId', 'get');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
         }
-        const flow = await client.getFlow({ flowId, projectId, fields });
+        const flow = await client.getFlow({
+          flowId,
+          projectId: resolvedProjectId,
+          fields,
+        });
         const safe = safeDetail(
           flow as {
             id?: string;
@@ -290,7 +312,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           flowId: safe.id,
           configName: safe.name ?? 'default',
           platform: pickPlatform(safe.config),
-          flowConfig: (safe.config ?? {}) as Record<string, unknown>,
+          flowConfig: safe.config ?? {},
           suggestions: [
             {
               label: 'Validate this flow',
@@ -306,13 +328,15 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'create': {
-        if (!name) {
-          return mcpError(new Error('name is required for create action.'));
+        assertParam(name, 'name', 'create');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
         }
         const created = await client.createFlow({
           name,
           content: content ?? {},
-          projectId,
+          projectId: resolvedProjectId,
         });
         const safeCreated = safeDetail(
           created as {
@@ -325,7 +349,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           flowId: safeCreated.id,
           configName: safeCreated.name ?? 'default',
           platform: pickPlatform(safeCreated.config),
-          flowConfig: (safeCreated.config ?? {}) as Record<string, unknown>,
+          flowConfig: safeCreated.config ?? {},
           suggestions: [
             {
               label: 'Validate this flow',
@@ -341,13 +365,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'update': {
-        if (!flowId) {
-          return mcpError(
-            new Error(
-              'flowId is required for update action. Use action "list" to see available flows.',
-            ),
-          );
-        }
+        assertParam(flowId, 'flowId', 'update');
         const updated = await client.updateFlow({
           flowId,
           projectId,
@@ -366,7 +384,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           flowId: safeUpdated.id,
           configName: safeUpdated.name ?? 'default',
           platform: pickPlatform(safeUpdated.config),
-          flowConfig: (safeUpdated.config ?? {}) as Record<string, unknown>,
+          flowConfig: safeUpdated.config ?? {},
           suggestions: [
             {
               label: 'Validate this flow',
@@ -382,25 +400,13 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'delete': {
-        if (!flowId) {
-          return mcpError(
-            new Error(
-              'flowId is required for delete action. Use action "list" to see available flows.',
-            ),
-          );
-        }
+        assertParam(flowId, 'flowId', 'delete');
         const deleted = await client.deleteFlow({ flowId, projectId });
         return mcpResult(deleted);
       }
 
       case 'duplicate': {
-        if (!flowId) {
-          return mcpError(
-            new Error(
-              'flowId is required for duplicate action. Use action "list" to see available flows.',
-            ),
-          );
-        }
+        assertParam(flowId, 'flowId', 'duplicate');
         const duplicated = await client.duplicateFlow({
           flowId,
           name,
@@ -412,23 +418,21 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'preview_list': {
-        if (!flowId) {
-          return mcpError(
-            new Error(
-              'flowId is required for preview_list. Use action "list" to see available flows.',
-            ),
-          );
+        assertParam(flowId, 'flowId', 'preview_list');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
         }
-        const data = await client.listPreviews({ projectId, flowId });
+        const data = await client.listPreviews({
+          projectId: resolvedProjectId,
+          flowId,
+        });
         return mcpResult(data);
       }
 
       case 'preview_get': {
-        if (!flowId || !previewId) {
-          return mcpError(
-            new Error('flowId and previewId are required for preview_get.'),
-          );
-        }
+        assertParam(flowId, 'flowId', 'preview_get');
+        assertParam(previewId, 'previewId', 'preview_get');
         const data = await client.getPreview({
           projectId,
           flowId,
@@ -438,21 +442,17 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'preview_create': {
-        if (!flowId) {
-          return mcpError(new Error('flowId is required for preview_create.'));
-        }
-        if (!flowName && !flowSettingsId) {
-          return mcpError(
-            new Error(
-              'flowName or flowSettingsId is required for preview_create.',
-            ),
-          );
+        assertParam(flowId, 'flowId', 'preview_create');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
         }
         const preview = await client.createPreview({
-          projectId,
+          projectId: resolvedProjectId,
           flowId,
           flowName,
           flowSettingsId,
+          ...(source ? { source } : {}),
         });
         const typedPreview = preview as {
           id: string;
@@ -490,17 +490,21 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'preview_delete': {
-        if (!flowId || !previewId) {
-          return mcpError(
-            new Error('flowId and previewId are required for preview_delete.'),
-          );
-        }
+        assertParam(flowId, 'flowId', 'preview_delete');
+        assertParam(previewId, 'previewId', 'preview_delete');
         const data = await client.deletePreview({
           projectId,
           flowId,
           previewId,
         });
-        return mcpResult(data);
+        // The app responds 204 No Content; an older CLI maps that to null.
+        // mcpResult requires a record for structuredContent, so synthesize a
+        // confirmation when the body is empty.
+        return mcpResult(
+          data && typeof data === 'object'
+            ? data
+            : { deleted: true, previewId },
+        );
       }
 
       default:

@@ -45,9 +45,9 @@ function createMockCollector(): MockCollectorWithStores {
 }
 
 interface TrackedBacking {
-  data: Map<string, unknown>;
-  get: jest.Mock<unknown, [string]>;
-  set: jest.Mock<void, [string, unknown, number | undefined]>;
+  data: Map<string, Store.StoreValue>;
+  get: jest.Mock<Store.StoreValue | undefined, [string]>;
+  set: jest.Mock<void, [string, Store.StoreValue, number | undefined]>;
   delete: jest.Mock<void, [string]>;
 }
 
@@ -67,10 +67,12 @@ function createTrackedStoreLayer(typeName: string): {
   backing: TrackedBacking;
   init: Store.Init;
 } {
-  const data = new Map<string, unknown>();
-  const get = jest.fn<unknown, [string]>((key: string) => data.get(key));
-  const set = jest.fn<void, [string, unknown, number | undefined]>(
-    (key: string, value: unknown) => {
+  const data = new Map<string, Store.StoreValue>();
+  const get = jest.fn<Store.StoreValue | undefined, [string]>((key: string) =>
+    data.get(key),
+  );
+  const set = jest.fn<void, [string, Store.StoreValue, number | undefined]>(
+    (key: string, value: Store.StoreValue) => {
       data.set(key, value);
     },
   );
@@ -121,8 +123,12 @@ describe('store-cache: 3-tier recursive composition', () => {
     expect(redis.backing.get).toHaveBeenCalledTimes(1);
     // wrapped-redis populates its own cache layer (memory) on a backing hit,
     // using its `redis:` namespace prefix on top of the already-prefixed key
-    // it received from wrapped-api. So memory ends up with `redis:api:K`.
-    expect(memory.backing.data.get('redis:api:K')).toBe('V_from_redis');
+    // it received from wrapped-api. So memory ends up with `redis:api:K`,
+    // holding the value wrapped in redis's own `{value, exp}` envelope.
+    expect(memory.backing.data.get('redis:api:K')).toEqual({
+      __walkeros_cache_v__: 'V_from_redis',
+      __walkeros_cache_exp__: expect.any(Number),
+    });
 
     // Second call: memory now has the value. Expect zero new backing calls.
     api.backing.get.mockClear();
@@ -168,13 +174,22 @@ describe('store-cache: 3-tier recursive composition', () => {
     expect(redis.backing.get).toHaveBeenCalledTimes(1);
 
     // Both intermediate tiers now hold the value. wrapped-api's MISS-path
-    // populates its cacheStore (wrapped-redis) via `cacheStore.set(prefixed,
-    // ...)`, which lands as `redis.backing.set('api:K', V)`. wrapped-redis's
-    // write-through then forwards the value into memory as
-    // `redis:api:K`. (Naming intuition: each wrapper layer prepends its own
-    // `namespace` prefix on top of whatever key it received.)
-    expect(redis.backing.data.get('api:K')).toBe('V_from_api');
-    expect(memory.backing.data.get('redis:api:K')).toBe('V_from_api');
+    // populates its cacheStore (wrapped-redis) with its `{value, exp}`
+    // envelope, which lands as `redis.backing.set('api:K', envelope_api)`.
+    // wrapped-redis's write-through then forwards that envelope into memory
+    // as `redis:api:K`, wrapped again in redis's own envelope (single-wrap:
+    // each layer owns exactly one envelope, stripped on its own read).
+    expect(redis.backing.data.get('api:K')).toEqual({
+      __walkeros_cache_v__: 'V_from_api',
+      __walkeros_cache_exp__: expect.any(Number),
+    });
+    expect(memory.backing.data.get('redis:api:K')).toEqual({
+      __walkeros_cache_v__: {
+        __walkeros_cache_v__: 'V_from_api',
+        __walkeros_cache_exp__: expect.any(Number),
+      },
+      __walkeros_cache_exp__: expect.any(Number),
+    });
 
     // Warm pass: api and redis are untouched; memory serves directly.
     api.backing.get.mockClear();
@@ -216,9 +231,20 @@ describe('store-cache: 3-tier recursive composition', () => {
     //                                    cacheStore set with `redis:` on top)
     expect(api.backing.set).toHaveBeenCalledTimes(1);
     expect(redis.backing.set).toHaveBeenCalledTimes(1);
+    // The terminal source-of-truth holds the raw written value; each cache
+    // tier holds the value behind its own (single) `{value, exp}` envelope.
     expect(api.backing.data.get('K')).toBe('V_written');
-    expect(redis.backing.data.get('api:K')).toBe('V_written');
-    expect(memory.backing.data.get('redis:api:K')).toBe('V_written');
+    expect(redis.backing.data.get('api:K')).toEqual({
+      __walkeros_cache_v__: 'V_written',
+      __walkeros_cache_exp__: expect.any(Number),
+    });
+    expect(memory.backing.data.get('redis:api:K')).toEqual({
+      __walkeros_cache_v__: {
+        __walkeros_cache_v__: 'V_written',
+        __walkeros_cache_exp__: expect.any(Number),
+      },
+      __walkeros_cache_exp__: expect.any(Number),
+    });
 
     // A subsequent get is fully served by the memory layer: wrapped-redis's
     // cache probe for `redis:api:K` hits memory immediately, so neither

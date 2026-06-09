@@ -34,6 +34,7 @@ export * from './fatalError';
 export * from './useHooks';
 export * from './telemetry';
 export * from './telemetryResolver';
+export { getTraceUntil, setTraceUntil } from './traceState';
 export { emitStep } from './emitStep';
 export * from './batchedPoster';
 export * from './userAgent';
@@ -49,6 +50,13 @@ export * from './matcher';
 // package-internal.
 export { getNextSteps, isRouteArray, isRouteConfigEntry } from './route';
 export * from './cache';
+export * from './cache-envelope';
+export {
+  serializeStoreValue,
+  deserializeStoreValue,
+  StoreCodecError,
+  isStoreValue,
+} from './store/codec';
 export * from './state';
 export * from './step-entry';
 export * from './examples/formatOut';

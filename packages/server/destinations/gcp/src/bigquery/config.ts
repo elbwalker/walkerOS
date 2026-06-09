@@ -2,6 +2,7 @@ import type { Config, Env, PartialConfig, Settings } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
 import type { Logger } from '@walkeros/core';
 import { BigQuery } from '@google-cloud/bigquery';
+import { parseCredentials } from '../pubsub/config';
 
 export function getConfig(
   partialConfig: PartialConfig = {},
@@ -18,8 +19,15 @@ export function getConfig(
   datasetId = datasetId || 'walkerOS';
   tableId = tableId || 'events';
 
-  const options: BigQueryOptions = bigquery || {};
+  const options: BigQueryOptions = { ...(bigquery || {}) };
   options.projectId = projectId;
+
+  // `config.credentials` (parse-if-string) merges into the client options.
+  // `settings.bigquery` stays the raw passthrough escape hatch.
+  const credentials = parseCredentials(partialConfig.credentials, logger);
+  if (credentials !== undefined && typeof credentials !== 'string') {
+    options.credentials = credentials;
+  }
 
   // Use BigQuery from env if available, otherwise use real BigQuery
   const BigQueryClass = env?.BigQuery || BigQuery;

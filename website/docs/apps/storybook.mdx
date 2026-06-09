@@ -70,12 +70,15 @@ events" to manually refresh the event list.
 Captures events in real-time as you interact with components. Shows timestamps
 for each event and stores up to 50 events. Use the "Clear" button to reset.
 
-### Attributes tab
+### Skeleton tab
 
-Shows a hierarchical tree view of all walker attributes found in the DOM:
+Shows a hierarchical tree of the entities found in the DOM, with each entity's
+properties resolved onto it the way the walker reads them:
 
-- Element paths and HTML tags
-- Expandable/collapsible structure
+- Generic (`data-elb-`) and scoped (`data-elb_`) values are shown on the
+  entities that consume them, labeled by origin (`G` for generic, `S` for
+  scoped; directly declared properties are unlabeled)
+- Expandable/collapsible entity structure
 - Click to view element markup
 - Attribute counts by type
 
@@ -88,7 +91,7 @@ Toggle buttons highlight elements with different attribute types:
 | Globals   | Cyan   | `data-elbglobals` |
 | Context   | Yellow | `data-elbcontext` |
 | Entity    | Green  | `data-elb`        |
-| Property  | Red    | `data-elb-*`      |
+| Property  | Red    | `data-elb-*`, `data-elb_` |
 | Action    | Purple | `data-elbaction`  |
 
 Multiple highlights can be active simultaneously, displaying layered outlines.

@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { loadJsonConfig } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { mcpResult, mcpError } from '@walkeros/core';
+import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
 import type { Flow } from '@walkeros/core';
 import { ExamplesListOutputShape } from '../schemas/output.js';
+import { getPackageBaseUrl, CLIENT_HEADER } from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
 
@@ -11,6 +12,9 @@ const TITLE = 'Flow Examples';
 const DESCRIPTION =
   'List all step examples in a walkerOS flow configuration. ' +
   'Shows example names, step locations, and in/out shapes. ' +
+  'Inline examples on a step take precedence; steps without inline examples ' +
+  'fall back to the examples shipped by their referenced package. ' +
+  'Each result is tagged with its source ("inline" or "package"). ' +
   'Use this to discover available test fixtures and simulation data.';
 
 const inputSchema = {
@@ -83,11 +87,12 @@ async function flowExamplesHandlerBody(input: unknown) {
     }
 
     // Collect all examples
-    const examples: Array<{
+    type ExampleItem = {
       step: string;
       stepType: string;
       stepName: string;
       exampleName: string;
+      source: 'inline' | 'package';
       title?: string;
       description?: string;
       public?: boolean;
@@ -99,7 +104,65 @@ async function flowExamplesHandlerBody(input: unknown) {
       out?: unknown;
       mapping?: unknown;
       trigger?: unknown;
-    }> = [];
+    };
+    const examples: ExampleItem[] = [];
+
+    const toItems = (
+      stepExamples: Flow.StepExamples,
+      type: string,
+      name: string,
+      source: 'inline' | 'package',
+    ): ExampleItem[] => {
+      const items: ExampleItem[] = [];
+      for (const [exName, ex] of Object.entries(stepExamples)) {
+        if (!includeHidden && ex.public === false) continue;
+        items.push({
+          step: `${type}.${name}`,
+          stepType: type,
+          stepName: name,
+          exampleName: exName,
+          source,
+          title: ex.title,
+          description: ex.description,
+          public: ex.public,
+          hasIn: ex.in !== undefined,
+          hasOut: ex.out !== undefined,
+          hasMapping: ex.mapping !== undefined,
+          hasTrigger: ex.trigger !== undefined,
+          ...(full
+            ? {
+                in: ex.in,
+                out: ex.out,
+                mapping: ex.mapping,
+                trigger: ex.trigger,
+              }
+            : {}),
+        });
+      }
+      return items;
+    };
+
+    // Pull a referenced package's shipped step examples via the same path
+    // package_get uses. A failed fetch must not break the whole tool: the
+    // step is skipped and inline examples from other steps still return.
+    const baseUrl = getPackageBaseUrl();
+    const loadPackageExamples = async (
+      packageName: string,
+    ): Promise<Flow.StepExamples | undefined> => {
+      try {
+        const info = await fetchPackage(packageName, {
+          baseUrl,
+          client: CLIENT_HEADER,
+        });
+        const stepExamples = (info.examples as { step?: unknown } | undefined)
+          ?.step;
+        if (stepExamples && typeof stepExamples === 'object')
+          return stepExamples as Flow.StepExamples;
+      } catch {
+        // Swallow: graceful fallback skip for this package.
+      }
+      return undefined;
+    };
 
     const stepTypes = [
       { key: 'sources' as const, type: 'source' },
@@ -110,37 +173,23 @@ async function flowExamplesHandlerBody(input: unknown) {
     for (const { key, type } of stepTypes) {
       const refs = flowSettings[key] || {};
       for (const [name, ref] of Object.entries(refs)) {
-        if (!ref.examples) continue;
-
         // Apply step filter
         if (step && `${type}.${name}` !== step) continue;
 
-        for (const [exName, ex] of Object.entries(
-          ref.examples as Flow.StepExamples,
-        )) {
-          if (!includeHidden && ex.public === false) continue;
-          examples.push({
-            step: `${type}.${name}`,
-            stepType: type,
-            stepName: name,
-            exampleName: exName,
-            title: ex.title,
-            description: ex.description,
-            public: ex.public,
-            hasIn: ex.in !== undefined,
-            hasOut: ex.out !== undefined,
-            hasMapping: ex.mapping !== undefined,
-            hasTrigger: ex.trigger !== undefined,
-            ...(full
-              ? {
-                  in: ex.in,
-                  out: ex.out,
-                  mapping: ex.mapping,
-                  trigger: ex.trigger,
-                }
-              : {}),
-          });
+        // Inline examples take precedence over package-shipped ones.
+        if (ref.examples) {
+          examples.push(
+            ...toItems(ref.examples as Flow.StepExamples, type, name, 'inline'),
+          );
+          continue;
         }
+
+        // No inline examples: fall back to the referenced package's shipped
+        // examples (only for refs that actually name a package).
+        if (!ref.package) continue;
+        const packageExamples = await loadPackageExamples(ref.package);
+        if (packageExamples)
+          examples.push(...toItems(packageExamples, type, name, 'package'));
       }
     }
 
@@ -155,7 +204,7 @@ async function flowExamplesHandlerBody(input: unknown) {
     };
     if (examples.length === 0) {
       hints.warnings = [
-        'No examples found. Add examples to step entries in your flow config for testing.',
+        'No examples found. Add examples to step entries, or reference a package that ships examples (see package_get).',
       ];
     }
     return mcpResult(result, hints);

@@ -2,7 +2,7 @@ import type { Hint } from '@walkeros/core';
 
 export const hints: Hint.Hints = {
   'ingest-prerequisite': {
-    text: 'Fields starting with ingest.* require the server source to have config.ingest configured. Without it, ingest is undefined and all ingest.* fields resolve to empty strings — the hash is still generated but not unique. Always pair this transformer with a source that extracts request metadata.',
+    text: 'Fields starting with ingest.* require the server source to have config.ingest configured. config.ingest MUST use the map operator with direct request field paths (no req. prefix); a bare object like { ip: "req.ip" } is silently inert and leaves ingest empty. Without populated ingest, all ingest.* fields resolve to empty strings, the hash is still generated but not unique. Always pair this transformer with a source that extracts request metadata.',
     code: [
       {
         lang: 'json',
@@ -14,9 +14,11 @@ export const hints: Hint.Hints = {
                 config: {
                   settings: { port: 8080 },
                   ingest: {
-                    ip: 'req.ip',
-                    userAgent: 'req.headers.user-agent',
-                    origin: 'req.headers.origin',
+                    map: {
+                      ip: { key: 'ip' },
+                      userAgent: { key: 'headers.user-agent' },
+                      origin: { key: 'headers.origin' },
+                    },
                   },
                 },
               },

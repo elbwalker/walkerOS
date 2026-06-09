@@ -22,6 +22,7 @@ import {
   generateWrapEntryServer,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
+import path from 'path';
 import type { Flow } from '@walkeros/core';
 import type { BuildOptions } from '../../../types/bundle.js';
 
@@ -384,6 +385,69 @@ describe('Implicit Collector', () => {
     // Should have both createCollector and startFlow
     expect(result).toContain('startFlow');
     expect(result).toContain('createCollector');
+  });
+});
+
+describe('lazy /dev registry', () => {
+  // Resolve the real @walkeros/web-source-browser package so its package.json
+  // ./dev export is read by the codegen (it genuinely exposes ./dev).
+  const browserPkgPath = path.resolve(
+    __dirname,
+    '../../../../../web/sources/browser',
+  );
+
+  const flowSettings: Flow = {
+    config: {
+      platform: 'web',
+      bundle: {
+        packages: {
+          '@walkeros/web-source-browser': {},
+        },
+      },
+    },
+    sources: {
+      browser: {
+        package: '@walkeros/web-source-browser',
+      },
+    },
+    destinations: {},
+  };
+
+  const buildOptions = {
+    platform: 'browser',
+    format: 'esm',
+    // withDev is resolved from skipWrapper when not set explicitly.
+    skipWrapper: true,
+    packages: {
+      '@walkeros/web-source-browser': {},
+    },
+    output: './dist/bundle.js',
+    code: '',
+  };
+
+  it('emits a lazy dynamic-import registry entry for a /dev-exposing package', async () => {
+    const { codeEntry } = await createEntryPoint(
+      flowSettings,
+      buildOptions as BuildOptions,
+      new Map([['@walkeros/web-source-browser', browserPkgPath]]),
+    );
+
+    expect(codeEntry).toContain('export const __devExports = {');
+    expect(codeEntry).toContain(
+      "'@walkeros/web-source-browser': () => import('@walkeros/web-source-browser/dev')",
+    );
+  });
+
+  it('emits NO static namespace dev import', async () => {
+    const { codeEntry } = await createEntryPoint(
+      flowSettings,
+      buildOptions as BuildOptions,
+      new Map([['@walkeros/web-source-browser', browserPkgPath]]),
+    );
+
+    // A static `import * as ... from '<pkg>/dev'` cannot be tree-shaken out of
+    // the deploy wrap; the registry must use a lazy thunk instead.
+    expect(codeEntry).not.toMatch(/import \* as [^\n]*\/dev'/);
   });
 });
 
@@ -791,6 +855,21 @@ describe('generateSplitWireConfigModule', () => {
     expect(configIdx).toBeGreaterThan(-1);
     expect(storesIdx).toBeLessThan(configIdx);
   });
+
+  it('injects the __walkerosRequireSecret guard helper in scope', () => {
+    const result = generateSplitWireConfigModule(
+      'const stores = {};',
+      '{ sources: {} }',
+      '',
+    );
+    // Helper present, declared before wireConfig so the body can reference it
+    expect(result).toContain('function __walkerosRequireSecret');
+    expect(result).toContain('is not set');
+    const helperIdx = result.indexOf('function __walkerosRequireSecret');
+    const wireIdx = result.indexOf('export function wireConfig');
+    expect(helperIdx).toBeGreaterThan(-1);
+    expect(helperIdx).toBeLessThan(wireIdx);
+  });
 });
 
 describe('generateWrapEntry preview preflight', () => {
@@ -943,6 +1022,7 @@ describe('generateWebEntry telemetry observer wiring', () => {
     const out = generateWebEntry('./skel.mjs', '{}', {
       telemetry: {
         observerUrl: 'https://o.example.com/i/d',
+        traceUrl: 'https://o.example.com/trace/d',
         ingestToken: 'tok_t',
         flowId: 'flow_t',
         level: 'standard',
@@ -970,6 +1050,7 @@ describe('generateWrapEntry telemetry observer wiring', () => {
     const out = generateWrapEntry('./skel.mjs', {
       telemetry: {
         observerUrl: 'https://o.example.com/i/d',
+        traceUrl: 'https://o.example.com/trace/d',
         ingestToken: 'tok_t',
         flowId: 'flow_t',
         level: 'standard',
@@ -983,6 +1064,45 @@ describe('generateWrapEntry telemetry observer wiring', () => {
     const observerIdx = out.indexOf('collector.observers.add');
     expect(startFlowIdx).toBeGreaterThan(-1);
     expect(observerIdx).toBeGreaterThan(startFlowIdx);
+  });
+
+  it('emits a static observer with no trace poll when traceUrl is omitted', () => {
+    const out = generateWrapEntry('./skel.mjs', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/ingest/preview/prv_1',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'trace',
+      },
+    });
+    expect(out).toContain('createTelemetryObserver');
+    expect(out).toContain('collector.observers.add');
+    expect(out).toContain('"trace"');
+    // No poll machinery when traceUrl is absent.
+    expect(out).not.toContain('__pollTrace');
+    expect(out).not.toContain('setInterval');
+    expect(out).not.toContain('resolveTelemetryOptions');
+    expect(out).not.toContain('traceUntil');
+    const startFlowIdx = out.indexOf('await startFlow(config)');
+    const observerIdx = out.indexOf('collector.observers.add');
+    expect(startFlowIdx).toBeGreaterThan(-1);
+    expect(observerIdx).toBeGreaterThan(startFlowIdx);
+  });
+
+  it('keeps the trace poll when traceUrl is present', () => {
+    const out = generateWrapEntry('./skel.mjs', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/i/d',
+        traceUrl: 'https://o.example.com/trace/d',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'standard',
+      },
+    });
+    expect(out).toContain('__pollTrace');
+    expect(out).toContain('setInterval');
+    expect(out).toContain('resolveTelemetryOptions');
+    expect(out).toContain('traceUntil');
   });
 });
 
@@ -1089,13 +1209,13 @@ describe('bundle() target resolution', () => {
     expect(buildOptions.withDev).toBe(false);
   });
 
-  it('target="cdn-skeleton" resolves to skipWrapper=true, withDev=false', async () => {
+  it('target="cdn-skeleton" resolves to skipWrapper=true, withDev=true', async () => {
     const { bundle } = await import('../../../commands/bundle/index.js');
     await bundle(MINIMAL_FLOW, { silent: true, target: 'cdn-skeleton' });
     expect(warnSpy).not.toHaveBeenCalled();
     const buildOptions = bundleCoreMock.mock.calls[0][1];
     expect(buildOptions.skipWrapper).toBe(true);
-    expect(buildOptions.withDev).toBe(false);
+    expect(buildOptions.withDev).toBe(true);
   });
 
   it('target="simulate" resolves to skipWrapper=true, withDev=true', async () => {

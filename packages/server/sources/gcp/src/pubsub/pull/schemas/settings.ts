@@ -32,7 +32,7 @@ export const SettingsSchema = z.object({
   credentials: z
     .any()
     .describe(
-      'Service account credentials as a JSON string or an object with client_email and private_key. Default: Application Default Credentials (ADC).',
+      'Service account credentials as a JSON string or an object with client_email and private_key. Default: Application Default Credentials (ADC). (deprecated: use config.credentials)',
     )
     .optional(),
   apiEndpoint: z

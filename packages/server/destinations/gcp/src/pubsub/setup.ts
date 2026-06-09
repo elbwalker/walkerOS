@@ -2,6 +2,7 @@ import type { DestinationServer } from '@walkeros/server-core';
 import type { Env, Setup, Types } from './types';
 import type { LifecycleContext, Logger } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
+import { parseCredentials, resolveCredentials } from './config';
 import {
   PubSub,
   type PubSub as PubSubClient,
@@ -89,11 +90,14 @@ export async function setup(
   let client: PubSubClient | undefined = settings.client;
   if (!client) {
     const Constructor = env?.PubSub ?? PubSub;
+    const credentials = parseCredentials(
+      resolveCredentials(config, logger),
+      logger,
+    );
     const clientOptions = {
       projectId,
-      ...(settings.credentials !== undefined &&
-      typeof settings.credentials !== 'string'
-        ? { credentials: settings.credentials }
+      ...(credentials !== undefined && typeof credentials !== 'string'
+        ? { credentials }
         : {}),
       ...(settings.apiEndpoint ? { apiEndpoint: settings.apiEndpoint } : {}),
     };

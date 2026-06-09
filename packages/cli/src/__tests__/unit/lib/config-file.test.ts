@@ -7,6 +7,7 @@ import {
   writeTelemetryOnlyConfig,
   setDefaultProject,
   getDefaultProject,
+  clearDefaultProject,
   setFeedbackPreference,
   getFeedbackPreference,
   getConfigPath,
@@ -117,6 +118,37 @@ describe('config-file defaultProject', () => {
 
     it('returns null when no config exists', () => {
       expect(getDefaultProject()).toBeNull();
+    });
+  });
+
+  describe('clearDefaultProject', () => {
+    it('removes defaultProjectId from config', () => {
+      writeConfig({ ...baseConfig, defaultProjectId: 'proj_abc' });
+      clearDefaultProject();
+
+      const raw = JSON.parse(readFileSync(getConfigPath(), 'utf-8'));
+      expect(raw.defaultProjectId).toBeUndefined();
+      expect(getDefaultProject()).toBeNull();
+    });
+
+    it('preserves other config fields', () => {
+      writeConfig({
+        ...baseConfig,
+        anonymousFeedback: true,
+        defaultProjectId: 'proj_abc',
+      });
+      clearDefaultProject();
+
+      const raw = JSON.parse(readFileSync(getConfigPath(), 'utf-8'));
+      expect(raw.token).toBe(baseConfig.token);
+      expect(raw.email).toBe(baseConfig.email);
+      expect(raw.anonymousFeedback).toBe(true);
+      expect(raw.defaultProjectId).toBeUndefined();
+    });
+
+    it('does nothing when no config exists', () => {
+      clearDefaultProject();
+      expect(readConfig()).toBeNull();
     });
   });
 });

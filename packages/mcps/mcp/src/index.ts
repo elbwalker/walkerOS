@@ -11,6 +11,7 @@ import { createAuthToolSpec } from './tools/auth.js';
 import { createProjectManageToolSpec } from './tools/project-manage.js';
 import { createFlowManageToolSpec } from './tools/flow-manage.js';
 import { createDeployManageToolSpec } from './tools/deploy-manage.js';
+import { createSecretManageToolSpec } from './tools/secret-manage.js';
 import { createFeedbackToolSpec } from './tools/feedback.js';
 
 import { createFlowValidateToolSpec } from './tools/validate.js';
@@ -23,6 +24,7 @@ import {
   createPackageSearchToolSpec,
   createPackageGetToolSpec,
 } from './tools/package.js';
+import { createDiagnosticsToolSpec } from './tools/diagnostics.js';
 
 export {
   createWalkerOSMcpServer,
@@ -62,27 +64,32 @@ export {
  *
  * Consumers that need to drive the tools WITHOUT an `McpServer` (e.g., the
  * walkerOS app's chat route wrapping them as Vercel AI SDK tools) should call
- * `createToolHandlers(client)` and iterate the returned record. Handlers are
- * closed over `client`, so the caller can bind a single `ToolClient` (such as
- * the zero-hop `ServiceToolClient`) once per session.
+ * `createToolHandlers(client, packageVersion)` and iterate the returned record.
+ * Handlers are closed over `client`, so the caller can bind a single
+ * `ToolClient` (such as the zero-hop `ServiceToolClient`) once per session.
+ * `packageVersion` is reported by the `diagnostics` tool and defaults to
+ * `'0.0.0'` when omitted.
  */
 export function createToolHandlers(
   client: ToolClient,
+  packageVersion = '0.0.0',
 ): Record<string, ToolSpec> {
   const specs: ToolSpec[] = [
     createAuthToolSpec(client),
     createProjectManageToolSpec(client),
     createFlowManageToolSpec(client),
     createDeployManageToolSpec(client),
+    createSecretManageToolSpec(client),
     createFeedbackToolSpec(client),
     createFlowValidateToolSpec(),
-    createFlowBundleToolSpec(),
-    createFlowSimulateToolSpec(),
+    createFlowBundleToolSpec(client),
+    createFlowSimulateToolSpec(client),
     createFlowPushToolSpec(),
     createFlowExamplesToolSpec(),
-    createFlowLoadToolSpec(),
+    createFlowLoadToolSpec(client),
     createPackageSearchToolSpec(),
     createPackageGetToolSpec(),
+    createDiagnosticsToolSpec(client, packageVersion),
   ];
   return Object.fromEntries(specs.map((s) => [s.name, s]));
 }

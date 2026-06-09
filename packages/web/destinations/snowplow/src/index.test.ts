@@ -4,7 +4,6 @@ import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
 import {
-  examples,
   clearUserData,
   enableAnonymousTracking,
   disableAnonymousTracking,
@@ -13,6 +12,7 @@ import {
   MEDIA_SCHEMAS,
   MEDIA_ACTIONS,
 } from '.';
+import { examples } from './dev';
 import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
 
 // Step example `.mapping` is typed as `unknown` (it can be any rule shape).
@@ -20,6 +20,12 @@ import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
 type SnowplowRule = Mapping.Rule<DestinationSnowplow.Mapping>;
 
 const asRule = (m: unknown): SnowplowRule => m as SnowplowRule;
+
+// Deliberately widen a value the compiler rejects in this slot. Used ONLY to
+// (a) feed malformed config into runtime-guard tests (missing/invalid fields)
+// and (b) stand in for opaque third-party SDK types (BrowserPlugin) whose full
+// shape is irrelevant to the assertion. Not for ordinary test-setup mismatches.
+const unsafeFixture = <T>(value: unknown): T => value as T;
 
 const mappingConfig = {
   page: { view: asRule(examples.step.pageView.mapping) },
@@ -158,7 +164,7 @@ describe('destination snowplow', () => {
         'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@3.24.0/dist/sp.js';
 
       // Create env that captures created scripts
-      const scriptEnv = {
+      const scriptEnv: DestinationSnowplow.Env = {
         window: {
           snowplow: Object.assign(() => {}, { q: [] }),
         },
@@ -176,7 +182,7 @@ describe('destination snowplow', () => {
 
       const destinationWithEnv = {
         ...destination,
-        env: scriptEnv as unknown as DestinationSnowplow.Env,
+        env: scriptEnv,
       };
       elb('walker destination', {
         code: destinationWithEnv,
@@ -197,7 +203,7 @@ describe('destination snowplow', () => {
 
     test('uses default CDN URL when scriptUrl not provided', async () => {
       // Create env that captures created scripts
-      const scriptEnv = {
+      const scriptEnv: DestinationSnowplow.Env = {
         window: {
           snowplow: Object.assign(() => {}, { q: [] }),
         },
@@ -215,7 +221,7 @@ describe('destination snowplow', () => {
 
       const destinationWithEnv = {
         ...destination,
-        env: scriptEnv as unknown as DestinationSnowplow.Env,
+        env: scriptEnv,
       };
       elb('walker destination', {
         code: destinationWithEnv,
@@ -2119,9 +2125,9 @@ describe('destination snowplow', () => {
                 settings: {
                   context: [
                     // Entry without schema - should be skipped
-                    {
+                    unsafeFixture<DestinationSnowplow.ContextEntity>({
                       data: { id: 'data.id' },
-                    } as unknown as DestinationSnowplow.ContextEntity,
+                    }),
                     // Valid entry - should be included
                     {
                       schema: 'iglu:com.example/product/jsonschema/1-0-0',
@@ -2171,9 +2177,11 @@ describe('destination snowplow', () => {
                 settings: {
                   context: [
                     // Non-object entries - should be skipped
-                    null as unknown as DestinationSnowplow.ContextEntity,
-                    'string entry' as unknown as DestinationSnowplow.ContextEntity,
-                    123 as unknown as DestinationSnowplow.ContextEntity,
+                    unsafeFixture<DestinationSnowplow.ContextEntity>(null),
+                    unsafeFixture<DestinationSnowplow.ContextEntity>(
+                      'string entry',
+                    ),
+                    unsafeFixture<DestinationSnowplow.ContextEntity>(123),
                     // Valid entry - should be included
                     {
                       schema: 'iglu:com.example/product/jsonschema/1-0-0',
@@ -2450,9 +2458,9 @@ describe('destination snowplow', () => {
 
   describe('code-based plugins (plugin.code)', () => {
     test('uses plugin code directly when provided as object', async () => {
-      const mockPlugin = {
+      const mockPlugin = unsafeFixture<DestinationSnowplow.BrowserPlugin>({
         trackerId: 'test',
-      } as unknown as DestinationSnowplow.BrowserPlugin;
+      });
 
       const destinationWithEnv = {
         ...destination,
@@ -2544,12 +2552,12 @@ describe('destination snowplow', () => {
     });
 
     test('handles multiple code-based plugins', async () => {
-      const mockPlugin1 = {
+      const mockPlugin1 = unsafeFixture<DestinationSnowplow.BrowserPlugin>({
         trackerId: 'plugin1',
-      } as unknown as DestinationSnowplow.BrowserPlugin;
-      const mockPlugin2 = {
+      });
+      const mockPlugin2 = unsafeFixture<DestinationSnowplow.BrowserPlugin>({
         trackerId: 'plugin2',
-      } as unknown as DestinationSnowplow.BrowserPlugin;
+      });
 
       const destinationWithEnv = {
         ...destination,
@@ -2779,9 +2787,9 @@ describe('destination snowplow', () => {
     });
 
     test('adds code-based plugins via adapter', async () => {
-      const mockPlugin = {
+      const mockPlugin = unsafeFixture<DestinationSnowplow.BrowserPlugin>({
         name: 'TestPlugin',
-      } as unknown as DestinationSnowplow.BrowserPlugin;
+      });
 
       elb('walker destination', {
         code: destination,
@@ -2925,10 +2933,10 @@ describe('destination snowplow', () => {
         config: {
           settings: {
             collectorUrl: 'https://collector.example.com',
-            tracker: {
+            tracker: unsafeFixture<DestinationSnowplow.Settings['tracker']>({
               // Missing newTracker - should fail
               trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
-            } as unknown as DestinationSnowplow.Settings['tracker'],
+            }),
           },
         },
       });
@@ -2950,10 +2958,10 @@ describe('destination snowplow', () => {
         config: {
           settings: {
             collectorUrl: 'https://collector.example.com',
-            tracker: {
+            tracker: unsafeFixture<DestinationSnowplow.Settings['tracker']>({
               newTracker: mockNewTracker,
               // Missing trackSelfDescribingEvent - should fail
-            } as unknown as DestinationSnowplow.Settings['tracker'],
+            }),
           },
         },
       });

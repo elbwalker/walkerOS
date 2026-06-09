@@ -76,13 +76,17 @@ destination, all at once.
    buffered in `Instance.queueOn`.
 2. Destinations with `require` are held as **pending** during initialization
    until their listed events fire.
-3. Each time a collector event fires (e.g., `consent`, `session`, `user`), the
-   collector decrements the matching entry from every source's and
-   destination's `require` list, then activates anything whose list is empty.
+3. A `require` entry is satisfied by the collector's **current recorded state**,
+   not only by a future event. So order does not matter: a step activates
+   whether the required state (such as a CMP applying consent) was recorded
+   before or after the step registered. The collector reconciles every pending
+   step against current state at each state change, at the run barrier, and once
+   after all sources have registered.
 4. Sources whose `require` just emptied have their queued lifecycle events
    replayed via `source.on(type, data)`. Destinations whose `require` just
-   emptied initialize and receive all previously queued events, so no data is
-   lost.
+   emptied are registered and become eligible to initialize/send; any previously
+   queued events are preserved and delivered once the collector is allowed to
+   push, so no data is lost.
 
 ### Key points
 
@@ -102,6 +106,12 @@ destination, all at once.
 2. Listening for CMP-specific events on consent changes
 3. Mapping CMP categories to walkerOS consent groups via `categoryMap`
 4. Calling `elb('walker consent', state)` with the mapped state
+
+CMP and session sources perform their initial consent read during `init()`, not
+in the source factory. The factory stays side-effect free; the consent emit
+happens once the collector runs the source's `init()`. Combined with the
+current-state `require` matching above, this means a `require:["consent"]` step
+activates reliably regardless of which source provided the consent or when.
 
 All CMP sources support `explicitOnly` (default: `true`) to filter out
 implicit/default consent and only process active user choices.

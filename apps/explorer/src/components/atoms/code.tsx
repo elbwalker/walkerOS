@@ -95,6 +95,12 @@ export interface CodeProps {
   packages?: string[];
   sticky?: boolean; // Enable sticky scroll (default: true)
   ide?: boolean; // Enable IDE features: hover, validation, etc. (default: false)
+  /**
+   * Contain wheel scrolling inside the editor. When true, Monaco consumes
+   * mouse-wheel events so scrolling does not chain to the page once the
+   * editor reaches its top or bottom (default: false).
+   */
+  isolateScroll?: boolean;
   /** JSON Schema (Draft 7) for validation and IntelliSense in JSON mode */
   jsonSchema?: Record<string, unknown>;
   /** Context data for dynamic IntelliSense (variable names, secrets, etc.) */
@@ -181,6 +187,7 @@ export function Code({
   packages,
   sticky = true,
   ide = false,
+  isolateScroll = false,
   jsonSchema,
   intellisenseContext,
   validate,
@@ -631,7 +638,7 @@ export function Code({
           scrollbar: {
             vertical: 'auto',
             horizontal: 'auto',
-            alwaysConsumeMouseWheel: false,
+            alwaysConsumeMouseWheel: isolateScroll,
           },
           // Cursor and selection behavior
           cursorBlinking: 'blink', // Make cursor blink visibly

@@ -26,6 +26,9 @@ export interface RunCommandOptions {
   /** Project ID */
   project?: string;
 
+  /** Opt-in dotenv file to load into process.env before config resolution */
+  envFile?: string;
+
   /** Enable JSON output */
   json?: boolean;
 

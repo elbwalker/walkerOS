@@ -2,6 +2,8 @@ import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
   SetupFn as CoreSetupFn,
+  Credential,
+  ServiceAccount,
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
 import type { PubSub, TopicMetadata } from '@google-cloud/pubsub';
@@ -12,12 +14,16 @@ export interface ServiceAccountCredentials {
   project_id?: string;
 }
 
+/** Credentials value for this destination: JSON string or service account object. */
+export type Credentials = Credential<ServiceAccount>;
+
 export interface Settings {
   // User-supplied OR populated by init(); single field for both. Mirrors BigQuery.
   client: PubSub;
   // Top-level always wins over credentials.project_id (documented in config.ts).
   projectId: string;
   topic: string;
+  /** @deprecated use config.credentials */
   credentials?: string | ServiceAccountCredentials;
   // SDK term, kept verbatim.
   apiEndpoint?: string;
@@ -31,6 +37,7 @@ export interface InitSettings {
   projectId: string;
   topic: string;
   client?: PubSub;
+  /** @deprecated use config.credentials */
   credentials?: string | ServiceAccountCredentials;
   apiEndpoint?: string;
   orderingKey?: WalkerOSMapping.Value;
@@ -73,7 +80,8 @@ export type Types = CoreDestination.Types<
   Mapping,
   Env,
   InitSettings,
-  Setup
+  Setup,
+  Credentials
 >;
 
 export interface Destination extends DestinationServer.Destination<Types> {

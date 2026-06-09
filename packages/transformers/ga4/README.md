@@ -33,8 +33,12 @@ Drop the transformer into a server source's `before` chain:
           "package": "@walkeros/server-source-express",
           "config": {
             "ingest": {
-              "url": "req.url",
-              "body": "req.body"
+              "map": {
+                "url": { "key": "url" },
+                "path": { "key": "path" },
+                "method": { "key": "method" },
+                "body": { "key": "body" }
+              }
             }
           },
           "before": "ga4"

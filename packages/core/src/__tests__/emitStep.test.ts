@@ -19,6 +19,9 @@ function makeCollector(observers: Set<ObserverFn>): Collector.Instance {
     on: {},
     queue: [],
     round: 0,
+    stateVersion: 0,
+    cellVersion: {},
+    delivery: new WeakMap<object, Record<string, number>>(),
     session: undefined,
     status: {
       startedAt: 0,
@@ -33,6 +36,7 @@ function makeCollector(observers: Set<ObserverFn>): Collector.Instance {
     user: {},
     sources: {},
     pending: { destinations: {} },
+    seenEvents: new Set(),
     push: async () => ({ ok: true }),
     command: async () => ({ ok: true }),
   };

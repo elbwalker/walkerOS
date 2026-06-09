@@ -2,7 +2,7 @@ import type { Collector, Store } from '@walkeros/core';
 import { getStateStore } from '../cache';
 
 function makeStore(type: string): Store.Instance {
-  const data = new Map<string, unknown>();
+  const data = new Map<string, Store.StoreValue>();
   return {
     type,
     config: {},

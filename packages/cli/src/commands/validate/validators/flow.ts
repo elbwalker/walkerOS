@@ -1,8 +1,14 @@
 // walkerOS/packages/cli/src/commands/validate/validators/flow.ts
 
-import type { Flow } from '@walkeros/core';
-import { getFlowSettings, isObject, validateStepEntry } from '@walkeros/core';
+import type { Flow, WalkerOS } from '@walkeros/core';
+import {
+  getFlowSettings,
+  isObject,
+  resolveContracts,
+  validateStepEntry,
+} from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
+import { validateEventAgainstContract } from '@walkeros/transformer-validate';
 import type {
   ValidateResult,
   ValidationError,
@@ -13,6 +19,8 @@ const { validateFlowConfig } = schemas;
 
 interface FlowValidateOptions {
   flow?: string;
+  /** When true, contract violations are reported as errors instead of warnings. */
+  strict?: boolean;
 }
 
 /**
@@ -179,7 +187,13 @@ export function validateFlow(
       // Contract compliance (contracts live on Config level only)
       const contract = input.contract;
       if (contract) {
-        checkContractCompliance(flowSettings, contract, warnings);
+        checkContractCompliance(
+          flowSettings,
+          contract,
+          errors,
+          warnings,
+          options.strict === true,
+        );
       }
     }
     details.connectionsChecked = totalConnections;
@@ -633,44 +647,82 @@ function lintRoute(
   // Bare gate: nothing else to recurse into.
 }
 
+/**
+ * Validate each step example against the flow's resolved top-level contract.
+ *
+ * - A contract violation → error when {@link strict}, else warning.
+ * - An entity.action with no matching contract entry produces NO diagnostic:
+ *   the shared {@link validateEventAgainstContract} authority treats no-match
+ *   as "no opinion = pass", and so do we. Emitting a warning here would wrongly
+ *   fail `walkeros validate --strict` for any event type the contract simply
+ *   does not cover.
+ *
+ * Only the canonical event INPUTS are validated: `destination.in` and
+ * `transformer.in`. A source example's `in` is RAW input (an HTTP request, a
+ * dataLayer array, an HTML string), not a canonical walkerOS event, so
+ * validating it against the event contract would be semantically wrong.
+ * Source-input validation (per-package input formats) and canonical-output
+ * validation (`source.out`/`transformer.out`, which are `StepOut` effect
+ * tuples, not events) are deferred to v2.
+ *
+ * The verdict comes from the shared {@link validateEventAgainstContract}
+ * authority so design-time and runtime stay in lockstep.
+ */
 function checkContractCompliance(
   config: Flow,
   contract: Flow.Contract,
+  errors: ValidationError[],
   warnings: ValidationWarning[],
+  strict: boolean,
 ): void {
+  // Resolve extend chains + wildcards once; each rule is a ContractSource.
+  const resolved = resolveContracts(contract);
+  const rules = Object.values(resolved);
+  if (rules.length === 0) return;
+
+  const checkExample = (path: string, candidate: unknown): void => {
+    if (!isObject(candidate)) return;
+
+    const entity =
+      typeof candidate.entity === 'string' ? candidate.entity : undefined;
+    const action =
+      typeof candidate.action === 'string' ? candidate.action : undefined;
+    if (!entity || !action) return;
+
+    const event: WalkerOS.DeepPartialEvent = candidate;
+    const result = validateEventAgainstContract(event, undefined, {
+      contracts: rules,
+    });
+    // No-match returns isValid:true (no opinion = pass), so an uncovered
+    // event type produces no diagnostic, matching runtime semantics.
+    if (result.isValid) return;
+
+    const message = `Example violates contract: ${result.errors
+      .map((e) => `${e.path || '/'}: ${e.message}`)
+      .join('; ')}`;
+
+    if (strict) {
+      errors.push({ path, message, code: 'CONTRACT_VIOLATION' });
+    } else {
+      warnings.push({
+        path,
+        message,
+        suggestion: 'Fix the example data to satisfy the contract schema.',
+      });
+    }
+  };
+
   for (const [name, dest] of Object.entries(config.destinations || {})) {
     if (!dest.examples) continue;
-
     for (const [exName, example] of Object.entries(dest.examples)) {
-      if (!example.in || typeof example.in !== 'object') continue;
+      checkExample(`destination.${name}.examples.${exName}.in`, example.in);
+    }
+  }
 
-      const event = example.in as { entity?: string; action?: string };
-      if (!event.entity || !event.action) continue;
-
-      // Walk every named contract rule and look in its events map.
-      // First match (entity exact or wildcard, action exact or wildcard) wins.
-      let matched = false;
-      for (const rule of Object.values(contract)) {
-        const events = rule.events;
-        if (!events) continue;
-
-        const entityActions = events[event.entity] || events['*'];
-        if (!entityActions) continue;
-
-        const actionSchema = entityActions[event.action] || entityActions['*'];
-        if (actionSchema) {
-          matched = true;
-          break;
-        }
-      }
-
-      if (matched) {
-        warnings.push({
-          path: `destination.${name}.examples.${exName}`,
-          message: `Example has contract for ${event.entity}.${event.action}`,
-          suggestion: 'Verify example data matches contract schema',
-        });
-      }
+  for (const [name, transformer] of Object.entries(config.transformers || {})) {
+    if (!transformer.examples) continue;
+    for (const [exName, example] of Object.entries(transformer.examples)) {
+      checkExample(`transformer.${name}.examples.${exName}.in`, example.in);
     }
   }
 }

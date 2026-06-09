@@ -3,14 +3,18 @@ import {
   simulateSource,
   simulateTransformer,
   simulateDestination,
+  simulateCollector,
 } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
-import type { Simulation, WalkerOS } from '@walkeros/core';
+import type { Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
 
+import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { resolveConfigPath } from './resolve-config-path.js';
+import { getOrBuildBundle } from './bundle-cache.js';
 
 interface DestinationSummary {
   received: boolean;
@@ -22,8 +26,9 @@ const TITLE = 'Simulate Flow';
 const DESCRIPTION =
   'Simulate events through a walkerOS flow without making real API calls. ' +
   'For destinations: event is a walkerOS event { name: "entity action", data: {...} }. ' +
-  'For sources: event is { content: ..., trigger?: { type?, options? }, env?: {...} }. ' +
-  'Use step to target a specific step. ' +
+  'For sources: event is { content, trigger?: { type?, options? } }, where content is the ' +
+  'walkerOS event { name: "entity action", data: {...} }. ' +
+  'step (required) targets the step to simulate, e.g. "destination.gtag". ' +
   'Use flow_examples to discover available test data. ' +
   'IMPORTANT: Destinations with require (e.g. require: ["consent"]) stay pending until ' +
   'that collector event fires — simulation will error "not found" if require is not satisfied. ' +
@@ -41,16 +46,42 @@ const inputSchema = {
     .describe(
       'For destinations: { name, data, consent? }. Include consent (e.g. { marketing: true }) ' +
         'to satisfy destination consent requirements. ' +
-        'For sources: { content, trigger?, env? }. ' +
+        'For sources: { content, trigger? } where content is the walkerOS event ' +
+        '{ name, data }. ' +
         'Can also be a JSON string or file path.',
     ),
   flow: schemas.SimulateInputShape.flow,
   platform: schemas.SimulateInputShape.platform,
-  step: schemas.SimulateInputShape.step,
+  // Override the (optional) CLI `step` shape: the simulate handler hard-requires
+  // a target step (no all-steps mode), so the registered schema must be honest.
+  step: z
+    .string()
+    .describe(
+      'Required. Target step as "type.name" — e.g. "source.demo", "destination.gtag", "transformer.router".',
+    ),
   verbose: z
     .boolean()
     .optional()
     .describe('Include full payload per destination (default: false)'),
+  ingest: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe(
+      'Pipeline context a transformer reads via ctx.ingest, e.g. { url } for a ' +
+        'request decoder. Only used for transformer steps.',
+    ),
+  state: z
+    .object({
+      consent: z.record(z.string(), z.unknown()).optional(),
+      user: z.record(z.string(), z.unknown()).optional(),
+      globals: z.record(z.string(), z.unknown()).optional(),
+      timing: z.number().optional(),
+    })
+    .optional()
+    .describe(
+      'Collector-state snapshot for collector steps: consent/user/globals/timing. ' +
+        'Seeds the collector before enrichment runs.',
+    ),
 };
 
 const annotations = {
@@ -60,27 +91,34 @@ const annotations = {
   openWorldHint: false,
 } as const;
 
-export function createFlowSimulateToolSpec(): ToolSpec {
+export function createFlowSimulateToolSpec(client: ToolClient): ToolSpec {
   return {
     name: 'flow_simulate',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowSimulateHandlerBody(input),
+    handler: (input) => flowSimulateHandlerBody(client, input),
   };
 }
 
-async function flowSimulateHandlerBody(input: unknown) {
-  const { configPath, event, flow, platform, step, verbose } = (input ??
-    {}) as {
-    configPath: string;
-    event?: Record<string, unknown> | string;
-    flow?: string;
-    platform?: 'web' | 'server';
-    step?: string;
-    verbose?: boolean;
-  };
+async function flowSimulateHandlerBody(client: ToolClient, input: unknown) {
+  const { configPath, event, flow, platform, step, verbose, ingest, state } =
+    (input ?? {}) as {
+      configPath: string;
+      event?: Record<string, unknown> | string;
+      flow?: string;
+      platform?: 'web' | 'server';
+      step?: string;
+      verbose?: boolean;
+      ingest?: Omit<Ingest, '_meta'>;
+      state?: {
+        consent?: WalkerOS.Consent;
+        user?: WalkerOS.User;
+        globals?: WalkerOS.Properties;
+        timing?: number;
+      };
+    };
   try {
     if (!event) {
       throw new Error(
@@ -116,12 +154,27 @@ async function flowSimulateHandlerBody(input: unknown) {
     const stepType = step.substring(0, dotIndex);
     const stepId = step.substring(dotIndex + 1);
 
+    // Accept a cloud flow/config id as configPath, resolving it to inline JSON.
+    const resolvedConfigPath = await resolveConfigPath(client, configPath);
+
+    // Reuse a prebuilt bundle across calls with the same resolved config. The
+    // simulate fns take their fast `mode: 'prebuilt'` branch when given a
+    // bundlePath, skipping the per-call rebuild. On any bundle failure fall back
+    // to undefined so the simulate fn rebuilds and surfaces its canonical error.
+    let bundlePath: string | undefined;
+    try {
+      bundlePath = await getOrBuildBundle(resolvedConfigPath);
+    } catch {
+      bundlePath = undefined;
+    }
+
     let result: Simulation.Result;
 
     switch (stepType) {
       case 'source':
-        result = await simulateSource(configPath, resolvedEvent, {
+        result = await simulateSource(resolvedConfigPath, resolvedEvent, {
           sourceId: stepId,
+          bundlePath,
           flow,
           silent: true,
         });
@@ -129,22 +182,39 @@ async function flowSimulateHandlerBody(input: unknown) {
 
       case 'transformer':
         result = await simulateTransformer(
-          configPath,
+          resolvedConfigPath,
           resolvedEvent as WalkerOS.DeepPartialEvent,
           {
             transformerId: stepId,
+            bundlePath,
             flow,
             silent: true,
+            ingest,
+          },
+        );
+        break;
+
+      case 'collector':
+        result = await simulateCollector(
+          resolvedConfigPath,
+          resolvedEvent as WalkerOS.DeepPartialEvent,
+          {
+            collectorName: stepId,
+            bundlePath,
+            flow,
+            silent: true,
+            state,
           },
         );
         break;
 
       case 'destination':
         result = await simulateDestination(
-          configPath,
+          resolvedConfigPath,
           resolvedEvent as WalkerOS.DeepPartialEvent,
           {
             destinationId: stepId,
+            bundlePath,
             flow,
             silent: true,
           },
@@ -153,7 +223,7 @@ async function flowSimulateHandlerBody(input: unknown) {
 
       default:
         throw new Error(
-          `Unknown step type "${stepType}". Use "source", "transformer", or "destination".`,
+          `Unknown step type "${stepType}". Use "source", "collector", "transformer", or "destination".`,
         );
     }
 
@@ -198,6 +268,22 @@ async function flowSimulateHandlerBody(input: unknown) {
         },
         {
           next: ['Use flow_bundle to build for production'],
+        },
+      );
+    }
+
+    // Collector simulation: surface the enriched event
+    if (result.step === 'collector') {
+      return mcpResult(
+        {
+          success,
+          error: errorMessage,
+          summary: `Collector enriched event`,
+          capturedEvents: result.events,
+          duration: result.duration,
+        },
+        {
+          next: ['Use flow_simulate with a destination step to test delivery'],
         },
       );
     }
@@ -255,8 +341,11 @@ async function flowSimulateHandlerBody(input: unknown) {
   }
 }
 
-export function registerFlowSimulateTool(server: McpServer) {
-  const spec = createFlowSimulateToolSpec();
+export function registerFlowSimulateTool(
+  server: McpServer,
+  client: ToolClient,
+) {
+  const spec = createFlowSimulateToolSpec(client);
   server.registerTool(
     spec.name,
     {

@@ -12,6 +12,7 @@ import {
   REF_CONTRACT,
   REF_ENV,
   REF_FLOW,
+  REF_SECRET,
   REF_VAR_FULL,
   REF_VAR_INLINE,
 } from './references';
@@ -35,6 +36,9 @@ function mergeVariables(
 
 /** Sentinel prefix for deferred $env resolution. Shared with CLI bundler. */
 export const ENV_MARKER_PREFIX = '__WALKEROS_ENV:';
+
+/** Sentinel prefix for deferred $secret resolution. Shared with CLI bundler. */
+export const SECRET_MARKER_PREFIX = '__WALKEROS_SECRET:';
 
 export interface ResolveOptions {
   deferred?: boolean;
@@ -267,6 +271,21 @@ function resolvePatterns(
       }
 
       return resolved;
+    }
+
+    // Check if entire string is a $secret reference (whole-string only).
+    // Server (deferred) → emit a marker the bundler turns into a runtime
+    // process.env read. Web (non-deferred) → hard error: a secret must never
+    // be inlined into a browser bundle, and we never read its value here.
+    const secretMatch = value.match(REF_SECRET);
+    if (secretMatch) {
+      const name = secretMatch[1];
+      if (options?.deferred) {
+        return `${SECRET_MARKER_PREFIX}${name}`;
+      }
+      throwError(
+        `Secret "$secret.${name}" cannot be used in a web flow — secrets are never sent to the browser. Use a server flow.`,
+      );
     }
 
     // Inline $var: must resolve to scalar
@@ -586,7 +605,6 @@ function resolveFlowSettings(
         before: source.before,
         next: source.next,
         cache: source.cache,
-        validate: source.validate,
         code: source.code,
       } as Flow.Source;
     }
@@ -626,7 +644,6 @@ function resolveFlowSettings(
         before: dest.before,
         next: dest.next,
         cache: dest.cache,
-        validate: dest.validate,
         code: dest.code,
       } as Flow.Destination;
     }
@@ -703,7 +720,6 @@ function resolveFlowSettings(
         before: transformer.before,
         next: transformer.next,
         cache: transformer.cache,
-        validate: transformer.validate,
         code: transformer.code,
       } as Flow.Transformer;
     }

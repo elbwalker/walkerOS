@@ -3,9 +3,12 @@ jest.mock('../auth', () => ({
 }));
 
 import { createMockContext, createMockLogger } from '@walkeros/core';
-import type { Store } from '@walkeros/core';
-import type { SheetsStoreSettings } from '../types';
+import type { Credential, ServiceAccount, Store } from '@walkeros/core';
+import type { ServiceAccountCredentials, SheetsStoreSettings } from '../types';
 import { storeSheetsInit, __resetSpreadsheetExistenceCache } from '../store';
+import { createTokenProvider } from '../auth';
+
+const mockCreateTokenProvider = jest.mocked(createTokenProvider);
 
 interface FetchCall {
   url: string;
@@ -71,7 +74,11 @@ function installFetch(responses: FetchResponseShape[]): {
 
 const mockBase = createMockContext();
 
-function createCtx(overrides: Partial<SheetsStoreSettings> = {}, id = 'crm') {
+function createCtx(
+  overrides: Partial<SheetsStoreSettings> = {},
+  id = 'crm',
+  credentials?: Credential<ServiceAccount>,
+) {
   const settings: SheetsStoreSettings = {
     id: 'spreadsheet-id-123',
     ...overrides,
@@ -81,7 +88,7 @@ function createCtx(overrides: Partial<SheetsStoreSettings> = {}, id = 'crm') {
     logger: createMockLogger(),
     id,
     env: {},
-    config: { settings },
+    config: { settings, credentials },
   };
 }
 
@@ -96,6 +103,7 @@ function jsonResponse(value: unknown): FetchResponseShape {
 describe('storeSheetsInit', () => {
   beforeEach(() => {
     __resetSpreadsheetExistenceCache();
+    mockCreateTokenProvider.mockClear();
   });
 
   afterEach(() => {
@@ -135,6 +143,27 @@ describe('storeSheetsInit', () => {
         await expect(storeSheetsInit(createCtx())).rejects.toThrow(
           /Spreadsheet not found.*walkeros setup store\.crm/,
         );
+      } finally {
+        restore();
+      }
+    });
+
+    it('rejects file: true at init (sheets is structured-only)', async () => {
+      // No fetch should fire: the file-mode guard runs before the existence
+      // probe.
+      const { calls, restore } = installFetch([]);
+      try {
+        const ctx = {
+          collector: mockBase.collector,
+          logger: createMockLogger(),
+          id: 'crm',
+          env: {},
+          config: { settings: { id: 'spreadsheet-id-123' }, file: true },
+        };
+        await expect(storeSheetsInit(ctx)).rejects.toThrow(
+          /does not support file mode/,
+        );
+        expect(calls).toHaveLength(0);
       } finally {
         restore();
       }
@@ -254,6 +283,43 @@ describe('storeSheetsInit', () => {
       }
     });
 
+    it('rejects a top-level binary value (request-cache wiring is not supported)', async () => {
+      const { restore } = installFetch([
+        probeOk(),
+        jsonResponse({ values: [['alice']] }),
+      ]);
+      try {
+        const store = await storeSheetsInit(createCtx());
+        const binary = new Uint8Array([0x00, 0x01, 0x02]);
+
+        await expect(store.set('req-cache-key', binary)).rejects.toThrow(
+          /cannot persist binary values/,
+        );
+      } finally {
+        restore();
+      }
+    });
+
+    it('rejects a nested binary leaf anywhere in the value', async () => {
+      const { calls, restore } = installFetch([
+        probeOk(),
+        jsonResponse({ values: [['alice']] }),
+      ]);
+      try {
+        const store = await storeSheetsInit(createCtx());
+        const initial = calls.length;
+
+        await expect(
+          store.set('dave', { meta: { blob: new Uint8Array([1, 2, 3]) } }),
+        ).rejects.toThrow(/cannot persist binary values/);
+
+        // No write fires when the value is rejected.
+        expect(calls).toHaveLength(initial);
+      } finally {
+        restore();
+      }
+    });
+
     it('updates the existing cell for a known key', async () => {
       const { calls, restore } = installFetch([
         probeOk(),
@@ -326,6 +392,63 @@ describe('storeSheetsInit', () => {
         await store.delete('unknown');
 
         expect(calls).toHaveLength(initial);
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  describe('credential resolution', () => {
+    const configSa: ServiceAccountCredentials = {
+      client_email: 'config@example.com',
+      private_key: 'config-key',
+    };
+    const settingsSa: ServiceAccountCredentials = {
+      client_email: 'settings@example.com',
+      private_key: 'settings-key',
+    };
+
+    function initFetch() {
+      return installFetch([probeOk(), jsonResponse({ values: [['alice']] })]);
+    }
+
+    it('uses config.credentials when both config and settings are set', async () => {
+      const { restore } = initFetch();
+      try {
+        const ctx = createCtx({ credentials: settingsSa }, 'crm', configSa);
+        await storeSheetsInit(ctx);
+
+        expect(mockCreateTokenProvider).toHaveBeenCalledWith(configSa);
+        expect(ctx.logger.warn).not.toHaveBeenCalled();
+      } finally {
+        restore();
+      }
+    });
+
+    it('falls back to settings.credentials and warns once', async () => {
+      const { restore } = initFetch();
+      try {
+        const ctx = createCtx({ credentials: settingsSa });
+        await storeSheetsInit(ctx);
+
+        expect(mockCreateTokenProvider).toHaveBeenCalledWith(settingsSa);
+        expect(ctx.logger.warn).toHaveBeenCalledTimes(1);
+        expect(ctx.logger.warn).toHaveBeenCalledWith(
+          'settings.credentials is deprecated; use config.credentials',
+        );
+      } finally {
+        restore();
+      }
+    });
+
+    it('passes undefined (ADC) when no credentials are configured', async () => {
+      const { restore } = initFetch();
+      try {
+        const ctx = createCtx();
+        await storeSheetsInit(ctx);
+
+        expect(mockCreateTokenProvider).toHaveBeenCalledWith(undefined);
+        expect(ctx.logger.warn).not.toHaveBeenCalled();
       } finally {
         restore();
       }

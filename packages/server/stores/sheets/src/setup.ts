@@ -7,6 +7,7 @@ import type {
   Types,
 } from './types';
 import { createTokenProvider } from './auth';
+import { resolveCredentials } from './credentials';
 import { SHEETS_BASE, buildHeaderRange, resolveSheet } from './setup-helpers';
 
 /**
@@ -44,7 +45,7 @@ export const setup: SetupFn<SheetsStoreConfig, Store.BaseEnv> = async (
   assertSheetsSettings(config.settings);
   const settings = config.settings;
 
-  const creds = parseCredentials(settings.credentials);
+  const creds = parseCredentials(resolveCredentials(config, logger));
   const getToken = createTokenProvider(creds);
   const token = await getToken();
 
@@ -111,7 +112,7 @@ function assertSheetsSettings(
 }
 
 function parseCredentials(
-  credentials?: string | ServiceAccountCredentials,
+  credentials?: unknown,
 ): ServiceAccountCredentials | undefined {
   if (!credentials) return undefined;
   if (typeof credentials === 'string') {
@@ -124,7 +125,8 @@ function parseCredentials(
     if (isServiceAccountShape(parsed)) return parsed;
     return undefined;
   }
-  return credentials;
+  if (isServiceAccountShape(credentials)) return credentials;
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

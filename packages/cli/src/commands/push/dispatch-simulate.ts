@@ -1,7 +1,7 @@
 import { planSimulate } from './plan-simulate.js';
 
 export interface SimulateDispatch {
-  kind: 'none' | 'source' | 'destination' | 'transformer';
+  kind: 'none' | 'source' | 'destination' | 'transformer' | 'collector';
   ids: string[];
 }
 

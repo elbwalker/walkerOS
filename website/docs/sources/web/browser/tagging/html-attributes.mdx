@@ -254,10 +254,13 @@ parent element per ID.
 
 :::note
 
-`data-elb`, `data-elbaction`, `data-elbcontext`, `data-elbglobals`, and
-`data-elblink` are reserved attributes, whereas `data-elb-*` attributes may be
-arbitrary combinations based on the related entity name. Actions and properties
-can be set anywhere inside an elb scope.
+`data-elb`, `data-elbaction`, `data-elbactions`, `data-elbcontext`,
+`data-elbglobals`, and `data-elblink` are reserved attributes, whereas
+`data-elb-*` attributes may be
+arbitrary combinations based on the related entity name. `data-elb_` is a
+reserved path-scoped generic that uses the same value syntax as `data-elb-` but
+only reaches triggers nested below it. Actions and properties can be set
+anywhere inside an elb scope.
 
 :::
 
@@ -451,6 +454,42 @@ o: 'v' // overridden by explicit
 }`}
   language="javascript"
 />
+
+### Scoped generic properties
+
+The blanket `data-elb-` generic is added to every trigger inside its entity,
+because the entity collects it through a descendant search. Use `data-elb_`
+(trailing underscore, no dash) when a property should reach only the triggers
+nested below it. It carries the same `key:value` payload as `data-elb-`
+(including `[]` arrays and `#dynamic` values), but it is collected only while
+bubbling up from the triggered element, so sibling triggers outside its branch
+never receive it.
+
+<CodeSnippet
+  code={`<div data-elb="product" data-elb-product="name:A">
+  <div data-elb_="size:L">
+    <button data-elbaction="click">L</button>
+  </div>
+  <div data-elb-="color:red"></div>
+  <button data-elbaction="click">Plain</button>
+</div>`}
+  language="html"
+/>
+
+Clicking the first button bubbles up through the `data-elb_` element, so it
+receives `size:L` along with the blanket `color:red`. Clicking the second
+button never passes through that element, so it has no `size`.
+
+<CodeSnippet
+  code={`// first button
+{ data: { name: 'A', color: 'red', size: 'L' } }
+// second button
+{ data: { name: 'A', color: 'red' } }`}
+  language="javascript"
+/>
+
+A scoped value on an element closer to the trigger wins over a value set
+farther up the tree, including an explicit entity property on a higher element.
 
 ## Globals
 

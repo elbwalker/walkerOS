@@ -1,9 +1,12 @@
 import type { Cache, EventCacheRule } from './types/cache';
 import type { Collector, Mapping, Store } from './types';
+import type { StoreValue } from './types/store';
 import type { CompiledMatcher } from './types/matcher';
 import { compileMatcher } from './matcher';
 import { getByPath, setByPath } from './byPath';
 import { getMappingValue } from './mapping';
+import { wrapCacheEnvelope, readCacheEnvelope } from './cache-envelope';
+import { isStoreValue } from './store/codec';
 
 interface CompiledCacheRule {
   match: CompiledMatcher;
@@ -22,7 +25,7 @@ export interface CompiledCache {
 export interface CacheResult {
   status: 'HIT' | 'MISS';
   key: string;
-  value?: unknown;
+  value?: StoreValue;
   rule: CompiledCacheRule;
 }
 
@@ -80,13 +83,19 @@ export async function checkCache(
   // Promise<T | undefined>`). Always await so a Promise return from an
   // async store (Redis, fs, the cache wrapper) never lands in the HIT
   // path as the cached "value".
-  const cached = await store.get(namespacedKey);
+  const decoded = readCacheEnvelope(await store.get(namespacedKey));
 
-  if (cached !== undefined) {
-    return { status: 'HIT', key: namespacedKey, value: cached, rule };
+  if (decoded === undefined)
+    return { status: 'MISS', key: namespacedKey, rule };
+  if ('expired' in decoded) {
+    try {
+      await store.delete(namespacedKey);
+    } catch {
+      /* best-effort purge; degrade to MISS rather than throw into the request */
+    }
+    return { status: 'MISS', key: namespacedKey, rule };
   }
-
-  return { status: 'MISS', key: namespacedKey, rule };
+  return { status: 'HIT', key: namespacedKey, value: decoded.value, rule };
 }
 
 export function storeCache(
@@ -95,7 +104,28 @@ export function storeCache(
   value: unknown,
   ttlSeconds: number,
 ): void {
-  store.set(key, value, ttlSeconds * 1000);
+  // Callers (source RespondOptions, destination push result, transformer
+  // processed event) hold values typed wider than `StoreValue` but that are
+  // structurally a `StoreValue` at runtime (JSON-shaped + binary leaves). The
+  // guard narrows cast-free; a value that is genuinely not a `StoreValue` is
+  // not cacheable, and the cache is advisory, so silently skip rather than
+  // throw into the request path.
+  if (!isStoreValue(value)) return;
+
+  const ttlMs = ttlSeconds * 1000;
+  // Store the plain {value, exp} envelope, not a pre-serialized Buffer: the
+  // backing store serializes it through the shared store codec, so binary
+  // leaves come back as Uint8Array. `exp` inside the envelope gives
+  // uniform expiry for stores that ignore the ttl arg (fs/s3/gcs); the ttl
+  // arg lets TTL-native stores (in-memory) evict instead of retaining until
+  // read.
+  // `Store.SetFn` returns `void | Promise<void>`. The write is fire-and-forget
+  // (the HTTP response is sent before it lands), so an async store that rejects
+  // (network error, EACCES) would otherwise surface as an unhandled rejection
+  // and crash the process. Swallow it: a failed cache persist must never crash
+  // the request path. Matches the best-effort silent catch on the checkCache purge.
+  const result = store.set(key, wrapCacheEnvelope(value, ttlMs), ttlMs);
+  if (result instanceof Promise) result.catch(() => {});
 }
 
 export async function applyUpdate(

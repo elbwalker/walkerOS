@@ -5,6 +5,7 @@ export * as Collector from './collector';
 export { stepId } from './collector';
 export type { StepKind, DroppedCounters } from './collector';
 export * as Context from './context';
+export type { ServiceAccount, Credential } from './credentials';
 export * as Destination from './destination';
 export * as Elb from './elb';
 export type { Flow } from './flow';
@@ -43,7 +44,7 @@ export type { SendDataValue, SendHeaders, SendResponse } from './send';
 export type { Ingest, IngestMeta } from './ingest';
 export { createIngest } from './ingest';
 
-export type { JsonSchema, ValidateEvents, Validate } from './validate';
+export type { JsonSchema, ValidateEvents } from './validate';
 
 // Telemetry FlowState shape, surfaced for observers to consume.
 export type {

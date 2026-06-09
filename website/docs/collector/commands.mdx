@@ -216,6 +216,31 @@ Set global properties that are added to each event processed by the collector.
   language="javascript"
 />
 
+## State delivery
+
+State commands (`consent`, `user`, `globals`, `custom`) set values on the
+collector. The collector records every state change immediately, even when it
+arrives before `run`. Side-effecting delivery to subscribers (the `on`
+callbacks above, and source `on` handlers) happens at or after `run`: when the
+collector starts, it delivers the current state once to every subscriber that
+has not yet seen it.
+
+This gives three practical guarantees:
+
+* **Exactly-once.** Each subscriber is invoked once per state change. The
+  collector tracks what each subscriber has already received, so re-running or
+  re-registering never double-fires a reaction.
+* **Order-independent.** A consent-gated reaction fires correctly whether the
+  state was set before or after `run`, and regardless of the order in which
+  sources initialize. You don't have to set state and start the collector in a
+  particular sequence.
+* **`require` is a timing hint, not a correctness dependency.** A source's
+  `require` only delays when its first `on` delivery lands. A dependent source
+  reacts to state correctly whether or not it declares `require`.
+
+This means sources don't need their own deduplication for state deliveries: the
+collector enforces exactly-once.
+
 ## hook
 
 Hooks customize the default behavior of the collector. Available hooks include

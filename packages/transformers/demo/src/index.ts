@@ -2,7 +2,6 @@ import type { Transformer, WalkerOS } from '@walkeros/core';
 import type { Types } from './types';
 
 export * as TransformerDemo from './types';
-export * as examples from './examples';
 
 /**
  * Demo transformer for walkerOS

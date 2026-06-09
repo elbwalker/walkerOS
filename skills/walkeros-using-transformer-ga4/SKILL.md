@@ -43,8 +43,12 @@ only by default. Per-field patching via `extend`/`remove` is supported.
           "package": "@walkeros/server-source-express",
           "config": {
             "ingest": {
-              "url": "req.url",
-              "body": "req.body"
+              "map": {
+                "url": { "key": "url" },
+                "path": { "key": "path" },
+                "method": { "key": "method" },
+                "body": { "key": "body" }
+              }
             }
           },
           "before": "ga4"
@@ -70,6 +74,18 @@ only by default. Per-field patching via `extend`/`remove` is supported.
   will not decode.
 - One HTTP request can fan out to N walkerOS events. This requires the collector
   fan-out fix (shipped in this release).
+
+**Common mistake:** `config.ingest` must be the `map` operator with direct `req`
+field paths (no `req.` prefix), e.g. `{ "map": { "url": { "key": "url" } } }`.
+The bare `{ "url": "req.url" }` form is silently inert: without a `map` operator
+the source passes the whole `req` through `getMappingValue`, and a real Express
+`req` (which carries functions and circular references) fails the property
+check, so `ctx.ingest` stays empty, the decoder reads no `url`, and the
+`/g/collect` `before` match never fires.
+
+This wiring contract (before-chain placement plus the `config.ingest` keys the
+source must populate) is also surfaced as a package hint, so `package_get` on
+`@walkeros/transformer-ga4` returns it without this skill.
 
 ## Configuration recipes
 
@@ -214,9 +230,12 @@ the `params` namespace.
 
 ### No events arriving
 
-1. Check that `source.config.ingest` populates `url` (required, string) and
-   `body` (optional, string). Express source typically uses `req.url` +
-   `req.body`.
+1. Check that `source.config.ingest` is the `map` operator and populates `url`
+   (required, string) and `body` (optional, string), e.g.
+   `{ "map": { "url": { "key": "url" }, "body": { "key": "body" } } }`. A bare
+   `{ "url": "req.url" }` object is silently inert: the source passes the whole
+   `req` through, the real Express `req` fails the property check, and
+   `ctx.ingest` is left empty.
 2. Confirm `before: "ga4"` is set on the source, not on a destination.
 3. Check the `tidPattern`: by default `^G-` blocks `AW-` / `DC-` traffic
    silently.

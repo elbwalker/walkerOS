@@ -1820,6 +1820,60 @@ describe('deferred env resolution', () => {
   });
 });
 
+describe('deferred secret resolution', () => {
+  const makeSetup = (collector: Record<string, unknown>) => ({
+    version: 4 as const,
+    flows: {
+      test: {
+        config: { platform: 'server' as const },
+        collector,
+        destinations: {},
+      },
+    },
+  });
+
+  it('returns __WALKEROS_SECRET: marker for $secret.NAME when deferred', () => {
+    const setup = makeSetup({
+      credentials: '$secret.GCP_SERVICE_ACCOUNT',
+    });
+    const config = getFlowSettings(setup, 'test', { deferred: true });
+    expect(config.collector).toEqual({
+      credentials: '__WALKEROS_SECRET:GCP_SERVICE_ACCOUNT',
+    });
+  });
+
+  it('throws for $secret.NAME when not deferred (web path)', () => {
+    process.env.GCP_SERVICE_ACCOUNT = 'should-never-be-read';
+    const setup = makeSetup({ credentials: '$secret.GCP_SERVICE_ACCOUNT' });
+    expect(() => getFlowSettings(setup, 'test', { deferred: false })).toThrow(
+      'GCP_SERVICE_ACCOUNT',
+    );
+    delete process.env.GCP_SERVICE_ACCOUNT;
+  });
+
+  it('throws a key-only message that never includes a secret value', () => {
+    process.env.GCP_SERVICE_ACCOUNT = 'super-secret-value';
+    const setup = makeSetup({ credentials: '$secret.GCP_SERVICE_ACCOUNT' });
+    let message = '';
+    try {
+      getFlowSettings(setup, 'test', { deferred: false });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toContain('GCP_SERVICE_ACCOUNT');
+    expect(message).not.toContain('super-secret-value');
+    delete process.env.GCP_SERVICE_ACCOUNT;
+  });
+
+  it('leaves non-$secret strings unaffected', () => {
+    const setup = makeSetup({ url: 'https://api.example.com/path' });
+    const config = getFlowSettings(setup, 'test', { deferred: true });
+    expect(config.collector).toEqual({
+      url: 'https://api.example.com/path',
+    });
+  });
+});
+
 // ========================================
 // getPlatform Tests
 // ========================================
@@ -2086,6 +2140,47 @@ describe('$contract edge cases', () => {
     expect(config.transformers?.validator?.config).toEqual({
       events: {
         product: { view: { properties: { data: { required: ['id'] } } } },
+      },
+    });
+  });
+
+  test('$contract.web resolves inside transformer config.settings.contract', () => {
+    const setup: Flow.Json = {
+      version: 4,
+      contract: {
+        web: {
+          events: {
+            page: { view: { required: ['data'] } },
+          },
+        },
+      },
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          transformers: {
+            validate: {
+              package: '@walkeros/transformer-validate',
+              config: {
+                settings: {
+                  contract: ['$contract.web', { type: 'object' }],
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowSettings(setup);
+
+    // The whole-string `$contract.web` resolves to the RESOLVED ContractRule
+    // (wildcards expanded, NOT the literal string), and the inline sibling
+    // passes through untouched.
+    expect(config.transformers?.validate?.config).toEqual({
+      settings: {
+        contract: [
+          { events: { page: { view: { required: ['data'] } } } },
+          { type: 'object' },
+        ],
       },
     });
   });
@@ -2739,5 +2834,114 @@ describe('$var unified resolver', () => {
     };
     const flow = getFlowSettings(config);
     expect(flow.destinations?.d.config).toEqual({ v: { nested: true } });
+  });
+});
+
+// ========================================
+// $env-in-credentials Resolution Tests
+// Locks the "no change needed" claim: resolvePatterns recurses the whole
+// config tree, so config.credentials (string or nested object) resolves like
+// any other field, on destinations, stores, and sources.
+// ========================================
+
+describe('getFlowSettings resolves $env inside config.credentials', () => {
+  const ENV_KEYS = ['SA', 'PK'] as const;
+  const saved: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const key of ENV_KEYS) saved[key] = process.env[key];
+    process.env.SA = '{"client_email":"svc@example.com"}';
+    process.env.PK = 'private-key-value';
+  });
+
+  afterEach(() => {
+    for (const key of ENV_KEYS) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+  });
+
+  it('resolves a string config.credentials on a destination', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          destinations: {
+            d: { config: { credentials: '$env.SA' } },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.destinations?.d.config).toEqual({
+      credentials: '{"client_email":"svc@example.com"}',
+    });
+  });
+
+  it('resolves a string config.credentials on a store', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          stores: {
+            s: { config: { credentials: '$env.SA' } },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.stores?.s.config).toEqual({
+      credentials: '{"client_email":"svc@example.com"}',
+    });
+  });
+
+  it('resolves a nested object config.credentials on a source', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          sources: {
+            src: {
+              config: { credentials: { private_key: '$env.PK' } },
+            },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.sources?.src.config).toEqual({
+      credentials: { private_key: 'private-key-value' },
+    });
+  });
+
+  it('resolves a nested object config.credentials on a destination', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          destinations: {
+            d: {
+              config: {
+                credentials: {
+                  client_email: '$env.SA',
+                  private_key: '$env.PK',
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const flow = getFlowSettings(config);
+    expect(flow.destinations?.d.config).toEqual({
+      credentials: {
+        client_email: '{"client_email":"svc@example.com"}',
+        private_key: 'private-key-value',
+      },
+    });
   });
 });
