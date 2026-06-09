@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-segment",
   "description": "Segment CDP web destination for walkerOS (@segment/analytics-next, full Segment Spec)",
-  "version": "4.1.2",
+  "version": "4.2.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -39,11 +39,11 @@
   },
   "dependencies": {
     "@segment/analytics-next": "^1.82.0",
-    "@walkeros/core": "4.1.2",
-    "@walkeros/web-core": "4.1.2"
+    "@walkeros/core": "4.2.0",
+    "@walkeros/web-core": "4.2.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "4.1.2"
+    "@walkeros/collector": "4.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

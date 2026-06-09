@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-mixpanel",
   "description": "Mixpanel server destination for walkerOS",
-  "version": "4.1.2",
+  "version": "4.2.0",
   "license": "MIT",
   "exports": {
     ".": {
@@ -35,12 +35,12 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.1.2",
-    "@walkeros/server-core": "4.1.2",
+    "@walkeros/core": "4.2.0",
+    "@walkeros/server-core": "4.2.0",
     "mixpanel": "^0.22.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "4.1.2"
+    "@walkeros/collector": "4.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

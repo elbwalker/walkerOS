@@ -1,5 +1,53 @@
 # @walkeros/explorer
 
+## 4.2.0
+
+### Minor Changes
+
+- 560d8af: Add a unified tag visualization: the `Tag` atom plus `TagCanvas` and
+  `TagTreeEditor`. It renders walkerOS data-elb tagging as nested rectangles
+  (entity, context, global, action, property) with an auto-laid-out reading view
+  and an overlay you can draw onto a screenshot. The overlay editor supports
+  dragging and resizing rectangles, keeping every tag fully nested or fully
+  separate. The existing `TagSkeleton` and `TagSkeletonOverlay` continue to
+  work.
+
+### Patch Changes
+
+- 2d64ed2: CodeBox now memoizes its toolbar and tabs so a validation-marker
+  update repaints only the error and warning badges instead of re-rendering the
+  whole editor. This removes the visible editor flicker when content or markers
+  change rapidly.
+- 560d8af: The built bundle now preserves its leading `"use client"` directive,
+  so Next.js treats the package as a client boundary. The minifier could
+  previously strip it, which broke server components that import the package at
+  build time.
+- Updated dependencies [76d32c1]
+- Updated dependencies [5b1a134]
+- Updated dependencies [5b1a134]
+- Updated dependencies [908d6f0]
+- Updated dependencies [654ba38]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [d65bbde]
+- Updated dependencies [e8f6909]
+- Updated dependencies [776e5f9]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [126c0f1]
+- Updated dependencies [654ba38]
+- Updated dependencies [21ac669]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/core@4.2.0
+  - @walkeros/collector@4.2.0
+  - @walkeros/web-source-browser@4.2.0
+  - @walkeros/web-core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes

@@ -1,5 +1,31 @@
 # @walkeros/server-destination-criteo
 
+## 4.2.0
+
+### Patch Changes
+
+- 2d64ed2: `getHashServer` now accepts an `algorithm` option (`sha256` default,
+  or `md5`), so destinations can request either digest from the shared util
+  instead of calling Node crypto directly. Criteo's email hashing composes this
+  util for its md5, sha256, and sha256_md5 forms. No behavior change for
+  existing SHA-256 callers.
+- Updated dependencies [76d32c1]
+- Updated dependencies [908d6f0]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [2d64ed2]
+- Updated dependencies [e8f6909]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [654ba38]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/core@4.2.0
+  - @walkeros/server-core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes

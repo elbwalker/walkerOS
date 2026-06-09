@@ -1,5 +1,89 @@
 # @walkeros/core
 
+## 4.2.0
+
+### Minor Changes
+
+- e8f6909: Add an optional, strictly-typed `config.credentials` field to
+  destinations, stores, and sources. Service-account credentials now configure
+  under `config.credentials`, validated per package and resolved from `$env`.
+  The package-specific `settings.credentials` still works but is deprecated, so
+  move credentials to `config.credentials`. The raw `settings.<sdk>` passthrough
+  (e.g. `settings.bigquery`) is unchanged.
+- 654ba38: Trace telemetry now activates at runtime by polling the deployment's
+  trace window, so web and server flows start and stop full-payload recording
+  without a redeploy. A future trace window upgrades a flow to full inbound and
+  outbound recording, and a null or past window reverts to the flow's `observe`
+  baseline and self-expires.
+- 6a72a32: Source simulation gains a `collector` step that runs the real
+  collector enrichment and returns the fully enriched event. Transformer
+  simulation now accepts an optional raw `ingest` so request decoders like GA4
+  can be tested standalone by supplying a `url`. The `flow_simulate` MCP tool
+  accepts the new collector step and the transformer `ingest` input.
+- 23d4b86: New `@walkeros/transformer-validate` transformer validates events
+  against JSON Schema contracts. It runs in both web and server flows, supports
+  strict and pass modes, and writes the verdict and error list to configurable
+  paths so you can gate or observe event quality.
+
+  The declarative per-step `validate` field on sources, transformers, and
+  destinations is removed. Define event shapes in the top-level `contract` and
+  enforce them at runtime by adding a `transformer-validate` step that
+  references them via `$contract.<name>`; `format: true` still checks an event
+  is a valid `WalkerOS.PartialEvent`. Design-time validation now checks step
+  examples against the resolved contract.
+
+### Patch Changes
+
+- 76d32c1: Batched destination delivery now reports failures. A batch push that
+  fails (including BigQuery row errors) is routed to the dead-letter buffer and
+  counted as failed instead of being silently dropped, and graceful shutdown
+  waits for in-flight batches to finish. Also fixes a shutdown timer that could
+  delay process exit, and makes a zero millisecond batch wait (`batch: 0`)
+  correctly enable batching.
+- 908d6f0: Promote chain, route shape, and reference scanner helpers to the
+  public surface so app and tooling can resolve transformer chains, probe route
+  shapes, and discover `$flow.` references without reaching into internal
+  modules:
+  - collector: re-export `walkChain` (resolve a transformer chain start into the
+    ordered step IDs) and `extractTransformerNextMap` (read static next-links
+    from a `Transformer.Transformers` map).
+  - core: re-export `isRouteArray` and `isRouteConfigEntry` (the canonical shape
+    probes for `Transformer.Route`) and add `scanFlowRefs(value, into?)`, which
+    walks any value (string, object, array) and returns every `$flow.<name>`
+    reference found, including refs nested inside `$code:` snippets.
+
+- f4a9013: Fix `$flow` reference scanning to match the resolver's name grammar,
+  so names with leading digits or hyphens no longer produce false-positive
+  references.
+- d65bbde: `FlowState` records can now carry an optional `platform` field
+  (`'web' | 'server'`) identifying the runtime that produced the state.
+  Observers can use it alongside `flowId` to correlate telemetry across web and
+  server runtimes of the same flow.
+- e8f6909: Documentation fix: server source `config.ingest` examples now use the
+  `map` operator with direct request field paths instead of a bare object. A
+  bare object like `{ url: 'req.url' }` is silently inert, so the ingest stayed
+  empty and downstream `ingest.*` fields never resolved. Affects package hints,
+  READMEs, the core source type docs, and the bundled CLI example.
+- c27d3c1: Request caching now persists structured HTTP responses, including
+  binary bodies (`Buffer`, `Uint8Array`, `ArrayBuffer`), to byte/string store
+  backends (filesystem, S3, GCS, in-memory) and honors TTL. Previously, caching
+  a response could crash the process or never populate, and entries never
+  expired. Cached values now round-trip safely (binary bodies decode back as a
+  `Buffer`) and expire correctly instead of serving stale content after a
+  redeploy.
+- 3eb2467: Add a declarative `state` block for `get`/`set` against a store,
+  replacing `$code:` for simple fetch and stash. Available on source,
+  transformer, and destination steps; defaults to an in-memory store.
+- 5b1a134: Stores now use one structured value type with binary (`Uint8Array`)
+  as a first-class leaf, serialized by a shared codec. A new `file: true` store
+  option serves byte-exact assets such as walker.js (default is structured
+  key-value). TTL is owned by the cache layer, not the store. Sheets is
+  structured-only and rejects `file: true`.
+- 18c9469: Flow validation now scopes the "web flows cannot reference a managed
+  secret" check per flow. A multi-flow config where a web flow forwards to a
+  server flow that holds a `$secret.` reference now validates cleanly, instead
+  of the server flow's secret being wrongly flagged against the web flow.
+
 ## 4.1.2
 
 ## 4.1.1

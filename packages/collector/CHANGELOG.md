@@ -1,5 +1,82 @@
 # @walkeros/collector
 
+## 4.2.0
+
+### Minor Changes
+
+- 654ba38: Consent and state-gated source reactions, such as the session
+  source's session start, now fire reliably regardless of source init order or
+  whether state arrives before or after `run`. The collector delivers each state
+  change exactly once per subscriber, so sources no longer need to re-fire on
+  repeat collector notifications of the same state.
+- c27d3c1: Destinations now batch every event when you set `config.batch`, with
+  no `'* *'` wildcard mapping rule needed. A bare number sets the debounce wait;
+  `{ wait, size, age }` tunes the window. Rule-level `batch` still overrides per
+  event type, and pending batches now flush on shutdown.
+
+  Migration: if you previously set `config.batch` alongside a single
+  non-wildcard rule `batch`, `config.batch` only capped that rule before; it now
+  batches all of the destination's events. To batch only specific events, drop
+  `config.batch` and set `batch` on those rules.
+
+- 126c0f1: A source or destination with a `require` gate now activates reliably
+  from the collector's current recorded state, regardless of source init order
+  or which source provided the required state (such as a CMP applying consent).
+  CMP and session sources now perform their initial consent read during
+  `init()`, so construction stays side-effect free.
+
+### Patch Changes
+
+- 76d32c1: Batched destination delivery now reports failures. A batch push that
+  fails (including BigQuery row errors) is routed to the dead-letter buffer and
+  counted as failed instead of being silently dropped, and graceful shutdown
+  waits for in-flight batches to finish. Also fixes a shutdown timer that could
+  delay process exit, and makes a zero millisecond batch wait (`batch: 0`)
+  correctly enable batching.
+- 5b1a134: Lifecycle dispatch now fails closed when called with a non-collector
+  argument. If an internal function is ever reached by foreign code (for example
+  a global name collision), it returns quietly instead of throwing, so it can no
+  longer break the surrounding page.
+- 908d6f0: Promote chain, route shape, and reference scanner helpers to the
+  public surface so app and tooling can resolve transformer chains, probe route
+  shapes, and discover `$flow.` references without reaching into internal
+  modules:
+  - collector: re-export `walkChain` (resolve a transformer chain start into the
+    ordered step IDs) and `extractTransformerNextMap` (read static next-links
+    from a `Transformer.Transformers` map).
+  - core: re-export `isRouteArray` and `isRouteConfigEntry` (the canonical shape
+    probes for `Transformer.Route`) and add `scanFlowRefs(value, into?)`, which
+    walks any value (string, object, array) and returns every `$flow.<name>`
+    reference found, including refs nested inside `$code:` snippets.
+
+- 6a72a32: Source simulation gains a `collector` step that runs the real
+  collector enrichment and returns the fully enriched event. Transformer
+  simulation now accepts an optional raw `ingest` so request decoders like GA4
+  can be tested standalone by supplying a `url`. The `flow_simulate` MCP tool
+  accepts the new collector step and the transformer `ingest` input.
+- 3eb2467: Add a declarative `state` block for `get`/`set` against a store,
+  replacing `$code:` for simple fetch and stash. Available on source,
+  transformer, and destination steps; defaults to an in-memory store.
+- 5b1a134: Stores now use one structured value type with binary (`Uint8Array`)
+  as a first-class leaf, serialized by a shared codec. A new `file: true` store
+  option serves byte-exact assets such as walker.js (default is structured
+  key-value). TTL is owned by the cache layer, not the store. Sheets is
+  structured-only and rejects `file: true`.
+- Updated dependencies [76d32c1]
+- Updated dependencies [908d6f0]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [e8f6909]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [654ba38]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes

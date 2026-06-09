@@ -1,5 +1,45 @@
 # @walkeros/server-destination-gcp
 
+## 4.2.0
+
+### Minor Changes
+
+- e8f6909: Add an optional, strictly-typed `config.credentials` field to
+  destinations, stores, and sources. Service-account credentials now configure
+  under `config.credentials`, validated per package and resolved from `$env`.
+  The package-specific `settings.credentials` still works but is deprecated, so
+  move credentials to `config.credentials`. The raw `settings.<sdk>` passthrough
+  (e.g. `settings.bigquery`) is unchanged.
+
+### Patch Changes
+
+- 76d32c1: Batched destination delivery now reports failures. A batch push that
+  fails (including BigQuery row errors) is routed to the dead-letter buffer and
+  counted as failed instead of being silently dropped, and graceful shutdown
+  waits for in-flight batches to finish. Also fixes a shutdown timer that could
+  delay process exit, and makes a zero millisecond batch wait (`batch: 0`)
+  correctly enable batching.
+- db97edc: The BigQuery destination now creates the `timing` column as `FLOAT64`
+  instead of `INT64`. Event timing carries sub-second decimal precision, which
+  was previously truncated to whole numbers on write. Existing tables keep their
+  column type; alter it to `FLOAT64` to preserve precision going forward.
+- Updated dependencies [76d32c1]
+- Updated dependencies [908d6f0]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [2d64ed2]
+- Updated dependencies [e8f6909]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [654ba38]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/core@4.2.0
+  - @walkeros/server-core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes

@@ -1,5 +1,129 @@
 # @walkeros/cli
 
+## 4.2.0
+
+### Minor Changes
+
+- 654ba38: `walkeros run` now accepts a `.tar.gz`/`.tgz` flow archive (URL or
+  local file): it extracts the bundle and its `node_modules/` and runs it, so
+  server flows with external step packages resolve them at runtime.
+  `walkeros bundle -o flow.tar.gz` packs a server bundle directory into that
+  archive. Web single-file bundles do not support archive output.
+- 6a72a32: The MCP `flow_simulate` and `flow_bundle` tools now accept a cloud
+  flow id as `configPath`, so you can simulate or bundle a saved flow without a
+  manual file round-trip, and repeated simulations reuse a prebuilt bundle for
+  faster runs. Loading or fetching a flow with no default project set now
+  returns a clear "no default project" error, and `flow_examples` surfaces a
+  referenced package's shipped examples when a step has none inline. Bundle
+  stats now report the real total bundle size and list package names instead of
+  a per-package estimate, and the GA4 transformer documents its wiring contract
+  via package hints.
+- 9d066cc: Preview creation can now target a deployed version: pass
+  `source: { kind: 'deployment-version', deploymentVersionId }` to
+  `createPreview` (CLI) or the MCP `flow_manage` `preview_create` action to
+  preview what's live instead of the flow's draft. Deleting a preview no longer
+  errors on the empty `204 No Content` response and resolves to a confirmation
+  record.
+- 654ba38: Trace telemetry now activates at runtime by polling the deployment's
+  trace window, so web and server flows start and stop full-payload recording
+  without a redeploy. A future trace window upgrades a flow to full inbound and
+  outbound recording, and a null or past window reverts to the flow's `observe`
+  baseline and self-expires.
+- e8f6909: Add a `secret_manage` MCP tool (and matching CLI functions) to manage
+  a flow's secrets. List secret metadata, create, rotate, and delete secrets
+  that flow steps reference as `$env.<NAME>`. Values are write-only: encrypted
+  at rest and never returned or logged.
+- 6a72a32: Source simulation gains a `collector` step that runs the real
+  collector enrichment and returns the fully enriched event. Transformer
+  simulation now accepts an optional raw `ingest` so request decoders like GA4
+  can be tested standalone by supplying a `url`. The `flow_simulate` MCP tool
+  accepts the new collector step and the transformer `ingest` input.
+
+### Patch Changes
+
+- e8f6909: The bundled API contract (`spec.json` and the generated
+  `api.gen.d.ts`) now covers the full served surface, adding typed paths for
+  service accounts, invitations, billing, deployments and their sub-resources,
+  custom domains, entitlements, LLM settings, chat sessions, MCP tokens,
+  runners, and the package catalog. No runtime behavior change; clients gain
+  accurate types for these endpoints.
+- 5b1a134: Browser flow bundles are now emitted as an IIFE so all internal code
+  stays inside a private scope. Previously the bundled helper functions could
+  leak onto the global `window` object and collide with other scripts on the
+  page, such as Google Analytics or a consent manager. Server bundles are
+  unchanged and still emit ESM.
+- b98474f: Source-level mapping examples for the dataLayer source now key on the
+  prefix as entity and the gtag action as action: `mapping.<prefix>.<action>`.
+  The shipped `examples/mapping.ts`, the comprehensive `flow-complete.json`
+  example, and the related docs reflect the convention, including the
+  special-cased actions `consent`, `config`, and `set` whose trailing token is
+  dropped by the entity/action split.
+- 59aa9e1: Refresh runtime dependencies to their latest majors: Express 5,
+  Commander 15, better-sqlite3 12, @libsql/client 0.17, Google Cloud
+  functions-framework 5, mixpanel 0.22, and jsdom 29. No public API changes;
+  installs now pull the current versions of these SDKs.
+- e8f6909: Documentation fix: server source `config.ingest` examples now use the
+  `map` operator with direct request field paths instead of a bare object. A
+  bare object like `{ url: 'req.url' }` is silently inert, so the ingest stayed
+  empty and downstream `ingest.*` fields never resolved. Affects package hints,
+  READMEs, the core source type docs, and the bundled CLI example.
+- d39a6a1: Bundle skeletons now expose each package's dev exports through a lazy
+  loader. Production deploy bundles drop it entirely, so a shipped `walker.js`
+  never carries the dev schema graph, while in-process simulate and push inline
+  the dev exports so they resolve on a minimal runtime without the source
+  packages installed alongside. This fixes a browser deploy bundle that could
+  fail to build or retain dev schemas, and web simulation that could not find
+  the dev exports.
+- 9d066cc: The MCP now loads flows by ID, requires the `flow_simulate` `step`
+  parameter it always enforced, and adds a `diagnostics` tool reporting client
+  and CLI versions plus backend reachability. Package discovery returns a
+  complete catalog with a warning when a source degrades, instead of silently
+  caching partial results, and returned flow configs are round-trip safe
+  (structural values stay literal). The demo source can now be simulated as a
+  source step; the CLI also exports `VERSION` and `resolveAppUrl` and clears a
+  deleted default project.
+- e2a60ae: The wrapped browser bundle can now install a telemetry observer
+  without a trace poll. When the telemetry options omit `traceUrl`, the bundle
+  emits at a fixed level with no polling, suited to short-lived, URL-opted-in
+  sessions. Bundles that pass `traceUrl` keep the existing poll behavior.
+- 23d4b86: New `@walkeros/transformer-validate` transformer validates events
+  against JSON Schema contracts. It runs in both web and server flows, supports
+  strict and pass modes, and writes the verdict and error list to configurable
+  paths so you can gate or observe event quality.
+
+  The declarative per-step `validate` field on sources, transformers, and
+  destinations is removed. Define event shapes in the top-level `contract` and
+  enforce them at runtime by adding a `transformer-validate` step that
+  references them via `$contract.<name>`; `format: true` still checks an event
+  is a valid `WalkerOS.PartialEvent`. Design-time validation now checks step
+  examples against the resolved contract.
+
+- Updated dependencies [76d32c1]
+- Updated dependencies [5b1a134]
+- Updated dependencies [908d6f0]
+- Updated dependencies [654ba38]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [2d64ed2]
+- Updated dependencies [e8f6909]
+- Updated dependencies [776e5f9]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [126c0f1]
+- Updated dependencies [654ba38]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+- Updated dependencies [0cad016]
+  - @walkeros/core@4.2.0
+  - @walkeros/collector@4.2.0
+  - @walkeros/server-core@4.2.0
+  - @walkeros/server-destination-api@4.2.0
+  - @walkeros/transformer-validate@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes

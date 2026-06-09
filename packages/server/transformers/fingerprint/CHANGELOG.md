@@ -1,5 +1,31 @@
 # @walkeros/server-transformer-fingerprint
 
+## 4.2.0
+
+### Patch Changes
+
+- e8f6909: Documentation fix: server source `config.ingest` examples now use the
+  `map` operator with direct request field paths instead of a bare object. A
+  bare object like `{ url: 'req.url' }` is silently inert, so the ingest stayed
+  empty and downstream `ingest.*` fields never resolved. Affects package hints,
+  READMEs, the core source type docs, and the bundled CLI example.
+- Updated dependencies [76d32c1]
+- Updated dependencies [908d6f0]
+- Updated dependencies [e8f6909]
+- Updated dependencies [f4a9013]
+- Updated dependencies [d65bbde]
+- Updated dependencies [2d64ed2]
+- Updated dependencies [e8f6909]
+- Updated dependencies [c27d3c1]
+- Updated dependencies [654ba38]
+- Updated dependencies [6a72a32]
+- Updated dependencies [3eb2467]
+- Updated dependencies [5b1a134]
+- Updated dependencies [23d4b86]
+- Updated dependencies [18c9469]
+  - @walkeros/core@4.2.0
+  - @walkeros/server-core@4.2.0
+
 ## 4.1.2
 
 ### Patch Changes
