@@ -29,12 +29,12 @@ export function getValidator(
 }
 
 function isContractRule(source: ContractSource): source is Flow.ContractRule {
-  return (
-    typeof source === 'object' &&
-    source !== null &&
+  if (typeof source !== 'object' || source === null) return false;
+  const hasEvents =
     'events' in source &&
-    typeof (source as { events?: unknown }).events === 'object'
-  );
+    typeof source.events === 'object' &&
+    source.events !== null;
+  return hasEvents || 'schema' in source;
 }
 
 /**

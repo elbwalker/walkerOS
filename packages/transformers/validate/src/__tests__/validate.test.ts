@@ -95,6 +95,25 @@ describe('validateEventAgainstContract', () => {
     expect(result).toEqual({ isValid: true, errors: [] });
   });
 
+  it('enforces a schema-only contract rule (no events block)', () => {
+    const schemaOnlyRule = {
+      description: 'whole-event shape',
+      schema: {
+        type: 'object',
+        required: ['data'],
+        properties: { data: { type: 'object', required: ['id'] } },
+      },
+    };
+
+    const result = validateEventAgainstContract(
+      { entity: 'order', action: 'complete' }, // no `data` → must fail
+      undefined,
+      { contracts: [schemaOnlyRule] },
+    );
+
+    expect(result.isValid).toBe(false);
+  });
+
   it('applies an inline whole-event JSON Schema (no events key)', () => {
     const event: WalkerOS.DeepPartialEvent = {
       name: 'page view',

@@ -62,7 +62,7 @@ await startFlow({
 
 ## How it works
 
-The transformer reads the `{ ingest, event }` context and validates the canonical event. Each `contract` entry is a constraint: a `$contract.<name>` reference resolves to the entity-action schemas for the event, an inline JSON Schema applies to the whole event. All entries are AND-ed and every error is aggregated. Set `format: true` to additionally check the canonical `WalkerOS.Event` structure.
+The transformer reads the `{ ingest, event }` context and validates the canonical event. Each `contract` entry is a constraint: a `$contract.<name>` reference resolves to the entity-action schemas for the event, an inline JSON Schema applies to the whole event. All entries are AND-ed and every error is aggregated. Set `format: true` to additionally check the canonical partial event shape (field types and structure); required-field rules come from `contract`.
 
 `mode` decides what happens to an invalid event:
 
