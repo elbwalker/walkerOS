@@ -102,16 +102,6 @@ describe('generate_tagging tool', () => {
     expect(result.structuredContent.attributes['data-track']).toBe('item');
   });
 
-  it('generates scoped generic', async () => {
-    const tool = server.getTool('generate_tagging');
-    const result = await tool.handler({
-      scoped: { size: 'L', color: 'red' },
-    });
-    expect(result.structuredContent.attributes['data-elb_']).toBe(
-      'size:L;color:red',
-    );
-  });
-
   it('returns error when no parameters provided', async () => {
     const tool = server.getTool('generate_tagging');
     const result = await tool.handler({});

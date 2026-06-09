@@ -2143,47 +2143,6 @@ describe('$contract edge cases', () => {
       },
     });
   });
-
-  test('$contract.web resolves inside transformer config.settings.contract', () => {
-    const setup: Flow.Json = {
-      version: 4,
-      contract: {
-        web: {
-          events: {
-            page: { view: { required: ['data'] } },
-          },
-        },
-      },
-      flows: {
-        default: {
-          config: { platform: 'web' },
-          transformers: {
-            validate: {
-              package: '@walkeros/transformer-validate',
-              config: {
-                settings: {
-                  contract: ['$contract.web', { type: 'object' }],
-                },
-              },
-            },
-          },
-        },
-      },
-    };
-    const config = getFlowSettings(setup);
-
-    // The whole-string `$contract.web` resolves to the RESOLVED ContractRule
-    // (wildcards expanded, NOT the literal string), and the inline sibling
-    // passes through untouched.
-    expect(config.transformers?.validate?.config).toEqual({
-      settings: {
-        contract: [
-          { events: { page: { view: { required: ['data'] } } } },
-          { type: 'object' },
-        ],
-      },
-    });
-  });
 });
 
 describe('$contract reference resolution', () => {

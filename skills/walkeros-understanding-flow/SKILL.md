@@ -168,16 +168,14 @@ for the full store interface and lifecycle.
 ## Step-Level Primitives
 
 Every step (source, transformer, destination) supports a small set of inline
-primitives alongside its package wiring: `cache`, `mapping`, and `consent`.
-
-Event shapes are not a step-level primitive. They live in the top-level
-`contract` block (a sibling of `flows`) as named JSON Schemas, and enforcement
-is an explicit `@walkeros/transformer-validate` step that references a contract
-via `$contract.<name>`. See
-[Website: Contract](../../website/docs/getting-started/flow/contract.mdx) for
-the contract shape and
+primitives alongside its package wiring. `cache`, `mapping`, and `consent` are
+the long-established ones; `validate?` is the newest. `validate:` declares
+validation intent (format check, per-event JSON Schemas, or a single generic
+schema) inline on a step, just like `cache` declares caching intent. It is a
+declarative description: consumers (CLI tooling, MCP, custom runners) decide how
+to enforce it. See
 [Website: Validate](../../website/docs/getting-started/flow/validate.mdx) for
-runtime enforcement.
+the full shape.
 
 ### How a step references its implementation
 

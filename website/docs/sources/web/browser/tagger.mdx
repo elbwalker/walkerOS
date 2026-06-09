@@ -138,28 +138,6 @@ const attributes = tagger()
   language="typescript"
 />
 
-### Scoped generic properties
-
-`scoped()` emits the `data-elb_` attribute: a generic property that only reaches
-triggers nested below the element, unlike `data-elb-` which every trigger in the
-entity receives. It uses the same value syntax and escaping as the other methods.
-
-<CodeSnippet
-  code={`const attributes = tagger()
-.entity('product')
-.data('name', 'A')
-.scoped('size', 'L')
-.get();
-
-// Result:
-// {
-//   'data-elb': 'product',
-//   'data-elb-product': 'name:A',
-//   'data-elb_': 'size:L'
-// }`}
-  language="typescript"
-/>
-
 ### Multiple entity scopes
 
 <CodeSnippet
@@ -319,22 +297,6 @@ tagger().globals('lang', 'en');
 
 // Multiple globals
 tagger().globals({ lang: 'en', plan: 'paid', version: '1.0' });`}
-  language="typescript"
-/>
-
-##### `scoped(key: string, value: Property)` | `scoped(object: Properties)`
-
-Adds path-scoped generic properties. Creates a `data-elb_` attribute that only
-applies to triggers nested below the element.
-
-<CodeSnippet
-  code={`// Single scoped property
-tagger().scoped('size', 'L');
-// Creates: data-elb_="size:L"
-
-// Multiple scoped properties
-tagger().scoped({ size: 'L', color: 'red' });
-// Creates: data-elb_="size:L;color:red"`}
   language="typescript"
 />
 

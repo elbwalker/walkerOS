@@ -605,6 +605,7 @@ function resolveFlowSettings(
         before: source.before,
         next: source.next,
         cache: source.cache,
+        validate: source.validate,
         code: source.code,
       } as Flow.Source;
     }
@@ -644,6 +645,7 @@ function resolveFlowSettings(
         before: dest.before,
         next: dest.next,
         cache: dest.cache,
+        validate: dest.validate,
         code: dest.code,
       } as Flow.Destination;
     }
@@ -720,6 +722,7 @@ function resolveFlowSettings(
         before: transformer.before,
         next: transformer.next,
         cache: transformer.cache,
+        validate: transformer.validate,
         code: transformer.code,
       } as Flow.Transformer;
     }

@@ -41,12 +41,6 @@ export function registerGenerateTool(server: McpServer) {
           .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
           .optional()
           .describe('Global properties for data-elbglobals'),
-        scoped: z
-          .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
-          .optional()
-          .describe(
-            'Path-scoped generic properties for data-elb_ (only triggers nested below this element receive them)',
-          ),
         link: z
           .record(z.string(), z.string())
           .optional()
@@ -73,20 +67,12 @@ export function registerGenerateTool(server: McpServer) {
       actions,
       context,
       globals,
-      scoped,
       link,
       prefix,
     }) => {
       try {
         const hasInput =
-          entity ||
-          data ||
-          action ||
-          actions ||
-          context ||
-          globals ||
-          scoped ||
-          link;
+          entity || data || action || actions || context || globals || link;
         if (!hasInput) {
           return mcpError(
             new Error(
@@ -104,7 +90,6 @@ export function registerGenerateTool(server: McpServer) {
         if (actions) t.actions(actions);
         if (context) t.context(context);
         if (globals) t.globals(globals);
-        if (scoped) t.scoped(scoped);
         if (link) t.link(link);
 
         const attributes = t.get();

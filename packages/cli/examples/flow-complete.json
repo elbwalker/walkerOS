@@ -286,6 +286,17 @@
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
+          "validate": {
+            "events": {
+              "order": {
+                "complete": {
+                  "properties": {
+                    "data": { "required": ["id", "total"] }
+                  }
+                }
+              }
+            }
+          },
           "config": {
             "require": ["consent", "user"],
             "consent": {

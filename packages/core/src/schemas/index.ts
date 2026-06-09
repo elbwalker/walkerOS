@@ -161,6 +161,7 @@ export {
   ContractActionsSchema,
   ContractSchemaEntry,
   ContractRuleSchema,
+  ValidateSchema,
   ValidateEventsSchema,
   SourceSchema as FlowSourceSchema,
   DestinationSchema as FlowDestinationSchema,
@@ -183,6 +184,7 @@ export {
   transformerJsonSchema,
   contractRuleJsonSchema,
   contractJsonSchema,
+  validateJsonSchema,
   validateEventsJsonSchema,
 } from './flow';
 

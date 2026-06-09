@@ -188,19 +188,6 @@ describe('validateStepEntry — kind-specific', () => {
     expect(r.ok).toBe(false);
     expect(r.code).toBe('UNKNOWN_KEY');
   });
-
-  it.each(['Source', 'Transformer', 'Destination', 'Store'] as const)(
-    '%s: rejects retired `validate` key (UNKNOWN_KEY)',
-    (kind) => {
-      const r = validateStepEntry(
-        { package: '@walkeros/x', validate: {} },
-        kind,
-      );
-      expect(r.ok).toBe(false);
-      expect(r.code).toBe('UNKNOWN_KEY');
-      expect(r.key).toBe('validate');
-    },
-  );
 });
 
 describe('isPathStepEntry', () => {

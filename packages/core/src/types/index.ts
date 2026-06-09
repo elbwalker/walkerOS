@@ -44,7 +44,7 @@ export type { SendDataValue, SendHeaders, SendResponse } from './send';
 export type { Ingest, IngestMeta } from './ingest';
 export { createIngest } from './ingest';
 
-export type { JsonSchema, ValidateEvents } from './validate';
+export type { JsonSchema, ValidateEvents, Validate } from './validate';
 
 // Telemetry FlowState shape, surfaced for observers to consume.
 export type {

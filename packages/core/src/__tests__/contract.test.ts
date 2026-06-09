@@ -285,43 +285,6 @@ describe('resolveContracts', () => {
     });
   });
 
-  it('preserves event-level annotations when stripAnnotations is false', () => {
-    const contract: Flow.Contract = {
-      web: {
-        events: {
-          product: {
-            view: {
-              description: 'Product viewed',
-              properties: {
-                data: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string', description: 'The SKU' },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    };
-
-    // Default path still strips annotations (AJV-clean).
-    const stripped = resolveContracts(contract);
-    expect(stripped.web.events?.product.view).not.toHaveProperty('description');
-
-    // Annotation-preserving view keeps descriptions for IntelliSense.
-    const annotated = resolveContracts(contract, { stripAnnotations: false });
-    expect(annotated.web.events?.product.view).toMatchObject({
-      description: 'Product viewed',
-      properties: {
-        data: {
-          properties: { id: { type: 'string', description: 'The SKU' } },
-        },
-      },
-    });
-  });
-
   it('should handle contract with only schema, no events', () => {
     const contract: Flow.Contract = {
       consent_only: {

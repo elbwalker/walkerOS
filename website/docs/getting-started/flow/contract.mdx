@@ -32,13 +32,13 @@ A contract is the schema for your event data: which fields are required, what ty
 
 ## Why use a contract
 
-A contract is a single, inheritable description of what your events should look like. The contract itself describes; enforcement is an explicit [`@walkeros/transformer-validate`](/docs/transformers/validate) step that references it. Tools and humans also read the contract for governance, documentation, and schema-driven workflows.
+A contract is a single, inheritable description of what your events should look like. It does not enforce anything at runtime: tools and humans read it for governance, documentation, and schema-driven workflows. Without a contract, schema rules can live inline (`validate:` on each step), which duplicates across flows.
 
 - **Single source of truth.** Define `product add` requirements once. Every flow that ships these events references the same definition.
 - **Inheritance.** Layer additional rules on top with `extend` (for example, `web_loggedin` extend `web` extend `default`) rather than copying.
 - **Versioned.** `tagging` tracks contract revisions alongside the events they govern.
 - **Self-documenting.** Each schema is JSON Schema, so `description` and `examples` annotate fields the same way humans and tools read them.
-- **Decoupled from enforcement.** The contract describes what events should look like; the validate transformer enforces it where you place it in the pipeline.
+- **Decoupled from enforcement.** Contracts describe what events should look like, step-level `validate:` references them, consumers decide whether to enforce.
 - **Composable with the rest of the config.** Reference fragments anywhere via `$contract.<name>.<path>` (see [Reference syntax](/docs/guides/reference-syntax#contract--contract-references)).
 
 If your flow has a single throwaway event, you do not need a contract. Reach for one as soon as the same shape needs to hold across more than one flow.
@@ -234,13 +234,15 @@ Annotations stay on the source contract for tooling (CLI hints, IDE descriptions
 
 ## `$contract` references
 
-Reference any part of a resolved contract with `$contract.<name>.<path>`. The contract is fully resolved (extend + wildcards) before path access, so the returned value is the merged shape, not the raw entry. A validate transformer references a contract via its `contract` setting:
+Reference any part of a resolved contract with `$contract.<name>.<path>`. The contract is fully resolved (extend + wildcards) before path access, so the returned value is the merged shape, not the raw entry.
 
 ```json
-"transformers": {
-  "validate": {
-    "package": "@walkeros/transformer-validate",
-    "config": { "settings": { "contract": ["$contract.web"], "mode": "strict" } }
+"destinations": {
+  "ga4": {
+    "validate": {
+      "schema":  "$contract.web.schema",
+      "events":  "$contract.web.events"
+    }
   }
 }
 ```
@@ -371,10 +373,12 @@ A shorter end-to-end illustration:
   "flows": {
     "web-shop": {
       "config": { "platform": "web" },
-      "transformers": {
-        "validate": {
-          "package": "@walkeros/transformer-validate",
-          "config": { "settings": { "contract": ["$contract.web_loggedin"], "mode": "strict" } }
+      "destinations": {
+        "ga4": {
+          "validate": {
+            "schema": "$contract.web_loggedin.schema",
+            "events": "$contract.web_loggedin.events"
+          }
         }
       }
     }
@@ -382,7 +386,7 @@ A shorter end-to-end illustration:
 }
 ```
 
-For `product add`, a validate transformer that references `$contract.web_loggedin` sees these rules (all from the merged shape):
+For `product add`, a `validate:` block that references `$contract.web_loggedin` sees these rules (all from the merged shape):
 
 | Source | Rule |
 |--------|------|
@@ -394,7 +398,7 @@ For `product add`, a validate transformer that references `$contract.web_loggedi
 
 ## Next steps
 
-- **[Validate](/docs/getting-started/flow/validate)**: enforce a contract at runtime with the validate transformer
+- **[Validate](/docs/getting-started/flow/validate)**: step-level `validate:` primitive that consumes contracts
 - **[Mapping](/docs/mapping)**: transform events between steps
 - **[Step examples](/docs/getting-started/flow/step-examples)**: pair every step with input/output fixtures
 - **[Reference syntax](/docs/guides/reference-syntax)**: all `$contract`, `$var`, `$flow`, `$store`, `$secret`, `$code:`, `$env` references

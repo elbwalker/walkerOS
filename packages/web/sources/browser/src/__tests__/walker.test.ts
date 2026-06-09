@@ -1,6 +1,5 @@
 import { getAllEvents, getEvents, getGlobals } from '../walker';
 import { Triggers } from '../trigger';
-import { createTagger } from '../tagger';
 import fs from 'fs';
 
 describe('Walker', () => {
@@ -521,23 +520,6 @@ describe('Walker', () => {
     expect(
       getEvents(getElem('scoped-blanket-guard'), Triggers.Click),
     ).toMatchObject([{ entity: 'bg', data: { leak: 'everywhere' } }]);
-  });
-
-  test('tagger-generated data-elb_ round-trips through the walker', () => {
-    const attrs = createTagger()()
-      .entity('product')
-      .data('name', 'A')
-      .scoped('size', 'L')
-      .action('click')
-      .get();
-
-    const el = document.createElement('div');
-    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
-    document.body.appendChild(el);
-
-    expect(getEvents(el, Triggers.Click)).toMatchObject([
-      { entity: 'product', action: 'click', data: { name: 'A', size: 'L' } },
-    ]);
   });
 });
 
