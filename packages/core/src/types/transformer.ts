@@ -260,7 +260,6 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   cache?: import('./cache').Cache;
   state?: import('./state').State | import('./state').State[];
   mapping?: MappingConfig;
-  validate?: import('./validate').Validate;
 };
 
 /**

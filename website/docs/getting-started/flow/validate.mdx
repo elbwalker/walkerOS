@@ -1,168 +1,94 @@
 ---
 title: Validate
-description: Step-level validation primitive. Declare validation inline on any step.
+description: Enforce a contract at runtime with the validate transformer.
 sidebar_position: 3
 ---
 
 # Validate
 
-`validate:` is a step-level primitive that attaches validation rules directly to a source, transformer, or destination. It is a declarative description, like `cache` or `consent`: consumers (CLI, MCP, custom runners) decide how to enforce.
+A [contract](/docs/getting-started/flow/contract) is the canonical definition of what your events should look like. Validation enforces that contract at runtime with an explicit transformer step, `@walkeros/transformer-validate`, the same way enrichment or decoding is a transformer step. The contract describes the shape; the transformer applies it.
+
+## Where event shapes live
+
+Event shapes live in the top-level `contract` block of flow.json (a sibling of `flows`), keyed by entity then action as JSON Schema, with `extend` inheritance and `*` wildcards. Reference any contract from a step with `$contract.<name>`.
 
 ```json
-"destinations": {
-  "ga4": {
-    "package": "@walkeros/web-destination-gtag",
-    "validate": {
-      "events": {
-        "order": {
-          "complete": { "properties": { "data": { "required": ["total"] } } }
-        }
-      }
-    }
+{
+  "version": 4,
+  "contract": {
+    "web": { "events": { "order": { "complete": { "properties": { "data": { "required": ["total", "currency"] } } } } } }
   }
 }
 ```
 
-## The shape
+See [Contract](/docs/getting-started/flow/contract) for the full shape, inheritance with `extend`, and wildcard merging.
 
-`validate` is an object with three optional fields. At least one must be set for the primitive to do anything.
+## Enforce at runtime
+
+Add a `@walkeros/transformer-validate` step and point its `contract` setting at the contract. The transformer reads the `{ ingest, event }` context and validates the canonical event.
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "contract": {
+    "web": { "events": { "order": { "complete": { "properties": { "data": { "required": ["total", "currency"] } } } } } }
+  },
+  "flows": {
+    "default": {
+      "transformers": {
+        "validate": {
+          "package": "@walkeros/transformer-validate",
+          "config": { "settings": {
+            "contract": ["$contract.web"],
+            "format": true,
+            "mode": "strict",
+            "output": { "isValid": "source.valid", "errors": "validation" }
+          } },
+          "next": "ga4"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### Settings
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `format?` | `boolean` | Check the full `WalkerOS.Event` structural shape (name, source, timestamp, etc.) |
-| `events?` | `Record<entity, Record<action, JsonSchema>>` | Per-event JSON Schemas keyed by entity then action, with `*` wildcard fallback |
-| `schema?` | `JsonSchema` | A single JSON Schema applied to every event that reaches the step |
+| `contract?` | `Array<$contract ref \| JSON Schema>` | Constraints. A `$contract.<name>` ref selects per `entity.action`; an inline schema applies to the whole event. All entries must pass (AND). |
+| `format?` | `boolean` | Also validate the canonical `WalkerOS.Event` structure. All fields are optional, so this checks shape and field types, not presence. |
+| `mode?` | `'strict' \| 'pass'` | `strict` drops invalid events (stops the chain); `pass` (default) annotates and continues so a downstream route can act. |
+| `output?` | `{ isValid?, errors? }` | Split targets. `isValid` (default `source.valid`) writes the boolean verdict onto the event; `errors` (default `validation`) writes the issue list onto the ingest context. Empty string skips a write. |
 
-## events or schema
+The verdict travels with the event as analytics-grade data (`event.source.valid`). The issue list (`{ path, message }` entries) stays off the event, on the observer-visible ingest context, so it survives even a strict-mode drop.
 
-Per-event rules go in `events`. Apply-to-every-event rules go in `schema`.
+## Filter unwanted events
 
-## Step-level usage
-
-`validate:` lives on the step it protects. Same shape on every step type.
-
-### On a destination
-
-Declare that orders without a total should not reach GA4. Other destinations on the same flow are unaffected by this declaration.
+Filtering is the same mechanism, not a separate setting. Author an inline schema that rejects the unwanted events and run `mode: "strict"`. For example, drop GTM lifecycle noise (`gtm.js`, `gtm.dom`) by rejecting any `name` matching `^gtm\.`:
 
 <CodeSnippet
-  code={`"destinations": {
-  "ga4": {
-    "package": "@walkeros/web-destination-gtag",
-    "config": { "settings": { "measurementId": "G-DEMO123456" } },
-    "validate": {
-      "events": {
-        "order": {
-          "complete": {
-            "properties": {
-              "data": { "required": ["total"] }
-            }
-          }
-        }
-      }
-    }
-  }
+  code={`"validate": {
+  "package": "@walkeros/transformer-validate",
+  "config": { "settings": {
+    "contract": [{ "type": "object", "properties": { "name": { "not": { "pattern": "^gtm\\\\." } } } }],
+    "mode": "strict"
+  } }
 }`}
   language="json"
 />
 
-### On a source
+## Design-time checks
 
-Declare ingest payloads that miss a required field as invalid before they hit the collector.
+The CLI flow validator checks step examples (`destination.in`, `transformer.in`) against the resolved contract and reports violations before you deploy, so a sample event that breaks the contract is caught at authoring time.
 
-<CodeSnippet
-  code={`"sources": {
-  "http": {
-    "package": "@walkeros/server-source-express",
-    "config": { "settings": { "port": 8080 } },
-    "validate": {
-      "schema": {
-        "required": ["name"],
-        "properties": { "name": { "type": "string", "minLength": 1 } }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-### On a transformer
-
-Declare a precondition for a transformer, for example that a downstream enrichment transformer never sees an event without a user id.
-
-<CodeSnippet
-  code={`"transformers": {
-  "enrich": {
-    "package": "@walkeros/transformer-enrich",
-    "validate": {
-      "events": {
-        "*": {
-          "*": { "properties": { "user": { "required": ["id"] } } }
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-## Failure semantic
-
-`validate:` is declarative, runtime behavior depends on the consumer. The typical interpretation is local to the step: a failed validation skips the step it is attached to and other destinations, transformers, and sources on the same flow continue to receive the event. Treat this as the recommended convention, not a guaranteed runtime contract.
-
+```bash
+walkeros validate flow.json
 ```
-                         ┌──────────────────────────┐
-                         │ ga4 (validate fails)     │
-event "order complete" ──┤   skipped                │
-                         │                          │
-                         │ meta (no validate here)  │
-                         │   receives event         │
-                         └──────────────────────────┘
-```
-
-This local-to-the-step semantic is the key difference from a flow-level validator that drops events globally.
-
-## Lifecycle position
-
-The recommended logical position is after the step's `before` chain and before the step's main action. On a source that places validation in front of the collector, on a transformer or destination it sits in front of the main push. The validator sees the event in the same shape the step itself would see.
-
-## Wiring from a contract
-
-`validate:` accepts `$contract.<name>.<path>` references just like any other config value. Define rules once in a contract, reference them from each step:
-
-<CodeSnippet
-  code={`"contract": {
-  "web": {
-    "events": {
-      "order": {
-        "complete": { "properties": { "data": { "required": ["total"] } } }
-      }
-    }
-  }
-},
-"flows": {
-  "default": {
-    "destinations": {
-      "ga4": {
-        "package": "@walkeros/web-destination-gtag",
-        "validate": {
-          "schema":  "$contract.web.schema",
-          "events":  "$contract.web.events"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-See [Contract](/docs/getting-started/flow/contract) for the full contract shape, inheritance with `extend`, and wildcard merging.
-
-## Format layer
-
-Setting `format: true` declares that the full `WalkerOS.Event` structural check should run on the input. That covers required top-level fields (`name`, `source`, `timestamp`, `id`, ...), the entity-action `event name` pattern, `source.type` being one of the known kinds, and the basic shape of nested objects (`data`, `context`, `globals`, `user`, `consent`). Use it as a cheap sanity gate when the step receives data from arbitrary callers, skip it when the input is already a `WalkerOS.Event` produced by the collector.
 
 ## Next steps
 
 - **[Contract](/docs/getting-started/flow/contract)**: named, inheritable schemas referenced via `$contract`
+- **[Validate transformer](/docs/transformers/validate)**: full settings reference and recipes
 - **[Mapping](/docs/mapping)**: transform events between steps

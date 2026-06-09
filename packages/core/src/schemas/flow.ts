@@ -253,28 +253,6 @@ export const ValidateEventsSchema = z
   })
   .describe('Entity-action keyed JSON Schemas');
 
-/**
- * Validate schema - step-level validation configuration.
- */
-export const ValidateSchema = z
-  .object({
-    format: z
-      .boolean()
-      .optional()
-      .describe('Validate event structure against the standard event format'),
-    events: ValidateEventsSchema.optional().describe(
-      'Per entity-action JSON Schemas to validate matching events against',
-    ),
-    schema: JsonSchemaSchema.optional().describe(
-      'A single JSON Schema applied to every event this step handles',
-    ),
-  })
-  .meta({
-    id: 'Validate',
-    title: 'Validate',
-    description: 'Step-level validation: { format?, events?, schema? }',
-  });
-
 // ========================================
 // Source / Destination / Transformer / Store Schemas
 // ========================================
@@ -382,7 +360,6 @@ export const SourceSchema = z
     cache: EventCacheSchema.optional().describe(
       'Cache configuration for this source (match → key → ttl rules)',
     ),
-    validate: ValidateSchema.optional(),
   })
   .meta({
     id: 'FlowSource',
@@ -451,7 +428,6 @@ export const TransformerSchema = z
     cache: EventCacheSchema.optional().describe(
       'Cache configuration for this transformer (match → key → ttl rules)',
     ),
-    validate: ValidateSchema.optional(),
   })
   .meta({
     id: 'FlowTransformer',
@@ -527,7 +503,6 @@ export const DestinationSchema = z
     cache: EventCacheSchema.optional().describe(
       'Cache configuration for this destination (match → key → ttl rules)',
     ),
-    validate: ValidateSchema.optional(),
   })
   .meta({
     id: 'FlowDestination',
@@ -948,11 +923,6 @@ export const contractRuleJsonSchema = toJsonSchema(
  * JSON Schema for the named Contract map (Flow.Contract).
  */
 export const contractJsonSchema = toJsonSchema(ContractSchema, 'Contract');
-
-/**
- * JSON Schema for the step-level Validate config (Flow.Validate).
- */
-export const validateJsonSchema = toJsonSchema(ValidateSchema, 'Validate');
 
 /**
  * JSON Schema for the entity-action keyed Validate events map
