@@ -15,6 +15,16 @@ import type {
   BrowserPlugin,
   ActivityTrackingConfiguration,
 } from '@snowplow/browser-tracker-core';
+// These six are also used in type positions throughout this file, not just
+// re-exported, so they must stay imported.
+import type {
+  Action,
+  Product,
+  Cart,
+  Refund,
+  User,
+  Page,
+} from '@snowplow/browser-plugin-snowplow-ecommerce';
 
 // Re-export official Snowplow entity types
 export type { SelfDescribingJson, CommonEventProperties };
