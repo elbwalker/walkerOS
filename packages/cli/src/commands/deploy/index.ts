@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { createApiClient } from '../../core/api-client.js';
 import { requireProjectId } from '../../core/auth.js';
 import { apiFetch } from '../../core/http.js';
@@ -5,12 +6,20 @@ import {
   ApiError,
   handleCliError,
   throwApiError,
+  throwApiResponseError,
 } from '../../core/api-error.js';
 import { parseSSEEvents } from '../../core/sse.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import type { GlobalOptions } from '../../types/global.js';
+import type { components } from '../../types/api.gen.js';
 import { getFlow } from '../flows/index.js';
+
+/**
+ * Response body of POST .../settings/{settingsId}/deploy, now that the
+ * per-settings deploy route is in the OpenAPI contract (api.gen.d.ts).
+ */
+type DeploySettingsResponse = components['schemas']['DeploySettingsResponse'];
 
 // === Helpers ===
 
@@ -49,6 +58,15 @@ async function getAvailableFlowNames(options: {
   return settings?.map((c) => c.name) ?? [];
 }
 
+/**
+ * Default client-side wait budget for a streamed deploy, in milliseconds.
+ *
+ * The server's deploy budget is 10 minutes; this default exceeds it so a
+ * slow-but-healthy long deploy is never aborted client-side and misread as a
+ * failure in CI. `--wait <seconds>` (the `timeout` option) overrides it.
+ */
+export const DEFAULT_DEPLOY_WAIT_MS = 12 * 60 * 1000;
+
 // === SSE Streaming ===
 
 interface DeploymentResult {
@@ -70,7 +88,7 @@ export async function streamDeploymentStatus(
     onStatus?: (status: string, substatus: string | null) => void;
   },
 ): Promise<DeploymentResult> {
-  const timeoutMs = options.timeout ?? 120_000;
+  const timeoutMs = options.timeout ?? DEFAULT_DEPLOY_WAIT_MS;
 
   const response = await apiFetch(
     `/api/projects/${projectId}/deployments/${deploymentId}/stream`,
@@ -148,10 +166,14 @@ export async function deploy(options: DeployOptions) {
     });
   }
 
-  // Legacy path
+  // Legacy path. A fresh Idempotency-Key per invocation means a retry after a
+  // failed attempt is a new deploy, not a silent replay of `already_created`.
   const { data, error } = await client.POST(
     '/api/projects/{projectId}/flows/{flowId}/deploy',
-    { params: { path: { projectId, flowId: options.flowId } } },
+    {
+      params: { path: { projectId, flowId: options.flowId } },
+      headers: { 'Idempotency-Key': randomUUID() },
+    },
   );
 
   if (error) {
@@ -184,7 +206,12 @@ export async function deploy(options: DeployOptions) {
   return { ...data, ...result };
 }
 
-// TODO: Replace with typed client.POST() once api.gen.d.ts includes per-settings routes
+// The per-settings deploy route now has an OpenAPI contract, so the success
+// body is typed (`DeploySettingsResponse`). It still uses a raw `apiFetch`
+// rather than the typed `client.POST()` on purpose: the bounded Retry-After
+// retry below inspects `response.status` and the `Retry-After` header, and the
+// `--wait` path then streams `text/event-stream`. openapi-fetch's `{ data,
+// error }` client hides the raw `Response`, so it cannot drive either path.
 async function deploySettings(options: {
   flowId: string;
   projectId: string;
@@ -196,17 +223,51 @@ async function deploySettings(options: {
 }) {
   const { flowId, projectId, settingsId } = options;
 
-  // 1. Trigger per-settings deploy
-  const response = await apiFetch(
-    `/api/projects/${projectId}/flows/${flowId}/settings/${settingsId}/deploy`,
-    { method: 'POST' },
-  );
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throwApiError(body, `Deploy failed (${response.status})`);
+  // 1. Trigger per-settings deploy. A fresh Idempotency-Key per invocation
+  // means a retry after a failed attempt is a new deploy, not a silent replay
+  // of `already_created`.
+  const triggerDeploy = () =>
+    apiFetch(
+      `/api/projects/${projectId}/flows/${flowId}/settings/${settingsId}/deploy`,
+      { method: 'POST', headers: { 'Idempotency-Key': randomUUID() } },
+    );
+
+  let response = await triggerDeploy();
+
+  // For `--wait`, honor a single bounded Retry-After on a rate-limited trigger
+  // before giving up, so a brief deploy-rate ceiling does not fail an
+  // otherwise healthy automated deploy.
+  if (!response.ok && options.wait) {
+    let retryBody: unknown = {};
+    try {
+      retryBody = await response.clone().json();
+    } catch {
+      retryBody = {};
+    }
+    try {
+      throwApiResponseError(
+        response,
+        retryBody,
+        `Deploy failed (${response.status})`,
+      );
+    } catch (e) {
+      if (e instanceof ApiError && e.retryable) {
+        const waitSeconds = Math.min(e.retryAfterSeconds ?? 5, 60);
+        options.onStatus?.('rate_limited', `retrying in ${waitSeconds}s`);
+        await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
+        response = await triggerDeploy();
+      } else {
+        throw e;
+      }
+    }
   }
 
-  const data = await response.json();
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throwApiResponseError(response, body, `Deploy failed (${response.status})`);
+  }
+
+  const data = (await response.json()) as DeploySettingsResponse;
   if (!options.wait) return data;
 
   // 2. Stream deployment status via SSE
@@ -237,7 +298,7 @@ export async function getDeployment(options: {
     );
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throwApiError(body, 'Failed to get deployment');
+      throwApiResponseError(response, body, 'Failed to get deployment');
     }
     return response.json();
   }
@@ -263,17 +324,34 @@ interface DeployCommandOptions extends GlobalOptions {
   json?: boolean;
 }
 
+// Progress labels keyed on the statuses the deploy stream ACTUALLY emits. The
+// server status enum is idle | deploying | published | active | stopped |
+// failed; the bundle phase is reported as `deploying`/`building`, not a
+// separate `bundling` status. Keys are `status` or `status:substatus`.
 const statusLabels: Record<string, string> = {
-  bundling: 'Building bundle...',
-  'bundling:building': 'Building bundle...',
-  'bundling:publishing': 'Publishing to web...',
-  deploying: 'Deploying container...',
+  'deploying:building': 'Building bundle...',
+  'deploying:publishing': 'Publishing to web...',
   'deploying:provisioning': 'Provisioning container...',
   'deploying:starting': 'Starting container...',
+  deploying: 'Deploying...',
   active: 'Container is live',
   published: 'Published',
+  stopped: 'Stopped',
   failed: 'Deployment failed',
 };
+
+/**
+ * Map a streamed `(status, substatus)` to a human progress line, falling back
+ * to the bare status label, then to a safe `Status: <raw>` line for an unknown
+ * status so an unexpected value still renders something instead of nothing.
+ */
+export function renderStatusLabel(
+  status: string,
+  substatus: string | null,
+): string {
+  const key = substatus ? `${status}:${substatus}` : status;
+  return statusLabels[key] || statusLabels[status] || `Status: ${status}`;
+}
 
 export async function deployCommand(
   flowId: string,
@@ -295,10 +373,7 @@ export async function deployCommand(
       onStatus: options.json
         ? undefined
         : (status, substatus) => {
-            const key = substatus ? `${status}:${substatus}` : status;
-            log.info(
-              statusLabels[key] || statusLabels[status] || `Status: ${status}`,
-            );
+            log.info(renderStatusLabel(status, substatus));
           },
     });
 
@@ -316,7 +391,9 @@ export async function deployCommand(
     } else if (r.status === 'failed') {
       log.error(`Failed: ${r.errorMessage || 'Unknown error'}`);
       process.exit(1);
-    } else if (r.status === 'bundling') {
+    } else if (r.status === 'deploying') {
+      // Non-wait path: the deploy-trigger response reports `deploying` (the
+      // server status enum has no `bundling`; the build phase is a substatus).
       log.info(`Deployment started: ${r.deploymentId} (${r.type})`);
     } else {
       log.info(`Status: ${r.status}`);

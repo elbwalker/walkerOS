@@ -167,7 +167,7 @@ walkeros deploy start <flowId> [options]
 | `--project <id>`    | Project ID (defaults to WALKEROS_PROJECT_ID) |
 | `-f, --flow <name>` | Flow name for multi-config flows             |
 | `--no-wait`         | Return immediately without streaming         |
-| `--timeout <sec>`   | Timeout in seconds (default: 120)            |
+| `--timeout <sec>`   | Override the wait budget (default: 12 min)   |
 | `--json`            | JSON output                                  |
 | `-v, --verbose`     | Verbose logging                              |
 | `-s, --silent`      | Silent mode                                  |

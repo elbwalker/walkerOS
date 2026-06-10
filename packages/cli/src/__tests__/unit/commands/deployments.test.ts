@@ -6,6 +6,7 @@ import {
   createDeployment,
   deleteDeployment,
   deleteDeploymentByFlowId,
+  createDeployCommand,
   DeploymentAmbiguityError,
 } from '../../../commands/deployments/index.js';
 
@@ -362,6 +363,56 @@ describe('deployments', () => {
           flowId: 'flow_abc',
         }),
       ).rejects.toThrow('No deployments found for flow flow_abc');
+    });
+  });
+
+  describe('createDeployCommand human-readable output', () => {
+    let logSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      logSpy.mockRestore();
+    });
+
+    const renderedLines = (): string =>
+      logSpy.mock.calls.map(String).join('\n');
+
+    it('never prints undefined or a raw placeholder, and points at minting a real deploy token', async () => {
+      mockApiFetch
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              config: { flows: { default: { server: {} } } },
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              id: 'dep_a1b2c3d4',
+              slug: 'k7m2x9p4q1w8',
+              type: 'server',
+            }),
+            { status: 201 },
+          ),
+        );
+
+      await createDeployCommand('cfg_remoteflow', {
+        project: 'proj_123',
+        flow: 'default',
+      });
+
+      const output = renderedLines();
+      // No undefined interpolation, and no bare `=<placeholder>` in the docker run.
+      expect(output).not.toContain('undefined');
+      expect(output).not.toContain('WALKEROS_DEPLOY_TOKEN=<');
+      // The instruction must point the user at minting a real deploy token.
+      expect(output.toLowerCase()).toContain('deploy token');
+      expect(output).toContain('WALKEROS_DEPLOY_TOKEN');
     });
   });
 });
