@@ -20,7 +20,7 @@ import {
 const TITLE = 'Deploy Management';
 const DESCRIPTION =
   'Deploy walkerOS flows and manage deployments. ' +
-  'deploy waits for the deployment to reach a terminal status by default (wait=true), with a 120-second budget; pass wait=false to return immediately with the deployment id. ' +
+  'deploy waits for the deployment to reach a terminal status by default (wait=true), with a 12-minute budget; pass wait=false to return immediately with the deployment id. ' +
   'A finished deployment carries its status and, on failure, an errorMessage with the user-facing reason; use the get action to re-read it. ' +
   'list supports cursor and limit for pagination. ' +
   'delete removes an active deployment. ' +
@@ -51,7 +51,7 @@ const inputSchema = {
     .boolean()
     .optional()
     .describe(
-      'Wait for the deployment to reach a terminal status (default true), with a 120-second budget. Set false to return the deployment id immediately. Only used with deploy action.',
+      'Wait for the deployment to reach a terminal status (default true), with a 12-minute budget. Set false to return the deployment id immediately. Only used with deploy action.',
     ),
   flowName: z
     .string()

@@ -88,7 +88,7 @@ describe('deploy_manage tool', () => {
 
     // wait is honored, including the budget
     expect(description).toContain('wait');
-    expect(description).toContain('120');
+    expect(description).toContain('12-minute');
 
     // delete works; no always-throws disclaimer
     expect(description).toContain('delete');
