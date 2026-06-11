@@ -1305,7 +1305,7 @@ walkeros deploy create flow.json --flow production`}
   language="bash"
 />
 
-On success, the CLI displays the deployment ID, slug, type, and a one-time deploy token. It also shows example commands for running the deployment locally or via Docker.
+On success, the CLI displays the deployment ID, slug, and type. It also shows example commands for running the deployment locally or via Docker. The create response does not include a deploy token: deploy tokens are minted separately, so the Docker instructions tell you to create one in the app (Settings, Self-hosted deploy token) and set it as `WALKEROS_DEPLOY_TOKEN`.
 
 | Option | Description |
 |--------|-------------|
@@ -1353,11 +1353,22 @@ Starting container...
 | `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
 | `-f, --flow <name>` | Flow name for multi-config flows |
 | `--no-wait` | Return immediately after triggering (do not stream progress) |
-| `--timeout <seconds>` | Timeout for deployment polling (default: 120) |
+| `--timeout <seconds>` | Override the client-side wait budget (defaults to 12 minutes, which covers the server's full deploy budget) |
 | `-o, --output <path>` | Write result to file |
 | `--json` | Output as JSON |
 | `-v, --verbose` | Verbose output |
 | `-s, --silent` | Suppress output |
+
+By default `deploy start` streams progress until the deploy completes. The
+client-side wait budget defaults to 12 minutes so a slow but healthy long
+deploy is never aborted early and misread as a failure in CI; `--timeout`
+overrides it. Each invocation sends a fresh idempotency key, so retrying after
+a failed attempt starts a new deploy instead of replaying the previous result.
+
+When a deploy fails, the CLI prints a stable, machine-readable `error.code`
+alongside the message so CI can branch on the code without matching prose. A
+rate-limited trigger (`429`) is reported as retryable with the `Retry-After`
+hint; under `--wait` the CLI honors one bounded retry automatically.
 
 ### deploy list
 

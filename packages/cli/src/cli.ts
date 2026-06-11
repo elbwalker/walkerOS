@@ -458,7 +458,7 @@ deployCmd
   .option('--no-wait', 'do not wait for deployment to complete')
   .option(
     '--timeout <seconds>',
-    'timeout for deployment polling (default: 120)',
+    'timeout in seconds for deployment polling (default: 720, the 12-minute server deploy budget)',
   )
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')

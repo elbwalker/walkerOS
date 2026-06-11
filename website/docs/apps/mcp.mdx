@@ -326,8 +326,12 @@ Deploy walkerOS flows and manage deployments.
 | `projectId` | string | No | Project ID. Optional; falls back to the default project. |
 | `type` | `"web"` \| `"server"` | No | Deployment type filter for `list`. |
 | `status` | string | No | Status filter for `list`. |
-| `wait` | boolean | No | Wait for deploy to complete (default: `true`). Only used with `deploy`. |
+| `wait` | boolean | No | Wait for the deployment to reach a terminal status (default: `true`), with a 120-second budget. Set `false` to return the deployment id immediately. Only used with `deploy`. |
 | `flowName` | string | No | Flow name for multi-settings flows. Only used with `deploy`. |
+| `cursor` | string | No | Pagination cursor from a previous `list` response. Only used with `list`. |
+| `limit` | number | No | Max items per page (1-100). Only used with `list`. |
+
+A finished `deploy` carries its status and, on failure, an `errorMessage` with the user-facing reason; use the `get` action to re-read it.
 
 When a flow has more than one active deployment and no `slug` is supplied, `get` and `delete` return a `MULTIPLE_DEPLOYMENTS` error with a `details[]` list so the caller can pick a specific deployment. Soft-deleted deployments are always excluded.
 

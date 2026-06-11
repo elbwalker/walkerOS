@@ -80,6 +80,31 @@ describe('deploy_manage tool', () => {
     });
   });
 
+  it('describes the now-real hosted behavior honestly', () => {
+    registerDeployTool(server as never, stubClient());
+    const tool = server.getTool('deploy_manage')!;
+    const config = tool.config as { description: string };
+    const description = config.description.toLowerCase();
+
+    // wait is honored, including the budget
+    expect(description).toContain('wait');
+    expect(description).toContain('12-minute');
+
+    // delete works; no always-throws disclaimer
+    expect(description).toContain('delete');
+    expect(description).not.toContain('throw');
+    expect(description).not.toContain('not yet');
+    expect(description).not.toContain('not implemented');
+    expect(description).not.toContain('always');
+
+    // pagination args are passed through
+    expect(description).toContain('cursor');
+    expect(description).toContain('limit');
+
+    // failure detail is reported by get/status
+    expect(description).toContain('errormessage');
+  });
+
   describe('deploy', () => {
     it('requires flowId', async () => {
       registerDeployTool(server as never, stubClient());

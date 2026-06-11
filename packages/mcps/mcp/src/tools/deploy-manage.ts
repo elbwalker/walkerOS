@@ -20,7 +20,11 @@ import {
 const TITLE = 'Deploy Management';
 const DESCRIPTION =
   'Deploy walkerOS flows and manage deployments. ' +
-  'For get/delete actions pass flowId (required) plus optional slug to disambiguate when a flow has multiple active deployments. ' +
+  'deploy waits for the deployment to reach a terminal status by default (wait=true), with a 12-minute budget; pass wait=false to return immediately with the deployment id. ' +
+  'A finished deployment carries its status and, on failure, an errorMessage with the user-facing reason; use the get action to re-read it. ' +
+  'list supports cursor and limit for pagination. ' +
+  'delete removes an active deployment. ' +
+  'For get and delete pass flowId (required) plus optional slug to disambiguate when a flow has multiple active deployments. ' +
   "If a flow has >=2 active deployments and no slug is supplied, the tool returns a MULTIPLE_DEPLOYMENTS error with a details[] list showing each deployment's slug, type, status, and updatedAt.";
 
 const inputSchema = {
@@ -47,7 +51,7 @@ const inputSchema = {
     .boolean()
     .optional()
     .describe(
-      'Wait for deploy to complete (default true). Only used with deploy action.',
+      'Wait for the deployment to reach a terminal status (default true), with a 12-minute budget. Set false to return the deployment id immediately. Only used with deploy action.',
     ),
   flowName: z
     .string()

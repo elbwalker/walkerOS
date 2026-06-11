@@ -305,24 +305,23 @@ export async function createDeployCommand(
       return;
     }
 
-    // Human-readable output
+    // Human-readable output. The create-deployment response does not include a
+    // deploy token: tokens are minted separately (admin-only) and never stored
+    // in plaintext, so we point the user at creating one rather than printing a
+    // missing field.
     log.info(`Deployment created: ${result.id}`);
     log.info(`  Slug:  ${result.slug}`);
     log.info(`  Type:  ${result.type}`);
-    if (result.deployToken) {
-      log.info(`  Token: ${result.deployToken}`);
-      log.warn('  Save this token — it will not be shown again.');
-    }
     log.info('');
     log.info('Run locally:');
     log.info(
       `  walkeros run ${isRemoteFlow ? 'flow.json' : config} --deploy ${result.id}`,
     );
     log.info('');
-    log.info('Docker:');
-    log.info(
-      `  docker run -e WALKEROS_DEPLOY_TOKEN=${result.deployToken ?? '<token>'} \\`,
-    );
+    log.info('Create a deploy token for this flow in the app');
+    log.info('(Settings, Self-hosted deploy token) and set it as');
+    log.info('WALKEROS_DEPLOY_TOKEN, then run with Docker:');
+    log.info('  docker run -e WALKEROS_DEPLOY_TOKEN \\');
     log.info('             -e WALKEROS_APP_URL=https://app.walkeros.io \\');
     log.info('             walkeros/flow:latest');
   } catch (err) {

@@ -15,7 +15,13 @@ import type {
   BrowserPlugin,
   ActivityTrackingConfiguration,
 } from '@snowplow/browser-tracker-core';
-import type {
+// Action is used in a type position below (Action['type']), so it must stay
+// imported. The other entity types are only re-exported.
+import type { Action } from '@snowplow/browser-plugin-snowplow-ecommerce';
+
+// Re-export official Snowplow entity types
+export type { SelfDescribingJson, CommonEventProperties };
+export type {
   Action,
   Product,
   Cart,
@@ -27,22 +33,6 @@ import type {
   User,
   Page,
 } from '@snowplow/browser-plugin-snowplow-ecommerce';
-
-// Re-export official Snowplow entity types
-export type {
-  SelfDescribingJson,
-  CommonEventProperties,
-  Action,
-  Product,
-  Cart,
-  SPTransaction,
-  SPPromotion,
-  CheckoutStep,
-  Refund,
-  TransactionError,
-  User,
-  Page,
-};
 
 // Re-export Snowplow tracker core types
 export type { BrowserPlugin, ActivityTrackingConfiguration };
