@@ -4,11 +4,18 @@
  * Used by both `walkeros run` (CLI) and Docker containers.
  * Creates health server, loads flow, and optionally enables
  * heartbeat/polling/secrets when API config is provided.
+ *
+ * Env surface: `WALKEROS_OBSERVER_URL` + `WALKEROS_INGEST_TOKEN` +
+ * `WALKEROS_DEPLOYMENT_ID` together gate telemetry and the trace poller;
+ * `WALKEROS_OBSERVE_LEVEL` sets the baseline telemetry level (a `trace`
+ * baseline also skips the trace poller); `WALKEROS_CONFIG_FROZEN` pins the
+ * served bundle as an immutable snapshot (secrets still injected, no
+ * hot-swap, no heartbeat).
  */
 
 import { writeFileSync } from 'fs';
 import fs from 'fs-extra';
-import type { Logger, ObserverFn } from '@walkeros/core';
+import type { Logger, ObserverFn, TelemetryLevel } from '@walkeros/core';
 import {
   createBatchedPoster,
   createTelemetryObserver,
@@ -70,6 +77,7 @@ export interface PipelineOptions {
 export async function runPipeline(options: PipelineOptions): Promise<void> {
   const { bundlePath, port, logger, loggerConfig, api } = options;
   let configVersion: string | undefined;
+  const configFrozen = readConfigFrozen();
 
   // Inject secrets before loading flow
   if (api) {
@@ -78,6 +86,9 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 
   logger.info(`walkeros/flow v${VERSION}`);
   logger.info(`Instance: ${getInstanceId()}`);
+  if (configFrozen) {
+    logger.info('Config frozen: hot-swap and heartbeat disabled');
+  }
 
   // Health server (always on)
   const healthServer = await createHealthServer(port, logger);
@@ -87,8 +98,14 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   // API) results in a no-op telemetry path. The active trace window arrives
   // via the trace-poller below (which writes the shared `traceUntil` holder);
   // the per-emit supplier reads it, so trace flips on and off at runtime
-  // without a redeploy.
-  const telemetryObservers = buildTelemetryObservers(api?.flowId ?? 'flow');
+  // without a redeploy. WALKEROS_OBSERVE_LEVEL sets the baseline telemetry
+  // level for the process; `traceUntil` keeps higher priority in the
+  // resolver, so a standard (or off) baseline can still be elevated to trace.
+  const observeLevel = readObserveLevel(logger);
+  const telemetryObservers = buildTelemetryObservers(
+    api?.flowId ?? 'flow',
+    observeLevel,
+  );
 
   // Load flow
   const runtimeConfig: RuntimeConfig = { port };
@@ -132,23 +149,30 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   const ingestToken = process.env.WALKEROS_INGEST_TOKEN;
   const deploymentId = process.env.WALKEROS_DEPLOYMENT_ID;
   if (observerBase && ingestToken && deploymentId) {
-    tracePoller = createTracePoller(
-      {
-        url: `${observerBase}/trace/${deploymentId}`,
-        token: ingestToken,
-        intervalMs: 15_000,
-      },
-      logger,
-    );
-    tracePoller.start();
-    logger.info('Trace poller: active (every 15s)');
+    if (observeLevel === 'trace') {
+      // The poller only exists to elevate the level via `traceUntil`. With a
+      // trace baseline there is nothing to elevate, so polling would burn a
+      // request every interval for no effect.
+      logger.info('Trace poller: skipped (observe level is trace)');
+    } else {
+      tracePoller = createTracePoller(
+        {
+          url: `${observerBase}/trace/${deploymentId}`,
+          token: ingestToken,
+          intervalMs: 15_000,
+        },
+        logger,
+      );
+      tracePoller.start();
+      logger.info('Trace poller: active (every 15s)');
+    }
   }
 
   // Track temp files for cleanup on hot-swap and shutdown
   let currentBundleCleanup: (() => Promise<void>) | undefined;
   let currentConfigPath: string | undefined;
 
-  if (api) {
+  if (api && !configFrozen) {
     heartbeat = createHeartbeat(
       {
         appUrl: api.appUrl,
@@ -284,6 +308,50 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   await new Promise(() => {});
 }
 
+const OBSERVE_LEVELS: ReadonlyArray<TelemetryLevel> = [
+  'off',
+  'standard',
+  'trace',
+];
+
+/**
+ * Read `WALKEROS_CONFIG_FROZEN` once at pipeline start (`'1'` or `'true'`
+ * enables it, matching the package's boolean env convention; anything else,
+ * including `'0'`, is off).
+ *
+ * Frozen mode is the immutable-bundle contract: a runtime serving a config
+ * snapshot must never hot-swap itself to a newer config, so the config
+ * poller is not constructed. The heartbeat is skipped for the same reason:
+ * it reports the config-version lifecycle of a hot-swappable runtime, which
+ * an immutable snapshot does not have. Secrets are still injected at boot,
+ * and the health server, telemetry, and trace poller are unaffected.
+ */
+function readConfigFrozen(): boolean {
+  const raw = process.env.WALKEROS_CONFIG_FROZEN;
+  return raw === '1' || raw === 'true';
+}
+
+/**
+ * Read and validate `WALKEROS_OBSERVE_LEVEL` once at boot. The value sets
+ * the runtime's baseline telemetry level (`off` | `standard` | `trace`).
+ * The resolver gives the runtime `traceUntil` window higher priority, so a
+ * baseline of `off` or `standard` can still be elevated to trace at runtime.
+ * Unset or empty means the resolver's standard default applies. Invalid
+ * values are logged and ignored (treated as unset).
+ */
+function readObserveLevel(logger: Logger.Instance): TelemetryLevel | undefined {
+  const raw = process.env.WALKEROS_OBSERVE_LEVEL;
+  if (raw === undefined || raw === '') return undefined;
+  const level = OBSERVE_LEVELS.find((candidate) => candidate === raw);
+  if (!level) {
+    logger.warn(
+      `Ignoring invalid WALKEROS_OBSERVE_LEVEL "${raw}" (expected off, standard, or trace)`,
+    );
+    return undefined;
+  }
+  return level;
+}
+
 /**
  * Build the telemetry observer array the runtime forwards through the
  * bundle context. Returns undefined when telemetry is disabled (missing env
@@ -296,10 +364,13 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
  * the batch buffer. Projection-level opts (`level`, `sample`,
  * `includeIn`/`Out`/`MappingKey`, plus the active `traceUntil`) are
  * re-resolved per emit through the supplier so the trace-poller's writes to
- * the shared holder reach the projection.
+ * the shared holder reach the projection. The optional `observeLevel`
+ * baseline (from `WALKEROS_OBSERVE_LEVEL`) feeds the resolver's `observe`
+ * block; `traceUntil` keeps its higher priority.
  */
 function buildTelemetryObservers(
   flowId: string,
+  observeLevel?: TelemetryLevel,
 ): Array<ObserverFn> | undefined {
   const base = process.env.WALKEROS_OBSERVER_URL;
   const token = process.env.WALKEROS_INGEST_TOKEN;
@@ -308,9 +379,11 @@ function buildTelemetryObservers(
 
   const url = `${base}/ingest/${deploymentId}`;
   const emit = createBatchedPoster({ url, token });
+  const observe =
+    observeLevel !== undefined ? { level: observeLevel } : undefined;
   return [
     createTelemetryObserver(emit, () =>
-      resolveTelemetryOptions({ flowId, traceUntil: getTraceUntil() }),
+      resolveTelemetryOptions({ flowId, observe, traceUntil: getTraceUntil() }),
     ),
   ];
 }

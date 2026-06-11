@@ -10,6 +10,7 @@ jest.mock('../../../commands/bundle/bundler.js', () => {
 });
 
 import {
+  buildDataPayload,
   buildSplitConfigObject,
   createEntryPoint,
   detectStepPackages,
@@ -1268,5 +1269,100 @@ describe('bundle() target resolution', () => {
     const buildOptions = bundleCoreMock.mock.calls[0][1];
     expect(buildOptions.skipWrapper).toBe(false);
     expect(buildOptions.withDev).toBe(false);
+  });
+});
+
+describe('data payload byte stability', () => {
+  // Representative flow covering every payload branch: split source props,
+  // inline-code step (skipped), code-marker props (kept in code layer),
+  // transformers, stores, and a plain collector.
+  const flowSettings: Flow = {
+    config: { platform: 'server' },
+    sources: {
+      api: {
+        package: '@walkeros/server-source-express',
+        config: { settings: { port: 8080 } },
+        next: 'enrich',
+      },
+      inline: {
+        code: { type: 'test', push: '$code:(e) => e' },
+        config: { settings: { tag: 'inline' } },
+      },
+    },
+    destinations: {
+      demo: {
+        package: '@walkeros/destination-demo',
+        config: {
+          settings: { name: 'Demo A' },
+          mapping: { product: { view: { name: 'view_item' } } },
+        },
+      },
+      coded: {
+        package: '@walkeros/destination-custom',
+        config: { settings: { fn: '$code:() => true' } },
+      },
+    },
+    transformers: {
+      enrich: {
+        package: '@walkeros/server-transformer-fingerprint',
+        config: { settings: { output: 'user.hash' } },
+      },
+    },
+    stores: {
+      memory: {
+        package: '@walkeros/server-store-fs',
+        config: { settings: { maxSize: 1000 } },
+      },
+    },
+    collector: { globals: { tenant: 'a' } },
+  };
+
+  // The exact payload object the splitter accumulates, in insertion order
+  // (sources, destinations, transformers, stores, collector). Steps whose
+  // props all carry code markers (`coded`) and inline-code steps (`inline`)
+  // contribute nothing.
+  const expectedPayload = {
+    sources: {
+      api: {
+        config: { settings: { port: 8080 } },
+        next: 'enrich',
+      },
+    },
+    destinations: {
+      demo: {
+        config: {
+          settings: { name: 'Demo A' },
+          mapping: { product: { view: { name: 'view_item' } } },
+        },
+      },
+    },
+    transformers: {
+      enrich: {
+        config: { settings: { output: 'user.hash' } },
+      },
+    },
+    stores: {
+      memory: {
+        config: { settings: { maxSize: 1000 } },
+      },
+    },
+    collector: { globals: { tenant: 'a' } },
+  };
+
+  it('emits the data payload string byte-identical to the pinned form', () => {
+    const result = buildSplitConfigObject(flowSettings, new Map());
+    expect(result.dataPayload).toBe(JSON.stringify(expectedPayload, null, 2));
+  });
+
+  it('returns the payload object alongside the identical string', () => {
+    const result = buildSplitConfigObject(flowSettings, new Map());
+    expect(result.dataPayloadObj).toEqual(expectedPayload);
+    expect(result.dataPayload).toBe(
+      JSON.stringify(result.dataPayloadObj, null, 2),
+    );
+  });
+
+  it('buildDataPayload builds the same object the bundler bakes', () => {
+    expect(buildDataPayload(flowSettings)).toEqual(expectedPayload);
   });
 });

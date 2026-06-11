@@ -1398,10 +1398,30 @@ function createBuildError(buildError: EsbuildError, code: string): Error {
 }
 
 /**
+ * Build the wireConfig data payload for a flow as a plain object.
+ *
+ * This is the same object the bundler bakes into a skeleton as
+ * `__configData` (section, step id, data-layer props), produced by the
+ * same classification pass the bundler uses. Callers that inject data at
+ * simulate time (the `data` option of the simulate functions) must build
+ * the FULL payload from the FULL config with this helper; injection
+ * replaces the baked payload, it does not merge.
+ *
+ * Mirrors the bundler's own call path (`detectNamedImports` feeding
+ * `buildSplitConfigObject`) so the result stays identical to the baked
+ * payload by construction.
+ */
+export function buildDataPayload(flowSettings: Flow): Record<string, unknown> {
+  return buildSplitConfigObject(flowSettings, detectNamedImports(flowSettings))
+    .dataPayloadObj;
+}
+
+/**
  * Build split config object from flow configuration.
- * Produces TWO outputs:
+ * Produces THREE outputs:
  * - codeConfigObject: skeleton with code references and __data.* placeholders
- * - dataPayload: plain JSON-serializable object with settings, mappings, etc.
+ * - dataPayloadObj: plain JSON-serializable object with settings, mappings, etc.
+ * - dataPayload: the stringified form of dataPayloadObj the codegen embeds
  *
  * Inline code steps bypass classification and go entirely to the code skeleton.
  * Package-based steps are split via classifyStepProperties.
@@ -1412,6 +1432,7 @@ export function buildSplitConfigObject(
 ): {
   storesDeclaration: string;
   codeConfigObject: string;
+  dataPayloadObj: Record<string, unknown>;
   dataPayload: string;
 } {
   const sources = flowSettings.sources || {};
@@ -1626,7 +1647,7 @@ ${destinationsEntries.join(',\n')}
 
   const dataPayload = JSON.stringify(dataPayloadObj, null, 2);
 
-  return { storesDeclaration, codeConfigObject, dataPayload };
+  return { storesDeclaration, codeConfigObject, dataPayloadObj, dataPayload };
 }
 
 /**

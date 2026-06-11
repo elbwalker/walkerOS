@@ -127,3 +127,14 @@ describe('classifyStepProperties', () => {
     expect(dataProps).toEqual({});
   });
 });
+
+describe('package-root exports', () => {
+  // Prod bundling and simulate-time data injection must share ONE
+  // classification authority: consumers import these from the package root.
+  it('exposes the classifier and payload builder from the package root', async () => {
+    const root = await import('../../../index.js');
+    expect(root.containsCodeMarkers).toBe(containsCodeMarkers);
+    expect(root.classifyStepProperties).toBe(classifyStepProperties);
+    expect(typeof root.buildDataPayload).toBe('function');
+  });
+});

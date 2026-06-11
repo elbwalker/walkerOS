@@ -24,6 +24,8 @@ export interface BuildSimulationResultArgs {
   startTime: number;
   captured?: CapturedEntry[];
   usage?: Record<string, TrackedCall[]>;
+  /** Entity-action key of the matched mapping rule (destination simulations). */
+  mappingKey?: string;
   error?: unknown;
 }
 
@@ -48,7 +50,7 @@ function toError(error: unknown): Error {
 export function buildSimulationResult(
   args: BuildSimulationResultArgs,
 ): Simulation.Result {
-  const { step, name, startTime, captured, usage, error } = args;
+  const { step, name, startTime, captured, usage, mappingKey, error } = args;
 
   const events: WalkerOS.DeepPartialEvent[] = (captured ?? [])
     .filter(hasEvent)
@@ -66,6 +68,7 @@ export function buildSimulationResult(
     events,
     calls,
     duration: Date.now() - startTime,
+    ...(mappingKey !== undefined ? { mappingKey } : {}),
     ...(error !== undefined ? { error: toError(error) } : {}),
   };
 }

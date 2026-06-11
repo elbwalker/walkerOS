@@ -34,6 +34,15 @@ export interface Result {
   calls: Call[];
   /** Execution time in ms */
   duration: number;
+  /**
+   * Entity-action key of the matched mapping rule, e.g. "product add" or
+   * "product *". Populated for destination simulations when a mapping rule
+   * matched; absent when no rule matched or the step has no mapping.
+   * Also absent when the matched rule uses batched delivery (batching
+   * reports no per-event key) and on error results, where the key is not
+   * available.
+   */
+  mappingKey?: string;
   /** Error if the step threw */
   error?: Error;
 }
