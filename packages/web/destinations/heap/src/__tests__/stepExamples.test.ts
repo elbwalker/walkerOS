@@ -47,6 +47,7 @@ describe('heap destination — step examples', () => {
       out?: ReadonlyArray<CallRecord>;
       command?: 'consent' | 'user' | 'config' | 'run';
       settings?: Partial<Settings>;
+      before?: WalkerOS.Consent;
     };
 
     const env = clone(examples.env.push) as Env;
@@ -70,6 +71,10 @@ describe('heap destination — step examples', () => {
           settings: baseSettings,
         },
       });
+      // Load the gated destination under a prior grant first when the example
+      // declares one, so a revoke acts on an already-granted destination.
+      if (example.before)
+        await elb('walker consent', example.before as WalkerOS.Consent);
       await elb('walker consent', example.in as WalkerOS.Consent);
     } else {
       const event = example.in as WalkerOS.Event;

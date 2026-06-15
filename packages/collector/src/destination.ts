@@ -370,9 +370,24 @@ export async function pushToDestinations(
       // the queueOn-only path. Mirrors the same pattern used below at the main
       // init call site so failures are never silent on either branch.
       if (!currentQueue.length && destination.queueOn?.length) {
+        // Consent gate (sole-gate invariant): this branch would init the
+        // destination purely to flush queued on() events, but there is no push
+        // event whose individual consent could apply, so collector consent is
+        // the complete basis. Never init a consent-gated destination while its
+        // required consent is denied. Self-heals: handle.ts runs
+        // pushToDestinations after every state command, so the grant command
+        // re-enters here with consent satisfied and inits then.
+        if (!getGrantedConsent(destination.config.consent, consent)) {
+          return { id, destination, skipped: true };
+        }
         let isInitialized = false;
         try {
-          isInitialized = await destinationInit(collector, destination, id);
+          isInitialized = await destinationInit(
+            collector,
+            destination,
+            id,
+            true,
+          );
         } catch (err) {
           collector.status.failed++;
           const destType = destination.type || 'unknown';
@@ -466,9 +481,11 @@ export async function pushToDestinations(
       // silently returned undefined when init threw, hiding real failures. The
       // destination itself may also log a more specific error before throwing;
       // this is the boundary safety net so failures are never silent.
+      // Allowed: at least one event cleared the per-event consent gate above,
+      // so initialization is authorized (true) for the chokepoint guard.
       let isInitialized = false;
       try {
-        isInitialized = await destinationInit(collector, destination, id);
+        isInitialized = await destinationInit(collector, destination, id, true);
       } catch (err) {
         collector.status.failed++;
         const destType = destination.type || 'unknown';
@@ -824,13 +841,39 @@ export async function pushToDestinations(
  * @param destId - The destination ID.
  * @returns Whether the destination was initialized successfully.
  */
+/**
+ * A destination declares a consent requirement when its config.consent has at
+ * least one key. Such a destination must never be initialized without a cleared
+ * consent gate (see destinationInit's `allowed` parameter).
+ */
+function hasConsentRequirement(destination: Destination.Instance): boolean {
+  const required = destination.config.consent;
+  return !!required && Object.keys(required).length > 0;
+}
+
 export async function destinationInit<Destination extends Destination.Instance>(
   collector: Collector.Instance,
   destination: Destination,
   destId: string,
+  // Fail-closed consent gate. Callers MUST pass an affirmative allow decision
+  // (per-event on the push path, collector-consent on the queueOn path). The
+  // default is false so any future call site that forgets fails closed: a
+  // consent-gated destination is never initialized without a cleared gate.
+  allowed = false,
 ): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
+    // Defense-in-depth: refuse to init a destination that declares a consent
+    // requirement unless the gate was cleared. We do NOT re-derive consent from
+    // collector state here, because the push path's decision may rest on an
+    // event's individual consent this function cannot see; re-deriving would
+    // wrongly block a legitimate event-level override.
+    if (!allowed && hasConsentRequirement(destination)) {
+      collector.logger
+        .scope(destination.type || 'unknown')
+        .debug('init blocked: consent gate not cleared');
+      return false;
+    }
     // Create scoped logger for this destination: [type:id] or [unknown:id]
     const destType = destination.type || 'unknown';
     const destLogger = collector.logger.scope(destType);
