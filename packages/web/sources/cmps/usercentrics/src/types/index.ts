@@ -28,8 +28,21 @@ export interface UsercentricsEventDetail {
 declare global {
   interface WindowEventMap {
     ucEvent: CustomEvent<UsercentricsEventDetail>;
+    UC_UI_INITIALIZED: Event;
     UC_UI_CMP_EVENT: CustomEvent<UsercentricsV3CmpEventDetail>;
   }
+}
+
+/** Usercentrics CONSENT_TYPE values (history entry type / V3 consent type). */
+export type UsercentricsConsentType = 'explicit' | 'implicit';
+
+/** A single entry in a V2 service's consent history (getServicesBaseInfo). */
+export interface UsercentricsV2ConsentHistoryEntry {
+  type: UsercentricsConsentType;
+  status: boolean;
+  /** CONSENT_ACTION, e.g. 'onAcceptAllServices' | 'onInitialPageLoad'. Not read for the gate. */
+  action?: string;
+  timestamp?: number;
 }
 
 /**
@@ -39,9 +52,13 @@ declare global {
 export interface UsercentricsV2Service {
   /** Category slug: 'essential' | 'functional' | 'marketing' | custom */
   categorySlug: string;
+  /** Service display name (used for service-level consent keys) */
+  name?: string;
   /** Consent state for this service */
   consent: {
     status: boolean;
+    /** Consent decision history; an 'explicit' entry proves a real user decision. */
+    history?: UsercentricsV2ConsentHistoryEntry[];
   };
 }
 
@@ -54,6 +71,7 @@ export interface UsercentricsV2Service {
 export interface UsercentricsV2Api {
   isInitialized?: () => boolean;
   getServicesBaseInfo?: () => UsercentricsV2Service[];
+  getServicesFullInfo?: () => Promise<UsercentricsV2Service[]>;
   areAllConsentsAccepted?: () => boolean;
 }
 
@@ -111,8 +129,16 @@ export interface UsercentricsV3Api {
  * `source: 'CMP'` + a decision `type` tells us a user action has been taken.
  */
 export interface UsercentricsV3CmpEventDetail {
-  source?: string;
+  source?:
+    | 'none'
+    | 'button'
+    | 'first'
+    | 'second'
+    | 'embeddings'
+    | '__ucCmp'
+    | string;
   type?: string;
+  abTestVariant?: string;
 }
 
 declare global {
@@ -137,15 +163,6 @@ declare global {
  */
 export interface Settings {
   /**
-   * Window event name to listen for.
-   * Configured in Usercentrics admin under Implementation > Data Layer & Events.
-   * Can also be set to 'UC_SDK_EVENT' for the built-in Browser SDK event.
-   *
-   * Default: 'ucEvent'
-   */
-  eventName?: string;
-
-  /**
    * Map Usercentrics categories to walkerOS consent groups.
    * Keys: Usercentrics category names (from ucCategory)
    * Values: walkerOS consent group names
@@ -160,11 +177,10 @@ export interface Settings {
   categoryMap?: Record<string, string>;
 
   /**
-   * Only process explicit consent (user made a choice).
-   * When true: Ignores events where type !== 'explicit'
-   * When false: Processes any consent_status event including implicit/defaults
-   *
-   * Default: true
+   * Only publish when the user has actively decided. V3: consent.type ===
+   * EXPLICIT. V2: an EXPLICIT entry exists in service consent history.
+   * Implicit/default page-load states are suppressed. Set false to publish any
+   * consent snapshot including implicit. Default: true.
    */
   explicitOnly?: boolean;
 

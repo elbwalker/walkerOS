@@ -1,7 +1,13 @@
 import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { sourceUsercentrics } from '../index';
-import type { Types, UsercentricsEventDetail } from '../types';
+import type {
+  Types,
+  UsercentricsConsentType,
+  UsercentricsV2Api,
+  UsercentricsV2Service,
+  UsercentricsV3CmpEventDetail,
+} from '../types';
 
 /**
  * Track consent commands called via elb
@@ -11,10 +17,19 @@ export interface ConsentCall {
 }
 
 /**
- * Mock window with test helpers for dispatching events
+ * Mock window with test helpers for dispatching the official Usercentrics V2
+ * events (`UC_UI_INITIALIZED`, `UC_UI_CMP_EVENT`) and for attaching a typed
+ * `UC_UI` API mock. No scattered casts: the mock is built against a typed
+ * interface and cast once at the `env.window` boundary inside the source
+ * factory helper.
  */
 export interface MockWindow extends Window {
-  __dispatchEvent: (event: string, detail?: UsercentricsEventDetail) => void;
+  /** Dispatch the synchronous `UC_UI_INITIALIZED` lifecycle event. */
+  __dispatchInitialized: () => void;
+  /** Dispatch a `UC_UI_CMP_EVENT` with the given V3 CMP event detail. */
+  __dispatchCmpEvent: (detail: UsercentricsV3CmpEventDetail) => void;
+  /** Attach (or replace) the `window.UC_UI` V2 API mock. */
+  __setUcUi: (ucUi: UsercentricsV2Api) => void;
 }
 
 /**
@@ -34,28 +49,83 @@ export function createMockElb(consentCalls: ConsentCall[]) {
 }
 
 /**
- * Create a mock window that supports addEventListener/removeEventListener
- * and can dispatch Usercentrics events for testing.
+ * Build a single V2 service entry. When `historyType` is provided the service
+ * carries a one-entry consent history with that type, which the explicit-gate
+ * inspects. `name` is the service display name surfaced as a service-level key.
+ */
+export function makeV2Service(
+  categorySlug: string,
+  status: boolean,
+  historyType?: UsercentricsConsentType,
+  name?: string,
+): UsercentricsV2Service {
+  return {
+    categorySlug,
+    ...(name !== undefined ? { name } : {}),
+    consent: {
+      status,
+      ...(historyType !== undefined
+        ? { history: [{ type: historyType, status }] }
+        : {}),
+    },
+  };
+}
+
+/**
+ * Build a UC_UI V2 API mock from a fixed service list. Defaults to
+ * `isInitialized() === true`; override per-case for the not-yet-initialized
+ * path.
+ */
+export function makeUcUi(
+  services: UsercentricsV2Service[],
+  overrides: Partial<UsercentricsV2Api> = {},
+): UsercentricsV2Api {
+  return {
+    isInitialized: () => true,
+    getServicesBaseInfo: () => services,
+    ...overrides,
+  };
+}
+
+/**
+ * Create a mock window that supports addEventListener/removeEventListener,
+ * carries a typed optional `UC_UI`, and can dispatch the official Usercentrics
+ * events for testing.
  */
 export function createMockWindow(): MockWindow {
   const listeners: Record<string, Array<(e: Event) => void>> = {};
+  let ucUi: UsercentricsV2Api | undefined;
 
-  const mockWindow = {
+  const mockWindow: Pick<Window, 'addEventListener' | 'removeEventListener'> & {
+    UC_UI?: UsercentricsV2Api;
+    __dispatchInitialized: MockWindow['__dispatchInitialized'];
+    __dispatchCmpEvent: MockWindow['__dispatchCmpEvent'];
+    __setUcUi: MockWindow['__setUcUi'];
+  } = {
+    get UC_UI() {
+      return ucUi;
+    },
     addEventListener: jest.fn((event: string, handler: (e: Event) => void) => {
       if (!listeners[event]) listeners[event] = [];
       listeners[event].push(handler);
-    }),
+    }) as unknown as Window['addEventListener'],
     removeEventListener: jest.fn(
       (event: string, handler: (e: Event) => void) => {
         if (listeners[event]) {
           listeners[event] = listeners[event].filter((h) => h !== handler);
         }
       },
-    ),
-    // Helper to dispatch events in tests
-    __dispatchEvent: (event: string, detail?: UsercentricsEventDetail) => {
-      const e = detail ? new CustomEvent(event, { detail }) : new Event(event);
-      listeners[event]?.forEach((handler) => handler(e));
+    ) as unknown as Window['removeEventListener'],
+    __setUcUi: (next: UsercentricsV2Api) => {
+      ucUi = next;
+    },
+    __dispatchInitialized: () => {
+      const e = new Event('UC_UI_INITIALIZED');
+      listeners['UC_UI_INITIALIZED']?.forEach((handler) => handler(e));
+    },
+    __dispatchCmpEvent: (detail: UsercentricsV3CmpEventDetail) => {
+      const e = new CustomEvent('UC_UI_CMP_EVENT', { detail });
+      listeners['UC_UI_CMP_EVENT']?.forEach((handler) => handler(e));
     },
   };
 

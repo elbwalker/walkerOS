@@ -1,7 +1,5 @@
 import { sourceUsercentrics } from '../index';
 import { createMockLogger } from '@walkeros/core';
-import * as inputs from '../examples/inputs';
-import * as outputs from '../examples/outputs';
 import type {
   UsercentricsV2Api,
   UsercentricsV2Service,
@@ -15,6 +13,8 @@ import {
   createMockElb,
   createMockWindow,
   createUsercentricsSource,
+  makeUcUi,
+  makeV2Service,
   ConsentCall,
   MockWindow,
 } from './test-utils';
@@ -48,8 +48,9 @@ describe('Usercentrics Source', () => {
       const mockWindow = createMockWindow();
       const source = await createUsercentricsSource(mockWindow, mockElb);
 
-      expect(source.config.settings?.eventName).toBe('ucEvent');
       expect(source.config.settings?.explicitOnly).toBe(true);
+      expect(source.config.settings?.apiVersion).toBe('auto');
+      expect(source.config.settings?.v3EventName).toBe('UC_UI_CMP_EVENT');
       expect(source.config.settings?.categoryMap).toEqual({});
     });
 
@@ -57,119 +58,134 @@ describe('Usercentrics Source', () => {
       const mockWindow = createMockWindow();
       const source = await createUsercentricsSource(mockWindow, mockElb, {
         settings: {
-          eventName: 'myConsentEvent',
           explicitOnly: false,
           categoryMap: { essential: 'functional' },
         },
       });
 
-      expect(source.config.settings?.eventName).toBe('myConsentEvent');
       expect(source.config.settings?.explicitOnly).toBe(false);
       expect(source.config.settings?.categoryMap).toEqual({
         essential: 'functional',
       });
+      // Untouched defaults remain.
+      expect(source.config.settings?.apiVersion).toBe('auto');
+      expect(source.config.settings?.v3EventName).toBe('UC_UI_CMP_EVENT');
     });
 
-    test('registers event listener on configured event name', async () => {
+    test('registers official V2 listeners when only UC_UI is present', async () => {
       const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      expect(mockWindow.addEventListener).toHaveBeenCalledWith(
-        'ucEvent',
-        expect.any(Function),
+      mockWindow.__setUcUi(
+        makeUcUi([makeV2Service('essential', true, 'explicit')]),
       );
-    });
 
-    test('registers listener on custom event name', async () => {
-      const mockWindow = createMockWindow();
       await createUsercentricsSource(mockWindow, mockElb, {
-        settings: { eventName: 'UC_SDK_EVENT' },
+        settings: { apiVersion: 'v2' },
       });
 
       expect(mockWindow.addEventListener).toHaveBeenCalledWith(
-        'UC_SDK_EVENT',
+        'UC_UI_INITIALIZED',
+        expect.any(Function),
+      );
+      expect(mockWindow.addEventListener).toHaveBeenCalledWith(
+        'UC_UI_CMP_EVENT',
         expect.any(Function),
       );
     });
   });
 
   describe('explicit consent filtering', () => {
-    test('processes explicit consent events', async () => {
+    test('publishes a returning visitor whose history is explicit (default explicitOnly)', async () => {
       const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('marketing', true, 'explicit'),
+        ]),
+      );
 
-      mockWindow.__dispatchEvent('ucEvent', inputs.fullConsent);
-
-      expect(consentCalls).toHaveLength(1);
-    });
-
-    test('processes explicit consent with uppercase type', async () => {
-      const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      mockWindow.__dispatchEvent('ucEvent', inputs.fullConsentUpperCase);
-
-      expect(consentCalls).toHaveLength(1);
-      expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
-    });
-
-    test('ignores implicit consent when explicitOnly=true', async () => {
-      const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      mockWindow.__dispatchEvent('ucEvent', inputs.implicitConsent);
-
-      expect(consentCalls).toHaveLength(0);
-    });
-
-    test('processes implicit consent when explicitOnly=false', async () => {
-      const mockWindow = createMockWindow();
       await createUsercentricsSource(mockWindow, mockElb, {
-        settings: { explicitOnly: false },
+        settings: { apiVersion: 'v2' },
       });
 
-      mockWindow.__dispatchEvent('ucEvent', inputs.implicitConsent);
+      expect(consentCalls).toHaveLength(1);
+      expect(consentCalls[0].consent).toEqual({
+        essential: true,
+        marketing: true,
+      });
+    });
+
+    test('suppresses a first-visit implicit-only snapshot under default explicitOnly', async () => {
+      const mockWindow = createMockWindow();
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'implicit'),
+          makeV2Service('marketing', false, 'implicit'),
+        ]),
+      );
+
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
+      });
+
+      expect(consentCalls).toHaveLength(0);
+    });
+
+    test('publishes an implicit-only snapshot when explicitOnly=false', async () => {
+      const mockWindow = createMockWindow();
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'implicit'),
+          makeV2Service('marketing', false, 'implicit'),
+        ]),
+      );
+
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2', explicitOnly: false },
+      });
 
       expect(consentCalls).toHaveLength(1);
-      expect(consentCalls[0].consent).toEqual(outputs.minimalConsentMapped);
-    });
-  });
-
-  describe('non-consent event filtering', () => {
-    test('ignores non-consent_status events', async () => {
-      const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      mockWindow.__dispatchEvent('ucEvent', inputs.nonConsentEvent);
-
-      expect(consentCalls).toHaveLength(0);
-    });
-
-    test('ignores events without detail', async () => {
-      const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      // Dispatch event with no detail
-      mockWindow.__dispatchEvent('ucEvent');
-
-      expect(consentCalls).toHaveLength(0);
+      expect(consentCalls[0].consent).toEqual({
+        essential: true,
+        marketing: false,
+      });
     });
   });
 
   describe('group-level consent (ucCategory)', () => {
-    test('maps partial consent correctly', async () => {
+    test('maps partial consent via strict-AND aggregation', async () => {
       const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('functional', true, 'explicit'),
+          makeV2Service('marketing', false, 'explicit'),
+        ]),
+      );
 
-      mockWindow.__dispatchEvent('ucEvent', inputs.partialConsent);
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
+      });
 
-      expect(consentCalls[0].consent).toEqual(outputs.partialConsentMapped);
+      expect(consentCalls[0].consent).toEqual({
+        essential: true,
+        functional: true,
+        marketing: false,
+      });
     });
 
     test('applies custom category mapping', async () => {
       const mockWindow = createMockWindow();
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('functional', true, 'explicit'),
+          makeV2Service('marketing', true, 'explicit'),
+        ]),
+      );
+
       await createUsercentricsSource(mockWindow, mockElb, {
         settings: {
+          apiVersion: 'v2',
           categoryMap: {
             essential: 'functional',
             functional: 'functional',
@@ -178,22 +194,23 @@ describe('Usercentrics Source', () => {
         },
       });
 
-      mockWindow.__dispatchEvent('ucEvent', inputs.fullConsent);
-
-      expect(consentCalls[0].consent).toEqual(outputs.fullConsentCustomMapped);
+      expect(consentCalls[0].consent).toEqual({
+        functional: true,
+        marketing: true,
+      });
     });
 
     test('passes through unmapped categories', async () => {
       const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('custom_group', true, 'explicit'),
+        ]),
+      );
 
-      mockWindow.__dispatchEvent('ucEvent', {
-        event: 'consent_status',
-        type: 'explicit',
-        ucCategory: {
-          essential: true,
-          custom_group: true,
-        },
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
       });
 
       expect(consentCalls[0].consent).toEqual({
@@ -202,10 +219,19 @@ describe('Usercentrics Source', () => {
       });
     });
 
-    test('uses strict AND logic when multiple categories map to same group', async () => {
+    test('uses strict AND when multiple categories map to the same group', async () => {
       const mockWindow = createMockWindow();
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('functional', false, 'explicit'),
+          makeV2Service('marketing', false, 'explicit'),
+        ]),
+      );
+
       await createUsercentricsSource(mockWindow, mockElb, {
         settings: {
+          apiVersion: 'v2',
           categoryMap: {
             essential: 'functional',
             functional: 'functional',
@@ -214,17 +240,7 @@ describe('Usercentrics Source', () => {
       });
 
       // essential=true, functional=false both map to 'functional'.
-      // Strict AND: any deny signal denies → functional = false.
-      mockWindow.__dispatchEvent('ucEvent', {
-        event: 'consent_status',
-        type: 'explicit',
-        ucCategory: {
-          essential: true,
-          functional: false,
-          marketing: false,
-        },
-      });
-
+      // Strict AND: any deny denies → functional = false.
       expect(consentCalls[0].consent).toEqual({
         functional: false,
         marketing: false,
@@ -233,22 +249,21 @@ describe('Usercentrics Source', () => {
 
     test('strict AND: all contributing sources true → target true', async () => {
       const mockWindow = createMockWindow();
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('functional', true, 'explicit'),
+          makeV2Service('marketing', false, 'explicit'),
+        ]),
+      );
+
       await createUsercentricsSource(mockWindow, mockElb, {
         settings: {
+          apiVersion: 'v2',
           categoryMap: {
             essential: 'functional',
             functional: 'functional',
           },
-        },
-      });
-
-      mockWindow.__dispatchEvent('ucEvent', {
-        event: 'consent_status',
-        type: 'explicit',
-        ucCategory: {
-          essential: true,
-          functional: true,
-          marketing: false,
         },
       });
 
@@ -259,123 +274,163 @@ describe('Usercentrics Source', () => {
     });
   });
 
-  describe('service-level consent', () => {
-    test('extracts individual services when ucCategory has non-boolean values', async () => {
+  describe('category-level aggregation across services', () => {
+    // Through the real V2 adapter, buildDetailFromServices always produces a
+    // boolean ucCategory, so parseConsent takes the group-level branch and the
+    // per-service name keys are not consumed. These tests exercise that
+    // end-to-end V2 path (multiple services per category, strict-AND).
+
+    test('aggregates multiple services within a category (strict AND)', async () => {
       const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('marketing', true, 'explicit', 'Google Analytics'),
+          makeV2Service('marketing', false, 'explicit', 'Meta Pixel'),
+        ]),
+      );
 
-      mockWindow.__dispatchEvent('ucEvent', inputs.serviceLevelConsent);
-
-      expect(consentCalls[0].consent).toEqual(outputs.serviceLevelMapped);
-    });
-
-    test('normalizes service names to lowercase with underscores', async () => {
-      const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      mockWindow.__dispatchEvent('ucEvent', {
-        event: 'consent_status',
-        type: 'explicit',
-        ucCategory: { essential: 'partial' },
-        'My Custom Service': true,
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
       });
 
-      expect(consentCalls[0].consent).toHaveProperty('my_custom_service', true);
+      // One denied service in 'marketing' denies the whole category.
+      expect(consentCalls[0].consent).toEqual({ marketing: false });
     });
 
-    test('merges boolean ucCategory entries with service keys', async () => {
+    test('a single accepted service yields its category as true', async () => {
       const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit', 'My Custom Service'),
+        ]),
+      );
 
-      // ucCategory has mix of boolean and non-boolean
-      // Boolean entries from ucCategory should be included
-      mockWindow.__dispatchEvent('ucEvent', {
-        event: 'consent_status',
-        type: 'explicit',
-        ucCategory: {
-          essential: true, // boolean - include
-          marketing: 'partial', // non-boolean - skip (use services)
-        },
-        'Facebook Pixel': true,
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
       });
 
-      expect(consentCalls[0].consent).toEqual({
-        essential: true,
-        facebook_pixel: true,
-      });
+      expect(consentCalls[0].consent).toEqual({ essential: true });
     });
 
-    test('applies categoryMap to boolean ucCategory entries in service-level mode', async () => {
+    test('applies categoryMap to aggregated categories', async () => {
       const mockWindow = createMockWindow();
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('marketing', true, 'explicit', 'Facebook Pixel'),
+        ]),
+      );
+
       await createUsercentricsSource(mockWindow, mockElb, {
         settings: {
+          apiVersion: 'v2',
           categoryMap: { essential: 'functional' },
         },
       });
 
-      mockWindow.__dispatchEvent('ucEvent', {
-        event: 'consent_status',
-        type: 'explicit',
-        ucCategory: {
-          essential: true, // boolean - mapped to 'functional'
-          marketing: 'partial', // non-boolean - skipped
-        },
-        'Facebook Pixel': true,
-      });
-
       expect(consentCalls[0].consent).toEqual({
         functional: true,
-        facebook_pixel: true,
+        marketing: true,
       });
     });
   });
 
   describe('event handling', () => {
-    test('handles consent change events', async () => {
+    test('re-reads and publishes on a UC_UI_CMP_EVENT decision', async () => {
       const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('marketing', false, 'explicit'),
+        ]),
+      );
 
-      // First consent
-      mockWindow.__dispatchEvent('ucEvent', inputs.minimalConsent);
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
+      });
+
+      // Static read at init published once.
       expect(consentCalls).toHaveLength(1);
-      expect(consentCalls[0].consent).toEqual(outputs.minimalConsentMapped);
+      expect(consentCalls[0].consent).toEqual({
+        essential: true,
+        marketing: false,
+      });
 
-      // User updates consent
-      mockWindow.__dispatchEvent('ucEvent', inputs.fullConsent);
+      // User accepts marketing; the getter now returns the updated services.
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('marketing', true, 'explicit'),
+        ]),
+      );
+      mockWindow.__dispatchCmpEvent({ source: 'button', type: 'ACCEPT_ALL' });
+
       expect(consentCalls).toHaveLength(2);
-      expect(consentCalls[1].consent).toEqual(outputs.fullConsentMapped);
+      expect(consentCalls[1].consent).toEqual({
+        essential: true,
+        marketing: true,
+      });
     });
 
     test('handles consent withdrawal (revocation)', async () => {
       const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('marketing', true, 'explicit'),
+        ]),
+      );
 
-      // User initially accepts all
-      mockWindow.__dispatchEvent('ucEvent', inputs.fullConsent);
-      expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
+      });
 
-      // User revokes marketing
-      mockWindow.__dispatchEvent('ucEvent', inputs.partialConsent);
-      expect(consentCalls[1].consent).toEqual(outputs.partialConsentMapped);
+      expect(consentCalls[0].consent).toEqual({
+        essential: true,
+        marketing: true,
+      });
+
+      // User revokes marketing.
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('marketing', false, 'explicit'),
+        ]),
+      );
+      mockWindow.__dispatchCmpEvent({ source: 'button', type: 'SAVE' });
+
+      expect(consentCalls[1].consent).toEqual({
+        essential: true,
+        marketing: false,
+      });
     });
 
-    test('handles multiple consent changes', async () => {
+    test('ignores non-decision CMP events', async () => {
       const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
+      mockWindow.__setUcUi(
+        makeUcUi([makeV2Service('marketing', true, 'explicit')]),
+      );
 
-      mockWindow.__dispatchEvent('ucEvent', inputs.minimalConsent);
-      mockWindow.__dispatchEvent('ucEvent', inputs.partialConsent);
-      mockWindow.__dispatchEvent('ucEvent', inputs.fullConsent);
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
+      });
+      const before = consentCalls.length;
 
-      expect(consentCalls).toHaveLength(3);
-      expect(consentCalls[2].consent).toEqual(outputs.fullConsentMapped);
+      mockWindow.__dispatchCmpEvent({ source: 'first', type: 'CMP_SHOWN' });
+
+      expect(consentCalls).toHaveLength(before);
     });
   });
 
   describe('cleanup', () => {
-    test('destroy removes event listener', async () => {
+    test('destroy removes both official V2 listeners', async () => {
       const mockWindow = createMockWindow();
-      const source = await createUsercentricsSource(mockWindow, mockElb);
+      mockWindow.__setUcUi(
+        makeUcUi([makeV2Service('marketing', true, 'explicit')]),
+      );
+      const source = await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'v2' },
+      });
 
       await source.destroy?.({
         id: 'test',
@@ -385,26 +440,11 @@ describe('Usercentrics Source', () => {
       });
 
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
-        'ucEvent',
+        'UC_UI_INITIALIZED',
         expect.any(Function),
       );
-    });
-
-    test('destroy removes listener for custom event name', async () => {
-      const mockWindow = createMockWindow();
-      const source = await createUsercentricsSource(mockWindow, mockElb, {
-        settings: { eventName: 'myConsentEvent' },
-      });
-
-      await source.destroy?.({
-        id: 'test',
-        config: source.config,
-        env: {} as never,
-        logger: createMockLogger(),
-      });
-
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
-        'myConsentEvent',
+        'UC_UI_CMP_EVENT',
         expect.any(Function),
       );
     });
@@ -445,28 +485,6 @@ describe('Usercentrics Source', () => {
       (mockWindow as unknown as { __ucCmp: UsercentricsV3Api }).__ucCmp = ucCmp;
     }
 
-    function withUcUi(mockWindow: MockWindow, ucUi: UsercentricsV2Api): void {
-      (mockWindow as unknown as { UC_UI: UsercentricsV2Api }).UC_UI = ucUi;
-    }
-
-    /**
-     * Dispatch a V3 event (detail shape differs from V2).
-     */
-    function dispatchV3Event(
-      mockWindow: MockWindow,
-      eventName: string,
-      detail: { source: string; type: string },
-    ): void {
-      (
-        mockWindow as unknown as {
-          __dispatchEvent: (
-            event: string,
-            detail: { source: string; type: string },
-          ) => void;
-        }
-      ).__dispatchEvent(eventName, detail);
-    }
-
     /**
      * Drain the microtask queue so awaited V3 calls settle. Fake timers are
      * on globally, so a setTimeout flush would hang.
@@ -493,14 +511,12 @@ describe('Usercentrics Source', () => {
       });
 
       // V2 also present, but should be ignored because __ucCmp wins in auto mode.
-      const v2Services: UsercentricsV2Service[] = [
-        { categorySlug: 'essential', consent: { status: true } },
-        { categorySlug: 'marketing', consent: { status: true } }, // would differ from V3
-      ];
-      withUcUi(mockWindow, {
-        isInitialized: () => true,
-        getServicesBaseInfo: () => v2Services,
-      });
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('marketing', true, 'explicit'),
+        ]),
+      );
 
       await createUsercentricsSource(mockWindow, mockElb, {
         settings: { apiVersion: 'auto' },
@@ -515,21 +531,17 @@ describe('Usercentrics Source', () => {
       });
     });
 
-    test('auto + only V2 present: V2 fires via event (static read suppressed by explicitOnly)', async () => {
+    test('auto + only V2 present (explicit history): static read publishes the returning visitor', async () => {
       const mockWindow = createMockWindow();
-      const v2Services: UsercentricsV2Service[] = [
-        { categorySlug: 'essential', consent: { status: true } },
-        { categorySlug: 'marketing', consent: { status: false } },
-      ];
-      withUcUi(mockWindow, {
-        isInitialized: () => true,
-        getServicesBaseInfo: () => v2Services,
-      });
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('marketing', false, 'explicit'),
+        ]),
+      );
 
       await createUsercentricsSource(mockWindow, mockElb, {
-        // Default explicitOnly=true would drop the implicit static read.
-        // Use false here to prove the V2 static read still flows end-to-end.
-        settings: { apiVersion: 'auto', explicitOnly: false },
+        settings: { apiVersion: 'auto' },
       });
       await flushPromises();
 
@@ -538,6 +550,23 @@ describe('Usercentrics Source', () => {
         essential: true,
         marketing: false,
       });
+    });
+
+    test('auto + only V2 present (implicit-only history): first visit does NOT publish', async () => {
+      const mockWindow = createMockWindow();
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'implicit'),
+          makeV2Service('marketing', false, 'implicit'),
+        ]),
+      );
+
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: { apiVersion: 'auto' },
+      });
+      await flushPromises();
+
+      expect(consentCalls).toHaveLength(0);
     });
 
     test('auto + neither present: both listeners registered', async () => {
@@ -551,33 +580,25 @@ describe('Usercentrics Source', () => {
       // Nothing fired yet — no static state on either API.
       expect(consentCalls).toHaveLength(0);
 
-      // V2 event fires.
-      mockWindow.__dispatchEvent('ucEvent', {
-        event: 'consent_status',
-        type: 'explicit',
-        ucCategory: { essential: true, marketing: false },
-      });
+      // Both adapter event buses are wired.
+      expect(mockWindow.addEventListener).toHaveBeenCalledWith(
+        'UC_UI_INITIALIZED',
+        expect.any(Function),
+      );
+      expect(mockWindow.addEventListener).toHaveBeenCalledWith(
+        'UC_UI_CMP_EVENT',
+        expect.any(Function),
+      );
+
+      // V2 API now becomes available with an explicit decision; the
+      // UC_UI_INITIALIZED lifecycle event drives the V2 static read.
+      mockWindow.__setUcUi(
+        makeUcUi([makeV2Service('essential', true, 'explicit')]),
+      );
+      mockWindow.__dispatchInitialized();
+
       expect(consentCalls).toHaveLength(1);
-
-      // Now V3 API becomes available and dispatches its event.
-      const v3Details: UsercentricsV3ConsentDetails = {
-        consent: buildConsentData({ type: 'EXPLICIT' }),
-        categories: {
-          essential: buildCategory('ALL_ACCEPTED', 'Essential'),
-        },
-      };
-      withUcCmp(mockWindow, {
-        isInitialized: jest.fn().mockResolvedValue(true),
-        getConsentDetails: jest.fn().mockResolvedValue(v3Details),
-      });
-      dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
-        source: 'CMP',
-        type: 'ACCEPT_ALL',
-      });
-      await flushPromises();
-
-      expect(consentCalls).toHaveLength(2);
-      expect(consentCalls[1].consent).toEqual({ essential: true });
+      expect(consentCalls[0].consent).toEqual({ essential: true });
     });
 
     test('apiVersion=v2 + only V3 present: V3 is ignored, V2 listener still works', async () => {
@@ -597,12 +618,15 @@ describe('Usercentrics Source', () => {
       expect(getConsentDetails).not.toHaveBeenCalled();
       expect(consentCalls).toHaveLength(0);
 
-      // V2 listener is active — dispatching ucEvent reaches it.
-      mockWindow.__dispatchEvent('ucEvent', {
-        event: 'consent_status',
-        type: 'explicit',
-        ucCategory: { essential: true, marketing: false },
-      });
+      // V2 API becomes available; a decision event drives the V2 read.
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('marketing', false, 'explicit'),
+        ]),
+      );
+      mockWindow.__dispatchCmpEvent({ source: 'button', type: 'ACCEPT_ALL' });
+
       expect(consentCalls).toHaveLength(1);
       expect(consentCalls[0].consent).toEqual({
         essential: true,
@@ -613,12 +637,13 @@ describe('Usercentrics Source', () => {
     test('apiVersion=v3 + only V2 present: V2 is ignored, V3 listener still works', async () => {
       const mockWindow = createMockWindow();
       const getServicesBaseInfo = jest.fn((): UsercentricsV2Service[] => [
-        { categorySlug: 'essential', consent: { status: true } },
+        makeV2Service('essential', true, 'explicit'),
       ]);
-      withUcUi(mockWindow, {
+      const ucUi: UsercentricsV2Api = {
         isInitialized: () => true,
         getServicesBaseInfo,
-      });
+      };
+      mockWindow.__setUcUi(ucUi);
 
       await createUsercentricsSource(mockWindow, mockElb, {
         settings: { apiVersion: 'v3' },
@@ -640,10 +665,7 @@ describe('Usercentrics Source', () => {
         isInitialized: jest.fn().mockResolvedValue(true),
         getConsentDetails: jest.fn().mockResolvedValue(v3Details),
       });
-      dispatchV3Event(mockWindow, 'UC_UI_CMP_EVENT', {
-        source: 'CMP',
-        type: 'ACCEPT_ALL',
-      });
+      mockWindow.__dispatchCmpEvent({ source: 'button', type: 'ACCEPT_ALL' });
       await flushPromises();
 
       expect(consentCalls).toHaveLength(1);
@@ -654,17 +676,15 @@ describe('Usercentrics Source', () => {
   describe('factory side-effect-free (init hygiene)', () => {
     test('factory attaches no listener and emits no consent until init() runs', async () => {
       const mockWindow = createMockWindow();
-      // V2 already initialized: a static read WOULD emit if the factory did it.
-      (mockWindow as unknown as { UC_UI: UsercentricsV2Api }).UC_UI = {
-        isInitialized: () => true,
-        getServicesBaseInfo: (): UsercentricsV2Service[] => [
-          { categorySlug: 'essential', consent: { status: true } },
-        ],
-      };
+      // V2 already initialized with an explicit decision: a static read WOULD
+      // emit if the factory did it.
+      mockWindow.__setUcUi(
+        makeUcUi([makeV2Service('essential', true, 'explicit')]),
+      );
 
       const source = await sourceUsercentrics({
         collector: {} as never,
-        config: { settings: { apiVersion: 'v2', explicitOnly: false } },
+        config: { settings: { apiVersion: 'v2' } },
         env: {
           push: mockElb,
           command: mockElb,
@@ -681,11 +701,11 @@ describe('Usercentrics Source', () => {
       expect(mockWindow.addEventListener).not.toHaveBeenCalled();
       expect(consentCalls).toHaveLength(0);
 
-      // init() (Pass 2) performs the adapter setup: listener + static read emit.
+      // init() (Pass 2) performs the adapter setup: listeners + static read emit.
       await source.init?.();
 
       expect(mockWindow.addEventListener).toHaveBeenCalledWith(
-        'ucEvent',
+        'UC_UI_INITIALIZED',
         expect.any(Function),
       );
       expect(consentCalls).toHaveLength(1);
@@ -702,34 +722,10 @@ describe('Usercentrics Source', () => {
           command: mockElb,
           elb: mockElb,
           window: undefined,
-          logger: {
-            error: () => {},
-            warn: () => {},
-            info: () => {},
-            debug: () => {},
-            json: () => {},
-            throw: (m: string | Error) => {
-              throw typeof m === 'string' ? new Error(m) : m;
-            },
-            scope: function () {
-              return this;
-            },
-          },
+          logger: createMockLogger(),
         },
         id: 'test-usercentrics',
-        logger: {
-          error: () => {},
-          warn: () => {},
-          info: () => {},
-          debug: () => {},
-          json: () => {},
-          throw: (m: string | Error) => {
-            throw typeof m === 'string' ? new Error(m) : m;
-          },
-          scope: function () {
-            return this;
-          },
-        },
+        logger: createMockLogger(),
         withScope: async (_r, _resp, body) => body({} as never),
       });
 

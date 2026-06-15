@@ -90,18 +90,27 @@ export async function setupV3Adapter(
   const listener = (event: Event): void => {
     const cmp = win.__ucCmp;
     if (!cmp) return;
-    const custom = event as CustomEvent<UsercentricsV3CmpEventDetail>;
-    const detail = custom.detail;
+    const detail = (event as CustomEvent<UsercentricsV3CmpEventDetail>).detail;
     // Filter to decision events only: the CMP emits a broad set of events
     // (CMP_SHOWN, UI_INITIALIZED, VIEW_CHANGED, …) on this bus. Without
-    // filtering, every view toggle would re-publish consent.
-    if (!detail || detail.source !== 'CMP') return;
-    if (!detail.type || !V3_DECISION_TYPES.has(detail.type)) return;
+    // filtering, every view toggle would re-publish consent. The decision
+    // `type` is the only reliable signal; `detail.source` is one of
+    // none|button|first|second|embeddings|__ucCmp and must NOT be gated on.
+    if (!detail?.type || !V3_DECISION_TYPES.has(detail.type)) return;
     publishConsent(cmp).catch(() => {
       // Swallow — a failed V3 fetch should not break the page.
     });
   };
   win.addEventListener(eventName, listener);
+
+  // When the source loads BEFORE __ucCmp, no UC_UI_CMP_EVENT fires for a
+  // choice made in a prior session. UC_UI_INITIALIZED signals the CMP is ready,
+  // so perform the static read then to publish any already-made decision.
+  const onInitialized = (): void => {
+    const cmp = win.__ucCmp;
+    if (cmp) publishConsent(cmp).catch(() => {});
+  };
+  win.addEventListener('UC_UI_INITIALIZED', onInitialized);
 
   // Static check: if __ucCmp is already initialized, fetch now.
   // Wrapped in try/catch so transient API failures during setup don't
@@ -121,5 +130,6 @@ export async function setupV3Adapter(
 
   return () => {
     win.removeEventListener(eventName, listener);
+    win.removeEventListener('UC_UI_INITIALIZED', onInitialized);
   };
 }
