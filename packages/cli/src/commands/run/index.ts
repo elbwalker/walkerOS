@@ -9,8 +9,10 @@ import path from 'path';
 import { writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
+import { Level } from '@walkeros/core';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { createTimer, getErrorMessage } from '../../core/index.js';
+import { ErrorRing, LogRing } from '../../runtime/index.js';
 import { getTmpPath } from '../../core/tmp.js';
 import { resolveAppUrl } from '../../lib/config-file.js';
 import { resolveRunToken } from '../../core/auth.js';
@@ -45,7 +47,23 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   const timer = createTimer();
   timer.start();
 
-  const logger = createCLILogger(options);
+  const errorRing = new ErrorRing(20);
+  const logRing = new LogRing(100);
+
+  const LEVEL_NAME = {
+    [Level.ERROR]: 'error',
+    [Level.WARN]: 'warn',
+    [Level.INFO]: 'info',
+    [Level.DEBUG]: 'debug',
+  } as const;
+
+  const logger = createCLILogger({
+    ...options,
+    onLine: (level, message) => {
+      if (level === Level.ERROR) errorRing.add(message);
+      logRing.add({ time: Date.now(), level: LEVEL_NAME[level], message });
+    },
+  });
 
   try {
     // Opt-in dotenv: load BEFORE config resolution/bundling so $env/$secret
@@ -137,6 +155,8 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       logger: logger.scope('runner'),
       loggerConfig: options.verbose ? { level: 0 } : undefined,
       api: apiConfig,
+      errorRing,
+      logRing,
     });
   } catch (error) {
     const duration = timer.getElapsed() / 1000;

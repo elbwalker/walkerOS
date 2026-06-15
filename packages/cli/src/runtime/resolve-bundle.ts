@@ -85,8 +85,9 @@ function writeBundleToDisk(writePath: string, content: string): void {
 /**
  * Perform the HTTP request and return the Response.
  *
- * fetchWithRetry bounds each attempt with a 30s timeout (NOT applied to body
- * streaming downstream) and retries transient failures (timeouts, connection
+ * fetchWithRetry bounds each attempt with a 30s timeout that is cleared once
+ * the response headers arrive, so it never aborts body streaming downstream,
+ * and retries transient failures (timeouts, connection
  * errors, 5xx, 429) so a brief control-plane blip during cold start no longer
  * hard-fails the boot. A non-retryable status (e.g. a 404) comes back as a
  * Response and is turned into the precise error below.
@@ -128,7 +129,8 @@ async function fetchTextToDisk(
  * extract itself is deliberately left unbounded. A multi-MB node_modules on a
  * cold container can take longer than 30s to unpack, and no abort signal is
  * wired into this pipe, so the body stream runs to completion regardless of
- * the header timeout that already fired and settled.
+ * the per-request timeout, which fetchWithRetry clears once the response
+ * headers arrive.
  */
 async function extractToDir(
   source: Readable,

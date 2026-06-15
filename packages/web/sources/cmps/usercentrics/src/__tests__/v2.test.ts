@@ -210,6 +210,25 @@ describe('setupV2Adapter (official events)', () => {
     cleanup();
   });
 
+  test('publishes when isInitialized is absent but getServicesBaseInfo is available', () => {
+    // Every V2 API method is optional; a deployment may expose
+    // getServicesBaseInfo without isInitialized. Consent must still publish
+    // rather than be silently suppressed by an absent optional method.
+    const mockWindow = createMockWindow();
+    mockWindow.__setUcUi(
+      makeUcUi([makeV2Service('marketing', true, 'explicit')], {
+        isInitialized: undefined,
+      }),
+    );
+
+    const cleanup = run(mockWindow);
+
+    expect(mockElb).toHaveBeenCalledWith('walker consent', { marketing: true });
+    expect(mockElb).toHaveBeenCalledTimes(1);
+
+    cleanup();
+  });
+
   test('static read at init (already initialized) with explicit history publishes the made choice', () => {
     const mockWindow = createMockWindow();
     mockWindow.__setUcUi(

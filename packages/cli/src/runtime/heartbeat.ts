@@ -2,6 +2,8 @@ import { randomBytes } from 'crypto';
 import { VERSION } from '../version.js';
 import { mergeAuthHeaders } from '../core/http.js';
 import type { Collector, Logger } from '@walkeros/core';
+import type { DedupedError, RingEntry } from './log-ring.js';
+import { redactErrors, redactLogs } from './redact.js';
 
 export interface CounterPayload {
   eventsIn: number;
@@ -87,6 +89,8 @@ export interface HeartbeatConfig {
   configVersion?: string;
   intervalMs: number;
   getCounters?: () => Collector.Status | undefined;
+  getErrors?: () => DedupedError[];
+  getLogs?: () => RingEntry[];
 }
 
 export interface HeartbeatHandle {
@@ -127,6 +131,11 @@ export function createHeartbeat(
         counters = computeCounterDelta(current, lastReported);
       }
 
+      const errors = config.getErrors ? redactErrors(config.getErrors()) : [];
+      const logs = config.getLogs
+        ? redactLogs(config.getLogs().slice(-50))
+        : [];
+
       const response = await fetch(
         `${config.appUrl}/api/projects/${config.projectId}/runners/heartbeat`,
         {
@@ -144,6 +153,8 @@ export function createHeartbeat(
             cliVersion: VERSION,
             uptime: Math.floor((Date.now() - startTime) / 1000),
             ...(counters && { counters }),
+            ...(errors.length && { recentErrors: errors }),
+            ...(logs.length && { recentLogs: logs }),
           }),
           signal: AbortSignal.timeout(10_000),
         },

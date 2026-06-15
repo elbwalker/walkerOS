@@ -45,6 +45,7 @@ import {
   SecretsHttpError,
 } from '../../runtime/secrets-fetcher.js';
 import { writeCache } from '../../runtime/cache.js';
+import type { ErrorRing, LogRing } from '../../runtime/index.js';
 import { VERSION } from '../../version.js';
 
 export interface PipelineOptions {
@@ -52,6 +53,8 @@ export interface PipelineOptions {
   port: number;
   logger: Logger.Instance;
   loggerConfig?: Logger.Config;
+  errorRing?: ErrorRing;
+  logRing?: LogRing;
   api?: {
     appUrl: string;
     token: string;
@@ -183,6 +186,8 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
         configVersion,
         intervalMs: api.heartbeatIntervalMs,
         getCounters: () => handle.collector.status,
+        getErrors: () => options.errorRing?.snapshot() ?? [],
+        getLogs: () => options.logRing?.snapshot() ?? [],
       },
       logger,
     );

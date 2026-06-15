@@ -6037,7 +6037,6 @@ export interface paths {
           };
           content: {
             'text/event-stream': components['schemas']['DeploymentStreamStatusEvent'];
-            'application/json': components['schemas']['DeploymentStreamStatusEvent'];
           };
         };
         /** @description Unauthorized */
@@ -8172,6 +8171,21 @@ export interface components {
       currentVersion: components['schemas']['DeploymentVersionDetail'];
       versions: components['schemas']['DeploymentVersionHistoryEntry'][];
       error: components['schemas']['DeploymentError'];
+      recentErrors?:
+        | {
+            message: string;
+            count: number;
+            firstSeen: string;
+            lastSeen: string;
+          }[]
+        | null;
+      recentLogs?:
+        | {
+            time: string;
+            level: string;
+            message: string;
+          }[]
+        | null;
       url: string | null;
       selfHosted: {
         /** Format: date-time */
@@ -9480,6 +9494,21 @@ export interface components {
           };
         };
       };
+      recentErrors?: {
+        message: string;
+        count: number;
+        /** Format: date-time */
+        firstSeen: string;
+        /** Format: date-time */
+        lastSeen: string;
+      }[];
+      recentLogs?: {
+        /** Format: date-time */
+        time: string;
+        /** @enum {string} */
+        level: 'error' | 'warn' | 'info' | 'debug';
+        message: string;
+      }[];
     };
   };
   responses: never;

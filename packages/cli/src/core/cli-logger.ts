@@ -8,6 +8,7 @@ export interface CLILoggerOptions {
   silent?: boolean;
   json?: boolean;
   stderr?: boolean;
+  onLine?: (level: Level, message: string) => void;
 }
 
 /**
@@ -41,6 +42,14 @@ export function createCLILogger(
       // Build formatted message
       const scopePath = scope.length > 0 ? `[${scope.join(':')}] ` : '';
       const fullMessage = `${scopePath}${message}`;
+
+      // Tap every line before any early return so no level is dropped from capture.
+      try {
+        options.onLine?.(level, fullMessage);
+      } catch {
+        // Swallow: a throwing consumer must never break logging (and we must
+        // not call logger methods here to avoid infinite recursion).
+      }
 
       // ERROR: always shown unless json mode
       if (level === Level.ERROR) {

@@ -95,7 +95,11 @@ export function setupV2Adapter(ctx: V2AdapterContext): () => void {
 
   const read = (): void => {
     const api = win.UC_UI;
-    if (!api?.isInitialized?.() || !api.getServicesBaseInfo) return;
+    if (!api?.getServicesBaseInfo) return;
+    // isInitialized is optional on the V2 API; only honor it when present.
+    // Hard-gating on it would suppress all consent on deployments that expose
+    // getServicesBaseInfo without isInitialized.
+    if (api.isInitialized && !api.isInitialized()) return;
     const services = api.getServicesBaseInfo();
     if (!services.length) return;
     const detail = buildDetailFromServices(services);

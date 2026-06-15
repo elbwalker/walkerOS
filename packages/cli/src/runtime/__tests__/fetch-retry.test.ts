@@ -219,7 +219,10 @@ describe('fetchWithRetry', () => {
     // perAttemptTimeoutMs (30s) far exceeds maxTotalMs (5s): the first attempt's
     // timeout must be clamped to the remaining 5s so a single attempt cannot
     // overrun the total budget.
-    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout');
+    // The per-attempt timeout is scheduled with
+    // setTimeout(() => controller.abort(), attemptTimeoutMs) and cleared once
+    // fetch resolves, so assert on the scheduled delay.
+    const setTimeoutSpy = jest.spyOn(globalThis, 'setTimeout');
     try {
       mockFetch.mockResolvedValueOnce(new Response('ok', { status: 200 }));
 
@@ -230,10 +233,12 @@ describe('fetchWithRetry', () => {
         }),
       );
 
-      expect(timeoutSpy).toHaveBeenCalledTimes(1);
-      expect(timeoutSpy).toHaveBeenCalledWith(5_000);
+      // Success on the first try schedules only the attempt-timeout timer (no
+      // backoff sleep), clamped to the 5s budget.
+      const delays = setTimeoutSpy.mock.calls.map((call) => call[1]);
+      expect(delays).toEqual([5_000]);
     } finally {
-      timeoutSpy.mockRestore();
+      setTimeoutSpy.mockRestore();
     }
   });
 
@@ -241,7 +246,7 @@ describe('fetchWithRetry', () => {
     // After a failed attempt and ~2000ms backoff, the next attempt's timeout
     // must be clamped to the budget remaining (~3000ms of the 5000ms cap), not
     // the full perAttemptTimeoutMs.
-    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout');
+    const setTimeoutSpy = jest.spyOn(globalThis, 'setTimeout');
     try {
       mockFetch
         .mockRejectedValueOnce(timeoutError())
@@ -254,15 +259,16 @@ describe('fetchWithRetry', () => {
         }),
       );
 
-      // Attempt 1 clamped to the full 5000ms budget; attempt 2 clamped to what
-      // remains after the ~2000ms (±20%) backoff has elapsed.
-      const calls = timeoutSpy.mock.calls.map((call) => call[0]);
-      expect(calls).toHaveLength(2);
-      expect(calls[0]).toBe(5_000);
-      expect(calls[1]).toBeLessThan(5_000);
-      expect(calls[1]).toBeGreaterThan(0);
+      // Scheduled timers in order: attempt-1 timeout, the backoff sleep, then
+      // attempt-2 timeout. Attempt 1 is clamped to the full 5000ms budget;
+      // attempt 2 is clamped to what remains after the ~2000ms (±20%) backoff.
+      const delays = setTimeoutSpy.mock.calls.map((call) => call[1]);
+      expect(delays).toHaveLength(3);
+      expect(delays[0]).toBe(5_000);
+      expect(delays[2]).toBeLessThan(5_000);
+      expect(delays[2]).toBeGreaterThan(0);
     } finally {
-      timeoutSpy.mockRestore();
+      setTimeoutSpy.mockRestore();
     }
   });
 });

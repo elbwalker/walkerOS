@@ -30,7 +30,9 @@ void (null as unknown as _CheckCacheReturnsPromise);
 // fields that belong only to the other variant. `update` is event-only; a
 // StoreCacheRule carrying it must fail the build.
 const _eventOk: Cache<EventCacheRule> = {
-  rules: [{ key: ['event.id'], ttl: 60 }],
+  // `update` is event-only; assert EventCacheRule accepts it so this file also
+  // fails the build if the field is ever dropped from EventCacheRule.
+  rules: [{ key: ['event.id'], ttl: 60, update: { foo: 'bar' } }],
 };
 void _eventOk;
 

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -1342,6 +1342,45 @@
           },
           "error": {
             "$ref": "#/components/schemas/DeploymentError"
+          },
+          "recentErrors": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "firstSeen": {
+                  "type": "string"
+                },
+                "lastSeen": {
+                  "type": "string"
+                }
+              },
+              "required": ["message", "count", "firstSeen", "lastSeen"]
+            }
+          },
+          "recentLogs": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "string"
+                },
+                "level": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["time", "level", "message"]
+            }
           },
           "url": {
             "type": ["string", "null"]
@@ -4967,6 +5006,54 @@
               "eventsFailed",
               "destinations"
             ]
+          },
+          "recentErrors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "firstSeen": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lastSeen": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": ["message", "count", "firstSeen", "lastSeen"]
+            },
+            "maxItems": 50
+          },
+          "recentLogs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "level": {
+                  "type": "string",
+                  "enum": ["error", "warn", "info", "debug"]
+                },
+                "message": {
+                  "type": "string",
+                  "maxLength": 256
+                }
+              },
+              "required": ["time", "level", "message"]
+            },
+            "maxItems": 100
           }
         },
         "required": ["instanceId", "flowId"]
@@ -11550,11 +11637,6 @@
             "description": "SSE stream; `status` event payload shape documented here.",
             "content": {
               "text/event-stream": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeploymentStreamStatusEvent"
-                }
-              },
-              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeploymentStreamStatusEvent"
                 }

@@ -181,10 +181,21 @@ export async function fetchWithRetry(
     let reason: TransientReason;
 
     try {
-      const response = await fetch(url, {
-        ...init,
-        signal: AbortSignal.timeout(attemptTimeoutMs),
-      });
+      // Bound only the request phase. Clear the per-attempt timer the moment
+      // fetch resolves (headers received) or throws, so the timeout can never
+      // abort downstream body consumption (response.text() / stream piping),
+      // which runs outside this retry loop and would otherwise fail unretried.
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), attemptTimeoutMs);
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          ...init,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       // Non-retryable status (success or deterministic 4xx) → hand back.
       if (!isTransientStatus(response.status)) return response;

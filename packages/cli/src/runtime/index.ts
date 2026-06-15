@@ -28,3 +28,12 @@ export {
 export { createPoller, type PollerConfig, type PollerHandle } from './poller';
 export { createHealthServer, type HealthServer } from './health-server';
 export { fetchSecrets, SecretsHttpError } from './secrets-fetcher';
+export {
+  LogRing,
+  ErrorRing,
+  type RingEntry,
+  type DedupedError,
+  type RecentError,
+  type RecentLogEntry,
+} from './log-ring';
+export { redactLine, redactErrors, redactLogs } from './redact';
