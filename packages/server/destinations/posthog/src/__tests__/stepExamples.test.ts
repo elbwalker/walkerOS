@@ -7,6 +7,7 @@ jest.mock('posthog-node', () => ({
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
+import type { PostHogStepExample } from '../examples/step';
 import type { Env, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
@@ -63,54 +64,52 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('posthog server destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
-    const example = rawExample as {
-      in?: unknown;
-      mapping?: unknown;
-      out?: unknown;
-      command?: 'consent' | 'user' | 'config' | 'run';
-      settings?: Partial<Settings>;
-      configInclude?: string[];
-    };
+  it.each<[string, PostHogStepExample]>(Object.entries(examples.step))(
+    '%s',
+    async (name, example) => {
+      const { env, collected } = spyEnv();
 
-    const { env, collected } = spyEnv();
+      const dest = jest.requireActual('../').default;
+      const { elb } = await startFlow();
 
-    const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow();
+      const baseSettings: Partial<Settings> & { apiKey: string } = {
+        apiKey: 'phc_test',
+        ...(example.settings || {}),
+      };
 
-    const baseSettings: Partial<Settings> & { apiKey: string } = {
-      apiKey: 'phc_test',
-      ...(example.settings || {}),
-    };
+      if (example.command === 'consent') {
+        await elb('walker destination', {
+          code: { ...dest, env },
+          config: {
+            consent: { analytics: true },
+            include: example.configInclude,
+            settings: baseSettings,
+          },
+        });
+        // Grant first when the example declares it, so the gated destination is
+        // loaded before the consent under test (it never loads under denial).
+        // Both the grant and the consent-under-test effects are asserted.
+        if (example.before) await elb('walker consent', example.before);
+        await elb('walker consent', example.in as WalkerOS.Consent);
+      } else {
+        const event = example.in as WalkerOS.Event;
+        const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+        const mappingConfig = mapping
+          ? { [event.entity]: { [event.action]: mapping } }
+          : undefined;
 
-    if (example.command === 'consent') {
-      await elb('walker destination', {
-        code: { ...dest, env },
-        config: {
-          consent: { analytics: true },
-          include: example.configInclude,
-          settings: baseSettings,
-        },
-      });
-      await elb('walker consent', example.in as WalkerOS.Consent);
-    } else {
-      const event = example.in as WalkerOS.Event;
-      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-      const mappingConfig = mapping
-        ? { [event.entity]: { [event.action]: mapping } }
-        : undefined;
+        await elb('walker destination', {
+          code: { ...dest, env },
+          config: {
+            include: example.configInclude,
+            settings: baseSettings,
+            mapping: mappingConfig,
+          },
+        });
+        await elb(event);
+      }
 
-      await elb('walker destination', {
-        code: { ...dest, env },
-        config: {
-          include: example.configInclude,
-          settings: baseSettings,
-          mapping: mappingConfig,
-        },
-      });
-      await elb(event);
-    }
-
-    expect(collected()).toEqual(example.out);
-  });
+      expect(collected()).toEqual(example.out);
+    },
+  );
 });

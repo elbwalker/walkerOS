@@ -2,6 +2,7 @@ import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
+import type { HeapStepExample } from '../examples/step';
 import type { Env, HeapSDK, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
@@ -40,62 +41,56 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('heap destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, rawExample) => {
-    const example = rawExample as {
-      in?: unknown;
-      mapping?: unknown;
-      out?: ReadonlyArray<CallRecord>;
-      command?: 'consent' | 'user' | 'config' | 'run';
-      settings?: Partial<Settings>;
-      before?: WalkerOS.Consent;
-    };
+  it.each<[string, HeapStepExample]>(Object.entries(examples.step))(
+    '%s',
+    async (name, example) => {
+      const env = clone(examples.env.push) as Env;
+      const { env: spiedEnv, collected } = spyEnv(env);
 
-    const env = clone(examples.env.push) as Env;
-    const { env: spiedEnv, collected } = spyEnv(env);
+      const dest = jest.requireActual('../').default;
+      const { elb } = await startFlow();
 
-    const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow();
+      const baseSettings: Partial<Settings> & { appId: string } = {
+        appId: 'test-app-id',
+        ...(example.settings || {}),
+      };
 
-    const baseSettings: Partial<Settings> & { appId: string } = {
-      appId: 'test-app-id',
-      ...(example.settings || {}),
-    };
+      if (example.command === 'consent') {
+        // Consent examples: declare the consent key on the destination so
+        // on() knows what to check, then fire walker consent.
+        await elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            consent: { analytics: true },
+            settings: baseSettings,
+          },
+        });
+        // Grant first when the example declares it, so the gated destination is
+        // loaded before the consent under test (it never loads under denial).
+        // Both the grant and the consent-under-test effects are asserted.
+        if (example.before) await elb('walker consent', example.before);
+        await elb('walker consent', example.in as WalkerOS.Consent);
+      } else {
+        const event = example.in as WalkerOS.Event;
+        const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+        const mappingConfig = mapping
+          ? { [event.entity]: { [event.action]: mapping } }
+          : undefined;
 
-    if (example.command === 'consent') {
-      // Consent examples: declare the consent key on the destination so
-      // on() knows what to check, then fire walker consent.
-      await elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          consent: { analytics: true },
-          settings: baseSettings,
-        },
-      });
-      // Load the gated destination under a prior grant first when the example
-      // declares one, so a revoke acts on an already-granted destination.
-      if (example.before)
-        await elb('walker consent', example.before as WalkerOS.Consent);
-      await elb('walker consent', example.in as WalkerOS.Consent);
-    } else {
-      const event = example.in as WalkerOS.Event;
-      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-      const mappingConfig = mapping
-        ? { [event.entity]: { [event.action]: mapping } }
-        : undefined;
+        await elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            settings: baseSettings,
+            mapping: mappingConfig,
+          },
+        });
+        await elb(event);
+      }
 
-      await elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          settings: baseSettings,
-          mapping: mappingConfig,
-        },
-      });
-      await elb(event);
-    }
-
-    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    // Filter init-time load() call.
-    const actual = collected().filter(([path]) => path !== 'heap.load');
-    expect(actual).toEqual(expected);
-  });
+      const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+      // Filter init-time load() call.
+      const actual = collected().filter(([path]) => path !== 'heap.load');
+      expect(actual).toEqual(expected);
+    },
+  );
 });

@@ -11,6 +11,7 @@ import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
+import type { PostHogStepExample } from '../examples/step';
 import type { Env, PostHogSDK, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
@@ -70,61 +71,59 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('posthog destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, rawExample) => {
-    const example = rawExample as {
-      in?: unknown;
-      mapping?: unknown;
-      out?: ReadonlyArray<CallRecord>;
-      command?: 'consent' | 'user' | 'config' | 'run';
-      settings?: Partial<Settings>;
-      configInclude?: string[];
-    };
+  it.each<[string, PostHogStepExample]>(Object.entries(examples.step))(
+    '%s',
+    async (name, example) => {
+      const env = clone(examples.env.push) as Env;
+      const { env: spiedEnv, collected } = spyEnv(env);
 
-    const env = clone(examples.env.push) as Env;
-    const { env: spiedEnv, collected } = spyEnv(env);
+      const dest = jest.requireActual('../').default;
+      const { elb } = await startFlow();
 
-    const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow();
+      const baseSettings: Partial<Settings> & { apiKey: string } = {
+        apiKey: 'phc_test',
+        ...(example.settings || {}),
+      };
 
-    const baseSettings: Partial<Settings> & { apiKey: string } = {
-      apiKey: 'phc_test',
-      ...(example.settings || {}),
-    };
+      if (example.command === 'consent') {
+        // Consent examples need config.consent declared so the destination's
+        // on() handler knows which walkerOS consent key to check.
+        elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            consent: { analytics: true },
+            include: example.configInclude,
+            settings: baseSettings,
+          },
+        });
+        // Load the gated destination under a prior grant first when the example
+        // declares one, so a revoke acts on an already-granted destination. The
+        // pre-grant's calls are dropped so only the example's consent is asserted.
+        if (example.before) await elb('walker consent', example.before);
+        await elb('walker consent', example.in as WalkerOS.Consent);
+      } else {
+        const event = example.in as WalkerOS.Event;
+        const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+        const mappingConfig = mapping
+          ? { [event.entity]: { [event.action]: mapping } }
+          : undefined;
 
-    if (example.command === 'consent') {
-      // Consent examples need config.consent declared so the destination's
-      // on() handler knows which walkerOS consent key to check.
-      elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          consent: { analytics: true },
-          include: example.configInclude,
-          settings: baseSettings,
-        },
-      });
-      await elb('walker consent', example.in as WalkerOS.Consent);
-    } else {
-      const event = example.in as WalkerOS.Event;
-      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-      const mappingConfig = mapping
-        ? { [event.entity]: { [event.action]: mapping } }
-        : undefined;
+        elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            include: example.configInclude,
+            settings: baseSettings,
+            mapping: mappingConfig,
+          },
+        });
+        await elb(event);
+      }
 
-      elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          include: example.configInclude,
-          settings: baseSettings,
-          mapping: mappingConfig,
-        },
-      });
-      await elb(event);
-    }
+      // Drop init — every example triggers init once; it's not part of `out`.
+      const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+      const actual = collected().filter(([path]) => path !== 'posthog.init');
 
-    // Drop init — every example triggers init once; it's not part of `out`.
-    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    const actual = collected().filter(([path]) => path !== 'posthog.init');
-
-    expect(actual).toEqual(expected);
-  });
+      expect(actual).toEqual(expected);
+    },
+  );
 });

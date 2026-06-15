@@ -10,6 +10,8 @@ import type { Settings } from '../types';
 export type PostHogStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
   configInclude?: string[];
+  /** Consent granted before `in` so a gated destination is loaded first. */
+  before?: WalkerOS.Consent;
 };
 
 /**
@@ -340,9 +342,10 @@ export const consentRevokeOptOut: PostHogStepExample = {
   description:
     'A walker consent command with analytics denied calls posthog.opt_out_capturing to stop capture and replay.',
   command: 'consent',
+  before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: [['posthog.opt_out_capturing']],
+  out: [['posthog.opt_in_capturing'], ['posthog.opt_out_capturing']],
 };
 
 /**

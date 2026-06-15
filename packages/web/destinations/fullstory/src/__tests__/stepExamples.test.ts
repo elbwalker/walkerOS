@@ -10,6 +10,7 @@ import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
+import type { FullStoryStepExample } from '../examples/step';
 import type { Env, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
@@ -47,80 +48,66 @@ function spyEnv(env: Env): {
 }
 
 describe('fullstory destination -- step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, rawExample) => {
-    const example = rawExample as {
-      in?: unknown;
-      mapping?: unknown;
-      out?: ReadonlyArray<CallRecord>;
-      command?: 'consent' | 'user' | 'config' | 'run';
-      settings?: Partial<Settings>;
-    };
+  it.each<[string, FullStoryStepExample]>(Object.entries(examples.step))(
+    '%s',
+    async (name, example) => {
+      const env = clone(examples.env.push) as Env;
+      const { env: spiedEnv, collected } = spyEnv(env);
 
-    const env = clone(examples.env.push) as Env;
-    const { env: spiedEnv, collected } = spyEnv(env);
+      const dest = jest.requireActual('../').default;
+      const { elb } = await startFlow();
 
-    const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow();
+      const baseSettings: Partial<Settings> & { orgId: string } = {
+        orgId: 'o-TEST-na1',
+        ...(example.settings || {}),
+      };
 
-    const baseSettings: Partial<Settings> & { orgId: string } = {
-      orgId: 'o-TEST-na1',
-      ...(example.settings || {}),
-    };
+      if (example.command === 'consent') {
+        // Declare the example's consent key(s) on the destination so the
+        // collector gates its load: under consent gating a destination is
+        // never initialized while its required consent is denied, and
+        // on('consent') knows what to check.
+        const requiredConsent: WalkerOS.Consent = {};
+        for (const key of Object.keys({
+          ...(example.before ?? {}),
+          ...((example.in as WalkerOS.Consent) ?? {}),
+        })) {
+          requiredConsent[key] = true;
+        }
+        await elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            consent: requiredConsent,
+            settings: baseSettings,
+          },
+        });
+        // Grant first when the example declares it, so the gated destination is
+        // loaded before the consent under test (it never loads under denial).
+        // Both the grant and the consent-under-test effects are asserted.
+        if (example.before) await elb('walker consent', example.before);
+        await elb('walker consent', example.in as WalkerOS.Consent);
+      } else {
+        const event = example.in as WalkerOS.Event;
+        const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+        const mappingConfig = mapping
+          ? { [event.entity]: { [event.action]: mapping } }
+          : undefined;
 
-    if (example.command === 'consent') {
-      elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          settings: baseSettings,
-        },
-      });
-      // Trigger init by pushing a priming event before consent so the
-      // destination's env is wired and on('consent') sees the spy env.
-      await elb({
-        entity: 'ping',
-        action: 'init',
-      } as unknown as WalkerOS.PartialEvent);
-      await elb('walker consent', example.in as WalkerOS.Consent);
-    } else {
-      const event = example.in as WalkerOS.Event;
-      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-      const mappingConfig = mapping
-        ? { [event.entity]: { [event.action]: mapping } }
-        : undefined;
-
-      elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          settings: baseSettings,
-          mapping: mappingConfig,
-        },
-      });
-      await elb(event);
-    }
-
-    // Drop init + priming trackEvent calls -- every example triggers init
-    // once, and consent examples push a priming event that fires trackEvent.
-    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    const actual = collected().filter(([path, arg]) => {
-      if (path === 'fullstory.init') return false;
-      if (
-        example.command === 'consent' &&
-        path === 'fullstory.trackEvent' &&
-        isPrimingEvent(arg)
-      ) {
-        return false;
+        elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            settings: baseSettings,
+            mapping: mappingConfig,
+          },
+        });
+        await elb(event);
       }
-      return true;
-    });
 
-    expect(actual).toEqual(expected);
-  });
-});
+      // Drop the init-time call -- every example triggers init once.
+      const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+      const actual = collected().filter(([path]) => path !== 'fullstory.init');
 
-function isPrimingEvent(arg: unknown): boolean {
-  return (
-    typeof arg === 'object' &&
-    arg !== null &&
-    (arg as { name?: unknown }).name === 'ping init'
+      expect(actual).toEqual(expected);
+    },
   );
-}
+});

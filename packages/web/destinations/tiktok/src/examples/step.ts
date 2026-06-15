@@ -10,6 +10,8 @@ import type { Settings } from '../types';
 export type TikTokStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
   configInclude?: string[];
+  /** Consent granted before `in` so a gated destination is loaded first. */
+  before?: WalkerOS.Consent;
 };
 
 /**
@@ -382,7 +384,8 @@ export const consentRevokeDisableCookie: TikTokStepExample = {
   description:
     'A walker consent revoke for marketing calls ttq.disableCookie so TikTok stops using its first-party cookie.',
   command: 'consent',
+  before: { marketing: true },
   in: { marketing: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: [['ttq.disableCookie']],
+  out: [['ttq.enableCookie'], ['ttq.disableCookie']],
 };

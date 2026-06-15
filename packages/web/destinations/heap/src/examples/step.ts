@@ -9,11 +9,7 @@ import type { Settings } from '../types';
  */
 export type HeapStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
-  /**
-   * A consent fired before `in`. Used so a consent-gated destination is loaded
-   * under a prior grant before a revoke is tested (under walkerOS consent
-   * gating a destination is never loaded while its required consent is denied).
-   */
+  /** Consent granted before `in` so a gated destination is loaded first. */
   before?: WalkerOS.Consent;
 };
 
@@ -187,10 +183,10 @@ export const globalEventProperties: HeapStepExample = {
 };
 
 /**
- * Consent revoked - after analytics consent is granted (Heap loads and starts
- * tracking), revoking it calls heap.stopTracking() via the on('consent')
- * handler. The destination is never loaded under denied consent, so the stop
- * is a real revocation of an already-granted destination.
+ * Consent granted then revoked: the destination loads under the grant
+ * (heap.startTracking), and the later revoke calls heap.stopTracking via the
+ * on('consent') handler. A gated destination never loads under denial, so the
+ * stop is a real revocation of an already-granted destination.
  */
 export const consentRevokeStopTracking: HeapStepExample = {
   title: 'Consent revoked',

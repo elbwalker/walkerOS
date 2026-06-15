@@ -10,6 +10,8 @@ import type { Settings } from '../types';
 export type MixpanelStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
   configInclude?: string[];
+  /** Consent granted before `in` so a gated destination is loaded first. */
+  before?: WalkerOS.Consent;
 };
 
 /**
@@ -385,17 +387,21 @@ export const companyUpdateGroupProfile: MixpanelStepExample = {
 };
 
 /**
- * Consent revoked → mixpanel.opt_out_tracking(). The destination checks
- * the consent keys declared in config.consent and toggles opt_out/opt_in.
+ * Consent revoked → mixpanel.opt_out_tracking(). After analytics consent is
+ * granted (Mixpanel loads and opts in), revoking it calls
+ * mixpanel.opt_out_tracking() via the consent handler. The destination is
+ * never loaded under denied consent, so the opt-out is a real revocation of an
+ * already-granted destination.
  */
 export const consentRevokeOptOut: MixpanelStepExample = {
   title: 'Consent revoked',
   description:
     'A walker consent command with analytics denied calls mixpanel.opt_out_tracking to stop event capture.',
   command: 'consent',
+  before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: [['mixpanel.opt_out_tracking']],
+  out: [['mixpanel.opt_in_tracking'], ['mixpanel.opt_out_tracking']],
 };
 
 /**

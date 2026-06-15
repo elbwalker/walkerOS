@@ -10,6 +10,8 @@ import type { Settings } from '../types';
 export type AmplitudeStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
   configInclude?: string[];
+  /** Consent granted before `in` so a gated destination is loaded first. */
+  before?: WalkerOS.Consent;
 };
 
 /**
@@ -389,9 +391,10 @@ export const eventOptionsTimeInsertId: AmplitudeStepExample = {
 };
 
 /**
- * Consent revoked -> amplitude.setOptOut(true). The destination checks
- * the consent keys declared in config.consent and toggles optOut
- * accordingly (strict: all required keys must be granted).
+ * Consent revoked -> amplitude.setOptOut(true). After analytics consent is
+ * granted (the destination loads), revoking it toggles optOut via the
+ * on('consent') handler. The destination is never loaded under denied consent,
+ * so the opt-out is a real revocation of an already-granted destination.
  *
  * Uses the canonical StepExample.command='consent' pattern: the test
  * runner dispatches via elb('walker consent', in) instead of pushing
@@ -400,11 +403,15 @@ export const eventOptionsTimeInsertId: AmplitudeStepExample = {
 export const consentRevokeOptOut: AmplitudeStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent command with analytics denied opts out of Amplitude tracking via setOptOut(true).',
+    'After analytics consent is granted (Amplitude loads), revoking it opts out of tracking via setOptOut(true).',
   command: 'consent',
+  before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: [['amplitude.setOptOut', true]],
+  out: [
+    ['amplitude.setOptOut', false],
+    ['amplitude.setOptOut', true],
+  ],
 };
 
 /**

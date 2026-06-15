@@ -11,6 +11,7 @@ import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
+import type { ClarityStepExample } from '../examples/step';
 import type { Env, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
@@ -42,62 +43,62 @@ function spyEnv(env: Env): {
 }
 
 describe('clarity destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, rawExample) => {
-    const example = rawExample as {
-      in?: unknown;
-      mapping?: unknown;
-      out?: ReadonlyArray<CallRecord>;
-      command?: 'consent' | 'user' | 'config' | 'run';
-      settings?: Partial<Settings>;
-      configInclude?: string[];
-    };
+  it.each<[string, ClarityStepExample]>(Object.entries(examples.step))(
+    '%s',
+    async (name, example) => {
+      const env = clone(examples.env.push) as Env;
+      const { env: spiedEnv, collected } = spyEnv(env);
 
-    const env = clone(examples.env.push) as Env;
-    const { env: spiedEnv, collected } = spyEnv(env);
+      const dest = jest.requireActual('../').default;
+      const { elb } = await startFlow();
 
-    const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow();
+      const baseSettings: Partial<Settings> & { apiKey: string } = {
+        apiKey: 'test-project',
+        ...(example.settings || {}),
+      };
 
-    const baseSettings: Partial<Settings> & { apiKey: string } = {
-      apiKey: 'test-project',
-      ...(example.settings || {}),
-    };
+      if (example.command === 'consent') {
+        // Command examples: route `in` through elb('walker <command>', in)
+        // rather than pushing it as an event. Declare the required consent on
+        // the destination so the collector gates init until consent is granted.
+        await elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            consent: { analytics: true, marketing: true },
+            include: example.configInclude,
+            settings: baseSettings,
+          },
+        });
+        // Load the gated destination under a prior grant first when the example
+        // declares one, so a revoke acts on an already-granted destination. Both
+        // the grant and the consent-under-test effects are asserted.
+        if (example.before) await elb('walker consent', example.before);
+        await elb('walker consent', example.in as WalkerOS.Consent);
+      } else {
+        // Standard event example.
+        const event = example.in as WalkerOS.Event;
+        const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+        const mappingConfig = mapping
+          ? { [event.entity]: { [event.action]: mapping } }
+          : undefined;
 
-    if (example.command === 'consent') {
-      // Command examples: route `in` through elb('walker <command>', in)
-      // rather than pushing it as an event.
-      elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          include: example.configInclude,
-          settings: baseSettings,
-        },
-      });
-      await elb('walker consent', example.in as WalkerOS.Consent);
-    } else {
-      // Standard event example.
-      const event = example.in as WalkerOS.Event;
-      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-      const mappingConfig = mapping
-        ? { [event.entity]: { [event.action]: mapping } }
-        : undefined;
+        elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            include: example.configInclude,
+            settings: baseSettings,
+            mapping: mappingConfig,
+          },
+        });
+        await elb(event);
+      }
 
-      elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          include: example.configInclude,
-          settings: baseSettings,
-          mapping: mappingConfig,
-        },
-      });
-      await elb(event);
-    }
+      // Drop the init call — every example triggers init once, it is not part
+      // of the declared `out`.
+      const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+      const actual = collected().filter(([path]) => path !== 'clarity.init');
 
-    // Drop the init call — every example triggers init once, it is not part
-    // of the declared `out`.
-    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    const actual = collected().filter(([path]) => path !== 'clarity.init');
-
-    expect(actual).toEqual(expected);
-  });
+      expect(actual).toEqual(expected);
+    },
+  );
 });

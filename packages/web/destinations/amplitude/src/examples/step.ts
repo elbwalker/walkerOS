@@ -12,6 +12,8 @@ import type { Settings } from '../types';
 export type AmplitudeStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
   configInclude?: string[];
+  /** Consent granted before `in` so a gated destination is loaded first. */
+  before?: WalkerOS.Consent;
 };
 
 /**
@@ -409,9 +411,13 @@ export const consentRevokeOptOut: AmplitudeStepExample = {
   description:
     'A walker consent command with analytics denied opts out of Amplitude tracking via setOptOut(true).',
   command: 'consent',
+  before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: [['amplitude.setOptOut', true]],
+  out: [
+    ['amplitude.setOptOut', false],
+    ['amplitude.setOptOut', true],
+  ],
 };
 
 /**

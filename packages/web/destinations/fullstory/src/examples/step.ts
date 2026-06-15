@@ -7,6 +7,8 @@ import type { Settings } from '../types';
  */
 export type FullStoryStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
+  /** Consent granted before `in` so a gated destination is loaded first. */
+  before?: WalkerOS.Consent;
 };
 
 /**
@@ -250,20 +252,24 @@ export const consentGrantCapture: FullStoryStepExample = {
 };
 
 /**
- * Consent revoke -- revoking consent calls FullStory('shutdown').
+ * Consent revoke -- after analytics consent is granted (FullStory starts
+ * capture), revoking it calls FullStory('shutdown'). The destination is never
+ * loaded under denied consent, so the shutdown is a real revocation of an
+ * already-granted destination.
  */
 export const consentRevokeCapture: FullStoryStepExample = {
   title: 'Shutdown capture',
   description:
     'A walker consent revoke for analytics calls FullStory shutdown to stop session recording.',
   command: 'consent',
+  before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
   settings: {
     consent: {
       analytics: 'capture',
     },
   },
-  out: [['fullstory.shutdown']],
+  out: [['fullstory.start'], ['fullstory.shutdown']],
 };
 
 /**
@@ -285,18 +291,25 @@ export const consentGrantFlag: FullStoryStepExample = {
 };
 
 /**
- * Consent flag revoke -- calls setIdentity({ consent: false }).
+ * Consent flag revoke -- after marketing consent is granted (the destination
+ * loads), revoking it calls setIdentity({ consent: false }). The destination is
+ * never loaded under denied consent, so the revoke acts on an already-granted
+ * destination.
  */
 export const consentRevokeFlag: FullStoryStepExample = {
   title: 'Consent flag revoked',
   description:
     'A walker consent revoke with action consent sets the FullStory identity consent flag to false.',
   command: 'consent',
+  before: { marketing: true },
   in: { marketing: false } as WalkerOS.Consent,
   settings: {
     consent: {
       marketing: 'consent',
     },
   },
-  out: [['fullstory.setIdentity', { consent: false }]],
+  out: [
+    ['fullstory.setIdentity', { consent: true }],
+    ['fullstory.setIdentity', { consent: false }],
+  ],
 };
