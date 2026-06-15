@@ -23,12 +23,10 @@ import { dirname, join } from 'path';
 import { Readable } from 'stream';
 import { x as tarExtract } from 'tar';
 import { isStdinPiped, readStdin } from '../core/stdin.js';
+import { fetchWithRetry } from './fetch-retry.js';
 
 /** Entry the runtime expects at the root of an extracted archive. */
 const ARCHIVE_ENTRY = 'flow.mjs';
-
-/** Request timeout for the URL fetch headers (not the streaming extract). */
-const FETCH_TIMEOUT_MS = 30_000;
 
 /**
  * Determine where to write fetched/stdin bundles.
@@ -86,13 +84,15 @@ function writeBundleToDisk(writePath: string, content: string): void {
 
 /**
  * Perform the HTTP request and return the Response.
- * A 30s timeout guards against silent container hangs while waiting on
- * headers; it is intentionally NOT applied to body streaming downstream.
+ *
+ * fetchWithRetry bounds each attempt with a 30s timeout (NOT applied to body
+ * streaming downstream) and retries transient failures (timeouts, connection
+ * errors, 5xx, 429) so a brief control-plane blip during cold start no longer
+ * hard-fails the boot. A non-retryable status (e.g. a 404) comes back as a
+ * Response and is turned into the precise error below.
  */
 async function fetchOk(url: string): Promise<Response> {
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const response = await fetchWithRetry(url);
 
   if (!response.ok) {
     throw new Error(

@@ -3,7 +3,7 @@ name: Build and test
 on:
   push:
     branches:
-      - '*'
+      - main
     paths-ignore:
       - '**/*.md'
       - '**/*.mdx'
@@ -39,7 +39,19 @@ jobs:
         with:
           node-version: '24.15.0'
           cache: 'npm'
-      - run: npm ci
+      - name: Cache node_modules
+        id: node_modules_cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+            packages/**/node_modules
+            apps/*/node_modules
+          key: nm-${{ runner.os }}-node24.15.0-${{ hashFiles('package-lock.json') }}
+      - name: Install dependencies
+        if: steps.node_modules_cache.outputs.cache-hit != 'true'
+        run: npm ci
       # Drift gate: the committed CLI api.gen.d.ts (and spec.json) must equal a
       # fresh, prettier-formatted generate:types run. Prevents stale/unformatted
       # generated API types from being committed (the recurring eternal-diff).
@@ -59,8 +71,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: npx turbo run typecheck lint test
       - name: Run integration tests
-        if:
-          github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         run: npm run test:integration
       - name: Upload test results on failure
         if: failure()

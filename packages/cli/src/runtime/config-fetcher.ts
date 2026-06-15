@@ -1,4 +1,5 @@
 import { mergeAuthHeaders } from '../core/http.js';
+import { fetchWithRetry } from './fetch-retry.js';
 import { throwIfRunnerAuthFailure } from './runner-auth-error.js';
 
 export interface FetchConfigResult {
@@ -32,10 +33,9 @@ export async function fetchConfig(
     options.lastEtag ? { 'If-None-Match': options.lastEtag } : undefined,
   );
 
-  const response = await fetch(url, {
-    headers,
-    signal: AbortSignal.timeout(30_000),
-  });
+  // Retry transient failures (timeouts, 5xx, 429) within the boot health
+  // window; 304, 401/403, and other 4xx are returned for the checks below.
+  const response = await fetchWithRetry(url, { init: { headers } });
 
   if (response.status === 304) {
     return { changed: false };

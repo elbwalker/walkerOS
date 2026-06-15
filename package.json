@@ -49,7 +49,7 @@
     "verify:touched": "bash scripts/verify-touched.sh",
     "verify:affected": "turbo run typecheck lint test --filter='[origin/main]'",
     "verify:force": "turbo run test --filter='[origin/main]' --force",
-    "// scripts": "verify:touched <pkg> for L1, verify:affected for L2, test:smoke for L3, test+lint+typecheck for L4, verify:force = uncached test run after a core-runtime change (turbo test cache hashes only own src). See /workspaces/developer/AGENT.md rule 11.",
+    "// scripts": "verify:touched <pkg> for L1, verify:affected for L2, test:smoke for L3, test+lint+typecheck for L4, verify:force = rarely needed escape hatch for a fully uncached test run; the turbo test task depends on ^build, so an upstream change busts downstream test caches automatically. See /workspaces/developer/AGENT.md rule 11.",
     "prepare": "husky || true",
     "validate:links": "npx tsx apps/scripts/validate-links.ts",
     "validate:docs": "npx tsx apps/scripts/validate-docs.ts",

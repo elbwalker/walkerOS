@@ -52,6 +52,7 @@
       "outputLogs": "errors-only"
     },
     "test": {
+      "dependsOn": ["^build"],
       "inputs": [
         "src/**/*.ts",
         "src/**/*.tsx",

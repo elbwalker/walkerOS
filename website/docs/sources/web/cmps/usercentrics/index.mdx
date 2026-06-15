@@ -8,7 +8,9 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Usercentrics
 
-Integrates [Usercentrics](https://usercentrics.com/) consent management with walkerOS by listening for a configured window event and mapping category or service consent state to walkerOS consent groups.
+Integrates [Usercentrics](https://usercentrics.com/) consent management with walkerOS using the official Usercentrics events and consent getters, mapping category or service consent state to walkerOS consent groups.
+
+We recommend the source package below over a hand-written event listener: it handles version detection, returning-visitor restore, and explicit-consent gating for you.
 
 ## Installation
 
@@ -26,7 +28,6 @@ await startFlow({
       code: sourceUsercentrics,
       config: {
         settings: {
-          eventName: 'ucEvent', // Must match your Usercentrics admin config
           categoryMap: {
             essential: 'functional',
             functional: 'functional',
@@ -41,13 +42,16 @@ await startFlow({
 
 <Configuration type="source" data={data} />
 
-| Setting        | Type                     | Default             | Description                                              |
-| -------------- | ------------------------ | ------------------- | -------------------------------------------------------- |
-| `apiVersion`   | `'auto' \| 'v2' \| 'v3'` | `'auto'`            | Which Usercentrics API to target (auto-detects by default)|
-| `eventName`    | `string`                 | `'ucEvent'`         | V2 window event name configured in Usercentrics admin    |
-| `v3EventName`  | `string`                 | `'UC_UI_CMP_EVENT'` | V3 window event name (overridable for custom admin configs)|
-| `categoryMap`  | `Record<string, string>` | `{}`                | Maps Usercentrics categories to walkerOS consent groups  |
-| `explicitOnly` | `boolean`                | `true`              | Only process explicit consent (user made a choice)       |
+| Setting        | Type                     | Default             | Description                                                  |
+| -------------- | ------------------------ | ------------------- | ----------------------------------------------------------- |
+| `apiVersion`   | `'auto' \| 'v2' \| 'v3'` | `'auto'`            | Which Usercentrics API to target (auto-detects by default)  |
+| `categoryMap`  | `Record<string, string>` | `{}`                | Maps Usercentrics categories to walkerOS consent groups     |
+| `explicitOnly` | `boolean`                | `true`              | Only publish when the user has actively decided             |
+| `v3EventName`  | `string`                 | `'UC_UI_CMP_EVENT'` | V3 event name, override only for a custom admin event       |
+
+There is no configurable data-layer event setting: the source listens to the
+always-emitted official Usercentrics events, so no `eventName` configuration or
+Usercentrics admin window-event setup is required.
 
 ### V2 vs V3 support
 
@@ -55,24 +59,15 @@ The source supports both Usercentrics V2 (`window.UC_UI`) and V3
 (`window.__ucCmp`) APIs. With the default `apiVersion: 'auto'`, detection runs
 at init:
 
-- If the CMP is already initialized, consent is read **statically** from the
-  available API — this fixes the race where V3's `UC_UI_CMP_EVENT` fires before
-  walkerOS loads.
-- If no CMP is present yet, listeners for **both** V2 and V3 events are
-  registered so late-loading CMPs are still caught.
+- If the CMP is already initialized, consent is read **statically** through the
+  official getters (V2 `UC_UI.getServicesBaseInfo()`, V3
+  `__ucCmp.getConsentDetails()`).
+- If no CMP is present yet, the source listens for `UC_UI_INITIALIZED` and reads
+  the current state once the CMP signals it is ready, so late-loading CMPs are
+  still caught.
 - When both APIs are available, V3 is preferred.
 
 Set `apiVersion: 'v2'` or `'v3'` to force a specific integration.
-
-### Usercentrics setup
-
-Configure a **Window Event** in your Usercentrics admin:
-Implementation > Data Layer & Events > Window Event Name (e.g., `ucEvent`).
-
-![Usercentrics window event implementation](./usercentrics-implementation-window_event.png)
-
-Alternatively, set `eventName: 'UC_SDK_EVENT'` to use the built-in Browser SDK
-event (no admin configuration required).
 
 ### Custom mapping example
 
@@ -83,7 +78,6 @@ await startFlow({
       code: sourceUsercentrics,
       config: {
         settings: {
-          eventName: 'ucEvent',
           categoryMap: {
             essential: 'functional',
             functional: 'functional',
@@ -99,35 +93,40 @@ await startFlow({
 
 ## How it works
 
-1. **API detection**: Reads consent statically from `window.UC_UI` (V2) or
-   `window.__ucCmp` (V3) if already initialized, otherwise registers event
-   listeners for both APIs so post-init events are still captured.
+The source uses Usercentrics' official integration surface across both API
+versions:
 
-2. **Group vs. service detection**: Checks if `ucCategory` values are all
-   booleans:
-   - **Group-level**: Uses `ucCategory` as consent state (maps categories via
-     `categoryMap`)
-   - **Service-level**: Extracts individual service booleans from `event.detail`
-     (normalized to `lowercase_underscores`) and applies `categoryMap` to
-     boolean `ucCategory` entries
+1. **Already initialized**: if the CMP loaded before the source, consent is read
+   statically through the official getters (V2 `UC_UI.getServicesBaseInfo()`, V3
+   `__ucCmp.getConsentDetails()`).
 
-3. **Explicit filtering**: By default, only processes events where
-   `type === 'explicit'` (user actively made a choice). Set
-   `explicitOnly: false` to also process implicit/default consent.
+2. **CMP loads after the source**: the source listens for `UC_UI_INITIALIZED`
+   and reads the current consent state once the CMP is ready.
 
-4. **Consent command**: Calls `elb('walker consent', state)` with the mapped
-   consent state.
+3. **User decisions**: the source listens for `UC_UI_CMP_EVENT` (consent actions
+   `ACCEPT_ALL`, `DENY_ALL`, and `SAVE`) and republishes the updated state.
 
+4. **Category mapping**: maps categories via `categoryMap` and calls
+   `elb('walker consent', state)` with the mapped consent state.
+
+### Explicit consent
+
+By default (`explicitOnly: true`), the source publishes only states the user has
+actively decided. It reads this from the official consent metadata: V3
+`consent.type === EXPLICIT`, and V2 an `EXPLICIT` entry in the service consent
+history. First-visit defaults stay suppressed. Set `explicitOnly: false` to also
+publish implicit/default consent.
 
 ### Timing considerations
 
-The source should be initialized before the Usercentrics script loads to avoid
-missing the initial consent event. When using `explicitOnly: true` (default),
-this is not a concern since the implicit init event is filtered anyway. For
-`explicitOnly: false`, ensure the consent source has no `require` constraints
-so it initializes immediately.
+A returning visitor's prior choice is applied on page load, either from the
+static getter read (CMP already initialized) or on `UC_UI_INITIALIZED` (CMP loads
+later). First-visit defaults stay suppressed under the default
+`explicitOnly: true`. Set `explicitOnly: false` to publish any snapshot,
+including implicit defaults. Ensure the consent source has no `require`
+constraints so it initializes immediately.
 
 ## Reference
 
-- [Usercentrics custom events documentation](https://support.usercentrics.com/hc/en-us/articles/17104002464668-How-can-I-create-a-custom-event)
+- [Usercentrics developer documentation](https://usercentrics.com/docs/)
 - [Source code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/cmps/usercentrics)

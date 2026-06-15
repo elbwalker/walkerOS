@@ -1,4 +1,5 @@
 import { mergeAuthHeaders } from '../core/http.js';
+import { fetchWithRetry } from './fetch-retry.js';
 import { throwIfRunnerAuthFailure } from './runner-auth-error.js';
 
 export interface FetchSecretsOptions {
@@ -29,8 +30,16 @@ export async function fetchSecrets(
   const { appUrl, token, projectId, flowId } = options;
   const url = `${appUrl}/api/projects/${encodeURIComponent(projectId)}/flows/${encodeURIComponent(flowId)}/secrets/values`;
 
-  const res = await fetch(url, {
-    headers: mergeAuthHeaders(token, { 'Content-Type': 'application/json' }),
+  // Runs sequentially after the bundle fetch within Scaleway's ~100s container
+  // health window, so keep the total budget small. Retries transient failures
+  // (timeouts, 5xx, 429); 401/403, 404, and other 4xx are returned for the
+  // classification/checks below. The helper also adds the per-attempt timeout
+  // this fetch previously lacked.
+  const res = await fetchWithRetry(url, {
+    maxTotalMs: 20_000,
+    init: {
+      headers: mergeAuthHeaders(token, { 'Content-Type': 'application/json' }),
+    },
   });
 
   // Classify 401/403 with the app's error code (FORBIDDEN_FLOW, FORBIDDEN_SCOPE).

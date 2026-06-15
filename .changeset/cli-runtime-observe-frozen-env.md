@@ -1,5 +1,5 @@
 ---
-'@walkeros/cli': minor
+'@walkeros/cli': patch
 ---
 
 `walkeros run` reads two new environment variables. `WALKEROS_OBSERVE_LEVEL`

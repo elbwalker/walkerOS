@@ -38,20 +38,32 @@ export const sourceSession: Source.Init<Types> = async (context) => {
     command,
   };
 
-  // Run session detection in init() (Pass 2 of initSources), not the factory
-  // (Pass 1), so construction stays side-effect free. When `settings.consent`
-  // is set this registers a single consent rule with the collector; the
-  // collector then guarantees exactly-once delivery per state change, so the
-  // source does not need to react to consent events itself. Deferring to init()
-  // keeps that single registration but moves the emit out of construction,
-  // where it would race source merge order.
-  const init = async (): Promise<void> => {
+  const runSessionStart = (): void => {
     sessionStart({
       ...settings,
       window: env.window,
       document: env.document,
       collector: collectorInterface as Collector.Instance,
     });
+  };
+
+  // Session detection runs in init() (Pass 2 of initSources), not the factory
+  // (Pass 1), so construction stays side-effect free.
+  //
+  // Consent-gated (settings.consent): sessionStart registers a single consent
+  // rule with the collector, which replays it at the run barrier and guarantees
+  // exactly-once delivery, so the source does not react to consent itself.
+  //
+  // Ungated: the emit must wait for the run lifecycle. Calling sessionStart in
+  // init() would push `session start` while the collector is not yet `allowed`,
+  // dropping it at the dormant destination gate. Registering an on('run') rule
+  // defers the emit into the now-allowed pipeline.
+  const init = async (): Promise<void> => {
+    if (settings.consent) {
+      runSessionStart();
+    } else {
+      await command('on', { type: 'run', rules: [() => runSessionStart()] });
+    }
   };
 
   return {

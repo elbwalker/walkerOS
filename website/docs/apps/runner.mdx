@@ -146,6 +146,8 @@ The runner treats secret fetch failures differently depending on the cause:
 | **500 (server error)** | Warning: the runner continues without secrets. |
 | **Failure during hot-swap** | The swap is skipped entirely. The runner keeps running the current flow with existing secrets and retries on the next poll. |
 
+Transient fetch failures (request timeouts, network errors, and 5xx responses) are retried a few times with bounded, jittered backoff before the behavior above applies. This covers the secret, config, and bundle fetches at startup, so a brief blip while the container starts does not fail the run. The secret and bundle fetches are also each bounded by a timeout, so an unresponsive API cannot stall startup indefinitely.
+
 :::note
 Secrets only apply in mode C/D (remote config). In local modes, set environment variables directly on the container with `-e` or in your Docker Compose file.
 :::

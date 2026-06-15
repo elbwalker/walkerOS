@@ -104,12 +104,25 @@ describe('Step Examples', () => {
       );
     }
 
-    const mockElb = jest.fn(async () => ({
-      ok: true,
-      successful: [],
-      failed: [],
-      queued: [],
-    })) as unknown as jest.MockedFunction<Elb.Fn>;
+    // The ungated path defers its emit to an on('run') subscription. Capture
+    // those rules here and fire them below to simulate the collector's run
+    // lifecycle, so the example output reflects the emitted user/session/
+    // session-start calls rather than the internal registration.
+    const runRules: Array<() => unknown> = [];
+    const captured: unknown[][] = [];
+
+    const mockElb = jest.fn(async (...args: unknown[]) => {
+      const [action, data] = args as [
+        unknown,
+        { type?: string; rules?: Array<() => unknown> } | undefined,
+      ];
+      if (action === 'on' && data?.type === 'run') {
+        runRules.push(...(data.rules || []));
+      } else {
+        captured.push(['elb', ...args]);
+      }
+      return { ok: true, successful: [], failed: [], queued: [] };
+    }) as unknown as jest.MockedFunction<Elb.Fn>;
 
     const collectorStub: Collector.Instance = {
       allowed: true,
@@ -134,14 +147,14 @@ describe('Step Examples', () => {
     // Session detection runs in init(), not the factory.
     await source.init?.();
 
+    // Fire the run lifecycle: the ungated path emits here, not at init().
+    for (const rule of runRules) await rule();
+
     // Yield to pick up any deferred pushes
-    for (let i = 0; i < 10 && mockElb.mock.calls.length === 0; i++) {
+    for (let i = 0; i < 10 && captured.length === 0; i++) {
       await Promise.resolve();
     }
 
-    const captured = mockElb.mock.calls.map(
-      (args) => ['elb', ...args] as unknown[],
-    );
     expect(captured).toEqual(example.out);
   });
 });

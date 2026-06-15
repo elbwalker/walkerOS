@@ -136,3 +136,70 @@ describe('Session Source: collector-enforced exactly-once (I12)', () => {
     expect(sessionStartCount(captured)).toBe(1);
   });
 });
+
+describe('Session Source: ungated path respects run', () => {
+  beforeEach(() => {
+    webCore.__store.clear();
+
+    // jsdom: a fresh navigate entry so the storage path treats this as a visit.
+    Object.defineProperty(window, 'performance', {
+      value: {
+        getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+      },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  // No `consent` setting: the source has no consent rule to replay at the run
+  // barrier. The emit must instead wait for the run lifecycle, otherwise the
+  // `session start` pushed during init() (while !allowed) is dropped at the
+  // dormant destination gate and never delivered.
+  async function startUngatedFlow(options: {
+    run: boolean;
+    captured: WalkerOS.Event[];
+  }): Promise<Collector.Instance> {
+    const { collector } = await startFlow({
+      run: options.run,
+      sources: {
+        session: {
+          code: sourceSession,
+          config: { settings: { storage: true } },
+        },
+      },
+      destinations: {
+        capture: {
+          code: {
+            type: 'capture',
+            config: {},
+            push: (event: WalkerOS.Event): void => {
+              options.captured.push(event);
+            },
+          },
+        },
+      },
+    });
+
+    return collector;
+  }
+
+  test('run:false — session start is delivered at run, not dropped pre-run', async () => {
+    const captured: WalkerOS.Event[] = [];
+    const collector = await startUngatedFlow({ run: false, captured });
+
+    // Pre-run: collector is not allowed yet, so nothing is delivered.
+    expect(sessionStartCount(captured)).toBe(0);
+
+    await collector.command('run');
+
+    // The ungated emit lands in the now-allowed pipeline exactly once.
+    expect(sessionStartCount(captured)).toBe(1);
+  });
+
+  test('run:true — session start is delivered exactly once at startup run', async () => {
+    const captured: WalkerOS.Event[] = [];
+    await startUngatedFlow({ run: true, captured });
+
+    expect(sessionStartCount(captured)).toBe(1);
+  });
+});
