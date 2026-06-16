@@ -38,12 +38,14 @@ export const sourceExpress = async (
   const settings = {
     ...userSettings,
     cors: userSettings.cors ?? true,
-    // Respond-first by default: a 2xx means "accepted", not "delivered".
-    async: userSettings.async ?? true,
     paths:
       userSettings.paths ??
       (userSettings.path ? [userSettings.path] : ['/collect']),
   };
+
+  // Respond-first by default: a 2xx means "accepted", not "delivered".
+  // Standardized on the source config (Source.Config.async), not settings.
+  const respondFirst = config.async ?? true;
 
   const app = expressLib();
 
@@ -119,7 +121,7 @@ export const sourceExpress = async (
             });
 
           if (parsedData && typeof parsedData === 'object') {
-            if (settings.async) {
+            if (respondFirst) {
               // Respond-first: the tracking pixel must return instantly and
               // never block on backend delivery. Fire the push without
               // awaiting; a rejected push is logged (destination errors are
@@ -147,7 +149,7 @@ export const sourceExpress = async (
           const eventData =
             req.body && typeof req.body === 'object' ? req.body : {};
 
-          if (settings.async) {
+          if (respondFirst) {
             // Respond-first ("accepted"), then deliver asynchronously. A
             // rejected push is logged, not surfaced to the client and not left
             // unhandled (destination errors are DLQ'd inside the collector).

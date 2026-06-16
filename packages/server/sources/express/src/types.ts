@@ -29,11 +29,11 @@ export interface Mapping {
 // Express-specific push type (uses Express Request/Response types)
 //
 // Ack contract: a 2xx response means the event was *accepted*, not that it was
-// *delivered*. With `settings.async` (the default, `true`) the handler responds
+// *delivered*. With `config.async` (the default, `true`) the handler responds
 // first and pushes to the collector without blocking the response; rejected
 // pushes are logged and destination errors are DLQ'd inside the collector. The
 // GET tracking pixel always responds first regardless of the flag. Set
-// `settings.async: false` to make the response wait for delivery to settle.
+// `config.async: false` to make the response wait for delivery to settle.
 export type Push = (req: Request, res: Response) => Promise<void>;
 
 export interface Env extends CoreSource.Env {

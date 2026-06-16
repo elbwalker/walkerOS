@@ -151,6 +151,12 @@ export const ConfigSchema = MappingConfigSchema.extend({
   logger: LoggerConfigSchema.optional().describe(
     'Logger configuration (level, handler) to override the collector defaults',
   ),
+  async: z
+    .boolean()
+    .optional()
+    .describe(
+      'Respond-first acknowledgement for response-producing server sources (express today; future fetch/lambda). When true (the default for such sources) the source responds 2xx ("accepted") before the event is delivered; when false it waits for delivery to settle. Browser/dataLayer sources have no HTTP response to defer and ignore it. A 2xx means accepted, not delivered. Default is per source type.',
+    ),
   setup: z
     .union([z.boolean(), z.record(z.string(), z.unknown())])
     .optional()

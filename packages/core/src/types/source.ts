@@ -102,6 +102,20 @@ export interface Config<
   id?: string;
   /** Logger configuration (level, handler) to override the collector's defaults. */
   logger?: Logger.Config;
+  /**
+   * Respond-first acknowledgement for response-producing server sources.
+   *
+   * When a source produces an HTTP response (express today; future fetch /
+   * lambda), `async: true` (the default for such sources) responds 2xx
+   * ("accepted") before the event is delivered to the collector, so the
+   * client is not blocked on backend delivery. `async: false` waits for
+   * delivery to settle before responding. A 2xx means "accepted", not
+   * "delivered".
+   *
+   * Browser and dataLayer sources have no HTTP response to defer and ignore
+   * this flag. The default is per source type.
+   */
+  async?: boolean;
   /** Mark as primary source; its push function becomes the exported `elb` from startFlow. */
   primary?: boolean;
   /** Defer source initialization until these collector events fire (e.g., `['consent']`). */

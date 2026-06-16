@@ -121,7 +121,6 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/collect'],
         cors: true,
-        async: true,
       });
       expect(typeof source.push).toBe('function');
       expect(source.app).toBeDefined();
@@ -149,7 +148,6 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/events'],
         cors: false,
-        async: true,
       });
     });
 
@@ -394,7 +392,7 @@ describe('sourceExpress', () => {
 
       const source = await sourceExpress(
         createSourceContext(
-          { settings: { async: false } },
+          { async: false },
           {
             push: errorPush as never,
             command: mockCommand as never,
@@ -873,7 +871,7 @@ describe('sourceExpress', () => {
       });
       const source = await sourceExpress(
         createSourceContext(
-          { settings: { async: false } },
+          { async: false },
           {
             push: slowPush as never,
             command: mockCommand as never,
