@@ -48,6 +48,56 @@ const DEFAULT_DLQ_MAX = 100;
 const DEFAULT_BATCH_SIZE = 1_000;
 /** Default upper-bound on batch age in ms. Forces flush even if debounce keeps resetting. */
 const DEFAULT_BATCH_AGE = 30_000;
+/**
+ * Default per-destination delivery timeout in ms. Applied when a destination's
+ * `config.timeout` is `0` or undefined. A hung delivery is converted into a
+ * counted DLQ failure after this window so one slow destination never wedges
+ * the collector push.
+ */
+const DEFAULT_DESTINATION_TIMEOUT_MS = 10_000;
+
+/**
+ * Resolve the effective delivery timeout for a destination. A positive number
+ * wins; `0` or undefined falls back to {@link DEFAULT_DESTINATION_TIMEOUT_MS}.
+ */
+function resolveDestinationTimeout(timeout?: number): number {
+  return typeof timeout === 'number' && timeout > 0
+    ? timeout
+    : DEFAULT_DESTINATION_TIMEOUT_MS;
+}
+
+/**
+ * Error thrown when a destination delivery does not settle within its timeout.
+ * The dedicated `name` lets DLQ consumers discriminate a timeout from a
+ * destination-thrown error without substring matching the message.
+ */
+class DestinationTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DestinationTimeoutError';
+  }
+}
+
+/**
+ * Races a delivery promise against a per-destination timeout. If the work does
+ * not settle within `ms`, the returned promise rejects with a
+ * {@link DestinationTimeoutError}; the timer is always cleared on settle so no
+ * dangling timer remains. The race is constructed per call site, so each
+ * destination times out independently and one hang never affects another.
+ */
+function withTimeout<T>(
+  work: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new DestinationTimeoutError(message)), ms);
+  });
+  return Promise.race([work, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
 
 /**
  * Sentinel returned by {@link destinationPush} when an event was enqueued
@@ -1135,13 +1185,24 @@ export async function destinationPush<Destination extends Destination.Instance>(
         // partial outcome = total minus the entries reported failed.
         let succeededCount = snapshot.entries.length;
 
+        const batchTimeoutMs = resolveDestinationTimeout(config.timeout);
         const outcome = await tryCatchAsync(
-          useHooks(
-            destination.pushBatch!,
-            'DestinationPushBatch',
-            collector.hooks,
-            collector.logger,
-          ),
+          (
+            batchArg: Destination.Batch<unknown>,
+            ctxArg: Destination.PushBatchContext,
+          ) =>
+            withTimeout(
+              Promise.resolve(
+                useHooks(
+                  destination.pushBatch!,
+                  'DestinationPushBatch',
+                  collector.hooks,
+                  collector.logger,
+                )(batchArg, ctxArg),
+              ),
+              batchTimeoutMs,
+              `Destination "${destId}" batch delivery timed out after ${batchTimeoutMs}ms`,
+            ),
           (err) => {
             succeededCount = 0;
             const errFinished = Date.now();
@@ -1282,13 +1343,23 @@ export async function destinationPush<Destination extends Destination.Instance>(
     emitStep(collector, inState);
 
     try {
-      // It's time to go to the destination's side now
-      const response = await useHooks(
-        destination.push,
-        'DestinationPush',
-        collector.hooks,
-        collector.logger,
-      )(processed.event, context);
+      // It's time to go to the destination's side now. Race the push against a
+      // per-destination timeout so a hung delivery becomes a thrown failure
+      // that flows into the SAME catch -> tryCatchAsync onError -> DLQ path a
+      // real throw uses. The race is per call, so it never affects siblings.
+      const timeoutMs = resolveDestinationTimeout(config.timeout);
+      const response = await withTimeout(
+        Promise.resolve(
+          useHooks(
+            destination.push,
+            'DestinationPush',
+            collector.hooks,
+            collector.logger,
+          )(processed.event, context),
+        ),
+        timeoutMs,
+        `Destination "${destId}" delivery timed out after ${timeoutMs}ms`,
+      );
 
       const pushFinished = Date.now();
       const outState = buildBaseState(collector, {

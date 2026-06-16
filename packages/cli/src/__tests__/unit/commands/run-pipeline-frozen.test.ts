@@ -2,12 +2,14 @@
  * Frozen-config run mode tests for the runtime pipeline.
  *
  * `WALKEROS_CONFIG_FROZEN` ('1' or 'true') marks the bundle the pipeline
- * serves as an immutable snapshot: secrets are still injected at boot, but
- * neither the config hot-swap poller nor the heartbeat is constructed.
- * Without the env var, the api-enabled pipeline behaves as before (secrets +
- * heartbeat + poller). The flag value convention matches the package's
- * existing boolean env flags (WALKEROS_TELEMETRY_DISABLED): exactly '1' or
- * 'true' enables it, anything else (including '0') is off.
+ * serves as an immutable snapshot: secrets are still injected at boot and the
+ * heartbeat keeps running so the operator retains observability, but the
+ * config hot-swap poller is NOT constructed. Freeze disables the in-container
+ * re-bundle only, never the heartbeat. Without the env var, the api-enabled
+ * pipeline behaves as before (secrets + heartbeat + poller). The flag value
+ * convention matches the package's existing boolean env flags
+ * (WALKEROS_TELEMETRY_DISABLED): exactly '1' or 'true' enables it, anything
+ * else (including '0') is off.
  */
 import type { PipelineOptions } from '../../../commands/run/pipeline.js';
 
@@ -96,7 +98,8 @@ const mockLogger = {
   scope: jest.fn().mockReturnThis(),
 };
 
-const frozenLogLine = 'Config frozen: hot-swap and heartbeat disabled';
+const frozenLogLine =
+  'Config frozen: hot-swap disabled (heartbeat still active)';
 
 function hasFrozenLog(): boolean {
   return mockLogger.info.mock.calls.some(
@@ -150,11 +153,11 @@ describe('runPipeline frozen-config mode', () => {
     },
   });
 
-  it('frozen=1 with full api: injects secrets at boot but constructs neither heartbeat nor poller', async () => {
+  it('frozen=1 with full api: injects secrets at boot, keeps the heartbeat, but constructs no poller', async () => {
     process.env.WALKEROS_CONFIG_FROZEN = '1';
 
     void runPipeline(makeApiOptions());
-    await waitFor(() => hasFrozenLog());
+    await waitFor(() => jest.mocked(createHeartbeat).mock.calls.length > 0);
 
     expect(fetchSecrets).toHaveBeenCalledWith({
       appUrl: 'https://app.walkeros.io',
@@ -163,17 +166,21 @@ describe('runPipeline frozen-config mode', () => {
       flowId: 'flow_456',
     });
     expect(loadFlow).toHaveBeenCalledTimes(1);
-    expect(createHeartbeat).not.toHaveBeenCalled();
+    expect(hasFrozenLog()).toBe(true);
+    // Freeze keeps the heartbeat so the operator retains observability.
+    expect(createHeartbeat).toHaveBeenCalled();
+    // Freeze disables only the in-container re-bundle poller.
     expect(createPoller).not.toHaveBeenCalled();
   });
 
-  it("frozen='true' with full api: also disables heartbeat and poller", async () => {
+  it("frozen='true' with full api: also keeps the heartbeat and disables the poller", async () => {
     process.env.WALKEROS_CONFIG_FROZEN = 'true';
 
     void runPipeline(makeApiOptions());
-    await waitFor(() => hasFrozenLog());
+    await waitFor(() => jest.mocked(createHeartbeat).mock.calls.length > 0);
 
-    expect(createHeartbeat).not.toHaveBeenCalled();
+    expect(hasFrozenLog()).toBe(true);
+    expect(createHeartbeat).toHaveBeenCalled();
     expect(createPoller).not.toHaveBeenCalled();
   });
 

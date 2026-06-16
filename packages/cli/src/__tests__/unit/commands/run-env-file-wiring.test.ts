@@ -6,6 +6,7 @@
  * - Without it: no auto-discovery, nothing is loaded.
  */
 
+import { Level } from '@walkeros/core';
 import { mkdtempSync, writeFileSync, chmodSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -45,6 +46,7 @@ jest.mock('../../../core/cli-logger.js', () => ({
     json: jest.fn(),
     scope: jest.fn().mockReturnValue({ info: jest.fn() }),
   }),
+  createCLILoggerConfig: () => ({ level: Level.DEBUG, handler: jest.fn() }),
 }));
 
 import { runCommand } from '../../../commands/run/index.js';

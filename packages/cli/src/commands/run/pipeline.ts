@@ -51,7 +51,22 @@ import { VERSION } from '../../version.js';
 export interface PipelineOptions {
   bundlePath: string;
   port: number;
+  /**
+   * Etag of the config this process booted with, used to seed the poller so
+   * the first poll can 304 instead of re-bundling the just-booted config.
+   * Sourced (by the caller) from the boot-time config fetch, or from
+   * `WALKEROS_CONFIG_ETAG` for the prebuilt-archive deploy path where the
+   * in-container boot never fetched the config.
+   */
+  bootEtag?: string;
   logger: Logger.Instance;
+  /**
+   * Logger config handed to the deployed bundle's collector as
+   * `context.logger`. Its handler taps the same ErrorRing/LogRing as the
+   * runner CLI logger, so the collector's destination errors land in the ring
+   * (and the heartbeat report) even without `--verbose`. The level is DEBUG so
+   * the handler controls visibility; ERROR is always emitted into the ring.
+   */
   loggerConfig?: Logger.Config;
   errorRing?: ErrorRing;
   logRing?: LogRing;
@@ -90,7 +105,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   logger.info(`walkeros/flow v${VERSION}`);
   logger.info(`Instance: ${getInstanceId()}`);
   if (configFrozen) {
-    logger.info('Config frozen: hot-swap and heartbeat disabled');
+    logger.info('Config frozen: hot-swap disabled (heartbeat still active)');
   }
 
   // Health server (always on)
@@ -175,7 +190,8 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   let currentBundleCleanup: (() => Promise<void>) | undefined;
   let currentConfigPath: string | undefined;
 
-  if (api && !configFrozen) {
+  if (shouldStartHeartbeat(api)) {
+    // Heartbeat runs even under freeze so the operator keeps observability.
     heartbeat = createHeartbeat(
       {
         appUrl: api.appUrl,
@@ -193,7 +209,9 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
     );
     heartbeat.start();
     logger.info(`Heartbeat: active (every ${api.heartbeatIntervalMs / 1000}s)`);
+  }
 
+  if (api && shouldStartPoller(api, configFrozen)) {
     poller = createPoller(
       {
         fetchOptions: {
@@ -203,6 +221,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
           flowId: api.flowId,
         },
         intervalMs: api.pollIntervalMs,
+        initialEtag: resolveInitialEtag(options.bootEtag),
         onUpdate: async (content, version) => {
           // Refresh secrets before hot-swap
           try {
@@ -230,10 +249,13 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
             flowName: api.flowName,
           });
 
-          // Keep /ready honest across the swap: not ready until the new
-          // collector is constructed. If swapFlow throws, readiness stays off.
-          healthServer.setReady(false);
-          handle = await swapFlow(
+          // swapFlow is atomic with rollback: it loads the new bundle into a
+          // fresh handle first and only mounts it on success, otherwise it
+          // returns the OLD handle unchanged and the old flow keeps serving.
+          // So readiness must NOT drop before the swap — a failed swap must
+          // leave /ready true (no wedge). When the swap succeeds the handler is
+          // already mounted atomically; readiness was never lost.
+          const swapped = await swapFlow(
             handle,
             newBundleResult.bundlePath,
             runtimeConfig,
@@ -242,7 +264,15 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
             healthServer,
             telemetryObservers,
           );
-          healthServer.setReady(true);
+
+          // Rollback case: handle unchanged. Skip cache write and version
+          // bookkeeping so a failed swap doesn't record the unbuilt version.
+          if (swapped === handle) {
+            await newBundleResult.cleanup().catch(() => {});
+            await fs.remove(tmpConfigPath).catch(() => {});
+            return;
+          }
+          handle = swapped;
 
           writeCache(
             api.cacheDir,
@@ -309,8 +339,112 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
+  // Process-level safety net: a stray unhandled rejection or uncaught
+  // exception (e.g. from the dynamically imported bundle) must degrade, not
+  // crash the container. The guards log into the error ring via the logger and
+  // keep the process serving; the orchestrator's own /ready gate still governs
+  // traffic. Registration is idempotent in case runPipeline runs more than once.
+  registerProcessGuards(logger);
+
   // Keep process alive
   await new Promise(() => {});
+}
+
+/**
+ * Dependencies the process guards need, injectable so the handler bodies are
+ * unit-testable without registering real `process` listeners or exiting.
+ */
+export interface ProcessGuardDeps {
+  logger: Logger.Instance;
+  exit: (code: number) => void;
+}
+
+/**
+ * Handle an `unhandledRejection`: log the reason into the error ring (via the
+ * logger) and keep serving. A stray rejection is treated as non-fatal — the
+ * container degrades instead of crash-looping.
+ */
+export function handleUnhandledRejection(
+  reason: unknown,
+  deps: ProcessGuardDeps,
+): void {
+  deps.logger.error(
+    `Unhandled rejection (continuing): ${
+      reason instanceof Error ? reason.message : String(reason)
+    }`,
+  );
+}
+
+/**
+ * Handle an `uncaughtException`: log the error into the error ring (via the
+ * logger) and keep serving for non-fatal cases. `process.exit` is reserved for
+ * genuinely unrecoverable state (handled by the shutdown orchestrator on
+ * signals), not for a single stray throw.
+ */
+export function handleUncaughtException(
+  error: Error,
+  deps: ProcessGuardDeps,
+): void {
+  deps.logger.error(`Uncaught exception (continuing): ${error.message}`);
+}
+
+let processGuardsRegistered = false;
+
+/**
+ * Register the process-level error guards exactly once per process. Guards
+ * against double-registration so a second `runPipeline` call in the same
+ * process does not stack listeners (which would multiply log lines).
+ */
+export function registerProcessGuards(logger: Logger.Instance): void {
+  if (processGuardsRegistered) return;
+  processGuardsRegistered = true;
+
+  const deps: ProcessGuardDeps = {
+    logger,
+    exit: (code) => process.exit(code),
+  };
+
+  process.on('unhandledRejection', (reason) =>
+    handleUnhandledRejection(reason, deps),
+  );
+  process.on('uncaughtException', (error) =>
+    handleUncaughtException(error, deps),
+  );
+}
+
+/**
+ * Resolve the poller's seed etag. The boot-time config fetch (Case 2 of the
+ * run command) knows the etag and wins; the prebuilt-archive deploy path
+ * never fetches the config in-container, so it falls back to
+ * `WALKEROS_CONFIG_ETAG`. Neither present means the first poll sends no
+ * `If-None-Match` (the safe legacy behavior).
+ */
+export function resolveInitialEtag(bootEtag?: string): string | undefined {
+  return bootEtag ?? process.env.WALKEROS_CONFIG_ETAG;
+}
+
+/**
+ * The heartbeat runs whenever the flow has API credentials, regardless of the
+ * frozen gate. Freezing a deployed flow disables the in-container re-bundle
+ * (the poller); it must NOT silence the heartbeat, or the operator loses all
+ * runner observability (counters, errors, logs) on frozen production flows.
+ */
+export function shouldStartHeartbeat(
+  api: PipelineOptions['api'],
+): api is NonNullable<PipelineOptions['api']> {
+  return Boolean(api);
+}
+
+/**
+ * The poller (config hot-swap via in-container re-bundle) runs only when the
+ * flow has API credentials AND is not frozen. `WALKEROS_CONFIG_FROZEN` exists
+ * to stop the re-bundle crash-loop, so it gates the poller alone.
+ */
+export function shouldStartPoller(
+  api: PipelineOptions['api'],
+  configFrozen: boolean,
+): boolean {
+  return Boolean(api) && !configFrozen;
 }
 
 const OBSERVE_LEVELS: ReadonlyArray<TelemetryLevel> = [

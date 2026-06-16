@@ -93,7 +93,7 @@ describe('fullstory destination -- step examples', () => {
           ? { [event.entity]: { [event.action]: mapping } }
           : undefined;
 
-        elb('walker destination', {
+        await elb('walker destination', {
           code: { ...dest, env: spiedEnv },
           config: {
             settings: baseSettings,

@@ -32,6 +32,13 @@ export const SettingsSchema = z.object({
       'CORS configuration: false = disabled, true = allow all origins (default), object = custom configuration',
     )
     .default(true),
+
+  async: z
+    .boolean()
+    .describe(
+      'Respond-first delivery (default true). When true, POST responds 2xx ("accepted") immediately and pushes to the collector without blocking the response; a rejected push is logged (destination errors are DLQ\'d inside the collector). When false, the response waits for the push to settle. The GET pixel always responds first regardless of this flag. A 2xx means accepted, not delivered.',
+    )
+    .default(true),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

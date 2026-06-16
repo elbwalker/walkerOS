@@ -90,8 +90,61 @@ describe('redactLine', () => {
       '{"type":"service_account","client_email":"x@y.iam.gserviceaccount.com","private_key":"-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBg==\\n-----END PRIVATE KEY-----\\n"}';
     const result = redactLine(json);
     expect(result).not.toContain('MIIEvQIBADANBg==');
+    // The field key name survives for legibility; its value is masked.
     expect(result).toContain('client_email');
-    expect(result).toContain('x@y.iam.gserviceaccount.com');
+  });
+
+  // Case 6b: service-account identifier fields are masked.
+  // client_email and private_key_id identify and pair with the leaked SA, so
+  // they must not ship even though they are not the private key body itself.
+  it('masks client_email value in a service-account JSON fragment', () => {
+    const json =
+      '{"type":"service_account","client_email":"svc@my-proj.iam.gserviceaccount.com","token_uri":"https://oauth2.googleapis.com/token"}';
+    const result = redactLine(json);
+    expect(result).not.toContain('svc@my-proj.iam.gserviceaccount.com');
+    expect(result).toContain('client_email');
+    expect(result).toContain('***');
+    // Non-secret structural fields are untouched.
+    expect(result).toContain('service_account');
+  });
+
+  it('masks private_key_id value in a service-account JSON fragment', () => {
+    const json =
+      '{"private_key_id":"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0","type":"service_account"}';
+    const result = redactLine(json);
+    expect(result).not.toContain('a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0');
+    expect(result).toContain('private_key_id');
+    expect(result).toContain('***');
+  });
+
+  // Case 6c: a full SA JSON blob embedded in an error message ships nothing
+  // sensitive: no private key body, no email, no key id, no cert url.
+  it('strips a full service-account JSON blob from an error message', () => {
+    const sa =
+      '{"type":"service_account","project_id":"my-proj","private_key_id":"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",' +
+      '"private_key":"-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcw==\\n-----END PRIVATE KEY-----\\n",' +
+      '"client_email":"svc@my-proj.iam.gserviceaccount.com",' +
+      '"client_x509_cert_url":"https://www.googleapis.com/robot/v1/metadata/x509/svc%40my-proj.iam.gserviceaccount.com"}';
+    const result = redactLine(`BigQuery init failed: ${sa}`);
+    expect(result).not.toContain('MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcw==');
+    expect(result).not.toContain('svc@my-proj.iam.gserviceaccount.com');
+    expect(result).not.toContain('svc%40my-proj.iam.gserviceaccount.com');
+    expect(result).not.toContain('a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0');
+    expect(result).toContain('***');
+    // Still informative: the operator sees what failed and the project.
+    expect(result).toContain('BigQuery init failed');
+    expect(result).toContain('my-proj');
+  });
+
+  // Case 6d: cert url and client_id are named explicitly, not left to heuristics.
+  it('masks client_x509_cert_url and client_id JSON values explicitly', () => {
+    const json =
+      '{"client_id":"123456789012345678901","client_x509_cert_url":"https://www.googleapis.com/robot/v1/metadata/x509/svc%40my-proj.iam.gserviceaccount.com"}';
+    const result = redactLine(json);
+    expect(result).not.toContain('123456789012345678901');
+    expect(result).not.toContain('www.googleapis.com/robot/v1/metadata/x509');
+    expect(result).not.toContain('svc%40my-proj.iam.gserviceaccount.com');
+    expect(result).toContain('***');
   });
 
   // Case 7: Normal diagnostic line passes through
@@ -261,25 +314,28 @@ describe('redactLine', () => {
     expect(result).toContain('***');
   });
 
-  // ReDoS: large no-space line must complete fast (the 10KB test is too small)
-  it('handles a 60KB no-space line under ~200ms (no quadratic backtracking)', () => {
+  // ReDoS: large no-space line must stay linear (the 10KB test is too small).
+  // The bound is deliberately loose (2s): the fixed regex runs in single-digit
+  // ms while the prior O(n^2) backtracking took seconds at this size, so 2s
+  // cleanly separates linear from quadratic without flaking on slow/contended CI.
+  it('handles a 60KB no-space line without quadratic backtracking', () => {
     // Key-prefixed value with no spaces, 60KB — the prior unbounded key prefix
     // backtracked O(n^2) on input like this.
     const big = 'KEY=' + 'a'.repeat(60_000);
     const start = Date.now();
     const result = redactLine(big);
     const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(200);
+    expect(elapsed).toBeLessThan(2000);
     expect(typeof result).toBe('string');
   });
 
-  it('handles an 80KB key-shaped no-space line under ~200ms', () => {
+  it('handles an 80KB key-shaped no-space line without quadratic backtracking', () => {
     // No '=' / ':' at all — exercises the key-prefix scan alone at scale.
     const big = 'a'.repeat(80_000);
     const start = Date.now();
     const result = redactLine(big);
     const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(200);
+    expect(elapsed).toBeLessThan(2000);
     expect(typeof result).toBe('string');
   });
 });

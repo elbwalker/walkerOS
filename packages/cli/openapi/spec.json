@@ -1409,6 +1409,10 @@
               "healthy"
             ]
           },
+          "lastHeartbeatAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -3402,6 +3406,12 @@
             "items": {
               "$ref": "#/components/schemas/UsageBucket"
             }
+          },
+          "destinations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageDestination"
+            }
           }
         },
         "required": [
@@ -3447,6 +3457,42 @@
           "eventsOut",
           "eventsFailed",
           "instances"
+        ]
+      },
+      "UsageDestination": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0
+          },
+          "dlqSize": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dropped": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name",
+          "count",
+          "failed",
+          "duration",
+          "dlqSize",
+          "dropped"
         ]
       },
       "CreateCustomDomainRequest": {
@@ -4993,6 +5039,14 @@
                     },
                     "duration": {
                       "type": "number",
+                      "minimum": 0
+                    },
+                    "dlqSize": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "dropped": {
+                      "type": "integer",
                       "minimum": 0
                     }
                   },

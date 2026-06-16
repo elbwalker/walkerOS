@@ -9,8 +9,6 @@ import type { Logger } from '@walkeros/core';
 import { getPackageCacheKey } from '../../core/cache-utils.js';
 import { getTmpPath } from '../../core/tmp.js';
 
-export const PACKAGE_DOWNLOAD_TIMEOUT_MS = 60000;
-
 export interface NpmConfig {
   registry: string;
   [key: string]: unknown;
@@ -75,20 +73,204 @@ export async function loadNpmConfigForPacote(
   return { ...merged, registry, preferOnline: true };
 }
 
-export async function withTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-  errorMessage: string,
-): Promise<T> {
-  let timer: ReturnType<typeof setTimeout>;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(errorMessage)), ms);
+// ============================================================
+// Resilient pacote downloads
+// ============================================================
+
+/**
+ * Bounded, classified retry around a single pacote call (`extract`/`manifest`).
+ *
+ * pacote 21.x forwards `opts.signal` end-to-end (npm-registry-fetch →
+ * make-fetch-happen → minipass-fetch). Passing a per-attempt AbortController
+ * both bounds the call AND cancels the in-flight fetch, so a timed-out attempt
+ * does not leave a detached download running. The previous `withTimeout` race
+ * only rejected the wrapper while the real fetch kept running; the signal path
+ * replaces it.
+ *
+ * Only TRANSIENT failures (timeouts, network blips) are retried. Deterministic
+ * npm failures (404, auth, bad spec, integrity) fail fast. A total wall-clock
+ * budget clamps every attempt to the remaining time so a sequential download
+ * loop never holds far longer than the budget. The budget pattern mirrors
+ * `runtime/fetch-retry.ts` but is copied here to avoid coupling the bundler to
+ * the runtime.
+ */
+
+/** Number of attempts (the first try plus retries). */
+export const PACOTE_RETRY_ATTEMPTS = 3;
+
+/** Per-attempt timeout before the attempt is aborted. */
+const PACOTE_PER_ATTEMPT_TIMEOUT_MS = 60_000;
+
+/** Total wall-clock budget across all attempts (including backoff sleeps). */
+const PACOTE_MAX_TOTAL_MS = 90_000;
+
+/**
+ * Floor of remaining budget below which starting another attempt is pointless:
+ * a sub-second timeout would abort before the socket connects.
+ */
+const MIN_ATTEMPT_BUDGET_MS = 1_000;
+
+/** Base backoff before retry #2 and #3. The last entry repeats if needed. */
+const BASE_BACKOFF_MS: readonly number[] = [2_000, 5_000];
+
+/** Jitter band applied to each backoff: ±20%. */
+const JITTER = 0.2;
+
+/**
+ * npm error codes that are permanent: an outer retry cannot help, so fail fast.
+ * `EINTEGRITY` is permanent at this layer because pacote already cache-busts and
+ * retries it once internally; a second outer pass just re-throws.
+ */
+const PERMANENT_ERROR_CODES: ReadonlySet<string> = new Set([
+  'E404',
+  'ETARGET',
+  'EINVALIDPACKAGENAME',
+  'E401',
+  'E403',
+  'EINTEGRITY',
+  'Z_DATA_ERROR',
+]);
+
+/** Read an optional string `code` off an unknown error without casting. */
+function readErrorCode(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const code = Reflect.get(value, 'code');
+  return typeof code === 'string' ? code : undefined;
+}
+
+/** A permanent error should not be retried (fail fast). */
+function isPermanentError(error: unknown): boolean {
+  const code = readErrorCode(error);
+  return code !== undefined && PERMANENT_ERROR_CODES.has(code);
+}
+
+/** Backoff delay (with jitter) before the retry following attempt index `i`. */
+function backoffForAttempt(index: number): number {
+  const base =
+    BASE_BACKOFF_MS[Math.min(index, BASE_BACKOFF_MS.length - 1)] ?? 0;
+  const spread = base * JITTER;
+  return base + (Math.random() * 2 - 1) * spread;
+}
+
+/** Promise-based sleep that fake timers can drive in tests. */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
   });
-  try {
-    return await Promise.race([promise, timeout]);
-  } finally {
-    clearTimeout(timer!);
+}
+
+/** Short, safe description of a thrown error for the exhaustion message. */
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+/**
+ * Attach an `AbortSignal` to pacote options. `signal` is forwarded by pacote at
+ * runtime (npm-registry-fetch → make-fetch-happen) but is not part of the
+ * `@types/pacote` Options surface; widen via intersection rather than casting.
+ */
+function withSignal(
+  opts: pacote.Options,
+  signal: AbortSignal,
+): pacote.Options & { signal: AbortSignal } {
+  return { ...opts, signal };
+}
+
+export interface PacoteRetryOptions {
+  attempts?: number;
+  perAttemptTimeoutMs?: number;
+  maxTotalMs?: number;
+}
+
+/**
+ * Run a pacote operation with bounded retry, a per-attempt abort, and a total
+ * wall-clock budget. `fn` receives the per-attempt `AbortSignal` to forward as
+ * `opts.signal`. Throws after attempts/budget are spent, or immediately on a
+ * permanent error.
+ */
+export async function withPacoteRetry<T>(
+  fn: (signal: AbortSignal) => Promise<T>,
+  label: string,
+  options: PacoteRetryOptions = {},
+): Promise<T> {
+  const attempts = options.attempts ?? PACOTE_RETRY_ATTEMPTS;
+  const perAttemptTimeoutMs =
+    options.perAttemptTimeoutMs ?? PACOTE_PER_ATTEMPT_TIMEOUT_MS;
+  const maxTotalMs = options.maxTotalMs ?? PACOTE_MAX_TOTAL_MS;
+
+  const start = Date.now();
+  let lastError: unknown;
+  let made = 0;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    // Clamp each attempt to the remaining budget so the total wall-clock is
+    // genuinely bounded. Stop if too little budget remains for a real attempt.
+    const remaining = maxTotalMs - (Date.now() - start);
+    if (remaining <= MIN_ATTEMPT_BUDGET_MS) break;
+    const attemptTimeoutMs = Math.min(perAttemptTimeoutMs, remaining);
+
+    made = attempt + 1;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), attemptTimeoutMs);
+    try {
+      return await fn(controller.signal);
+    } catch (error) {
+      lastError = error;
+      // Permanent failures never benefit from a retry.
+      if (isPermanentError(error)) throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    const isLastAttempt = attempt === attempts - 1;
+    const budgetSpent = Date.now() - start >= maxTotalMs;
+    if (isLastAttempt || budgetSpent) break;
+
+    const sleepMs = Math.min(
+      backoffForAttempt(attempt),
+      maxTotalMs - (Date.now() - start),
+    );
+    if (sleepMs <= 0) break;
+    await delay(sleepMs);
   }
+
+  throw new Error(
+    `Failed ${label} after ${made} attempts: ${describeError(lastError)}`,
+  );
+}
+
+/**
+ * `pacote.extract` with resilient retry. Retrying into the same dir is safe:
+ * pacote empties `dest` before each extract, so no redundant pre-clean is
+ * needed. The `cache` opt (when present) is preserved across attempts.
+ */
+export function extractWithResilience(
+  spec: string,
+  dest: string,
+  opts: pacote.Options,
+  _logger: Logger.Instance,
+  retryOptions?: PacoteRetryOptions,
+): Promise<pacote.FetchResult> {
+  return withPacoteRetry(
+    (signal) => pacote.extract(spec, dest, withSignal(opts, signal)),
+    `download ${spec}`,
+    retryOptions,
+  );
+}
+
+/** `pacote.manifest` with resilient retry. */
+export function manifestWithResilience(
+  spec: string,
+  opts: pacote.Options,
+  _logger: Logger.Instance,
+  retryOptions?: PacoteRetryOptions,
+): Promise<pacote.AbbreviatedManifest & pacote.ManifestResult> {
+  return withPacoteRetry(
+    (signal) => pacote.manifest(spec, withSignal(opts, signal)),
+    `fetch manifest ${spec}`,
+    retryOptions,
+  );
 }
 
 export interface Package {
@@ -296,14 +478,17 @@ export async function collectAllSpecs(
     }
     let manifest: ManifestWithMeta;
     try {
-      manifest = await withTimeout(
-        pacote.manifest(`${item.name}@${item.spec}`, npmConfig),
-        PACKAGE_DOWNLOAD_TIMEOUT_MS,
-        `Manifest fetch timed out: ${item.name}@${item.spec}`,
+      manifest = await manifestWithResilience(
+        `${item.name}@${item.spec}`,
+        npmConfig,
+        logger,
       );
     } catch (error) {
-      logger.debug(
-        `Failed to fetch manifest for ${item.name}@${item.spec}: ${error}`,
+      // A persistent manifest miss silently under-resolves the dependency
+      // graph (the consumer's transitive deps are never queued). Escalate to
+      // warn so the gap is visible, then continue resolving the rest.
+      logger.warn(
+        `Failed to fetch manifest for ${item.name}@${item.spec} after retries; its dependencies may be unresolved: ${error instanceof Error ? error.message : String(error)}`,
       );
       continue;
     }
@@ -464,9 +649,10 @@ export async function resolveVersionConflicts(
       concreteVersion = chosenVersion;
     } else {
       try {
-        const manifest = await pacote.manifest(
+        const manifest = await manifestWithResilience(
           `${name}@${chosenVersion}`,
           npmConfig,
+          logger,
         );
         concreteVersion = manifest.version;
       } catch (err) {
@@ -648,13 +834,13 @@ async function downloadPackagesImpl(
       await fs.ensureDir(path.dirname(packageDir));
       const cacheDir =
         process.env.NPM_CACHE_DIR || getTmpPath(tmpDir, 'cache', 'npm');
-      await withTimeout(
-        pacote.extract(packageSpec, packageDir, {
-          ...npmConfig,
-          cache: cacheDir,
-        }),
-        PACKAGE_DOWNLOAD_TIMEOUT_MS,
-        `Package download timed out after ${PACKAGE_DOWNLOAD_TIMEOUT_MS / 1000}s: ${packageSpec}`,
+      // Retrying into the same dir is safe: pacote empties `dest` before each
+      // extract, so no redundant pre-clean is needed here.
+      await extractWithResilience(
+        packageSpec,
+        packageDir,
+        { ...npmConfig, cache: cacheDir },
+        logger,
       );
 
       if (userSpecifiedPackages.has(name)) {
@@ -683,10 +869,10 @@ async function downloadPackagesImpl(
 
     if (!semver.valid(nestedPkg.version)) {
       try {
-        const manifest = await withTimeout(
-          pacote.manifest(resolvedSpec, npmConfig),
-          PACKAGE_DOWNLOAD_TIMEOUT_MS,
-          `Manifest fetch timed out: ${resolvedSpec}`,
+        const manifest = await manifestWithResilience(
+          resolvedSpec,
+          npmConfig,
+          logger,
         );
         resolvedSpec = `${nestedPkg.name}@${manifest.version}`;
       } catch (error) {
@@ -706,13 +892,11 @@ async function downloadPackagesImpl(
         await fs.ensureDir(path.dirname(nestedDir));
         const cacheDir =
           process.env.NPM_CACHE_DIR || getTmpPath(tmpDir, 'cache', 'npm');
-        await withTimeout(
-          pacote.extract(resolvedSpec, nestedDir, {
-            ...npmConfig,
-            cache: cacheDir,
-          }),
-          PACKAGE_DOWNLOAD_TIMEOUT_MS,
-          `Nested package download timed out: ${resolvedSpec}`,
+        await extractWithResilience(
+          resolvedSpec,
+          nestedDir,
+          { ...npmConfig, cache: cacheDir },
+          logger,
         );
         logger.debug(`Nested: ${resolvedSpec} under ${consumer}`);
       } catch (error) {

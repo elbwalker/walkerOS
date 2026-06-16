@@ -1,28 +1,41 @@
 import { randomBytes } from 'crypto';
 import { VERSION } from '../version.js';
 import { mergeAuthHeaders } from '../core/http.js';
+import { stepId } from '@walkeros/core';
 import type { Collector, Logger } from '@walkeros/core';
 import type { DedupedError, RingEntry } from './log-ring.js';
 import { redactErrors, redactLogs } from './redact.js';
+
+/**
+ * Per-destination heartbeat figures.
+ *
+ * `count`/`failed`/`duration`/`dropped` are deltas since the last reported
+ * snapshot (monotonic counters). `dlqSize` is a point-in-time gauge (current
+ * DLQ depth), reported as-is rather than delta'd so the operator sees the live
+ * backlog, not how it changed between two heartbeats.
+ */
+export interface DestinationCounter {
+  count: number;
+  failed: number;
+  duration: number;
+  /** Current DLQ depth (gauge). */
+  dlqSize: number;
+  /** Events dropped from the destination's queue/DLQ buffers (delta). */
+  dropped: number;
+}
 
 export interface CounterPayload {
   eventsIn: number;
   eventsOut: number;
   eventsFailed: number;
-  destinations: Record<
-    string,
-    { count: number; failed: number; duration: number }
-  >;
+  destinations: Record<string, DestinationCounter>;
 }
 
 export interface CounterSnapshot {
   in: number;
   out: number;
   failed: number;
-  destinations: Record<
-    string,
-    { count: number; failed: number; duration: number }
-  >;
+  destinations: Record<string, DestinationCounter>;
 }
 
 export function computeCounterDelta(
@@ -35,11 +48,17 @@ export function computeCounterDelta(
       count: 0,
       failed: 0,
       duration: 0,
+      dlqSize: 0,
+      dropped: 0,
     };
     destinations[name] = {
       count: dest.count - prev.count,
       failed: dest.failed - prev.failed,
       duration: dest.duration - prev.duration,
+      // dlqSize is a current-depth gauge, not a monotonic counter: report the
+      // live value rather than the difference between two snapshots.
+      dlqSize: dest.dlqSize,
+      dropped: dest.dropped - prev.dropped,
     };
   }
   return {
@@ -51,24 +70,24 @@ export function computeCounterDelta(
 }
 
 /**
- * Deep-copy destination status values to prevent shared references
- * between snapshots from causing delta computation to always return 0.
+ * Build a per-destination snapshot from the collector status. Copies the
+ * scalar counters (preventing shared references that would zero out deltas)
+ * and folds in the destination's current DLQ depth (`dlqSize`) plus its total
+ * dropped count (`status.dropped["destination.<id>"]`, summing queue + dlq).
  */
 function snapshotDestinations(
-  destinations: Record<
-    string,
-    { count: number; failed: number; duration: number }
-  >,
-): Record<string, { count: number; failed: number; duration: number }> {
-  const result: Record<
-    string,
-    { count: number; failed: number; duration: number }
-  > = {};
-  for (const [name, dest] of Object.entries(destinations)) {
+  status: Collector.Status,
+): Record<string, DestinationCounter> {
+  const result: Record<string, DestinationCounter> = {};
+  for (const [name, dest] of Object.entries(status.destinations)) {
+    const drops = status.dropped[stepId('destination', name)];
+    const dropped = (drops?.queue ?? 0) + (drops?.dlq ?? 0);
     result[name] = {
       count: dest.count,
       failed: dest.failed,
       duration: dest.duration,
+      dlqSize: dest.dlqSize,
+      dropped,
     };
   }
   return result;
@@ -126,7 +145,7 @@ export function createHeartbeat(
           in: status.in,
           out: status.out,
           failed: status.failed,
-          destinations: snapshotDestinations(status.destinations),
+          destinations: snapshotDestinations(status),
         };
         counters = computeCounterDelta(current, lastReported);
       }
@@ -153,7 +172,10 @@ export function createHeartbeat(
             cliVersion: VERSION,
             uptime: Math.floor((Date.now() - startTime) / 1000),
             ...(counters && { counters }),
-            ...(errors.length && { recentErrors: errors }),
+            // Always send recentErrors (even []) so a heartbeat that no longer
+            // carries any errors clears a stale snapshot on the app side. logs
+            // have no clear semantics, so they stay omit-when-empty.
+            recentErrors: errors,
             ...(logs.length && { recentLogs: logs }),
           }),
           signal: AbortSignal.timeout(10_000),

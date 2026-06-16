@@ -23,8 +23,19 @@ export const push: PushFn = async function (
     rowCount: rows.length,
   });
 
-  const pending = writer.appendRows(rows);
-  const result = await pending.getResult();
+  let result;
+  try {
+    const pending = writer.appendRows(rows);
+    result = await pending.getResult();
+  } catch (err) {
+    // Log the failure and rethrow the raw error to the collector/DLQ. Secret
+    // redaction is standardized at the CLI logger handler; the raw error keeps
+    // its `code` so the row stays DLQ-routable.
+    logger.error('BigQuery row append threw', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
 
   if (result.rowErrors && result.rowErrors.length > 0) {
     // Single-event push path: throw with row context so the caller sees the failure.

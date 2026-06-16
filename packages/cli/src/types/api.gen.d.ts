@@ -8195,6 +8195,8 @@ export interface components {
         healthy: boolean;
       } | null;
       /** Format: date-time */
+      lastHeartbeatAt?: string | null;
+      /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
@@ -8942,6 +8944,7 @@ export interface components {
       averageThroughputPerHour: number;
       period: string;
       buckets: components['schemas']['UsageBucket'][];
+      destinations?: components['schemas']['UsageDestination'][];
     };
     UsageBucket: {
       /** Format: date-time */
@@ -8950,6 +8953,14 @@ export interface components {
       eventsOut: number;
       eventsFailed: number;
       instances: number;
+    };
+    UsageDestination: {
+      name: string;
+      count: number;
+      failed: number;
+      duration: number;
+      dlqSize: number;
+      dropped: number;
     };
     CreateCustomDomainRequest: {
       hostname: string;
@@ -9491,6 +9502,8 @@ export interface components {
             count: number;
             failed: number;
             duration: number;
+            dlqSize?: number;
+            dropped?: number;
           };
         };
       };
