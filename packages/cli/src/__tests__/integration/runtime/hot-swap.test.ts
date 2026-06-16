@@ -127,8 +127,9 @@ describe('swapFlow', () => {
 
     expect(result).toBe(oldHandle);
     expect(oldHandle.collector).toBeDefined();
-    // Old collector is NOT shut down on a failed swap.
-    expect(oldCommand).not.toHaveBeenCalledWith('shutdown');
+    // Old collector is left entirely untouched on a failed swap: not shut down,
+    // not commanded at all.
+    expect(oldCommand).toHaveBeenCalledTimes(0);
   });
 });
 

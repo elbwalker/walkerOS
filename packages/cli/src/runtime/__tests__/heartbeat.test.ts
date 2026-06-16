@@ -94,6 +94,12 @@ function createFetchMock(): jest.Mock<
 describe('heartbeat', () => {
   const originalFetch = globalThis.fetch;
 
+  beforeEach(() => {
+    // mockLogger is shared across tests; clear its spies' call history so
+    // assertions don't see calls from a prior test.
+    jest.clearAllMocks();
+  });
+
   afterEach(() => {
     globalThis.fetch = originalFetch;
     jest.restoreAllMocks();

@@ -170,6 +170,12 @@ export const ConfigSchema = z
       .describe(
         'Maximum failed-push entries retained in dlq for this destination. FIFO drop on overflow. Default 100.',
       ),
+    timeout: z
+      .number()
+      .optional()
+      .describe(
+        'Per-destination delivery timeout in ms (default 10000); a delivery that does not settle in this window is routed to the DLQ like a thrown push.',
+      ),
     batch: z
       .union([
         z.number(),
