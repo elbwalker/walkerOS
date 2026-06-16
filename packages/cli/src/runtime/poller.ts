@@ -4,6 +4,13 @@ import type { Logger } from '@walkeros/core';
 export interface PollerConfig {
   fetchOptions: Omit<FetchConfigOptions, 'lastEtag'>;
   intervalMs: number;
+  /**
+   * Seed value for the conditional-request etag. When set, the very first
+   * poll sends `If-None-Match`, so an unchanged config 304s instead of being
+   * re-bundled on every boot/restart. Resolved by the caller from the
+   * boot-time config fetch or `WALKEROS_CONFIG_ETAG`.
+   */
+  initialEtag?: string;
   onUpdate: (
     content: Record<string, unknown>,
     version: string,
@@ -21,7 +28,7 @@ export function createPoller(
   logger: Logger.Instance,
 ): PollerHandle {
   let timer: ReturnType<typeof setInterval> | null = null;
-  let lastEtag: string | undefined;
+  let lastEtag: string | undefined = config.initialEtag;
 
   async function pollOnce(): Promise<void> {
     try {
@@ -47,7 +54,6 @@ export function createPoller(
   }
 
   function start(): void {
-    lastEtag = undefined;
     const jitter = config.intervalMs * 0.15 * (Math.random() * 2 - 1);
     timer = setInterval(() => pollOnce(), config.intervalMs + jitter);
     logger.info(

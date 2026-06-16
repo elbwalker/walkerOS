@@ -5,6 +5,7 @@ jest.mock('@optimizely/optimizely-sdk', () => ({
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
+import type { OptimizelyStepExample } from '../examples/step';
 import type { Env, OptimizelyUserContext, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
@@ -42,64 +43,52 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('optimizely destination -- step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
-    const example = rawExample as {
-      in?: unknown;
-      mapping?: unknown;
-      out?: ReadonlyArray<CallRecord>;
-      command?: 'consent' | 'user' | 'config' | 'run';
-      settings?: Partial<Settings>;
-    };
+  it.each<[string, OptimizelyStepExample]>(Object.entries(examples.step))(
+    '%s',
+    async (name, example) => {
+      const { env, collected } = spyEnv();
+      const dest = jest.requireActual('../').default;
+      const { elb } = await startFlow();
 
-    const { env, collected } = spyEnv();
-    const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow();
+      const baseSettings: Partial<Settings> & { sdkKey: string } = {
+        sdkKey: 'test-sdk-key',
+        userId: 'user.id',
+        ...(example.settings || {}),
+      };
 
-    const baseSettings: Partial<Settings> & { sdkKey: string } = {
-      sdkKey: 'test-sdk-key',
-      userId: 'user.id',
-      ...(example.settings || {}),
-    };
+      if (example.command === 'consent') {
+        await elb('walker destination', {
+          code: { ...dest, env },
+          config: {
+            consent: { analytics: true },
+            settings: baseSettings,
+          },
+        });
+        // Load the gated destination under a prior grant first when the example
+        // declares one, so a revoke acts on an already-granted destination.
+        if (example.before) await elb('walker consent', example.before);
+        await elb('walker consent', example.in as WalkerOS.Consent);
+      } else {
+        const event = example.in as WalkerOS.Event;
+        const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+        const mappingConfig = mapping
+          ? { [event.entity]: { [event.action]: mapping } }
+          : undefined;
 
-    if (example.command === 'consent') {
-      await elb('walker destination', {
-        code: { ...dest, env },
-        config: {
-          consent: { analytics: true },
-          settings: baseSettings,
-        },
-      });
-      // Prime the destination so init runs and state.client exists before
-      // consent revocation fires on('consent').
-      await elb({
-        entity: 'ping',
-        action: 'init',
-        data: { id: 'prime' },
-      } as unknown as WalkerOS.PartialEvent);
-      await elb('walker consent', { analytics: true } as WalkerOS.Consent);
-      // Reset the call log so only the post-consent behavior is asserted.
-      collected().length = 0;
-      await elb('walker consent', example.in as WalkerOS.Consent);
-    } else {
-      const event = example.in as WalkerOS.Event;
-      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-      const mappingConfig = mapping
-        ? { [event.entity]: { [event.action]: mapping } }
-        : undefined;
+        await elb('walker destination', {
+          code: { ...dest, env },
+          config: {
+            settings: baseSettings,
+            mapping: mappingConfig,
+          },
+        });
+        await elb(event);
+      }
 
-      await elb('walker destination', {
-        code: { ...dest, env },
-        config: {
-          settings: baseSettings,
-          mapping: mappingConfig,
-        },
-      });
-      await elb(event);
-    }
+      const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+      const actual = collected();
 
-    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    const actual = collected();
-
-    expect(actual).toEqual(expected);
-  });
+      expect(actual).toEqual(expected);
+    },
+  );
 });

@@ -5,13 +5,6 @@ import { z } from '@walkeros/core/dev';
  */
 export const SettingsSchema = z
   .object({
-    eventName: z
-      .string()
-      .describe(
-        "Window event name to listen for, configured in the Usercentrics admin (Implementation > Data Layer & Events). Use 'UC_SDK_EVENT' for the built-in Browser SDK event. Default: 'ucEvent'.",
-      )
-      .optional(),
-
     categoryMap: z
       .record(z.string(), z.string())
       .describe(
@@ -22,7 +15,7 @@ export const SettingsSchema = z
     explicitOnly: z
       .boolean()
       .describe(
-        "Only process consent_status events where type is 'explicit'. Ignores implicit/default page-load events. Default: true.",
+        'Only publish when the user has actively decided (V3: consent.type EXPLICIT; V2: an EXPLICIT entry in service consent history). Implicit/default page-load states are suppressed. Set false to publish any snapshot including implicit. Default: true.',
       )
       .optional(),
   })

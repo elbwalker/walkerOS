@@ -256,13 +256,64 @@ describe('resolveBundle', () => {
       ).rejects.toThrow('empty');
     });
 
-    it('should throw on network error', async () => {
-      isStdinPiped.mockReturnValue(false);
-      mockFetch.mockRejectedValue(new Error('ECONNREFUSED'));
+    it('should throw after retries are exhausted on a persistent network error', async () => {
+      // fetchOk now retries transient failures; a coded connection error is
+      // retried up to 3 times, then the exhaustion error surfaces. Fake timers
+      // drain the backoff sleeps so the test does not wait in real time.
+      jest.useFakeTimers();
+      try {
+        isStdinPiped.mockReturnValue(false);
+        const connError = Object.assign(new Error('connect ECONNREFUSED'), {
+          code: 'ECONNREFUSED',
+        });
+        mockFetch.mockRejectedValue(connError);
 
-      await expect(
-        resolveBundle('https://s3.example.com/bundle.mjs'),
-      ).rejects.toThrow('ECONNREFUSED');
+        const pending = resolveBundle('https://s3.example.com/bundle.mjs').then(
+          () => ({ ok: true as const }),
+          (error: unknown) => ({ ok: false as const, error }),
+        );
+        await jest.runAllTimersAsync();
+        const result = await pending;
+
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+          expect(result.error).toBeInstanceOf(Error);
+          if (result.error instanceof Error) {
+            expect(result.error.message).toMatch(/after 3 attempts/);
+          }
+        }
+        expect(mockFetch).toHaveBeenCalledTimes(3);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('retries a transient failure then resolves the bundle', async () => {
+      jest.useFakeTimers();
+      try {
+        isStdinPiped.mockReturnValue(false);
+        const connError = Object.assign(new Error('connect ECONNRESET'), {
+          code: 'ECONNRESET',
+        });
+        mockFetch
+          .mockRejectedValueOnce(connError)
+          .mockResolvedValueOnce(
+            textResponse('export default function() {}', true, 200, 'OK'),
+          );
+
+        const pending = resolveBundle('https://s3.example.com/bundle.mjs');
+        await jest.runAllTimersAsync();
+        const result = await pending;
+
+        expect(result.source).toBe('url');
+        expect(result.path).toBe(DEFAULT_WRITE_PATH);
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(readFileSync(DEFAULT_WRITE_PATH, 'utf-8')).toBe(
+          'export default function() {}',
+        );
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

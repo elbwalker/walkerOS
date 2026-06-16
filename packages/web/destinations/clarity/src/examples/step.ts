@@ -11,6 +11,8 @@ import type { Settings } from '../types';
 export type ClarityStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
   configInclude?: string[];
+  /** Consent granted before `in` so a gated destination is loaded first. */
+  before?: WalkerOS.Consent;
 };
 
 /**
@@ -281,15 +283,19 @@ export const consentGrantBoth: ClarityStepExample = {
 };
 
 /**
- * Consent revocation - denied categories call Clarity.consentV2(...) with
- * denied flags. The destination does NOT call the legacy `Clarity.consent(false)`
- * API at all - consentV2 is the single source of truth for consent state.
+ * Consent revocation - after analytics and marketing are granted (Clarity
+ * loads), revoking them calls Clarity.consentV2(...) with denied flags. The
+ * destination does NOT call the legacy `Clarity.consent(false)` API at all -
+ * consentV2 is the single source of truth for consent state. The destination
+ * is never loaded under denied consent, so the revoke acts on an
+ * already-granted destination.
  */
 export const consentRevoke: ClarityStepExample = {
   title: 'Consent revoked',
   description:
     'A walker consent command with analytics and marketing denied calls Clarity.consentV2 with denied flags.',
   command: 'consent',
+  before: { analytics: true, marketing: true },
   in: { analytics: false, marketing: false } as WalkerOS.Consent,
   settings: {
     consent: {
@@ -298,6 +304,10 @@ export const consentRevoke: ClarityStepExample = {
     },
   },
   out: [
+    [
+      'clarity.consentV2',
+      { analytics_Storage: 'granted', ad_Storage: 'granted' },
+    ],
     [
       'clarity.consentV2',
       { analytics_Storage: 'denied', ad_Storage: 'denied' },

@@ -8,6 +8,12 @@ import { openWriter, closeWriter } from './writer';
 // Types
 export * as DestinationBigQuery from './types';
 
+// Default gRPC deadline (ms) when the standard per-step `config.timeout` is
+// unset or <= 0. Mirrors the collector's DEFAULT_DESTINATION_TIMEOUT_MS and its
+// `> 0 ? value : default` rule (packages/collector/src/destination.ts), so the
+// gax deadline matches the window the collector uses to race the push.
+const DEFAULT_TIMEOUT_MS = 10_000;
+
 export const destinationBigQuery: Destination = {
   type: 'gcp-bigquery',
 
@@ -18,6 +24,14 @@ export const destinationBigQuery: Destination = {
   async init({ config: partialConfig, env, logger, id }) {
     const config = getConfig(partialConfig, env, logger);
 
+    // The gax deadline derives from the standard per-step config.timeout (the
+    // same value the collector uses to race the push), not a destination-custom
+    // knob. A positive number wins; 0/unset falls back to the default.
+    const timeout =
+      config.timeout && config.timeout > 0
+        ? config.timeout
+        : DEFAULT_TIMEOUT_MS;
+
     // Open the long-lived JSONWriter on the _default stream.
     // Hard-fail when the dataset/table is missing.
     try {
@@ -27,12 +41,19 @@ export const destinationBigQuery: Destination = {
           datasetId: config.settings.datasetId,
           tableId: config.settings.tableId,
           bigquery: config.settings.bigquery,
+          timeout,
         },
         logger,
       );
       config.settings.writer = writer;
       config.settings.writeClient = writeClient;
     } catch (err) {
+      // Log the failure and rethrow the raw error. Secret redaction is
+      // standardized at the CLI logger handler, which scrubs every line before
+      // both stderr and the heartbeat ring, so the destination logs the message
+      // as-is. The raw error keeps its `code` naturally, so it stays
+      // NotFound-classifiable and DLQ-routable.
+      const message = err instanceof Error ? err.message : String(err);
       if (isNotFound(err)) {
         const target = `${config.settings.datasetId}.${config.settings.tableId}`;
         const project = config.settings.projectId;
@@ -42,7 +63,7 @@ export const destinationBigQuery: Destination = {
           {
             project,
             target,
-            error: err instanceof Error ? err.message : String(err),
+            error: message,
           },
         );
       } else {
@@ -51,7 +72,7 @@ export const destinationBigQuery: Destination = {
         // resolve stream, build proto descriptor), so it logs here before
         // re-throwing.
         logger.error('BigQuery init failed', {
-          error: err instanceof Error ? err.message : String(err),
+          error: message,
         });
       }
       throw err;

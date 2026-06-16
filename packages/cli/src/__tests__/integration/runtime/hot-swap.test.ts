@@ -111,15 +111,25 @@ describe('swapFlow', () => {
     expect(mockLogger.info).toHaveBeenCalledWith('Flow swapped successfully');
   });
 
-  it('keeps old handle if new bundle fails to load', async () => {
+  it('rolls back to the old handle (no throw) if new bundle fails to load', async () => {
     const oldHandle = await loadFlow(BUNDLE_V1, { port: 8080 }, mockLogger);
+    const oldCommand = jest.fn();
+    oldHandle.collector.command = oldCommand;
 
-    await expect(
-      swapFlow(oldHandle, BUNDLE_INVALID, { port: 8080 }, mockLogger),
-    ).rejects.toThrow('Invalid bundle');
+    // Atomic load-then-swap: a failed load returns the OLD handle unchanged
+    // instead of throwing, so the old flow keeps serving (no wedge).
+    const result = await swapFlow(
+      oldHandle,
+      BUNDLE_INVALID,
+      { port: 8080 },
+      mockLogger,
+    );
 
-    // Old handle should still be valid
+    expect(result).toBe(oldHandle);
     expect(oldHandle.collector).toBeDefined();
+    // Old collector is left entirely untouched on a failed swap: not shut down,
+    // not commanded at all.
+    expect(oldCommand).toHaveBeenCalledTimes(0);
   });
 });
 

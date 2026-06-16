@@ -5,6 +5,7 @@ import {
   getPlatform,
   getNextSteps,
   buildCacheContext,
+  stepId,
 } from '@walkeros/core';
 import {
   enrichEvent,
@@ -23,6 +24,7 @@ import {
 
 import type {
   Flow,
+  FlowState,
   Ingest,
   Logger,
   Simulation,
@@ -616,7 +618,29 @@ function buildFailureSummary(failedIds: string[], collector: unknown): string {
   return `Push failed for ${noun}: ${labels.join(', ')}`;
 }
 
-export interface SimulateSourceOptions {
+/**
+ * Shared data-injection seam for all simulate functions.
+ */
+export interface SimulateDataOptions {
+  /**
+   * Wire-config data payload to execute instead of the bundle's baked
+   * `__configData`. Shape: the split-config data payload the bundler
+   * emits (section, step id, data-layer props), as built by
+   * `buildDataPayload`.
+   *
+   * The payload REPLACES the baked data, there is no deep-merge: build
+   * the full payload from the full config. Injection granularity follows
+   * the skeleton's `__data` references, which are emitted per TOP-LEVEL
+   * step prop. Changed values for any nested key under an existing
+   * top-level data prop (e.g. a new entity-action rule inside an existing
+   * `mapping`) take effect without a rebundle. An entirely NEW top-level
+   * data prop on a step has no `__data` reference in the skeleton, so it
+   * is IGNORED by injection and requires a rebundle.
+   */
+  data?: Record<string, unknown>;
+}
+
+export interface SimulateSourceOptions extends SimulateDataOptions {
   sourceId: string;
   bundlePath?: string;
   flow?: string;
@@ -718,7 +742,9 @@ export async function simulateSource(
           );
         }
 
-        const flowConfig = module.wireConfig(module.__configData ?? undefined);
+        const flowConfig = module.wireConfig(
+          options.data ?? module.__configData ?? undefined,
+        );
         applyOverrides(flowConfig, prepared.overrides);
 
         // Capture events at the collector.push boundary via prePush hook.
@@ -786,7 +812,7 @@ export async function simulateSource(
   }
 }
 
-export interface SimulateTransformerOptions {
+export interface SimulateTransformerOptions extends SimulateDataOptions {
   transformerId: string;
   bundlePath?: string;
   flow?: string;
@@ -887,7 +913,9 @@ export async function simulateTransformer(
         networkCalls,
       },
       async (module) => {
-        const flowConfig = module.wireConfig(module.__configData ?? undefined);
+        const flowConfig = module.wireConfig(
+          options.data ?? module.__configData ?? undefined,
+        );
         applyOverrides(flowConfig, prepared.overrides);
 
         // Don't initialize sources or destinations during transformer simulation.
@@ -1027,7 +1055,7 @@ export async function simulateTransformer(
   }
 }
 
-export interface SimulateCollectorOptions {
+export interface SimulateCollectorOptions extends SimulateDataOptions {
   collectorName: string;
   bundlePath?: string;
   flow?: string;
@@ -1123,7 +1151,9 @@ export async function simulateCollector(
         networkCalls,
       },
       async (module) => {
-        const flowConfig = module.wireConfig(module.__configData ?? undefined);
+        const flowConfig = module.wireConfig(
+          options.data ?? module.__configData ?? undefined,
+        );
         applyOverrides(flowConfig, prepared.overrides);
 
         // Don't initialize sources or destinations during collector enrichment.
@@ -1185,7 +1215,7 @@ export async function simulateCollector(
   }
 }
 
-export interface SimulateDestinationOptions {
+export interface SimulateDestinationOptions extends SimulateDataOptions {
   destinationId: string;
   bundlePath?: string;
   flow?: string;
@@ -1277,7 +1307,9 @@ export async function simulateDestination(
         networkCalls,
       },
       async (module) => {
-        const flowConfig = module.wireConfig(module.__configData ?? undefined);
+        const flowConfig = module.wireConfig(
+          options.data ?? module.__configData ?? undefined,
+        );
         applyOverrides(flowConfig, prepared.overrides);
 
         // Read env from bundled __devExports
@@ -1341,6 +1373,27 @@ export async function simulateDestination(
 
         logger.info(`Simulating destination: ${options.destinationId}`);
 
+        // Capture the matched mapping rule key from the runtime's own
+        // FlowState emissions: the destination push site emits per-event
+        // records carrying the mappingKey that processEventMapping computed.
+        // Observing the wired execution keeps a single rule-matching
+        // authority and automatically reflects injected data payloads.
+        let mappingKey: string | undefined;
+        const targetStepId = stepId('destination', options.destinationId);
+        // The in, out, and error phases can all carry the key, so capture on
+        // presence rather than pinning a phase: a throwing destination still
+        // reports which rule matched.
+        const captureMappingKey = (state: FlowState): void => {
+          if (state.stepId === targetStepId && state.mappingKey) {
+            mappingKey = state.mappingKey;
+          }
+        };
+        // Guarded: a prebuilt bundle may carry a collector without an
+        // observer channel; degrade to an undefined key instead of throwing.
+        if (collector.observers instanceof Set) {
+          collector.observers.add(captureMappingKey);
+        }
+
         // Full pipeline: consent, mapping, enrichment, before chains
         // include filter ensures only the target destination receives the event
         await collector.push(event, {
@@ -1356,6 +1409,7 @@ export async function simulateDestination(
           usage: trackedCalls.length
             ? { [options.destinationId]: trackedCalls }
             : undefined,
+          mappingKey,
         });
       },
       (error) =>

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "1.1.0",
+    "version": "2.1.0",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -344,8 +344,11 @@
             "enum": ["web", "server"],
             "example": "web"
           },
-          "deploymentStatus": {
-            "type": ["string", "null"]
+          "serving": {
+            "$ref": "#/components/schemas/ServingStatus"
+          },
+          "latestAttempt": {
+            "$ref": "#/components/schemas/LatestAttemptStatus"
           },
           "deploymentUrl": {
             "type": ["string", "null"]
@@ -358,9 +361,26 @@
           "id",
           "name",
           "platform",
-          "deploymentStatus",
+          "serving",
+          "latestAttempt",
           "deploymentUrl",
           "deployedAt"
+        ]
+      },
+      "ServingStatus": {
+        "type": "string",
+        "enum": ["live", "none"]
+      },
+      "LatestAttemptStatus": {
+        "type": ["string", "null"],
+        "enum": [
+          "idle",
+          "deploying",
+          "published",
+          "active",
+          "stopped",
+          "failed",
+          null
         ]
       },
       "Version": {
@@ -465,6 +485,353 @@
           }
         },
         "required": ["userId", "email", "role", "createdAt"]
+      },
+      "DeleteAccountRequest": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "string",
+            "minLength": 1,
+            "example": "me@example.com"
+          }
+        },
+        "required": ["confirm"]
+      },
+      "DeleteAccountBlocked": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["SOLE_OWNER"],
+                "example": "SOLE_OWNER"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "projects": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": ["proj_abc123"]
+                  }
+                },
+                "required": ["projects"]
+              }
+            },
+            "required": ["code", "message", "details"]
+          }
+        },
+        "required": ["error"]
+      },
+      "AccountExportResponse": {
+        "type": "object",
+        "properties": {
+          "exportedAt": {
+            "type": "string",
+            "example": "2026-06-10T12:00:00.000Z"
+          },
+          "profile": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "user_a1b2c3d4"
+              },
+              "email": {
+                "type": "string",
+                "example": "me@example.com"
+              },
+              "displayName": {
+                "type": ["string", "null"]
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "lastLoginAt": {
+                "type": ["string", "null"]
+              },
+              "globalRole": {
+                "type": "string",
+                "example": "user"
+              },
+              "traits": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "displayName",
+              "createdAt",
+              "lastLoginAt",
+              "globalRole",
+              "traits"
+            ]
+          },
+          "memberships": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "joinedAt": {
+                  "type": "string"
+                }
+              },
+              "required": ["projectId", "projectName", "role", "joinedAt"]
+            }
+          },
+          "apiTokens": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": ["string", "null"]
+                },
+                "origin": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "lastUsedAt": {
+                  "type": ["string", "null"]
+                },
+                "expiresAt": {
+                  "type": ["string", "null"]
+                },
+                "revokedAt": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "projectId",
+                "origin",
+                "createdAt",
+                "lastUsedAt",
+                "expiresAt",
+                "revokedAt"
+              ]
+            }
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "expiresAt": {
+                  "type": "string"
+                },
+                "lastTouchedAt": {
+                  "type": "string"
+                }
+              },
+              "required": ["id", "createdAt", "expiresAt", "lastTouchedAt"]
+            }
+          },
+          "mcpTokens": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "lastUsedAt": {
+                  "type": ["string", "null"]
+                },
+                "expiresAt": {
+                  "type": "string"
+                },
+                "revokedAt": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "createdAt",
+                "lastUsedAt",
+                "expiresAt",
+                "revokedAt"
+              ]
+            }
+          },
+          "mcpSessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": ["string", "null"]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "lastActiveAt": {
+                  "type": "string"
+                },
+                "expiresAt": {
+                  "type": "string"
+                },
+                "messages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "seq": {
+                        "type": "number"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "content": {},
+                      "createdAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["seq", "role", "createdAt"]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "projectId",
+                "createdAt",
+                "lastActiveAt",
+                "expiresAt",
+                "messages"
+              ]
+            }
+          },
+          "feedback": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": ["string", "null"]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": ["id", "projectId", "text", "source", "createdAt"]
+            }
+          },
+          "invitations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "invitedEmail": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "expiresAt": {
+                  "type": "string"
+                },
+                "acceptedAt": {
+                  "type": ["string", "null"]
+                },
+                "declinedAt": {
+                  "type": ["string", "null"]
+                },
+                "cancelledAt": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": [
+                "id",
+                "projectId",
+                "invitedEmail",
+                "role",
+                "status",
+                "createdAt",
+                "expiresAt",
+                "acceptedAt",
+                "declinedAt",
+                "cancelledAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "exportedAt",
+          "profile",
+          "memberships",
+          "apiTokens",
+          "sessions",
+          "mcpTokens",
+          "mcpSessions",
+          "feedback",
+          "invitations"
+        ]
       },
       "ApiTokenSummary": {
         "type": "object",
@@ -725,6 +1092,15 @@
               "updatedAt"
             ]
           },
+          "serving": {
+            "$ref": "#/components/schemas/ServingStatus"
+          },
+          "latestAttempt": {
+            "$ref": "#/components/schemas/LatestAttemptStatus"
+          },
+          "deployedAt": {
+            "type": ["string", "null"]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -741,6 +1117,9 @@
           "name",
           "platform",
           "deployment",
+          "serving",
+          "latestAttempt",
+          "deployedAt",
           "createdAt",
           "updatedAt"
         ]
@@ -854,6 +1233,9 @@
             ],
             "example": "active"
           },
+          "serving": {
+            "$ref": "#/components/schemas/ServingStatus"
+          },
           "currentVersionNumber": {
             "type": ["integer", "null"],
             "exclusiveMinimum": 0
@@ -875,10 +1257,6 @@
           },
           "updatedAt": {
             "type": "string",
-            "format": "date-time"
-          },
-          "traceUntil": {
-            "type": ["string", "null"],
             "format": "date-time"
           },
           "usageSummary": {
@@ -903,13 +1281,13 @@
           "label",
           "origin",
           "status",
+          "serving",
           "currentVersionNumber",
           "url",
           "flowId",
           "flowName",
           "createdAt",
-          "updatedAt",
-          "traceUntil"
+          "updatedAt"
         ]
       },
       "DeploymentDetailResponse": {
@@ -965,6 +1343,45 @@
           "error": {
             "$ref": "#/components/schemas/DeploymentError"
           },
+          "recentErrors": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "firstSeen": {
+                  "type": "string"
+                },
+                "lastSeen": {
+                  "type": "string"
+                }
+              },
+              "required": ["message", "count", "firstSeen", "lastSeen"]
+            }
+          },
+          "recentLogs": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "string"
+                },
+                "level": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["time", "level", "message"]
+            }
+          },
           "url": {
             "type": ["string", "null"]
           },
@@ -992,7 +1409,7 @@
               "healthy"
             ]
           },
-          "traceUntil": {
+          "lastHeartbeatAt": {
             "type": ["string", "null"],
             "format": "date-time"
           },
@@ -1018,7 +1435,6 @@
           "error",
           "url",
           "selfHosted",
-          "traceUntil",
           "createdAt",
           "updatedAt"
         ]
@@ -1176,6 +1592,9 @@
             ],
             "example": "active"
           },
+          "serving": {
+            "$ref": "#/components/schemas/ServingStatus"
+          },
           "currentVersionNumber": {
             "type": ["integer", "null"],
             "exclusiveMinimum": 0
@@ -1197,10 +1616,6 @@
           },
           "updatedAt": {
             "type": "string",
-            "format": "date-time"
-          },
-          "traceUntil": {
-            "type": ["string", "null"],
             "format": "date-time"
           },
           "usageSummary": {
@@ -1225,13 +1640,123 @@
           "label",
           "origin",
           "status",
+          "serving",
           "currentVersionNumber",
           "url",
           "flowId",
           "flowName",
           "createdAt",
-          "updatedAt",
-          "traceUntil"
+          "updatedAt"
+        ]
+      },
+      "StartDeploymentResponse": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "deploymentId": {
+                "type": "string",
+                "pattern": "^dep_[a-zA-Z0-9_-]+$",
+                "example": "dep_a1b2c3d4"
+              },
+              "slug": {
+                "type": "string",
+                "pattern": "^[a-z0-9]{12}$",
+                "example": "k7m2x9p4q1w8"
+              },
+              "target": {
+                "type": ["string", "null"]
+              },
+              "type": {
+                "type": "string",
+                "enum": ["web", "server"],
+                "example": "web"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["deploying"]
+              },
+              "settingsId": {
+                "type": "string"
+              },
+              "versionId": {
+                "type": "string"
+              },
+              "versionNumber": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "deploymentId",
+              "slug",
+              "target",
+              "type",
+              "status",
+              "versionId",
+              "versionNumber"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "deploymentId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["already_created"]
+              }
+            },
+            "required": ["deploymentId", "status"]
+          }
+        ]
+      },
+      "DeploymentStreamStatusEvent": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "substatus": {
+            "type": ["string", "null"]
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"],
+            "example": "web"
+          },
+          "target": {
+            "type": ["string", "null"]
+          },
+          "containerUrl": {
+            "type": ["string", "null"]
+          },
+          "errorCode": {
+            "type": ["string", "null"]
+          },
+          "errorMessage": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "substatus",
+          "type",
+          "target",
+          "containerUrl",
+          "errorCode",
+          "errorMessage",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "ListDeploymentsResponse": {
@@ -1650,6 +2175,99 @@
           }
         },
         "required": ["flowSettingsId"]
+      },
+      "ObserveSessionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^ses_[a-zA-Z0-9_-]+$",
+            "example": "ses_abc123xyz456"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "flowId": {
+            "type": "string",
+            "pattern": "^flow_[a-zA-Z0-9_-]+$",
+            "example": "flow_a1b2c3d4"
+          },
+          "status": {
+            "type": "string"
+          },
+          "errorMessage": {
+            "type": ["string", "null"]
+          },
+          "configSnapshot": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "serverFlowName": {
+            "type": ["string", "null"]
+          },
+          "serverEndpoint": {
+            "type": ["string", "null"]
+          },
+          "web": {
+            "$ref": "#/components/schemas/ObserveSessionWeb"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "flowId",
+          "status",
+          "errorMessage",
+          "configSnapshot",
+          "serverFlowName",
+          "serverEndpoint",
+          "web",
+          "createdBy",
+          "createdAt"
+        ]
+      },
+      "ObserveSessionWeb": {
+        "type": ["object", "null"],
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "activationUrl": {
+            "type": "string"
+          },
+          "bundleUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": ["token", "activationUrl", "bundleUrl"]
+      },
+      "CreateObserveSessionRequest": {
+        "type": "object",
+        "properties": {
+          "settingsName": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["settingsName"]
+      },
+      "ObserveSessionHeartbeatResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["ok"]
       },
       "SecretName": {
         "type": "string",
@@ -2745,29 +3363,6 @@
         },
         "required": ["ingestToken"]
       },
-      "TraceDeploymentRequest": {
-        "type": "object",
-        "properties": {
-          "minutes": {
-            "type": "integer",
-            "minimum": 0
-          }
-        }
-      },
-      "TraceDeploymentResponse": {
-        "type": "object",
-        "properties": {
-          "traceUntil": {
-            "type": ["string", "null"],
-            "format": "date-time"
-          },
-          "minutes": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "required": ["traceUntil", "minutes"]
-      },
       "DeploymentUsageResponse": {
         "type": "object",
         "properties": {
@@ -2810,6 +3405,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/UsageBucket"
+            }
+          },
+          "destinations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageDestination"
             }
           }
         },
@@ -2856,6 +3457,42 @@
           "eventsOut",
           "eventsFailed",
           "instances"
+        ]
+      },
+      "UsageDestination": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0
+          },
+          "dlqSize": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dropped": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name",
+          "count",
+          "failed",
+          "duration",
+          "dlqSize",
+          "dropped"
         ]
       },
       "CreateCustomDomainRequest": {
@@ -3930,22 +4567,6 @@
           "updatedAt"
         ]
       },
-      "StartDeploymentResponse": {
-        "type": "object",
-        "properties": {
-          "deploymentId": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["web", "server"]
-          },
-          "status": {
-            "type": "string"
-          }
-        },
-        "required": ["deploymentId", "type", "status"]
-      },
       "ListSettingsResponse": {
         "type": "object",
         "properties": {
@@ -4419,6 +5040,14 @@
                     "duration": {
                       "type": "number",
                       "minimum": 0
+                    },
+                    "dlqSize": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "dropped": {
+                      "type": "integer",
+                      "minimum": 0
                     }
                   },
                   "required": ["count", "failed", "duration"]
@@ -4431,6 +5060,54 @@
               "eventsFailed",
               "destinations"
             ]
+          },
+          "recentErrors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "firstSeen": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lastSeen": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": ["message", "count", "firstSeen", "lastSeen"]
+            },
+            "maxItems": 50
+          },
+          "recentLogs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "level": {
+                  "type": "string",
+                  "enum": ["error", "warn", "info", "debug"]
+                },
+                "message": {
+                  "type": "string",
+                  "maxLength": 256
+                }
+              },
+              "required": ["time", "level", "message"]
+            },
+            "maxItems": 100
           }
         },
         "required": ["instanceId", "flowId"]
@@ -4538,6 +5215,86 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WhoamiResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account": {
+      "delete": {
+        "tags": ["Account"],
+        "summary": "Delete own account",
+        "description": "Soft-delete the authenticated account, starting the 30-day grace window. Requires a confirmation of the account email in the body. Revokes all sessions, API tokens, and MCP tokens. Blocked with 409 when the caller is the sole owner of a project that still has other members.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Account scheduled for deletion"
+          },
+          "400": {
+            "description": "Confirmation email does not match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sole owner of a shared project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAccountBlocked"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/export": {
+      "get": {
+        "tags": ["Account"],
+        "summary": "Export own account data",
+        "description": "Download a portable JSON export of everything the platform holds about the authenticated account: profile, memberships, token and session metadata, MCP sessions with messages, feedback, and invitations. Metadata only; token hashes and secret values are never included. Served as a file attachment.",
+        "responses": {
+          "200": {
+            "description": "Account data export (file attachment)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountExportResponse"
                 }
               }
             }
@@ -6710,7 +7467,7 @@
       "post": {
         "tags": ["Deployments"],
         "summary": "Start deployment",
-        "description": "Start a new deployment for a flow. Returns 400 AMBIGUOUS_SETTINGS if the flow has multiple named settings — use the per-settings deploy endpoint instead.",
+        "description": "Start a new deployment for a flow. The bundle runs asynchronously on the worker. Returns 400 AMBIGUOUS_CONFIG when the flow has multiple named settings (use the per-settings deploy endpoint instead). When an Idempotency-Key replays a prior request, returns 200 with status `already_created`.",
         "parameters": [
           {
             "schema": {
@@ -6734,6 +7491,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Deployment started, or idempotent replay of a prior request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartDeploymentResponse"
+                }
+              }
+            }
+          },
           "201": {
             "description": "Deployment started",
             "content": {
@@ -6764,6 +7531,16 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -6776,6 +7553,16 @@
           },
           "409": {
             "description": "Deployment already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited or concurrent deploy limit (Retry-After header)",
             "content": {
               "application/json": {
                 "schema": {
@@ -7773,6 +8560,404 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/observe-sessions": {
+      "post": {
+        "tags": ["Observe Sessions"],
+        "summary": "Start observe session",
+        "description": "Start an Observe session for a flow. Validates the flow topology, inserts the row, and kicks off detached provisioning. Returns the row immediately as arming.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateObserveSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Observe session started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObserveSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Flow topology not supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}": {
+      "get": {
+        "tags": ["Observe Sessions"],
+        "summary": "Get observe session",
+        "description": "Get an observe session: status, error message, config snapshot, web activation info, and the live server endpoint when live.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^ses_[a-zA-Z0-9_-]+$",
+              "example": "ses_abc123xyz456"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Observe session details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObserveSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Observe Sessions"],
+        "summary": "End observe session",
+        "description": "End an observe session: tear down the container, revoke credentials, delete the web preview, delete the row. Idempotent.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^ses_[a-zA-Z0-9_-]+$",
+              "example": "ses_abc123xyz456"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Observe session ended"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/heartbeat": {
+      "post": {
+        "tags": ["Observe Sessions"],
+        "summary": "Heartbeat observe session",
+        "description": "Keep an observe session warm. The window posts this every 30s while open; a stale session is reaped by the janitor.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^ses_[a-zA-Z0-9_-]+$",
+              "example": "ses_abc123xyz456"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Heartbeat recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObserveSessionHeartbeatResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/end": {
+      "post": {
+        "tags": ["Observe Sessions"],
+        "summary": "End observe session (beacon)",
+        "description": "The navigator.sendBeacon end target for page unload. Mirrors the DELETE end route because sendBeacon cannot send a DELETE. Idempotent.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^ses_[a-zA-Z0-9_-]+$",
+              "example": "ses_abc123xyz456"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Observe session ended"
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -10475,6 +11660,66 @@
         }
       }
     },
+    "/api/projects/{projectId}/deployments/{deploymentId}/stream": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "Stream deployment status (SSE)",
+        "description": "Server-Sent Events (`text/event-stream`) stream of a deployment's live status. Emits named events: `status` (a snapshot payload, schema below), `done` (terminal, no body), and `timeout`. The CLI consumes this with a raw fetch while waiting for a deploy to finish. Requires member role. The schema documents the JSON `data:` of a `status` event; `errorCode`/`errorMessage` carry the persisted, redacted classification of a failed deploy.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "dep_abc123"
+            },
+            "required": true,
+            "name": "deploymentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream; `status` event payload shape documented here.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentStreamStatusEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{projectId}/deployments/{deploymentId}/versions": {
       "get": {
         "tags": ["Deployments"],
@@ -10796,96 +12041,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RotateIngestTokenResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/projects/{projectId}/deployments/{deploymentId}/trace": {
-      "post": {
-        "tags": ["Deployments"],
-        "summary": "Toggle debug tracing",
-        "description": "Enable or disable debug tracing for a deployment. Owner-only, gated by the debugTrace feature. `minutes` of 0 disables; allowed values are 0, 15, 30, 60. An absent body defaults to 15 minutes.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^proj_[a-zA-Z0-9_-]+$",
-              "example": "proj_x7y8z9"
-            },
-            "required": true,
-            "name": "projectId",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "example": "dep_abc123"
-            },
-            "required": true,
-            "name": "deploymentId",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TraceDeploymentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Updated trace window",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TraceDeploymentResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

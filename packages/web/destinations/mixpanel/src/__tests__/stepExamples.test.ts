@@ -11,6 +11,7 @@ import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
+import type { MixpanelStepExample } from '../examples/step';
 import type { Env, MixpanelGroup, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
@@ -114,68 +115,67 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('mixpanel destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, rawExample) => {
-    const example = rawExample as {
-      in?: unknown;
-      mapping?: unknown;
-      out?: ReadonlyArray<CallRecord>;
-      command?: 'consent' | 'user' | 'config' | 'run';
-      settings?: Partial<Settings>;
-      configInclude?: string[];
-    };
+  it.each<[string, MixpanelStepExample]>(Object.entries(examples.step))(
+    '%s',
+    async (name, example) => {
+      const env = clone(examples.env.push) as Env;
+      const { env: spiedEnv, collected } = spyEnv(env);
 
-    const env = clone(examples.env.push) as Env;
-    const { env: spiedEnv, collected } = spyEnv(env);
+      const dest = jest.requireActual('../').default;
+      const { elb } = await startFlow();
 
-    const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow();
+      const baseSettings: Partial<Settings> & { apiKey: string } = {
+        apiKey: 'test-project',
+        ...(example.settings || {}),
+      };
 
-    const baseSettings: Partial<Settings> & { apiKey: string } = {
-      apiKey: 'test-project',
-      ...(example.settings || {}),
-    };
+      if (example.command === 'consent') {
+        await elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            consent: { analytics: true },
+            include: example.configInclude,
+            settings: baseSettings,
+          },
+        });
+        // Grant first when the example declares it, so the gated destination is
+        // loaded before the consent under test (it never loads under denial).
+        // Both the grant and the consent-under-test effects are asserted.
+        if (example.before) await elb('walker consent', example.before);
+        await elb('walker consent', example.in as WalkerOS.Consent);
+      } else {
+        const event = example.in as WalkerOS.Event;
+        const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+        const mappingConfig = mapping
+          ? { [event.entity]: { [event.action]: mapping } }
+          : undefined;
 
-    if (example.command === 'consent') {
-      await elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          consent: { analytics: true },
-          include: example.configInclude,
-          settings: baseSettings,
-        },
+        await elb('walker destination', {
+          code: { ...dest, env: spiedEnv },
+          config: {
+            include: example.configInclude,
+            settings: baseSettings,
+            mapping: mappingConfig,
+          },
+        });
+        await elb(event);
+      }
+
+      // Drop init + bookkeeping — every example triggers init once; the
+      // synthetic 'mixpanel.get_group' marker is also dropped unless an
+      // example explicitly expects it.
+      const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+      const expectsGetGroupMarker = expected.some(
+        ([path]) => path === 'mixpanel.get_group',
+      );
+      const actual = collected().filter(([path]) => {
+        if (path === 'mixpanel.init') return false;
+        if (path === 'mixpanel.get_group' && !expectsGetGroupMarker)
+          return false;
+        return true;
       });
-      await elb('walker consent', example.in as WalkerOS.Consent);
-    } else {
-      const event = example.in as WalkerOS.Event;
-      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-      const mappingConfig = mapping
-        ? { [event.entity]: { [event.action]: mapping } }
-        : undefined;
 
-      await elb('walker destination', {
-        code: { ...dest, env: spiedEnv },
-        config: {
-          include: example.configInclude,
-          settings: baseSettings,
-          mapping: mappingConfig,
-        },
-      });
-      await elb(event);
-    }
-
-    // Drop init + bookkeeping — every example triggers init once; the
-    // synthetic 'mixpanel.get_group' marker is also dropped unless an
-    // example explicitly expects it.
-    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    const expectsGetGroupMarker = expected.some(
-      ([path]) => path === 'mixpanel.get_group',
-    );
-    const actual = collected().filter(([path]) => {
-      if (path === 'mixpanel.init') return false;
-      if (path === 'mixpanel.get_group' && !expectsGetGroupMarker) return false;
-      return true;
-    });
-
-    expect(actual).toEqual(expected);
-  });
+      expect(actual).toEqual(expected);
+    },
+  );
 });

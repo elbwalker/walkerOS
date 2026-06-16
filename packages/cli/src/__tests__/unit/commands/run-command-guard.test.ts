@@ -7,6 +7,7 @@
  * the health-check window and gets killed with no log).
  */
 
+import { Level } from '@walkeros/core';
 import type { RunCommandOptions } from '../../../commands/run/types.js';
 
 const prepareBundleForRun = jest.fn();
@@ -46,6 +47,7 @@ jest.mock('../../../core/cli-logger.js', () => ({
     json: jest.fn(),
     scope: jest.fn().mockReturnValue({ info: jest.fn() }),
   }),
+  createCLILoggerConfig: () => ({ level: Level.DEBUG, handler: jest.fn() }),
 }));
 
 import { runCommand } from '../../../commands/run/index.js';

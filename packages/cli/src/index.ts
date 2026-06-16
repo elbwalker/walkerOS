@@ -59,6 +59,11 @@ export {
 // === Programmatic API ===
 // High-level functions for library usage
 export { bundle } from './commands/bundle/index.js';
+export { buildDataPayload } from './commands/bundle/bundler.js';
+export {
+  classifyStepProperties,
+  containsCodeMarkers,
+} from './commands/bundle/config-classifier.js';
 export { validateFlowStructure } from './commands/bundle/validate-structure.js';
 export { wrapSkeleton } from './commands/bundle/wrap.js';
 export type { WrapSkeletonOptions } from './commands/bundle/wrap.js';
@@ -70,6 +75,7 @@ export {
   simulateCollector,
 } from './commands/push/index.js';
 export type {
+  SimulateDataOptions,
   SimulateSourceOptions,
   SimulateTransformerOptions,
   SimulateDestinationOptions,

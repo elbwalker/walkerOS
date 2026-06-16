@@ -137,19 +137,19 @@ destroy implementation.
 
 Fill in this matrix for your CMP. Reference implementations for comparison:
 
-| Decision                | CookieFirst                             | Usercentrics                     | CookiePro                                        |
-| ----------------------- | --------------------------------------- | -------------------------------- | ------------------------------------------------ |
-| Already loaded?         | `window.CookieFirst.consent`            | None (events only)               | `window.OneTrust` + `window.OptanonActiveGroups` |
-| Init listener           | `cf_init` event                         | Same as change event (`ucEvent`) | `OptanonWrapper` callback (self-unwrap)          |
-| Change listener         | `cf_consent` event                      | `ucEvent` / `UC_SDK_EVENT`       | `OneTrustGroupsUpdated` event                    |
-| Consent shape           | Boolean map `{ category: bool }`        | Mixed object (groups + services) | Comma-separated IDs `,C0001,C0003,`              |
-| Category naming         | Human-readable                          | Admin-configured                 | Opaque IDs (C0001-C0005)                         |
-| Explicit check          | `consent === null`                      | `detail.type` (case-insensitive) | `IsAlertBoxClosed()`                             |
-| Default categoryMap     | Populated (human names to walkerOS)     | Empty (pass-through)             | Populated (opaque IDs need mapping)              |
-| Number of change events | 1 (`cf_consent`)                        | 1 (`ucEvent`)                    | 2 (`OptanonWrapper` + `OneTrustGroupsUpdated`)   |
-| Consent layers          | Single (categories only)                | Dual (groups + services)         | Single (categories only)                         |
-| Consent access          | Property (`window.CookieFirst.consent`) | Event detail (`event.detail`)    | Property (`window.OptanonActiveGroups`)          |
-| Event registration      | `addEventListener`                      | `addEventListener`               | Callback assignment + `addEventListener`         |
+| Decision                | CookieFirst                             | Usercentrics                                                                                     | CookiePro                                        |
+| ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| Already loaded?         | `window.CookieFirst.consent`            | None (events only)                                                                               | `window.OneTrust` + `window.OptanonActiveGroups` |
+| Init listener           | `cf_init` event                         | Same as change event (`ucEvent`)                                                                 | `OptanonWrapper` callback (self-unwrap)          |
+| Change listener         | `cf_consent` event                      | `ucEvent` / `UC_SDK_EVENT`                                                                       | `OneTrustGroupsUpdated` event                    |
+| Consent shape           | Boolean map `{ category: bool }`        | Mixed object (groups + services)                                                                 | Comma-separated IDs `,C0001,C0003,`              |
+| Category naming         | Human-readable                          | Admin-configured                                                                                 | Opaque IDs (C0001-C0005)                         |
+| Explicit check          | `consent === null`                      | Official consent metadata (V3 `consent.type`; V2 an `EXPLICIT` entry in service consent history) | `IsAlertBoxClosed()`                             |
+| Default categoryMap     | Populated (human names to walkerOS)     | Empty (pass-through)                                                                             | Populated (opaque IDs need mapping)              |
+| Number of change events | 1 (`cf_consent`)                        | 1 (`ucEvent`)                                                                                    | 2 (`OptanonWrapper` + `OneTrustGroupsUpdated`)   |
+| Consent layers          | Single (categories only)                | Dual (groups + services)                                                                         | Single (categories only)                         |
+| Consent access          | Property (`window.CookieFirst.consent`) | Event detail (`event.detail`)                                                                    | Property (`window.OptanonActiveGroups`)          |
+| Event registration      | `addEventListener`                      | `addEventListener`                                                                               | Callback assignment + `addEventListener`         |
 
 ### Gate: Research complete
 
@@ -699,6 +699,14 @@ decision matrix. If >1, determine which pattern applies and plan accordingly.
 What if the CMP loads before the source? What about `explicitOnly: false`? Each
 CMP has different timing behavior -- document it explicitly under "Timing
 considerations."
+
+For "previous-choice" detection (was this an active user decision or a
+first-visit default?), read the CMP's official consent metadata, the consent
+type or decision history (e.g. Usercentrics V3 `consent.type`, V2 the service
+consent history), not a per-pageload event `type` field. A per-pageload event
+`type` conflates first-visit defaults with a returning visitor's restored
+choice, so a returning visitor's prior consent would be dropped under
+`explicitOnly`.
 
 ### 6. Test consent revocation end-to-end
 

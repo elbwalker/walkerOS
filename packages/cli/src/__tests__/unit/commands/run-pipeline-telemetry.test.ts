@@ -12,9 +12,28 @@
  * The active trace window arrives via the trace-poller, which writes the
  * shared `traceUntil` holder in @walkeros/core; the pipeline supplier reads
  * it per emit.
+ *
+ * WALKEROS_OBSERVE_LEVEL sets the baseline telemetry level (off | standard |
+ * trace) fed into the resolver's `observe` block; `traceUntil` keeps higher
+ * priority. A trace baseline also skips the trace poller.
  */
-import { setTraceUntil } from '@walkeros/core';
+import { resolveTelemetryOptions, setTraceUntil } from '@walkeros/core';
+import type { FlowState, ObserverFn } from '@walkeros/core';
 import type { PipelineOptions } from '../../../commands/run/pipeline.js';
+
+// Partial core mock: keep the real resolver semantics (spied for call
+// inspection) but replace the batched poster with a captured emit so
+// invoking an observer in tests performs no HTTP and no batching timers.
+const mockEmit = jest.fn();
+jest.mock('@walkeros/core', () => {
+  const actual =
+    jest.requireActual<typeof import('@walkeros/core')>('@walkeros/core');
+  return {
+    ...actual,
+    createBatchedPoster: jest.fn(() => mockEmit),
+    resolveTelemetryOptions: jest.fn(actual.resolveTelemetryOptions),
+  };
+});
 
 jest.mock('../../../runtime/health-server.js', () => ({
   createHealthServer: jest.fn().mockResolvedValue({
@@ -81,6 +100,7 @@ jest.mock('../../../runtime/cache.js', () => ({
 jest.mock('../../../version.js', () => ({ VERSION: '0.0.0-test' }));
 
 import { loadFlow } from '../../../runtime/runner.js';
+import { createTracePoller } from '../../../runtime/trace-poller.js';
 
 async function waitFor(cond: () => boolean, timeoutMs = 1000): Promise<void> {
   const start = Date.now();
@@ -109,6 +129,7 @@ describe('runPipeline telemetry wiring', () => {
     delete process.env.WALKEROS_OBSERVER_URL;
     delete process.env.WALKEROS_INGEST_TOKEN;
     delete process.env.WALKEROS_DEPLOYMENT_ID;
+    delete process.env.WALKEROS_OBSERVE_LEVEL;
     setTraceUntil(null);
     const mod = await import('../../../commands/run/pipeline.js');
     runPipeline = mod.runPipeline;
@@ -119,6 +140,7 @@ describe('runPipeline telemetry wiring', () => {
     delete process.env.WALKEROS_OBSERVER_URL;
     delete process.env.WALKEROS_INGEST_TOKEN;
     delete process.env.WALKEROS_DEPLOYMENT_ID;
+    delete process.env.WALKEROS_OBSERVE_LEVEL;
     setTraceUntil(null);
   });
 
@@ -183,5 +205,140 @@ describe('runPipeline telemetry wiring', () => {
     expect(loadFlow).toHaveBeenCalledTimes(1);
     const call = (loadFlow as jest.Mock).mock.calls[0];
     expect(call[5]).toBeUndefined();
+  });
+
+  describe('WALKEROS_OBSERVE_LEVEL', () => {
+    const setObserverEnv = () => {
+      process.env.WALKEROS_OBSERVER_URL = 'https://observer.example.com';
+      process.env.WALKEROS_INGEST_TOKEN = 'tok_test';
+      process.env.WALKEROS_DEPLOYMENT_ID = 'dep_42';
+    };
+
+    const makeState = (): FlowState => ({
+      flowId: 'flow',
+      stepId: 'destination.test',
+      stepType: 'destination',
+      phase: 'in',
+      eventId: 'evt-1',
+      timestamp: '2026-06-11T00:00:00.000Z',
+      elapsedMs: 1,
+      inEvent: { name: 'page view' },
+    });
+
+    async function startAndGetObserver(): Promise<ObserverFn> {
+      void runPipeline(baseOptions);
+      await waitFor(() => jest.mocked(loadFlow).mock.calls.length > 0);
+      const firstCall = jest.mocked(loadFlow).mock.calls[0];
+      if (!firstCall) throw new Error('loadFlow was not called');
+      const observers = firstCall[5];
+      const observer = observers?.[0];
+      if (!observer || observers.length !== 1) {
+        throw new Error('expected a single telemetry observer');
+      }
+      return observer;
+    }
+
+    it('trace: per-emit supplier passes observe { level: trace } to the resolver and payloads survive projection', async () => {
+      setObserverEnv();
+      process.env.WALKEROS_OBSERVE_LEVEL = 'trace';
+
+      const observer = await startAndGetObserver();
+      observer(makeState());
+
+      const resolveSpy = jest.mocked(resolveTelemetryOptions);
+      expect(resolveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ observe: { level: 'trace' } }),
+      );
+      expect(resolveSpy).toHaveLastReturnedWith(
+        expect.objectContaining({ level: 'trace' }),
+      );
+      expect(mockEmit).toHaveBeenCalledWith(
+        expect.objectContaining({ inEvent: { name: 'page view' } }),
+      );
+    });
+
+    it('off: telemetry resolves to null and nothing is emitted', async () => {
+      setObserverEnv();
+      process.env.WALKEROS_OBSERVE_LEVEL = 'off';
+
+      const observer = await startAndGetObserver();
+      observer(makeState());
+
+      expect(jest.mocked(resolveTelemetryOptions)).toHaveLastReturnedWith(null);
+      expect(mockEmit).not.toHaveBeenCalled();
+    });
+
+    it('unset: no observe block, standard level, traceUntil still elevates', async () => {
+      setObserverEnv();
+
+      const observer = await startAndGetObserver();
+      observer(makeState());
+
+      const resolveSpy = jest.mocked(resolveTelemetryOptions);
+      const firstResolveCall = resolveSpy.mock.calls[0];
+      if (!firstResolveCall) throw new Error('resolver was not called');
+      expect(firstResolveCall[0].observe).toBeUndefined();
+      expect(resolveSpy).toHaveLastReturnedWith(
+        expect.objectContaining({ level: 'standard' }),
+      );
+      expect(mockEmit).toHaveBeenCalledWith(
+        expect.not.objectContaining({ inEvent: expect.anything() }),
+      );
+
+      setTraceUntil(new Date(Date.now() + 60_000).toISOString());
+      observer(makeState());
+      expect(resolveSpy).toHaveLastReturnedWith(
+        expect.objectContaining({ level: 'trace' }),
+      );
+    });
+
+    it('invalid value: warns once, treated as unset, poller still starts', async () => {
+      setObserverEnv();
+      process.env.WALKEROS_OBSERVE_LEVEL = 'verbose';
+
+      const observer = await startAndGetObserver();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('WALKEROS_OBSERVE_LEVEL'),
+      );
+
+      observer(makeState());
+      expect(jest.mocked(resolveTelemetryOptions)).toHaveLastReturnedWith(
+        expect.objectContaining({ level: 'standard' }),
+      );
+
+      await waitFor(() => jest.mocked(createTracePoller).mock.calls.length > 0);
+      const pollerResult = jest.mocked(createTracePoller).mock.results[0];
+      if (!pollerResult || pollerResult.type !== 'return') {
+        throw new Error('trace poller was not created');
+      }
+      expect(pollerResult.value.start).toHaveBeenCalled();
+    });
+
+    it('trace: skips starting the trace poller (nothing to elevate)', async () => {
+      setObserverEnv();
+      process.env.WALKEROS_OBSERVE_LEVEL = 'trace';
+
+      void runPipeline(baseOptions);
+      await waitFor(() =>
+        mockLogger.info.mock.calls.some(
+          (call) =>
+            typeof call[0] === 'string' &&
+            call[0].includes('Trace poller: skipped'),
+        ),
+      );
+      expect(createTracePoller).not.toHaveBeenCalled();
+    });
+
+    it('unset: trace poller starts when observer env is present', async () => {
+      setObserverEnv();
+
+      void runPipeline(baseOptions);
+      await waitFor(() => jest.mocked(createTracePoller).mock.calls.length > 0);
+      const pollerResult = jest.mocked(createTracePoller).mock.results[0];
+      if (!pollerResult || pollerResult.type !== 'return') {
+        throw new Error('trace poller was not created');
+      }
+      expect(pollerResult.value.start).toHaveBeenCalled();
+    });
   });
 });

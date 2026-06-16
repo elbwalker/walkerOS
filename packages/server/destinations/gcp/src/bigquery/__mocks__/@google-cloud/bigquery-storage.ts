@@ -8,6 +8,7 @@ interface MockRowError {
 
 let nextAppendRowErrors: MockRowError[] | null = null;
 let nextAppendThrow: unknown = null;
+let nextGetResultReject: unknown = null;
 let nextCreateStreamConnectionError: unknown = null;
 
 class MockJSONWriter {
@@ -23,12 +24,19 @@ class MockJSONWriter {
     }
     const queuedErrors = nextAppendRowErrors;
     nextAppendRowErrors = null;
+    const queuedReject = nextGetResultReject;
+    nextGetResultReject = null;
     return {
-      getResult: async () => ({
-        appendResult: { offset: { value: '0' } },
-        rowErrors: queuedErrors ?? [],
-        writeStream: 'projects/p/datasets/d/tables/t/streams/_default',
-      }),
+      getResult: async () => {
+        // Models a gRPC deadline-exceeded (or any stream error): the append is
+        // accepted but getResult() rejects when the stream's deadline fires.
+        if (queuedReject !== null) throw queuedReject;
+        return {
+          appendResult: { offset: { value: '0' } },
+          rowErrors: queuedErrors ?? [],
+          writeStream: 'projects/p/datasets/d/tables/t/streams/_default',
+        };
+      },
     };
   }
   close(): void {
@@ -45,10 +53,13 @@ class MockWriterClient {
   }) {
     calls.push({ method: 'WriterClient.ctor', args: [args] });
   }
-  async createStreamConnection(args: {
-    destinationTable: string;
-    streamId: string;
-  }) {
+  async createStreamConnection(
+    args: {
+      destinationTable: string;
+      streamId: string;
+    },
+    options?: unknown,
+  ) {
     // Match the real SDK: callers must pass streamId=DefaultStream (not streamType)
     // for default-stream use. Passing streamType triggers a CreateWriteStream
     // call with type='DEFAULT', which BQ rejects as TYPE_UNSPECIFIED.
@@ -57,7 +68,9 @@ class MockWriterClient {
         `mock createStreamConnection: expected streamId='DEFAULT', got ${JSON.stringify(args)}`,
       );
     }
-    calls.push({ method: 'createStreamConnection', args: [args] });
+    // args[1] captures the gax CallOptions (e.g. { timeout }) so tests can
+    // assert the request deadline is forwarded to the appendRows stream.
+    calls.push({ method: 'createStreamConnection', args: [args, options] });
     const queuedError = nextCreateStreamConnectionError;
     if (queuedError !== null) {
       nextCreateStreamConnectionError = null;
@@ -67,8 +80,13 @@ class MockWriterClient {
       getStreamId: () => `${args.destinationTable}/streams/_default`,
     };
   }
-  async getWriteStream(args: { streamId: string; view?: number }) {
-    calls.push({ method: 'getWriteStream', args: [args] });
+  async getWriteStream(
+    args: { streamId: string; view?: number },
+    options?: unknown,
+  ) {
+    // args[1] captures the gax CallOptions so tests can assert the deadline
+    // is forwarded to the unary schema fetch.
+    calls.push({ method: 'getWriteStream', args: [args, options] });
     // Minimal tableSchema shape consumed by adapt.convertStorageSchemaToProto2Descriptor
     return {
       tableSchema: { fields: [] },
@@ -122,6 +140,7 @@ function __resetMockCalls() {
   calls.length = 0;
   nextAppendRowErrors = null;
   nextAppendThrow = null;
+  nextGetResultReject = null;
   nextCreateStreamConnectionError = null;
 }
 
@@ -142,6 +161,15 @@ function __setNextAppendThrow(err: unknown): void {
 }
 
 /**
+ * Test-only: make the next appendRows().getResult() reject, simulating a gRPC
+ * deadline-exceeded (or any stream error) surfacing through the pending write.
+ * Auto-resets after one use.
+ */
+function __setNextGetResultReject(err: unknown): void {
+  nextGetResultReject = err;
+}
+
+/**
  * Test-only: queue an error for the next createStreamConnection() call so
  * tests can simulate openWriter failures (NotFound, INVALID_ARGUMENT, etc.).
  * Auto-resets after one use.
@@ -158,5 +186,6 @@ export {
   __resetMockCalls,
   __setNextAppendRowErrors,
   __setNextAppendThrow,
+  __setNextGetResultReject,
   __setNextOpenWriterError,
 };

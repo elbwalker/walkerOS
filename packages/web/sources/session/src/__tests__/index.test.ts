@@ -55,11 +55,18 @@ describe('Session Source', () => {
   });
 
   describe('Session Start', () => {
-    test('calls sessionStart on initialization', async () => {
+    test('ungated path registers a run subscription at init (emit deferred to run)', async () => {
       await createSessionSource(collector);
 
-      // Session start should have been called, which calls command('user', ...)
-      expect(mockCommand).toHaveBeenCalled();
+      // No consent configured: the emit is deferred to the run lifecycle, so
+      // init registers a single on('run') rule rather than emitting at init
+      // (which would be dropped at the collector's dormant gate).
+      const runRegistrations = mockCommand.mock.calls.filter(
+        ([cmd, data]) =>
+          cmd === 'on' &&
+          (data as { type?: string } | undefined)?.type === 'run',
+      );
+      expect(runRegistrations).toHaveLength(1);
     });
   });
 

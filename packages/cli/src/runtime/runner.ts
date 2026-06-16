@@ -32,7 +32,13 @@ export interface FlowHandle {
  * `commands/bundle/bundler.ts`) installs each observer onto
  * `collector.observers` after `startFlow` returns.
  */
-export async function loadFlow(
+/**
+ * Load a bundle into a `FlowHandle` WITHOUT mounting its handler onto the
+ * health server. This is the atomic-swap primitive: `swapFlow` loads the new
+ * bundle into a detached handle first, and only mounts it once the load
+ * succeeded, so a failed load never leaves the server handler-less.
+ */
+async function loadFlowHandle(
   file: string,
   config: RuntimeConfig | undefined,
   logger: Logger.Instance,
@@ -53,11 +59,6 @@ export async function loadFlow(
 
   const result = await loadBundle(absolutePath, flowContext, logger);
 
-  // Mount flow's httpHandler onto runner's health server (opaque — no type inspection)
-  if (healthServer && typeof result.httpHandler === 'function') {
-    healthServer.setFlowHandler(result.httpHandler);
-  }
-
   return {
     collector: {
       command: result.collector.command as FlowHandle['collector']['command'],
@@ -69,8 +70,55 @@ export async function loadFlow(
 }
 
 /**
- * Swap the running flow to a new bundle. Shuts down old flow FIRST to release
- * the port, then loads the new bundle. Brief downtime is acceptable for Mode C.
+ * Signature of the bundle loader `swapFlow` uses to produce a fresh, unmounted
+ * handle. Defaults to `loadFlowHandle`; injectable so tests can drive the
+ * success/failure paths without a real on-disk bundle.
+ */
+export type FlowLoader = (
+  file: string,
+  config: RuntimeConfig | undefined,
+  logger: Logger.Instance,
+  loggerConfig?: Logger.Config,
+  healthServer?: HealthServer,
+  observers?: Array<ObserverFn>,
+) => Promise<FlowHandle>;
+
+export async function loadFlow(
+  file: string,
+  config: RuntimeConfig | undefined,
+  logger: Logger.Instance,
+  loggerConfig?: Logger.Config,
+  healthServer?: HealthServer,
+  observers?: Array<ObserverFn>,
+): Promise<FlowHandle> {
+  const handle = await loadFlowHandle(
+    file,
+    config,
+    logger,
+    loggerConfig,
+    healthServer,
+    observers,
+  );
+
+  // Mount flow's httpHandler onto runner's health server (opaque — no type inspection)
+  if (healthServer && typeof handle.httpHandler === 'function') {
+    healthServer.setFlowHandler(handle.httpHandler);
+  }
+
+  return handle;
+}
+
+/**
+ * Atomically swap the running flow to a new bundle with rollback.
+ *
+ * Load-then-swap (not shut-then-load): the new bundle is loaded into a fresh,
+ * detached handle FIRST. Only on success is the new handler mounted and the
+ * OLD collector shut down. If the load fails, the OLD handler stays mounted,
+ * `/ready` is untouched (the old flow keeps serving), the error is logged, and
+ * the unchanged OLD handle is returned. This avoids the wedge where a failed
+ * load leaves the container handler-less with `/ready` stuck at 503.
+ *
+ * `load` is injectable for testing; it defaults to the real detached loader.
  */
 export async function swapFlow(
   currentHandle: FlowHandle,
@@ -80,32 +128,47 @@ export async function swapFlow(
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
   observers?: Array<ObserverFn>,
+  load: FlowLoader = loadFlowHandle,
 ): Promise<FlowHandle> {
-  logger.info('Shutting down current flow for hot-swap...');
+  logger.info('Loading new flow for hot-swap...');
 
-  // Detach old handler, health endpoints still work during swap
-  if (healthServer) {
-    healthServer.setFlowHandler(null);
+  // 1. Load the new bundle into a fresh, unmounted handle. The old flow stays
+  //    mounted and serving throughout this step.
+  let newHandle: FlowHandle;
+  try {
+    newHandle = await load(
+      newFile,
+      config,
+      logger,
+      loggerConfig,
+      healthServer,
+      observers,
+    );
+  } catch (error) {
+    // Rollback: keep the OLD handler mounted, keep /ready true, return the OLD
+    // handle unchanged. No wedge — the old flow continues serving.
+    logger.error(
+      `Hot-swap load failed, keeping current flow: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    return currentHandle;
   }
 
-  // Delegate to collector's shutdown command (destroys sources, destinations, transformers)
+  // 2. Success — mount the new handler, then shut the OLD collector down. Mount
+  //    before shutdown so the server never has a window without a handler.
+  if (healthServer && typeof newHandle.httpHandler === 'function') {
+    healthServer.setFlowHandler(newHandle.httpHandler);
+  }
+
   try {
     if (currentHandle.collector.command) {
       await currentHandle.collector.command('shutdown');
     }
   } catch (error) {
+    // The new flow is already live; an old-collector shutdown error is non-fatal.
     logger.debug(`Shutdown warning: ${error}`);
   }
-
-  // Load new flow, mounts new handler onto same server
-  const newHandle = await loadFlow(
-    newFile,
-    config,
-    logger,
-    loggerConfig,
-    healthServer,
-    observers,
-  );
 
   logger.info('Flow swapped successfully');
   return newHandle;

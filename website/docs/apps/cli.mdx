@@ -1994,6 +1994,8 @@ These options work with all commands:
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
 | `WALKEROS_DEPLOY_TOKEN` | Deploy token for container heartbeat authentication |
 | `WALKEROS_CLIENT_TYPE` | Override client identity sent to the app. Defaults to `cli`; set to `runner` for long-lived flow runners. Used by the runtime image. |
+| `WALKEROS_OBSERVE_LEVEL` | Baseline telemetry level for `walkeros run` (`off`, `standard`, or `trace`). Invalid values are warned about and ignored. |
+| `WALKEROS_CONFIG_FROZEN` | Set to `1` or `true` to make `walkeros run` serve the bundle as an immutable snapshot: secrets are still injected at boot, but config hot-swap and heartbeat are disabled. |
 
 ## API version compatibility
 

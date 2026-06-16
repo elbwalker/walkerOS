@@ -137,6 +137,11 @@ export interface Config<T extends TypesGeneric = Types> {
   state?: import('./state').State | import('./state').State[];
   /** Completely skip this destination — no init, no push, no queuing. */
   disabled?: boolean;
+  /**
+   * Per-destination delivery timeout in ms (default 10000); a delivery that
+   * does not settle within this window is routed to the DLQ like a thrown push.
+   */
+  timeout?: number;
   /** Return this value instead of calling push(). Uses !== undefined check to support falsy values. */
   mock?: unknown;
   /**

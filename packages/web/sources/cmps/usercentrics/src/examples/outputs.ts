@@ -3,12 +3,13 @@ import type { WalkerOS } from '@walkeros/core';
 /**
  * Expected walkerOS consent outputs.
  *
- * These represent the consent state after parsing Usercentrics event details
- * with no category mapping configured (pass-through).
+ * These represent the consent state emitted via `elb('walker consent', state)`
+ * after the V2 adapter aggregates `getServicesBaseInfo()` into group-level
+ * consent (no category mapping configured: pass-through by `categorySlug`).
  */
 
 /**
- * Full consent - all categories true (group-level)
+ * Full consent - all categories granted.
  */
 export const fullConsentMapped: WalkerOS.Consent = {
   essential: true,
@@ -17,7 +18,7 @@ export const fullConsentMapped: WalkerOS.Consent = {
 };
 
 /**
- * Partial consent - essential and functional true, marketing false
+ * Partial consent - essential and functional granted, marketing denied.
  */
 export const partialConsentMapped: WalkerOS.Consent = {
   essential: true,
@@ -26,7 +27,7 @@ export const partialConsentMapped: WalkerOS.Consent = {
 };
 
 /**
- * Minimal consent - only essential true
+ * Minimal consent - only essential granted.
  */
 export const minimalConsentMapped: WalkerOS.Consent = {
   essential: true,
@@ -35,22 +36,11 @@ export const minimalConsentMapped: WalkerOS.Consent = {
 };
 
 /**
- * Full consent with custom category mapping applied
- * (essential->functional, functional->functional, marketing->marketing)
+ * Full consent with a custom category mapping applied
+ * (essential->functional, functional->analytics).
  */
 export const fullConsentCustomMapped: WalkerOS.Consent = {
   functional: true,
+  analytics: true,
   marketing: true,
-};
-
-/**
- * Service-level consent - individual service booleans + boolean ucCategory entries
- * (services normalized: lowercase, spaces to underscores)
- * (ucCategory boolean entries mapped through categoryMap)
- */
-export const serviceLevelMapped: WalkerOS.Consent = {
-  essential: true,
-  google_analytics: true,
-  google_ads_remarketing: false,
-  hotjar: true,
 };

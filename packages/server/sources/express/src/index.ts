@@ -6,6 +6,14 @@ import type { ExpressSource, Types, EventRequest } from './types';
 import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
 
 /**
+ * Normalize an unknown rejection reason into an Error for the logger.
+ * A fire-and-forget push can reject with any value; the logger accepts
+ * `string | Error`, so non-Error reasons are wrapped.
+ */
+const toError = (value: unknown): Error =>
+  value instanceof Error ? value : new Error(String(value));
+
+/**
  * Express source initialization
  *
  * This source OWNS its HTTP server infrastructure:
@@ -30,6 +38,8 @@ export const sourceExpress = async (
   const settings = {
     ...userSettings,
     cors: userSettings.cors ?? true,
+    // Respond-first by default: a 2xx means "accepted", not "delivered".
+    async: userSettings.async ?? true,
     paths:
       userSettings.paths ??
       (userSettings.path ? [userSettings.path] : ['/collect']),
@@ -97,19 +107,38 @@ export const sourceExpress = async (
           // Parse query parameters to event data using requestToData
           const parsedData = requestToData(req.url);
 
-          // Send to collector
-          if (parsedData && typeof parsedData === 'object') {
-            await env.push(parsedData);
-          }
+          // Default GIF body (idempotent fallback; skipped if a step already
+          // called respond, e.g. a cache/asset destination serving real bytes).
+          const respondGif = () =>
+            respond({
+              body: TRANSPARENT_GIF,
+              headers: {
+                'Content-Type': 'image/gif',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+              },
+            });
 
-          // Default: 1x1 GIF (skipped if a step already called respond)
-          respond({
-            body: TRANSPARENT_GIF,
-            headers: {
-              'Content-Type': 'image/gif',
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-            },
-          });
+          if (parsedData && typeof parsedData === 'object') {
+            if (settings.async) {
+              // Respond-first: the tracking pixel must return instantly and
+              // never block on backend delivery. Fire the push without
+              // awaiting; a rejected push is logged (destination errors are
+              // DLQ'd inside the collector). A 2xx means "accepted", not
+              // "delivered".
+              respondGif();
+              env.push(parsedData).catch((err: unknown) => {
+                env.logger.error(toError(err));
+              });
+            } else {
+              // Synchronous: await the push so a step (e.g. a cache/asset
+              // destination) can respond with real content before the GIF
+              // fallback applies.
+              await env.push(parsedData);
+              respondGif();
+            }
+          } else {
+            respondGif();
+          }
           return;
         }
 
@@ -118,9 +147,19 @@ export const sourceExpress = async (
           const eventData =
             req.body && typeof req.body === 'object' ? req.body : {};
 
-          await env.push(eventData);
-
-          respond({ body: { success: true, timestamp: Date.now() } });
+          if (settings.async) {
+            // Respond-first ("accepted"), then deliver asynchronously. A
+            // rejected push is logged, not surfaced to the client and not left
+            // unhandled (destination errors are DLQ'd inside the collector).
+            respond({ body: { success: true, timestamp: Date.now() } });
+            env.push(eventData).catch((err: unknown) => {
+              env.logger.error(toError(err));
+            });
+          } else {
+            // Synchronous ack: wait for delivery to settle before responding.
+            await env.push(eventData);
+            respond({ body: { success: true, timestamp: Date.now() } });
+          }
           return;
         }
 

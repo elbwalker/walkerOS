@@ -76,6 +76,8 @@ export const pushBatch: PushBatchFn = async (batch, { config, logger }) => {
       offset: result.appendResult?.offset?.value,
     });
   } catch (err) {
+    // Log the failure and rethrow the raw error so the whole batch routes to the
+    // DLQ. Secret redaction is standardized at the CLI logger handler.
     logger.error('BigQuery batch append threw', {
       error: err instanceof Error ? err.message : String(err),
     });

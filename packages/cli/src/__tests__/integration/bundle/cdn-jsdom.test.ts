@@ -96,17 +96,16 @@ interface LoadedBundle {
 }
 
 describe('CDN bundle — jsdom smoke', () => {
+  // The three smoke tests build the identical MINIMAL_FLOW cdn bundle with the
+  // identical overrides, so the esbuild pipeline runs ONCE here and every test
+  // loads the same script bytes into its own fresh jsdom window. Per-window
+  // isolation is preserved (the routing test pushes through elb and mutates
+  // its window), only the expensive build is shared.
   let tmpDir: string;
+  let script: string;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'walkeros-jsdom-'));
-  });
-
-  afterEach(async () => {
-    await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-  });
-
-  async function buildAndLoad(): Promise<LoadedBundle> {
     const out = join(tmpDir, 'walker.js');
     await bundle(MINIMAL_FLOW, {
       target: 'cdn',
@@ -117,8 +116,16 @@ describe('CDN bundle — jsdom smoke', () => {
         windowElb: 'elb',
       },
     });
-    const script = await readFile(out, 'utf8');
+    script = await readFile(out, 'utf8');
+  }, 120000);
 
+  afterAll(async () => {
+    await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  });
+
+  // Load the shared bundle script into a fresh jsdom window with a captured
+  // fetch. Each call returns an isolated window so tests never share state.
+  async function loadBundle(): Promise<LoadedBundle> {
     const virtualConsole = new VirtualConsole();
     virtualConsole.on('jsdomError', () => {});
 
@@ -150,25 +157,25 @@ describe('CDN bundle — jsdom smoke', () => {
   }
 
   it('sets window.elb as a function after load', async () => {
-    const { dom } = await buildAndLoad();
+    const { dom } = await loadBundle();
     expect(typeof (dom.window as unknown as { elb: unknown }).elb).toBe(
       'function',
     );
     dom.window.close();
-  }, 120000);
+  });
 
   it('sets window.elbLayer as an array after load', async () => {
-    const { dom } = await buildAndLoad();
+    const { dom } = await loadBundle();
     expect(
       Array.isArray((dom.window as unknown as { elbLayer: unknown }).elbLayer),
     ).toBe(true);
     dom.window.close();
-  }, 120000);
+  });
 
   // Bug 2 regression: previously elbLayer existed but nothing routed through
   // to destinations because the browser source had no env.window/env.document.
   it('elb("page view") reaches the api destination via elbLayer', async () => {
-    const { dom, fetchCalls } = await buildAndLoad();
+    const { dom, fetchCalls } = await loadBundle();
     const win = dom.window as unknown as {
       elb: (event: string, data?: Record<string, unknown>) => void;
       setTimeout: typeof setTimeout;
@@ -183,7 +190,7 @@ describe('CDN bundle — jsdom smoke', () => {
     expect(last.body).toContain('page view');
 
     dom.window.close();
-  }, 120000);
+  });
 });
 
 /**

@@ -56,8 +56,12 @@ describe('Express source cache round-trip', () => {
         express: {
           code: sourceExpress,
           // No port: drive the handler in-process via the source's `push`.
+          // `async: false` makes the GET handler await the push so the
+          // cache/asset destination can respond with real bytes before the
+          // GIF fallback applies (the default respond-first pixel mode would
+          // win the race with the GIF).
           config: {
-            settings: { paths: ['/walker.js'] },
+            settings: { paths: ['/walker.js'], async: false },
             ingest: {
               map: {
                 method: { key: 'method' },
@@ -195,7 +199,7 @@ describe('Express source cache round-trip', () => {
         express: {
           code: sourceExpress,
           config: {
-            settings: { paths: ['/walker.js'] },
+            settings: { paths: ['/walker.js'], async: false },
             ingest: {
               map: {
                 method: { key: 'method' },
@@ -324,7 +328,7 @@ describe('Express source cache round-trip', () => {
         express: {
           code: sourceExpress,
           config: {
-            settings: { paths: ['/asset'] },
+            settings: { paths: ['/asset'], async: false },
             ingest: {
               map: { method: { key: 'method' }, path: { key: 'url' } },
             },

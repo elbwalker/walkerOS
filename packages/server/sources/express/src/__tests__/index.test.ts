@@ -120,6 +120,7 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/collect'],
         cors: true,
+        async: true,
       });
       expect(typeof source.push).toBe('function');
       expect(source.app).toBeDefined();
@@ -147,6 +148,7 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/events'],
         cors: false,
+        async: true,
       });
     });
 
@@ -384,14 +386,14 @@ describe('sourceExpress', () => {
       });
     });
 
-    it('should handle collector errors', async () => {
+    it('should handle collector errors when async is disabled', async () => {
       const errorPush = jest
         .fn()
         .mockRejectedValue(new Error('Collector error'));
 
       const source = await sourceExpress(
         createSourceContext(
-          {},
+          { settings: { async: false } },
           {
             push: errorPush as never,
             command: mockCommand as never,
@@ -709,6 +711,198 @@ describe('sourceExpress', () => {
       );
 
       expect(source.config.settings?.paths).toEqual(['/events']);
+    });
+  });
+
+  describe('respond-first async ack', () => {
+    // A push that returns a promise we can resolve/reject on demand, to prove
+    // the HTTP response is produced without waiting for delivery to complete.
+    function createDeferredPush(): {
+      push: jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
+      resolve: (value?: unknown) => void;
+      reject: (reason?: unknown) => void;
+    } {
+      let resolve!: (value?: unknown) => void;
+      let reject!: (reason?: unknown) => void;
+      const pending = new Promise<unknown>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      const push = jest.fn(() => pending) as jest.MockedFunction<
+        (...args: unknown[]) => Promise<unknown>
+      >;
+      return { push, resolve, reject };
+    }
+
+    it('GET returns the GIF even if push never resolves', async () => {
+      const { push } = createDeferredPush();
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: push as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const req = createMockRequest({
+        method: 'GET',
+        url: '/collect.gif?event=page%20view',
+      });
+      const res = createMockResponse();
+
+      // Resolves immediately despite the never-resolving push.
+      await source.push(req, res);
+
+      expect(res.responseHeaders?.['Content-Type']).toBe('image/gif');
+      expect(Buffer.isBuffer(res.responseBody)).toBe(true);
+      expect(push).toHaveBeenCalled();
+      // Push is still pending — we did not block on it.
+    });
+
+    it('GET logs a rejected push and does not throw out of the handler', async () => {
+      const { push, reject } = createDeferredPush();
+      const logger = createMockLogger();
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: push as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger,
+          },
+        ),
+      );
+
+      const req = createMockRequest({
+        method: 'GET',
+        url: '/collect.gif?event=page%20view',
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+      expect(res.responseHeaders?.['Content-Type']).toBe('image/gif');
+
+      const error = new Error('delivery failed');
+      reject(error);
+      // Flush microtasks so the .catch handler runs.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(logger.error).toHaveBeenCalledWith(error);
+    });
+
+    it('POST async (default) responds before push resolves', async () => {
+      const { push, resolve } = createDeferredPush();
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: push as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const req = createMockRequest({
+        method: 'POST',
+        body: { event: 'page view' },
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      // Responded already, before the push promise settles.
+      expect(res.statusCode).toBe(200);
+      expect(res.responseBody).toMatchObject({ success: true });
+      expect(push).toHaveBeenCalledWith({ event: 'page view' });
+
+      resolve();
+    });
+
+    it('POST async (default) catches a rejected push without changing the 2xx response', async () => {
+      const { push, reject } = createDeferredPush();
+      const logger = createMockLogger();
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: push as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger,
+          },
+        ),
+      );
+
+      const req = createMockRequest({
+        method: 'POST',
+        body: { event: 'page view' },
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.responseBody).toMatchObject({ success: true });
+
+      const error = new Error('delivery failed');
+      reject(error);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Rejection was caught/logged, not thrown, and response unchanged.
+      expect(logger.error).toHaveBeenCalledWith(error);
+      expect(res.statusCode).toBe(200);
+      expect(res.responseBody).toMatchObject({ success: true });
+    });
+
+    it('POST async:false awaits push, then responds (regression)', async () => {
+      const order: string[] = [];
+      const slowPush = jest.fn(async () => {
+        await Promise.resolve();
+        order.push('push');
+        return { ok: true };
+      });
+      const source = await sourceExpress(
+        createSourceContext(
+          { settings: { async: false } },
+          {
+            push: slowPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const res = createMockResponse();
+      const sendSpy = res.send as jest.Mock;
+      const jsonSpy = res.json as jest.Mock;
+      jsonSpy.mockImplementation((body: unknown) => {
+        order.push('respond');
+        (res as { responseBody?: unknown }).responseBody = body;
+        return res;
+      });
+
+      const req = createMockRequest({
+        method: 'POST',
+        body: { event: 'page view' },
+      });
+
+      await source.push(req, res);
+
+      // Push completed before the response was sent.
+      expect(order).toEqual(['push', 'respond']);
+      expect(res.statusCode).toBe(200);
+      expect(res.responseBody).toMatchObject({ success: true });
+      expect(sendSpy).not.toHaveBeenCalled();
     });
   });
 });

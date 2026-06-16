@@ -112,3 +112,27 @@ describe('transformer captured→events mapping (output-only convention)', () =>
     expect(result.calls).toEqual([]);
   });
 });
+
+describe('destination mappingKey passthrough', () => {
+  it('carries the matched mapping rule key when provided', () => {
+    const result = buildSimulationResult({
+      step: 'destination',
+      name: 'demo',
+      startTime: Date.now(),
+      mappingKey: 'product add',
+    });
+
+    expect(result.mappingKey).toBe('product add');
+  });
+
+  it('omits mappingKey entirely when none was captured', () => {
+    const result = buildSimulationResult({
+      step: 'destination',
+      name: 'demo',
+      startTime: Date.now(),
+    });
+
+    expect(result.mappingKey).toBeUndefined();
+    expect('mappingKey' in result).toBe(false);
+  });
+});

@@ -1,112 +1,89 @@
-import type { UsercentricsEventDetail } from '../types';
+import type { UsercentricsV2Service } from '../types';
 
 /**
- * Example Usercentrics consent event detail inputs.
+ * Example Usercentrics V2 service inputs.
  *
- * These represent real event.detail payloads from Usercentrics CMP.
+ * These mirror the shape returned by `window.UC_UI.getServicesBaseInfo()`:
+ * an array of services, each carrying a `categorySlug`, optional display
+ * `name`, and a `consent` block with the current `status` plus a decision
+ * `history`. The adapter derives the explicit/implicit gate from whether any
+ * history entry is `explicit`, and aggregates services into group-level
+ * consent via strict AND per `categorySlug`.
  */
 
 /**
- * Full consent - user accepted all categories (explicit)
+ * Full consent - every category accepted via an explicit decision
+ * (user clicked "Accept all").
  */
-export const fullConsent: UsercentricsEventDetail = {
-  event: 'consent_status',
-  type: 'explicit',
-  action: 'onAcceptAllServices',
-  ucCategory: {
-    essential: true,
-    functional: true,
-    marketing: true,
+export const servicesFullExplicit: UsercentricsV2Service[] = [
+  {
+    categorySlug: 'essential',
+    consent: { status: true, history: [{ type: 'explicit', status: true }] },
   },
-  'Google Analytics': true,
-  'Google Ads Remarketing': true,
-};
-
-/**
- * Partial consent - user accepted only essential and functional (explicit)
- */
-export const partialConsent: UsercentricsEventDetail = {
-  event: 'consent_status',
-  type: 'explicit',
-  action: 'onUpdateServices',
-  ucCategory: {
-    essential: true,
-    functional: true,
-    marketing: false,
+  {
+    categorySlug: 'functional',
+    consent: { status: true, history: [{ type: 'explicit', status: true }] },
   },
-  'Google Analytics': true,
-  'Google Ads Remarketing': false,
-};
-
-/**
- * Minimal consent - user denied everything except essential (explicit)
- */
-export const minimalConsent: UsercentricsEventDetail = {
-  event: 'consent_status',
-  type: 'explicit',
-  action: 'onDenyAllServices',
-  ucCategory: {
-    essential: true,
-    functional: false,
-    marketing: false,
+  {
+    categorySlug: 'marketing',
+    consent: { status: true, history: [{ type: 'explicit', status: true }] },
   },
-  'Google Analytics': false,
-  'Google Ads Remarketing': false,
-};
+];
 
 /**
- * Implicit consent - page load with default consent state
- * (not an explicit user choice)
+ * Minimal consent - only essential accepted, others denied via an explicit
+ * decision (user clicked "Deny all").
  */
-export const implicitConsent: UsercentricsEventDetail = {
-  event: 'consent_status',
-  type: 'implicit',
-  ucCategory: {
-    essential: true,
-    functional: false,
-    marketing: false,
+export const servicesMinimalExplicit: UsercentricsV2Service[] = [
+  {
+    categorySlug: 'essential',
+    consent: { status: true, history: [{ type: 'explicit', status: true }] },
   },
-  'Google Analytics': false,
-  'Google Ads Remarketing': false,
-};
-
-/**
- * Explicit consent with uppercase type field (Usercentrics docs are
- * inconsistent about casing - some show 'EXPLICIT', others 'explicit')
- */
-export const fullConsentUpperCase: UsercentricsEventDetail = {
-  event: 'consent_status',
-  type: 'EXPLICIT',
-  action: 'onAcceptAllServices',
-  ucCategory: {
-    essential: true,
-    functional: true,
-    marketing: true,
+  {
+    categorySlug: 'functional',
+    consent: { status: false, history: [{ type: 'explicit', status: false }] },
   },
-};
-
-/**
- * Service-level consent - ucCategory has mixed types (non-boolean values
- * indicate individual service-level choice rather than group-level)
- */
-export const serviceLevelConsent: UsercentricsEventDetail = {
-  event: 'consent_status',
-  type: 'explicit',
-  action: 'onUpdateServices',
-  ucCategory: {
-    essential: true,
-    functional: 'partial', // Non-boolean indicates mixed service choices
-    marketing: 'partial',
+  {
+    categorySlug: 'marketing',
+    consent: { status: false, history: [{ type: 'explicit', status: false }] },
   },
-  'Google Analytics': true,
-  'Google Ads Remarketing': false,
-  Hotjar: true,
-};
+];
 
 /**
- * Non-consent event (should be ignored)
+ * Partial consent - essential and functional accepted, marketing denied,
+ * all via an explicit decision (user saved a custom selection).
  */
-export const nonConsentEvent: UsercentricsEventDetail = {
-  event: 'other_event',
-  type: 'explicit',
-};
+export const servicesPartialExplicit: UsercentricsV2Service[] = [
+  {
+    categorySlug: 'essential',
+    consent: { status: true, history: [{ type: 'explicit', status: true }] },
+  },
+  {
+    categorySlug: 'functional',
+    consent: { status: true, history: [{ type: 'explicit', status: true }] },
+  },
+  {
+    categorySlug: 'marketing',
+    consent: { status: false, history: [{ type: 'explicit', status: false }] },
+  },
+];
+
+/**
+ * First-visit implicit state - the CMP reports page-load defaults with only
+ * implicit history. The default `explicitOnly` gate suppresses this, so no
+ * consent command is emitted.
+ */
+export const servicesFirstVisitImplicit: UsercentricsV2Service[] = [
+  {
+    categorySlug: 'essential',
+    consent: { status: true, history: [{ type: 'implicit', status: true }] },
+  },
+  {
+    categorySlug: 'functional',
+    consent: { status: false, history: [{ type: 'implicit', status: false }] },
+  },
+  {
+    categorySlug: 'marketing',
+    consent: { status: false, history: [{ type: 'implicit', status: false }] },
+  },
+];

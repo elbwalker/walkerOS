@@ -7,6 +7,8 @@ import type { Settings } from '../types';
  */
 export type OptimizelyStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
+  /** Consent granted before `in` so a gated destination is loaded first. */
+  before?: WalkerOS.Consent;
 };
 
 /**
@@ -161,6 +163,7 @@ export const consentRevoked: OptimizelyStepExample = {
   description:
     'A walker consent command with analytics denied closes the Optimizely client and flushes queued events.',
   command: 'consent',
+  before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
   out: [['optimizely.close']],

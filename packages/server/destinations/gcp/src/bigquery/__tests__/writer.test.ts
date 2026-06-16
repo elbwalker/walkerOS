@@ -55,6 +55,31 @@ describe('openWriter', () => {
     });
   });
 
+  test('forwards timeout as the gax deadline to createStreamConnection and getWriteStream', async () => {
+    const logger = createMockLogger();
+    await openWriter(
+      { projectId: 'p', datasetId: 'd', tableId: 't', timeout: 7500 },
+      logger,
+    );
+    const streamCall = __getMockCalls().find(
+      (c) => c.method === 'createStreamConnection',
+    );
+    expect(streamCall?.args[1]).toEqual({ timeout: 7500 });
+    const schemaCall = __getMockCalls().find(
+      (c) => c.method === 'getWriteStream',
+    );
+    expect(schemaCall?.args[1]).toEqual({ timeout: 7500 });
+  });
+
+  test('omits the deadline when timeout is unset', async () => {
+    const logger = createMockLogger();
+    await openWriter({ projectId: 'p', datasetId: 'd', tableId: 't' }, logger);
+    const streamCall = __getMockCalls().find(
+      (c) => c.method === 'createStreamConnection',
+    );
+    expect(streamCall?.args[1]).toBeUndefined();
+  });
+
   test('closeWriter calls close on writer and writeClient', async () => {
     const logger = createMockLogger();
     const { writer, writeClient } = await openWriter(

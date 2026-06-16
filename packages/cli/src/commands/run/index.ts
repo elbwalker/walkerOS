@@ -9,8 +9,13 @@ import path from 'path';
 import { writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import { createCLILogger } from '../../core/cli-logger.js';
+import { Level } from '@walkeros/core';
+import {
+  createCLILogger,
+  createCLILoggerConfig,
+} from '../../core/cli-logger.js';
 import { createTimer, getErrorMessage } from '../../core/index.js';
+import { ErrorRing, LogRing } from '../../runtime/index.js';
 import { getTmpPath } from '../../core/tmp.js';
 import { resolveAppUrl } from '../../lib/config-file.js';
 import { resolveRunToken } from '../../core/auth.js';
@@ -45,7 +50,30 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   const timer = createTimer();
   timer.start();
 
-  const logger = createCLILogger(options);
+  const errorRing = new ErrorRing(20);
+  const logRing = new LogRing(100);
+
+  const LEVEL_NAME = {
+    [Level.ERROR]: 'error',
+    [Level.WARN]: 'warn',
+    [Level.INFO]: 'info',
+    [Level.DEBUG]: 'debug',
+  } as const;
+
+  const onLine = (level: Level, message: string) => {
+    if (level === Level.ERROR) errorRing.add(message);
+    logRing.add({ time: Date.now(), level: LEVEL_NAME[level], message });
+  };
+
+  const logger = createCLILogger({ ...options, onLine });
+
+  // The deployed bundle's collector builds its own logger from this config
+  // (`context.logger`), so its destination errors flow through the SAME
+  // `onLine` ring tap as the runner CLI logger above. Without this, production
+  // (no --verbose) passes no `context.logger`, the collector's createLogger has
+  // no handler, and destination "Push failed" errors never reach the ErrorRing
+  // (the heartbeat would report "No errors reported" despite failed deliveries).
+  const collectorLoggerConfig = createCLILoggerConfig({ ...options, onLine });
 
   try {
     // Opt-in dotenv: load BEFORE config resolution/bundling so $env/$secret
@@ -123,7 +151,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     }
 
     // Resolve bundle path
-    const bundlePath = await resolveBundlePath(
+    const { bundlePath, bootEtag } = await resolveBundlePath(
       options.config,
       apiConfig,
       logger,
@@ -133,10 +161,13 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     logger.info('Starting flow...');
     await runPipeline({
       bundlePath,
+      bootEtag,
       port,
       logger: logger.scope('runner'),
-      loggerConfig: options.verbose ? { level: 0 } : undefined,
+      loggerConfig: collectorLoggerConfig,
       api: apiConfig,
+      errorRing,
+      logRing,
     });
   } catch (error) {
     const duration = timer.getElapsed() / 1000;
@@ -162,12 +193,21 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
  * 1. Local file (provided via CLI arg or BUNDLE env)
  * 2. Remote config fetch (when apiConfig is provided and no local file)
  * 3. Cached bundle (fallback when remote fetch fails)
+ *
+ * `bootEtag` is the etag of the config this process booted with, returned
+ * only on the remote-fetch path (Case 2) where it is known. It seeds the
+ * poller so the first poll can 304 instead of re-bundling on every restart.
  */
+interface ResolvedBundle {
+  bundlePath: string;
+  bootEtag?: string;
+}
+
 async function resolveBundlePath(
   configInput: string | undefined,
   apiConfig: PipelineOptions['api'] | undefined,
   logger: ReturnType<typeof createCLILogger>,
-): Promise<string> {
+): Promise<ResolvedBundle> {
   // Case 1: Local file or URL bundle
   if (configInput) {
     const resolved = await resolveBundle(configInput);
@@ -181,7 +221,7 @@ async function resolveBundlePath(
     }
 
     if (isPreBuiltConfig(resolved.path)) {
-      return path.resolve(resolved.path);
+      return { bundlePath: path.resolve(resolved.path) };
     }
 
     // JSON config — needs bundling
@@ -192,7 +232,7 @@ async function resolveBundlePath(
       silent: true,
       flowName: apiConfig?.flowName,
     });
-    return result.bundlePath;
+    return { bundlePath: result.bundlePath };
   }
 
   // Runner guard: managed flow containers are started with
@@ -255,7 +295,7 @@ async function resolveBundlePath(
           logger.debug('Cache write failed (non-critical)');
         }
 
-        return bundleResult.bundlePath;
+        return { bundlePath: bundleResult.bundlePath, bootEtag: result.etag };
       }
     } catch (error) {
       logger.error(
@@ -266,7 +306,7 @@ async function resolveBundlePath(
       const cached = readCache(apiConfig.cacheDir);
       if (cached) {
         logger.info(`Using cached bundle (version: ${cached.version})`);
-        return cached.bundlePath;
+        return { bundlePath: cached.bundlePath };
       }
 
       throw new Error(
@@ -278,7 +318,7 @@ async function resolveBundlePath(
   // Case 3: Default — look for server-collect.mjs
   const defaultFile = 'server-collect.mjs';
   logger.debug(`No config specified, using default: ${defaultFile}`);
-  return path.resolve(defaultFile);
+  return { bundlePath: path.resolve(defaultFile) };
 }
 
 /**

@@ -10,8 +10,14 @@ describe('computeCounterDelta', () => {
       out: 95,
       failed: 5,
       destinations: {
-        ga4: { count: 50, failed: 2, duration: 1000 },
-        mixpanel: { count: 45, failed: 3, duration: 800 },
+        ga4: { count: 50, failed: 2, duration: 1000, dlqSize: 0, dropped: 0 },
+        mixpanel: {
+          count: 45,
+          failed: 3,
+          duration: 800,
+          dlqSize: 0,
+          dropped: 0,
+        },
       },
     };
     const last: CounterSnapshot = {
@@ -34,7 +40,7 @@ describe('computeCounterDelta', () => {
       out: 95,
       failed: 5,
       destinations: {
-        ga4: { count: 50, failed: 2, duration: 1000 },
+        ga4: { count: 50, failed: 2, duration: 1000, dlqSize: 0, dropped: 0 },
       },
     };
     const current: CounterSnapshot = {
@@ -42,7 +48,7 @@ describe('computeCounterDelta', () => {
       out: 240,
       failed: 10,
       destinations: {
-        ga4: { count: 120, failed: 5, duration: 2500 },
+        ga4: { count: 120, failed: 5, duration: 2500, dlqSize: 0, dropped: 0 },
       },
     };
     const delta = computeCounterDelta(current, last);
@@ -66,7 +72,13 @@ describe('computeCounterDelta', () => {
       out: 190,
       failed: 10,
       destinations: {
-        newDest: { count: 95, failed: 5, duration: 500 },
+        newDest: {
+          count: 95,
+          failed: 5,
+          duration: 500,
+          dlqSize: 0,
+          dropped: 0,
+        },
       },
     };
     const delta = computeCounterDelta(current, last);
@@ -81,7 +93,7 @@ describe('computeCounterDelta', () => {
       out: 50,
       failed: 0,
       destinations: {
-        ga4: { count: 50, failed: 0, duration: 500 },
+        ga4: { count: 50, failed: 0, duration: 500, dlqSize: 0, dropped: 0 },
       },
     };
     const delta = computeCounterDelta(snapshot, snapshot);

@@ -183,6 +183,122 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/account': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete own account
+     * @description Soft-delete the authenticated account, starting the 30-day grace window. Requires a confirmation of the account email in the body. Revokes all sessions, API tokens, and MCP tokens. Blocked with 409 when the caller is the sole owner of a project that still has other members.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['DeleteAccountRequest'];
+        };
+      };
+      responses: {
+        /** @description Account scheduled for deletion */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Confirmation email does not match */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Sole owner of a shared project */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeleteAccountBlocked'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/account/export': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Export own account data
+     * @description Download a portable JSON export of everything the platform holds about the authenticated account: profile, memberships, token and session metadata, MCP sessions with messages, feedback, and invitations. Metadata only; token hashes and secret values are never included. Served as a file attachment.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Account data export (file attachment) */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['AccountExportResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/sessions': {
     parameters: {
       query?: never;
@@ -2055,7 +2171,7 @@ export interface paths {
     put?: never;
     /**
      * Start deployment
-     * @description Start a new deployment for a flow. Returns 400 AMBIGUOUS_SETTINGS if the flow has multiple named settings — use the per-settings deploy endpoint instead.
+     * @description Start a new deployment for a flow. The bundle runs asynchronously on the worker. Returns 400 AMBIGUOUS_CONFIG when the flow has multiple named settings (use the per-settings deploy endpoint instead). When an Idempotency-Key replays a prior request, returns 200 with status `already_created`.
      */
     post: {
       parameters: {
@@ -2069,6 +2185,15 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
+        /** @description Deployment started, or idempotent replay of a prior request */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StartDeploymentResponse'];
+          };
+        };
         /** @description Deployment started */
         201: {
           headers: {
@@ -2096,6 +2221,15 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
         /** @description Not found */
         404: {
           headers: {
@@ -2107,6 +2241,15 @@ export interface paths {
         };
         /** @description Deployment already in progress */
         409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited or concurrent deploy limit (Retry-After header) */
+        429: {
           headers: {
             [name: string]: unknown;
           };
@@ -2947,6 +3090,348 @@ export interface paths {
         };
       };
     };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/observe-sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start observe session
+     * @description Start an Observe session for a flow. Validates the flow topology, inserts the row, and kicks off detached provisioning. Returns the row immediately as arming.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateObserveSessionRequest'];
+        };
+      };
+      responses: {
+        /** @description Observe session started */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ObserveSessionResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Flow topology not supported */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limit exceeded */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get observe session
+     * @description Get an observe session: status, error message, config snapshot, web activation info, and the live server endpoint when live.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          sessionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Observe session details */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ObserveSessionResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    /**
+     * End observe session
+     * @description End an observe session: tear down the container, revoke credentials, delete the web preview, delete the row. Idempotent.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          sessionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Observe session ended */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/heartbeat': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Heartbeat observe session
+     * @description Keep an observe session warm. The window posts this every 30s while open; a stale session is reaped by the janitor.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          sessionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Heartbeat recorded */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ObserveSessionHeartbeatResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/end': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * End observe session (beacon)
+     * @description The navigator.sendBeacon end target for page unload. Mirrors the DELETE end route because sendBeacon cannot send a DELETE. Idempotent.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          sessionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Observe session ended */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -5522,6 +6007,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/projects/{projectId}/deployments/{deploymentId}/stream': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Stream deployment status (SSE)
+     * @description Server-Sent Events (`text/event-stream`) stream of a deployment's live status. Emits named events: `status` (a snapshot payload, schema below), `done` (terminal, no body), and `timeout`. The CLI consumes this with a raw fetch while waiting for a deploy to finish. Requires member role. The schema documents the JSON `data:` of a `status` event; `errorCode`/`errorMessage` carry the persisted, redacted classification of a failed deploy.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description SSE stream; `status` event payload shape documented here. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'text/event-stream': components['schemas']['DeploymentStreamStatusEvent'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/projects/{projectId}/deployments/{deploymentId}/versions': {
     parameters: {
       query?: never;
@@ -5789,88 +6334,6 @@ export interface paths {
           };
           content: {
             'application/json': components['schemas']['RotateIngestTokenResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/deployments/{deploymentId}/trace': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Toggle debug tracing
-     * @description Enable or disable debug tracing for a deployment. Owner-only, gated by the debugTrace feature. `minutes` of 0 disables; allowed values are 0, 15, 30, 60. An absent body defaults to 15 minutes.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['TraceDeploymentRequest'];
-        };
-      };
-      responses: {
-        /** @description Updated trace window */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['TraceDeploymentResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
           };
         };
         /** @description Unauthorized */
@@ -7289,10 +7752,22 @@ export interface components {
        * @enum {string}
        */
       platform: 'web' | 'server';
-      deploymentStatus: string | null;
+      serving: components['schemas']['ServingStatus'];
+      latestAttempt: components['schemas']['LatestAttemptStatus'];
       deploymentUrl: string | null;
       deployedAt: string | null;
     };
+    /** @enum {string} */
+    ServingStatus: 'live' | 'none';
+    /** @enum {string|null} */
+    LatestAttemptStatus:
+      | 'idle'
+      | 'deploying'
+      | 'published'
+      | 'active'
+      | 'stopped'
+      | 'failed'
+      | null;
     Version: {
       /** @example 1 */
       version: number;
@@ -7349,6 +7824,106 @@ export interface components {
        * @example 2026-01-26T14:30:00.000Z
        */
       createdAt: string;
+    };
+    DeleteAccountRequest: {
+      /** @example me@example.com */
+      confirm: string;
+    };
+    DeleteAccountBlocked: {
+      error: {
+        /**
+         * @example SOLE_OWNER
+         * @enum {string}
+         */
+        code: 'SOLE_OWNER';
+        message: string;
+        details: {
+          /**
+           * @example [
+           *       "proj_abc123"
+           *     ]
+           */
+          projects: string[];
+        };
+      };
+    };
+    AccountExportResponse: {
+      /** @example 2026-06-10T12:00:00.000Z */
+      exportedAt: string;
+      profile: {
+        /** @example user_a1b2c3d4 */
+        id: string;
+        /** @example me@example.com */
+        email: string;
+        displayName: string | null;
+        createdAt: string;
+        lastLoginAt: string | null;
+        /** @example user */
+        globalRole: string;
+        traits: string[];
+      };
+      memberships: {
+        projectId: string;
+        projectName: string;
+        role: string;
+        joinedAt: string;
+      }[];
+      apiTokens: {
+        id: string;
+        name: string;
+        projectId: string | null;
+        origin: string;
+        createdAt: string;
+        lastUsedAt: string | null;
+        expiresAt: string | null;
+        revokedAt: string | null;
+      }[];
+      sessions: {
+        id: string;
+        createdAt: string;
+        expiresAt: string;
+        lastTouchedAt: string;
+      }[];
+      mcpTokens: {
+        id: string;
+        name: string;
+        createdAt: string;
+        lastUsedAt: string | null;
+        expiresAt: string;
+        revokedAt: string | null;
+      }[];
+      mcpSessions: {
+        id: string;
+        projectId: string | null;
+        createdAt: string;
+        lastActiveAt: string;
+        expiresAt: string;
+        messages: {
+          seq: number;
+          role: string;
+          content?: unknown;
+          createdAt: string;
+        }[];
+      }[];
+      feedback: {
+        id: string;
+        projectId: string | null;
+        text: string;
+        source: string;
+        createdAt: string;
+      }[];
+      invitations: {
+        id: string;
+        projectId: string;
+        invitedEmail: string;
+        role: string;
+        status: string;
+        createdAt: string;
+        expiresAt: string;
+        acceptedAt: string | null;
+        declinedAt: string | null;
+        cancelledAt: string | null;
+      }[];
     };
     ApiTokenSummary: {
       /** @example tok_a1b2c3d4 */
@@ -7471,6 +8046,9 @@ export interface components {
         createdAt: string;
         updatedAt: string | null;
       } | null;
+      serving: components['schemas']['ServingStatus'];
+      latestAttempt: components['schemas']['LatestAttemptStatus'];
+      deployedAt: string | null;
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -7547,6 +8125,7 @@ export interface components {
         | 'active'
         | 'stopped'
         | 'failed';
+      serving: components['schemas']['ServingStatus'];
       currentVersionNumber: number | null;
       url: string | null;
       /** @example flow_a1b2c3d4 */
@@ -7556,8 +8135,6 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      /** Format: date-time */
-      traceUntil: string | null;
       usageSummary?: {
         eventsIn24h: number;
         healthy: boolean;
@@ -7594,6 +8171,21 @@ export interface components {
       currentVersion: components['schemas']['DeploymentVersionDetail'];
       versions: components['schemas']['DeploymentVersionHistoryEntry'][];
       error: components['schemas']['DeploymentError'];
+      recentErrors?:
+        | {
+            message: string;
+            count: number;
+            firstSeen: string;
+            lastSeen: string;
+          }[]
+        | null;
+      recentLogs?:
+        | {
+            time: string;
+            level: string;
+            message: string;
+          }[]
+        | null;
       url: string | null;
       selfHosted: {
         /** Format: date-time */
@@ -7603,7 +8195,7 @@ export interface components {
         healthy: boolean;
       } | null;
       /** Format: date-time */
-      traceUntil: string | null;
+      lastHeartbeatAt?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -7673,6 +8265,7 @@ export interface components {
         | 'active'
         | 'stopped'
         | 'failed';
+      serving: components['schemas']['ServingStatus'];
       currentVersionNumber: number | null;
       url: string | null;
       /** @example flow_a1b2c3d4 */
@@ -7682,12 +8275,50 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      /** Format: date-time */
-      traceUntil: string | null;
       usageSummary?: {
         eventsIn24h: number;
         healthy: boolean;
       };
+    };
+    StartDeploymentResponse:
+      | {
+          /** @example dep_a1b2c3d4 */
+          deploymentId: string;
+          /** @example k7m2x9p4q1w8 */
+          slug: string;
+          target: string | null;
+          /**
+           * @example web
+           * @enum {string}
+           */
+          type: 'web' | 'server';
+          /** @enum {string} */
+          status: 'deploying';
+          settingsId?: string;
+          versionId: string;
+          versionNumber: number;
+        }
+      | {
+          deploymentId: string;
+          /** @enum {string} */
+          status: 'already_created';
+        };
+    DeploymentStreamStatusEvent: {
+      status: string;
+      substatus: string | null;
+      /**
+       * @example web
+       * @enum {string}
+       */
+      type: 'web' | 'server';
+      target: string | null;
+      containerUrl: string | null;
+      errorCode: string | null;
+      errorMessage: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
     };
     ListDeploymentsResponse: {
       deployments: components['schemas']['DeploymentSummary'][];
@@ -7830,6 +8461,37 @@ export interface components {
             kind: 'deployment-version';
             deploymentVersionId: string;
           };
+    };
+    ObserveSessionResponse: {
+      /** @example ses_abc123xyz456 */
+      id: string;
+      projectId: string;
+      /** @example flow_a1b2c3d4 */
+      flowId: string;
+      status: string;
+      errorMessage: string | null;
+      configSnapshot: {
+        [key: string]: unknown;
+      };
+      serverFlowName: string | null;
+      serverEndpoint: string | null;
+      web: components['schemas']['ObserveSessionWeb'];
+      createdBy: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    ObserveSessionWeb: {
+      token: string;
+      activationUrl: string;
+      /** Format: uri */
+      bundleUrl: string;
+    } | null;
+    CreateObserveSessionRequest: {
+      settingsName: string;
+    };
+    ObserveSessionHeartbeatResponse: {
+      /** @enum {boolean} */
+      ok: true;
     };
     SecretName: string;
     CreateSecretRequest: {
@@ -8269,14 +8931,6 @@ export interface components {
     RotateIngestTokenResponse: {
       ingestToken: string;
     };
-    TraceDeploymentRequest: {
-      minutes?: number;
-    };
-    TraceDeploymentResponse: {
-      /** Format: date-time */
-      traceUntil: string | null;
-      minutes: number;
-    };
     DeploymentUsageResponse: {
       totalEventsIn: number;
       totalEventsOut: number;
@@ -8290,6 +8944,7 @@ export interface components {
       averageThroughputPerHour: number;
       period: string;
       buckets: components['schemas']['UsageBucket'][];
+      destinations?: components['schemas']['UsageDestination'][];
     };
     UsageBucket: {
       /** Format: date-time */
@@ -8298,6 +8953,14 @@ export interface components {
       eventsOut: number;
       eventsFailed: number;
       instances: number;
+    };
+    UsageDestination: {
+      name: string;
+      count: number;
+      failed: number;
+      duration: number;
+      dlqSize: number;
+      dropped: number;
     };
     CreateCustomDomainRequest: {
       hostname: string;
@@ -8661,12 +9324,6 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     } | null;
-    StartDeploymentResponse: {
-      deploymentId: string;
-      /** @enum {string} */
-      type: 'web' | 'server';
-      status: string;
-    };
     ListSettingsResponse: {
       settings: components['schemas']['FlowSettingsSummary'][];
     };
@@ -8845,9 +9502,26 @@ export interface components {
             count: number;
             failed: number;
             duration: number;
+            dlqSize?: number;
+            dropped?: number;
           };
         };
       };
+      recentErrors?: {
+        message: string;
+        count: number;
+        /** Format: date-time */
+        firstSeen: string;
+        /** Format: date-time */
+        lastSeen: string;
+      }[];
+      recentLogs?: {
+        /** Format: date-time */
+        time: string;
+        /** @enum {string} */
+        level: 'error' | 'warn' | 'info' | 'debug';
+        message: string;
+      }[];
     };
   };
   responses: never;

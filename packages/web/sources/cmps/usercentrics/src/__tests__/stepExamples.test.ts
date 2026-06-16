@@ -2,11 +2,34 @@ import type { Collector, Elb } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { sourceUsercentrics } from '../index';
 import { examples } from '../dev';
+import type { UsercentricsV2Api, UsercentricsV2Service } from '../types';
+
+/** Typed access to the `UC_UI` global on the jsdom window. */
+interface UcWindow {
+  UC_UI?: UsercentricsV2Api;
+}
+
+function ucWindow(): UcWindow {
+  return window as unknown as UcWindow;
+}
 
 describe('Step Examples', () => {
+  beforeEach(() => {
+    ucWindow().UC_UI = undefined;
+  });
+
+  afterEach(() => {
+    ucWindow().UC_UI = undefined;
+  });
+
   it.each(Object.entries(examples.step))('%s', async (_name, example) => {
-    const content = example.in as Record<string, unknown>;
-    const mapping = example.mapping as Record<string, unknown> | undefined;
+    const services = example.in as UsercentricsV2Service[];
+    const mapping = example.mapping as
+      | { settings?: Record<string, unknown> }
+      | undefined;
+    const dispatch =
+      (example.trigger?.options as { dispatch?: string } | undefined)
+        ?.dispatch ?? 'init';
 
     const mockElb = jest.fn(async () => ({
       ok: true,
@@ -19,16 +42,21 @@ describe('Step Examples', () => {
       allowed: true,
     } as unknown as Collector.Instance;
 
+    const ucUi: UsercentricsV2Api = {
+      isInitialized: () => true,
+      getServicesBaseInfo: () => services,
+    };
+
+    // 'init': UC_UI is present when the source runs, so the static read at
+    // init emits the snapshot. 'cmp': attach UC_UI only after init so the
+    // static read is a no-op, then drive the consent-change path.
+    if (dispatch === 'init') ucWindow().UC_UI = ucUi;
+
     const source = await sourceUsercentrics({
       collector: collectorStub,
       config: {
         settings: {
-          ...(mapping?.eventName
-            ? { eventName: mapping.eventName as string }
-            : {}),
-          ...(mapping?.categoryMap
-            ? { categoryMap: mapping.categoryMap as Record<string, string> }
-            : {}),
+          ...(mapping?.settings || {}),
         },
       },
       env: {
@@ -43,14 +71,19 @@ describe('Step Examples', () => {
       withScope: async (_r, _resp, body) => body({} as never),
     });
 
-    // Adapter setup (listener attach) happens in init(), not the factory.
+    // Adapter setup (listener attach + static read) happens in init().
     await source.init?.();
 
-    // Dispatch CMP event — source listener catches it
-    const eventName = (mapping?.eventName as string) || 'ucEvent';
-    window.dispatchEvent(new CustomEvent(eventName, { detail: content }));
+    if (dispatch === 'cmp') {
+      ucWindow().UC_UI = ucUi;
+      window.dispatchEvent(
+        new CustomEvent('UC_UI_CMP_EVENT', {
+          detail: { source: 'button', type: 'ACCEPT_ALL' },
+        }),
+      );
+    }
 
-    // Source pushes via detached elb chain — yield for it
+    // Source pushes via detached elb chain — yield for it.
     for (let i = 0; i < 10 && mockElb.mock.calls.length === 0; i++) {
       await Promise.resolve();
     }

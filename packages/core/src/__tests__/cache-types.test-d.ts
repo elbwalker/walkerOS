@@ -10,6 +10,7 @@
  */
 import type { CacheResult } from '../cache';
 import { checkCache } from '../cache';
+import type { Cache, EventCacheRule, StoreCacheRule } from '../types/cache';
 
 type Equal<X, Y> =
   (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
@@ -24,3 +25,24 @@ type _CheckCacheReturnsPromise = Expect<
 >;
 
 void (null as unknown as _CheckCacheReturnsPromise);
+
+// The discriminated cache-rule union must accept each rule shape and reject
+// fields that belong only to the other variant. `update` is event-only; a
+// StoreCacheRule carrying it must fail the build.
+const _eventOk: Cache<EventCacheRule> = {
+  // `update` is event-only; assert EventCacheRule accepts it so this file also
+  // fails the build if the field is ever dropped from EventCacheRule.
+  rules: [{ key: ['event.id'], ttl: 60, update: { foo: 'bar' } }],
+};
+void _eventOk;
+
+const _storeOk: Cache<StoreCacheRule> = {
+  rules: [{ ttl: 60 }],
+};
+void _storeOk;
+
+const _storeBad: Cache<StoreCacheRule> = {
+  // @ts-expect-error -- update is not allowed in StoreCacheRule
+  rules: [{ ttl: 60, update: { foo: 'bar' } }],
+};
+void _storeBad;

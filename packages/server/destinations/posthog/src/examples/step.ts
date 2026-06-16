@@ -14,6 +14,8 @@ import type { Settings } from '../types';
 export type PostHogStepExample = Flow.StepExample & {
   settings?: Partial<Settings>;
   configInclude?: string[];
+  /** Consent granted before `in` so a gated destination is loaded first. */
+  before?: WalkerOS.Consent;
 };
 
 /**
@@ -205,16 +207,20 @@ export const captureWithGroupContext: PostHogStepExample = {
 };
 
 /**
- * Consent revoked - client.disable() is called.
+ * Consent revoked - after analytics consent is granted (PostHog loads and is
+ * enabled), revoking it calls client.disable() via the on('consent') handler.
+ * The destination is never loaded under denied consent, so the disable is a
+ * real revocation of an already-granted destination.
  */
 export const consentRevoke: PostHogStepExample = {
   title: 'Consent revoked',
   description:
     'A walker consent command with analytics denied calls client.disable on the PostHog client.',
   command: 'consent',
+  before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: [['client.disable']],
+  out: [['client.enable'], ['client.disable']],
 };
 
 /**

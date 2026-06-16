@@ -24,7 +24,6 @@ export * as SourceUsercentrics from './types';
  *       code: sourceUsercentrics,
  *       config: {
  *         settings: {
- *           eventName: 'ucEvent',
  *           categoryMap: {
  *             essential: 'functional',
  *             functional: 'functional',
@@ -48,7 +47,6 @@ export const sourceUsercentrics: Source.Init<Types> = async (context) => {
 
   // Merge user settings with defaults so adapters always see a fully-resolved Settings
   const settings: Settings = {
-    eventName: config?.settings?.eventName ?? 'ucEvent',
     categoryMap: config?.settings?.categoryMap ?? {},
     explicitOnly: config?.settings?.explicitOnly ?? true,
     apiVersion: config?.settings?.apiVersion ?? 'auto',

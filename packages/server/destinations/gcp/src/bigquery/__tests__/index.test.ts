@@ -12,6 +12,7 @@ import {
   __resetMockCalls,
   __setNextAppendRowErrors,
   __setNextAppendThrow,
+  __setNextGetResultReject,
   __setNextOpenWriterError,
 } from '@google-cloud/bigquery-storage';
 import {
@@ -41,10 +42,17 @@ describe('Server Destination BigQuery', () => {
   const mockCollector = {} as Collector.Instance;
   let testEnv: Env;
 
-  async function callInit(initSettings: InitSettings, logger?: MockLogger) {
+  async function callInit(
+    initSettings: InitSettings,
+    logger?: MockLogger,
+    timeout?: number,
+  ) {
     if (!destination.init) throw new Error('destination.init undefined');
     return destination.init({
-      config: { settings: initSettings },
+      config:
+        timeout === undefined
+          ? { settings: initSettings }
+          : { settings: initSettings, timeout },
       collector: mockCollector,
       env: testEnv,
       logger: logger ?? createMockLogger(),
@@ -153,6 +161,43 @@ describe('Server Destination BigQuery', () => {
     )
       return;
     expect(errorContext.error).toBe('TYPE_UNSPECIFIED: bad write stream type');
+  });
+
+  test('init logs and throws an informative, DLQ-routable error on a non-NotFound failure', async () => {
+    // The destination no longer scrubs error messages itself: secret redaction
+    // is standardized at the CLI logger handler (covers stderr + heartbeat ring)
+    // and the thrown error is scrubbed on output there. Here the destination's
+    // job is to log the failure and rethrow the RAW error so it stays
+    // informative and DLQ-routable, keeping its routing `code`.
+    const underlyingError: Error & { code?: number } = Object.assign(
+      new Error('streams/_default" contains illegal characters'),
+      { code: 3 }, // INVALID_ARGUMENT — not NotFound, so it hits the catch-all
+    );
+    __setNextOpenWriterError(underlyingError);
+
+    const logger = createMockLogger();
+
+    let thrown: unknown;
+    try {
+      await callInit({ projectId, datasetId, tableId }, logger);
+    } catch (err) {
+      thrown = err;
+    }
+
+    // The thrown error is the raw error: informative and DLQ-routable, with its
+    // routing code intact (read without a cast).
+    expect(thrown).toBe(underlyingError);
+    expect(thrown).toBeInstanceOf(Error);
+    if (!(thrown instanceof Error)) return;
+    expect(thrown.message).toContain('contains illegal characters');
+    expect('code' in thrown).toBe(true);
+    if (!('code' in thrown)) return;
+    const withCode: { code?: unknown } = thrown;
+    expect(withCode.code).toBe(3);
+
+    // Still informative for the operator.
+    const serialized = JSON.stringify(logger.error.mock.calls);
+    expect(serialized).toContain('BigQuery init failed');
   });
 
   test('push appends one row through JSONWriter', async () => {
@@ -478,6 +523,205 @@ describe('Server Destination BigQuery', () => {
           }),
         ),
       ).rejects.toThrow('writer is missing');
+    });
+  });
+
+  describe('gRPC deadline (config.timeout)', () => {
+    // The Storage Write API appendRows runs on the long-lived bidi stream opened
+    // by createStreamConnection. The deadline is therefore applied at the
+    // stream-connection level (gax CallOptions.timeout), which governs every
+    // appendRows/getResult on that stream, and at the unary getWriteStream call.
+    // The deadline derives from the standard per-step config.timeout, the same
+    // value the collector uses to race the push, not a destination-custom knob.
+
+    test('init forwards the standard config.timeout as the gax deadline on the appendRows stream and schema fetch', async () => {
+      await callInit({ projectId, datasetId, tableId }, undefined, 5000);
+
+      const streamCall = __getMockCalls().find(
+        (c) => c.method === 'createStreamConnection',
+      );
+      expect(streamCall?.args[1]).toEqual({ timeout: 5000 });
+
+      const schemaCall = __getMockCalls().find(
+        (c) => c.method === 'getWriteStream',
+      );
+      expect(schemaCall?.args[1]).toEqual({ timeout: 5000 });
+    });
+
+    test('init applies the default deadline when config.timeout is unset', async () => {
+      await callInit({ projectId, datasetId, tableId });
+
+      const streamCall = __getMockCalls().find(
+        (c) => c.method === 'createStreamConnection',
+      );
+      expect(streamCall?.args[1]).toEqual({ timeout: 10000 });
+
+      const schemaCall = __getMockCalls().find(
+        (c) => c.method === 'getWriteStream',
+      );
+      expect(schemaCall?.args[1]).toEqual({ timeout: 10000 });
+    });
+
+    test('init treats config.timeout: 0 as "use the default" (no zero-ms deadline)', async () => {
+      // A zero-ms deadline would expire immediately; 0 is not a "disabled"
+      // sentinel. Resolution falls back to the default so writer.ts always gets
+      // a positive deadline, mirroring the collector's resolveDestinationTimeout.
+      await callInit({ projectId, datasetId, tableId }, undefined, 0);
+
+      const streamCall = __getMockCalls().find(
+        (c) => c.method === 'createStreamConnection',
+      );
+      expect(streamCall?.args[1]).toEqual({ timeout: 10000 });
+
+      const schemaCall = __getMockCalls().find(
+        (c) => c.method === 'getWriteStream',
+      );
+      expect(schemaCall?.args[1]).toEqual({ timeout: 10000 });
+    });
+
+    test('a deadline-exceeded getResult surfaces as a rejection from push (so the collector can DLQ it)', async () => {
+      const logger = createMockLogger();
+      const { writer, writeClient } = await openWriter(
+        { projectId, datasetId, tableId, timeout: 1000 },
+        logger,
+      );
+      __resetMockCalls();
+
+      const settings: Settings = {
+        client: new BigQuery({ projectId }),
+        projectId,
+        datasetId,
+        tableId,
+        location: 'EU',
+        writer,
+        writeClient,
+      };
+      const config: Config = { settings };
+
+      const deadlineError: Error & { code?: number } = Object.assign(
+        new Error('Deadline exceeded'),
+        { code: 4 }, // gRPC DEADLINE_EXCEEDED
+      );
+      __setNextGetResultReject(deadlineError);
+
+      await expect(
+        destination.push(
+          event,
+          createMockContext({
+            config,
+            rule: undefined,
+            data: undefined,
+            env: testEnv,
+            id: 'test-bq',
+          }),
+        ),
+      ).rejects.toThrow('Deadline exceeded');
+    });
+
+    test('a getResult rejection surfaces the raw, informative, DLQ-routable error from push', async () => {
+      // Single-event path (batching off): a getResult() rejection must surface
+      // to the collector/DLQ as the RAW error, keeping its message and routing
+      // `code`. Secret redaction is standardized at the CLI logger handler, so
+      // the destination no longer scrubs here.
+      const logger = createMockLogger();
+      const { writer, writeClient } = await openWriter(
+        { projectId, datasetId, tableId },
+        logger,
+      );
+      __resetMockCalls();
+
+      const settings: Settings = {
+        client: new BigQuery({ projectId }),
+        projectId,
+        datasetId,
+        tableId,
+        location: 'EU',
+        writer,
+        writeClient,
+      };
+      const config: Config = { settings };
+
+      const appendError: Error & { code?: number } = Object.assign(
+        new Error('streams/_default" contains illegal characters'),
+        { code: 3 },
+      );
+      __setNextGetResultReject(appendError);
+
+      let thrown: unknown;
+      try {
+        await destination.push(
+          event,
+          createMockContext({
+            config,
+            rule: undefined,
+            data: undefined,
+            env: testEnv,
+            logger,
+            id: 'test-bq',
+          }),
+        );
+      } catch (err) {
+        thrown = err;
+      }
+
+      // The raw error surfaces: an Error, informative, with the routing code
+      // intact (read without a cast).
+      expect(thrown).toBe(appendError);
+      expect(thrown).toBeInstanceOf(Error);
+      if (!(thrown instanceof Error)) return;
+      expect(thrown.message).toContain('contains illegal characters');
+      expect('code' in thrown).toBe(true);
+      if (!('code' in thrown)) return;
+      const withCode: { code?: unknown } = thrown;
+      expect(withCode.code).toBe(3);
+
+      // The destination still logs the failure for the operator.
+      const serialized = JSON.stringify(logger.error.mock.calls);
+      expect(serialized).toContain('BigQuery row append threw');
+    });
+
+    test('a deadline-exceeded getResult rejects pushBatch (whole batch DLQ)', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+
+      const logger = createMockLogger();
+      const { writer, writeClient } = await openWriter(
+        { projectId, datasetId, tableId, timeout: 1000 },
+        logger,
+      );
+      __resetMockCalls();
+
+      const settings: Settings = {
+        client: new BigQuery({ projectId }),
+        projectId,
+        datasetId,
+        tableId,
+        location: 'EU',
+        writer,
+        writeClient,
+      };
+      const config: Config = { settings };
+
+      const deadlineError: Error & { code?: number } = Object.assign(
+        new Error('Deadline exceeded'),
+        { code: 4 },
+      );
+      __setNextGetResultReject(deadlineError);
+
+      const events = [createEvent(), createEvent()];
+      const data: Array<undefined> = events.map(() => undefined);
+      const entries = events.map((e) => ({ event: e }));
+
+      await expect(
+        destination.pushBatch!(
+          { key: 'k', events, data, entries },
+          createMockContext({
+            config,
+            env: testEnv,
+            logger,
+            id: 'test-bq',
+          }),
+        ),
+      ).rejects.toThrow('Deadline exceeded');
     });
   });
 });

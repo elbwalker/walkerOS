@@ -48,6 +48,56 @@ const DEFAULT_DLQ_MAX = 100;
 const DEFAULT_BATCH_SIZE = 1_000;
 /** Default upper-bound on batch age in ms. Forces flush even if debounce keeps resetting. */
 const DEFAULT_BATCH_AGE = 30_000;
+/**
+ * Default per-destination delivery timeout in ms. Applied when a destination's
+ * `config.timeout` is `0` or undefined. A hung delivery is converted into a
+ * counted DLQ failure after this window so one slow destination never wedges
+ * the collector push.
+ */
+const DEFAULT_DESTINATION_TIMEOUT_MS = 10_000;
+
+/**
+ * Resolve the effective delivery timeout for a destination. A positive number
+ * wins; `0` or undefined falls back to {@link DEFAULT_DESTINATION_TIMEOUT_MS}.
+ */
+function resolveDestinationTimeout(timeout?: number): number {
+  return typeof timeout === 'number' && timeout > 0
+    ? timeout
+    : DEFAULT_DESTINATION_TIMEOUT_MS;
+}
+
+/**
+ * Error thrown when a destination delivery does not settle within its timeout.
+ * The dedicated `name` lets DLQ consumers discriminate a timeout from a
+ * destination-thrown error without substring matching the message.
+ */
+class DestinationTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DestinationTimeoutError';
+  }
+}
+
+/**
+ * Races a delivery promise against a per-destination timeout. If the work does
+ * not settle within `ms`, the returned promise rejects with a
+ * {@link DestinationTimeoutError}; the timer is always cleared on settle so no
+ * dangling timer remains. The race is constructed per call site, so each
+ * destination times out independently and one hang never affects another.
+ */
+function withTimeout<T>(
+  work: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new DestinationTimeoutError(message)), ms);
+  });
+  return Promise.race([work, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
 
 /**
  * Sentinel returned by {@link destinationPush} when an event was enqueued
@@ -370,9 +420,24 @@ export async function pushToDestinations(
       // the queueOn-only path. Mirrors the same pattern used below at the main
       // init call site so failures are never silent on either branch.
       if (!currentQueue.length && destination.queueOn?.length) {
+        // Consent gate (sole-gate invariant): this branch would init the
+        // destination purely to flush queued on() events, but there is no push
+        // event whose individual consent could apply, so collector consent is
+        // the complete basis. Never init a consent-gated destination while its
+        // required consent is denied. Self-heals: handle.ts runs
+        // pushToDestinations after every state command, so the grant command
+        // re-enters here with consent satisfied and inits then.
+        if (!getGrantedConsent(destination.config.consent, consent)) {
+          return { id, destination, skipped: true };
+        }
         let isInitialized = false;
         try {
-          isInitialized = await destinationInit(collector, destination, id);
+          isInitialized = await destinationInit(
+            collector,
+            destination,
+            id,
+            true,
+          );
         } catch (err) {
           collector.status.failed++;
           const destType = destination.type || 'unknown';
@@ -466,9 +531,11 @@ export async function pushToDestinations(
       // silently returned undefined when init threw, hiding real failures. The
       // destination itself may also log a more specific error before throwing;
       // this is the boundary safety net so failures are never silent.
+      // Allowed: at least one event cleared the per-event consent gate above,
+      // so initialization is authorized (true) for the chokepoint guard.
       let isInitialized = false;
       try {
-        isInitialized = await destinationInit(collector, destination, id);
+        isInitialized = await destinationInit(collector, destination, id, true);
       } catch (err) {
         collector.status.failed++;
         const destType = destination.type || 'unknown';
@@ -824,13 +891,39 @@ export async function pushToDestinations(
  * @param destId - The destination ID.
  * @returns Whether the destination was initialized successfully.
  */
+/**
+ * A destination declares a consent requirement when its config.consent has at
+ * least one key. Such a destination must never be initialized without a cleared
+ * consent gate (see destinationInit's `allowed` parameter).
+ */
+function hasConsentRequirement(destination: Destination.Instance): boolean {
+  const required = destination.config.consent;
+  return !!required && Object.keys(required).length > 0;
+}
+
 export async function destinationInit<Destination extends Destination.Instance>(
   collector: Collector.Instance,
   destination: Destination,
   destId: string,
+  // Fail-closed consent gate. Callers MUST pass an affirmative allow decision
+  // (per-event on the push path, collector-consent on the queueOn path). The
+  // default is false so any future call site that forgets fails closed: a
+  // consent-gated destination is never initialized without a cleared gate.
+  allowed = false,
 ): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
+    // Defense-in-depth: refuse to init a destination that declares a consent
+    // requirement unless the gate was cleared. We do NOT re-derive consent from
+    // collector state here, because the push path's decision may rest on an
+    // event's individual consent this function cannot see; re-deriving would
+    // wrongly block a legitimate event-level override.
+    if (!allowed && hasConsentRequirement(destination)) {
+      collector.logger
+        .scope(destination.type || 'unknown')
+        .debug('init blocked: consent gate not cleared');
+      return false;
+    }
     // Create scoped logger for this destination: [type:id] or [unknown:id]
     const destType = destination.type || 'unknown';
     const destLogger = collector.logger.scope(destType);
@@ -1092,13 +1185,24 @@ export async function destinationPush<Destination extends Destination.Instance>(
         // partial outcome = total minus the entries reported failed.
         let succeededCount = snapshot.entries.length;
 
+        const batchTimeoutMs = resolveDestinationTimeout(config.timeout);
         const outcome = await tryCatchAsync(
-          useHooks(
-            destination.pushBatch!,
-            'DestinationPushBatch',
-            collector.hooks,
-            collector.logger,
-          ),
+          (
+            batchArg: Destination.Batch<unknown>,
+            ctxArg: Destination.PushBatchContext,
+          ) =>
+            withTimeout(
+              Promise.resolve(
+                useHooks(
+                  destination.pushBatch!,
+                  'DestinationPushBatch',
+                  collector.hooks,
+                  collector.logger,
+                )(batchArg, ctxArg),
+              ),
+              batchTimeoutMs,
+              `Destination "${destId}" batch delivery timed out after ${batchTimeoutMs}ms`,
+            ),
           (err) => {
             succeededCount = 0;
             const errFinished = Date.now();
@@ -1239,13 +1343,23 @@ export async function destinationPush<Destination extends Destination.Instance>(
     emitStep(collector, inState);
 
     try {
-      // It's time to go to the destination's side now
-      const response = await useHooks(
-        destination.push,
-        'DestinationPush',
-        collector.hooks,
-        collector.logger,
-      )(processed.event, context);
+      // It's time to go to the destination's side now. Race the push against a
+      // per-destination timeout so a hung delivery becomes a thrown failure
+      // that flows into the SAME catch -> tryCatchAsync onError -> DLQ path a
+      // real throw uses. The race is per call, so it never affects siblings.
+      const timeoutMs = resolveDestinationTimeout(config.timeout);
+      const response = await withTimeout(
+        Promise.resolve(
+          useHooks(
+            destination.push,
+            'DestinationPush',
+            collector.hooks,
+            collector.logger,
+          )(processed.event, context),
+        ),
+        timeoutMs,
+        `Destination "${destId}" delivery timed out after ${timeoutMs}ms`,
+      );
 
       const pushFinished = Date.now();
       const outState = buildBaseState(collector, {
