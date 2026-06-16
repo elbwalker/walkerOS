@@ -11,6 +11,11 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { Level } from '@walkeros/core';
 import {
+  ensureSinkDir,
+  errorSinkPath,
+  seedErrorRingFromJsonl,
+} from './error-sink.js';
+import {
   createCLILogger,
   createCLILoggerConfig,
 } from '../../core/cli-logger.js';
@@ -148,6 +153,19 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
         flowName,
         prepareBundleForRun: lazyPrepareBundleForRun,
       };
+
+      // Durable error persistence: only when a cacheDir exists (managed/API
+      // run). Wire the synchronous jsonl sink, then read-and-ship any errors
+      // that a prior boot persisted before a crash (seed into the ring so the
+      // first heartbeat re-reports them, then truncate). Best-effort throughout.
+      //
+      // Ensure the cache dir exists BEFORE wiring the sink, so the synchronous
+      // jsonl append can succeed on a fresh managed-runner container (where
+      // `writeCache` never runs to create it).
+      ensureSinkDir(apiConfig.cacheDir);
+      const sinkPath = errorSinkPath(apiConfig.cacheDir);
+      seedErrorRingFromJsonl(errorRing, sinkPath);
+      errorRing.setSink(sinkPath);
     }
 
     // Resolve bundle path

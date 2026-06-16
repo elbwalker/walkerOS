@@ -9,6 +9,7 @@ import { isArray, FatalError } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
 import { mergeEnvironments } from './destination';
+import { buildReportError } from './report-error';
 import { reconcilePending } from './pending';
 import { flushSourceQueueOn, isSourceStarted } from './source';
 
@@ -386,6 +387,13 @@ export function callDestinationOn(
     config: destination.config,
     data: data as Destination.Data,
     env: mergeEnvironments(destination.env, destination.config.env),
+    reportError: buildReportError(
+      collector,
+      'destination',
+      destId,
+      destLogger,
+      destination,
+    ),
   };
 
   tryCatch(destination.on, (err) =>

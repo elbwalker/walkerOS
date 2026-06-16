@@ -38,6 +38,8 @@ function createTestCollector(): Collector.Instance {
       sources: {},
       destinations: {},
       dropped: {},
+      connectionErrors: {},
+      breakers: {},
     },
     timing: 0,
     user: {},

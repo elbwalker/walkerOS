@@ -2,6 +2,8 @@ import { createMockLogger } from '@walkeros/core';
 import {
   __getMockCalls,
   __resetMockCalls,
+  __getLastConnection,
+  MockStreamConnection,
 } from '@google-cloud/bigquery-storage';
 import { openWriter, closeWriter } from '../writer';
 
@@ -91,5 +93,70 @@ describe('openWriter', () => {
     const methods = __getMockCalls().map((c) => c.method);
     expect(methods).toContain('JSONWriter.close');
     expect(methods).toContain('WriterClient.close');
+  });
+
+  describe("connection 'error' listener (out-of-band containment)", () => {
+    // Honesty guard: the mock StreamConnection is a REAL EventEmitter, so an
+    // `emit('error', …)` with NO listener throws exactly like Node does. This
+    // is the crash class this listener exists to prevent.
+    test('a listener-less connection error throws (reproduces the crash)', () => {
+      const conn = new MockStreamConnection('s');
+      const boom: Error & { code?: number } = Object.assign(
+        new Error('stream died'),
+        { code: 13 },
+      );
+      // No listener attached -> Node re-throws the emitted error synchronously.
+      expect(() => conn.__emitConnectionError(boom)).toThrow('stream died');
+    });
+
+    test('openWriter attaches a listener so the same error is contained', async () => {
+      const logger = createMockLogger();
+      const captured: unknown[] = [];
+      await openWriter(
+        {
+          projectId: 'p',
+          datasetId: 'd',
+          tableId: 't',
+          onConnectionError: (err) => {
+            captured.push(err);
+          },
+        },
+        logger,
+      );
+
+      // The destination registered via the SDK's documented hook.
+      const methods = __getMockCalls().map((c) => c.method);
+      expect(methods).toContain('onConnectionError');
+
+      const conn = __getLastConnection();
+      expect(conn.listenerCount('error')).toBe(1);
+
+      const boom: Error & { code?: number } = Object.assign(
+        new Error('stream died'),
+        { code: 13 },
+      );
+      // With the listener in place the emit no longer throws: it is contained
+      // and routed to the supplied handler.
+      expect(() => conn.__emitConnectionError(boom)).not.toThrow();
+      expect(captured).toEqual([boom]);
+    });
+
+    test('closeWriter removes the connection-error listener', async () => {
+      const logger = createMockLogger();
+      const handles = await openWriter(
+        {
+          projectId: 'p',
+          datasetId: 'd',
+          tableId: 't',
+          onConnectionError: () => undefined,
+        },
+        logger,
+      );
+      const conn = __getLastConnection();
+      expect(conn.listenerCount('error')).toBe(1);
+
+      closeWriter(handles, logger);
+      expect(conn.listenerCount('error')).toBe(0);
+    });
   });
 });

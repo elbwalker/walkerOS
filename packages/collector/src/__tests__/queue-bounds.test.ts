@@ -62,6 +62,8 @@ describe('queue bounds', () => {
         sources: {},
         destinations: {},
         dropped: {},
+        connectionErrors: {},
+        breakers: {},
       },
       config,
       push: jest.fn(),

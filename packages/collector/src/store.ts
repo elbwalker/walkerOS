@@ -3,6 +3,7 @@ import { emitStep, useHooks } from '@walkeros/core';
 import { createCacheStore } from './cache-store';
 import { buildBaseState } from './observerEmit';
 import { wrapStoreWithCache } from './store-cache-wrapper';
+import { buildReportError } from './report-error';
 
 /**
  * Narrowed view of a `Store.InitStore` entry that also carries the optional
@@ -298,6 +299,7 @@ export async function initStores(
       id: storeId,
       config,
       env,
+      reportError: buildReportError(collector, 'store', storeId, storeLogger),
     };
 
     const instance = await code(context);

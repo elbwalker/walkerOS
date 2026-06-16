@@ -143,6 +143,31 @@ Counters (`count`, `out`) are bumped only after a successful flush.
 Operators also see `status.destinations[id].inFlightBatch`: the number of events
 buffered but not yet delivered.
 
+### Out-of-band errors from an EventEmitter SDK
+
+`tryCatchAsync` only catches errors on the awaited `push`/`pushBatch` path. If a
+destination owns an SDK object that is an EventEmitter (a BigQuery
+`StreamConnection`, a Redis client, a Kafka producer), that object can emit
+`'error'` on a detached tick with no awaiter. An EventEmitter that emits
+`'error'` with zero listeners throws synchronously and crashes the process.
+
+A destination that owns such an object MUST attach an `'error'` listener and
+route the error through `context.reportError`, which is available on every step
+context:
+
+- `context.reportError(err)` (no event): a connection-level error between
+  pushes. Logs (redacted) and bumps `status.connectionErrors[stepId]`. Does not
+  count as a failed event.
+- `context.reportError(err, event)`: a specific event was lost. Routes it to the
+  DLQ and bumps `failed`, exactly like an in-band push failure.
+
+`reportError` is guarded and must never be called in a way that throws back into
+the emitter tick. The Pub/Sub pull source (`sources/gcp/src/pubsub/pull`) is the
+reference for attaching an `'error'` listener. The runner's process guards are a
+backstop, but the listener is what gives clean DLQ routing, attribution, and
+redaction. Optionally pair this with the `breaker` config so a persistently
+broken transport stops retrying every event.
+
 ## Require vs Consent
 
 Two separate mechanisms control when destinations receive events:

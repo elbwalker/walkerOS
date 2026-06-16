@@ -61,6 +61,8 @@ export async function collector(
       sources: {},
       destinations: {},
       dropped: {},
+      connectionErrors: {},
+      breakers: {},
     },
     timing: Date.now(),
     user: initConfig.user || {},

@@ -8,6 +8,11 @@ import type {
 } from '@walkeros/core';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 import type { managedwriter } from '@google-cloud/bigquery-storage';
+import type {
+  WriterHandles,
+  StreamConnection as WriterConnection,
+  RemoveListener as WriterRemoveListener,
+} from '../writer';
 
 export interface Settings {
   client: BigQuery;
@@ -19,6 +24,34 @@ export interface Settings {
   // Runtime-only handles populated by init(); not user-facing.
   writeClient?: managedwriter.WriterClient;
   writer?: managedwriter.JSONWriter;
+  // The StreamConnection the writer appends to. Held so the connection-error
+  // listener can be removed on re-open/destroy. Runtime-only.
+  connection?: WriterConnection;
+  // The `{ off }` disposable for the connection-error listener. Runtime-only.
+  connectionErrorListener?: WriterRemoveListener;
+  /**
+   * Set by the connection's `'error'` handler when the long-lived stream
+   * errored out-of-band. The next push self-heals (one re-open attempt) before
+   * failing; while set, push/pushBatch route the event to the DLQ. Runtime-only.
+   */
+  writerBroken?: boolean;
+  /** The last out-of-band stream error, surfaced in the DLQ-routed message. Runtime-only. */
+  lastStreamError?: Error;
+  /**
+   * Lazy re-open hook, wired by init(). Closes over the openWriter args plus
+   * `reportError`/logger so the push path can self-heal a broken writer without
+   * the destination needing the original init context. Runtime-only.
+   */
+  reopenWriter?: () => Promise<WriterHandles>;
+  /**
+   * The in-flight self-heal re-open, memoized so concurrent pushes admitted in
+   * the same breaking pass (the collector fans out a destination's events with
+   * Promise.all) await ONE re-open instead of each closing+re-opening, which
+   * would orphan a gRPC connection + live 'error' listener per redundant
+   * attempt. Cleared in a finally so a later push after a failed re-open
+   * retries. Runtime-only.
+   */
+  reopenInFlight?: Promise<void>;
 }
 
 export interface InitSettings {
@@ -31,6 +64,12 @@ export interface InitSettings {
   // Runtime-only handles populated by init(); not user-facing.
   writeClient?: managedwriter.WriterClient;
   writer?: managedwriter.JSONWriter;
+  connection?: WriterConnection;
+  connectionErrorListener?: WriterRemoveListener;
+  writerBroken?: boolean;
+  lastStreamError?: Error;
+  reopenWriter?: () => Promise<WriterHandles>;
+  reopenInFlight?: Promise<void>;
 }
 
 export interface Mapping {}

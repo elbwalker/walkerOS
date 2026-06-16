@@ -107,6 +107,12 @@ export interface HeartbeatConfig {
   deploymentId?: string;
   configVersion?: string;
   intervalMs: number;
+  /**
+   * Debounce window (ms) for {@link HeartbeatHandle.flushSoon}. A burst of new
+   * errors inside the window coalesces into ONE extra out-of-band POST. Default
+   * 1500ms.
+   */
+  flushDebounceMs?: number;
   getCounters?: () => Collector.Status | undefined;
   getErrors?: () => DedupedError[];
   getLogs?: () => RingEntry[];
@@ -116,8 +122,23 @@ export interface HeartbeatHandle {
   start(): void;
   stop(): void;
   sendOnce(): Promise<void>;
+  /**
+   * Schedule a single out-of-band `sendOnce()` on a short debounce. Coalesces a
+   * burst of calls within the window into ONE POST. Does NOT touch the steady
+   * interval timer (the regular cadence keeps running); this is an extra beat so
+   * a fresh distinct error egresses well before the next interval.
+   *
+   * ACCEPTED overlap: the flushed `sendOnce` and a steady-interval `sendOnce`
+   * can run concurrently and both read/advance the shared `lastReported`. This
+   * is harmless: the heartbeat endpoint is idempotent and the worst case is one
+   * re-sent counter delta. No locking is added for this rare window.
+   */
+  flushSoon(): void;
   updateConfigVersion(version: string): void;
 }
+
+/** Default debounce window for {@link HeartbeatHandle.flushSoon}. */
+const DEFAULT_FLUSH_DEBOUNCE_MS = 1500;
 
 export function createHeartbeat(
   config: HeartbeatConfig,
@@ -170,6 +191,10 @@ export function createHeartbeat(
             }),
             configVersion,
             cliVersion: VERSION,
+            // Advertise the configured heartbeat cadence (milliseconds) so the
+            // app reads the real interval instead of hard-coding a default for
+            // staleness detection.
+            intervalMs: config.intervalMs,
             uptime: Math.floor((Date.now() - startTime) / 1000),
             ...(counters && { counters }),
             // Always send recentErrors (even []) so a heartbeat that no longer
@@ -211,11 +236,28 @@ export function createHeartbeat(
       clearInterval(timer);
       timer = null;
     }
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+  }
+
+  // Out-of-band flush: a single pending debounce timer coalesces a burst of
+  // flushSoon() calls into one POST. Independent of the steady interval timer.
+  let flushTimer: ReturnType<typeof setTimeout> | null = null;
+  const flushDebounceMs = config.flushDebounceMs ?? DEFAULT_FLUSH_DEBOUNCE_MS;
+
+  function flushSoon(): void {
+    if (flushTimer) return; // already scheduled; coalesce into the pending beat
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      sendOnce();
+    }, flushDebounceMs);
   }
 
   function updateConfigVersion(version: string): void {
     configVersion = version;
   }
 
-  return { start, stop, sendOnce, updateConfigVersion };
+  return { start, stop, sendOnce, flushSoon, updateConfigVersion };
 }

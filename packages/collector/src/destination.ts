@@ -40,10 +40,21 @@ import {
 } from './transformer';
 import { getCacheStore, getStateStore } from './cache';
 import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
+import {
+  DEFAULT_DLQ_MAX,
+  bumpDropped,
+  ensureDestStatus,
+  buildReportError,
+} from './report-error';
 import { reconcilePending } from './pending';
+import {
+  isBreakerOpen,
+  recordStepOutcome,
+  releaseProbe,
+  resolveBreakerConfig,
+} from './breaker';
 
 const DEFAULT_QUEUE_MAX = 1_000;
-const DEFAULT_DLQ_MAX = 100;
 /** Default upper-bound on entries per batch. Caps unbounded growth under sustained load. */
 const DEFAULT_BATCH_SIZE = 1_000;
 /** Default upper-bound on batch age in ms. Forces flush even if debounce keeps resetting. */
@@ -145,43 +156,6 @@ function normalizeBatchOptions(
   if (value === undefined) return {};
   if (typeof value === 'number') return { wait: value };
   return { wait: value.wait, size: value.size, age: value.age };
-}
-
-/**
- * Ensure a per-destination status entry exists and return it.
- * Mirrors the shape used elsewhere in this file.
- */
-function ensureDestStatus(
-  collector: Collector.Instance,
-  destId: string,
-): Collector.DestinationStatus {
-  if (!collector.status.destinations[destId]) {
-    collector.status.destinations[destId] = {
-      count: 0,
-      failed: 0,
-      duration: 0,
-      queuePushSize: 0,
-      dlqSize: 0,
-    };
-  }
-  return collector.status.destinations[destId];
-}
-
-/**
- * Bump a drop counter under `status.dropped[stepId][buffer]`. Lazily
- * creates the per-step entry; returns the new counter value so callers
- * can pass it straight into the warn-once log payload.
- */
-function bumpDropped(
-  status: Collector.Status,
-  id: string,
-  buffer: 'queue' | 'dlq',
-  n: number,
-): number {
-  if (!status.dropped[id]) status.dropped[id] = {};
-  const entry = status.dropped[id];
-  entry[buffer] = (entry[buffer] ?? 0) + n;
-  return entry[buffer]!;
 }
 
 /**
@@ -389,6 +363,50 @@ export async function pushToDestinations(
         return { id, destination, skipped: true };
       }
 
+      // Canonical id: the breaker gate, the failure/success accounting, and any
+      // aggregation MUST all key on the SAME id. A destination whose runtime
+      // `config.id` differs from its map key would otherwise touch two
+      // different breaker entries (gate vs accounting), so failures never
+      // accumulate against the entry the gate inspects and the breaker never
+      // opens. Resolve once here and thread it through the result.
+      const canonicalId = destination.config.id || id;
+      const breakerKey = stepId('destination', canonicalId);
+      const breakerConfig = resolveBreakerConfig(destination.config.breaker);
+
+      // Circuit-breaker gate (same precedence as `config.disabled`): when the
+      // breaker is open, skip the event (counted as skipped, never pushed).
+      // Presence-gated: inert unless `config.breaker` is set.
+      if (
+        breakerConfig &&
+        isBreakerOpen(
+          collector.status.breakers,
+          breakerKey,
+          breakerConfig.cooldown,
+        )
+      ) {
+        return { id, destination, skipped: true };
+      }
+
+      // Probe-settle helpers. When the gate above admitted a half-open probe,
+      // EVERY post-gate path must settle it: either record an outcome (the
+      // event reached the transport) or release the probe (it never did).
+      // Otherwise `probing` stays true and the breaker deadlocks half-open.
+      // Both are presence-gated and internally no-op unless half-open+probing.
+      const recordProbe = (outcome: 'transport-failure' | 'success') => {
+        if (breakerConfig) {
+          recordStepOutcome(
+            collector.status.breakers,
+            breakerKey,
+            outcome,
+            breakerConfig.threshold,
+            breakerConfig.cooldown,
+          );
+        }
+      };
+      const releaseProbeSlot = () => {
+        if (breakerConfig) releaseProbe(collector.status.breakers, breakerKey);
+      };
+
       // Queued events: refresh consent (full replace — stale consent must not persist).
       // User/globals merge happens for all events below in allowedEvents.map.
       let currentQueue = (destination.queuePush || []).map((event) => ({
@@ -410,6 +428,7 @@ export async function pushToDestinations(
 
       // If no events and no queued on events, skip this destination
       if (!currentQueue.length && !destination.queueOn?.length) {
+        releaseProbeSlot(); // probe admitted but no event to push
         return { id, destination, skipped: true };
       }
 
@@ -428,6 +447,7 @@ export async function pushToDestinations(
         // pushToDestinations after every state command, so the grant command
         // re-enters here with consent satisfied and inits then.
         if (!getGrantedConsent(destination.config.consent, consent)) {
+          releaseProbeSlot(); // probe admitted but consent gate denies push
           return { id, destination, skipped: true };
         }
         let isInitialized = false;
@@ -444,7 +464,13 @@ export async function pushToDestinations(
           collector.logger.scope(destType).error('destination init failed', {
             error: err instanceof Error ? err.message : String(err),
           });
+          // A probe whose init throws is a real transport failure: re-open.
+          recordProbe('transport-failure');
         }
+        // queueOn-only flush exercises no push, so a successful/false-returning
+        // init releases the probe (the transport-failure path already re-opened
+        // it, where release is a no-op).
+        releaseProbeSlot();
         return { id, destination, skipped: !isInitialized };
       }
 
@@ -522,6 +548,7 @@ export async function pushToDestinations(
 
       // Execution shall not pass if no events are allowed
       if (!allowedEvents.length) {
+        releaseProbeSlot(); // probe admitted but every event was re-queued
         return { id, destination, queue: currentQueue }; // Don't push if not allowed
       }
 
@@ -542,9 +569,18 @@ export async function pushToDestinations(
         collector.logger.scope(destType).error('destination init failed', {
           error: err instanceof Error ? err.message : String(err),
         });
+        // A probe whose init throws is a real transport failure (the down
+        // destination is exactly the one whose init throws): re-open with a
+        // fresh window so self-heal does not deadlock.
+        recordProbe('transport-failure');
       }
 
-      if (!isInitialized) return { id, destination, queue: currentQueue };
+      if (!isInitialized) {
+        // Init returned false (no throw): the probe never pushed, so release it
+        // (no-op if the throw path above already re-opened).
+        releaseProbeSlot();
+        return { id, destination, queue: currentQueue };
+      }
 
       // Process the destinations event queue
       let error: unknown;
@@ -815,6 +851,8 @@ export async function pushToDestinations(
         totalDuration,
         batchedCount,
         allowedCount: allowedEvents.length,
+        canonicalId,
+        breakerConfig,
       };
     }),
   );
@@ -842,6 +880,24 @@ export async function pushToDestinations(
     destStatus.queuePushSize = destination.queuePush?.length ?? 0;
     destStatus.dlqSize = destination.dlq?.length ?? 0;
 
+    // Circuit-breaker accounting keys on the canonical stepId so it matches the
+    // gate exactly. Presence-gated: only when this destination has a breaker.
+    const breakerConfig = result.breakerConfig;
+    const breakerKey = result.canonicalId
+      ? stepId('destination', result.canonicalId)
+      : undefined;
+    const recordBreaker = (outcome: 'transport-failure' | 'success') => {
+      if (breakerConfig && breakerKey) {
+        recordStepOutcome(
+          collector.status.breakers,
+          breakerKey,
+          outcome,
+          breakerConfig.threshold,
+          breakerConfig.cooldown,
+        );
+      }
+    };
+
     if (result.error) {
       ref.error = result.error;
       failed[result.id] = ref;
@@ -849,6 +905,8 @@ export async function pushToDestinations(
       destStatus.lastAt = now;
       destStatus.duration += result.totalDuration || 0;
       collector.status.failed++;
+      // A single-event push that threw/timed out is a transport failure.
+      recordBreaker('transport-failure');
     } else if (result.queue && result.queue.length) {
       // Events already re-queued at destination.queuePush via skippedEvents push
       queued[result.id] = ref;
@@ -870,6 +928,10 @@ export async function pushToDestinations(
         destStatus.lastAt = now;
         destStatus.duration += result.totalDuration || 0;
         collector.status.out++;
+        // A synchronously-delivered single-event push is a success: reset and
+        // close the breaker. (Fully-batched passes settle in the flush
+        // callback instead, which records its own outcome.)
+        recordBreaker('success');
       }
     }
   }
@@ -934,6 +996,13 @@ export async function destinationInit<Destination extends Destination.Instance>(
       id: destId,
       config: destination.config,
       env: mergeEnvironments(destination.env, destination.config.env),
+      reportError: buildReportError(
+        collector,
+        'destination',
+        destId,
+        destLogger,
+        destination,
+      ),
     };
 
     destLogger.debug('init');
@@ -1043,6 +1112,13 @@ export async function destinationPush<Destination extends Destination.Instance>(
       ...mergeEnvironments(destination.env, config.env),
       ...(respond ? { respond } : {}),
     },
+    reportError: buildReportError(
+      collector,
+      'destination',
+      destId,
+      destLogger,
+      destination,
+    ),
   };
 
   // Mock interception — replaces the actual destination.push() call
@@ -1122,12 +1198,41 @@ export async function destinationPush<Destination extends Destination.Instance>(
             ...baseEnv,
             ...(rep.respond ? { respond: rep.respond } : {}),
           },
+          reportError: buildReportError(
+            collector,
+            'destination',
+            destId,
+            destLogger,
+            destination,
+          ),
         };
 
         destLogger.debug('push batch', { events: snapshot.entries.length });
 
         const destIdResolved = destination.config.id || destId;
         const destStatus = ensureDestStatus(collector, destIdResolved);
+
+        // Circuit-breaker accounting for the batch path. Keys on the canonical
+        // stepId so it matches the gate. Presence-gated. A whole-batch throw is
+        // a transport failure; any delivered rows (full or partial success) are
+        // a success. Partial-failure rows themselves are breaker-neutral.
+        const flushBreakerConfig = resolveBreakerConfig(
+          destination.config.breaker,
+        );
+        const flushBreakerKey = stepId('destination', destIdResolved);
+        const recordFlushBreaker = (
+          outcome: 'transport-failure' | 'success',
+        ) => {
+          if (flushBreakerConfig) {
+            recordStepOutcome(
+              collector.status.breakers,
+              flushBreakerKey,
+              outcome,
+              flushBreakerConfig.threshold,
+              flushBreakerConfig.cooldown,
+            );
+          }
+        };
 
         const flushStarted = Date.now();
         const flushState = buildBaseState(collector, {
@@ -1225,6 +1330,8 @@ export async function destinationPush<Destination extends Destination.Instance>(
             emitStep(collector, batchErrState);
             // Route the entire batch to DLQ on a thrown/whole-batch failure.
             routeToDlq(snapshot.entries.map((entry) => [entry.event, err]));
+            // Whole-batch throw is a transport failure for the breaker.
+            recordFlushBreaker('transport-failure');
             destLogger.error('Push batch failed', {
               error: err instanceof Error ? err.message : String(err),
               entries: snapshot.entries.length,
@@ -1277,6 +1384,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
           destStatus.count += succeededCount;
           destStatus.lastAt = Date.now();
           collector.status.out += succeededCount;
+          // Any delivered rows mean the transport worked: success closes the
+          // breaker. Partial-failure rows are breaker-neutral (handled by the
+          // absence of a transport-failure record for them above).
+          recordFlushBreaker('success');
         }
       };
 

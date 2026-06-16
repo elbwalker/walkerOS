@@ -36,6 +36,8 @@ function makeCollector(observers: Set<ObserverFn>): Collector.Instance {
       sources: {},
       destinations: {},
       dropped: {},
+      connectionErrors: {},
+      breakers: {},
     },
     timing: 1000,
     user: {},
