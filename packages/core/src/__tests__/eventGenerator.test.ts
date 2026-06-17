@@ -32,6 +32,8 @@ describe('createEvent', () => {
     source: {
       type: 'collector',
       schema: '4',
+      count: 1,
+      trace: expect.stringMatching(/^[0-9a-f]{32}$/),
     },
   };
 

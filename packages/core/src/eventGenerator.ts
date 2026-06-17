@@ -52,6 +52,17 @@ export function createEvent(
   // Merge properties
   const event = assign(defaultEvent, props, { merge: false });
 
+  // Mirror collector output: generated events always carry the run-stamped
+  // source fields (per-run count and a fixed, deterministic trace) so an event
+  // built from this helper matches a pushed event without tests having to
+  // assert them, and two generator calls produce equal events. Any source
+  // fields provided via props still win.
+  event.source = {
+    count: 1,
+    trace: '0a1b2c3d4e5f60718293a4b5c6d7e8f9',
+    ...event.source,
+  };
+
   // Update conditions
 
   // Entity and action from event
