@@ -36,6 +36,7 @@ describe('Transformer', () => {
       on: {},
       queue: [],
       round: 0,
+      count: 0,
       session: undefined,
       timing: Date.now(),
       user: {},

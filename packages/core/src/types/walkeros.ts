@@ -85,9 +85,9 @@ export interface Source extends Properties {
   version?: string;
   /** Event-model spec version. Collector defaults to "4". */
   schema?: string;
-  /** Emission sequence per run (was: event.count). */
+  /** Emission sequence within the run. */
   count?: number;
-  /** W3C traceparent full string; set when the emission is part of a chained trace. */
+  /** Trace id shared by every event of a run (W3C trace-id shape). */
   trace?: string;
   /** Walker-controlled standard suggestions (sources may set). */
   url?: string;

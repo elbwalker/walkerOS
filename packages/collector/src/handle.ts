@@ -12,7 +12,13 @@ import {
   pushToDestinations,
   createPushResult,
 } from './destination';
-import { assign, getSpanId, isFunction, isString } from '@walkeros/core';
+import {
+  assign,
+  getSpanId,
+  getTraceId,
+  isFunction,
+  isString,
+} from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { processConsent } from './consent';
 import { on, onApply, redeliverStateAtRun, enterCascade } from './on';
@@ -244,6 +250,13 @@ export function createEvent(
     source = { type: 'collector', schema: '4' },
   } = partialEvent;
 
+  // Stamp run-scoped trace and the per-run sequence, but only when absent so
+  // forwarded events (web -> api -> server) keep their origin identity.
+  const count = source.count ?? (collector.count += 1);
+  const trace = source.trace ?? collector.trace;
+  const stampedSource: WalkerOS.Source = { ...source, count };
+  if (trace !== undefined) stampedSource.trace = trace;
+
   return {
     name,
     data,
@@ -259,7 +272,7 @@ export function createEvent(
     action,
     timestamp,
     timing,
-    source,
+    source: stampedSource,
   };
 }
 
@@ -296,6 +309,10 @@ export async function runCollector(
 
   // Update timing for this run
   collector.timing = Date.now();
+
+  // Each run starts a new trace and resets the per-run emission counter.
+  collector.trace = getTraceId();
+  collector.count = 0;
 
   // Update collector state if provided
   if (state) {

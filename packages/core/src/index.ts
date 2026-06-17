@@ -14,6 +14,7 @@ export * from './deepMerge';
 export * from './eventGenerator';
 export * from './getId';
 export * from './getSpanId';
+export * from './getTraceId';
 export * from './getMarketingParameters';
 export * from './invocations';
 export * from './is';

@@ -9,4 +9,11 @@ describe('getSpanId', () => {
   it('produces different ids on subsequent calls', () => {
     expect(getSpanId()).not.toBe(getSpanId());
   });
+
+  it('draws from crypto.getRandomValues when available', () => {
+    const spy = jest.spyOn(globalThis.crypto, 'getRandomValues');
+    getSpanId();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
 });

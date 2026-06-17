@@ -339,6 +339,10 @@ export interface Instance {
   on: On.OnConfig;
   queue: WalkerOS.Events;
   round: number;
+  /** Run-scoped W3C trace id, minted on each run and stamped onto events. */
+  trace?: string;
+  /** Per-run emission sequence; reset on each run, incremented per stamped event. */
+  count: number;
   /**
    * Monotonic counter bumped on every accepted reactive-state mutation
    * (consent, user, globals, custom). Used for per-subscriber high-water-mark

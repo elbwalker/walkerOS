@@ -57,6 +57,7 @@ function createMockCollector(
     on: {},
     queue: [],
     round: 0,
+    count: 0,
     stateVersion: 0,
     cellVersion: {},
     delivery: new WeakMap(),

@@ -2056,6 +2056,25 @@
         },
         "required": ["ack", "deploymentId", "action"]
       },
+      "ObserveTicketRequest": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["session"]
+              },
+              "sessionId": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["kind", "sessionId"]
+          }
+        }
+      },
       "ObserveTicketResponse": {
         "type": "object",
         "properties": {
@@ -2202,6 +2221,9 @@
             "type": "object",
             "additionalProperties": {}
           },
+          "observedFlowName": {
+            "type": ["string", "null"]
+          },
           "serverFlowName": {
             "type": ["string", "null"]
           },
@@ -2226,6 +2248,7 @@
           "status",
           "errorMessage",
           "configSnapshot",
+          "observedFlowName",
           "serverFlowName",
           "serverEndpoint",
           "web",
@@ -4928,9 +4951,29 @@
               }
             },
             "required": ["size", "ttlMs"]
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["session"]
+                  },
+                  "sessionId": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind", "sessionId"]
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
-        "required": ["userId", "projectId", "replay"]
+        "required": ["userId", "projectId", "replay", "scope"]
       },
       "ValidateTicketRequest": {
         "type": "object",
@@ -9824,7 +9867,7 @@
       "post": {
         "tags": ["Observe"],
         "summary": "Create SSE ticket",
-        "description": "Generate a one-time ticket for authenticating an SSE connection to the Observer service. Requires project membership.",
+        "description": "Generate a one-time ticket for authenticating an SSE connection to the Observer service. Requires project membership. An optional scope narrows the ticket to a subset of the project feed (e.g. one Observe session).",
         "parameters": [
           {
             "schema": {
@@ -9837,6 +9880,16 @@
             "in": "path"
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObserveTicketRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Ticket generated",
@@ -9850,6 +9903,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
