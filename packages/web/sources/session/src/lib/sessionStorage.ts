@@ -40,7 +40,7 @@ export function sessionStorage(
   const device = tryCatch((key: string, age: number, storage: StorageType) => {
     let id = storageRead(key, storage, storageEnv);
     if (!id) {
-      id = getId(8); // Create a new device ID
+      id = getId(16); // Create a new device ID
       storageWrite(key, id, age * 1440, storage, undefined, storageEnv); // Write device ID to storage
     }
     return String(id);
@@ -90,7 +90,7 @@ export function sessionStorage(
 
   // Default session data
   const defaultSession: Partial<Collector.SessionData> = {
-    id: getId(12),
+    id: getId(16),
     start: now,
     isNew: true,
     count: 1,
