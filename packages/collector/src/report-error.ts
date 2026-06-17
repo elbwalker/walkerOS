@@ -156,7 +156,7 @@ export function buildReportError(
           // lost event so it is never silent.
           collector.status.failed++;
         }
-        logger.error('reportError', {
+        logger.error('report error', {
           error: err instanceof Error ? err.message : String(err),
           event: event.name,
         });
