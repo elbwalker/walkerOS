@@ -1451,6 +1451,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
     if (processed.event.consent) {
       inState.consent = { ...processed.event.consent };
     }
+    inState.inEvent = processed.event;
     emitStep(collector, inState);
 
     try {
@@ -1481,7 +1482,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
         now: pushFinished,
       });
       outState.durationMs = pushFinished - pushStarted;
-      outState.outEvent = response;
+      outState.outEvent = processed.event;
+      if (isDefined(response)) {
+        outState.meta = { ...outState.meta, response };
+      }
       if (processed.mappingKey) outState.mappingKey = processed.mappingKey;
       emitStep(collector, outState);
 

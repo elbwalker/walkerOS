@@ -1,4 +1,5 @@
-import type { FlowState } from '@walkeros/core';
+import type { FlowState, WalkerOS } from '@walkeros/core';
+import { createTelemetryObserver } from '@walkeros/core';
 import { startFlow } from '..';
 
 describe('destination self-emission', () => {
@@ -120,5 +121,142 @@ describe('destination self-emission', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  test('trace observer carries inEvent on destination in frame and outEvent (delivered event) plus meta.response on out frame', async () => {
+    const states: FlowState[] = [];
+    let received: WalkerOS.Event | undefined;
+    const response = { ok: true, id: 'resp-123' };
+
+    const { collector, elb } = await startFlow({
+      run: true,
+      destinations: {
+        gtag: {
+          code: {
+            type: 'gtag',
+            config: {},
+            push: async (event) => {
+              received = event;
+              return response;
+            },
+          },
+        },
+      },
+    });
+    collector.observers.add(
+      createTelemetryObserver((state) => states.push(state), {
+        flowId: 'default',
+        level: 'trace',
+      }),
+    );
+
+    await elb({ name: 'page view', data: {} });
+
+    expect(received).toBeDefined();
+
+    const inFrame = states.find(
+      (s) =>
+        s.stepType === 'destination' &&
+        s.stepId === 'destination.gtag' &&
+        s.phase === 'in',
+    );
+    expect(inFrame).toBeDefined();
+    expect(inFrame?.inEvent).toEqual(received);
+
+    const outFrame = states.find(
+      (s) =>
+        s.stepType === 'destination' &&
+        s.stepId === 'destination.gtag' &&
+        s.phase === 'out',
+    );
+    expect(outFrame).toBeDefined();
+    // outEvent is the DELIVERED EVENT, not the API response.
+    expect(outFrame?.outEvent).toEqual(received);
+    // The raw API response moves to meta.response.
+    expect(outFrame?.meta?.response).toEqual(response);
+  });
+
+  test('void-returning destination keeps outEvent as the event and attaches no response meta', async () => {
+    const states: FlowState[] = [];
+    let received: WalkerOS.Event | undefined;
+
+    const { collector, elb } = await startFlow({
+      run: true,
+      destinations: {
+        gtag: {
+          code: {
+            type: 'gtag',
+            config: {},
+            push: async (event) => {
+              received = event;
+            },
+          },
+        },
+      },
+    });
+    collector.observers.add(
+      createTelemetryObserver((state) => states.push(state), {
+        flowId: 'default',
+        level: 'trace',
+      }),
+    );
+
+    await elb({ name: 'page view', data: {} });
+
+    const outFrame = states.find(
+      (s) =>
+        s.stepType === 'destination' &&
+        s.stepId === 'destination.gtag' &&
+        s.phase === 'out',
+    );
+    expect(outFrame).toBeDefined();
+    expect(outFrame?.outEvent).toEqual(received);
+    expect(outFrame?.meta?.response).toBeUndefined();
+  });
+
+  test('standard observer strips inEvent/outEvent but keeps meta.response on the destination out frame', async () => {
+    const states: FlowState[] = [];
+    const response = { ok: true, id: 'resp-456' };
+
+    const { collector, elb } = await startFlow({
+      run: true,
+      destinations: {
+        gtag: {
+          code: {
+            type: 'gtag',
+            config: {},
+            push: async () => response,
+          },
+        },
+      },
+    });
+    collector.observers.add(
+      createTelemetryObserver((state) => states.push(state), {
+        flowId: 'default',
+        level: 'standard',
+      }),
+    );
+
+    await elb({ name: 'page view', data: {} });
+
+    const inFrame = states.find(
+      (s) =>
+        s.stepType === 'destination' &&
+        s.stepId === 'destination.gtag' &&
+        s.phase === 'in',
+    );
+    expect(inFrame).toBeDefined();
+    expect(inFrame?.inEvent).toBeUndefined();
+
+    const outFrame = states.find(
+      (s) =>
+        s.stepType === 'destination' &&
+        s.stepId === 'destination.gtag' &&
+        s.phase === 'out',
+    );
+    expect(outFrame).toBeDefined();
+    // Trace-gated payload stripped, but meta survives the projector.
+    expect(outFrame?.outEvent).toBeUndefined();
+    expect(outFrame?.meta?.response).toEqual(response);
   });
 });

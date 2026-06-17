@@ -8488,6 +8488,7 @@ export interface components {
     } | null;
     CreateObserveSessionRequest: {
       settingsName: string;
+      force?: boolean;
     };
     ObserveSessionHeartbeatResponse: {
       /** @enum {boolean} */

@@ -2255,6 +2255,9 @@
           "settingsName": {
             "type": "string",
             "minLength": 1
+          },
+          "force": {
+            "type": "boolean"
           }
         },
         "required": ["settingsName"]

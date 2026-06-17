@@ -491,6 +491,7 @@ export async function transformerPush(
     eventId,
     now: started,
   });
+  inState.inEvent = event;
   emitStep(collector, inState);
 
   try {
