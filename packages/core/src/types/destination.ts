@@ -166,6 +166,31 @@ export interface Config<T extends TypesGeneric = Types> {
    * - `age`: time since the first entry of the current window. Forces a flush even if pushes keep arriving. Default 30000 (30s).
    */
   batch?: number | BatchOptions;
+  /**
+   * Per-destination circuit breaker. Presence-gated: when unset the breaker is
+   * inert and behavior is unchanged. After `threshold` CONSECUTIVE transport
+   * failures (a thrown push, a timed-out push, a whole-batch throw, a
+   * connection-level `reportError(err, event)`) the breaker opens and events
+   * are skipped (counted, not pushed) until `cooldown` ms elapse, then a single
+   * probe event is allowed; its success closes the breaker, its failure
+   * re-opens it. Partial-batch row failures are breaker-neutral. A bare number
+   * is the `threshold`.
+   *
+   * - `threshold`: consecutive transport failures before opening. Default 5.
+   * - `cooldown`: ms an open breaker waits before admitting a probe. Default 30000.
+   */
+  breaker?: number | BreakerOptions;
+}
+
+/**
+ * Circuit-breaker tuning. Used at the destination-config layer
+ * (`Destination.Config.breaker`). A bare number is treated as `threshold`.
+ */
+export interface BreakerOptions {
+  /** Consecutive transport failures before the breaker opens. Default 5. */
+  threshold?: number;
+  /** Milliseconds an open breaker waits before admitting a probe. Default 30000. */
+  cooldown?: number;
 }
 
 /**

@@ -9,17 +9,30 @@ import { getEvent } from '@walkeros/core';
  *   ['resumePublishing', topicName, orderingKey] // only on publish failure
  */
 
+// Events reaching a server destination arrive already enriched by the upstream
+// collector, so they carry the run trace and per-run count. The collector
+// preserves these (stamp-if-absent), keeping the example deterministic.
 const orderEvent = getEvent('order complete', {
   timestamp: 1700001100,
   data: { id: 'ORD-500', total: 199.99, currency: 'EUR' },
   user: { id: 'usr-789' },
-  source: { type: 'express', platform: 'server' },
+  source: {
+    type: 'express',
+    platform: 'server',
+    trace: '1a2b3c4d5e6f70819a2b3c4d5e6f7081',
+    count: 1,
+  },
 });
 
 const pageEvent = getEvent('page view', {
   timestamp: 1700001101,
   data: { title: 'Documentation', url: 'https://example.com/docs' },
-  source: { type: 'express', platform: 'server' },
+  source: {
+    type: 'express',
+    platform: 'server',
+    trace: '9f8e7d6c5b4a39281706f5e4d3c2b1a0',
+    count: 1,
+  },
 });
 
 function expectedPayload(event: unknown): Buffer {

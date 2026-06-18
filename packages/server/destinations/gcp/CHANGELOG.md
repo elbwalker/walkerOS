@@ -1,5 +1,26 @@
 # @walkeros/server-destination-gcp
 
+## 4.2.1
+
+### Patch Changes
+
+- 96c791a: The BigQuery destination now applies `config.credentials` to the
+  Storage Write client that performs event writes, not just the query client.
+  Event writes from the configured service account now succeed on non-Google
+  Cloud runtimes instead of failing with a credentials error. Both clients
+  resolve credentials the same way, so a destination always authenticates as a
+  single identity.
+- 8afb7cc: Capture BigQuery Storage Write stream errors so a broken writer
+  routes events to the dead-letter queue instead of crashing the process, and
+  re-open a broken writer automatically on the next event.
+- Updated dependencies [5cbcd23]
+- Updated dependencies [31c6858]
+- Updated dependencies [d1b41ca]
+- Updated dependencies [0a8a08b]
+- Updated dependencies [8afb7cc]
+  - @walkeros/core@4.2.1
+  - @walkeros/server-core@4.2.1
+
 ## 4.2.0
 
 ### Minor Changes

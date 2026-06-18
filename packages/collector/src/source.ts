@@ -27,6 +27,7 @@ import {
   runTransformerChain,
   cloneIngest,
 } from './transformer';
+import { buildReportError } from './report-error';
 import { isStateDelivery, shouldDeliver, setMark } from './on';
 import { reconcilePending } from './pending';
 
@@ -535,6 +536,7 @@ export async function initSource(
     config,
     env: cleanEnv,
     withScope,
+    reportError: buildReportError(collector, 'source', sourceId, initialLogger),
   };
 
   const sourceInstance = await tryCatchAsync(

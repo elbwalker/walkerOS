@@ -58,6 +58,7 @@ import {
 } from '@walkeros/core';
 import { buildBaseState } from './observerEmit';
 import { getCacheStore, getStateStore } from './cache';
+import { buildReportError } from './report-error';
 
 /**
  * Extracts transformer next configuration for chain walking.
@@ -260,6 +261,12 @@ export async function initTransformers(
       ingest: createIngest(transformerId),
       config: configWithState,
       env: env as Transformer.Env,
+      reportError: buildReportError(
+        collector,
+        'transformer',
+        transformerId,
+        transformerLogger,
+      ),
     };
 
     // Synthesize a passthrough instance when `code` is absent.
@@ -397,6 +404,12 @@ export async function transformerInit(
       ingest: createIngest(transformerId),
       config: transformer.config,
       env: mergeTransformerEnvironments(transformer.config.env),
+      reportError: buildReportError(
+        collector,
+        'transformer',
+        transformerId,
+        transformerLogger,
+      ),
     };
 
     transformerLogger.debug('init');
@@ -459,6 +472,12 @@ export async function transformerPush(
       ...mergeTransformerEnvironments(transformer.config.env),
       ...(respond ? { respond } : {}),
     },
+    reportError: buildReportError(
+      collector,
+      'transformer',
+      transformerId,
+      transformerLogger,
+    ),
   };
 
   transformerLogger.debug('push', { event: (event as { name?: string }).name });
@@ -472,6 +491,7 @@ export async function transformerPush(
     eventId,
     now: started,
   });
+  inState.inEvent = event;
   emitStep(collector, inState);
 
   try {

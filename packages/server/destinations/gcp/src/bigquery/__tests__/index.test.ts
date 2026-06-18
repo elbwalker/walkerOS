@@ -1,4 +1,4 @@
-import type { Collector } from '@walkeros/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import type {
   Config,
   Destination,
@@ -14,6 +14,8 @@ import {
   __setNextAppendThrow,
   __setNextGetResultReject,
   __setNextOpenWriterError,
+  __getLastConnection,
+  __getAllConnections,
 } from '@google-cloud/bigquery-storage';
 import {
   clone,
@@ -46,6 +48,7 @@ describe('Server Destination BigQuery', () => {
     initSettings: InitSettings,
     logger?: MockLogger,
     timeout?: number,
+    reportError?: (err: unknown, event?: WalkerOS.Event) => void,
   ) {
     if (!destination.init) throw new Error('destination.init undefined');
     return destination.init({
@@ -57,6 +60,7 @@ describe('Server Destination BigQuery', () => {
       env: testEnv,
       logger: logger ?? createMockLogger(),
       id: 'test-bq',
+      reportError: reportError ?? (() => undefined),
     });
   }
 
@@ -80,6 +84,9 @@ describe('Server Destination BigQuery', () => {
     expect(methods).toEqual([
       'WriterClient.ctor',
       'createStreamConnection',
+      // The connection-error listener is attached between opening the stream and
+      // building the JSONWriter so a detached `'error'` is contained, not thrown.
+      'onConnectionError',
       'getWriteStream',
       'adapt.convertStorageSchemaToProto2Descriptor',
       'JSONWriter.ctor',
@@ -100,6 +107,46 @@ describe('Server Destination BigQuery', () => {
       projectId,
       keyFilename: './init-sa.json',
     });
+  });
+
+  test('init forwards config.credentials to BOTH the query and the Storage Write client', async () => {
+    if (!destination.init) throw new Error('destination.init undefined');
+    const credentials = {
+      client_email: 'sa@example.com',
+      private_key: '-----BEGIN PRIVATE KEY-----',
+    };
+    const config = await destination.init({
+      config: { settings: { projectId, datasetId, tableId }, credentials },
+      collector: mockCollector,
+      env: testEnv,
+      logger: createMockLogger(),
+      id: 'test-bq',
+      reportError: () => undefined,
+    });
+    if (!config || !config.settings) throw new Error('init returned no config');
+
+    // Query client (BigQuery) carries the credentials on its constructor options.
+    // The example mock records its ctor options on `this.options`.
+    const queryClient: unknown = config.settings.client;
+    if (
+      typeof queryClient !== 'object' ||
+      queryClient === null ||
+      !('options' in queryClient)
+    )
+      throw new Error('mock query client did not capture options');
+    const { options } = queryClient;
+    if (typeof options !== 'object' || options === null)
+      throw new Error('mock query client options not an object');
+    const queryCredentials =
+      'credentials' in options ? options.credentials : undefined;
+    expect(queryCredentials).toEqual(credentials);
+
+    // Storage Write client (WriterClient) carries the same credentials, so it
+    // does not silently fall back to ADC on a non-GCP runtime.
+    const ctorCall = __getMockCalls().find(
+      (c) => c.method === 'WriterClient.ctor',
+    );
+    expect(ctorCall?.args[0]).toEqual({ projectId, credentials });
   });
 
   test('init defaults datasetId to walkerOS and tableId to events', async () => {
@@ -722,6 +769,228 @@ describe('Server Destination BigQuery', () => {
           }),
         ),
       ).rejects.toThrow('Deadline exceeded');
+    });
+  });
+
+  describe("connection 'error' containment + self-heal", () => {
+    test('a non-retryable stream error sets writerBroken, calls reportError (orphan), and DLQ-routes the next push', async () => {
+      const reportError = jest.fn();
+      const config = await callInit(
+        { projectId, datasetId, tableId },
+        undefined,
+        undefined,
+        reportError,
+      );
+      if (!config) throw new Error('init returned void');
+      const { settings } = config;
+      if (!settings) throw new Error('settings missing after init');
+
+      // Emit an out-of-band, non-retryable stream error on the live connection.
+      // With the listener attached this does NOT throw (containment).
+      const streamError: Error & { code?: number } = Object.assign(
+        new Error('INVALID_ARGUMENT: stream is permanently broken'),
+        { code: 3 },
+      );
+      expect(() =>
+        __getLastConnection().__emitConnectionError(streamError),
+      ).not.toThrow();
+
+      // Orphan reportError form: called with the error and NO event.
+      expect(reportError).toHaveBeenCalledTimes(1);
+      expect(reportError).toHaveBeenCalledWith(streamError);
+      expect(reportError.mock.calls[0]).toHaveLength(1);
+
+      // The destination flagged itself broken with the last error captured.
+      expect(settings.writerBroken).toBe(true);
+      expect(settings.lastStreamError).toBe(streamError);
+
+      // The next push self-heals (one re-open). Make that re-open FAIL so the
+      // event is DLQ-routed in-band (throws) rather than crashing out-of-band.
+      __setNextOpenWriterError(
+        Object.assign(new Error('re-open failed'), { code: 14 }),
+      );
+
+      await expect(
+        destination.push(
+          event,
+          createMockContext({
+            config,
+            rule: undefined,
+            data: undefined,
+            env: testEnv,
+            id: 'test-bq',
+          }),
+        ),
+      ).rejects.toThrow('re-open failed');
+
+      // Stayed broken after a failed re-open.
+      expect(settings.writerBroken).toBe(true);
+    });
+
+    test('the next push self-heals (re-opens) and delivers when writerBroken', async () => {
+      const config = await callInit({ projectId, datasetId, tableId });
+      if (!config) throw new Error('init returned void');
+      const { settings } = config;
+      if (!settings) throw new Error('settings missing after init');
+
+      // Break the writer via the connection error path.
+      __getLastConnection().__emitConnectionError(new Error('stream gone'));
+      expect(settings.writerBroken).toBe(true);
+      const brokenWriter = settings.writer;
+
+      __resetMockCalls();
+
+      // Next push: re-open succeeds (no queued openWriter error), flag clears,
+      // and the row is appended on the fresh writer.
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          rule: undefined,
+          data: undefined,
+          env: testEnv,
+          id: 'test-bq',
+        }),
+      );
+
+      expect(settings.writerBroken).toBe(false);
+      expect(settings.lastStreamError).toBeUndefined();
+      expect(settings.writer).not.toBe(brokenWriter);
+
+      const methods = __getMockCalls().map((c) => c.method);
+      // A fresh writer was opened (re-open) and a row appended.
+      expect(methods).toContain('JSONWriter.ctor');
+      expect(methods).toContain('appendRows');
+    });
+
+    test('the re-opened WriterClient still carries config.credentials', async () => {
+      if (!destination.init) throw new Error('destination.init undefined');
+      const credentials = {
+        client_email: 'sa@example.com',
+        private_key: '-----BEGIN PRIVATE KEY-----',
+      };
+      const config = await destination.init({
+        config: { settings: { projectId, datasetId, tableId }, credentials },
+        collector: mockCollector,
+        env: testEnv,
+        logger: createMockLogger(),
+        id: 'test-bq',
+        reportError: () => undefined,
+      });
+      if (!config || !config.settings)
+        throw new Error('init returned no config');
+      const { settings } = config;
+
+      __getLastConnection().__emitConnectionError(new Error('stream gone'));
+      expect(settings.writerBroken).toBe(true);
+
+      __resetMockCalls();
+
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          rule: undefined,
+          data: undefined,
+          env: testEnv,
+          id: 'test-bq',
+        }),
+      );
+
+      expect(settings.writerBroken).toBe(false);
+      // The re-open constructs a fresh WriterClient; it must still receive the
+      // resolved credentials so the self-healed writer authenticates as the
+      // same identity instead of falling back to ADC.
+      const reopenCtor = __getMockCalls().find(
+        (c) => c.method === 'WriterClient.ctor',
+      );
+      expect(reopenCtor?.args[0]).toEqual({ projectId, credentials });
+    });
+
+    test('a broken writer DLQ-routes the whole batch when re-open fails (batch path)', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+
+      const config = await callInit({ projectId, datasetId, tableId });
+      if (!config) throw new Error('init returned void');
+      const { settings } = config;
+      if (!settings) throw new Error('settings missing after init');
+
+      __getLastConnection().__emitConnectionError(new Error('stream gone'));
+      expect(settings.writerBroken).toBe(true);
+
+      // Re-open fails on the batch path -> whole batch throws (DLQ).
+      __setNextOpenWriterError(new Error('re-open failed (batch)'));
+
+      const logger = createMockLogger();
+      const events = [createEvent(), createEvent()];
+      const data: Array<undefined> = events.map(() => undefined);
+      const entries = events.map((e) => ({ event: e }));
+
+      await expect(
+        destination.pushBatch!(
+          { key: 'k', events, data, entries },
+          createMockContext({
+            config,
+            env: testEnv,
+            logger,
+            id: 'test-bq',
+          }),
+        ),
+      ).rejects.toThrow('re-open failed (batch)');
+
+      expect(settings.writerBroken).toBe(true);
+    });
+
+    test('concurrent pushes on a broken writer trigger exactly ONE re-open (no orphaned connection or listener)', async () => {
+      const config = await callInit({ projectId, datasetId, tableId });
+      if (!config) throw new Error('init returned void');
+      const { settings } = config;
+      if (!settings) throw new Error('settings missing after init');
+
+      // Break the writer. The original (now broken) connection still holds its
+      // 'error' listener until the re-open closes it.
+      const brokenConnection = __getLastConnection();
+      brokenConnection.__emitConnectionError(new Error('stream gone'));
+      expect(settings.writerBroken).toBe(true);
+      expect(brokenConnection.listenerCount('error')).toBe(1);
+
+      __resetMockCalls();
+
+      // Two pushes admitted in the same breaking pass (breaker still CLOSED):
+      // the collector would fan these out concurrently. Without the in-flight
+      // memo each would close+re-open, orphaning a connection + listener.
+      const ctx = () =>
+        createMockContext({
+          config,
+          rule: undefined,
+          data: undefined,
+          env: testEnv,
+          id: 'test-bq',
+        });
+      await Promise.all([
+        destination.push(event, ctx()),
+        destination.push(event, ctx()),
+      ]);
+
+      // Exactly ONE re-open: one new connection, one new JSONWriter.
+      const methods = __getMockCalls().map((c) => c.method);
+      expect(
+        methods.filter((m) => m === 'createStreamConnection'),
+      ).toHaveLength(1);
+      expect(methods.filter((m) => m === 'JSONWriter.ctor')).toHaveLength(1);
+
+      // The writer self-healed and both rows were appended on the one writer.
+      expect(settings.writerBroken).toBe(false);
+      expect(methods.filter((m) => m === 'appendRows')).toHaveLength(2);
+
+      // No orphaned connection: exactly one connection (the live one) still
+      // carries an 'error' listener; the broken one was .off()'d on re-open.
+      const leaked = __getAllConnections().filter(
+        (c) => c.listenerCount('error') > 0,
+      );
+      expect(leaked).toHaveLength(1);
+      expect(leaked[0]).toBe(settings.connection);
+      expect(brokenConnection.listenerCount('error')).toBe(0);
     });
   });
 });

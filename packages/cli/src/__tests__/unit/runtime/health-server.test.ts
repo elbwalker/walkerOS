@@ -88,6 +88,25 @@ describe('createHealthServer', () => {
     expect(JSON.parse(res.body)).toEqual({ status: 'not_ready' });
   });
 
+  it('responds 503 with a degraded status and reason after setDegraded', async () => {
+    server.setReady(true);
+    server.setDegraded('out-of-band error hot loop');
+    const res = await fetch(port, '/ready');
+    expect(res.status).toBe(503);
+    expect(JSON.parse(res.body)).toEqual({
+      status: 'degraded',
+      reason: 'out-of-band error hot loop',
+    });
+  });
+
+  it('clears a degraded state once setReady(true) is called again', async () => {
+    server.setDegraded('out-of-band error hot loop');
+    server.setReady(true);
+    const res = await fetch(port, '/ready');
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body)).toEqual({ status: 'ready' });
+  });
+
   it('delegates non-health requests to flow handler', async () => {
     server.setFlowHandler((_req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/plain' });

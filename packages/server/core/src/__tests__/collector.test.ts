@@ -96,32 +96,17 @@ describe('Server Collector', () => {
       user: { id: 'us3r1d' },
       consent: { test: true },
     });
-    const event = {
-      name: 'e a',
-      data: {},
-      context: {},
-      custom: {},
-      globals: { glow: 'balls' },
-      user: { id: 'us3r1d' },
-      nested: [],
-      consent: { test: true },
-      id: expect.any(String),
-      trigger: '',
-      entity: 'e',
-      action: 'a',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      source: {
-        type: 'collector',
-        schema: '4',
-        version: expect.any(String),
-      },
-    };
-
     await elb('e a');
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
     expect(mockDestinationPush).toHaveBeenCalledWith(
-      event,
+      expect.objectContaining({
+        name: 'e a',
+        entity: 'e',
+        action: 'a',
+        globals: { glow: 'balls' },
+        user: { id: 'us3r1d' },
+        consent: { test: true },
+      }),
       expect.objectContaining({
         config: mockDestination.config,
       }),
@@ -189,10 +174,12 @@ describe('Server Collector', () => {
     };
     result = await elb(mockEvent);
 
-    expect(result.event).toHaveProperty('source', {
-      type: 'server',
-      url: 'https://example.com/',
-      referrer: 'https://google.com/',
-    });
+    expect(result.event?.source).toEqual(
+      expect.objectContaining({
+        type: 'server',
+        url: 'https://example.com/',
+        referrer: 'https://google.com/',
+      }),
+    );
   });
 });

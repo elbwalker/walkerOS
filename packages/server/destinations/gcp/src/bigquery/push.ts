@@ -1,6 +1,7 @@
 import type { PushFn } from './types';
 import { isObject } from '@walkeros/core';
 import { eventToRow } from './eventToRow';
+import { ensureWriter } from './writer';
 
 export const push: PushFn = async function (
   event,
@@ -8,6 +9,18 @@ export const push: PushFn = async function (
 ) {
   const settings = config.settings;
   if (!settings) return logger.throw('settings missing, init() not run');
+
+  if (!settings.writer)
+    return logger.throw('writer is missing, init() not run');
+
+  // Self-heal a writer that the connection's `'error'` handler flagged broken:
+  // exactly one re-open attempt before failing. On a failed re-open this throws,
+  // routing the event to the DLQ in-band (instead of an out-of-band crash) and
+  // feeding the collector's per-destination breaker. Breaker-gated: the
+  // collector does not call push while the breaker is OPEN, so the re-open runs
+  // at most once per admitted push, never in a loop.
+  if (settings.writerBroken) await ensureWriter(settings, logger);
+
   const { writer, datasetId, tableId } = settings;
 
   if (!writer) return logger.throw('writer is missing, init() not run');

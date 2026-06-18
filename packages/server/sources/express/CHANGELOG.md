@@ -1,5 +1,25 @@
 # @walkeros/server-source-express
 
+## 4.2.1
+
+### Patch Changes
+
+- 0a8a08b: Add an optional `async` option to the source config
+  (`Source.Config.async`) for respond-first acknowledgement on
+  response-producing server sources. The express source now reads `config.async`
+  (default `true`): a 2xx response means the event was accepted, not yet
+  delivered.
+- Updated dependencies [bd9188d]
+- Updated dependencies [d8aebd1]
+- Updated dependencies [5cbcd23]
+- Updated dependencies [31c6858]
+- Updated dependencies [d1b41ca]
+- Updated dependencies [0a8a08b]
+- Updated dependencies [8afb7cc]
+- Updated dependencies [8afb7cc]
+  - @walkeros/collector@4.2.1
+  - @walkeros/core@4.2.1
+
 ## 4.2.0
 
 ### Patch Changes

@@ -63,6 +63,8 @@ for canonical types (Event interface, plus event helpers in `event.ts`).
 | `source.type`     | string | Source kind (`browser`, `dataLayer`, `cookiefirst`, ...)    | `"browser"`                            |
 | `source.platform` | string | Runtime platform (`web`, `server`)                          | `"web"`                                |
 | `source.schema`   | string | Source-emitted schema/version (optional)                    | `"datalayer-v2"`                       |
+| `source.trace`    | string | Run-scoped W3C trace_id, shared by every event of a run     | `"0123...cdef"` (32 hex)               |
+| `source.count`    | number | Per-run emission sequence (1, 2, 3, ...)                    | `1`                                    |
 
 ### data Property
 
@@ -135,8 +137,8 @@ source: {
   platform: 'web',         // runtime: 'web' or 'server'
   version: '4.0.0',        // source package version
   schema: 'datalayer-v2',  // optional schema/version emitted by the source
-  count: 5,                // event ordinal within the source
-  trace: '...',            // W3C trace context (optional)
+  trace: '0123...cdef',    // run-scoped W3C trace_id, groups all events of a run
+  count: 1,                // per-run emission sequence (1, 2, 3, ...)
   url: 'https://...',      // page URL (web only, set by web-context transformer)
   referrer: '...',         // page referrer (web only)
   tool: 'cli',             // tool that produced the event (optional)
@@ -147,18 +149,23 @@ source: {
 CMP and other non-page sources do NOT set `source.url`/`source.referrer` -
 that's the responsibility of a web-context transformer.
 
+`source.trace` is the run grouping key: the collector mints a fresh run-scoped
+trace_id on each run and stamps it (plus a per-run `source.count`) on every
+event when absent. It is preserved unchanged when an event is forwarded from web
+to server, so the whole pipeline shares one trace.
+
 ## Migration from v3
 
 If you have existing v3 events or configs, here is the v4 mapping:
 
-| v3                                | v4                                                              |
-| --------------------------------- | --------------------------------------------------------------- |
-| `event.id` = `"<ts>-<rnd>-<seq>"` | `event.id` = W3C span_id (16 lowercase hex chars)               |
-| `event.version`                   | removed - see `source.version` and `source.schema`              |
-| `event.group`                     | removed - use `source.trace` for correlation                    |
-| `event.count`                     | removed - see `source.count` for source-emitted ordinal         |
-| `event.source.id`                 | `event.source.url` (when it meant page URL)                     |
-| `nested: [{ type, data }]`        | `nested: [{ entity, data }]` (`Entity.entity` replaces `.type`) |
+| v3                                | v4                                                                 |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `event.id` = `"<ts>-<rnd>-<seq>"` | `event.id` = W3C span_id (16 lowercase hex chars)                  |
+| `event.version`                   | removed - see `source.version` and `source.schema`                 |
+| `event.group`                     | removed - use `source.trace` (run-scoped trace_id) for correlation |
+| `event.count`                     | removed - use `source.count` (per-run emission sequence)           |
+| `event.source.id`                 | `event.source.url` (when it meant page URL)                        |
+| `nested: [{ type, data }]`        | `nested: [{ entity, data }]` (`Entity.entity` replaces `.type`)    |
 
 ## Design Principles
 

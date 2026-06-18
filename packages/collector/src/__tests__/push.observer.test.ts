@@ -1,4 +1,5 @@
-import type { FlowState } from '@walkeros/core';
+import type { FlowState, WalkerOS } from '@walkeros/core';
+import { createTelemetryObserver } from '@walkeros/core';
 import { startFlow } from '..';
 
 describe('collector.push self-emission', () => {
@@ -51,5 +52,58 @@ describe('collector.push self-emission', () => {
     );
     expect(destError).toBeDefined();
     expect(destError?.error?.message).toContain('destination kaboom');
+  });
+
+  test('trace observer keeps inEvent on the collector.push in frame', async () => {
+    const states: FlowState[] = [];
+
+    const { collector, elb } = await startFlow({
+      run: true,
+      destinations: {},
+    });
+    collector.observers.add(
+      createTelemetryObserver((state) => states.push(state), {
+        flowId: 'default',
+        level: 'trace',
+      }),
+    );
+
+    const inbound: WalkerOS.DeepPartialEvent = { name: 'page view', data: {} };
+    await elb(inbound);
+
+    const inFrame = states.find(
+      (s) =>
+        s.stepId === 'collector.push' &&
+        s.stepType === 'collector' &&
+        s.phase === 'in',
+    );
+    expect(inFrame).toBeDefined();
+    expect(inFrame?.inEvent).toEqual(inbound);
+  });
+
+  test('standard observer strips inEvent from the collector.push in frame', async () => {
+    const states: FlowState[] = [];
+
+    const { collector, elb } = await startFlow({
+      run: true,
+      destinations: {},
+    });
+    collector.observers.add(
+      createTelemetryObserver((state) => states.push(state), {
+        flowId: 'default',
+        level: 'standard',
+      }),
+    );
+
+    await elb({ name: 'page view', data: {} });
+
+    const inFrame = states.find(
+      (s) =>
+        s.stepId === 'collector.push' &&
+        s.stepType === 'collector' &&
+        s.phase === 'in',
+    );
+    expect(inFrame).toBeDefined();
+    expect(inFrame?.inEvent).toBeUndefined();
   });
 });

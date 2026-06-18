@@ -423,3 +423,59 @@ describe('validateFlow — many operator lint warnings', () => {
     expect(manyWarnings).toEqual([]);
   });
 });
+
+describe('validateFlow — mandatory config.platform', () => {
+  it('rejects a flow whose config is missing platform', () => {
+    // `config.platform` is the single deterministic source of a flow's
+    // platform; a missing value must be a loud error, never a guess. A config
+    // block that is present but omits `platform` must fail validation through
+    // the full validate path (core Zod schema), not pass silently.
+    const flow = {
+      version: 4,
+      flows: {
+        default: {
+          config: { url: 'https://example.com' },
+          sources: {
+            browser: {
+              package: '@walkeros/web-source-browser',
+            },
+          },
+        },
+      },
+    };
+
+    const result = validateFlow(flow);
+
+    expect(result.valid).toBe(false);
+    const platformError = result.errors.find(
+      (e) =>
+        e.code === 'SCHEMA_VALIDATION' &&
+        /platform/i.test(e.message + ' ' + e.path),
+    );
+    expect(platformError).toBeDefined();
+  });
+
+  it('accepts a flow whose config declares a valid platform', () => {
+    // Positive control: an otherwise identical flow with `config.platform`
+    // present produces no platform-related schema error.
+    const flow = {
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' as const, url: 'https://example.com' },
+          sources: {
+            browser: {
+              package: '@walkeros/web-source-browser',
+            },
+          },
+        },
+      },
+    };
+
+    const result = validateFlow(flow);
+
+    expect(
+      result.errors.some((e) => /platform/i.test(e.message + ' ' + e.path)),
+    ).toBe(false);
+  });
+});

@@ -46,6 +46,7 @@ describe('Step Examples', () => {
       env: testEnv,
       logger: createMockLogger(),
       id: 'test-bq',
+      reportError: () => undefined,
     })) as Config;
 
     await destination.push(

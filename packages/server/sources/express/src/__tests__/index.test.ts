@@ -17,6 +17,7 @@ function createSourceContext(
     logger: env.logger || createMockLogger(),
     id: 'test-express',
     collector: {} as Collector.Instance,
+    reportError: () => undefined,
     // Minimal withScope stub: forwards body with a scope env that delegates
     // push back to env.push so the test's mockPush still captures the call.
     withScope: async (_raw, respond, body) => {
@@ -120,7 +121,6 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/collect'],
         cors: true,
-        async: true,
       });
       expect(typeof source.push).toBe('function');
       expect(source.app).toBeDefined();
@@ -148,7 +148,6 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/events'],
         cors: false,
-        async: true,
       });
     });
 
@@ -393,7 +392,7 @@ describe('sourceExpress', () => {
 
       const source = await sourceExpress(
         createSourceContext(
-          { settings: { async: false } },
+          { async: false },
           {
             push: errorPush as never,
             command: mockCommand as never,
@@ -872,7 +871,7 @@ describe('sourceExpress', () => {
       });
       const source = await sourceExpress(
         createSourceContext(
-          { settings: { async: false } },
+          { async: false },
           {
             push: slowPush as never,
             command: mockCommand as never,
@@ -903,6 +902,100 @@ describe('sourceExpress', () => {
       expect(res.statusCode).toBe(200);
       expect(res.responseBody).toMatchObject({ success: true });
       expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('POST async responds while push is still pending (ordering proof)', async () => {
+      const order: string[] = [];
+      const { push, resolve } = createDeferredPush();
+      // Record the relative moment the destination push settles.
+      const settled = push().then(() => {
+        order.push('push-settled');
+      });
+
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: push as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const res = createMockResponse();
+      const jsonSpy = res.json as jest.Mock;
+      jsonSpy.mockImplementation((body: unknown) => {
+        order.push('respond');
+        res.responseBody = body;
+        return res;
+      });
+
+      const req = createMockRequest({
+        method: 'POST',
+        body: { event: 'page view' },
+      });
+
+      await source.push(req, res);
+
+      // Response is committed even though the push has not settled yet.
+      expect(order).toEqual(['respond']);
+      expect(res.statusCode).toBe(200);
+      expect(res.responseBody).toMatchObject({ success: true });
+
+      // Now let delivery finish; it lands strictly after the response.
+      resolve();
+      await settled;
+      expect(order).toEqual(['respond', 'push-settled']);
+    });
+
+    it('POST async rejected push never escapes as an unhandled rejection', async () => {
+      const { push, reject } = createDeferredPush();
+      const logger = createMockLogger();
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: push as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger,
+          },
+        ),
+      );
+
+      const unhandled: unknown[] = [];
+      const onUnhandled = (reason: unknown): void => {
+        unhandled.push(reason);
+      };
+      process.on('unhandledRejection', onUnhandled);
+
+      try {
+        const req = createMockRequest({
+          method: 'POST',
+          body: { event: 'page view' },
+        });
+        const res = createMockResponse();
+
+        await source.push(req, res);
+        expect(res.statusCode).toBe(200);
+        expect(res.responseBody).toMatchObject({ success: true });
+
+        const error = new Error('delivery failed');
+        reject(error);
+
+        // Flush microtasks AND a macrotask so Node would emit
+        // 'unhandledRejection' for any promise the source failed to catch.
+        await Promise.resolve();
+        await Promise.resolve();
+        await new Promise<void>((resolveTick) => setTimeout(resolveTick, 0));
+
+        expect(logger.error).toHaveBeenCalledWith(error);
+        expect(unhandled).toEqual([]);
+      } finally {
+        process.off('unhandledRejection', onUnhandled);
+      }
     });
   });
 });

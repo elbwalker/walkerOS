@@ -1,5 +1,37 @@
 # @walkeros/collector
 
+## 4.2.1
+
+### Patch Changes
+
+- bd9188d: Enforce consent gating on destination initialization. A destination
+  that declares a consent requirement is never initialized while that consent is
+  denied, including the path that flushes queued `on` (consent) signals.
+  Initialization is now fail-closed: it requires an affirmative consent decision
+  from the caller, so a destination cannot load or send under denied consent.
+- d8aebd1: Trace-level telemetry now carries the inbound event on every pipeline
+  hop, so per-step observers can show what each collector, transformer, and
+  destination actually received. The destination's outbound frame now reports
+  the delivered event as its payload, and the raw delivery response moves to
+  `meta.response`.
+- d1b41ca: The collector now stamps a run-scoped trace id (`event.source.trace`)
+  and a per-run sequence number (`event.source.count`) onto every event, minted
+  fresh on each `run`. These group all events of a page load or run and are
+  preserved unchanged when events are forwarded from web to server, giving a
+  stable correlation id across the pipeline. Adds `getTraceId`, and `getSpanId`
+  now uses the cryptographic random source.
+- 8afb7cc: Add a per-destination circuit breaker that skips a destination after
+  consecutive transport failures and probes once after a cooldown, so a
+  persistently failing destination stops retrying on every event. Out-of-band
+  `reportError` calls are routed to the dead-letter queue (when an event is in
+  hand) or counted as connection errors and surfaced in status.
+- Updated dependencies [5cbcd23]
+- Updated dependencies [31c6858]
+- Updated dependencies [d1b41ca]
+- Updated dependencies [0a8a08b]
+- Updated dependencies [8afb7cc]
+  - @walkeros/core@4.2.1
+
 ## 4.2.0
 
 ### Minor Changes

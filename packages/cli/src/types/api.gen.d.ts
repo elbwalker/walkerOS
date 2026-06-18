@@ -4197,7 +4197,7 @@ export interface paths {
     put?: never;
     /**
      * Create SSE ticket
-     * @description Generate a one-time ticket for authenticating an SSE connection to the Observer service. Requires project membership.
+     * @description Generate a one-time ticket for authenticating an SSE connection to the Observer service. Requires project membership. An optional scope narrows the ticket to a subset of the project feed (e.g. one Observe session).
      */
     post: {
       parameters: {
@@ -4208,7 +4208,11 @@ export interface paths {
         };
         cookie?: never;
       };
-      requestBody?: never;
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['ObserveTicketRequest'];
+        };
+      };
       responses: {
         /** @description Ticket generated */
         200: {
@@ -4221,6 +4225,15 @@ export interface paths {
         };
         /** @description Unauthorized */
         401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
           headers: {
             [name: string]: unknown;
           };
@@ -8424,6 +8437,13 @@ export interface components {
       versionNumber?: number;
       bundleUrl?: string;
     };
+    ObserveTicketRequest: {
+      scope?: {
+        /** @enum {string} */
+        kind: 'session';
+        sessionId: string;
+      };
+    };
     ObserveTicketResponse: {
       ticket: string;
       /** Format: uri */
@@ -8473,6 +8493,7 @@ export interface components {
       configSnapshot: {
         [key: string]: unknown;
       };
+      observedFlowName: string | null;
       serverFlowName: string | null;
       serverEndpoint: string | null;
       web: components['schemas']['ObserveSessionWeb'];
@@ -8488,6 +8509,7 @@ export interface components {
     } | null;
     CreateObserveSessionRequest: {
       settingsName: string;
+      force?: boolean;
     };
     ObserveSessionHeartbeatResponse: {
       /** @enum {boolean} */
@@ -9451,6 +9473,11 @@ export interface components {
         size: number;
         ttlMs: number;
       };
+      scope: {
+        /** @enum {string} */
+        kind: 'session';
+        sessionId: string;
+      } | null;
     };
     ValidateTicketRequest: {
       ticket: string;

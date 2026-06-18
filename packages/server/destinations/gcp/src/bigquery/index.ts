@@ -21,7 +21,7 @@ export const destinationBigQuery: Destination = {
 
   setup,
 
-  async init({ config: partialConfig, env, logger, id }) {
+  async init({ config: partialConfig, env, logger, id, reportError }) {
     const config = getConfig(partialConfig, env, logger);
 
     // The gax deadline derives from the standard per-step config.timeout (the
@@ -32,21 +32,60 @@ export const destinationBigQuery: Destination = {
         ? config.timeout
         : DEFAULT_TIMEOUT_MS;
 
-    // Open the long-lived JSONWriter on the _default stream.
-    // Hard-fail when the dataset/table is missing.
-    try {
-      const { writer, writeClient } = await openWriter(
+    const { settings } = config;
+
+    // Handler for the StreamConnection's out-of-band `'error'` event. Attaching
+    // it prevents Node's uncaught-`'error'` crash on the detached gRPC tick. It
+    // flags the writer broken (so the next push self-heals or DLQs in-band) and
+    // routes the error through the Task-2 ORPHAN reportError seam (no event):
+    // a redacted, ring-tapped log plus a connection-error counter bump. MUST
+    // NOT throw (detached emitter tick).
+    const onConnectionError = (err: unknown): void => {
+      settings.writerBroken = true;
+      settings.lastStreamError =
+        err instanceof Error ? err : new Error(String(err));
+      reportError?.(err);
+    };
+
+    // Lazy re-open hook used by ensureWriter on the push path to self-heal a
+    // broken writer. Closes over the openWriter args + onConnectionError so the
+    // fresh connection carries the same containment handler. The reused args
+    // (projectId/datasetId/tableId/bigquery/timeout) are immutable post-init, so
+    // a re-open targets the same table with the same auth and deadline.
+    settings.reopenWriter = () =>
+      openWriter(
         {
-          projectId: config.settings.projectId,
-          datasetId: config.settings.datasetId,
-          tableId: config.settings.tableId,
-          bigquery: config.settings.bigquery,
+          projectId: settings.projectId,
+          datasetId: settings.datasetId,
+          tableId: settings.tableId,
+          credentials: settings.credentials,
+          bigquery: settings.bigquery,
           timeout,
+          onConnectionError,
         },
         logger,
       );
-      config.settings.writer = writer;
-      config.settings.writeClient = writeClient;
+
+    // Open the long-lived JSONWriter on the _default stream.
+    // Hard-fail when the dataset/table is missing.
+    try {
+      const { writer, writeClient, connection, connectionErrorListener } =
+        await openWriter(
+          {
+            projectId: settings.projectId,
+            datasetId: settings.datasetId,
+            tableId: settings.tableId,
+            credentials: settings.credentials,
+            bigquery: settings.bigquery,
+            timeout,
+            onConnectionError,
+          },
+          logger,
+        );
+      settings.writer = writer;
+      settings.writeClient = writeClient;
+      settings.connection = connection;
+      settings.connectionErrorListener = connectionErrorListener;
     } catch (err) {
       // Log the failure and rethrow the raw error. Secret redaction is
       // standardized at the CLI logger handler, which scrubs every line before
@@ -93,6 +132,7 @@ export const destinationBigQuery: Destination = {
       {
         writer: config.settings.writer,
         writeClient: config.settings.writeClient,
+        connectionErrorListener: config.settings.connectionErrorListener,
       },
       logger,
     );

@@ -1,5 +1,24 @@
 # @walkeros/quickstart
 
+## 4.2.1
+
+### Patch Changes
+
+- Updated dependencies [bd9188d]
+- Updated dependencies [d8aebd1]
+- Updated dependencies [5cbcd23]
+- Updated dependencies [31c6858]
+- Updated dependencies [d1b41ca]
+- Updated dependencies [0a8a08b]
+- Updated dependencies [8afb7cc]
+- Updated dependencies [8afb7cc]
+  - @walkeros/collector@4.2.1
+  - @walkeros/core@4.2.1
+  - @walkeros/web-destination-api@4.2.1
+  - @walkeros/web-source-browser@4.2.1
+  - @walkeros/web-core@4.2.1
+  - @walkeros/web-destination-gtag@4.2.1
+
 ## 4.2.0
 
 ### Patch Changes

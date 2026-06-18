@@ -30,6 +30,10 @@ function createFakeHealthServer(): {
       ready = false;
       failures.push(reason);
     },
+    setDegraded(reason) {
+      ready = false;
+      failures.push(reason);
+    },
     close: async () => {},
   };
 

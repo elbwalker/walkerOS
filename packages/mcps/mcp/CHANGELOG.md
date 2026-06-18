@@ -1,5 +1,27 @@
 # @walkeros/mcp
 
+## 4.2.1
+
+### Patch Changes
+
+- b03bfce: The `deploy_manage` tool now matches its real behavior: `deploy`
+  honors `wait`, `delete` removes an active deployment, and `list` accepts
+  `cursor` and `limit` for pagination. A failed deployment surfaces its error
+  reason so an assistant can report why a deploy did not succeed.
+- Updated dependencies [b03bfce]
+- Updated dependencies [ec84331]
+- Updated dependencies [4809699]
+- Updated dependencies [5cbcd23]
+- Updated dependencies [5cbcd23]
+- Updated dependencies [5cbcd23]
+- Updated dependencies [31c6858]
+- Updated dependencies [d1b41ca]
+- Updated dependencies [0a8a08b]
+- Updated dependencies [8afb7cc]
+- Updated dependencies [8afb7cc]
+  - @walkeros/cli@4.2.1
+  - @walkeros/core@4.2.1
+
 ## 4.2.0
 
 ### Minor Changes

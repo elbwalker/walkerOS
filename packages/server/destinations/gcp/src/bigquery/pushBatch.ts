@@ -1,6 +1,7 @@
 import type { PushBatchFn } from './types';
 import { isObject } from '@walkeros/core';
 import { eventToRow } from './eventToRow';
+import { ensureWriter } from './writer';
 
 /**
  * Batched push using a single appendRows call.
@@ -15,6 +16,16 @@ import { eventToRow } from './eventToRow';
 export const pushBatch: PushBatchFn = async (batch, { config, logger }) => {
   const settings = config.settings;
   if (!settings) return logger.throw('settings missing, init() not run');
+
+  if (!settings.writer)
+    return logger.throw('writer is missing, init() not run');
+
+  // Self-heal a broken writer (one re-open attempt) before failing. On a failed
+  // re-open this throws, routing the WHOLE batch to the DLQ in-band and feeding
+  // the collector's per-destination breaker. Breaker-gated by the collector, so
+  // the re-open runs at most once per admitted batch.
+  if (settings.writerBroken) await ensureWriter(settings, logger);
+
   const { writer, datasetId, tableId } = settings;
 
   if (!writer) return logger.throw('writer is missing, init() not run');

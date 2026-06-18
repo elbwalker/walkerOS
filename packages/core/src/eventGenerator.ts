@@ -6,6 +6,10 @@ import { getSpanId } from './getSpanId';
  * Creates a complete event with default values.
  * Used for testing and debugging.
  *
+ * Models a post-collector event: `source` always carries the run-stamped
+ * `count` and `trace`, so a generated event matches one that has been pushed
+ * through the collector. Override via `props.source` if needed.
+ *
  * @param props - Properties to override the default values.
  * @returns A complete event.
  */
@@ -51,6 +55,17 @@ export function createEvent(
 
   // Merge properties
   const event = assign(defaultEvent, props, { merge: false });
+
+  // Mirror collector output: generated events always carry the run-stamped
+  // source fields (per-run count and a fixed, deterministic trace) so an event
+  // built from this helper matches a pushed event without tests having to
+  // assert them, and two generator calls produce equal events. Any source
+  // fields provided via props still win.
+  event.source = {
+    count: 1,
+    trace: '0a1b2c3d4e5f60718293a4b5c6d7e8f9',
+    ...event.source,
+  };
 
   // Update conditions
 

@@ -54,6 +54,9 @@ interface SerializedDestination {
 /** The shape of the JSON body the heartbeat POSTs (fields under test). */
 interface HeartbeatBody {
   instanceId?: string;
+  /** Configured heartbeat cadence in milliseconds. */
+  intervalMs?: number;
+  uptime?: number;
   recentErrors?: SerializedRecord[];
   recentLogs?: SerializedLog[];
   counters?: {
@@ -346,6 +349,8 @@ describe('heartbeat per-destination breakdown (dlqSize + dropped)', () => {
       sources: {},
       destinations,
       dropped,
+      breakers: {},
+      connectionErrors: {},
     };
   }
 
@@ -388,6 +393,209 @@ describe('heartbeat per-destination breakdown (dlqSize + dropped)', () => {
     expect(dest?.dlqSize).toBe(3);
     // dropped sums queue + dlq drops for the destination step (delta from 0).
     expect(dest?.dropped).toBe(3);
+  });
+});
+
+describe('heartbeat flushSoon (debounced out-of-band beat)', () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    globalThis.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  function typedLogger(): Logger.Instance {
+    const logger: Logger.Instance = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+      throw: (message: string | Error): never => {
+        throw new Error(
+          typeof message === 'string' ? message : message.message,
+        );
+      },
+      json: jest.fn(),
+      scope: (_name: string): Logger.Instance => logger,
+    };
+    return logger;
+  }
+
+  it('coalesces a burst of N notifications within the debounce window into exactly one extra send', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+
+    const heartbeat = createHeartbeat(
+      {
+        appUrl: 'http://localhost:3000',
+        token: 'bearer-test',
+        projectId: 'proj_1',
+        intervalMs: 60000,
+        flushDebounceMs: 1000,
+      },
+      typedLogger(),
+    );
+
+    // Five new-error notifications inside the debounce window.
+    heartbeat.flushSoon();
+    heartbeat.flushSoon();
+    heartbeat.flushSoon();
+    heartbeat.flushSoon();
+    heartbeat.flushSoon();
+
+    // Nothing fires before the debounce elapses.
+    expect(fetchMock.mock.calls).toHaveLength(0);
+
+    await jest.advanceTimersByTimeAsync(1000);
+
+    // Exactly ONE extra POST for the whole burst.
+    expect(fetchMock.mock.calls).toHaveLength(1);
+  });
+
+  it('does not start or reset the steady interval timer', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+
+    const heartbeat = createHeartbeat(
+      {
+        appUrl: 'http://localhost:3000',
+        token: 'bearer-test',
+        projectId: 'proj_1',
+        intervalMs: 60000,
+        flushDebounceMs: 1000,
+      },
+      typedLogger(),
+    );
+
+    // flushSoon without start(): the steady interval is never created, so only
+    // the debounced flush fires — no interval beat appears afterward.
+    heartbeat.flushSoon();
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(fetchMock.mock.calls).toHaveLength(1);
+
+    // Advancing well past one interval produces no further sends because the
+    // interval was never started by flushSoon.
+    await jest.advanceTimersByTimeAsync(120000);
+    expect(fetchMock.mock.calls).toHaveLength(1);
+  });
+});
+
+describe('heartbeat intervalMs (advertised cadence)', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  function typedLogger(): Logger.Instance {
+    const logger: Logger.Instance = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+      throw: (message: string | Error): never => {
+        throw new Error(
+          typeof message === 'string' ? message : message.message,
+        );
+      },
+      json: jest.fn(),
+      scope: (_name: string): Logger.Instance => logger,
+    };
+    return logger;
+  }
+
+  it('includes the configured intervalMs (in ms) in the body', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+
+    const heartbeat = createHeartbeat(
+      {
+        appUrl: 'http://localhost:3000',
+        token: 'bearer-test',
+        projectId: 'proj_1',
+        intervalMs: 60000,
+      },
+      typedLogger(),
+    );
+
+    await heartbeat.sendOnce();
+
+    const body = readHeartbeatBody(fetchMock);
+    expect(body.intervalMs).toBe(60000);
+  });
+});
+
+describe('heartbeat uptime (restart evidence)', () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    globalThis.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  function typedLogger(): Logger.Instance {
+    const logger: Logger.Instance = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+      throw: (message: string | Error): never => {
+        throw new Error(
+          typeof message === 'string' ? message : message.message,
+        );
+      },
+      json: jest.fn(),
+      scope: (_name: string): Logger.Instance => logger,
+    };
+    return logger;
+  }
+
+  it('increases uptime across two beats within one process', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+
+    const heartbeat = createHeartbeat(
+      {
+        appUrl: 'http://localhost:3000',
+        token: 'bearer-test',
+        projectId: 'proj_1',
+        intervalMs: 60000,
+      },
+      typedLogger(),
+    );
+
+    await heartbeat.sendOnce();
+    const firstInit = fetchMock.mock.calls[0]?.[1];
+    const firstBodyRaw = firstInit?.body;
+    if (typeof firstBodyRaw !== 'string') {
+      throw new Error('expected a string request body');
+    }
+    const firstBody: HeartbeatBody = JSON.parse(firstBodyRaw);
+
+    await jest.advanceTimersByTimeAsync(5000);
+
+    await heartbeat.sendOnce();
+    const secondInit = fetchMock.mock.calls[1]?.[1];
+    const secondBodyRaw = secondInit?.body;
+    if (typeof secondBodyRaw !== 'string') {
+      throw new Error('expected a string request body');
+    }
+    const secondBody: HeartbeatBody = JSON.parse(secondBodyRaw);
+
+    expect(firstBody.uptime).toBeDefined();
+    expect(secondBody.uptime).toBeDefined();
+    expect(secondBody.uptime ?? 0).toBeGreaterThan(firstBody.uptime ?? 0);
   });
 });
 

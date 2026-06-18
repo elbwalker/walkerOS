@@ -41,6 +41,7 @@ jest.mock('../../../runtime/health-server.js', () => ({
     setFlowHandler: jest.fn(),
     setReady: jest.fn(),
     setFailed: jest.fn(),
+    setDegraded: jest.fn(),
     close: jest.fn().mockResolvedValue(undefined),
   }),
 }));

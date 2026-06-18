@@ -3,7 +3,7 @@ export * as Collector from './collector';
 // Direct re-export so consumers can call `stepId('collector')` without
 // going through the `Collector` namespace.
 export { stepId } from './collector';
-export type { StepKind, DroppedCounters } from './collector';
+export type { StepKind, DroppedCounters, BreakerState } from './collector';
 export * as Context from './context';
 export type { ServiceAccount, Credential } from './credentials';
 export * as Destination from './destination';

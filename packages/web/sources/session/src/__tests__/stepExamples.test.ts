@@ -74,13 +74,16 @@ describe('Step Examples', () => {
     const isReturning = name === 'returningVisitor';
     const fakeNow = isReturning ? 1700001000000 : 1700000000000;
     dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(fakeNow);
-    coreMocked.getId.mockImplementation((len?: number) => {
-      if (len === 8) return 'd3v1c3-id';
-      if (len === 12) {
-        return isReturning ? 'n3w-s3ss10n' : 's3ss10n-id';
-      }
-      return 'id';
+    coreMocked.getId.mockImplementation(() => {
+      return isReturning ? 'n3w-s3ss10n' : 's3ss10n-id';
     });
+
+    // Seed device ID so it reads from storage instead of being regenerated;
+    // getId then only ever produces the session id.
+    localStorage.setItem(
+      'elbDeviceId',
+      JSON.stringify({ e: fakeNow + 3600000, v: 'd3v1c3-id' }),
+    );
 
     // Seed pre-existing session for returning visitor — old enough to expire.
     // storageRead wraps values as { e: expiry, v: JSON-string }.
@@ -96,11 +99,6 @@ describe('Step Examples', () => {
       localStorage.setItem(
         'elbSessionId',
         JSON.stringify({ e: fakeNow + 3600000, v: sessionData }),
-      );
-      // Also seed device ID so we get the expected 'd3v1c3-id' without regen
-      localStorage.setItem(
-        'elbDeviceId',
-        JSON.stringify({ e: fakeNow + 3600000, v: 'd3v1c3-id' }),
       );
     }
 

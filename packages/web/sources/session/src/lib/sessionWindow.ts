@@ -77,7 +77,7 @@ export function sessionWindow(
           isStart,
           storage: false,
           start: Date.now(),
-          id: getId(12),
+          id: getId(16),
           referrer,
         },
         marketing,

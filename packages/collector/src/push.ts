@@ -228,16 +228,15 @@ export function createPush<T extends Collector.Instance>(
   const wrapped: Collector.PushFn = async (event, options) => {
     const eventId = typeof event.id === 'string' ? event.id : '';
     const started = Date.now();
-    emitStep(
-      collector,
-      buildBaseState(collector, {
-        stepId: 'collector.push',
-        stepType: 'collector',
-        phase: 'in',
-        eventId,
-        now: started,
-      }),
-    );
+    const inState = buildBaseState(collector, {
+      stepId: 'collector.push',
+      stepType: 'collector',
+      phase: 'in',
+      eventId,
+      now: started,
+    });
+    inState.inEvent = event;
+    emitStep(collector, inState);
 
     try {
       const result = await innerPush(event, options);

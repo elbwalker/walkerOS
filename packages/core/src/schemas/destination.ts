@@ -189,6 +189,18 @@ export const ConfigSchema = z
       .describe(
         "Enables batching for all of this destination's events into one shared default buffer; a mapping rule's own batch splits that entity-action into its own buffer and overrides per field. Bare number is the debounce wait window; object form supports wait (debounce ms), size (count cap, default 1000), age (max ms since first entry, default 30000).",
       ),
+    breaker: z
+      .union([
+        z.number(),
+        z.object({
+          threshold: z.number().optional(),
+          cooldown: z.number().optional(),
+        }),
+      ])
+      .optional()
+      .describe(
+        'Per-destination circuit breaker (presence-gated). After threshold consecutive transport failures the breaker opens and events are skipped until cooldown ms elapse, then one probe is admitted; success closes it, failure re-opens it. Partial-batch row failures are breaker-neutral. Bare number is the threshold; object form supports threshold (default 5) and cooldown (default 30000ms).',
+      ),
   })
   .meta({
     id: 'DestinationConfig',

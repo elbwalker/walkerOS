@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-store-s3",
   "description": "S3-compatible object storage for walkerOS server flows",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -33,7 +33,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.2.0",
+    "@walkeros/core": "4.2.1",
     "s3mini": "^0.9.1"
   },
   "devDependencies": {},

@@ -368,7 +368,16 @@ export const ga4WithIncludeAll: Flow.StepExample = {
   title: 'GA4 include all',
   description:
     'Include flattens every event section into prefixed GA4 params, exposing data, context, user, source, and event fields.',
-  in: getEvent('page view', { id: 'ev-1700000106', timestamp: 1700000106 }),
+  in: getEvent('page view', {
+    id: 'ev-1700000106',
+    timestamp: 1700000106,
+    source: {
+      type: 'collector',
+      schema: '4',
+      count: 1,
+      trace: '1700000106abcdef1700000106abcdef',
+    },
+  }),
   mapping: {
     include: ['data', 'context', 'globals', 'user', 'source', 'event'],
   },
@@ -396,6 +405,8 @@ export const ga4WithIncludeAll: Flow.StepExample = {
         // source_* params from event.source
         source_type: 'collector',
         source_schema: '4',
+        source_count: 1,
+        source_trace: '1700000106abcdef1700000106abcdef',
         // event_* params from event properties
         event_entity: 'page',
         event_action: 'view',

@@ -24,8 +24,12 @@ export function getConfig(
 
   // `config.credentials` (parse-if-string) merges into the client options.
   // `settings.bigquery` stays the raw passthrough escape hatch.
-  const credentials = parseCredentials(partialConfig.credentials, logger);
-  if (credentials !== undefined && typeof credentials !== 'string') {
+  const parsed = parseCredentials(partialConfig.credentials, logger);
+  // parseCredentials returns the object form (or undefined); a string can only
+  // remain on the invalid-JSON path, which logger.throw already handles.
+  const credentials =
+    parsed !== undefined && typeof parsed !== 'string' ? parsed : undefined;
+  if (credentials !== undefined) {
     options.credentials = credentials;
   }
 
@@ -40,6 +44,8 @@ export function getConfig(
     location,
     datasetId,
     tableId,
+    // Stored so init() can thread the same SA to the Storage Write client.
+    ...(credentials !== undefined ? { credentials } : {}),
   };
 
   return { ...partialConfig, settings: settingsConfig };

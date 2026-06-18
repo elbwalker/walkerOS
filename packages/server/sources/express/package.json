@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-source-express",
   "description": "Express server source for walkerOS",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -20,8 +20,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/collector": "4.2.0",
-    "@walkeros/core": "4.2.0",
+    "@walkeros/collector": "4.2.1",
+    "@walkeros/core": "4.2.1",
     "express": "^5.2.1",
     "cors": "^2.8.5"
   },

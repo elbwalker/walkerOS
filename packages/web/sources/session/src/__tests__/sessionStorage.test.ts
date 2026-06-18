@@ -89,8 +89,8 @@ describe('SessionStorage', () => {
       }),
     );
 
-    expect(session.device).toHaveLength(8);
-    expect(session.id).toHaveLength(12);
+    expect(session.device).toHaveLength(16);
+    expect(session.id).toHaveLength(16);
   });
 
   test('Existing expired session', () => {
@@ -128,7 +128,7 @@ describe('SessionStorage', () => {
     );
 
     // Id should be different to previous session
-    expect(newSession.id).toHaveLength(12);
+    expect(newSession.id).toHaveLength(16);
   });
 
   test('Storage Session Options', () => {

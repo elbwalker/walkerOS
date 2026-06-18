@@ -312,7 +312,8 @@ export const eventFormatSchema = Object.freeze({
               maximum: 9007199254740991,
             },
             trace: {
-              description: 'W3C traceparent full string',
+              description:
+                'Trace id shared by every event of a run (W3C trace-id shape)',
               type: 'string',
             },
             url: {
@@ -632,7 +633,8 @@ export const eventFormatSchema = Object.freeze({
                   maximum: 9007199254740991,
                 },
                 trace: {
-                  description: 'W3C traceparent full string',
+                  description:
+                    'Trace id shared by every event of a run (W3C trace-id shape)',
                   type: 'string',
                 },
                 url: {

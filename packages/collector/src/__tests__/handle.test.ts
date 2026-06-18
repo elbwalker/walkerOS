@@ -367,8 +367,18 @@ describe('enrichEvent', () => {
       name: 'page view',
       id: 'fixed',
     };
-    expect(enrichEvent(c, partial)).toEqual(
-      createEvent(c, prepareEvent(c, partial)),
+    const viaEnrich = enrichEvent(c, partial);
+    const viaCompose = createEvent(c, prepareEvent(c, partial));
+    // Both paths produce the same event. `source.count` is a per-run sequence
+    // that legitimately advances on each createEvent call, so compare it
+    // independently and assert deep equality on everything else.
+    expect(viaEnrich.source.count).toBe(1);
+    expect(viaCompose.source.count).toBe(2);
+    expect({ ...viaEnrich, source: { ...viaEnrich.source, count: 0 } }).toEqual(
+      {
+        ...viaCompose,
+        source: { ...viaCompose.source, count: 0 },
+      },
     );
   });
 });

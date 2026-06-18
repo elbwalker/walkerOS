@@ -1,5 +1,17 @@
 # @walkeros/web-destination-optimizely
 
+## 4.2.1
+
+### Patch Changes
+
+- Updated dependencies [5cbcd23]
+- Updated dependencies [31c6858]
+- Updated dependencies [d1b41ca]
+- Updated dependencies [0a8a08b]
+- Updated dependencies [8afb7cc]
+  - @walkeros/core@4.2.1
+  - @walkeros/web-core@4.2.1
+
 ## 4.2.0
 
 ### Patch Changes

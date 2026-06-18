@@ -61,7 +61,8 @@ describe('Express source cache round-trip', () => {
           // GIF fallback applies (the default respond-first pixel mode would
           // win the race with the GIF).
           config: {
-            settings: { paths: ['/walker.js'], async: false },
+            settings: { paths: ['/walker.js'] },
+            async: false,
             ingest: {
               map: {
                 method: { key: 'method' },
@@ -199,7 +200,8 @@ describe('Express source cache round-trip', () => {
         express: {
           code: sourceExpress,
           config: {
-            settings: { paths: ['/walker.js'], async: false },
+            settings: { paths: ['/walker.js'] },
+            async: false,
             ingest: {
               map: {
                 method: { key: 'method' },
@@ -328,7 +330,8 @@ describe('Express source cache round-trip', () => {
         express: {
           code: sourceExpress,
           config: {
-            settings: { paths: ['/asset'], async: false },
+            settings: { paths: ['/asset'] },
+            async: false,
             ingest: {
               map: { method: { key: 'method' }, path: { key: 'url' } },
             },

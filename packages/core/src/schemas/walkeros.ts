@@ -204,7 +204,10 @@ export const SourceSchema = PropertiesSchema.and(
       .nonnegative()
       .optional()
       .describe('Emission sequence per run'),
-    trace: z.string().optional().describe('W3C traceparent full string'),
+    trace: z
+      .string()
+      .optional()
+      .describe('Trace id shared by every event of a run (W3C trace-id shape)'),
     url: z.string().optional(),
     referrer: z.string().optional(),
     tool: z.string().optional(),

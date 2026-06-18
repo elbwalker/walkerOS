@@ -1,4 +1,5 @@
-import type { FlowState } from '@walkeros/core';
+import type { FlowState, WalkerOS } from '@walkeros/core';
+import { createTelemetryObserver } from '@walkeros/core';
 import { startFlow } from '..';
 
 describe('transformer.push self-emission', () => {
@@ -69,5 +70,99 @@ describe('transformer.push self-emission', () => {
     );
     expect(err).toBeDefined();
     expect(err?.error?.message).toContain('transformer kaboom');
+  });
+
+  test('trace observer keeps inEvent/outEvent on the transformer frames', async () => {
+    const states: FlowState[] = [];
+    let seenEvent: WalkerOS.DeepPartialEvent | undefined;
+
+    const { collector, elb } = await startFlow({
+      run: true,
+      transformers: {
+        echo: {
+          code: async (context) => ({
+            type: 'echo',
+            config: context.config,
+            push: async (event) => {
+              seenEvent = event;
+              return { event };
+            },
+          }),
+        },
+      },
+      destinations: {
+        sink: {
+          code: { type: 'sink', config: {}, push: async () => undefined },
+          before: 'echo',
+        },
+      },
+    });
+    collector.observers.add(
+      createTelemetryObserver((state) => states.push(state), {
+        flowId: 'default',
+        level: 'trace',
+      }),
+    );
+
+    await elb({ name: 'page view', data: {} });
+
+    const inFrame = states.find(
+      (s) =>
+        s.stepType === 'transformer' &&
+        s.stepId === 'transformer.echo' &&
+        s.phase === 'in',
+    );
+    expect(inFrame).toBeDefined();
+    expect(seenEvent).toBeDefined();
+    expect(inFrame?.inEvent).toEqual(seenEvent);
+
+    const outFrame = states.find(
+      (s) =>
+        s.stepType === 'transformer' &&
+        s.stepId === 'transformer.echo' &&
+        s.phase === 'out',
+    );
+    expect(outFrame).toBeDefined();
+    expect(outFrame?.outEvent).toEqual({ event: seenEvent });
+  });
+
+  test('standard observer strips inEvent from the transformer in frame', async () => {
+    const states: FlowState[] = [];
+
+    const { collector, elb } = await startFlow({
+      run: true,
+      transformers: {
+        echo: {
+          code: async (context) => ({
+            type: 'echo',
+            config: context.config,
+            push: async (event) => ({ event }),
+          }),
+        },
+      },
+      destinations: {
+        sink: {
+          code: { type: 'sink', config: {}, push: async () => undefined },
+          before: 'echo',
+        },
+      },
+    });
+    collector.observers.add(
+      createTelemetryObserver((state) => states.push(state), {
+        flowId: 'default',
+        level: 'standard',
+      }),
+    );
+
+    await elb({ name: 'page view', data: {} });
+
+    const inFrame = states.find(
+      (s) =>
+        s.stepType === 'transformer' &&
+        s.stepId === 'transformer.echo' &&
+        s.phase === 'in',
+    );
+    expect(inFrame).toBeDefined();
+    expect(inFrame?.inEvent).toBeUndefined();
   });
 });

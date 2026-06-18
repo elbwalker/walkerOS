@@ -1,5 +1,55 @@
 # @walkeros/cli
 
+## 4.2.1
+
+### Patch Changes
+
+- b03bfce: `walkeros deploy` now waits long enough to cover a full server deploy
+  by default, so a slow but healthy deploy is no longer aborted early and
+  reported as a failure. Each run sends a fresh idempotency key, so retrying
+  after a failure starts a new deploy instead of replaying the previous result.
+  Failures print a stable, machine-readable error code (with a `Retry-After`
+  hint on rate limits), and `deploy create` no longer prints an empty token
+  placeholder.
+- ec84331: The managed flow runner now retries its bundle, config, and secret
+  fetches on transient failures (timeouts, network errors, 5xx) with bounded,
+  jittered backoff capped well inside the container health window, and the
+  secret fetch is now bounded by a timeout. A brief outage while a flow
+  container starts no longer hard-fails the run.
+- 4809699: The managed flow runner now reports its recent errors and recent log
+  output in its heartbeat, so deployed flows can surface runtime errors and logs
+  in the app without any external log tooling. Secrets are redacted before
+  leaving the runner.
+- 5cbcd23: `walkeros run` reads two new environment variables.
+  `WALKEROS_OBSERVE_LEVEL` sets the runtime's baseline telemetry level (`off`,
+  `standard`, or `trace`). `WALKEROS_CONFIG_FROZEN` (`1` or `true`) serves the
+  bundle as an immutable snapshot: secrets are still injected at boot, but
+  config hot-swap and heartbeat are disabled.
+- 5cbcd23: All four simulate functions (`simulateSource`, `simulateTransformer`,
+  `simulateCollector`, `simulateDestination`) accept a new `data` option to run
+  an existing bundle with updated configuration values, without rebundling. The
+  new `buildDataPayload`, `classifyStepProperties`, and `containsCodeMarkers`
+  exports build and inspect that payload. Destination simulation results now
+  include `mappingKey`, the entity-action key of the matched mapping rule.
+- 8afb7cc: The runner registers its process-error guards before startup and
+  degrades its readiness check after repeated out-of-band errors, so a wedged
+  container is recycled instead of silently hot-looping. Heartbeats now flush
+  immediately on a new error and on shutdown, persist errors to disk so a
+  failure cause survives a restart, and report their configured interval.
+- Updated dependencies [bd9188d]
+- Updated dependencies [d8aebd1]
+- Updated dependencies [5cbcd23]
+- Updated dependencies [31c6858]
+- Updated dependencies [d1b41ca]
+- Updated dependencies [0a8a08b]
+- Updated dependencies [8afb7cc]
+- Updated dependencies [8afb7cc]
+  - @walkeros/collector@4.2.1
+  - @walkeros/core@4.2.1
+  - @walkeros/server-core@4.2.1
+  - @walkeros/server-destination-api@4.2.1
+  - @walkeros/transformer-validate@4.2.1
+
 ## 4.2.0
 
 ### Minor Changes

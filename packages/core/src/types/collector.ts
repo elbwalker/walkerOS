@@ -14,20 +14,25 @@ import type { Ingest } from './ingest';
 import type { ObserverFn } from './observer';
 
 /** Identifies which kind of step a stepId belongs to. */
-export type StepKind = 'collector' | 'source' | 'transformer' | 'destination';
+export type StepKind =
+  | 'collector'
+  | 'source'
+  | 'transformer'
+  | 'destination'
+  | 'store';
 
 /**
- * Build a stepId for use as a key in `Status.dropped` (and future
- * status maps). The collector-level stepId is the literal "collector"
- * (no id). Source/transformer/destination ids take the form
- * `"<kind>.<id>"`, e.g. `"destination.ga4"`.
+ * Build a stepId for use as a key in `Status.dropped` /
+ * `Status.connectionErrors` (and future status maps). The collector-level
+ * stepId is the literal "collector" (no id). Source/transformer/destination/
+ * store ids take the form `"<kind>.<id>"`, e.g. `"destination.ga4"`.
  *
  * The dot separator mirrors the vocabulary already used in collector
  * log messages ("collector.queue overflow", "destination.dlq overflow").
  */
 export function stepId(kind: 'collector'): 'collector';
 export function stepId(
-  kind: 'source' | 'transformer' | 'destination',
+  kind: 'source' | 'transformer' | 'destination' | 'store',
   id: string,
 ): string;
 export function stepId(kind: StepKind, id?: string): string {
@@ -46,6 +51,32 @@ export function stepId(kind: StepKind, id?: string): string {
 export interface DroppedCounters {
   queue?: number;
   dlq?: number;
+}
+
+/**
+ * Circuit-breaker state for a single step (keyed by `stepId()` in
+ * `Status.breakers`). Tracks consecutive transport failures so a step whose
+ * transport is down can be skipped (gated) until a cooldown elapses, instead
+ * of every event hammering a known-broken writer.
+ *
+ * - `closed`: healthy; events pass through. `consecutiveFailures` accrues on
+ *   transport failures and resets to 0 on any success.
+ * - `open`: tripped; events are skipped until `openUntil`. The first event at
+ *   or after `openUntil` transitions to `half-open` and becomes the probe.
+ * - `half-open`: a single probe event is allowed through; `probing` marks that
+ *   the probe slot is taken so concurrent events still skip. A probe success
+ *   closes the breaker; a probe failure re-opens it with a fresh `openUntil`.
+ *
+ * `consecutiveFailures` is CONSECUTIVE, not cumulative: a single success
+ * resets it, so only an unbroken run reaching the threshold opens the breaker.
+ */
+export interface BreakerState {
+  state: 'closed' | 'open' | 'half-open';
+  consecutiveFailures: number;
+  /** Epoch ms after which an open breaker admits a single probe. */
+  openUntil?: number;
+  /** True while a half-open probe is in flight (probe slot taken). */
+  probing?: boolean;
 }
 
 /**
@@ -121,6 +152,39 @@ export interface Status {
    *  - `dropped["destination.ga4"]?.dlq`: ga4's dead-letter queue drops
    */
   dropped: Record<string, DroppedCounters>;
+  /**
+   * Per-step circuit-breaker state, keyed by stepId. See `stepId()` for key
+   * construction; keyed step-agnostically (NOT embedded in
+   * `DestinationStatus`) so the breaker can guard any step kind, though
+   * destinations are the primary use today. A breaker is created lazily on
+   * first accounting and stays inert unless its step is configured with a
+   * `breaker` (presence-gated): existing flows never trip a breaker.
+   *
+   * A runtime status field, not drift-guarded (it is observed, never authored
+   * in a flow config).
+   *
+   * Example:
+   *  - `breakers["destination.bigquery"]`: bigquery's consecutive-failure gate.
+   */
+  breakers: Record<string, BreakerState>;
+  /**
+   * Monotonic counts of out-of-band connection-level errors reported by a
+   * step via `context.reportError(err)` with no event (an orphan error from
+   * an EventEmitter SDK object's `'error'` handler), keyed by stepId. See
+   * `stepId()` for key construction; mirrors `dropped`.
+   *
+   * Distinct from `failed`: `failed` counts events lost in-band (a push that
+   * threw, a DLQ'd entry). `connectionErrors` counts connection faults that
+   * did not lose a specific event at the moment they fired. Operators read
+   * both: a rising `connectionErrors` with flat `failed` means a writer is
+   * flapping but events are still landing; both rising means the fault is
+   * now dropping events.
+   *
+   * Example:
+   *  - `connectionErrors["destination.bigquery"]`: BigQuery stream writer
+   *    `'error'` events reported between pushes.
+   */
+  connectionErrors: Record<string, number>;
 }
 
 export interface SourceStatus {
@@ -275,6 +339,10 @@ export interface Instance {
   on: On.OnConfig;
   queue: WalkerOS.Events;
   round: number;
+  /** Run-scoped W3C trace id, minted on each run and stamped onto events. */
+  trace?: string;
+  /** Per-run emission sequence; reset on each run, incremented per stamped event. */
+  count: number;
   /**
    * Monotonic counter bumped on every accepted reactive-state mutation
    * (consent, user, globals, custom). Used for per-subscriber high-water-mark

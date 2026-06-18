@@ -23,7 +23,10 @@ import {
   resolveTelemetryOptions,
 } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
-import { createHealthServer } from '../../runtime/health-server.js';
+import {
+  createHealthServer,
+  type HealthServer,
+} from '../../runtime/health-server.js';
 import {
   loadFlow,
   swapFlow,
@@ -97,6 +100,14 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   let configVersion: string | undefined;
   const configFrozen = readConfigFrozen();
 
+  // Process-level safety net FIRST, before any construction (secret injection,
+  // health server, flow load, openWriter). A stray init-window emit from a step
+  // or third-party lib (e.g. a gRPC StreamConnection's listener-less
+  // emit('error', ...) on a detached tick) must land in the net rather than
+  // crash the container before the guards are up. The degrade hook is wired in
+  // once the health server exists; the listeners stay registered from here.
+  const guards = registerProcessGuards(logger);
+
   // Inject secrets before loading flow
   if (api) {
     await injectSecrets(api, logger);
@@ -110,6 +121,29 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 
   // Health server (always on)
   const healthServer = await createHealthServer(port, logger);
+
+  // Wire the out-of-band degrade net into the already-registered guards. A
+  // sustained loop of uncaught exceptions / unhandled rejections (a wedged
+  // step or third-party lib) crosses the windowed threshold and flips `/ready`
+  // to 503 so the orchestrator recycles the container; a single stray error
+  // stays under the threshold and self-heals (stays 200). Degraded is a
+  // recycle signal, not a hot-swap-clearable state: only the boot-time
+  // `setReady(true)` below clears it, so a degraded container clears on a fresh
+  // boot after the orchestrator recycles it (a `swapFlow` does not call
+  // `setReady`, so an in-place hot-swap leaves degraded intact, as intended).
+  // The tracker keeps its own latch so it fires `setDegraded` once per
+  // crossing; that latch is independent of the health server's degraded flag.
+  const outOfBandTracker = createOutOfBandErrorTracker({
+    threshold: OUT_OF_BAND_THRESHOLD,
+    windowMs: OUT_OF_BAND_WINDOW_MS,
+    onThresholdExceeded: () => {
+      logger.error(
+        `Out-of-band errors crossed ${OUT_OF_BAND_THRESHOLD} within ${OUT_OF_BAND_WINDOW_MS / 1000}s, degrading /ready for recycle`,
+      );
+      healthServer.setDegraded('out-of-band error loop');
+    },
+  });
+  guards.setOnOutOfBandError(() => outOfBandTracker.record());
 
   // Telemetry observers: only wire when observer URL, ingest token, and
   // deployment id are all present. Missing env (local dev, run --flow without
@@ -209,6 +243,16 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
     );
     heartbeat.start();
     logger.info(`Heartbeat: active (every ${api.heartbeatIntervalMs / 1000}s)`);
+
+    // Flush on first new distinct error: a fresh error key triggers a single
+    // debounced out-of-band beat so the failure surfaces well before the next
+    // steady interval (and before a crash can drop the in-memory ring). Repeats
+    // (isNew=false) do not flush, so a hot error loop does not spam POSTs. The
+    // ring↔heartbeat coupling lives here because this file owns both.
+    const beat = heartbeat;
+    options.errorRing?.setListener((_entry, isNew) => {
+      if (isNew) beat.flushSoon();
+    });
   }
 
   if (api && shouldStartPoller(api, configFrozen)) {
@@ -302,52 +346,109 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
     logger.info(`Polling: active (every ${api.pollIntervalMs / 1000}s)`);
   }
 
-  // Single shutdown orchestrator
-  const shutdown = async (signal: string) => {
-    logger.info(`Received ${signal}, shutting down...`);
-
-    const forceTimer = setTimeout(() => {
-      logger.error('Shutdown timed out, forcing exit');
-      process.exit(1);
-    }, 15000);
-
-    try {
-      if (tracePoller) tracePoller.stop();
-      if (poller) poller.stop();
-      if (heartbeat) heartbeat.stop();
-      if (handle.collector.command) {
-        await handle.collector.command('shutdown');
-      }
-      await healthServer.close();
-
-      // Clean up temp files
-      if (currentBundleCleanup) await currentBundleCleanup().catch(() => {});
-      if (currentConfigPath) await fs.remove(currentConfigPath).catch(() => {});
-
-      logger.info('Shutdown complete');
-      clearTimeout(forceTimer);
-      process.exit(0);
-    } catch (error) {
-      clearTimeout(forceTimer);
-      logger.error(
-        `Error during shutdown: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      process.exit(1);
-    }
-  };
+  // Single shutdown orchestrator, driven through the extracted, dependency-
+  // injected `runShutdown` so the final-flush ordering is unit-testable. The
+  // current bundle/config temp-file references are read lazily inside the
+  // cleanup closure so a hot-swap that updates them before a shutdown removes
+  // the latest files, not the boot-time ones.
+  const shutdown = (signal: string) =>
+    runShutdown(signal, {
+      tracePoller,
+      poller,
+      heartbeat,
+      collector: handle.collector,
+      healthServer,
+      logger,
+      exit: (code) => process.exit(code),
+      cleanupTempFiles: async () => {
+        if (currentBundleCleanup) await currentBundleCleanup().catch(() => {});
+        if (currentConfigPath)
+          await fs.remove(currentConfigPath).catch(() => {});
+      },
+      forceTimeoutMs: 15000,
+    });
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  // Process-level safety net: a stray unhandled rejection or uncaught
-  // exception (e.g. from the dynamically imported bundle) must degrade, not
-  // crash the container. The guards log into the error ring via the logger and
-  // keep the process serving; the orchestrator's own /ready gate still governs
-  // traffic. Registration is idempotent in case runPipeline runs more than once.
-  registerProcessGuards(logger);
-
   // Keep process alive
   await new Promise(() => {});
+}
+
+/**
+ * Dependencies the shutdown orchestrator needs, injectable so the final-flush
+ * ordering and force-timer behavior are unit-testable without a live pipeline.
+ * Mirrors the {@link ProcessGuardDeps} pattern.
+ */
+export interface ShutdownDeps {
+  tracePoller: TracePollerHandle | null;
+  poller: PollerHandle | null;
+  heartbeat: HeartbeatHandle | null;
+  collector: FlowHandle['collector'];
+  healthServer: Pick<
+    HealthServer,
+    'setReady' | 'setFailed' | 'setDegraded' | 'close'
+  >;
+  logger: Logger.Instance;
+  exit: (code: number) => void;
+  /** Remove the latest bundle/config temp files (read lazily by the caller). */
+  cleanupTempFiles: () => Promise<void>;
+  /** Hard deadline (ms) after which shutdown forces exit(1). */
+  forceTimeoutMs: number;
+}
+
+/**
+ * Orchestrate a graceful shutdown. Order:
+ *   tracePoller.stop → poller.stop → final heartbeat sendOnce (await,
+ *   best-effort) → heartbeat.stop → collector shutdown → healthServer.close →
+ *   temp-file cleanup → exit(0).
+ *
+ * The final `sendOnce` runs BEFORE collector drain so the last beat reflects the
+ * pre-drain counters/DLQ depth (what the operator wants at the moment of
+ * failure) and carries the final ring contents (incl. the error that may have
+ * triggered the shutdown). It is wrapped so a slow/rejecting POST cannot block
+ * shutdown; the whole sequence sits inside a force-timer so a hung step still
+ * exits at `forceTimeoutMs` (`sendOnce` has its own ~10s AbortSignal, under the
+ * 15s deadline).
+ */
+export async function runShutdown(
+  signal: string,
+  deps: ShutdownDeps,
+): Promise<void> {
+  deps.logger.info(`Received ${signal}, shutting down...`);
+
+  const forceTimer = setTimeout(() => {
+    deps.logger.error('Shutdown timed out, forcing exit');
+    deps.exit(1);
+  }, deps.forceTimeoutMs);
+
+  try {
+    if (deps.tracePoller) deps.tracePoller.stop();
+    if (deps.poller) deps.poller.stop();
+
+    // Final out-of-band beat: egress the last ring contents (incl. the failure
+    // that may have triggered this shutdown) before stopping/draining. Best-
+    // effort: a slow or rejecting POST must not wedge shutdown.
+    if (deps.heartbeat) await deps.heartbeat.sendOnce().catch(() => {});
+    if (deps.heartbeat) deps.heartbeat.stop();
+
+    if (deps.collector.command) {
+      await deps.collector.command('shutdown');
+    }
+    await deps.healthServer.close();
+
+    await deps.cleanupTempFiles();
+
+    deps.logger.info('Shutdown complete');
+    clearTimeout(forceTimer);
+    deps.exit(0);
+  } catch (error) {
+    clearTimeout(forceTimer);
+    deps.logger.error(
+      `Error during shutdown: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    deps.exit(1);
+  }
 }
 
 /**
@@ -357,22 +458,40 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 export interface ProcessGuardDeps {
   logger: Logger.Instance;
   exit: (code: number) => void;
+  /**
+   * Fed by BOTH guard handlers on every out-of-band error so a windowed
+   * counter can auto-degrade `/ready` after a sustained loop (and so a later
+   * task's collector `reportError` can route into the same counter). Optional
+   * because the handler bodies stay unit-testable without a real server.
+   */
+  onOutOfBandError?: () => void;
 }
 
 /**
  * Handle an `unhandledRejection`: log the reason into the error ring (via the
  * logger) and keep serving. A stray rejection is treated as non-fatal — the
  * container degrades instead of crash-looping.
+ *
+ * This IS the registered `unhandledRejection` listener, so the body must never
+ * throw: if the logger or the degrade chain throws synchronously, the escape
+ * would itself become an uncaught error and crash the process — the exact
+ * failure this guard exists to prevent. The whole body is therefore wrapped;
+ * the fallback uses bare `console.error` (never a re-entrant `deps.logger`).
  */
 export function handleUnhandledRejection(
   reason: unknown,
   deps: ProcessGuardDeps,
 ): void {
-  deps.logger.error(
-    `Unhandled rejection (continuing): ${
-      reason instanceof Error ? reason.message : String(reason)
-    }`,
-  );
+  try {
+    deps.logger.error(
+      `Unhandled rejection (continuing): ${
+        reason instanceof Error ? reason.message : String(reason)
+      }`,
+    );
+    deps.onOutOfBandError?.();
+  } catch (guardError) {
+    console.error('Process guard handler failed (continuing):', guardError);
+  }
 }
 
 /**
@@ -380,29 +499,75 @@ export function handleUnhandledRejection(
  * logger) and keep serving for non-fatal cases. `process.exit` is reserved for
  * genuinely unrecoverable state (handled by the shutdown orchestrator on
  * signals), not for a single stray throw.
+ *
+ * This IS the registered `uncaughtException` listener, so the body must never
+ * throw (see `handleUnhandledRejection`): a throw escaping here is fatal. The
+ * whole body is wrapped; the fallback uses bare `console.error`.
  */
 export function handleUncaughtException(
   error: Error,
   deps: ProcessGuardDeps,
 ): void {
-  deps.logger.error(`Uncaught exception (continuing): ${error.message}`);
+  try {
+    deps.logger.error(`Uncaught exception (continuing): ${error.message}`);
+    deps.onOutOfBandError?.();
+  } catch (guardError) {
+    console.error('Process guard handler failed (continuing):', guardError);
+  }
+}
+
+/**
+ * Handle returned by {@link registerProcessGuards} so the caller can wire the
+ * `/ready` auto-degrade hook in AFTER the health server is constructed, while
+ * keeping the `uncaughtException`/`unhandledRejection` listeners registered
+ * from the very top of the pipeline.
+ */
+export interface ProcessGuardHandle {
+  /** Wire (or replace) the out-of-band error hook fed by both guard handlers. */
+  setOnOutOfBandError(onOutOfBandError: () => void): void;
 }
 
 let processGuardsRegistered = false;
+// Live deps shared by the registered listeners. Held at module scope so the
+// idempotent re-registration path can still re-wire the degrade hook onto the
+// already-mounted listeners (a fresh runPipeline gets a fresh health server).
+let processGuardDeps: ProcessGuardDeps | undefined;
+
+const noopGuardHandle: ProcessGuardHandle = {
+  setOnOutOfBandError(onOutOfBandError) {
+    if (processGuardDeps) processGuardDeps.onOutOfBandError = onOutOfBandError;
+  },
+};
 
 /**
- * Register the process-level error guards exactly once per process. Guards
- * against double-registration so a second `runPipeline` call in the same
- * process does not stack listeners (which would multiply log lines).
+ * Register the process-level error guards exactly once per process, and return
+ * a handle to wire the out-of-band degrade hook later. Guards against
+ * double-registration so a second `runPipeline` call in the same process does
+ * not stack listeners (which would multiply log lines); the returned handle
+ * still re-points the live hook so the newest health server gets degraded.
+ *
+ * `onOutOfBandError` may be supplied up front, or wired later via the handle.
+ * The listeners read `deps.onOutOfBandError` live, so wiring it after the
+ * health server exists does not lose any error that arrived in between (it is
+ * just logged, not yet counted).
  */
-export function registerProcessGuards(logger: Logger.Instance): void {
-  if (processGuardsRegistered) return;
+export function registerProcessGuards(
+  logger: Logger.Instance,
+  onOutOfBandError?: () => void,
+): ProcessGuardHandle {
+  if (processGuardsRegistered) {
+    if (processGuardDeps && onOutOfBandError)
+      processGuardDeps.onOutOfBandError = onOutOfBandError;
+    return noopGuardHandle;
+  }
   processGuardsRegistered = true;
 
   const deps: ProcessGuardDeps = {
     logger,
     exit: (code) => process.exit(code),
+    onOutOfBandError,
   };
+  processGuardDeps = deps;
 
   process.on('unhandledRejection', (reason) =>
     handleUnhandledRejection(reason, deps),
@@ -410,7 +575,85 @@ export function registerProcessGuards(logger: Logger.Instance): void {
   process.on('uncaughtException', (error) =>
     handleUncaughtException(error, deps),
   );
+
+  return {
+    setOnOutOfBandError(next) {
+      deps.onOutOfBandError = next;
+    },
+  };
 }
+
+/**
+ * Reset the one-shot registration latch so a test can register a fresh set of
+ * guard listeners. Tests must also `process.removeAllListeners(...)` the
+ * relevant events; this only clears the module-level idempotency flag.
+ */
+export function resetProcessGuardsForTest(): void {
+  processGuardsRegistered = false;
+  processGuardDeps = undefined;
+}
+
+/**
+ * Configuration for the windowed out-of-band error counter that decides when
+ * `/ready` should auto-degrade.
+ */
+export interface OutOfBandErrorTrackerConfig {
+  /** Number of errors within `windowMs` that triggers a degrade. */
+  threshold: number;
+  /** Rolling window length in milliseconds. */
+  windowMs: number;
+  /**
+   * Called once when the count first crosses the threshold within the window.
+   * Not called again until the window drains below the threshold and re-crosses.
+   */
+  onThresholdExceeded: () => void;
+  /** Injectable clock so the window is testable without fake timers. */
+  now?: () => number;
+}
+
+export interface OutOfBandErrorTracker {
+  /** Record one out-of-band error at the current `now()`. */
+  record(): void;
+}
+
+/**
+ * Windowed counter for out-of-band errors. A single stray error self-heals
+ * (stays under threshold, `/ready` keeps 200); a sustained hot loop crosses the
+ * threshold within the rolling window and triggers `onThresholdExceeded`
+ * exactly once per crossing, so the container is recycled rather than wedged
+ * behind a 200 with a half-open writer.
+ */
+export function createOutOfBandErrorTracker(
+  config: OutOfBandErrorTrackerConfig,
+): OutOfBandErrorTracker {
+  const now = config.now ?? (() => Date.now());
+  const timestamps: number[] = [];
+  let degraded = false;
+
+  return {
+    record() {
+      const ts = now();
+      timestamps.push(ts);
+      const cutoff = ts - config.windowMs;
+      while (timestamps.length > 0 && timestamps[0] < cutoff)
+        timestamps.shift();
+
+      if (timestamps.length >= config.threshold) {
+        if (!degraded) {
+          degraded = true;
+          config.onThresholdExceeded();
+        }
+      } else {
+        degraded = false;
+      }
+    },
+  };
+}
+
+/** N out-of-band errors within {@link OUT_OF_BAND_WINDOW_MS} degrade `/ready`. */
+const OUT_OF_BAND_THRESHOLD = 5;
+/** Rolling window for the out-of-band degrade counter. */
+const OUT_OF_BAND_WINDOW_MS = 60_000;
 
 /**
  * Resolve the poller's seed etag. The boot-time config fetch (Case 2 of the
