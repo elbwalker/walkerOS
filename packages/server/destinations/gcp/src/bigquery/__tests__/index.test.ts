@@ -109,6 +109,46 @@ describe('Server Destination BigQuery', () => {
     });
   });
 
+  test('init forwards config.credentials to BOTH the query and the Storage Write client', async () => {
+    if (!destination.init) throw new Error('destination.init undefined');
+    const credentials = {
+      client_email: 'sa@example.com',
+      private_key: '-----BEGIN PRIVATE KEY-----',
+    };
+    const config = await destination.init({
+      config: { settings: { projectId, datasetId, tableId }, credentials },
+      collector: mockCollector,
+      env: testEnv,
+      logger: createMockLogger(),
+      id: 'test-bq',
+      reportError: () => undefined,
+    });
+    if (!config || !config.settings) throw new Error('init returned no config');
+
+    // Query client (BigQuery) carries the credentials on its constructor options.
+    // The example mock records its ctor options on `this.options`.
+    const queryClient: unknown = config.settings.client;
+    if (
+      typeof queryClient !== 'object' ||
+      queryClient === null ||
+      !('options' in queryClient)
+    )
+      throw new Error('mock query client did not capture options');
+    const { options } = queryClient;
+    if (typeof options !== 'object' || options === null)
+      throw new Error('mock query client options not an object');
+    const queryCredentials =
+      'credentials' in options ? options.credentials : undefined;
+    expect(queryCredentials).toEqual(credentials);
+
+    // Storage Write client (WriterClient) carries the same credentials, so it
+    // does not silently fall back to ADC on a non-GCP runtime.
+    const ctorCall = __getMockCalls().find(
+      (c) => c.method === 'WriterClient.ctor',
+    );
+    expect(ctorCall?.args[0]).toEqual({ projectId, credentials });
+  });
+
   test('init defaults datasetId to walkerOS and tableId to events', async () => {
     const result = await callInit({ projectId });
 
@@ -821,6 +861,50 @@ describe('Server Destination BigQuery', () => {
       // A fresh writer was opened (re-open) and a row appended.
       expect(methods).toContain('JSONWriter.ctor');
       expect(methods).toContain('appendRows');
+    });
+
+    test('the re-opened WriterClient still carries config.credentials', async () => {
+      if (!destination.init) throw new Error('destination.init undefined');
+      const credentials = {
+        client_email: 'sa@example.com',
+        private_key: '-----BEGIN PRIVATE KEY-----',
+      };
+      const config = await destination.init({
+        config: { settings: { projectId, datasetId, tableId }, credentials },
+        collector: mockCollector,
+        env: testEnv,
+        logger: createMockLogger(),
+        id: 'test-bq',
+        reportError: () => undefined,
+      });
+      if (!config || !config.settings)
+        throw new Error('init returned no config');
+      const { settings } = config;
+
+      __getLastConnection().__emitConnectionError(new Error('stream gone'));
+      expect(settings.writerBroken).toBe(true);
+
+      __resetMockCalls();
+
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          rule: undefined,
+          data: undefined,
+          env: testEnv,
+          id: 'test-bq',
+        }),
+      );
+
+      expect(settings.writerBroken).toBe(false);
+      // The re-open constructs a fresh WriterClient; it must still receive the
+      // resolved credentials so the self-healed writer authenticates as the
+      // same identity instead of falling back to ADC.
+      const reopenCtor = __getMockCalls().find(
+        (c) => c.method === 'WriterClient.ctor',
+      );
+      expect(reopenCtor?.args[0]).toEqual({ projectId, credentials });
     });
 
     test('a broken writer DLQ-routes the whole batch when re-open fails (batch path)', async () => {

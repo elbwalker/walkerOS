@@ -21,6 +21,14 @@ export interface Settings {
   tableId: string;
   location?: string;
   bigquery?: BigQueryOptions;
+  /**
+   * Service-account credentials parsed from `config.credentials` at init.
+   * Threaded to BOTH the query client (`new BigQuery`) and the data-plane
+   * Storage Write client (`new WriterClient`) so event writes authenticate
+   * with the configured SA instead of falling back to ADC on non-GCP runtimes.
+   * Runtime-only (the raw `config.credentials` may be a JSON string).
+   */
+  credentials?: ServiceAccount;
   // Runtime-only handles populated by init(); not user-facing.
   writeClient?: managedwriter.WriterClient;
   writer?: managedwriter.JSONWriter;

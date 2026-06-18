@@ -6,6 +6,10 @@ import { getSpanId } from './getSpanId';
  * Creates a complete event with default values.
  * Used for testing and debugging.
  *
+ * Models a post-collector event: `source` always carries the run-stamped
+ * `count` and `trace`, so a generated event matches one that has been pushed
+ * through the collector. Override via `props.source` if needed.
+ *
  * @param props - Properties to override the default values.
  * @returns A complete event.
  */

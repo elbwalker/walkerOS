@@ -1,4 +1,4 @@
-import type { Logger } from '@walkeros/core';
+import type { Logger, ServiceAccount } from '@walkeros/core';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
 import { managedwriter, adapt, protos } from '@google-cloud/bigquery-storage';
 
@@ -26,8 +26,17 @@ export interface OpenWriterArgs {
   projectId: string;
   datasetId: string;
   tableId: string;
-  // Auth forwarded from settings.bigquery so the data-plane WriterClient
-  // authenticates like the control plane instead of falling back to ADC.
+  /**
+   * Service-account credentials resolved from `config.credentials`. Forwarded
+   * to the data-plane WriterClient so event writes authenticate with the
+   * configured SA instead of falling back to ADC (which has no metadata server
+   * to query on non-GCP runtimes, e.g. Scaleway). When both this and a
+   * `settings.bigquery.credentials` are set, `config.credentials` wins, matching
+   * the query client's resolution in getConfig, so one destination always
+   * authenticates as a single identity across both clients.
+   */
+  credentials?: ServiceAccount;
+  // Raw passthrough auth/client options for the WriterClient (the escape hatch).
   bigquery?: BigQueryOptions;
   /**
    * gRPC deadline in milliseconds, derived from the standard per-step
@@ -79,6 +88,7 @@ export async function openWriter(
     projectId,
     datasetId,
     tableId,
+    credentials,
     bigquery,
     timeout,
     onConnectionError,
@@ -97,9 +107,16 @@ export async function openWriter(
   const callOptions: CallOptions | undefined =
     timeout === undefined ? undefined : { timeout };
 
+  // The WriterClient takes google-gax ClientOptions, which extend
+  // GoogleAuthOptions: `projectId` + `credentials` (a JWTInput, i.e.
+  // { client_email, private_key, ... }), the same auth surface as
+  // BigQueryOptions on the query client. Spread the resolved `config.credentials`
+  // last so it wins over any `settings.bigquery.credentials`, mirroring the query
+  // client's resolution in getConfig (one identity per destination).
   const writeClient = new managedwriter.WriterClient({
     projectId,
     ...bigquery,
+    ...(credentials !== undefined ? { credentials } : {}),
   });
   let connectionErrorListener: RemoveListener | undefined;
   let connection: StreamConnection | undefined;

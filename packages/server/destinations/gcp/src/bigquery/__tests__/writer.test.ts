@@ -57,6 +57,76 @@ describe('openWriter', () => {
     });
   });
 
+  test('forwards config.credentials to the WriterClient so it does not fall back to ADC', async () => {
+    const logger = createMockLogger();
+    const credentials = {
+      client_email: 'sa@example.com',
+      private_key: '-----BEGIN PRIVATE KEY-----',
+    };
+    await openWriter(
+      { projectId: 'p', datasetId: 'd', tableId: 't', credentials },
+      logger,
+    );
+    const ctorCall = __getMockCalls().find(
+      (c) => c.method === 'WriterClient.ctor',
+    );
+    expect(ctorCall?.args[0]).toEqual({ projectId: 'p', credentials });
+  });
+
+  test('config.credentials wins over settings.bigquery.credentials, matching the query client', async () => {
+    const logger = createMockLogger();
+    const credentials = {
+      client_email: 'sa@example.com',
+      private_key: '-----BEGIN PRIVATE KEY-----',
+    };
+    const passthroughCredentials = {
+      client_email: 'other@example.com',
+      private_key: '-----BEGIN OTHER KEY-----',
+    };
+    await openWriter(
+      {
+        projectId: 'p',
+        datasetId: 'd',
+        tableId: 't',
+        credentials,
+        // Same key collides: config.credentials must win so both clients
+        // authenticate as one identity (no split-brain auth).
+        bigquery: { credentials: passthroughCredentials },
+      },
+      logger,
+    );
+    const ctorCall = __getMockCalls().find(
+      (c) => c.method === 'WriterClient.ctor',
+    );
+    expect(ctorCall?.args[0]).toEqual({ projectId: 'p', credentials });
+  });
+
+  test('non-colliding settings.bigquery fields are preserved alongside config.credentials', async () => {
+    const logger = createMockLogger();
+    const credentials = {
+      client_email: 'sa@example.com',
+      private_key: '-----BEGIN PRIVATE KEY-----',
+    };
+    await openWriter(
+      {
+        projectId: 'p',
+        datasetId: 'd',
+        tableId: 't',
+        credentials,
+        bigquery: { apiEndpoint: 'http://localhost:9050' },
+      },
+      logger,
+    );
+    const ctorCall = __getMockCalls().find(
+      (c) => c.method === 'WriterClient.ctor',
+    );
+    expect(ctorCall?.args[0]).toEqual({
+      projectId: 'p',
+      apiEndpoint: 'http://localhost:9050',
+      credentials,
+    });
+  });
+
   test('forwards timeout as the gax deadline to createStreamConnection and getWriteStream', async () => {
     const logger = createMockLogger();
     await openWriter(
