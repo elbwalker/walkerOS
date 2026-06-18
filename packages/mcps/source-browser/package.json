@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/mcp-source-browser",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "description": "MCP server for walkerOS data-elb HTML tagging — generate, parse, and validate tracking attributes with real DOM parsing",
   "license": "MIT",
   "type": "module",
@@ -31,16 +31,16 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@walkeros/core": "4.2.0",
-    "@walkeros/web-source-browser": "4.2.0",
+    "@walkeros/core": "4.2.1",
+    "@walkeros/web-source-browser": "4.2.1",
     "jsdom": "^29.1.1"
   },
   "devDependencies": {
     "@types/jsdom": "^28.0.3",
     "@types/node": "^25.9.1",
-    "@walkeros/config": "4.2.0",
-    "@walkeros/collector": "4.2.0",
-    "@walkeros/web-core": "4.2.0"
+    "@walkeros/config": "4.2.1",
+    "@walkeros/collector": "4.2.1",
+    "@walkeros/web-core": "4.2.1"
   },
   "peerDependencies": {
     "zod": "^4.0"

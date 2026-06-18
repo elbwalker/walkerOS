@@ -1,5 +1,26 @@
 # @walkeros/web-source-cmp-usercentrics
 
+## 4.2.1
+
+### Patch Changes
+
+- ec84331: Use the official Usercentrics events (UC_UI_INITIALIZED,
+  UC_UI_CMP_EVENT) and consent getters so a returning visitor's prior choice is
+  applied on load and first-visit defaults stay suppressed under explicitOnly.
+  The configurable eventName data-layer setting is removed; the source now uses
+  the always-emitted official events. Fixes consent-change events being dropped
+  on the current Usercentrics Web CMP.
+- Updated dependencies [bd9188d]
+- Updated dependencies [d8aebd1]
+- Updated dependencies [5cbcd23]
+- Updated dependencies [31c6858]
+- Updated dependencies [d1b41ca]
+- Updated dependencies [0a8a08b]
+- Updated dependencies [8afb7cc]
+- Updated dependencies [8afb7cc]
+  - @walkeros/collector@4.2.1
+  - @walkeros/core@4.2.1
+
 ## 4.2.0
 
 ### Patch Changes
