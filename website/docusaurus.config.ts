@@ -1,6 +1,7 @@
 import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config, Plugin } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plugin-llms-txt';
 import { version as coreVersion } from '../packages/core/package.json';
 
 const vars = {
@@ -237,6 +238,35 @@ const config: Config = {
           },
         ],
       },
+    ],
+    [
+      '@signalwire/docusaurus-plugin-llms-txt',
+      {
+        siteTitle: 'walkerOS Documentation',
+        siteDescription:
+          'Privacy-first, composable event data collection (Source → Collector → Destination).',
+        // depth: 2 groups routes like /docs/destinations/web/amplitude into the
+        // "docs/destinations" category, mirroring the pipeline taxonomy.
+        depth: 2,
+        enableDescriptions: true,
+        // Order the llms.txt sections along the pipeline taxonomy.
+        includeOrder: [
+          '/docs/getting-started/**',
+          '/docs/sources/**',
+          '/docs/collector/**',
+          '/docs/destinations/**',
+          '/docs/transformers/**',
+          '/docs/stores/**',
+          '/docs/mapping/**',
+          '/docs/apps/**',
+          '/docs/guides/**',
+        ],
+        content: {
+          enableMarkdownFiles: true,
+          enableLlmsFullTxt: true,
+          excludeRoutes: ['/search', '/404', '/tags/**'],
+        },
+      } satisfies LlmsTxtOptions,
     ],
   ],
 };

@@ -212,6 +212,11 @@ user-facing table.
 Tokens match because Shiki uses the same TextMate grammars as VS Code / Monaco,
 with the matching `dark-plus` / `light-plus` themes.
 
+`<CodeView>` and `<CodeSnippet>` render their code server-side, so it appears in
+the static HTML and the markdown/`llms.txt` export. Code is shown exactly as
+authored (no automatic reformatting), so format multi-line snippets before
+putting them in the `code` prop.
+
 **Rule:** default to `<CodeView>`. Only reach for `<CodeBox>` when the code must
 be editable.
 

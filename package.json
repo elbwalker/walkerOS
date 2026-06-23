@@ -53,7 +53,8 @@
     "prepare": "husky || true",
     "validate:links": "npx tsx apps/scripts/validate-links.ts",
     "validate:docs": "npx tsx apps/scripts/validate-docs.ts",
-    "validate": "npm run validate:links && npm run validate:docs"
+    "validate:llms": "npx tsx apps/scripts/validate-llms.ts",
+    "validate": "npm run validate:links && npm run validate:docs && npm run validate:llms"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
