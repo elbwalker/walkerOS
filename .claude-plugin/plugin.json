@@ -33,6 +33,8 @@
     "skills/walkeros-using-cli",
     "skills/walkeros-using-store-cache",
     "skills/walkeros-using-transformer-ga4",
+    "skills/walkeros-mcp-actions",
+    "skills/walkeros-create-cmp-source",
     "skills/walkeros-create-destination",
     "skills/walkeros-create-source",
     "skills/walkeros-create-transformer",

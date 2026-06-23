@@ -1,8 +1,11 @@
 ---
 name: walkeros-create-source
 description:
-  Use when creating a new walkerOS source. Example-driven workflow starting with
-  research and examples before implementation.
+  Use when creating a new walkerOS source to capture events (browser source,
+  dataLayer interception, server/HTTP source, webhook receiver, event capture),
+  web or server-side. Example-driven workflow: research the input format and
+  define step examples before implementing the push interface, createTrigger,
+  and env pattern.
 ---
 
 # Create a New Source

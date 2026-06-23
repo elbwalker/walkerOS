@@ -466,7 +466,7 @@ See [walkeros-create-destination](../walkeros-create-destination/SKILL.md),
 and the `walkeros setup` CLI documentation for the authoring template and
 operator workflow.
 
-## Related skills
+## Related Skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) -
   Architecture and Flow structure

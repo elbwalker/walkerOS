@@ -129,6 +129,13 @@ const config: Config = {
         },
         { to: '/playground/', label: 'Playground', position: 'left' },
         {
+          type: 'docSidebar',
+          sidebarId: 'skillsSidebar',
+          docsPluginId: 'skills',
+          position: 'left',
+          label: 'Skills',
+        },
+        {
           href: vars.github,
           label: 'GitHub',
           position: 'right',
@@ -212,6 +219,16 @@ const config: Config = {
   plugins: [
     tailwindPlugin,
     devOverlayFilterPlugin,
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'skills',
+        path: 'skills-generated',
+        routeBasePath: 'skills',
+        sidebarPath: './sidebarsSkills.ts',
+        editUrl: `${vars.github}edit/main/skills/`,
+      },
+    ],
     [
       '@docusaurus/plugin-client-redirects',
       {

@@ -9,7 +9,7 @@
  * validation.
  */
 
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join, relative } from 'path';
 
 interface Issue {
@@ -105,6 +105,75 @@ function checkAmplitudeExport(): void {
   }
 }
 
+// The /skills surface is single-sourced from skills/<name>/SKILL.md by the
+// website generator. Guard that every SKILL.md became a page and that link
+// rewriting + content survived the build (one heading + one GitHub blob link).
+function checkSkillsExport(): void {
+  const skillsBuildDir = join(BUILD_DIR, 'skills');
+  if (!existsSync(skillsBuildDir)) {
+    issues.push({
+      file: 'website/build/skills',
+      message:
+        'skills route not emitted to the build (generator or plugin failed)',
+    });
+    return;
+  }
+
+  // (a) Coverage: one emitted .md per SKILL.md (index.md excluded).
+  const skillsSrcDir = join(ROOT, 'skills');
+  const sourceSkills = readdirSync(skillsSrcDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && d.name.startsWith('walkeros-'))
+    .filter((d) => existsSync(join(skillsSrcDir, d.name, 'SKILL.md')))
+    .map((d) => d.name);
+
+  const emitted = readdirSync(skillsBuildDir)
+    .filter((f) => f.endsWith('.md') && f !== 'index.md')
+    .map((f) => f.replace(/\.md$/, ''));
+
+  if (emitted.length !== sourceSkills.length) {
+    issues.push({
+      file: 'website/build/skills',
+      message: `skill page count mismatch: ${sourceSkills.length} SKILL.md in repo, ${emitted.length} emitted .md pages`,
+    });
+  }
+  for (const name of sourceSkills) {
+    if (!emitted.includes(name)) {
+      issues.push({
+        file: 'website/build/skills',
+        message: `skill not emitted: ${name}.md missing from website/build/skills/`,
+      });
+    }
+  }
+
+  // (b) Content survival: a known skill page keeps a heading AND a rewritten
+  // GitHub blob link (proves the body + link rewriter survived the build).
+  const rel = 'website/build/skills/walkeros-understanding-flow.md';
+  const abs = join(ROOT, rel);
+  if (!existsSync(abs)) {
+    issues.push({
+      file: rel,
+      message:
+        'understanding-flow skill page not emitted to the Markdown export',
+    });
+    return;
+  }
+  const content = readFileSync(abs, 'utf-8');
+  if (!content.includes('# Understanding walkerOS Flow')) {
+    issues.push({
+      file: rel,
+      message:
+        'missing known heading "# Understanding walkerOS Flow" (skill body export degraded)',
+    });
+  }
+  if (!content.includes('https://github.com/elbwalker/walkerOS/blob/main/')) {
+    issues.push({
+      file: rel,
+      message:
+        'missing rewritten GitHub blob link (link rewriter output not in export)',
+    });
+  }
+}
+
 function main(): void {
   if (!existsSync(LLMS_INDEX)) {
     console.log(
@@ -117,6 +186,7 @@ function main(): void {
 
   checkIndexLinks();
   checkAmplitudeExport();
+  checkSkillsExport();
 
   if (issues.length === 0) {
     console.log('✅ LLM Markdown export is complete and intact!\n');

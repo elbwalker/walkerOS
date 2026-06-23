@@ -270,6 +270,18 @@ Override the consent path manually if you need richer mapping.
 - **Raw text body required.** Pre-parsed JSON bodies will not decode.
 - **Server-side only.** Web ingest via interception sources is not supported.
 
+## Related Skills
+
+- [walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md) -
+  Transformer interface, return values, and before/next chaining this skill
+  relies on
+- [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md) -
+  The `data`/`map` path syntax used in the GA4 mapping recipes
+- [walkeros-mapping-configuration](../walkeros-mapping-configuration/SKILL.md) -
+  Mapping recipes for GA4 and other vendors
+- [walkeros-using-cli](../walkeros-using-cli/SKILL.md) - Validate and simulate a
+  flow that wires the GA4 transformer
+
 See the [website docs](https://www.walkeros.io/docs/transformers/ga4) for the
 authoritative reference and the
 [README](../../packages/transformers/ga4/README.md) for the in-repo summary.

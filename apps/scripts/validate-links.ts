@@ -20,6 +20,7 @@ const errors: LinkError[] = [];
 
 // Patterns to check
 const PATTERNS = [
+  'AGENT.md',
   'packages/**/README.md',
   'website/docs/**/*.mdx',
   'skills/**/*.md',

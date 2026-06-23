@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "docusaurus start --host 0.0.0.0",
-    "build": "docusaurus build",
+    "start": "node scripts/generate-skills-docs.mjs && docusaurus start --host 0.0.0.0",
+    "build": "node scripts/generate-skills-docs.mjs && docusaurus build",
     "swizzle": "docusaurus swizzle",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve --host 0.0.0.0",

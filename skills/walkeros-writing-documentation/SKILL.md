@@ -528,11 +528,8 @@ WRONG:   "free — without sampling caps"
 
 ### Event Naming
 
-```text
-
-CORRECT: "page view", "product add", "order complete" WRONG: "page_view",
-"pageView", "PAGE VIEW"
-```
+Event naming (`"entity action"`, space not underscore): see
+[walkeros-understanding-events](../walkeros-understanding-events/SKILL.md).
 ````
 
 ### Package References

@@ -1,8 +1,9 @@
 ---
 name: walkeros-create-transformer
 description:
-  Use when creating a new walkerOS transformer. Example-driven workflow for
-  validation, enrichment, or redaction transformers.
+  Use when creating a new walkerOS transformer to modify events in the pipeline
+  (validate, enrich, or redact) at a before/next chain position. Example-driven
+  workflow for the transformer interface, return values, and chaining.
 ---
 
 # Create a New Transformer
