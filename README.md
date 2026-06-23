@@ -73,6 +73,27 @@ Choose one based on your workflow and integration possibilities:
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
+
+const { elb } = await startFlow({
+  destinations: {
+    console: {
+      code: {
+        type: 'console',
+        config: {},
+        push: (event) => console.log('Event:', event.name),
+      },
+    },
+  },
+});
+
+await elb('page view', { title: 'Home' });
+// -> logs: Event: page view
+```
+
+Wire a real source and destination once you are ready:
+
+```typescript
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
@@ -98,8 +119,19 @@ await startFlow({
 
 ```json
 {
+  "version": 4,
   "flows": {
     "default": {
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {},
+            "@walkeros/web-source-browser": {},
+            "@walkeros/web-destination-gtag": {}
+          }
+        }
+      },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",

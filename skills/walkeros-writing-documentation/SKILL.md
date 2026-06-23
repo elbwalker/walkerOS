@@ -77,6 +77,30 @@ TIER 4: Package READMEs & Website docs
   → VERIFY against Tier 1-3 before trusting
 ```
 
+### Pinned onboarding examples
+
+Getting-started and onboarding code examples are sourced from Tier-1
+`apps/quickstart/src/*.ts` (CI-validated) first, then the docs source them. The
+current canonical examples:
+
+- `first-event.ts`, the zero-to-first-event console example used by the
+  quickstart and integrated-mode pages and the README.
+- `ga4-ecommerce.ts`, the `product add` to GA4 `add_to_cart` mapping used by the
+  GA4 reference page and the GA4 ecommerce tutorial.
+
+These are pinned against drift by the doc-lint at
+`apps/scripts/validate-docs.ts` (run `npx tsx apps/scripts/validate-docs.ts`).
+It extracts canonical tokens from the Tier-1 source and asserts the docs
+snippets contain them, tolerating intentional doc simplifications (dropping the
+`seen` capture, arrow `push` instead of a method). It also enforces that bundled
+flow snippets carry `config.platform`, that quickstart Docker snippets use
+`BUNDLE` not `FLOW`, and forbids invalid CLI verbs (`walkeros serve`, standalone
+`walkeros simulate`) in getting-started docs.
+
+The rule: when you edit a pinned example, edit the Tier-1 `.ts` source and
+re-run the doc-lint. If the docs snippet must change too, update both so the
+lint passes.
+
 ### Validation Checklist
 
 Before publishing ANY code example:

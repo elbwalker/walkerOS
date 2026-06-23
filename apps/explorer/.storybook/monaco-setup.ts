@@ -29,3 +29,6 @@ self.MonacoEnvironment = {
 
 // Configure loader to use local Monaco instance (prevents CDN loading)
 loader.config({ monaco });
+
+// Expose the Monaco instance for dev-only Playwright checks (Storybook only).
+Object.assign(window, { monaco });

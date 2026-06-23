@@ -48,4 +48,73 @@ await startFlow({
   language="typescript"
 />
 
+## A page view needs no mapping
+
+The gtag destination snake-cases an `entity action` event name into a GA4 event
+name automatically, so `page view` arrives in GA4 as `page_view` with no mapping
+at all. An unmapped `product add` would arrive as `product_add` carrying only
+`send_to`, which is why the ecommerce event below needs an explicit mapping.
+
+## Add the ecommerce mapping
+
+Nest the mapping under the gtag destination to turn a `product add` event into
+the GA4 `add_to_cart` event. The product price becomes the GA4 `value`, the
+currency falls back to `EUR`, and the product is shaped into a GA4 `items` array
+via a `this` loop.
+
+<CodeSnippet
+  code={`mapping: {
+  product: {
+    add: {
+      name: 'add_to_cart',
+      data: {
+        map: {
+          value: 'data.price',
+          currency: { value: 'EUR', key: 'data.currency' },
+          items: {
+            loop: [
+              'this',
+              {
+                map: {
+                  item_id: 'data.id',
+                  item_name: 'data.name',
+                  quantity: { value: 1, key: 'data.quantity' },
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+Pushing a `product add` event:
+
+<CodeSnippet
+  code={`elb('product add', { id: 'ers', name: 'Everyday Ruck Snack', price: 420 });`}
+  language="typescript"
+/>
+
+produces the GA4 `add_to_cart` event:
+
+<CodeSnippet
+  code={`gtag('event', 'add_to_cart', {
+  value: 420,
+  currency: 'EUR',
+  items: [{ item_id: 'ers', item_name: 'Everyday Ruck Snack', quantity: 1 }],
+  send_to: 'G-XXXXXXXXXX',
+});`}
+  language="typescript"
+/>
+
+## Verify in GA4
+
+Copy your Measurement ID from GA4 > Admin > Data Streams and open your web
+stream. Watch Reports > Realtime to confirm the `page_view` event, then open
+Admin > DebugView to inspect the `add_to_cart` event and its parameters as they
+arrive.
+
 <Configuration type="destination" data={data} />

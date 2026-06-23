@@ -22,39 +22,27 @@ Install the collector package from npm:
 
 ## 2. Create basic setup
 
+Send your first event with a collector and a single console destination. This
+first snippet stays DOM-free so it runs in Node; the browser source for
+automatic DOM capture comes in the next step.
+
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
-import { sourceBrowser } from '@walkeros/web-source-browser';
 
-// Initialize walkerOS
-export async function initializeWalker(): Promise<void> {
-const { collector, elb } = await startFlow({
-sources: {
-browser: {
-  code: sourceBrowser,
-  config: {
-    settings: {
-      pageview: true,
-      session: true,
-      elb: 'elb', // Makes elb available as window.elb
+const { elb } = await startFlow({
+  destinations: {
+    console: {
+      code: {
+        type: 'console',
+        config: {},
+        push: (event) => console.log('Event:', event.name),
+      },
     },
   },
-},
-},
-destinations: {
-console: {
-  code: {
-    type: 'console',
-    config: {},
-    push: (event) => console.log('Event:', event),
-  },
-},
-},
 });
 
-// Make collector available globally
-window.walker = collector;
-}`}
+await elb('page view', { title: 'Home' });
+// -> logs: Event: page view`}
   language="javascript"
 />
 
@@ -69,43 +57,43 @@ import { destinationGtag } from '@walkeros/web-destination-gtag';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 export async function initializeWalker(): Promise<void> {
-const { collector, elb } = await startFlow({
-sources: {
-browser: {
-  code: sourceBrowser,
-  config: {
-    settings: {
-      pageview: true,
-      session: true,
-      elb: 'elb',
+  const { collector, elb } = await startFlow({
+    sources: {
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
+        },
+      },
     },
-  },
-},
-},
-destinations: {
-// Send events to your API
-api: {
-  code: destinationAPI,
-  config: {
-    settings: {
-      url: 'https://your-api.com/events',
-    },
-  },
-},
+    destinations: {
+      // Send events to your API
+      api: {
+        code: destinationAPI,
+        config: {
+          settings: {
+            url: 'https://your-api.com/events',
+          },
+        },
+      },
 
-// Send to Google Analytics 4
-ga4: {
-  code: destinationGtag,
-  config: {
-    settings: {
-      ga4: { measurementId: 'G-XXXXXXXXXX' },
+      // Send to Google Analytics 4
+      ga4: {
+        code: destinationGtag,
+        config: {
+          settings: {
+            ga4: { measurementId: 'G-XXXXXXXXXX' },
+          },
+        },
+      },
     },
-  },
-},
-},
-});
+  });
 
-window.walker = collector;
+  window.walker = collector;
 }`}
   language="javascript"
 />
@@ -116,70 +104,88 @@ Add consent requirements to your destinations:
 
 <CodeSnippet
   code={`export async function initializeWalker(): Promise<void> {
-const { collector, elb } = await startFlow({
-sources: {
-browser: {
-  code: sourceBrowser,
-  config: {
-    settings: {
-      pageview: true,
-      session: true,
-      elb: 'elb',
+  const { collector, elb } = await startFlow({
+    sources: {
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
+        },
+      },
     },
-  },
-},
-},
-destinations: {
-// API destination - requires functional consent
-api: {
-  code: destinationAPI,
-  config: {
-    settings: {
-      url: 'https://your-api.com/events',
+    destinations: {
+      // API destination - requires functional consent
+      api: {
+        code: destinationAPI,
+        config: {
+          settings: {
+            url: 'https://your-api.com/events',
+          },
+          consent: {
+            functional: true,
+          },
+        },
+      },
+
+      // GA4 - requires analytics consent
+      ga4: {
+        code: destinationGtag,
+        config: {
+          settings: {
+            ga4: { measurementId: 'G-XXXXXXXXXX' },
+          },
+          consent: {
+            analytics: true,
+          },
+        },
+      },
     },
-    consent: {
+  });
+
+  window.walker = collector;
+
+  // Set consent when user accepts/denies
+  // This would typically come from your consent banner
+  function handleConsentAccept() {
+    elb('walker consent', {
       functional: true,
-    },
-  },
-},
-
-// GA4 - requires analytics consent
-ga4: {
-  code: destinationGtag,
-  config: {
-    settings: {
-      ga4: { measurementId: 'G-XXXXXXXXXX' },
-    },
-    consent: {
       analytics: true,
-    },
-  },
-},
-},
-});
+      marketing: true,
+    });
+  }
 
-window.walker = collector;
-
-// Set consent when user accepts/denies
-// This would typically come from your consent banner
-function handleConsentAccept() {
-elb('walker consent', {
-functional: true,
-analytics: true,
-marketing: true,
-});
-}
-
-function handleConsentDeny() {
-elb('walker consent', {
-functional: true,
-analytics: false,
-marketing: false,
-});
-}
+  function handleConsentDeny() {
+    elb('walker consent', {
+      functional: true,
+      analytics: false,
+      marketing: false,
+    });
+  }
 }`}
   language="javascript"
 />
+
+## See your event
+
+Once you have a `flow.json` with `config.platform` set (the Bundled-mode flows
+above), run the event through the flow offline with the named destination
+mocked:
+
+<CodeSnippet
+  code={`npx walkeros push flow.json \\
+  -e '{"name":"page view"}' \\
+  --simulate destination.console`}
+  language="bash"
+/>
+
+`push --simulate` builds the flow, runs the event through it with
+`destination.console` replaced by a mock, and prints the resolved outcome
+(`success` and `Duration`); add `--json` to get the same result as JSON.
+Nothing is sent to a vendor. Event names use a space (`page view`).
 
 ## Next steps
 

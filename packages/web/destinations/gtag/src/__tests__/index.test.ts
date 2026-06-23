@@ -1,6 +1,6 @@
 import { destinationGtag, resetConsentState } from '../index';
 import { examples } from '../dev';
-import type { Settings, Rule } from '../types';
+import type { Settings, Rule, Env } from '../types';
 import { type Collector } from '@walkeros/core';
 import {
   clone,
@@ -866,6 +866,132 @@ describe('Unified Gtag Destination', () => {
           expect.any(String),
           expect.any(Object),
         );
+      });
+    });
+  });
+
+  describe('Consent default ordering', () => {
+    let orderEnv: Env;
+    let gtag: jest.Mock;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      resetConsentState();
+      gtag = jest.fn();
+      // examples.env.init is typed `Env | undefined`; clone the non-optional
+      // push env and install our own gtag mock so `orderEnv` stays `Env` with
+      // no cast. initializeGtag() leaves an existing gtag untouched.
+      orderEnv = clone(examples.env.push);
+      orderEnv.window.gtag = gtag;
+    });
+
+    it('emits consent default (denied) before tool init when config.consent is set', () => {
+      const calls: string[] = [];
+      gtag.mockImplementation((...args: unknown[]) => {
+        if (args[0] === 'consent' && args[1] === 'default')
+          calls.push('default');
+      });
+      (initGA4 as jest.Mock).mockImplementation(() => calls.push('initGA4'));
+
+      const config = {
+        consent: { marketing: true },
+        settings: { ga4: { measurementId: 'G-X' } },
+      };
+
+      destinationGtag.init!({
+        id: contextId,
+        config,
+        env: orderEnv,
+        collector: mockCollector,
+        logger: createThrowingLogger(),
+      });
+
+      expect(calls).toEqual(['default', 'initGA4']);
+      expect(gtag).toHaveBeenCalledWith('consent', 'default', {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied',
+      });
+    });
+
+    it('does NOT emit a default when there is no consent signal', () => {
+      const config = { settings: { ga4: { measurementId: 'G-X' } } };
+
+      destinationGtag.init!({
+        id: contextId,
+        config,
+        env: orderEnv,
+        collector: mockCollector,
+        logger: createThrowingLogger(),
+      });
+
+      expect(gtag).not.toHaveBeenCalledWith(
+        'consent',
+        'default',
+        expect.anything(),
+      );
+    });
+
+    it('adds wait_for_update in advanced mode', () => {
+      const config = {
+        settings: { como_advanced: true, ga4: { measurementId: 'G-X' } },
+      };
+
+      destinationGtag.init!({
+        id: contextId,
+        config,
+        env: orderEnv,
+        collector: mockCollector,
+        logger: createThrowingLogger(),
+      });
+
+      expect(gtag).toHaveBeenCalledWith(
+        'consent',
+        'default',
+        expect.objectContaining({ wait_for_update: 500, ad_storage: 'denied' }),
+      );
+    });
+
+    it('does NOT emit a default when como_advanced is false and no config.consent', () => {
+      const config = {
+        settings: { como_advanced: false, ga4: { measurementId: 'G-X' } },
+      };
+
+      destinationGtag.init!({
+        id: contextId,
+        config,
+        env: orderEnv,
+        collector: mockCollector,
+        logger: createThrowingLogger(),
+      });
+
+      expect(gtag).not.toHaveBeenCalledWith(
+        'consent',
+        'default',
+        expect.anything(),
+      );
+    });
+
+    it('emits the custom como mapping as the denied default', () => {
+      const config = {
+        consent: { marketing: true },
+        settings: {
+          como: { marketing: 'ad_storage' },
+          ga4: { measurementId: 'G-X' },
+        },
+      };
+
+      destinationGtag.init!({
+        id: contextId,
+        config,
+        env: orderEnv,
+        collector: mockCollector,
+        logger: createThrowingLogger(),
+      });
+
+      expect(gtag).toHaveBeenCalledWith('consent', 'default', {
+        ad_storage: 'denied',
       });
     });
   });
