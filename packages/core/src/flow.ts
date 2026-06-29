@@ -127,7 +127,10 @@ export type FlowConfigResolver = (flowName: string) => unknown;
  *   (object, array, number, boolean, string). Inline interpolation requires a
  *   scalar (string/number/boolean) and throws on objects/arrays. Resolution is
  *   recursive (variables may reference other variables) with cycle detection.
- * - $env.NAME or $env.NAME:default → Look up process.env[NAME]
+ * - $env.NAME or $env.NAME:default → Look up process.env[NAME] (non-secret config)
+ * - $secret.NAME → Managed secret. In deferred (server) mode emits a marker the
+ *   bundler turns into a runtime process.env read; the deploy pipeline injects
+ *   the secret value. Throws in non-deferred (web) mode. Use for credentials.
  * - $contract.name(.path)? → Resolved contract value (when contracts available)
  * - $flow.name(.path)? → Sibling flow's resolved {@link Flow.Config} (when resolver available)
  *

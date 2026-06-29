@@ -70,7 +70,7 @@ export const ConfigSchema = z
         id: 'DestinationCredentials',
         title: 'Destination.Credentials',
         description:
-          'Optional credentials slot (destination-defined shape); supports $env. The per-package shape is supplied via mergeConfigSchema.',
+          'Optional credentials slot (destination-defined shape); back it with a managed secret via $secret.NAME (credentials use $secret, not $env). The per-package shape is supplied via mergeConfigSchema.',
       })
       .describe('Optional credentials (destination-defined shape)')
       .optional(),

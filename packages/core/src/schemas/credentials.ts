@@ -33,8 +33,8 @@ export const ServiceAccountSchema = z
   .describe('Google-style service account credentials');
 
 /**
- * Credentials - either a JSON string (often a `$env` reference) or a parsed
- * service account object.
+ * Credentials - either a JSON string (often a `$secret.NAME` reference to a
+ * managed secret) or a parsed service account object.
  */
 export const CredentialsSchema = z
   .union([z.string(), ServiceAccountSchema])
@@ -42,10 +42,10 @@ export const CredentialsSchema = z
     id: 'Credentials',
     title: 'Credentials',
     description:
-      'Service account credentials: a JSON string (often $env) or a parsed service account object.',
+      'Service account credentials: a JSON string (back it with a managed secret via $secret.NAME) or a parsed service account object.',
   })
   .describe(
-    'Service account credentials: a JSON string (often $env) or a parsed object',
+    'Service account credentials: a JSON string (back it with a managed secret via $secret.NAME) or a parsed object',
   );
 
 export const credentialsJsonSchema = toJsonSchema(

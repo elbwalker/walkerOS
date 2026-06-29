@@ -133,9 +133,10 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: 'secret_manage',
     title: 'Secret Management',
     description:
-      'Manage a flow’s secrets (the $env.<NAME> values its steps reference at deploy/run time). ' +
+      'Manage a flow’s managed secrets (the $secret.<NAME> values its steps reference at deploy/run time). ' +
       'Actions: list (metadata only), set (create), update (rotate value), delete. ' +
-      'Secrets are write-mostly: values are encrypted at rest and are NEVER returned, listed, or echoed.',
+      'Secrets are write-mostly: values are encrypted at rest and are NEVER returned, listed, or echoed. ' +
+      'Reference a secret from a flow step as $secret.<NAME> (credentials, tokens, and private keys use $secret, not $env).',
     inputSchema: {
       action: z.enum(['list', 'set', 'update', 'delete']),
       projectId: z.string().optional(),

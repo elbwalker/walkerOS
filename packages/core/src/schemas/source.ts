@@ -128,7 +128,7 @@ export const ConfigSchema = MappingConfigSchema.extend({
       id: 'SourceCredentials',
       title: 'Source.Credentials',
       description:
-        'Optional credentials slot (source-defined shape); supports $env. The per-package shape is supplied via mergeConfigSchema.',
+        'Optional credentials slot (source-defined shape); back it with a managed secret via $secret.NAME (credentials use $secret, not $env). The per-package shape is supplied via mergeConfigSchema.',
     })
     .describe('Optional credentials (source-defined shape)')
     .optional(),

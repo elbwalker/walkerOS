@@ -17,10 +17,11 @@ import {
 
 const TITLE = 'Secret Management';
 const DESCRIPTION =
-  'Manage a flow’s secrets (the $env.<NAME> values its steps reference at deploy/run time). ' +
+  'Manage a flow’s managed secrets (the $secret.<NAME> values its steps reference at deploy/run time). ' +
   'Actions: list (metadata only), set (create), update (rotate value), delete. ' +
   'Secrets are write-mostly: values are encrypted at rest and are NEVER returned, listed, or echoed. ' +
-  'Reference a secret from a flow step as $env.<NAME>.';
+  'Reference a secret from a flow step as $secret.<NAME>. Credentials, tokens, and private keys must use $secret, not $env: ' +
+  'the deploy pipeline only injects values referenced as $secret.<NAME> into the server runner. Server flows only.';
 
 const inputSchema = {
   action: z
@@ -45,7 +46,7 @@ const inputSchema = {
     )
     .optional()
     .describe(
-      'Secret name (UPPER_SNAKE_CASE). Required for set. Referenced in flows as $env.<NAME>.',
+      'Secret name (UPPER_SNAKE_CASE). Required for set. Referenced in flows as $secret.<NAME>.',
     ),
   value: z
     .string()
@@ -112,7 +113,7 @@ async function secretManageHandlerBody(client: ToolClient, input: unknown) {
         });
         return mcpResult(data as Record<string, unknown>, {
           next: [
-            'Reference a listed secret from a flow step as $env.<NAME>.',
+            'Reference a listed secret from a flow step as $secret.<NAME>.',
             'Use action "set" to add a secret or "update" to rotate one.',
           ],
         });
@@ -130,7 +131,7 @@ async function secretManageHandlerBody(client: ToolClient, input: unknown) {
         });
         // Response is metadata only; value is never echoed back.
         return mcpResult(created as Record<string, unknown>, {
-          next: [`Reference it in this flow as $env.${name}.`],
+          next: [`Reference it in this flow as $secret.${name}.`],
         });
       }
 

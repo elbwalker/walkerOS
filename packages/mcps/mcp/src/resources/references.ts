@@ -124,7 +124,7 @@ export function registerReferenceResources(server: McpServer) {
                 '$var.name.deep.path':
                   'Deep-path access into a structured variable. Walks nested keys/indices. Whole-string preserves type at the leaf; inline still requires a scalar leaf.',
                 '$env.NAME':
-                  'Environment variable. $env.GA_ID reads process.env.GA_ID.',
+                  'Environment variable, resolved at bundle/deploy time. $env.GA_ID reads process.env.GA_ID. Use for non-secret config (IDs, hostnames, regions), never for credentials.',
                 '$env.NAME:default':
                   'Environment variable with fallback. $env.GA_ID:G-DEFAULT (the `:` is the literal default separator).',
                 '$contract.name':
@@ -136,7 +136,7 @@ export function registerReferenceResources(server: McpServer) {
                 '$store.storeId':
                   'Store injection in env values. Wires runtime store access.',
                 '$secret.NAME':
-                  'Secret injection. Resolved server-side at deploy/runtime.',
+                  'Managed secret injection (created via the secret manager). The deploy pipeline detects $secret.NAME references and injects the secret value into the server runner’s environment at runtime. Use for credentials, tokens, and private keys. Server flows only; $env does NOT inject managed secrets.',
               },
               cascade: {
                 priority: [
