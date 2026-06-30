@@ -1,25 +1,27 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import type { WalkerOS, Collector, Elb } from '@walkeros/core';
+import type { Collector, Elb } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
-import { destinationAPI } from '@walkeros/web-destination-api';
 
 declare global {
   interface Window {
     alst: Elb.Fn;
-    alstCollector: Collector.Instance;
     elb: Elb.Fn;
     walkerjs: Collector.Instance;
   }
 }
+
+// Hosted analytics bundle (self-initializing IIFE that exposes window.alst).
+const ANALYTICS_BUNDLE_SRC = 'https://cdn.walkeros.io/d/x1fsqqucg526/walker.js';
+let analyticsScriptInjected = false;
 
 export const DataCollection = () => {
   const location = useLocation();
 
   useEffect(() => {
     const init = async () => {
-      // Setup demo walkerjs using new collector pattern
+      // Setup demo walkerOS flow
       if (!window.walkerjs) {
         const { collector, elb } = await startFlow({
           sources: {
@@ -28,13 +30,7 @@ export const DataCollection = () => {
               config: {
                 settings: {
                   pageview: false,
-                  prefix: 'data-elb',
-                  elb: 'elb',
                 },
-              },
-              env: {
-                window,
-                document,
               },
             },
           },
@@ -49,56 +45,15 @@ export const DataCollection = () => {
         window.elb('walker run');
       }
 
-      // Setup internal analytics collector
-      if (!window.alstCollector) {
-        const { collector, elb } = await startFlow({
-          sources: {
-            browser: {
-              code: sourceBrowser,
-              config: {
-                settings: {
-                  pageview: true,
-                  prefix: 'data-alst',
-                  elb: 'alst',
-                },
-              },
-              env: {
-                window,
-                document,
-              },
-            },
-          },
-          destinations: {
-            lama: {
-              code: destinationAPI,
-              config: {
-                settings: {
-                  url: 'https://moin.p.elbwalkerapis.com/lama',
-                  transform: (event: WalkerOS.Event) => {
-                    return JSON.stringify({
-                      ...event,
-                      projectId: 'RQGM6XJ',
-                    });
-                  },
-                  transport: 'xhr',
-                },
-              },
-            },
-            api: {
-              code: destinationAPI,
-              config: {
-                settings: {
-                  url: 'https://europe-west1-walkeros-firebase-stack.cloudfunctions.net/ingest',
-                  transport: 'beacon',
-                },
-              },
-            },
-          },
-        });
-        window.alst = elb;
-        window.alstCollector = collector;
-      } else {
-        // new page load
+      // Load hosted analytics bundle (self-initializing IIFE).
+      if (!analyticsScriptInjected) {
+        analyticsScriptInjected = true;
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = ANALYTICS_BUNDLE_SRC;
+        document.head.appendChild(script);
+      } else if (typeof window.alst === 'function') {
+        // new page load - re-scan the DOM for the new page
         window.alst('walker run');
       }
     };
