@@ -1,6 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Walker } from '@walkeros/web-core';
-import type { Scope, Settings, Context } from './types';
+import type { Scope, Settings, Context, ScopeState } from './types';
 import { throttle, tryCatch } from '@walkeros/core';
 import { Const, onApply } from '@walkeros/collector';
 import { elb as elbOrg, getAttribute } from '@walkeros/web-core';
@@ -15,37 +15,59 @@ import {
   initVisibilityTracking,
   triggerVisible,
   destroyVisibilityTracking,
+  unobserveElement,
 } from './triggerVisible';
 import { translateToCoreCollector } from './translation';
 
 // Module-level state is intentional. The walker.js browser source is
-// single-instance per window: one elb queue, one set of DOM listeners,
-// one scroll tracker. The state below is shared across all callers
-// because there is only ever one caller. If multi-instance ever becomes
-// a real requirement (e.g., micro-frontends with isolated walker queues),
-// refactor this into a per-instance closure returned by createSource()
-// and route every trigger function through that closure.
-let scrollElements: Walker.ScrollElements = [];
-let scrollListener: EventListenerOrEventListenerObject | undefined;
-let globalAbortController: AbortController | undefined;
-let pulseIntervals: ReturnType<typeof setInterval>[] = [];
-let waitTimeouts: ReturnType<typeof setTimeout>[] = [];
+// single-instance per window: one elb queue, one set of DOM listeners.
+// If multi-instance ever becomes a real requirement (e.g., micro-frontends
+// with isolated walker queues), refactor this into a per-instance closure
+// returned by createSource() and route every trigger function through it.
+//
+// Root click/submit delegation lives on an instance-level controller, aborted
+// only by destroyTriggers (or re-arming initGlobalTrigger). It is deliberately
+// SEPARATE from the per-scope controllers below: a sub-scope re-init must
+// never tear down page-wide click/submit.
+let rootAbortController: AbortController | undefined;
 
-// Listeners registered before initTriggers (or after destroyTriggers) would
-// otherwise miss the AbortController and never be removed on teardown. This
-// helper guarantees every listener gets a signal from the current session's
-// controller, lazily creating one when needed.
-function ensureAbortController(): AbortController {
-  if (!globalAbortController) {
-    globalAbortController = new AbortController();
+// Iterable on purpose: destroyTriggers must enumerate every active scope to
+// reach sub-scope intervals/observers (a WeakMap could not back full teardown).
+// Note: this holds strong references to init'd scope nodes (including detached
+// DOM elements). A node init'd via `walker init <el>` and later removed from
+// the DOM without a re-init or source destroy is retained until re-init
+// replaces its entry or destroyTriggers clears the Map. Bounded by the
+// source/page session and accepted per plan §4.
+const scopeStates = new Map<Document | Element, ScopeState>();
+
+// Tear down a scope's prior state (if any), then install a fresh empty bucket.
+function resetScope(scope: Document | Element): ScopeState {
+  const previous = scopeStates.get(scope);
+  if (previous) {
+    previous.abort.abort(); // removes hover + scroll listeners
+    previous.intervalIds.forEach((id) => clearInterval(id));
+    previous.timeoutIds.forEach((id) => clearTimeout(id));
+    // Drop this scope's elements from the shared per-document observer.
+    previous.observed.forEach((element) => unobserveElement(scope, element));
   }
-  return globalAbortController;
+
+  const fresh: ScopeState = {
+    abort: new AbortController(),
+    intervalIds: [],
+    timeoutIds: [],
+    scrollElements: [],
+    observed: new Set(),
+  };
+  scopeStates.set(scope, fresh);
+  return fresh;
 }
 
-// Reset function for testing
+// Reset function for testing: clears each active scope's scroll state.
 export function resetScrollListener() {
-  scrollListener = undefined;
-  scrollElements = [];
+  scopeStates.forEach((state) => {
+    state.scrollElements = [];
+    state.scrollListener = undefined;
+  });
 }
 
 export const createElb: (customLayer?: unknown) => unknown = (customLayer?) => {
@@ -112,10 +134,11 @@ export function initGlobalTrigger(context: Context, settings: Settings): void {
 
   if (!scope) return;
 
-  // Abort any previously registered listeners before re-registering
-  if (globalAbortController) globalAbortController.abort();
-  globalAbortController = new AbortController();
-  const { signal } = globalAbortController;
+  // Abort any previously registered root listeners before re-registering.
+  // This controller owns ONLY the root click/submit delegation.
+  if (rootAbortController) rootAbortController.abort();
+  rootAbortController = new AbortController();
+  const { signal } = rootAbortController;
 
   scope.addEventListener(
     'click',
@@ -133,52 +156,63 @@ export function initGlobalTrigger(context: Context, settings: Settings): void {
   );
 }
 
-// Removes all listeners registered via the global AbortController and
-// resets module-level scroll state. Safe to call before any init.
-export function destroyTriggers(settings: Settings): void {
-  if (globalAbortController) {
-    globalAbortController.abort();
-    globalAbortController = undefined;
+// Full teardown: aborts the root click/submit controller, then enumerates the
+// scope registry so EVERY active scope (document and sub-scopes alike) has its
+// hover/scroll listeners aborted, intervals/timeouts cleared, and shared
+// per-document observer disconnected. Safe to call before any init.
+export function destroyTriggers(_settings?: Settings): void {
+  if (rootAbortController) {
+    rootAbortController.abort();
+    rootAbortController = undefined;
   }
-  scrollListener = undefined;
-  scrollElements = [];
-  pulseIntervals.forEach((id) => clearInterval(id));
-  pulseIntervals = [];
-  waitTimeouts.forEach((id) => clearTimeout(id));
-  waitTimeouts = [];
+
+  scopeStates.forEach((state, scope) => {
+    state.abort.abort();
+    state.intervalIds.forEach((id) => clearInterval(id));
+    state.timeoutIds.forEach((id) => clearTimeout(id));
+    // Normalizes to the owner document and disconnects the shared observer;
+    // the second call for a same-document sub-scope is a harmless no-op.
+    destroyVisibilityTracking(scope);
+  });
+
+  scopeStates.clear();
 }
 
-export function initScopeTrigger(context: Context, settings: Settings) {
-  const elem = settings.scope;
-
-  // Reset all scroll events @TODO check if it's right here
-  scrollElements = [];
-
-  // Clean up any existing visibility tracking to prevent observer accumulation
-  const scope = elem;
+// Scope is the single carrier: it lives only in context.settings.scope. The
+// optional second argument is kept for signature compatibility (the Context
+// `initScope` slot calls this with a single, scope-aligned context) but is not
+// read. `walker init <el>` and `walker run` (document) are the same path,
+// differing only in the scope the carrier holds. Re-running on a scope tears
+// down that scope's prior state, then attaches fresh = one fresh init.
+export function initScopeTrigger(context: Context, _settings?: Settings) {
+  const scope = context.settings.scope;
   if (!scope) return;
-  destroyVisibilityTracking(scope);
-  // Initialize visibility tracking for this scope
+
+  const bucket = resetScope(scope);
+
+  // Idempotent "ensure" of the per-document observer (one per ownerDocument).
+  // Never disconnect on a sub-scope re-init — resetScope already unobserved
+  // this scope's elements above.
   initVisibilityTracking(scope, 1000);
 
   // default data-elbaction
   const selectorAction = getElbAttributeName(
-    settings.prefix,
+    context.settings.prefix,
     Const.Commands.Action,
     false,
   );
   const doc = (scope as Element).ownerDocument || (scope as Document);
   if (scope !== doc) {
     // Handle the elements action(s), too
-    handleActionElem(context, scope as HTMLElement, selectorAction, settings);
+    handleActionElem(context, scope as HTMLElement, selectorAction, bucket);
   }
 
   // Handle all children action(s)
   queryAllComposed(scope, `[${selectorAction}]`, (elem) => {
-    handleActionElem(context, elem as HTMLElement, selectorAction, settings);
+    handleActionElem(context, elem as HTMLElement, selectorAction, bucket);
   });
 
-  if (scrollElements.length) scroll(context, scope, settings);
+  if (bucket.scrollElements.length) scroll(context, scope, bucket);
 }
 
 export async function handleTrigger(
@@ -203,7 +237,7 @@ function handleActionElem(
   context: Context,
   elem: HTMLElement,
   selectorAction: string,
-  settings: Settings,
+  bucket: ScopeState,
 ) {
   const actionAttr = getAttribute(elem, selectorAction);
 
@@ -216,25 +250,27 @@ function handleActionElem(
       // TriggerAction ({ trigger, triggerParams, action, actionParams })
       switch (triggerAction.trigger) {
         case Triggers.Hover:
-          triggerHover(context, elem);
+          triggerHover(context, elem, bucket);
           break;
         case Triggers.Load:
           triggerLoad(context, elem);
           break;
         case Triggers.Pulse:
-          triggerPulse(context, elem, triggerAction.triggerParams);
+          triggerPulse(context, elem, bucket, triggerAction.triggerParams);
           break;
         case Triggers.Scroll:
-          triggerScroll(elem, triggerAction.triggerParams);
+          triggerScroll(elem, bucket, triggerAction.triggerParams);
           break;
         case Triggers.Impression:
           triggerVisible(context, elem);
+          bucket.observed.add(elem);
           break;
         case Triggers.Visible:
           triggerVisible(context, elem, { multiple: true });
+          bucket.observed.add(elem);
           break;
         case Triggers.Wait:
-          triggerWait(context, elem, triggerAction.triggerParams);
+          triggerWait(context, elem, bucket, triggerAction.triggerParams);
           break;
       }
     }),
@@ -259,14 +295,14 @@ function triggerClick(context: Context, ev: MouseEvent) {
   if (target) handleTrigger(context, target, Triggers.Click);
 }
 
-function triggerHover(context: Context, elem: HTMLElement) {
+function triggerHover(context: Context, elem: HTMLElement, bucket: ScopeState) {
   elem.addEventListener(
     'mouseenter',
     tryCatch(function (this: Document, ev: MouseEvent) {
       const target = getComposedTarget(ev);
       if (target) handleTrigger(context, target, Triggers.Hover);
     }),
-    { signal: ensureAbortController().signal },
+    { signal: bucket.abort.signal },
   );
 }
 
@@ -277,6 +313,7 @@ function triggerLoad(context: Context, elem: HTMLElement) {
 function triggerPulse(
   context: Context,
   elem: HTMLElement,
+  bucket: ScopeState,
   triggerParams: string = '',
 ) {
   const doc = elem.ownerDocument;
@@ -287,17 +324,21 @@ function triggerPulse(
     },
     parseInt(triggerParams || '') || 15000,
   );
-  pulseIntervals.push(intervalId);
+  bucket.intervalIds.push(intervalId);
 }
 
-function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
+function triggerScroll(
+  elem: HTMLElement,
+  bucket: ScopeState,
+  triggerParams: string = '',
+) {
   // Scroll depth in percent, default 50%
   const depth = parseInt(triggerParams || '') || 50;
 
   // Ignore invalid parameters
   if (depth < 0 || depth > 100) return;
 
-  scrollElements.push([elem, depth]);
+  bucket.scrollElements.push([elem, depth]);
 }
 
 function triggerSubmit(context: Context, ev: SubmitEvent) {
@@ -308,16 +349,17 @@ function triggerSubmit(context: Context, ev: SubmitEvent) {
 function triggerWait(
   context: Context,
   elem: HTMLElement,
+  bucket: ScopeState,
   triggerParams: string = '',
 ) {
   const timeoutId = setTimeout(
     () => handleTrigger(context, elem, Triggers.Wait),
     parseInt(triggerParams || '') || 15000,
   );
-  waitTimeouts.push(timeoutId);
+  bucket.timeoutIds.push(timeoutId);
 }
 
-function scroll(context: Context, scope: Scope, settings: Settings) {
+function scroll(context: Context, scope: Scope, bucket: ScopeState) {
   const doc = (scope as Element).ownerDocument || (scope as Document);
   const win = doc.defaultView!;
   const scrolling = (
@@ -356,14 +398,19 @@ function scroll(context: Context, scope: Scope, settings: Settings) {
     });
   };
 
-  // Don't add unnecessary scroll listeners
-  if (!scrollListener) {
-    scrollListener = throttle(function () {
-      scrollElements = scrolling.call(scope, scrollElements, context);
+  // Don't add unnecessary scroll listeners. The bucket is fresh per init, so
+  // the scope's prior scroll listener was already aborted via its controller.
+  if (!bucket.scrollListener) {
+    bucket.scrollListener = throttle(function () {
+      bucket.scrollElements = scrolling.call(
+        scope,
+        bucket.scrollElements,
+        context,
+      );
     });
 
-    scope.addEventListener('scroll', scrollListener, {
-      signal: ensureAbortController().signal,
+    scope.addEventListener('scroll', bucket.scrollListener, {
+      signal: bucket.abort.signal,
     });
   }
 }

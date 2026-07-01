@@ -27,8 +27,21 @@ interface VisibilityState {
   >;
 }
 
-// Module-level visibility state keyed by document/scope
+// Module-level visibility state keyed by the owner document. Both an element
+// sub-scope and its document normalize to the same key (see getScopeKey), so
+// there is exactly one IntersectionObserver per document: create-key and
+// lookup-key can never diverge, and iframes still get their own observer.
 const visibilityStates = new WeakMap<Document | Element, VisibilityState>();
+
+/**
+ * Normalize any scope (document or element) to its owner document. The
+ * IntersectionObserver root is always the viewport, so per-sub-scope observers
+ * would be meaningless; keying by ownerDocument gives one shared observer per
+ * document and keeps the create/lookup keys aligned.
+ */
+export function getScopeKey(scope: Document | Element): Document | Element {
+  return (scope as Element).ownerDocument || (scope as Document);
+}
 
 /**
  * Cached visibility check to reduce expensive isVisible() calls
@@ -58,12 +71,16 @@ export function unobserveElement(
   scope: Document | Element,
   element: HTMLElement,
 ): void {
-  const state = visibilityStates.get(scope);
+  const state = visibilityStates.get(getScopeKey(scope));
   if (!state) return;
 
   if (state.observer) {
     state.observer.unobserve(element);
   }
+
+  // Drop the element's config so a re-init or teardown leaves no stale config
+  // behind (read back in handleIntersection).
+  state.elementConfigs?.delete(element);
 
   // Clear timer
   const timer = state.timers.get(element);
@@ -112,7 +129,7 @@ function handleIntersection(
   entry: IntersectionObserverEntry,
 ): void {
   const target = entry.target as HTMLElement;
-  const state = visibilityStates.get(scope);
+  const state = visibilityStates.get(getScopeKey(scope));
 
   if (!state) return;
 
@@ -203,10 +220,11 @@ export function initVisibilityTracking(
   scope: Document | Element,
   duration = 1000,
 ): void {
-  if (visibilityStates.has(scope)) return; // Already initialized
+  const key = getScopeKey(scope);
+  if (visibilityStates.has(key)) return; // Already initialized for this document
 
-  visibilityStates.set(scope, {
-    observer: createObserver(scope),
+  visibilityStates.set(key, {
+    observer: createObserver(key),
     timers: new WeakMap(),
     duration,
   });
@@ -222,7 +240,7 @@ export function triggerVisible(
 ): void {
   const scope = context.settings.scope;
   if (!scope) return;
-  const state = visibilityStates.get(scope);
+  const state = visibilityStates.get(getScopeKey(scope));
 
   if (state?.observer && element) {
     // Store element config for later use in intersection handling
@@ -245,12 +263,13 @@ export function triggerVisible(
 export function destroyVisibilityTracking(scope?: Document | Element): void {
   if (!scope) return; // No scope provided, nothing to clean up
 
-  const state = visibilityStates.get(scope);
+  const key = getScopeKey(scope);
+  const state = visibilityStates.get(key);
   if (!state) return;
 
   if (state.observer) {
     state.observer.disconnect();
   }
 
-  visibilityStates.delete(scope);
+  visibilityStates.delete(key);
 }

@@ -34,7 +34,10 @@ export function translateToCoreCollector(
     if (eventOrCommand === 'walker init' && context.initScope) {
       const scopes = normalizeInitScopes(data, settings);
       for (const scope of scopes) {
-        context.initScope(context, { ...settings, scope });
+        // Scope is a single carrier: build a scope-aligned context so the
+        // trigger pipeline reads the new scope from context.settings.scope
+        // everywhere (no diverging positional scope param).
+        context.initScope({ ...context, settings: { ...settings, scope } });
       }
       return Promise.resolve(createPushResult({ ok: true }));
     }

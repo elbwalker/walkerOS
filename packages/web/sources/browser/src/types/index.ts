@@ -1,4 +1,5 @@
 import type { Source, Elb } from '@walkeros/core';
+import type { Walker } from '@walkeros/web-core';
 import type { SettingsSchema } from '../schemas';
 import type { z } from '@walkeros/core/dev';
 
@@ -53,7 +54,9 @@ export type Config = Source.Config<Types>;
 export interface Context {
   elb: Elb.Fn;
   settings: Settings;
-  initScope?: (context: Context, settings: Settings) => void;
+  // Scope travels in context.settings.scope; the implementation reads it from
+  // there. Called with a single, scope-aligned context for `walker init`.
+  initScope?: (context: Context) => void;
 }
 
 // ELB Layer types for async command handling
@@ -64,3 +67,16 @@ export interface ELBLayerConfig {
 
 // Scope type for DOM operations
 export type Scope = Document | Element;
+
+// Everything a single scope's init installs, bucketed so a re-init can tear the
+// scope's prior state down before attaching fresh. Keyed by the scope node, so
+// `walker run` (document) and `walker init <el>` (element) own independent
+// buckets that never reach into each other.
+export interface ScopeState {
+  abort: AbortController; // this scope's hover + scroll listeners
+  intervalIds: ReturnType<typeof setInterval>[]; // pulse
+  timeoutIds: ReturnType<typeof setTimeout>[]; // wait
+  scrollElements: Walker.ScrollElements; // this scope's scroll targets
+  scrollListener?: EventListenerOrEventListenerObject;
+  observed: Set<HTMLElement>; // elements registered on the shared per-doc observer
+}

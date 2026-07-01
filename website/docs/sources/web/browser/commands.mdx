@@ -148,6 +148,9 @@ elb('walker init', [element1, element2]); // Multiple elements`}
 This command is essential for Single Page Applications (SPAs) where content is
 added dynamically after the initial page load.
 
+Re-initializing a scope clears and rebuilds that scope's `pulse`, `wait`,
+`hover`, `scroll`, `visible`, and `impression` triggers. The `load` trigger fires (again) on each call.
+
 <CodeSnippet
   code={`// After loading new products via AJAX
 const productList = document.getElementById('product-list');
