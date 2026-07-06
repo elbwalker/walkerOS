@@ -24,6 +24,8 @@ single destination configuration. Loads gtag script dynamically, initializes
 the gtag function with your config, handles Consent Mode v2 commands
 automatically, and pushes mapped events to Google services.
 
+Consent Mode is on by default via `como` (set `como: false` to disable it). When the destination declares a consent signal (`config.consent` or `como_advanced`), the denied `consent default` is emitted before `config`, as Consent Mode v2 requires. Set `como_advanced: true` (or a number of milliseconds) to opt into advanced mode, emitting the denied default at page load with `wait_for_update`, for non-EU setups.
+
 <WhereThisFits
   pre={<>Gtag is a <strong>destination</strong> in the walkerOS flow:</>}
   flowMap={{

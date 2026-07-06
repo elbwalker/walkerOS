@@ -343,7 +343,7 @@ The dedicated `@walkeros/store-memory` package was deleted once the built-in
 `flow_validate` rejects `package: "@walkeros/store-memory"` and points at the
 replacement.
 
-## Related skills
+## Related Skills
 
 - [walkeros-understanding-stores](../walkeros-understanding-stores/SKILL.md) -
   Store interface, `$store.` wiring, lifecycle

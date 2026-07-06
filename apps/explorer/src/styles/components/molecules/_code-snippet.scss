@@ -1,12 +1,16 @@
 @use '../../theme/tokens' as *;
 
-// CodeSnippet wraps CodeBox with prominent styling for code snippets
-// Uses larger font size (via fontSize prop), generous padding, and minimal min-height
+// CodeSnippet renders the static Shiki path (CodeView without a header) with
+// prominent styling for read-only code snippets: a slightly larger font and a
+// minimal min-height.
 .elb-code-snippet {
   min-height: var(--height-snippet-min);
 
-  // Add generous padding to content area
-  .elb-explorer-content {
-    padding: var(--spacing-snippet);
+  // Snippets read a touch larger than the default code view. The nested
+  // selector (0,2,0) outranks `.elb-code-static` (0,1,0) in _code-static.scss,
+  // and the `pre`/`code` there use `font-size: inherit !important`, so they
+  // pick this 15px up by inheritance.
+  .elb-code-static {
+    font-size: 15px;
   }
 }

@@ -1,0 +1,349 @@
+{
+  "$generated": "Generated file. Do not edit by hand. Regenerate via: npm run generate:skills-index",
+  "version": "0.2.0",
+  "count": 22,
+  "skills": [
+    {
+      "name": "walkeros-create-cmp-source",
+      "description": "Use when creating a new walkerOS CMP (consent management platform) source. Structured fill-in-the-blanks workflow that turns any CMP's consent API into a walkerOS source package. Covers CookieFirst, Usercentrics, CookiePro/OneTrust patterns and generalizes to any CMP.",
+      "category": "create",
+      "path": "skills/walkeros-create-cmp-source/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-create-cmp-source",
+      "resources": [
+        "TESTING.md",
+        "examples/env.ts",
+        "examples/index.ts",
+        "examples/inputs.ts",
+        "examples/outputs.ts",
+        "templates/cmp/index.test.ts",
+        "templates/cmp/index.ts",
+        "templates/cmp/test-utils.ts",
+        "templates/cmp/types.ts"
+      ],
+      "related": [
+        "walkeros-create-source",
+        "walkeros-testing-strategy",
+        "walkeros-understanding-flow",
+        "walkeros-understanding-sources",
+        "walkeros-writing-documentation"
+      ]
+    },
+    {
+      "name": "walkeros-create-destination",
+      "description": "Use when creating a new walkerOS destination to send events to a vendor or API (GA4/gtag, Meta/Facebook Pixel, Mixpanel, Amplitude, a custom HTTP API, Measurement Protocol), web or server-side. Example-driven workflow: research the vendor SDK and define step examples before implementing the destination interface, env pattern, and mappings.",
+      "category": "create",
+      "path": "skills/walkeros-create-destination/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-create-destination",
+      "resources": [
+        "TESTING.md",
+        "examples/env.ts",
+        "examples/events.ts",
+        "examples/index.ts",
+        "examples/mapping.ts",
+        "examples/outputs.ts",
+        "templates/simple/index.test.ts",
+        "templates/simple/index.ts",
+        "templates/simple/types.ts"
+      ],
+      "related": [
+        "walkeros-testing-strategy",
+        "walkeros-understanding-destinations",
+        "walkeros-understanding-flow",
+        "walkeros-understanding-mapping",
+        "walkeros-understanding-transformers",
+        "walkeros-using-step-examples",
+        "walkeros-writing-documentation"
+      ]
+    },
+    {
+      "name": "walkeros-create-source",
+      "description": "Use when creating a new walkerOS source to capture events (browser source, dataLayer interception, server/HTTP source, webhook receiver, event capture), web or server-side. Example-driven workflow: research the input format and define step examples before implementing the push interface, createTrigger, and env pattern.",
+      "category": "create",
+      "path": "skills/walkeros-create-source/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-create-source",
+      "resources": [
+        "TESTING.md",
+        "examples/index.ts",
+        "examples/inputs.ts",
+        "examples/mapping.ts",
+        "examples/outputs.ts",
+        "examples/requests.ts",
+        "templates/server/dev.ts",
+        "templates/server/index.test.ts",
+        "templates/server/index.ts",
+        "templates/server/schemas.ts",
+        "templates/server/types.ts"
+      ],
+      "related": [
+        "walkeros-testing-strategy",
+        "walkeros-understanding-events",
+        "walkeros-understanding-flow",
+        "walkeros-understanding-mapping",
+        "walkeros-understanding-sources",
+        "walkeros-understanding-transformers",
+        "walkeros-using-step-examples",
+        "walkeros-writing-documentation"
+      ]
+    },
+    {
+      "name": "walkeros-create-transformer",
+      "description": "Use when creating a new walkerOS transformer to modify events in the pipeline (validate, enrich, or redact) at a before/next chain position. Example-driven workflow for the transformer interface, return values, and chaining.",
+      "category": "create",
+      "path": "skills/walkeros-create-transformer/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-create-transformer",
+      "resources": [
+        "TESTING.md",
+        "examples/config.ts",
+        "examples/events.ts",
+        "examples/index.ts",
+        "templates/validation/index.test.ts",
+        "templates/validation/index.ts",
+        "templates/validation/schemas.ts",
+        "templates/validation/types.ts"
+      ],
+      "related": [
+        "walkeros-testing-strategy",
+        "walkeros-understanding-events",
+        "walkeros-understanding-flow",
+        "walkeros-understanding-transformers",
+        "walkeros-writing-documentation"
+      ]
+    },
+    {
+      "name": "walkeros-debugging",
+      "description": "Use when walkerOS events aren't reaching destinations, debugging event flow, or troubleshooting mapping issues. Covers common problems and debugging strategies.",
+      "category": "task",
+      "path": "skills/walkeros-debugging/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-debugging",
+      "resources": ["TESTING.md"],
+      "related": [
+        "walkeros-mapping-configuration",
+        "walkeros-understanding-destinations",
+        "walkeros-understanding-flow"
+      ]
+    },
+    {
+      "name": "walkeros-mapping-configuration",
+      "description": "Use when configuring walkerOS event mappings for specific use cases. Provides recipes for GA4, Meta, custom APIs, and common transformation patterns.",
+      "category": "task",
+      "path": "skills/walkeros-mapping-configuration/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-mapping-configuration",
+      "resources": [],
+      "related": ["walkeros-understanding-mapping"]
+    },
+    {
+      "name": "walkeros-mcp-actions",
+      "description": "Use when an AI agent calls walkerOS MCP tools from code (code execution / Code Mode, a Worker, or an app sandbox) to validate, simulate, bundle, or inspect flows and packages, and wants to filter large results in code instead of issuing many separate tool calls.",
+      "category": "task",
+      "path": "skills/walkeros-mcp-actions/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-mcp-actions",
+      "resources": [],
+      "related": [
+        "walkeros-mapping-configuration",
+        "walkeros-understanding-flow",
+        "walkeros-using-cli"
+      ]
+    },
+    {
+      "name": "walkeros-testing-strategy",
+      "description": "Use when writing tests, reviewing test code, or discussing testing approach for walkerOS packages. Covers env pattern, dev examples, and package-specific strategies.",
+      "category": "task",
+      "path": "skills/walkeros-testing-strategy/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-testing-strategy",
+      "resources": [],
+      "related": ["walkeros-understanding-development"]
+    },
+    {
+      "name": "walkeros-understanding-destinations",
+      "description": "Use when working with walkerOS destinations, understanding the destination interface, or learning about env pattern and configuration. Covers interface, lifecycle, env mocking, and paths.",
+      "category": "understanding",
+      "path": "skills/walkeros-understanding-destinations/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-understanding-destinations",
+      "resources": [],
+      "related": [
+        "walkeros-create-destination",
+        "walkeros-understanding-flow",
+        "walkeros-understanding-mapping"
+      ]
+    },
+    {
+      "name": "walkeros-understanding-development",
+      "description": "Use when contributing to walkerOS, before writing code, or when unsure about project conventions. Covers build/test/lint workflow, XP principles, folder structure, and package usage.",
+      "category": "understanding",
+      "path": "skills/walkeros-understanding-development/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-understanding-development",
+      "resources": [],
+      "related": ["walkeros-testing-strategy"]
+    },
+    {
+      "name": "walkeros-understanding-events",
+      "description": "Use when creating walkerOS events, understanding event structure, or working with event properties. Covers entity-action naming, event properties, statelessness, and vendor-agnostic design.",
+      "category": "understanding",
+      "path": "skills/walkeros-understanding-events/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-understanding-events",
+      "resources": [],
+      "related": [
+        "walkeros-understanding-flow",
+        "walkeros-understanding-mapping"
+      ]
+    },
+    {
+      "name": "walkeros-understanding-flow",
+      "description": "Use when learning walkerOS architecture, understanding data flow, or designing composable event pipelines. Covers Source→Collector→Destination pattern and separation of concerns.",
+      "category": "understanding",
+      "path": "skills/walkeros-understanding-flow/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-understanding-flow",
+      "resources": [],
+      "related": [
+        "walkeros-understanding-destinations",
+        "walkeros-understanding-events",
+        "walkeros-understanding-sources"
+      ]
+    },
+    {
+      "name": "walkeros-understanding-mapping",
+      "description": "Use when transforming walkerOS events in the flow (source→collector or collector→destination), configuring data/map/loop/set/condition/policy, or using $code: syntax in JSON configs.",
+      "category": "understanding",
+      "path": "skills/walkeros-understanding-mapping/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-understanding-mapping",
+      "resources": [
+        "TESTING.md",
+        "complete-examples.md",
+        "value-strategies.md"
+      ],
+      "related": [
+        "walkeros-mapping-configuration",
+        "walkeros-understanding-destinations",
+        "walkeros-understanding-events",
+        "walkeros-understanding-transformers"
+      ]
+    },
+    {
+      "name": "walkeros-understanding-sources",
+      "description": "Use when working with walkerOS sources, understanding event capture, or learning about the push interface. Covers browser, dataLayer, and server source patterns.",
+      "category": "understanding",
+      "path": "skills/walkeros-understanding-sources/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-understanding-sources",
+      "resources": [],
+      "related": [
+        "walkeros-create-source",
+        "walkeros-understanding-events",
+        "walkeros-understanding-flow"
+      ]
+    },
+    {
+      "name": "walkeros-understanding-stores",
+      "description": "Use when working with walkerOS stores, understanding key-value storage in flows, or learning about store injection via env. Covers interface, lifecycle, $store. wiring, and available store packages.",
+      "category": "understanding",
+      "path": "skills/walkeros-understanding-stores/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-understanding-stores",
+      "resources": [],
+      "related": [
+        "walkeros-understanding-flow",
+        "walkeros-understanding-transformers",
+        "walkeros-using-cli",
+        "walkeros-using-store-cache"
+      ]
+    },
+    {
+      "name": "walkeros-understanding-transformers",
+      "description": "Use when working with walkerOS transformers, understanding event validation/enrichment/redaction, or learning about transformer chaining. Covers interface, return values, and pipeline integration.",
+      "category": "understanding",
+      "path": "skills/walkeros-understanding-transformers/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-understanding-transformers",
+      "resources": [],
+      "related": [
+        "walkeros-create-transformer",
+        "walkeros-understanding-flow",
+        "walkeros-using-store-cache"
+      ]
+    },
+    {
+      "name": "walkeros-using-cli",
+      "description": "Use when bundling walkerOS flows, testing events with simulate/push, running local servers, validating configs, or configuring Flow JSON files.",
+      "category": "using",
+      "path": "skills/walkeros-using-cli/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-using-cli",
+      "resources": [
+        "TESTING.md",
+        "commands-reference.md",
+        "flow-configuration.md",
+        "server-deployment.md"
+      ],
+      "related": [
+        "walkeros-create-destination",
+        "walkeros-create-source",
+        "walkeros-debugging",
+        "walkeros-understanding-flow",
+        "walkeros-understanding-mapping"
+      ]
+    },
+    {
+      "name": "walkeros-using-logger",
+      "description": "Use when working with walkerOS sources/destinations to understand standard logging patterns, replace console.log, or add logging to external API calls. Covers DRY principles, when to log, and migration patterns.",
+      "category": "using",
+      "path": "skills/walkeros-using-logger/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-using-logger",
+      "resources": [],
+      "related": [
+        "walkeros-understanding-destinations",
+        "walkeros-understanding-sources"
+      ]
+    },
+    {
+      "name": "walkeros-using-step-examples",
+      "description": "Use when writing, simulating, validating, or testing with walkerOS step examples. Covers the complete lifecycle from authoring examples to CI integration.",
+      "category": "using",
+      "path": "skills/walkeros-using-step-examples/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-using-step-examples",
+      "resources": [],
+      "related": [
+        "walkeros-create-destination",
+        "walkeros-create-source",
+        "walkeros-create-transformer",
+        "walkeros-testing-strategy",
+        "walkeros-understanding-flow",
+        "walkeros-using-cli"
+      ]
+    },
+    {
+      "name": "walkeros-using-store-cache",
+      "description": "Use when adding read-through caching to a walkerOS store, memoizing a slow API/Sheets backing, composing multi-tier cache chains, or deduplicating concurrent store reads. Covers recipes, TTL choice, error policy, and observability counters.",
+      "category": "using",
+      "path": "skills/walkeros-using-store-cache/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-using-store-cache",
+      "resources": [],
+      "related": [
+        "walkeros-understanding-flow",
+        "walkeros-understanding-stores",
+        "walkeros-using-cli"
+      ]
+    },
+    {
+      "name": "walkeros-using-transformer-ga4",
+      "description": "Use when wiring `@walkeros/transformer-ga4` into a server flow, overriding default GA4 event mappings, dropping events, adding custom event keys, or troubleshooting GA4 Measurement Protocol decoding. Covers the `before`-chain wiring contract, configuration recipes, and per-field patching with extend/remove.",
+      "category": "using",
+      "path": "skills/walkeros-using-transformer-ga4/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-using-transformer-ga4",
+      "resources": [],
+      "related": [
+        "walkeros-mapping-configuration",
+        "walkeros-understanding-mapping",
+        "walkeros-understanding-transformers",
+        "walkeros-using-cli"
+      ]
+    },
+    {
+      "name": "walkeros-writing-documentation",
+      "description": "Use when writing or updating walkerOS documentation - README, website docs, or skills. Covers quality standards, example validation, and DRY patterns.",
+      "category": "task",
+      "path": "skills/walkeros-writing-documentation/SKILL.md",
+      "url": "https://www.walkeros.io/skills/walkeros-writing-documentation",
+      "resources": [],
+      "related": [
+        "walkeros-understanding-events",
+        "walkeros-understanding-flow"
+      ]
+    }
+  ]
+}

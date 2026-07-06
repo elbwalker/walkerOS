@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import {
-  createHighlighter,
-  type Highlighter,
-  type BundledLanguage,
-} from 'shiki';
+import React from 'react';
+import { createHighlighterCoreSync, type HighlighterCore } from 'shiki/core';
+import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
+import json from 'shiki/langs/json.mjs';
+import javascript from 'shiki/langs/javascript.mjs';
+import typescript from 'shiki/langs/typescript.mjs';
+import tsx from 'shiki/langs/tsx.mjs';
+import bash from 'shiki/langs/bash.mjs';
+import html from 'shiki/langs/html.mjs';
+import css from 'shiki/langs/css.mjs';
 import { palenightTheme } from '../../themes/palenight';
 import { lighthouseTheme } from '../../themes/lighthouse';
 import { monacoThemeToShiki } from '../../themes/shiki-adapter';
@@ -13,22 +17,19 @@ export interface CodeStaticProps {
   code: string;
   language?: string;
   className?: string;
-  /** Force theme. If omitted, auto-detected from <html> data-theme / class. */
-  theme?: 'light' | 'dark';
 }
 
-// Pinned language set. Extend here when docs need a new language.
-const LANGS: readonly BundledLanguage[] = [
+// Pinned language set. Extend here (and the imports above) when docs need a new
+// language. Names match Shiki's fine-grained lang ids.
+const LANGS = [
   'json',
   'javascript',
   'typescript',
   'tsx',
-  'jsx',
   'bash',
   'html',
   'css',
-  'markdown',
-];
+] as const;
 
 // Derive Shiki themes from the same Monaco theme objects CodeBox uses,
 // so CodeView (Shiki) and CodeBox (Monaco) render identical colors.
@@ -47,77 +48,43 @@ const ELB_SHIKI_DARK = monacoThemeToShiki(palenightTheme, {
   defaultForeground: '#bfc7d5',
 });
 
-let highlighterPromise: Promise<Highlighter> | null = null;
+let highlighter: HighlighterCore | null = null;
 
-function getHighlighter(): Promise<Highlighter> {
-  if (!highlighterPromise) {
-    highlighterPromise = createHighlighter({
+// Lazily build a synchronous, WASM-free highlighter on first render. Touches no
+// browser globals at import time, so it is safe under SSR.
+function getHighlighterSync(): HighlighterCore {
+  if (!highlighter) {
+    highlighter = createHighlighterCoreSync({
       themes: [ELB_SHIKI_LIGHT, ELB_SHIKI_DARK],
-      langs: [...LANGS],
+      langs: [json, javascript, typescript, tsx, bash, html, css],
+      engine: createJavaScriptRegexEngine(),
     });
   }
-  return highlighterPromise;
+  return highlighter;
 }
 
-function detectTheme(): 'light' | 'dark' {
-  if (typeof document === 'undefined') return 'dark';
-  const html = document.documentElement;
-  if (html.dataset.theme === 'dark') return 'dark';
-  if (html.classList.contains('dark')) return 'dark';
-  return 'light';
-}
-
-function resolveLang(language: string | undefined): BundledLanguage | 'text' {
+function resolveLang(language: string | undefined): string {
   if (!language) return 'json';
-  return (LANGS as readonly string[]).includes(language)
-    ? (language as BundledLanguage)
-    : 'text';
+  return (LANGS as readonly string[]).includes(language) ? language : 'text';
 }
 
 export function CodeStatic({
   code,
   language,
   className,
-  theme,
 }: CodeStaticProps): React.ReactElement {
-  const [html, setHtml] = useState<string>('');
-  const [activeTheme, setActiveTheme] = useState<'light' | 'dark'>(
-    theme ?? detectTheme(),
-  );
-
-  // Track host theme changes when not explicitly overridden.
-  useEffect(() => {
-    if (theme) {
-      setActiveTheme(theme);
-      return;
-    }
-    setActiveTheme(detectTheme());
-    const observer = new MutationObserver(() => setActiveTheme(detectTheme()));
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class', 'data-theme'],
-    });
-    return () => observer.disconnect();
-  }, [theme]);
-
-  useEffect(() => {
-    let cancelled = false;
-    getHighlighter().then((highlighter) => {
-      if (cancelled) return;
-      const rendered = highlighter.codeToHtml(code, {
-        lang: resolveLang(language),
-        theme: activeTheme === 'dark' ? ELB_THEME_DARK : ELB_THEME_LIGHT,
-      });
-      setHtml(rendered);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [code, language, activeTheme]);
+  const rendered = getHighlighterSync().codeToHtml(code, {
+    lang: resolveLang(language),
+    themes: { light: ELB_THEME_LIGHT, dark: ELB_THEME_DARK },
+    defaultColor: 'light',
+  });
 
   const wrapperClass = `elb-code-static${className ? ` ${className}` : ''}`;
 
   return (
-    <div className={wrapperClass} dangerouslySetInnerHTML={{ __html: html }} />
+    <div
+      className={wrapperClass}
+      dangerouslySetInnerHTML={{ __html: rendered }}
+    />
   );
 }

@@ -16,7 +16,6 @@ import {
   ready,
   destroyTriggers,
 } from './trigger';
-import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer, drainNonWalkerEvents } from './elbLayer';
 import { translateToCoreCollector } from './translation';
 import { getPageViewData } from './walker';
@@ -238,14 +237,11 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     on: handleEvent,
     init,
     destroy: async () => {
-      // Remove all DOM trigger listeners registered via AbortController
+      // Iterates the scope registry: aborts root + per-scope listeners, clears
+      // every scope's intervals/timeouts, and disconnects the shared
+      // per-document observer(s). Reaches sub-scopes from `walker init <el>`,
+      // not just the source's own document scope.
       destroyTriggers(settings);
-      // Cleanup visibility tracking and other resources
-      if (actualDocument) {
-        destroyVisibilityTracking(
-          settings.scope || (actualDocument as Document),
-        );
-      }
     },
   };
 };

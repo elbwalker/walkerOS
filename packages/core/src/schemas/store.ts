@@ -41,7 +41,7 @@ export const ConfigSchema = z
         id: 'StoreCredentials',
         title: 'Store.Credentials',
         description:
-          'Optional credentials slot (store-defined shape); supports $env. The per-package shape is supplied via mergeConfigSchema.',
+          'Optional credentials slot (store-defined shape); back it with a managed secret via $secret.NAME (credentials use $secret, not $env). The per-package shape is supplied via mergeConfigSchema.',
       })
       .describe('Optional credentials (store-defined shape)')
       .optional(),

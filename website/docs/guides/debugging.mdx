@@ -1,0 +1,94 @@
+---
+title: My events aren't arriving
+description: A how-to for tracing walkerOS events when a destination stays silent
+sidebar_position: 2
+---
+
+# My events aren't arriving
+
+When a destination stays silent, you do not need a server or a login to find out
+why. Run your flow against a single event offline and read the result.
+
+<CodeSnippet
+  code={`npx walkeros push flow.json -e '{"name":"product add","data":{"id":"ers","price":420}}' --simulate destination.gtag`}
+  language="bash"
+/>
+
+The simulation reports whether the destination accepted the event:
+
+<CodeSnippet
+  code={`Simulating destination: gtag
+success: true
+  Duration: 4302ms`}
+  language="text"
+/>
+
+Add `--json` to get the same result as machine-readable output
+(`{ "success": true, "duration": 1104 }`). Your `flow.json` must carry
+`config.platform` (`"web"` or `"server"`), otherwise bundling throws before the
+simulation runs.
+
+## Symptom to cause
+
+| Symptom                            | Likely cause                 |
+| ---------------------------------- | ---------------------------- |
+| No events at all                   | Source not initialized       |
+| A destination is silent            | Mapping mismatch             |
+| Partial or wrong data              | Path does not exist          |
+| A destination is skipped           | Required consent not granted |
+| A destination throws               | Vendor SDK or API error      |
+
+## Log every event at the collector
+
+To confirm events are flowing before you blame a vendor, add an inline console
+destination. It logs the name of every event the collector processes, so you can
+see what arrives and when.
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  destinations: {
+    debug: {
+      code: {
+        type: 'console',
+        config: {},
+        push: (event) => console.log('Event:', event.name),
+      },
+    },
+    // ...your other destinations
+  },
+});`}
+  language="typescript"
+/>
+
+If you see event names in the console but the real destination stays silent, the
+problem is downstream of the collector: a mapping mismatch, a missing consent, or
+a vendor error. If you see nothing, the source is not capturing or the collector
+never started.
+
+## Checklist
+
+1. Any errors in the browser console?
+2. Is the event pushed? Add the console destination above to confirm.
+3. Does the destination mapping match the entity and action names exactly? Names
+   are case-sensitive (`product add`, not `Product Add`).
+4. Do the mapped data paths exist on the event? Log the full event and check.
+5. Is the required consent granted for the destination?
+6. Run `npx walkeros validate flow.json` to catch a malformed config.
+
+## Zero-install equivalent (AI assistant via MCP)
+
+If you use the walkerOS MCP server with an AI assistant, the same offline
+simulation is one tool call. `step` is required and uses the `type.name` form
+(for example `destination.gtag`).
+
+<CodeSnippet
+  code={`flow_simulate({
+  configPath: 'flow.json',
+  step: 'destination.gtag',
+  event: { name: 'product add', data: { id: 'ers', price: 420 } },
+})`}
+  language="typescript"
+/>
+
+The response includes `_hints.warnings`, which flags when no destination received
+the event.

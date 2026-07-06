@@ -1,4 +1,5 @@
 import type { Elb } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 import type { Settings } from '../types';
 import {
   initGlobalTrigger,
@@ -10,6 +11,7 @@ import {
   resetScrollListener,
   destroyTriggers,
 } from '../trigger';
+import { destroyVisibilityTracking } from '../triggerVisible';
 
 // Helper function to create test settings
 const createTestSettings = (prefix = 'data-elb'): Settings => ({
@@ -673,6 +675,250 @@ describe('Trigger System', () => {
         expect.any(Function),
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
+    });
+  });
+
+  describe('Re-init clears scope state', () => {
+    // Re-running `walker init` / `walker run` on the same scope must equal one
+    // fresh init: prior pulse/wait/hover state is torn down, then attached
+    // fresh. `load` is the deliberate exception (immediate, re-fires per init).
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const triggerOf = (call: unknown[]): unknown =>
+      isObject(call[0]) ? call[0].trigger : undefined;
+    const countTrigger = (trigger: string): number =>
+      mockElb.mock.calls.filter((call) => triggerOf(call) === trigger).length;
+
+    test('1a pulse: double init fires once per tick (no stacking)', () => {
+      document.body.innerHTML = `
+        <div data-elb="content" data-elbaction="pulse(1000):action">Content</div>
+      `;
+      Object.defineProperty(document, 'hidden', {
+        value: false,
+        writable: true,
+      });
+
+      const settings = createTestSettings('data-elb');
+      const context = { elb: mockElb, settings };
+
+      initScopeTrigger(context, settings);
+      initScopeTrigger(context, settings);
+
+      jest.advanceTimersByTime(1000);
+
+      // RED today: two intervals stack → two events per tick.
+      expect(countTrigger('pulse')).toBe(1);
+    });
+
+    test('1b wait: double init fires once', () => {
+      document.body.innerHTML = `
+        <div data-elb="content" data-elbaction="wait(1000):action">Content</div>
+      `;
+
+      const settings = createTestSettings('data-elb');
+      const context = { elb: mockElb, settings };
+
+      initScopeTrigger(context, settings);
+      initScopeTrigger(context, settings);
+
+      jest.advanceTimersByTime(1000);
+
+      // RED today: two timeouts stack → fires twice.
+      expect(countTrigger('wait')).toBe(1);
+    });
+
+    test('1c hover: double init fires once per mouseenter', () => {
+      document.body.innerHTML = `
+        <div id="hover-elem" data-elb="content" data-elbaction="hover:action">Content</div>
+      `;
+      const element = document.getElementById('hover-elem')!;
+
+      const settings = createTestSettings('data-elb');
+      const context = { elb: mockElb, settings };
+
+      initScopeTrigger(context, settings);
+      initScopeTrigger(context, settings);
+
+      element.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+      // RED today: two listeners stack → fires twice on one dispatch.
+      expect(countTrigger('hover')).toBe(1);
+    });
+
+    test('1d load: double init fires twice (intended, not deduped)', () => {
+      document.body.innerHTML = `
+        <div data-elb="content" data-elbaction="load:action">Content</div>
+      `;
+
+      const settings = createTestSettings('data-elb');
+      const context = { elb: mockElb, settings };
+
+      initScopeTrigger(context, settings);
+      initScopeTrigger(context, settings);
+
+      // GREEN today and after: load is immediate and re-fires per init.
+      expect(countTrigger('load')).toBe(2);
+    });
+
+    test('1f sub-scope re-init does not abort root click/submit', () => {
+      // The root click/submit controller is instance-level; a sub-scope
+      // re-init must only abort its own per-scope controller. If the fix
+      // wrongly tore down the root controller, page-wide click/submit would
+      // silently die.
+      const rootScope = document.createElement('div');
+      rootScope.innerHTML = `<button data-elb="cta" data-elbaction="click:press">Go</button>`;
+      document.body.appendChild(rootScope);
+      const rootSettings: Settings = {
+        ...createTestSettings('data-elb'),
+        scope: rootScope,
+      };
+      const rootContext = { elb: mockElb, settings: rootSettings };
+      initGlobalTrigger(rootContext, rootSettings);
+
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const containerSettings: Settings = {
+        ...createTestSettings('data-elb'),
+        scope: container,
+      };
+      const containerContext = { elb: mockElb, settings: containerSettings };
+      initScopeTrigger(containerContext, containerSettings);
+
+      rootScope
+        .querySelector('button')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      // GREEN today and after: the root click listener survives the sub init.
+      expect(countTrigger('click')).toBe(1);
+    });
+  });
+
+  describe('Scoped re-init (walker init <element>)', () => {
+    // Scope is a single carrier: it lives in context.settings.scope. The
+    // translation layer builds a scope-aligned context for `walker init <el>`,
+    // so every observer create/lookup reads the same scope. C-core then
+    // normalizes that scope to its owner document, giving one shared observer
+    // per document. Each created observer is captured so we can assert WHICH
+    // one an element lands on (and whether it is still live).
+    let observers: MockIntersectionObserver[];
+    let originalIntersectionObserver: typeof IntersectionObserver;
+
+    // Cast-free IntersectionObserver stub: a class that implements the
+    // interface, so it is assignable to `typeof IntersectionObserver` without
+    // casts and exposes jest mocks for assertions.
+    class MockIntersectionObserver implements IntersectionObserver {
+      root: Document | Element | null = null;
+      rootMargin = '0px';
+      thresholds: ReadonlyArray<number> = [0, 0.5];
+      observe = jest.fn();
+      unobserve = jest.fn();
+      disconnect = jest.fn();
+      takeRecords = jest.fn(() => []);
+
+      constructor(_callback?: IntersectionObserverCallback) {
+        observers.push(this);
+      }
+    }
+
+    const observedOn = (el: Element) =>
+      observers.filter((o) =>
+        o.observe.mock.calls.some((args) => args[0] === el),
+      ).length;
+    // Counts only observers that are still live (not disconnected) and have
+    // observed the element. Re-init must leave the element on exactly one live
+    // observer, never stack it across several.
+    const liveObservedOn = (el: Element) =>
+      observers.filter(
+        (o) =>
+          o.disconnect.mock.calls.length === 0 &&
+          o.observe.mock.calls.some((args) => args[0] === el),
+      ).length;
+
+    beforeEach(() => {
+      observers = [];
+      originalIntersectionObserver = global.IntersectionObserver;
+      global.IntersectionObserver = MockIntersectionObserver;
+    });
+
+    afterEach(() => {
+      global.IntersectionObserver = originalIntersectionObserver;
+    });
+
+    test('a sub-scoped init registers the scope’s visible elements on the shared observer', () => {
+      document.body.innerHTML = `
+        <section id="injected">
+          <div id="promo" data-elb="promo" data-elbaction="visible:view(promo)"></div>
+        </section>
+      `;
+      const settings = createTestSettings('data-elb'); // source context: scope = document
+      const context = { elb: mockElb, settings };
+      const container = document.getElementById('injected')!;
+      const promo = document.getElementById('promo')!;
+
+      // `walker init <container>`: the translation layer builds a scope-aligned
+      // context whose settings.scope is the container. The sub-scope init scans
+      // the container, finds its visible element, and observes it on the shared
+      // per-document observer (C-core normalizes the container to its document).
+      initScopeTrigger({
+        ...context,
+        settings: { ...context.settings, scope: container },
+      });
+
+      // One shared per-document observer is created, and the container's own
+      // visible element is registered on it exactly once.
+      expect(observers.length).toBeGreaterThan(0);
+      expect(observedOn(promo)).toBe(1);
+
+      destroyVisibilityTracking(document);
+      destroyVisibilityTracking(container);
+    });
+
+    test('2b a document-scope run observes its visible elements', () => {
+      document.body.innerHTML = `
+        <div id="promo" data-elb="promo" data-elbaction="visible:view(promo)"></div>
+      `;
+      const settings = createTestSettings('data-elb'); // scope = document
+      const context = { elb: mockElb, settings };
+      const promo = document.getElementById('promo')!;
+
+      initScopeTrigger(context, settings);
+
+      // `walker run` aligns scope on both sides, so the element is observed.
+      expect(observedOn(promo)).toBe(1);
+
+      destroyVisibilityTracking(document);
+    });
+
+    test('2c double scoped re-init keeps the element on a single live observer', () => {
+      document.body.innerHTML = `
+        <section id="injected">
+          <div id="promo" data-elb="promo" data-elbaction="visible:view(promo)"></div>
+        </section>
+      `;
+      const container = document.getElementById('injected')!;
+      const promo = document.getElementById('promo')!;
+      const settings: Settings = {
+        ...createTestSettings('data-elb'),
+        scope: container,
+      };
+      // Scope-aligned context, as the translation layer builds for walker init.
+      const context = { elb: mockElb, settings };
+
+      initScopeTrigger(context, settings);
+      initScopeTrigger(context, settings);
+
+      // No stacking: the prior registration is torn down, the element ends up
+      // on exactly one live observer.
+      expect(liveObservedOn(promo)).toBe(1);
+
+      destroyVisibilityTracking(container);
+      destroyVisibilityTracking(document);
     });
   });
 });

@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "docusaurus start --host 0.0.0.0",
-    "build": "docusaurus build",
+    "start": "node scripts/generate-skills-docs.mjs && docusaurus start --host 0.0.0.0",
+    "build": "node scripts/generate-skills-docs.mjs && docusaurus build",
     "swizzle": "docusaurus swizzle",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve --host 0.0.0.0",
@@ -106,6 +106,7 @@
     "@docusaurus/tsconfig": "^3.9.2",
     "@docusaurus/types": "^3.9.2",
     "@heroicons/react": "^2.2.0",
+    "@signalwire/docusaurus-plugin-llms-txt": "^1.2.2",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/postcss": "^4.1.18",

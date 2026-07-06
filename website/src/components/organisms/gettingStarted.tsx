@@ -4,8 +4,19 @@ import { CodeBox } from '@walkeros/explorer';
 import { tagger } from '@site/src/components/walkerjs';
 
 const bundledCode = `{
+  "version": 4,
   "flows": {
     "default": {
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {},
+            "@walkeros/web-source-browser": {},
+            "@walkeros/web-destination-gtag": {}
+          }
+        }
+      },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",

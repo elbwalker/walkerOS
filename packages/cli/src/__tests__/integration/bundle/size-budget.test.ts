@@ -9,7 +9,7 @@
  *      as a literal `import('<pkg>/dev')`, but that subpath stays external, so
  *      the zod/schema body must not appear inline.
  *
- * Baseline: CDN direct IIFE = 70,560 bytes. Budget = baseline × 1.10.
+ * Baseline: CDN direct IIFE = 80,614 bytes. Budget = baseline × 1.10.
  */
 import { readFile, mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -18,11 +18,11 @@ import { join } from 'path';
 import { bundle } from '../../../commands/bundle/index.js';
 import { MINIMAL_FLOW } from '../../fixtures/minimal-flow.js';
 
-// Current CDN IIFE size is 70,560 bytes for the minimal web flow: core +
+// Current CDN IIFE size is 80,614 bytes for the minimal web flow: core +
 // collector (event engine, mapping, cache, consent, spans) plus the browser
-// source and api destination. Budget = 70,560 × 1.10 headroom. Guards against
+// source and api destination. Budget = 80,614 × 1.10 headroom. Guards against
 // sudden growth; bump it deliberately only when a real feature lands.
-const SIZE_BUDGET_BYTES = 77616;
+const SIZE_BUDGET_BYTES = 88676;
 
 describe('CDN bundle size budget', () => {
   let tmpDir: string;

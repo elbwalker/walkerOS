@@ -11,39 +11,36 @@ In Integrated mode, walkerOS lives inside your application code. You configure i
 
 ## Quickstart
 
-### 1. Install packages
+### 1. Install the collector
 
 <CodeSnippet
-  code={`npm install @walkeros/collector @walkeros/web-source-browser`}
+  code={`npm install @walkeros/collector`}
   language="bash"
 />
 
-### 2. Initialize walkerOS
+### 2. Send your first event
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
-import { sourceBrowser } from '@walkeros/web-source-browser';
 
-const { collector, elb } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: {
-          pageview: true,
-          session: true,
-        },
+const { elb } = await startFlow({
+  destinations: {
+    console: {
+      code: {
+        type: 'console',
+        config: {},
+        push: (event) => console.log('Event:', event.name),
       },
     },
   },
 });
 
-// Track events
-elb('page view', { title: document.title });`}
+await elb('page view', { title: 'Home' });
+// -> logs: Event: page view`}
   language="typescript"
 />
 
-That's it. You now have browser event collection running.
+That's it. You just sent your first event and saw it in the console.
 
 ---
 
@@ -226,6 +223,25 @@ export function WalkerProvider({ children }: { children: React.ReactNode }) {
 
   </TabItem>
 </Tabs>
+
+---
+
+## See your event
+
+To check a flow offline before it ships, export it to a `flow.json` that carries
+`config.platform` and run the event through it with the destination mocked:
+
+<CodeSnippet
+  code={`npx walkeros push flow.json \\
+  -e '{"name":"page view"}' \\
+  --simulate destination.console`}
+  language="bash"
+/>
+
+`push --simulate` builds the flow, runs the event through it with
+`destination.console` replaced by a mock, and prints the resolved outcome
+(`success` and `Duration`); add `--json` to get the same result as JSON.
+Nothing is sent to a vendor. Event names use a space (`page view`).
 
 ---
 

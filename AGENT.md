@@ -17,32 +17,33 @@ npm run lint       # Check code quality
 
 Learn the concepts before coding:
 
-| Skill                                                                    | What You'll Learn                                                          |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| [understanding-development](skills/understanding-development/SKILL.md)   | Build workflow, XP principles, folder structure                            |
-| [understanding-flow](skills/understanding-flow/SKILL.md)                 | Architecture, composability, data flow                                     |
-| [understanding-events](skills/understanding-events/SKILL.md)             | Event model, entity-action naming, properties                              |
-| [understanding-mapping](skills/understanding-mapping/SKILL.md)           | Event transformation, data/map/loop                                        |
-| [understanding-destinations](skills/understanding-destinations/SKILL.md) | Destination interface, env pattern                                         |
-| [understanding-sources](skills/understanding-sources/SKILL.md)           | Source interface, capture patterns                                         |
-| [understanding-transformers](skills/understanding-transformers/SKILL.md) | Transformer interface, chaining, pipeline                                  |
-| [understanding-stores](skills/understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle                                 |
-| [using-logger](skills/using-logger/SKILL.md)                             | Logger access, DRY principles, when to log                                 |
-| [using-step-examples](skills/using-step-examples/SKILL.md)               | Step examples lifecycle, Three Type Zones, testing                         |
-| [using-store-cache](skills/walkeros-using-store-cache/SKILL.md)          | Recipes for store-level cache, multi-tier composition                      |
-| [using-transformer-ga4](skills/walkeros-using-transformer-ga4/SKILL.md)  | Wire `@walkeros/transformer-ga4`, override mappings, troubleshoot decoding |
+| Skill                                                                             | What You'll Learn                                                          |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [understanding-development](skills/walkeros-understanding-development/SKILL.md)   | Build workflow, XP principles, folder structure                            |
+| [understanding-flow](skills/walkeros-understanding-flow/SKILL.md)                 | Architecture, composability, data flow                                     |
+| [understanding-events](skills/walkeros-understanding-events/SKILL.md)             | Event model, entity-action naming, properties                              |
+| [understanding-mapping](skills/walkeros-understanding-mapping/SKILL.md)           | Event transformation, data/map/loop                                        |
+| [understanding-destinations](skills/walkeros-understanding-destinations/SKILL.md) | Destination interface, env pattern                                         |
+| [understanding-sources](skills/walkeros-understanding-sources/SKILL.md)           | Source interface, capture patterns                                         |
+| [understanding-transformers](skills/walkeros-understanding-transformers/SKILL.md) | Transformer interface, chaining, pipeline                                  |
+| [understanding-stores](skills/walkeros-understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle                                 |
+| [using-logger](skills/walkeros-using-logger/SKILL.md)                             | Logger access, DRY principles, when to log                                 |
+| [using-step-examples](skills/walkeros-using-step-examples/SKILL.md)               | Step examples lifecycle, Three Type Zones, testing                         |
+| [using-store-cache](skills/walkeros-using-store-cache/SKILL.md)                   | Recipes for store-level cache, multi-tier composition                      |
+| [using-transformer-ga4](skills/walkeros-using-transformer-ga4/SKILL.md)           | Wire `@walkeros/transformer-ga4`, override mappings, troubleshoot decoding |
+| [mcp-actions](skills/walkeros-mcp-actions/SKILL.md)                               | Call walkerOS MCP tools from code execution, filter results in code        |
 
 ## Creating Things
 
-| Task                | Skill                                                          |
-| ------------------- | -------------------------------------------------------------- |
-| Write tests         | [testing-strategy](skills/testing-strategy/SKILL.md)           |
-| Create destination  | [create-destination](skills/create-destination/SKILL.md)       |
-| Create source       | [create-source](skills/create-source/SKILL.md)                 |
-| Create transformer  | [create-transformer](skills/create-transformer/SKILL.md)       |
-| Configure mappings  | [mapping-configuration](skills/mapping-configuration/SKILL.md) |
-| Debug event flow    | [debugging](skills/debugging/SKILL.md)                         |
-| Write documentation | [writing-documentation](skills/writing-documentation/SKILL.md) |
+| Task                | Skill                                                                   |
+| ------------------- | ----------------------------------------------------------------------- |
+| Write tests         | [testing-strategy](skills/walkeros-testing-strategy/SKILL.md)           |
+| Create destination  | [create-destination](skills/walkeros-create-destination/SKILL.md)       |
+| Create source       | [create-source](skills/walkeros-create-source/SKILL.md)                 |
+| Create transformer  | [create-transformer](skills/walkeros-create-transformer/SKILL.md)       |
+| Configure mappings  | [mapping-configuration](skills/walkeros-mapping-configuration/SKILL.md) |
+| Debug event flow    | [debugging](skills/walkeros-debugging/SKILL.md)                         |
+| Write documentation | [writing-documentation](skills/walkeros-writing-documentation/SKILL.md) |
 
 ## Package Navigation
 
@@ -68,9 +69,9 @@ apps/
 
 | What                  | Where                                                                            |
 | --------------------- | -------------------------------------------------------------------------------- |
-| Event types           | [packages/core/src/types/event.ts](packages/core/src/types/event.ts)             |
+| Event types           | [packages/core/src/types/walkeros.ts](packages/core/src/types/walkeros.ts)       |
 | Mapping functions     | [packages/core/src/mapping.ts](packages/core/src/mapping.ts)                     |
-| Flow type             | [packages/collector/src/types/flow.ts](packages/collector/src/types/flow.ts)     |
+| Flow type             | [packages/core/src/types/flow.ts](packages/core/src/types/flow.ts)               |
 | Destination interface | [packages/core/src/types/destination.ts](packages/core/src/types/destination.ts) |
 | Source interface      | [packages/core/src/types/source.ts](packages/core/src/types/source.ts)           |
 | Validated examples    | [apps/quickstart/](apps/quickstart/)                                             |

@@ -181,6 +181,39 @@ export const WithJsonSchema: Story = {
 };
 
 /**
+ * Cursor-preservation repro (used by the dev-only Playwright check).
+ *
+ * A controlled parent whose value is replaced externally (the "apply external"
+ * button changes only line 3). With the fix, the caret keeps its line/column;
+ * without it the full-range replace shoves the caret to the document end.
+ */
+export const ExternalValueChange: Story = {
+  render: () => {
+    const [code, setCode] = useState('{\n  "version": 4,\n  "flows": {}\n}');
+    return (
+      <div>
+        <button
+          type="button"
+          data-testid="apply-external"
+          onClick={() =>
+            setCode('{\n  "version": 4,\n  "flows": { "a": {} }\n}')
+          }
+        >
+          apply external
+        </button>
+        <CodeBox
+          code={code}
+          onChange={setCode}
+          language="json"
+          label="External value change"
+          jsonSchema={{ type: 'object' }}
+        />
+      </div>
+    );
+  },
+};
+
+/**
  * CodeBox with settings toggle
  *
  * Click the gear icon to toggle line numbers, minimap, and word wrap.

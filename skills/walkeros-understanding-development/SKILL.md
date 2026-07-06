@@ -18,25 +18,20 @@ complete.
 
 ## Commands
 
-| Command                       | Purpose                                                  |
-| ----------------------------- | -------------------------------------------------------- |
-| `npm install`                 | Install all dependencies                                 |
-| `npm run dev`                 | Watch mode for all packages                              |
-| `npm run build`               | Build all packages                                       |
-| `npm run verify:touched -- X` | L1: typecheck + lint + test for one package              |
-| `npm run verify:affected`     | L2: same, only for packages affected since `origin/main` |
-| `npm run test:smoke`          | L3: critical path (core, collector, cli) + affected      |
-| `npm run test`                | L4: full suite (10-15 min, release / on demand)          |
-| `npm run typecheck`           | Full typecheck                                           |
-| `npm run lint`                | Full lint                                                |
-| `npm run format`              | Prettier formatting                                      |
+| Command          | Purpose                     |
+| ---------------- | --------------------------- |
+| `npm install`    | Install all dependencies    |
+| `npm run dev`    | Watch mode for all packages |
+| `npm run build`  | Build all packages          |
+| `npm run format` | Prettier formatting         |
 
-**Validation while iterating:** `npm run verify:touched -- <pkg>`
+**Verification cheatsheet:**
 
-**Validation before opening a PR:** `npm run verify:affected` (or
-`npm run test:smoke`)
+- While iterating (L1, touched package): `npm run verify:touched -- <pkg>`
+- At plan completion (L2, affected since `origin/main`):
+  `npm run verify:affected`
 
-See `/workspaces/developer/AGENT.md` rule 11 for the full tier doctrine.
+See `/workspaces/developer/AGENT.md` rule 11 for the full doctrine.
 
 ## XP Principles (Non-Negotiable)
 

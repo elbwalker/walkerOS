@@ -26,6 +26,40 @@ const config = {
     '\\.d\\.ts$': '<rootDir>/jest-raw-loader.cjs',
   },
 
+  // shiki, its @shikijs/* internals, and the hast/unist/micromark ESM graph
+  // that codeToHtml pulls in ship ESM only. The synchronous highlighter is
+  // imported into the render path, so jest must transform them (the base
+  // allowlist only covers @walkeros). Listed by package-name prefix so a minor
+  // dependency bump doesn't silently break the transform.
+  transformIgnorePatterns: [
+    '/node_modules/(?!(' +
+      [
+        '@walkeros',
+        'shiki',
+        '@shikijs',
+        '@ungap',
+        'hast-util-',
+        'mdast-util-',
+        'unist-util-',
+        'micromark-',
+        'character-entities-',
+        'comma-separated-tokens',
+        'space-separated-tokens',
+        'oniguruma-',
+        'oniguruma-to-es',
+        'regex',
+        'vfile',
+        'property-information',
+        'stringify-entities',
+        'html-void-elements',
+        'trim-lines',
+        'devlop',
+        'ccount',
+        'zwitch',
+      ].join('|') +
+      '))',
+  ],
+
   detectOpenHandles: true,
 };
 

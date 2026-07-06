@@ -1,7 +1,9 @@
 /**
  * Shared credentials types for steps that authenticate against an external
  * service. A step's `Types['credentials']` points at one of these (or its own
- * shape); the value resolves via `$env` like any other config field.
+ * shape). The value resolves like any other config field; back it with a
+ * managed secret via `$secret.NAME` (credentials, tokens, and private keys
+ * must use `$secret`, not `$env`, so the deploy pipeline injects them).
  */
 
 /**
@@ -16,7 +18,7 @@ export interface ServiceAccount {
 }
 
 /**
- * A credential value: either a JSON string (often a `$env` reference) or the
- * already-parsed object form `T`.
+ * A credential value: either a JSON string (often a `$secret.NAME` reference to
+ * a managed secret) or the already-parsed object form `T`.
  */
 export type Credential<T> = string | T;

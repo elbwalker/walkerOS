@@ -63,6 +63,10 @@ export interface BaseSettings {
 export interface Settings {
   // Consent mode configuration
   como?: ConsentMode;
+  // Advanced consent mode (non-EU): emit the denied default at page load and
+  // add `wait_for_update`. `true` => wait_for_update: 500; a number sets the ms.
+  // Leave unset for basic mode (the EU-safe default).
+  como_advanced?: boolean | number;
   // GA4 settings
   ga4?: GA4Settings;
   // Google Ads settings

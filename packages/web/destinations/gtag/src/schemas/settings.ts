@@ -11,6 +11,12 @@ export const SettingsSchema = z
     como: ConsentModeSchema.describe(
       'Consent mode configuration: false (disabled), true (use defaults), or custom mapping',
     ).optional(),
+    como_advanced: z
+      .union([z.boolean(), z.number()])
+      .describe(
+        'Advanced consent mode (non-EU): emit denied default at page load with wait_for_update (true=500ms, or a number of ms)',
+      )
+      .optional(),
     ga4: GA4SettingsSchema.describe(
       'GA4-specific configuration settings (like { measurementId: G-XXXXXXXXXX })',
     ).optional(),

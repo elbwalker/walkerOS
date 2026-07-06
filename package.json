@@ -51,13 +51,17 @@
     "verify:force": "turbo run test --filter='[origin/main]' --force",
     "// scripts": "verify:touched <pkg> for L1, verify:affected for L2, test:smoke for L3, test+lint+typecheck for L4, verify:force = rarely needed escape hatch for a fully uncached test run; the turbo test task depends on ^build, so an upstream change busts downstream test caches automatically. See /workspaces/developer/AGENT.md rule 11.",
     "prepare": "husky || true",
+    "generate:skills-index": "npx tsx apps/scripts/generate-skills-index.ts",
     "validate:links": "npx tsx apps/scripts/validate-links.ts",
     "validate:docs": "npx tsx apps/scripts/validate-docs.ts",
-    "validate": "npm run validate:links && npm run validate:docs"
+    "validate:skills": "npx tsx apps/scripts/validate-skills-index.ts",
+    "validate:llms": "npx tsx apps/scripts/validate-llms.ts",
+    "validate": "npm run validate:links && npm run validate:docs && npm run validate:skills && npm run validate:llms"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
     "@walkeros/config": "4.1.0",
+    "gray-matter": "^4.0.3",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "prettier": "^3.7.4",

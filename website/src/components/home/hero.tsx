@@ -4,8 +4,8 @@ import Hero from '@site/src/components/organisms/hero';
 export default function HomeHero() {
   return (
     <Hero
-      title="Open-source data collection and tag management"
-      text="Collect and route your behavioral data with full control and ownership. Add, or swap any analytics or marketing tool in config, no re-instrumentation, no vendor lock-in."
+      title="Open-source event data collection platform"
+      text="Collect and route your behavioral data with full control and ownership, with tag management built in. Add, or swap any analytics or marketing tool in config, no re-instrumentation, no vendor lock-in."
       primaryButton={{
         link: '/docs/',
         children: 'Get started',

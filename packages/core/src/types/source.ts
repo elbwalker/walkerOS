@@ -91,7 +91,8 @@ export interface Config<
   /** Implementation-specific configuration passed to the init function. */
   settings?: InitSettings<T>;
   /**
-   * Optional, strictly-typed credentials slot ($env-resolved). The package
+   * Optional, strictly-typed credentials slot. Back it with a managed secret
+   * via `$secret.NAME` (credentials use `$secret`, not `$env`). The package
    * defines the shape via `Types['credentials']`. `settings.<sdk>` stays the
    * escape hatch for raw SDK options.
    */

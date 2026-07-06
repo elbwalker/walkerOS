@@ -1,0 +1,142 @@
+---
+title: GA4 ecommerce
+description: Send a page view and a product add event to Google Analytics 4
+sidebar_position: 4
+---
+
+# GA4 ecommerce
+
+By the end of this tutorial you will send a `page view` and a `product add` event
+to Google Analytics 4 and watch both arrive in DebugView. You start with a single
+console destination to see output immediately, then swap in the GA4 destination
+and add the ecommerce mapping that turns `product add` into `add_to_cart`.
+
+## Step 1: Install
+
+Install the collector and the gtag destination:
+
+<CodeSnippet
+  code={`npm install @walkeros/collector @walkeros/web-destination-gtag`}
+  language="bash"
+/>
+
+## Step 2: Send a page view
+
+Start with a single console destination so you can see your first event in the
+terminal before any vendor is involved. This snippet stays DOM-free, so it runs
+in Node:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+
+const { elb } = await startFlow({
+  destinations: {
+    console: {
+      code: {
+        type: 'console',
+        config: {},
+        push: (event) => console.log('Event:', event.name),
+      },
+    },
+  },
+});
+
+await elb('page view', { title: 'Home' });
+// -> logs: Event: page view`}
+  language="javascript"
+/>
+
+Once that prints, point the same `page view` at GA4 by swapping the console
+destination for the gtag destination. The gtag destination snake-cases the
+`entity action` name automatically, so `page view` arrives in GA4 as `page_view`
+with no mapping:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+
+const { elb } = await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          ga4: { measurementId: 'G-XXXXXXXXXX' },
+        },
+      },
+    },
+  },
+});
+
+await elb('page view', { title: 'Home' });`}
+  language="typescript"
+/>
+
+## Step 3: Add the ecommerce mapping
+
+A `product add` event needs an explicit mapping, otherwise it would arrive as
+`product_add` carrying only `send_to`. Nest the mapping under the gtag
+destination to turn `product add` into the GA4 `add_to_cart` event. The product
+price becomes the GA4 `value`, the currency falls back to `EUR`, and the product
+is shaped into a GA4 `items` array via a `this` loop:
+
+<CodeSnippet
+  code={`mapping: {
+  product: {
+    add: {
+      name: 'add_to_cart',
+      data: {
+        map: {
+          value: 'data.price',
+          currency: { value: 'EUR', key: 'data.currency' },
+          items: {
+            loop: [
+              'this',
+              {
+                map: {
+                  item_id: 'data.id',
+                  item_name: 'data.name',
+                  quantity: { value: 1, key: 'data.quantity' },
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+Pushing a `product add` event:
+
+<CodeSnippet
+  code={`elb('product add', { id: 'ers', name: 'Everyday Ruck Snack', price: 420 });`}
+  language="typescript"
+/>
+
+produces the GA4 `add_to_cart` event:
+
+<CodeSnippet
+  code={`gtag('event', 'add_to_cart', {
+  value: 420,
+  currency: 'EUR',
+  items: [{ item_id: 'ers', item_name: 'Everyday Ruck Snack', quantity: 1 }],
+  send_to: 'G-XXXXXXXXXX',
+});`}
+  language="typescript"
+/>
+
+## Step 4: Verify in GA4
+
+Copy your Measurement ID from GA4 > Admin > Data Streams and open your web
+stream, then set it as the `measurementId` above. Watch Reports > Realtime to
+confirm the `page_view` event, then open Admin > DebugView to inspect the
+`add_to_cart` event and its parameters as they arrive.
+
+## Next steps
+
+* **[GA4 destination reference](/docs/destinations/web/gtag/ga4)**: full
+  configuration for the gtag destination, including consent and additional GA4
+  settings.

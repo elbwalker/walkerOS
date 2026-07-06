@@ -364,6 +364,26 @@ export function Code({
     }
   }, [intellisenseContext]);
 
+  // Apply external `code` changes imperatively while preserving the cursor and
+  // scroll position. The editor is uncontrolled (defaultValue) so a normalised
+  // round-trip from a controlled parent does not trigger @monaco-editor/react's
+  // full-range replace (executeEdits with forceMoveMarkers:true), which would
+  // shove the cursor to the document end while typing.
+  useEffect(() => {
+    const editor = editorRef.current;
+    const model = editor?.getModel();
+    if (!editor || !model) return;
+    if (model.getValue() === code) return;
+
+    const viewState = editor.saveViewState();
+    model.pushEditOperations(
+      [],
+      [{ range: model.getFullModelRange(), text: code }],
+      () => null,
+    );
+    if (viewState) editor.restoreViewState(viewState);
+  }, [code]);
+
   const handleChange = (value: string | undefined) => {
     if (onChange && value !== undefined) {
       onChange(value);
@@ -417,7 +437,7 @@ export function Code({
   const MonacoEditor = Editor as ComponentType<{
     height: string;
     language: string;
-    value: string;
+    defaultValue: string;
     onChange: (value: string | undefined) => void;
     beforeMount?: (monaco: typeof import('monaco-editor')) => void;
     onMount?: (editor: editor.IStandaloneCodeEditor) => void;
@@ -596,7 +616,7 @@ export function Code({
       <MonacoEditor
         height={monacoHeight}
         language={language}
-        value={code}
+        defaultValue={code}
         onChange={handleChange}
         beforeMount={handleBeforeMount}
         onMount={handleEditorMount}
@@ -651,7 +671,7 @@ export function Code({
           wordBasedSuggestions: 'off', // Reduce auto-completion interference
           quickSuggestions:
             jsonSchema || intellisenseContext
-              ? { strings: true, other: true, comments: false }
+              ? { strings: true, other: false, comments: false }
               : false,
           stickyScroll: { enabled: sticky },
         }}

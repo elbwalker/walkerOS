@@ -7,9 +7,11 @@ sidebar_position: 1
 
 # What is walkerOS
 
-walkerOS is **event data collection as code**. Capture events from anywhere, transform them with mapping, and route them to any destination, all with built-in consent management.
+walkerOS is an **open-source event data collection platform** you run as code. Capture events from anywhere, transform them with mapping, and route them to any destination, all with built-in consent management.
 
 No fragile UI configs. No vendor lock-in. Just tracking you can version, test, and trust.
+
+It's built for analytics engineers, data leads, and developers who own analytics on a custom-built app and want to replace a duct-taped GA4 and server-side tag manager stack with a pipeline they actually control.
 
 <FlowMap
   sources={{
@@ -26,10 +28,10 @@ No fragile UI configs. No vendor lock-in. Just tracking you can version, test, a
 ## Why walkerOS?
 
 - **Open-Source:** MIT licensed, free forever, no restrictions
-- **Self-Hosted:** Your infrastructure, your data, full ownership
+- **Self-hostable:** Run it on your infrastructure, or use the hosted app
 - **Config-as-Code:** Version control, PRs, deploy with confidence
 - **Composable:** Mix sources, destinations, and mappings freely
-- **Developer-First:** TypeScript, no GUI, declarative tagging
+- **Developer-first:** TypeScript and declarative tagging, with an optional hosted app and MCP/AI-assisted management
 
 ---
 
@@ -138,6 +140,8 @@ Then: `walkeros bundle flow.json` → standalone file.
 ## Quick links
 
 **Just want to try it?**
+- [Quickstart](/docs/getting-started/quickstart/): your first event in five minutes
+- [GA4 ecommerce](/docs/getting-started/ga4-ecommerce): send a page view and a product add to GA4
 - [Integrated Quickstart](/docs/getting-started/modes/integrated#quickstart): npm install and go
 - [Bundled Quickstart](/docs/getting-started/modes/bundled#quickstart): JSON config and CLI
 

@@ -119,6 +119,10 @@ the `:default` suffix.
 The `:` here is the **default-value separator**, not a name delimiter. The
 token after `:` is used verbatim.
 
+Use `$env.` for non-secret config (IDs, hostnames, regions). For credentials,
+tokens, and private keys managed by the secret manager, use `$secret.`: the
+deploy pipeline only injects values referenced as `$secret.NAME`.
+
 ## `$contract.` — contract references
 
 Inject a fragment of a named contract entry. Same whole-string and deep-path
@@ -209,6 +213,13 @@ and never written into customer databases alongside the flow.
 
 Secret names are uppercase: `[A-Z0-9_]+`. The `.` is the separator, secrets
 have no internal structure.
+
+Use `$secret.` for credentials, tokens, and private keys (for example a service
+account JSON on `config.credentials`). The app's deploy pipeline detects
+`$secret.NAME` references and injects the managed secret value into the server
+runner's environment at runtime. A managed secret referenced as `$env.NAME` is
+**not** injected, so reach for `$secret.` whenever the value comes from the
+secret manager. Secrets resolve on server flows only.
 
 ## `$code:` — inline code
 

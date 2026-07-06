@@ -337,6 +337,26 @@ See [Docker documentation](/docs/apps/docker) for complete deployment guides.
 
 ---
 
+## See your event
+
+Before you build and deploy, run the event through the flow offline with the
+named destination mocked. Your `flow.json` already carries `config.platform`, so
+`push` can build it:
+
+<CodeSnippet
+  code={`npx walkeros push flow.json \\
+  -e '{"name":"page view"}' \\
+  --simulate destination.console`}
+  language="bash"
+/>
+
+`push --simulate` builds the flow, runs the event through it with
+`destination.console` replaced by a mock, and prints the resolved outcome
+(`success` and `Duration`); add `--json` to get the same result as JSON.
+Nothing is sent to a vendor. Event names use a space (`page view`).
+
+---
+
 ## Next steps
 
 - [**CLI documentation**](/docs/apps/cli): All CLI commands and options

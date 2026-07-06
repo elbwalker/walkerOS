@@ -1,9 +1,15 @@
 import type { WalkerOS, On, Collector, Logger } from '@walkeros/core';
-import type { Settings, Destination, ConsentMapping, Env } from './types';
+import type { Settings, Destination, Env, Config } from './types';
 import { initGA4, pushGA4Event } from './ga4';
 import { initAds, pushAdsEvent, resolveUserData } from './ads';
 import { initGTM, pushGTMEvent } from './gtm';
 import { getData } from './shared/mapping';
+import {
+  buildDefaultConsent,
+  hasConsentSignal,
+  resolveConsentMapping,
+} from './shared/consent';
+import { initializeGtag } from './shared/gtag';
 import { isObject } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 
@@ -18,11 +24,25 @@ export function resetConsentState(): void {
   defaultConsentSet = false;
 }
 
-// Default consent mapping: walkerOS consent groups → gtag consent parameters
-const DEFAULT_CONSENT_MAPPING: ConsentMapping = {
-  marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'],
-  functional: ['analytics_storage'],
-};
+// Establish the Consent Mode v2 denied baseline BEFORE any tool's config call,
+// per Google's required ordering. Gated on the destination's OWN config: a
+// consent signal (config.consent set, or como_advanced) and como !== false.
+// Idempotent via defaultConsentSet (consent state is window-global).
+function setupConsentDefault(config: Config, env: Env | undefined): void {
+  const settings = config.settings || {};
+  if (defaultConsentSet) return;
+  if (!hasConsentSignal(config.consent, settings)) return;
+
+  const defaultConsent = buildDefaultConsent(settings);
+  if (!defaultConsent) return; // como:false or no params
+
+  const { window } = getEnv<Env>(env);
+  const gtag = initializeGtag(window); // ensure stub exists before any config
+  if (!gtag) return;
+
+  gtag('consent', 'default', defaultConsent);
+  defaultConsentSet = true;
+}
 
 export const destinationGtag: Destination = {
   type: 'google-gtag',
@@ -39,6 +59,9 @@ export const destinationGtag: Destination = {
         'Config settings missing. Set ga4.measurementId, ads.conversionId, or gtm.containerId',
       );
     }
+
+    // Emit the denied consent default before any tool's config call.
+    setupConsentDefault(config, env);
 
     // Initialize GA4 if configured
     if (ga4?.measurementId) {
@@ -128,40 +151,21 @@ export const destinationGtag: Destination = {
     // own Settings/Env needs a core-types change to make `on` generic over
     // Types; tracked as a follow-up. The two `as` casts mark that boundary.
     const settings = (context.config?.settings || {}) as Partial<Settings>;
-    const { como = true } = settings;
 
-    // Skip if consent mode is disabled
-    if (!como) return;
+    // Skip if consent mode is disabled (como === false)
+    const mapping = resolveConsentMapping(settings);
+    if (!mapping) return;
 
     // gtag is available after init() - on() is only called after init completes
     const { window } = getEnv<Env>(context.env as Env);
     const gtag = window.gtag;
     if (!gtag) return;
 
-    // Determine consent mapping to use
-    const consentMapping: ConsentMapping =
-      como === true ? DEFAULT_CONSENT_MAPPING : como;
-
-    // If this is the first consent call, set default to denied for all parameters
+    // Safety net for setups that fire consent without init having seen a signal:
+    // establish the denied default once before the first update.
     if (!defaultConsentSet) {
-      // Get all possible gtag parameters from the mapping
-      const allGtagParams = new Set<string>();
-      Object.values(consentMapping).forEach((params) => {
-        const paramArray = Array.isArray(params) ? params : [params];
-        paramArray.forEach((param) => allGtagParams.add(param));
-      });
-
-      // Only call default if we have parameters to set
-      if (allGtagParams.size > 0) {
-        const defaultConsent: Record<string, 'denied'> = {};
-        allGtagParams.forEach((param) => {
-          defaultConsent[param] = 'denied';
-        });
-
-        // Call default with all denied
-        gtag('consent', 'default', defaultConsent);
-      }
-
+      const defaultConsent = buildDefaultConsent(settings);
+      if (defaultConsent) gtag('consent', 'default', defaultConsent);
       defaultConsentSet = true;
     }
 
@@ -170,7 +174,7 @@ export const destinationGtag: Destination = {
 
     // Map walkerOS consent to gtag consent parameters for update
     Object.entries(consent).forEach(([walkerOSGroup, granted]) => {
-      const gtagParams = consentMapping[walkerOSGroup];
+      const gtagParams = mapping[walkerOSGroup];
       if (!gtagParams) return;
 
       const params = Array.isArray(gtagParams) ? gtagParams : [gtagParams];

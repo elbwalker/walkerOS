@@ -345,6 +345,79 @@ describe('triggerVisible', () => {
     global.IntersectionObserver = originalIntersectionObserver;
   });
 
+  describe('Scope-aligned re-init', () => {
+    const buildContext = (scope: Document | Element): Context => ({
+      elb: mockElb,
+      settings: {
+        prefix: 'data-elb',
+        scope,
+        pageview: false,
+        elb: '',
+        elbLayer: false,
+      },
+    });
+
+    test('3a observes and fires a sub-scope element via the shared per-document observer', async () => {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const promo = document.createElement('div') as HTMLElement;
+      container.appendChild(promo);
+
+      // Visibility initialized for the sub-scope (as `walker init <container>`).
+      initVisibilityTracking(container, 500);
+
+      // The element is registered through the scope carried by context. Today
+      // initVisibilityTracking keys the observer by the container while
+      // triggerVisible looks it up by context.settings.scope (document): the
+      // keys diverge, the element is never observed, and it never fires.
+      const context = buildContext(document);
+      triggerVisible(context, promo, { multiple: true });
+
+      const entry: Partial<IntersectionObserverEntry> = {
+        target: promo,
+        intersectionRatio: 0.6,
+      };
+      observerCallback([entry as IntersectionObserverEntry]);
+      jest.runAllTimers();
+      await Promise.resolve();
+
+      expect(handleTrigger).toHaveBeenCalledWith(
+        expect.objectContaining({ elb: mockElb }),
+        promo,
+        'visible',
+      );
+
+      destroyVisibilityTracking(container);
+      destroyVisibilityTracking(document);
+    });
+
+    test('3b re-registering the same element fires once on a single intersection', async () => {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const promo = document.createElement('div') as HTMLElement;
+      container.appendChild(promo);
+
+      initVisibilityTracking(container, 500);
+
+      const context = buildContext(container);
+      triggerVisible(context, promo, { multiple: true });
+      triggerVisible(context, promo, { multiple: true }); // re-register
+
+      const entry: Partial<IntersectionObserverEntry> = {
+        target: promo,
+        intersectionRatio: 0.6,
+      };
+      observerCallback([entry as IntersectionObserverEntry]);
+      jest.runAllTimers();
+      await Promise.resolve();
+
+      expect(handleTrigger).toHaveBeenCalledTimes(1);
+
+      destroyVisibilityTracking(container);
+      destroyVisibilityTracking(document);
+    });
+  });
+
   test('caches element size calculations for performance', () => {
     initVisibilityTracking(testScope);
 
