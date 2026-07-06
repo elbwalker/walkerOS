@@ -6,6 +6,7 @@ import type {
   Destination,
   Transformer,
   Ingest,
+  Simulation,
 } from '@walkeros/core';
 import {
   assign,
@@ -30,7 +31,9 @@ import {
   compileState,
   applyState,
 } from '@walkeros/core';
-import { buildBaseState } from './observerEmit';
+import { buildBaseState, journeyFields } from './observerEmit';
+import { wrapEnv } from './wrapEnv';
+import { sanitizeCalls } from './sanitizeArgs';
 import { callDestinationOn } from './on';
 import {
   runTransformerChain,
@@ -497,6 +500,7 @@ export async function pushToDestinations(
           phase: 'skip',
           eventId: typeof queuedEvent.id === 'string' ? queuedEvent.id : '',
           now: Date.now(),
+          ...journeyFields(queuedEvent, destIngest, collector),
         });
         skipState.skipReason = 'consent';
         if (consent) skipState.consent = { ...consent };
@@ -1186,6 +1190,15 @@ export async function destinationPush<Destination extends Destination.Instance>(
         currentBatched.data = [];
 
         const rep = snapshot.entries[0];
+        // Representative journey correlation for the batch record. A forwarded
+        // batch may aggregate events from distinct upstream traces, so
+        // first-entry stamping on the flush/error records is best-effort; the
+        // per-event in/out records carry each event's exact trace.
+        const {
+          traceId: batchTraceId,
+          sourceId: batchSourceId,
+          parentEventId: batchParentEventId,
+        } = journeyFields(rep.event, rep.ingest, collector);
         const batchContext: Destination.PushBatchContext = {
           collector,
           logger: destLogger,
@@ -1241,6 +1254,9 @@ export async function destinationPush<Destination extends Destination.Instance>(
           phase: 'flush',
           eventId: '',
           now: flushStarted,
+          traceId: batchTraceId,
+          sourceId: batchSourceId,
+          parentEventId: batchParentEventId,
         });
         flushState.batch = { size: snapshot.entries.length, index: 0 };
         emitStep(collector, flushState);
@@ -1317,6 +1333,9 @@ export async function destinationPush<Destination extends Destination.Instance>(
               phase: 'error',
               eventId: '',
               now: errFinished,
+              traceId: batchTraceId,
+              sourceId: batchSourceId,
+              parentEventId: batchParentEventId,
             });
             batchErrState.durationMs = errFinished - flushStarted;
             batchErrState.error =
@@ -1435,10 +1454,34 @@ export async function destinationPush<Destination extends Destination.Instance>(
   } else {
     destLogger.debug('push', { event: processed.event.name });
 
+    // Trace-level vendor-call capture (presence-gated). Only when an
+    // observeLevel supplier reports 'trace' AND this destination declares
+    // observable callables do we wrap the merged env with recording proxies
+    // for this push. wrapEnv deep-clones the env per push, so this must never
+    // run on the default path; prod stays zero-cost beyond the guard check.
+    let recordedCalls: Simulation.Call[] | undefined;
+    if (
+      collector.observeLevel?.() === 'trace' &&
+      Array.isArray(destination.calls) &&
+      destination.calls.length > 0
+    ) {
+      const wrapped = wrapEnv({
+        ...context.env,
+        simulation: destination.calls,
+      });
+      context.env = wrapped.wrappedEnv;
+      recordedCalls = wrapped.calls;
+    }
+
     // Emit a per-event observer pair around the destination.push call so
     // observers see the work this destination did for this event.
     const eventIdValue =
       typeof processed.event.id === 'string' ? processed.event.id : '';
+    const { traceId, sourceId, parentEventId } = journeyFields(
+      event,
+      ingest,
+      collector,
+    );
     const pushStarted = Date.now();
     const inState = buildBaseState(collector, {
       stepId: stepId('destination', destId),
@@ -1446,6 +1489,9 @@ export async function destinationPush<Destination extends Destination.Instance>(
       phase: 'in',
       eventId: eventIdValue,
       now: pushStarted,
+      traceId,
+      sourceId,
+      parentEventId,
     });
     if (processed.mappingKey) inState.mappingKey = processed.mappingKey;
     if (processed.event.consent) {
@@ -1480,9 +1526,18 @@ export async function destinationPush<Destination extends Destination.Instance>(
         phase: 'out',
         eventId: eventIdValue,
         now: pushFinished,
+        traceId,
+        sourceId,
+        parentEventId,
       });
       outState.durationMs = pushFinished - pushStarted;
       outState.outEvent = processed.event;
+      // Attach the vendor calls recorded during this push, sanitized to a
+      // JSON-safe projection. Only when trace capture ran and something was
+      // recorded.
+      if (recordedCalls && recordedCalls.length > 0) {
+        outState.calls = sanitizeCalls(recordedCalls);
+      }
       if (isDefined(response)) {
         outState.meta = { ...outState.meta, response };
       }
@@ -1500,6 +1555,9 @@ export async function destinationPush<Destination extends Destination.Instance>(
         phase: 'error',
         eventId: eventIdValue,
         now: pushFinished,
+        traceId,
+        sourceId,
+        parentEventId,
       });
       errState.durationMs = pushFinished - pushStarted;
       errState.error =

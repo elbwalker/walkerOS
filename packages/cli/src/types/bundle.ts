@@ -125,6 +125,12 @@ export interface BuildOptions extends CLIBuildOptions {
 
   /**
    * Window property name for elb function (web platform only).
+   *
+   * @deprecated The browser source is the single writer of
+   * `window[settings.elb]`. Set the browser source's `config.settings.elb`
+   * instead. The CLI forwards `flow.config.settings.windowElb` onto that field
+   * during bundling for backward compatibility, but emits no window assignment
+   * of its own.
    * @default "elb"
    */
   windowElb?: string;

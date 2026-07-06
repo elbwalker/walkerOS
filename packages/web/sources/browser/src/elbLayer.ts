@@ -1,170 +1,179 @@
-import type { WalkerOS, Elb, Logger } from '@walkeros/core';
-import type { ELBLayer, ELBLayerConfig, Settings } from './types';
-import { tryCatch, isString, isObject } from '@walkeros/core';
+import type { Elb, Logger } from '@walkeros/core';
+import { isString, isObject } from '@walkeros/core';
+import { createPushResult } from '@walkeros/collector';
+import type { Context } from './types';
 import { translateToCoreCollector } from './translation';
 
 /**
- * Initialize elbLayer for async command handling.
+ * Controller for the append-only `window.elbLayer` command queue.
  *
- * Installs the live `push` override on `window.elbLayer` and drains any
- * walker commands (`walker *`) that were queued before initialization.
- * Non-walker events stay in the array — they are drained later from the
- * source's `on('run')` handler via `drainNonWalkerEvents`, anchored at
- * the last `walker run` entry.
+ * The layer is never spliced, truncated, or cleared: every pushed entry is
+ * appended raw so inspection reflects the page's full input history. Two lanes
+ * run over it. `walker *` commands process immediately from controller creation,
+ * serialized on a pre-start command chain. Non-command events are recorded but
+ * held until `start()`, then replayed from a cursor in original push order. The
+ * command chain seeds the post-start chain, so the last pre-start command
+ * strictly precedes the first replayed event.
  */
-export function initElbLayer(
-  elb: Elb.Fn,
-  config: ELBLayerConfig & {
-    prefix?: string;
-    window?: Window;
-    logger?: Logger.Instance;
-  } = {},
-): void {
+export interface ElbLayerController {
+  /** Append an entry to the layer and route it. Returns the processing result. */
+  intake(entry: unknown[]): Promise<Elb.PushResult>;
+  /** Begin consuming recorded events. Idempotent: a second call is a no-op. */
+  start(): void;
+  /**
+   * Append arbitrary work to the FIFO chain, after everything queued so far.
+   * `fn` must not await the controller's own chain: calling `enqueue`/`intake`
+   * from inside a chain item and awaiting the result deadlocks (it waits on a
+   * promise scheduled behind itself). Pushing new entries mid-dispatch is safe
+   * — that appends a link, it does not await one.
+   */
+  enqueue<T>(fn: () => Promise<T> | T): Promise<T>;
+  /** Restore the array's native push and forget internal state. */
+  destroy(): void;
+}
+
+export function createElbLayer(
+  context: Context,
+  config: { name?: string; window?: Window; logger?: Logger.Instance } = {},
+): ElbLayerController {
   const layerName = config.name || 'elbLayer';
   const windowObj = config.window;
   const logger = config.logger;
-  if (!windowObj) return;
 
-  // Ensure elbLayer exists on window
-  const windowWithLayer = windowObj as typeof windowObj &
-    Record<string, unknown>;
-  if (!windowWithLayer[layerName]) {
-    windowWithLayer[layerName] = [];
+  const ok = (): Elb.PushResult => createPushResult({ ok: true });
+
+  // Window-less environments (SSR/node) cannot host a layer. Return an inert
+  // controller so callers never branch on undefined.
+  if (!windowObj) {
+    return {
+      intake: () => Promise.resolve(ok()),
+      start: () => {},
+      enqueue: <T>(fn: () => Promise<T> | T) =>
+        Promise.resolve().then(() => fn()),
+      destroy: () => {},
+    };
   }
 
-  const elbLayer = windowWithLayer[layerName] as ELBLayer;
+  // Ensure the named array exists without ever replacing an existing one.
+  const existing = Reflect.get(windowObj, layerName);
+  let layer: unknown[];
+  if (Array.isArray(existing)) {
+    layer = existing;
+  } else {
+    layer = [];
+    Reflect.set(windowObj, layerName, layer);
+  }
 
-  const scope = windowObj.document as Document;
+  let started = false;
+  let eventCursor = 0;
+  let cmdTail: Promise<Elb.PushResult> = Promise.resolve(ok());
+  let tail: Promise<unknown> = Promise.resolve();
 
-  logger?.debug('initElbLayer enter', {
-    layerName,
-    queuedItems: elbLayer.length,
-  });
-
-  // Override the push method to process items immediately
-  elbLayer.push = function (...args: Array<Elb.Layer | IArguments>) {
-    // Handle arguments object
-    if (isArguments(args[0])) {
-      const argsArray = [...Array.from(args[0])];
-      const i = Array.prototype.push.apply(this, [argsArray]);
-      // Process the arguments as a single command
-      pushCommand(elb, config.prefix, argsArray, scope, logger);
-      return i;
+  const route = (item: unknown): Promise<Elb.PushResult> => {
+    if (Array.isArray(item)) {
+      const [eventOrCommand, ...rest] = item;
+      return translateToCoreCollector(context, eventOrCommand, ...rest);
     }
-
-    const i = Array.prototype.push.apply(this, args);
-
-    // Process each pushed item immediately
-    args.forEach((item) => {
-      pushCommand(elb, config.prefix, item, scope, logger);
-    });
-
-    return i;
+    return translateToCoreCollector(context, item);
   };
 
-  // Drain walker commands from any pre-existing queue items.
-  // Non-walker events stay in the array for `drainNonWalkerEvents`.
-  if (Array.isArray(elbLayer) && elbLayer.length > 0) {
-    logger?.debug('initElbLayer drain walker commands', {
-      count: elbLayer.length,
-    });
-    drainWalkerCommands(
-      elb,
-      config.prefix ?? 'data-elb',
-      elbLayer,
-      scope,
-      logger,
-    );
-  }
-}
+  // One bad entry must not break the chain: isolate each route so a throw
+  // resolves ok:false and the FIFO continues.
+  const routeSafe = async (item: unknown[]): Promise<Elb.PushResult> => {
+    try {
+      return await route(item);
+    } catch (error) {
+      logger?.warn('elbLayer entry failed', { error, item });
+      return createPushResult({ ok: false });
+    }
+  };
 
-/**
- * Drain walker commands (`walker *`) from the elbLayer queue.
- *
- * Called from `initElbLayer` during source init. Iterates the queue in
- * declaration order, pushes each walker command via `pushCommand`, then
- * removes the consumed entries from the live array. Non-walker events
- * stay in place.
- */
-function drainWalkerCommands(
-  elb: Elb.Fn,
-  prefix: string,
-  elbLayer: ELBLayer,
-  scope: Document,
-  logger?: Logger.Instance,
-): void {
-  const walkerCommand = 'walker '; // Space on purpose
-  // Iterate a snapshot — the array may be mutated by side effects of elb.
-  const snapshot = [...elbLayer];
-  const consumed = new Set<number>();
-  snapshot.forEach((pushedItem, idx) => {
-    const item = normalizeItem(pushedItem);
-    if (!item) return;
-    const firstParam = item[0];
-    const isCommand =
-      !isObject(firstParam) &&
-      isString(firstParam) &&
-      firstParam.startsWith(walkerCommand);
-    if (!isCommand) return;
-    consumed.add(idx);
-    pushCommand(elb, prefix, item, scope, logger);
-  });
-  // Remove consumed commands from the live array, descending index order
-  // so splice indices remain valid.
-  const indices = [...consumed].sort((a, b) => b - a);
-  for (const i of indices) elbLayer.splice(i, 1);
-  logger?.debug('drainWalkerCommands done', {
-    consumed: consumed.size,
-    remaining: elbLayer.length,
-  });
-}
+  const isCommandEntry = (item: unknown[]): boolean => {
+    const first = item[0];
+    return isString(first) && first.startsWith('walker ');
+  };
 
-/**
- * Drain non-walker events from the elbLayer queue, anchored at the
- * LAST `walker run` entry.
- *
- * Items before that anchor are stale — a prior run already had its chance.
- * Items at strictly greater indices are current and replay through
- * `pushCommand`. If no `walker run` is in the queue, anchor is `-1` and
- * the entire queue replays.
- *
- * Called from the browser source's `on('run')` handler.
- */
-export function drainNonWalkerEvents(
-  elb: Elb.Fn,
-  settings: Pick<Settings, 'prefix'> & {
-    elbLayer?: Settings['elbLayer'];
-  },
-  windowObj: Window,
-  logger?: Logger.Instance,
-): void {
-  const layerName = isString(settings.elbLayer)
-    ? settings.elbLayer
-    : 'elbLayer';
-  const prefix = settings.prefix || 'data-elb';
-  const layer = (windowObj as unknown as Record<string, unknown>)[layerName];
-  if (!Array.isArray(layer)) return;
-  const scope = windowObj.document as Document;
+  const process = (item: unknown[]): Promise<Elb.PushResult> => {
+    if (!started) {
+      if (isCommandEntry(item)) {
+        const link = cmdTail.then(() => routeSafe(item));
+        cmdTail = link;
+        return link;
+      }
+      // Pre-start event: recorded in the layer, replayed on start().
+      return Promise.resolve(ok());
+    }
+    // Post-start every entry serializes on the shared tail. A later start() is
+    // barred by the started flag, so these are never replayed.
+    const link = tail.then(() => routeSafe(item));
+    tail = link;
+    return link;
+  };
 
-  let anchor = -1;
-  layer.forEach((pushedItem, idx) => {
-    const item = normalizeItem(pushedItem);
-    if (!item) return;
-    if (isString(item[0]) && item[0] === 'walker run') anchor = idx;
-  });
+  const appendAndProcess = (raw: unknown): Promise<Elb.PushResult> => {
+    const normalized = normalizeItem(raw);
+    // Append the raw arg so inspection shows exactly what the page pushed.
+    // Index-assign, not layer.push(raw): push here is our own wrappedPush
+    // override, so calling it would recurse into this function.
+    layer[layer.length] = raw;
+    if (!normalized) return Promise.resolve(ok());
+    return process(normalized);
+  };
 
-  const drained: unknown[] = [];
-  for (let i = anchor + 1; i < layer.length; i++) {
+  // Live capture: normalize, append raw, route. Returns the array's new length
+  // to honor the Array.push contract.
+  const wrappedPush = (...args: unknown[]): number => {
+    for (const arg of args) appendAndProcess(arg);
+    return layer.length;
+  };
+  layer.push = wrappedPush;
+
+  // Backlog present at creation flows through the same lanes without being
+  // re-appended: commands run now via the command chain, events wait for start.
+  const backlogLength = layer.length;
+  for (let i = 0; i < backlogLength; i++) {
     const normalized = normalizeItem(layer[i]);
-    if (normalized) drained.push(normalized);
+    if (normalized) process(normalized);
   }
-  // Remove drained tail from live array.
-  layer.length = anchor + 1;
-  logger?.debug('drainNonWalkerEvents', {
-    anchor,
-    drained: drained.length,
-  });
-  drained.forEach((item) => pushCommand(elb, prefix, item, scope, logger));
+
+  const intake = (entry: unknown[]): Promise<Elb.PushResult> =>
+    appendAndProcess(entry);
+
+  const start = (): void => {
+    // Runs at most once (started flag). A second call must not re-seed tail
+    // from cmdTail — that would rewind the chain past work enqueued after
+    // start and orphan it. The cursor only marks the pre-start backlog boundary.
+    if (started) return;
+    started = true;
+    // Seed the post-start chain from the command chain so the last pre-start
+    // command strictly precedes the first replayed event.
+    tail = cmdTail;
+    for (let i = eventCursor; i < layer.length; i++) {
+      const normalized = normalizeItem(layer[i]);
+      if (!normalized) continue;
+      if (isCommandEntry(normalized)) continue; // already ran pre-start
+      const item = normalized;
+      tail = tail.then(() => routeSafe(item));
+    }
+    eventCursor = layer.length;
+  };
+
+  const enqueue = <T>(fn: () => Promise<T> | T): Promise<T> => {
+    const link = tail.then(() => fn());
+    tail = link;
+    return link;
+  };
+
+  const destroy = (): void => {
+    // Drop the own-property override so pushes fall back to Array.prototype.push.
+    Reflect.deleteProperty(layer, 'push');
+    started = false;
+    eventCursor = 0;
+    cmdTail = Promise.resolve(ok());
+    tail = Promise.resolve();
+  };
+
+  return { intake, start, enqueue, destroy };
 }
 
 /**
@@ -190,74 +199,6 @@ function normalizeItem(pushedItem: unknown): unknown[] | null {
     return null;
   }
   return item;
-}
-
-/**
- * Push command directly using elb or translation based on type
- */
-function pushCommand(
-  elb: Elb.Fn,
-  prefix: string = 'data-elb',
-  item: unknown,
-  scope?: Document,
-  logger?: Logger.Instance,
-): void {
-  tryCatch(
-    () => {
-      if (Array.isArray(item)) {
-        const [action, ...rest] = item;
-
-        // Skip empty or invalid actions
-        if (!action || (isString(action) && action.trim() === '')) {
-          logger?.debug('pushCommand skipped (empty/invalid action)', {
-            item,
-          });
-          return;
-        }
-
-        // Walker commands go directly to collector
-        if (isString(action) && action.startsWith('walker ')) {
-          logger?.debug('pushCommand walker command', {
-            action,
-            data: rest[0],
-          });
-          elb(action, rest[0]);
-          return;
-        }
-
-        logger?.debug('pushCommand event (translated)', {
-          action,
-          rest,
-        });
-        translateToCoreCollector(
-          {
-            elb,
-            settings: {
-              prefix,
-              scope,
-              pageview: false,
-              elb: '',
-              elbLayer: false,
-            },
-          },
-          action,
-          ...rest,
-        );
-      } else if (item && typeof item === 'object') {
-        // Skip empty objects
-        if (Object.keys(item).length === 0) {
-          logger?.debug('pushCommand skipped (empty object)');
-          return;
-        }
-        logger?.debug('pushCommand object event', { item });
-        // Object events go directly to elb
-        elb(item as WalkerOS.DeepPartialEvent);
-      }
-    },
-    (error) => {
-      logger?.warn('pushCommand failed', { error, item });
-    },
-  )();
 }
 
 /**

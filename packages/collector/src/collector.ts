@@ -1,10 +1,11 @@
-import type { Collector, Logger, WalkerOS } from '@walkeros/core';
+import type { Collector, Elb, Logger, WalkerOS } from '@walkeros/core';
 import { assign, createLogger } from '@walkeros/core';
 import { commonHandleCommand, prepareEvent } from './handle';
 import { initDestinations } from './destination';
 import { initTransformers } from './transformer';
 import { createPush } from './push';
 import { createCommand } from './command';
+import { createElb } from './elb';
 import { initSources } from './source';
 import { initStores, resolveStoreReferences } from './store';
 import { createCacheStore } from './cache-store';
@@ -73,6 +74,7 @@ export async function collector(
     seenEvents: new Set(),
     push: undefined as unknown as Collector.PushFn, // Placeholder, will be set below
     command: undefined as unknown as Collector.CommandFn, // Placeholder, will be set below
+    elb: undefined as unknown as Elb.Fn, // Placeholder, will be set below
   };
 
   // Set the push and command functions with the collector reference
@@ -81,6 +83,9 @@ export async function collector(
   );
 
   collector.command = createCommand(collector, commonHandleCommand);
+
+  // Attach the elb adapter so it exists before any source init
+  collector.elb = createElb(collector);
 
   // Initialize stores (first - other components may depend on them)
   const rawStores = initConfig.stores || {};

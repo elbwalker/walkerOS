@@ -21,7 +21,6 @@ export const WEB_BUILD_DEFAULTS: Omit<BuildOptions, 'output' | 'packages'> = {
   sourcemap: false,
   cache: true,
   windowCollector: 'walkerOS',
-  windowElb: 'elb',
 };
 
 /**

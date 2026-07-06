@@ -51,6 +51,12 @@ export const DataCollection = () => {
         const script = document.createElement('script');
         script.async = true;
         script.src = ANALYTICS_BUNDLE_SRC;
+        // If the CDN request fails (blocked, offline, 5xx), clear the flag so a
+        // later navigation can retry injection instead of leaving analytics
+        // dead for the rest of the session.
+        script.onerror = () => {
+          analyticsScriptInjected = false;
+        };
         document.head.appendChild(script);
       } else if (typeof window.alst === 'function') {
         // new page load - re-scan the DOM for the new page

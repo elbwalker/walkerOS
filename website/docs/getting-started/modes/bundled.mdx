@@ -340,8 +340,8 @@ See [Docker documentation](/docs/apps/docker) for complete deployment guides.
 ## See your event
 
 Before you build and deploy, run the event through the flow offline with the
-named destination mocked. Your `flow.json` already carries `config.platform`, so
-`push` can build it:
+named destination mocked. Using the **server** `flow.json` above (which defines
+the `console` destination), `push` builds and simulates it:
 
 <CodeSnippet
   code={`npx walkeros push flow.json \\

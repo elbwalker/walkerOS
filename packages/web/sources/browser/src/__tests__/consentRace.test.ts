@@ -75,7 +75,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
 
     // What we want: the freshest call wins.
     // What actually happens: the queued stale {marketing:false} is replayed
-    // AFTER the fresh grant by initElbLayer → consent.marketing === false.
+    // AFTER the fresh grant on activation → consent.marketing === false.
     expect(collector.consent.marketing).toBe(true);
   });
 
@@ -185,9 +185,9 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
   });
 
   test('post-init pushes to elbLayer accumulate without ever clearing', async () => {
-    // After initElbLayer overrides .push, items are appended on every push
-    // (elbLayer.ts line ~40) and never cleared again. The array grows
-    // unbounded for the lifetime of the page.
+    // Once the controller adopts the layer's push, items are appended on every
+    // push and never cleared again (append-only). The array grows unbounded for
+    // the lifetime of the page.
     const { elb } = await startFlow({
       consent: { marketing: true }, // skip the require gate for this test
       sources: {

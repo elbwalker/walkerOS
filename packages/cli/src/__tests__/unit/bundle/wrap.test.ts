@@ -58,9 +58,11 @@ export const __configData = { test: true };
     // Bootstrap call — wireConfig produces `config`, then startFlow(config)
     expect(output).toMatch(/wireConfig\s*\(\s*__configData\s*\)/);
     expect(output).toMatch(/startFlow\s*\(\s*\w+\s*\)/);
-    // Window assignments (esbuild may normalize quote style, so match both)
+    // Collector window assignment (esbuild may normalize quote style).
     expect(output).toMatch(/window\[['"]walker['"]\]/);
-    expect(output).toMatch(/window\[['"]elb['"]\]/);
+    // windowElb no longer emits its own assignment; the browser source is the
+    // single writer of window[settings.elb].
+    expect(output).not.toMatch(/window\[['"]elb['"]\]/);
     // No top-level ESM exports — everything is wrapped
     expect(output).not.toMatch(/^export\s/m);
     // __configData was pulled from the skeleton (not inlined by caller)

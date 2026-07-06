@@ -62,7 +62,11 @@ function rewriteBody(body, skillName) {
   const out = lines.map((line) => {
     const fenceMatch = line.match(/^\s*(```+|~~~+)/);
     if (fenceMatch) {
-      const marker = fenceMatch[1][0].repeat(3);
+      // Preserve the opening fence's exact length. A 4-backtick fence must stay
+      // open until another 4+-backtick line, so collapsing every opener to three
+      // characters would close it on the first inner ``` and start rewriting
+      // links inside the example.
+      const marker = fenceMatch[1];
       if (!inFence) {
         inFence = true;
         fenceMarker = marker;

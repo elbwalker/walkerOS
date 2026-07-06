@@ -1,12 +1,6 @@
-import type { Source, WalkerOS, On } from '@walkeros/core';
+import type { Source, On } from '@walkeros/core';
 import type { Scope, Types, Env } from './types';
-import type {
-  BrowserPushData,
-  BrowserPushOptions,
-  BrowserPushContext,
-  BrowserPush,
-  BrowserArguments,
-} from './types/elb';
+import type { BrowserPush, BrowserArguments } from './types/elb';
 import { isString } from '@walkeros/core';
 import { createPushResult } from '@walkeros/collector';
 import {
@@ -16,7 +10,8 @@ import {
   ready,
   destroyTriggers,
 } from './trigger';
-import { initElbLayer, drainNonWalkerEvents } from './elbLayer';
+import type { ElbLayerController } from './elbLayer';
+import { createElbLayer } from './elbLayer';
 import { translateToCoreCollector } from './translation';
 import { getPageViewData } from './walker';
 import { getConfig } from './config';
@@ -49,6 +44,13 @@ function resolveGuardWindow(
 export function __resetInstanceCountForTests(): void {
   const win = resolveGuardWindow(undefined);
   if (win) Reflect.deleteProperty(win, SINGLE_INSTANCE_KEY);
+}
+
+/** For tests only. Reads the window-scoped single-instance sentinel so tests
+ * assert against the real key, not a copied string. */
+export function __readInstanceGuardForTests(): unknown {
+  const win = resolveGuardWindow(undefined);
+  return win ? Reflect.get(win, SINGLE_INSTANCE_KEY) : undefined;
 }
 
 /**
@@ -144,14 +146,21 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     initScope: initScopeTrigger,
   };
 
-  // Helper to send pageview event if enabled
+  // The append-only elbLayer controller (created in init when elbLayer is
+  // enabled) and the window.elb function we install, retained so destroy can
+  // tear down exactly what this instance set up.
+  let controller: ElbLayerController | undefined;
+  let installedWindowElb: BrowserPush | undefined;
+
+  // Helper to send pageview event if enabled. Returns the dispatch promise so
+  // the enqueued run-chain link resolves when the pageview actually completes.
   const sendPageview = (s: Source.Settings<Types>) => {
     if (!s.pageview) return;
     const [data, contextData] = getPageViewData(
       s.prefix || 'data-elb',
       s.scope as Scope,
     );
-    translateToCoreCollector(
+    return translateToCoreCollector(
       translationContext,
       'page view',
       data,
@@ -161,40 +170,39 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   };
 
   // Lifecycle method — eager. The collector calls this AFTER all source
-  // factories have registered. Side effects allowed: drains walker
-  // commands from window.elbLayer, sets up DOM listeners, overrides
-  // elbLayer.push for live captures.
+  // factories have registered. Side effects allowed: adopts window.elbLayer
+  // via the controller, sets up DOM listeners, installs window.elb.
   const init = async () => {
     if (!actualWindow || !actualDocument) return;
 
-    if (settings.elbLayer !== false && elb) {
-      initElbLayer(elb, {
-        name: isString(settings.elbLayer) ? settings.elbLayer : 'elbLayer',
-        prefix: settings.prefix,
-        window: actualWindow as Window,
-        logger,
-      });
-    }
+    // Build the append-only layer controller. It routes through the real
+    // translationContext, so `walker init` reaches initScope and events flow
+    // through the same funnel as direct window.elb calls.
+    const activeController =
+      settings.elbLayer !== false
+        ? createElbLayer(translationContext, {
+            name: isString(settings.elbLayer) ? settings.elbLayer : 'elbLayer',
+            window: actualWindow,
+            logger,
+          })
+        : undefined;
+    controller = activeController;
 
     // Setup global triggers (click, submit) when DOM is ready
     await ready(initTriggers, translationContext, settings);
 
-    // Set up automatic window.elb assignment if configured
+    // Single writer for window.elb. With a controller, calls append to the
+    // layer and route through the shared chain; without one (elbLayer:false)
+    // they route directly via the source's push. `activeController` is a const
+    // so its truthy narrowing survives into the arrow closure — the `let
+    // controller` field would widen back to `| undefined` and force a cast.
     if (isString(settings.elb) && settings.elb) {
-      (actualWindow as unknown as Record<string, unknown>)[settings.elb] = (
-        ...args: unknown[]
-      ) => {
-        const [event, data, options, context, nested, custom] = args;
-        return translateToCoreCollector(
-          translationContext,
-          event,
-          data as BrowserPushData | undefined,
-          options as BrowserPushOptions | undefined,
-          context as BrowserPushContext | undefined,
-          nested as WalkerOS.Entities,
-          custom as WalkerOS.Properties,
-        );
-      };
+      const windowElb: BrowserPush = activeController
+        ? (((...args: Parameters<BrowserArguments>) =>
+            activeController.intake(args)) satisfies BrowserPush)
+        : push;
+      installedWindowElb = windowElb;
+      Reflect.set(actualWindow, settings.elb, windowElb);
     }
   };
 
@@ -206,8 +214,15 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
       case 'run':
         if (actualDocument && actualWindow) {
           processLoadTriggers(translationContext, settings);
-          drainNonWalkerEvents(elb, settings, actualWindow as Window, logger);
-          sendPageview(settings);
+          if (controller) {
+            // Replay the recorded backlog, then the pageview, on one chain so
+            // the pageview lands after any queued events. Fire-and-forget: run
+            // may arrive from inside a chain item, so awaiting would deadlock.
+            controller.start();
+            controller.enqueue(() => sendPageview(settings));
+          } else {
+            sendPageview(settings);
+          }
         }
         break;
 
@@ -242,6 +257,24 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
       // per-document observer(s). Reaches sub-scopes from `walker init <el>`,
       // not just the source's own document scope.
       destroyTriggers(settings);
+
+      // Restore the layer's native push and forget controller state.
+      controller?.destroy();
+
+      // Remove window.elb only if it is still the function we installed — never
+      // clobber a foreign global.
+      if (actualWindow && isString(settings.elb) && settings.elb) {
+        if (Reflect.get(actualWindow, settings.elb) === installedWindowElb)
+          Reflect.deleteProperty(actualWindow, settings.elb);
+      }
+
+      // Clear the single-instance sentinel so a destroyed source can be
+      // recreated on the same window.
+      if (guardWindow) Reflect.deleteProperty(guardWindow, SINGLE_INSTANCE_KEY);
+
+      // Drop references so a stray post-destroy run finds nothing to drive.
+      controller = undefined;
+      installedWindowElb = undefined;
     },
   };
 };

@@ -64,11 +64,11 @@
                   },
                   "windowElb": {
                     "default": "elb",
-                    "description": "Window property name for the elb command queue (default: \"elb\")",
+                    "description": "Deprecated: set the browser source's config.settings.elb instead. The CLI forwards this value onto that field during bundling; it emits no window assignment of its own.",
                     "type": "string"
                   }
                 },
-                "required": ["windowCollector", "windowElb"],
+                "required": ["windowCollector"],
                 "additionalProperties": false
               },
               "server": {
@@ -672,11 +672,11 @@
                   },
                   "windowElb": {
                     "default": "elb",
-                    "description": "Window property name for the elb command queue (default: \"elb\")",
+                    "description": "Deprecated: set the browser source's config.settings.elb instead. The CLI forwards this value onto that field during bundling; it emits no window assignment of its own.",
                     "type": "string"
                   }
                 },
-                "required": ["windowCollector", "windowElb"],
+                "required": ["windowCollector"],
                 "additionalProperties": false
               },
               "server": {
@@ -1370,11 +1370,11 @@
                   },
                   "windowElb": {
                     "default": "elb",
-                    "description": "Window property name for the elb command queue (default: \"elb\")",
+                    "description": "Deprecated: set the browser source's config.settings.elb instead. The CLI forwards this value onto that field during bundling; it emits no window assignment of its own.",
                     "type": "string"
                   }
                 },
-                "required": ["windowCollector", "windowElb"],
+                "required": ["windowCollector"],
                 "additionalProperties": false
               },
               "server": {

@@ -92,6 +92,7 @@ describe('swapFlow — atomic load-then-swap with rollback', () => {
       undefined,
       fake.healthServer,
       undefined,
+      undefined,
       failingLoader,
     );
 
@@ -126,6 +127,7 @@ describe('swapFlow — atomic load-then-swap with rollback', () => {
       undefined,
       fake.healthServer,
       undefined,
+      undefined,
       failingLoader,
     );
 
@@ -151,6 +153,7 @@ describe('swapFlow — atomic load-then-swap with rollback', () => {
       logger,
       undefined,
       fake.healthServer,
+      undefined,
       undefined,
       failingLoader,
     );
@@ -191,6 +194,7 @@ describe('swapFlow — atomic load-then-swap with rollback', () => {
       undefined,
       fake.healthServer,
       undefined,
+      undefined,
       successLoader,
     );
 
@@ -230,6 +234,7 @@ describe('swapFlow — atomic load-then-swap with rollback', () => {
       undefined,
       fake.healthServer,
       undefined,
+      undefined,
       successLoader,
     );
 
@@ -253,6 +258,7 @@ describe('swapFlow — atomic load-then-swap with rollback', () => {
       logger,
       undefined,
       fake.healthServer,
+      undefined,
       undefined,
       successLoader,
     );

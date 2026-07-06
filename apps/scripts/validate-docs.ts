@@ -142,6 +142,26 @@ function checkBundledSnippets(): void {
   }
 }
 
+// Concatenate only the CODE regions of a docs file so drift tokens are matched
+// against actual code, not the surrounding prose. Without this, a required token
+// that happens to appear in explanatory text (or a different example) would keep
+// a drift check green even after the featured snippet itself changed. Handles
+// both the MDX `<CodeSnippet code={`...`}/>` form and standard ``` fenced blocks.
+function extractCodeRegions(content: string): string {
+  const regions: string[] = [];
+
+  // <CodeSnippet ... code={`...`} ... /> — capture the template-literal body.
+  const snippetRe = /code=\{`([\s\S]*?)`\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = snippetRe.exec(content)) !== null) regions.push(m[1]);
+
+  // ``` fenced code blocks (```lang ... ```).
+  const fenceRe = /```[^\n]*\n([\s\S]*?)```/g;
+  while ((m = fenceRe.exec(content)) !== null) regions.push(m[1]);
+
+  return regions.join('\n');
+}
+
 // The learner-facing first-event snippets in the docs are deliberately simpler
 // than the tested Tier-1 source (apps/quickstart/src/first-event.ts): they use
 // an arrow `push`, drop the `seen` array, and skip types and the function
@@ -210,7 +230,9 @@ function checkFirstEventSnippet(): void {
       });
       continue;
     }
-    const normalizedDoc = normalize(readFileSync(abs, 'utf-8'));
+    const normalizedDoc = normalize(
+      extractCodeRegions(readFileSync(abs, 'utf-8')),
+    );
     const missing = requiredTokens.some(
       (token) => !normalizedDoc.includes(token),
     );
@@ -345,7 +367,9 @@ function checkGa4MappingSnippet(): void {
       });
       continue;
     }
-    const normalizedDoc = normalize(readFileSync(abs, 'utf-8'));
+    const normalizedDoc = normalize(
+      extractCodeRegions(readFileSync(abs, 'utf-8')),
+    );
     const missing = requiredTokens.some(
       (token) => !normalizedDoc.includes(token),
     );

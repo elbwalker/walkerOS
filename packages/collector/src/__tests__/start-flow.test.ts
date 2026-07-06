@@ -2,14 +2,22 @@ import { startFlow } from '../flow';
 import type { Source, WalkerOS, Elb } from '@walkeros/core';
 
 describe('Source Start Flow Integration', () => {
-  it('should return ELB source push as elb when no sources', async () => {
-    const { collector, elb } = await startFlow({
-      run: false,
-    });
+  it('collector exposes elb adapter and registers no pseudo-source', async () => {
+    const { collector, elb } = await startFlow({});
+    expect(collector.sources.elb).toBeUndefined();
+    expect(typeof collector.elb).toBe('function');
+    expect(elb).toBe(collector.elb); // no sources -> fallback is the adapter
 
-    // elb should be the ELB source's push function
-    expect(collector.sources.elb).toBeDefined();
-    expect(elb).toBe(collector.sources.elb.push);
+    // Event-object lane routes to collector.push even with no sources
+    await expect(collector.elb({ name: 'page view' })).resolves.toMatchObject({
+      ok: expect.any(Boolean),
+    });
+  });
+
+  it('adapter routes commands and events like before', async () => {
+    const { collector } = await startFlow({});
+    await collector.elb('walker consent', { functional: true });
+    expect(collector.consent.functional).toBe(true);
   });
 
   it('should return first source push as elb by default', async () => {
@@ -170,7 +178,7 @@ describe('Source Start Flow Integration', () => {
       },
       push: expect.any(Function),
     });
-    expect(collector.sources.elb).toBeDefined();
+    expect(collector.elb).toBeDefined();
 
     await elb({ name: 'manual event', data: { test: 'data' } });
 

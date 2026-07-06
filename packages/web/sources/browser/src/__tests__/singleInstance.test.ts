@@ -12,7 +12,7 @@ import type { Types } from '../types';
  * second factory call becomes inert: it must NOT re-adopt
  * `window.elbLayer.push`, re-bind DOM triggers, set `window.elb`, or throw
  * to the host page. This reproduces the production crash where a double
- * load re-ran `initElbLayer` against a foreign/second context.
+ * load re-adopted the elbLayer against a foreign/second context.
  */
 
 const elbLayerKey = 'elbLayer';
@@ -40,7 +40,7 @@ async function buildSource(
   const env: Source.Env<Types> = {
     push: collector.push,
     command: collector.command,
-    elb: collector.sources.elb.push,
+    elb: collector.elb,
     window,
     document,
     logger: createMockLogger(),

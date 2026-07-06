@@ -9,6 +9,10 @@ export interface IngestMeta {
   path: string[];
   /** Current chain context, e.g., "destination.ga4.before" or "source.web.next". */
   chainPath?: string;
+  /** W3C 32-hex trace id adopted from an inbound traceparent header. */
+  trace?: string;
+  /** Parent span (upstream event.id) from an inbound traceparent header. */
+  parentEventId?: string;
 }
 
 /**

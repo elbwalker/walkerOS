@@ -59,12 +59,6 @@ export interface Context {
   initScope?: (context: Context) => void;
 }
 
-// ELB Layer types for async command handling
-export type ELBLayer = Array<Elb.Layer | IArguments>;
-export interface ELBLayerConfig {
-  name?: string; // Property name for window.elbLayer (default: 'elbLayer')
-}
-
 // Scope type for DOM operations
 export type Scope = Document | Element;
 

@@ -10,7 +10,7 @@ import {
 } from '@walkeros/core';
 import { createEvent, enrichEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
-import { buildBaseState } from './observerEmit';
+import { buildBaseState, journeyFields } from './observerEmit';
 import { runTransformerChain } from './transformer';
 
 function filterDestinations(
@@ -143,7 +143,7 @@ export function createPush<T extends Collector.Instance>(
               const forkResults = await Promise.all(
                 chainResult.event.map(async (forkEvent) => {
                   const enriched = prepareEvent(forkEvent);
-                  const full = createEvent(collector, enriched);
+                  const full = createEvent(collector, enriched, pipelineIngest);
                   return pushToDestinations(
                     collector,
                     full,
@@ -178,7 +178,11 @@ export function createPush<T extends Collector.Instance>(
           }
 
           // Enrich into a full event (timing, source info, defaults)
-          const fullEvent = enrichEvent(collector, partialEvent);
+          const fullEvent = enrichEvent(
+            collector,
+            partialEvent,
+            pipelineIngest,
+          );
 
           // Push to destinations with id and ingest
           const result = await pushToDestinations(
@@ -227,6 +231,16 @@ export function createPush<T extends Collector.Instance>(
 
   const wrapped: Collector.PushFn = async (event, options) => {
     const eventId = typeof event.id === 'string' ? event.id : '';
+    // Journey correlation from what is in scope at the wrap boundary: the
+    // incoming event's trace, then the header-derived ingest trace, then the
+    // run trace, plus the source context threaded through `options.ingest`.
+    // The processed full event is not visible here, so out/error reuse the
+    // same incoming-event trace (identical value in the common case).
+    const { traceId, sourceId, parentEventId } = journeyFields(
+      event,
+      options?.ingest,
+      collector,
+    );
     const started = Date.now();
     const inState = buildBaseState(collector, {
       stepId: 'collector.push',
@@ -234,6 +248,9 @@ export function createPush<T extends Collector.Instance>(
       phase: 'in',
       eventId,
       now: started,
+      traceId,
+      sourceId,
+      parentEventId,
     });
     inState.inEvent = event;
     emitStep(collector, inState);
@@ -247,6 +264,9 @@ export function createPush<T extends Collector.Instance>(
         phase: 'out',
         eventId,
         now: finished,
+        traceId,
+        sourceId,
+        parentEventId,
       });
       outState.durationMs = finished - started;
       outState.outEvent = result;
@@ -260,6 +280,9 @@ export function createPush<T extends Collector.Instance>(
         phase: 'error',
         eventId,
         now: finished,
+        traceId,
+        sourceId,
+        parentEventId,
       });
       errState.durationMs = finished - started;
       errState.error =

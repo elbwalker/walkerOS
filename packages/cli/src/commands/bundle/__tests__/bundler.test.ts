@@ -1130,7 +1130,9 @@ describe('generateWrapEntry telemetry supplier + poller codegen', () => {
 
   it('wires the observer as a supplier that re-resolves per emit', () => {
     const out = emit('standard');
-    expect(out).toContain('__cto(__emit, () => __cto_resolve({');
+    // Supplier re-resolves per emit, shared with observeLevel via __resolveTelemetry.
+    expect(out).toContain('() => __cto_resolve({');
+    expect(out).toContain('__cto(__emit, __resolveTelemetry)');
     expect(out).toContain('flowId: "flow-1"');
     expect(out).toContain('level: "standard"');
     expect(out).toContain('sample: 0.5');
@@ -1248,7 +1250,7 @@ describe('generateWrapEntry telemetry supplier + poller codegen', () => {
 
   it('wires telemetry even when the baseline level is off', () => {
     const out = emit('off');
-    expect(out).toContain('__cto(__emit, () => __cto_resolve({');
+    expect(out).toContain('__cto(__emit, __resolveTelemetry)');
     expect(out).toContain('level: "off"');
     expect(out).toContain('function __pollTrace');
   });

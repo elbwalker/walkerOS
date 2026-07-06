@@ -285,7 +285,7 @@ describe('Scoped visible (end-to-end)', () => {
     const destroyEnv: Source.Env<Types> = {
       push: collector.push,
       command: collector.command,
-      elb: collector.sources.elb.push,
+      elb: collector.elb,
       window,
       document,
       logger: createMockLogger(),

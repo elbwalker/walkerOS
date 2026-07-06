@@ -80,6 +80,15 @@ export interface Instance<T extends TypesGeneric = Types> {
   dlq?: DLQ;
   batches?: BatchRegistry<Mapping<T>>;
   type?: string;
+  /**
+   * Observable env callables for trace-level vendor-call capture. Dot-paths of
+   * the functions this destination invokes on its env, using the same grammar
+   * as the dev-env `simulation` lists (incl. an optional `call:` prefix), e.g.
+   * `['call:window.gtag']`. When present AND the collector reports trace level,
+   * the per-event push env is wrapped (via `wrapEnv`) so each listed call is
+   * recorded onto the destination out record. Absent or empty = no capture.
+   */
+  calls?: string[];
   env?: Env<T>;
   setup?: SetupFn<Config<T>, Env<T>>;
   init?: InitFn<T>;

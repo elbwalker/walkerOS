@@ -324,3 +324,64 @@ describe('browser bundle — no global-scope leak', () => {
     }
   }, 120000);
 });
+
+/**
+ * window.elb comes from the browser source, not the bundle.
+ *
+ * The bundle no longer emits `window[windowElb] = elb`. The browser source is
+ * the single writer of `window[settings.elb]`, so a web flow with NO browser
+ * source exposes no `window.elb` — only the collector global the wrap still
+ * assigns. This is the counterpart to the MINIMAL_FLOW smoke tests above, which
+ * DO have a browser source and therefore still expose `window.elb`.
+ */
+describe('CDN bundle without a browser source — window.elb', () => {
+  const BROWSERLESS_FLOW = {
+    version: 4,
+    flows: {
+      default: {
+        config: { platform: 'web' },
+        sources: {},
+        destinations: {
+          api: {
+            package: '@walkeros/web-destination-api',
+            config: {
+              settings: {
+                url: 'https://example.com/events',
+                method: 'POST',
+                transport: 'fetch',
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  let tmpDir: string;
+  let script: string;
+
+  beforeAll(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'walkeros-nobrowser-'));
+    const out = join(tmpDir, 'walker.js');
+    await bundle(BROWSERLESS_FLOW, {
+      target: 'cdn',
+      silent: true,
+      cache: false,
+      buildOverrides: { output: out, windowCollector: 'walkerOS' },
+    });
+    script = await readFile(out, 'utf8');
+  }, 120000);
+
+  afterAll(async () => {
+    await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  });
+
+  it('leaves window.elb undefined; only the collector global is added', async () => {
+    const { added, read } = await runScriptAndDiffGlobals(script);
+    // No browser source ran, and the bundle no longer emits window.elb.
+    expect(read('elb')).toBeUndefined();
+    expect(added).not.toContain('elb');
+    // The collector global is still emitted by the wrap.
+    expect(added).toContain('walkerOS');
+  }, 120000);
+});

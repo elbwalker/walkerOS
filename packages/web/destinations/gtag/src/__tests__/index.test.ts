@@ -62,6 +62,10 @@ describe('Unified Gtag Destination', () => {
     it('should not have default environment', () => {
       expect(destinationGtag.env).toBeUndefined();
     });
+
+    it('should declare the observable gtag call for trace capture', () => {
+      expect(destinationGtag.calls).toEqual(['call:window.gtag']);
+    });
   });
 
   describe('init', () => {

@@ -121,13 +121,17 @@ describe('walkerOS Web Basic Example', () => {
     // Verify all destinations were called immediately
     expect(consoleEvents).toContain('order complete');
 
-    // Verify API destination call details
+    // Verify API destination call details; the event's trace and id travel
+    // as a W3C traceparent header alongside configured headers
     expect(mockSendWeb).toHaveBeenCalledWith(
       'https://analytics.example.com/events',
       expect.stringContaining(JSON.stringify(orderEvent)),
       expect.objectContaining({
         method: 'POST',
-        headers: { 'X-R4N': 'D0M' },
+        headers: {
+          'X-R4N': 'D0M',
+          traceparent: `00-${orderEvent.source.trace}-${orderEvent.id}-01`,
+        },
       }),
     );
 

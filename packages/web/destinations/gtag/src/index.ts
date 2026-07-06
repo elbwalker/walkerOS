@@ -47,6 +47,10 @@ function setupConsentDefault(config: Config, env: Env | undefined): void {
 export const destinationGtag: Destination = {
   type: 'google-gtag',
 
+  // Observable env callable for trace-level vendor-call capture. Mirrors the
+  // dev-env simulation list (src/examples/env.ts).
+  calls: ['call:window.gtag'],
+
   config: { settings: {} },
 
   init({ config, env, logger }) {

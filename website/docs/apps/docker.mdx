@@ -610,7 +610,6 @@ Create `web-tracker.json`:
     "default": {
       "config": {
         "platform": "web",
-        "settings": { "windowElb": "track" },
         "bundle": {
           "packages": {
             "@walkeros/collector": { "version": "latest" },
@@ -625,7 +624,7 @@ Create `web-tracker.json`:
           "config": {
             "settings": {
               "pageview": true,
-              "session": true
+              "elb": "track"
             }
           }
         }

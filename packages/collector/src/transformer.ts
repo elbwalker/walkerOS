@@ -56,7 +56,7 @@ import {
   compileState,
   applyState,
 } from '@walkeros/core';
-import { buildBaseState } from './observerEmit';
+import { buildBaseState, journeyFields } from './observerEmit';
 import { getCacheStore, getStateStore } from './cache';
 import { buildReportError } from './report-error';
 
@@ -483,6 +483,11 @@ export async function transformerPush(
   transformerLogger.debug('push', { event: (event as { name?: string }).name });
 
   const eventId = typeof event.id === 'string' ? event.id : '';
+  const { traceId, sourceId, parentEventId } = journeyFields(
+    event,
+    ingest,
+    collector,
+  );
   const started = Date.now();
   const inState = buildBaseState(collector, {
     stepId: stepId('transformer', transformerId),
@@ -490,6 +495,9 @@ export async function transformerPush(
     phase: 'in',
     eventId,
     now: started,
+    traceId,
+    sourceId,
+    parentEventId,
   });
   inState.inEvent = event;
   emitStep(collector, inState);
@@ -509,6 +517,9 @@ export async function transformerPush(
       phase: 'out',
       eventId,
       now: finished,
+      traceId,
+      sourceId,
+      parentEventId,
     });
     outState.durationMs = finished - started;
     outState.outEvent = result;
@@ -525,6 +536,9 @@ export async function transformerPush(
       phase: 'error',
       eventId,
       now: finished,
+      traceId,
+      sourceId,
+      parentEventId,
     });
     errState.durationMs = finished - started;
     errState.error =

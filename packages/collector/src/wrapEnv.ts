@@ -7,12 +7,42 @@ interface WrapResult {
   calls: Simulation.Call[];
 }
 
-function deepClone(obj: unknown): unknown {
+/**
+ * Structural-clone depth cap. Beyond this depth the ORIGINAL reference is
+ * reused instead of cloned: the wrapped env is what the destination executes
+ * against, so the fallback must stay functional (never a marker string).
+ * Tracked simulation dot-paths must resolve within this depth so recorders
+ * are installed on cloned parents and never mutate the caller's env.
+ */
+const CLONE_MAX_DEPTH = 8;
+
+/**
+ * Visit-once structural clone. The memo maps each source object to its single
+ * clone, so cycles terminate and shared references stay shared (the clone
+ * preserves the object graph's shape). Functions are kept by reference.
+ */
+function deepClone(
+  obj: unknown,
+  memo: WeakMap<object, unknown>,
+  depth: number,
+): unknown {
   if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(deepClone);
+  if (depth >= CLONE_MAX_DEPTH) return obj;
+  const existing = memo.get(obj);
+  if (existing !== undefined) return existing;
+  if (Array.isArray(obj)) {
+    const cloneArr: unknown[] = [];
+    memo.set(obj, cloneArr);
+    for (const item of obj) {
+      cloneArr.push(deepClone(item, memo, depth + 1));
+    }
+    return cloneArr;
+  }
   const clone: Record<string, unknown> = {};
+  memo.set(obj, clone);
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-    clone[key] = typeof value === 'function' ? value : deepClone(value);
+    clone[key] =
+      typeof value === 'function' ? value : deepClone(value, memo, depth + 1);
   }
   return clone;
 }
@@ -31,7 +61,11 @@ export function wrapEnv(
   const { simulation, ...rest } = env;
 
   // Deep clone the env to avoid mutating the original (preserves functions)
-  const wrappedEnv = deepClone(rest) as Record<string, unknown>;
+  const wrappedEnv = deepClone(
+    rest,
+    new WeakMap<object, unknown>(),
+    0,
+  ) as Record<string, unknown>;
 
   for (const rawPath of simulation) {
     // Strip optional "call:" prefix

@@ -67,7 +67,7 @@ describe('Source Create Flow Integration', () => {
       },
       push: expect.any(Function),
     });
-    expect(collector.sources.elb).toBeDefined();
+    expect(collector.elb).toBeDefined();
 
     await elb({ name: 'manual event', data: { test: 'data' } });
 

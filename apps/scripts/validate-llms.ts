@@ -176,6 +176,16 @@ function checkSkillsExport(): void {
 
 function main(): void {
   if (!existsSync(LLMS_INDEX)) {
+    // In CI the website build runs before validation, so a missing llms.txt
+    // here means the llms plugin stopped emitting its index (a broken export),
+    // not a harmless local no-build run. Fail loudly in that case; only skip
+    // when there is genuinely no build (unit-test-only local runs).
+    if (existsSync(BUILD_DIR) || process.env.CI === 'true') {
+      console.log(
+        '❌ LLM export validation failed: website/build/llms.txt not found after website build.\n',
+      );
+      process.exit(1);
+    }
     console.log(
       '🟡 Skipping LLM export validation: website/build/llms.txt not found (site not built).\n',
     );

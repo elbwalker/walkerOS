@@ -62,11 +62,11 @@
               },
               "windowElb": {
                 "default": "elb",
-                "description": "Window property name for the elb command queue (default: \"elb\")",
+                "description": "Deprecated: set elb in the browser source's config.settings instead. Window property name for the elb command queue (default: \"elb\")",
                 "type": "string"
               }
             },
-            "required": ["windowCollector", "windowElb"],
+            "required": ["windowCollector"],
             "additionalProperties": false
           },
           "server": {

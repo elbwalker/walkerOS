@@ -4,6 +4,7 @@ import type {
   Destination,
   Elb,
   Hooks,
+  Ingest,
   On,
 } from '@walkeros/core';
 import { Const } from './constants';
@@ -184,6 +185,10 @@ export async function commonHandleCommand(
           shouldNotify = true;
         }
         break;
+
+      default:
+        collector.logger.warn('unknown command', { command: action });
+        return createPushResult({ ok: false });
     }
 
     // Single notification + flush point for all state-mutation commands
@@ -226,6 +231,7 @@ export function prepareEvent(
 export function createEvent(
   collector: Collector.Instance,
   partialEvent: WalkerOS.PartialEvent,
+  ingest?: Ingest,
 ): WalkerOS.Event {
   if (!partialEvent.name) throw new Error('Event name is required');
 
@@ -250,10 +256,13 @@ export function createEvent(
     source = { type: 'collector', schema: '4' },
   } = partialEvent;
 
-  // Stamp run-scoped trace and the per-run sequence, but only when absent so
-  // forwarded events (web -> api -> server) keep their origin identity.
+  // Stamp the per-run sequence and trace, but only when absent so forwarded
+  // events (web -> api -> server) keep their origin identity. Trace precedence:
+  // a payload trace wins; a header-derived ingest trace fills the gap; the
+  // run-scoped collector trace is the final fallback.
   const count = source.count ?? (collector.count += 1);
-  const trace = source.trace ?? collector.trace;
+  // Must match journeyFields' trace precedence (observerEmit.ts).
+  const trace = source.trace ?? ingest?._meta.trace ?? collector.trace;
   const stampedSource: WalkerOS.Source = { ...source, count };
   if (trace !== undefined) stampedSource.trace = trace;
 
@@ -289,8 +298,9 @@ export function createEvent(
 export function enrichEvent(
   collector: Collector.Instance,
   event: WalkerOS.DeepPartialEvent,
+  ingest?: Ingest,
 ): WalkerOS.Event {
-  return createEvent(collector, prepareEvent(collector, event));
+  return createEvent(collector, prepareEvent(collector, event), ingest);
 }
 
 /**

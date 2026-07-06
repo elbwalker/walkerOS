@@ -6,6 +6,7 @@ function createTestCollector(): Collector.Instance {
   return {
     push: async () => ({ ok: true }),
     command: async () => ({ ok: true }),
+    elb: async () => ({ ok: true }),
     allowed: true,
     config: {
       globalsStatic: {},

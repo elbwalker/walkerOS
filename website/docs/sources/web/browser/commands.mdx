@@ -49,6 +49,25 @@ elb({event: "entity action", data: { foo: "bar"}});`}
   language="javascript"
 />
 
+The browser source owns the `window.elb` name: during initialization it
+assigns the function to `window[settings.elb]` (default `elb`). Calls return a
+promise that resolves with the processing result.
+
+### elbLayer processing
+
+`window.elbLayer` is an append-only queue: entries are recorded and never
+removed, so inspecting the array always shows the full input history. Both
+`window.elb(...)` and `window.elbLayer.push(...)` are processed through the
+same translation layer.
+
+Processing order:
+
+* `walker` commands apply as soon as the source is initialized, so a queued
+  `walker consent` takes effect before any queued events.
+* Events are processed once the source has started (after the first
+  `walker run`), in the order they were pushed.
+* From then on, all entries are processed strictly in push order.
+
 ## config
 
 Configure the browser source during initialization through `startFlow`. These
@@ -68,7 +87,6 @@ config: {
     elbLayer: true, // Enable elbLayer for async command queuing
     pageview: true, // Trigger a page view event by default
     prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning
-    session: true, // Enable session tracking
   },
 },
 },
@@ -81,7 +99,8 @@ config: {
 
 Browser source configuration must be done during initialization.
 Settings like `prefix` and `elbLayer` cannot be changed after the source is
-created.
+created. Session tracking is provided by the separate
+`@walkeros/web-source-session` source.
 
 :::
 

@@ -214,9 +214,9 @@ describe('Source', () => {
       });
 
       expect(testCollector.sources).toBeDefined();
-      // ELB source is always present
-      expect(Object.keys(testCollector.sources)).toHaveLength(1);
-      expect(testCollector.sources.elb).toBeDefined();
+      // No pseudo-source is registered; the elb adapter lives on the collector
+      expect(Object.keys(testCollector.sources)).toHaveLength(0);
+      expect(testCollector.elb).toBeDefined();
     });
   });
 

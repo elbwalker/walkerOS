@@ -57,8 +57,7 @@
       "config": {
         "platform": "web",
         "settings": {
-          "windowCollector": "collector",
-          "windowElb": "elb"
+          "windowCollector": "collector"
         },
         "bundle": {
           "packages": {

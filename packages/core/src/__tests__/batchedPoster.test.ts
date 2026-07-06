@@ -87,7 +87,9 @@ describe('createBatchedPoster', () => {
 
     expect(harness.callCount()).toBe(1);
     expect(harness.calls[0].init.method).toBe('POST');
-    expect(readBody(harness.calls[0].init)).toEqual([makeState('span_1')]);
+    expect(readBody(harness.calls[0].init)).toEqual([
+      { ...makeState('span_1'), seq: 1 },
+    ]);
   });
 
   it('posts immediately when batch size hits the cap', async () => {

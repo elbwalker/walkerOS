@@ -1794,7 +1794,6 @@ Create `web-track.json`:
     "default": {
       "config": {
         "platform": "web",
-        "settings": { "windowElb": "track" },
         "bundle": {
           "packages": {
             "@walkeros/web-source-browser": {},
@@ -1806,7 +1805,7 @@ Create `web-track.json`:
         "browser": {
           "package": "@walkeros/web-source-browser",
           "config": {
-            "settings": { "pageview": true, "session": true }
+            "settings": { "pageview": true, "elb": "track" }
           }
         }
       },

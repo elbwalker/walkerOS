@@ -234,8 +234,9 @@ export function enrichFlowConfigSchema(baseSchema: AnySchema): AnySchema {
     if (flowConfigProps.settings) {
       flowConfigProps.settings.markdownDescription =
         'Free-form key-value settings consumed by the platform runtime.\n\n' +
-        'For web: typical keys include `windowCollector`, `windowElb`.\n\n' +
-        '```json\n"settings": {\n  "windowCollector": "collector",\n  "windowElb": "elb"\n}\n```';
+        'For web: typical keys include `windowCollector`. The `windowElb` key is ' +
+        "deprecated — set the browser source's `config.settings.elb` instead.\n\n" +
+        '```json\n"settings": {\n  "windowCollector": "collector"\n}\n```';
     }
 
     if (flowConfigProps.bundle) {

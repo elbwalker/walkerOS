@@ -23,6 +23,7 @@ import {
   generateWrapEntryServer,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
+import { createMockLogger } from '../../helpers/mock-logger.js';
 import path from 'path';
 import type { Flow } from '@walkeros/core';
 import type { BuildOptions } from '../../../types/bundle.js';
@@ -911,7 +912,7 @@ describe('generateWrapEntry preview preflight', () => {
     expect(output).not.toContain('elbPreview');
   });
 
-  it('preserves window assignments alongside preflight', () => {
+  it('preserves the collector window assignment alongside preflight', () => {
     const output = generateWrapEntry('./skeleton.mjs', {
       windowCollector: 'collector',
       windowElb: 'elb',
@@ -919,7 +920,9 @@ describe('generateWrapEntry preview preflight', () => {
       previewScope: 'proj_test',
     });
     expect(output).toContain("window['collector']");
-    expect(output).toContain("window['elb']");
+    // windowElb no longer emits its own assignment; the browser source is the
+    // single writer of window[settings.elb].
+    expect(output).not.toContain("window['elb']");
     expect(output).toContain('elbPreview');
   });
 });
@@ -950,6 +953,148 @@ describe('generateWebEntry platform gating', () => {
     expect(output).toContain("typeof window !== 'undefined'");
     expect(output).toContain("typeof document !== 'undefined'");
     expect(output).toContain('Object.keys(config.sources)');
+  });
+});
+
+describe('windowElb emission drop', () => {
+  const DATA_PAYLOAD = '{"sources":{},"destinations":{}}';
+
+  it('generateWebEntry emits the collector global but never a windowElb assignment', () => {
+    const output = generateWebEntry('./skeleton.mjs', DATA_PAYLOAD, {
+      windowCollector: 'walkerOS',
+      windowElb: 'elb',
+      platform: 'browser',
+    });
+    expect(output).toContain("window['walkerOS'] = collector");
+    // The browser source is the single writer of window[settings.elb]; the
+    // bundle no longer emits a competing window[...] = elb assignment.
+    expect(output).not.toContain("window['elb']");
+  });
+
+  it('generateWrapEntry emits the collector global but never a windowElb assignment', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      windowCollector: 'walkerOS',
+      windowElb: 'elb',
+    });
+    expect(output).toContain("window['walkerOS'] = collector");
+    expect(output).not.toContain("window['elb']");
+  });
+});
+
+describe('windowElb bridge (createEntryPoint)', () => {
+  const buildOptions: BuildOptions = {
+    platform: 'browser',
+    format: 'esm',
+    packages: { '@walkeros/web-source-browser': {} },
+    output: './dist/bundle.js',
+    code: '',
+  };
+  const packagePaths = new Map([['@walkeros/web-source-browser', '/tmp/pkg']]);
+
+  function browserFlow(sourceConfig?: Record<string, unknown>): Flow {
+    return {
+      config: { platform: 'web', settings: { windowElb: 'track' } },
+      sources: {
+        browser: {
+          package: '@walkeros/web-source-browser',
+          ...(sourceConfig ? { config: sourceConfig } : {}),
+        },
+      },
+      destinations: {},
+    };
+  }
+
+  it('forwards config.settings.windowElb to the browser source settings.elb and warns once', async () => {
+    const logger = createMockLogger();
+    const { dataPayload } = await createEntryPoint(
+      browserFlow(),
+      buildOptions,
+      packagePaths,
+      logger,
+    );
+    // Forwarded value lands inside the embedded __configData payload.
+    const data = JSON.parse(dataPayload);
+    expect(data.sources.browser.config.settings.elb).toBe('track');
+    expect(jest.mocked(logger.warn)).toHaveBeenCalledTimes(1);
+    const msg = String(jest.mocked(logger.warn).mock.calls[0][0]);
+    expect(msg).toMatch(/windowElb/);
+    expect(msg).toMatch(/settings\.elb/);
+  });
+
+  it('does not override an explicit browser source settings.elb and warns it is ignored', async () => {
+    const logger = createMockLogger();
+    const { dataPayload } = await createEntryPoint(
+      browserFlow({ settings: { elb: 'keep' } }),
+      buildOptions,
+      packagePaths,
+      logger,
+    );
+    const data = JSON.parse(dataPayload);
+    expect(data.sources.browser.config.settings.elb).toBe('keep');
+    expect(jest.mocked(logger.warn)).toHaveBeenCalledTimes(1);
+    const msg = String(jest.mocked(logger.warn).mock.calls[0][0]);
+    expect(msg).toMatch(/ignored/);
+  });
+
+  it('warns windowElb has no effect when the flow has no browser source', async () => {
+    const logger = createMockLogger();
+    const flow: Flow = {
+      config: { platform: 'web', settings: { windowElb: 'track' } },
+      sources: {},
+      destinations: {
+        api: {
+          package: '@walkeros/web-destination-api',
+          config: { settings: { url: 'https://example.com/events' } },
+        },
+      },
+    };
+    const opts: BuildOptions = {
+      platform: 'browser',
+      format: 'esm',
+      packages: { '@walkeros/web-destination-api': {} },
+      output: './dist/bundle.js',
+      code: '',
+    };
+    const { dataPayload } = await createEntryPoint(
+      flow,
+      opts,
+      new Map([['@walkeros/web-destination-api', '/tmp/pkg']]),
+      logger,
+    );
+    const data = JSON.parse(dataPayload);
+    expect(data.sources?.browser).toBeUndefined();
+    expect(jest.mocked(logger.warn)).toHaveBeenCalledTimes(1);
+    const msg = String(jest.mocked(logger.warn).mock.calls[0][0]);
+    expect(msg).toMatch(/no effect/);
+  });
+
+  it('does not warn or forward when config.settings.windowElb is absent', async () => {
+    const logger = createMockLogger();
+    const flow = browserFlow();
+    flow.config = { platform: 'web' };
+    const { dataPayload } = await createEntryPoint(
+      flow,
+      buildOptions,
+      packagePaths,
+      logger,
+    );
+    const data = JSON.parse(dataPayload);
+    expect(data.sources?.browser?.config?.settings?.elb).toBeUndefined();
+    expect(jest.mocked(logger.warn)).not.toHaveBeenCalled();
+  });
+
+  it('never mutates the input flow when forwarding', async () => {
+    // The forwarding case mutates a nested source.config; guard that it lands on
+    // a clone and the caller's flow is left byte-for-byte identical.
+    const flow = browserFlow();
+    const before = structuredClone(flow);
+    await createEntryPoint(
+      flow,
+      buildOptions,
+      packagePaths,
+      createMockLogger(),
+    );
+    expect(flow).toEqual(before);
   });
 });
 
@@ -1002,6 +1147,21 @@ describe('generateServerEntry observer wiring', () => {
     expect(startFlowIdx).toBeGreaterThan(-1);
     expect(observerIdx).toBeGreaterThan(startFlowIdx);
   });
+
+  it('installs a guarded context.observeLevel on the collector after the observers loop', () => {
+    const out = generateServerEntry('./skel.mjs', '{}');
+    // Guarded install: a context without the supplier (no telemetry env)
+    // leaves collector.observeLevel unset.
+    expect(out).toContain(
+      'if (context.observeLevel) result.collector.observeLevel = context.observeLevel;',
+    );
+    const observersIdx = out.indexOf('result.collector.observers.add');
+    const levelIdx = out.indexOf(
+      'result.collector.observeLevel = context.observeLevel',
+    );
+    expect(observersIdx).toBeGreaterThan(-1);
+    expect(levelIdx).toBeGreaterThan(observersIdx);
+  });
 });
 
 describe('generateWrapEntryServer observer wiring', () => {
@@ -1015,6 +1175,21 @@ describe('generateWrapEntryServer observer wiring', () => {
     const observerIdx = out.indexOf('result.collector.observers.add');
     expect(startFlowIdx).toBeGreaterThan(-1);
     expect(observerIdx).toBeGreaterThan(startFlowIdx);
+  });
+
+  it('installs a guarded context.observeLevel on the collector after the observers loop', () => {
+    const out = generateWrapEntryServer('./skel.mjs');
+    // Guarded install: a context without the supplier (no telemetry env)
+    // leaves collector.observeLevel unset.
+    expect(out).toContain(
+      'if (context.observeLevel) result.collector.observeLevel = context.observeLevel;',
+    );
+    const observersIdx = out.indexOf('result.collector.observers.add');
+    const levelIdx = out.indexOf(
+      'result.collector.observeLevel = context.observeLevel',
+    );
+    expect(observersIdx).toBeGreaterThan(-1);
+    expect(levelIdx).toBeGreaterThan(observersIdx);
   });
 });
 
@@ -1104,6 +1279,164 @@ describe('generateWrapEntry telemetry observer wiring', () => {
     expect(out).toContain('setInterval');
     expect(out).toContain('resolveTelemetryOptions');
     expect(out).toContain('traceUntil');
+  });
+});
+
+describe('telemetry observeLevel install', () => {
+  it('generateWebEntry (static) installs observeLevel returning the baked level literal after startFlow', () => {
+    const out = generateWebEntry('./skel.mjs', '{}', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/i/d',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'standard',
+      },
+    });
+    // Static form: the SAME literal the observer options bake, returned directly.
+    expect(out).toContain(
+      'collector.observeLevel = function () { return "standard"; };',
+    );
+    // No runtime resolve mechanism in the static form.
+    expect(out).not.toContain('__cto_resolve');
+    expect(out).not.toContain('__traceUntil');
+    // Install lands after startFlow, alongside the observer.
+    const startFlowIdx = out.indexOf('await startFlow(config)');
+    const levelIdx = out.indexOf('collector.observeLevel');
+    expect(startFlowIdx).toBeGreaterThan(-1);
+    expect(levelIdx).toBeGreaterThan(startFlowIdx);
+  });
+
+  it('generateWebEntry (static) defaults the observeLevel literal to standard when level is omitted', () => {
+    const out = generateWebEntry('./skel.mjs', '{}', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/i/d',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+      },
+    });
+    expect(out).toContain(
+      'collector.observeLevel = function () { return "standard"; };',
+    );
+  });
+
+  it('generateWrapEntry static form installs observeLevel returning the baked level literal', () => {
+    const out = generateWrapEntry('./skel.mjs', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/ingest/preview/prv_1',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'trace',
+      },
+    });
+    expect(out).toContain(
+      'collector.observeLevel = function () { return "trace"; };',
+    );
+    expect(out).not.toContain('__cto_resolve');
+    expect(out).not.toContain('__traceUntil');
+    const startFlowIdx = out.indexOf('await startFlow(config)');
+    const levelIdx = out.indexOf('collector.observeLevel');
+    expect(levelIdx).toBeGreaterThan(startFlowIdx);
+  });
+
+  it("generateWrapEntry static form with level 'off' still installs observeLevel returning 'off'", () => {
+    const out = generateWrapEntry('./skel.mjs', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/ingest/preview/prv_1',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'off',
+      },
+    });
+    // Token present wires telemetry; observeLevel reports 'off' so capture stays inactive.
+    expect(out).toContain(
+      'collector.observeLevel = function () { return "off"; };',
+    );
+  });
+
+  it('generateWrapEntry poll form installs observeLevel via the SAME resolve/__traceUntil mechanism as the observer', () => {
+    const out = generateWrapEntry('./skel.mjs', {
+      telemetry: {
+        observerUrl: 'https://o.example.com/i/d',
+        traceUrl: 'https://o.example.com/trace/d',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'standard',
+      },
+    });
+    // A single shared resolver feeds both the observer and observeLevel.
+    expect(out).toContain(
+      'const __observer = __cto(__emit, __resolveTelemetry);',
+    );
+    // observeLevel resolves through the shared closure, mirroring the observer's
+    // level: null (off, no trace) reports 'off', otherwise the resolved level.
+    expect(out).toMatch(
+      /collector\.observeLevel = function \(\) \{\s*const __opts = __resolveTelemetry\(\);\s*return __opts \? __opts\.level : 'off';\s*\};/,
+    );
+    // It must reuse __traceUntil / resolveTelemetryOptions, never a fresh date
+    // comparison reimplemented in the bundle.
+    expect(out).not.toContain('Date.parse');
+    expect(out).not.toContain('new Date');
+    // Not the static return-literal shape.
+    expect(out).not.toContain('collector.observeLevel = function () { return');
+  });
+
+  it('installs no observeLevel when no telemetry (no token) is wired', () => {
+    const web = generateWebEntry('./skel.mjs', '{}');
+    expect(web).not.toContain('observeLevel');
+    const wrap = generateWrapEntry('./skel.mjs', {});
+    expect(wrap).not.toContain('observeLevel');
+  });
+
+  it('evaluated static wrap bundle exposes collector.observeLevel() returning the baked level', async () => {
+    const out = generateWrapEntry('./skel.mjs', {
+      platform: 'node',
+      telemetry: {
+        observerUrl: 'https://o.example.com/i/d',
+        ingestToken: 'tok_t',
+        flowId: 'flow_t',
+        level: 'standard',
+      },
+    });
+
+    // Evaluate the generated IIFE with the ESM imports stripped and stubbed
+    // in as parameters, so the assertion runs the real generated code.
+    const stripped = out.replace(/^import .*$/gm, '');
+    const collector: {
+      observers: Set<unknown>;
+      observeLevel?: () => 'off' | 'standard' | 'trace';
+    } = { observers: new Set() };
+
+    const run = new Function(
+      'startFlow',
+      'wireConfig',
+      '__configData',
+      '__cbp',
+      '__cto',
+      stripped,
+    ) as (
+      startFlow: () => Promise<{
+        collector: typeof collector;
+        elb: () => void;
+      }>,
+      wireConfig: (d: unknown) => unknown,
+      configData: unknown,
+      cbp: (opts: unknown) => () => void,
+      cto: (emit: unknown, opts: unknown) => () => void,
+    ) => void;
+
+    run(
+      () => Promise.resolve({ collector, elb: () => {} }),
+      (d) => d,
+      {},
+      () => () => {},
+      () => () => {},
+    );
+    // Let the async IIFE settle past `await startFlow(config)`.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(collector.observers.size).toBe(1);
+    expect(collector.observeLevel).toBeDefined();
+    expect(collector.observeLevel?.()).toBe('standard');
   });
 });
 

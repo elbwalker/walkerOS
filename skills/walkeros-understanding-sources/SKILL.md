@@ -57,7 +57,7 @@ export const sourceMySource: Source.Init<Types> = async (context) => {
 returned `Source.Instance`. The factory must be **side-effect-free**: build the
 instance and return it. The collector calls `init()` on every source eagerly
 after all factories register, regardless of `config.require`. Use `init` for
-work that previously sat in the factory body: draining a pre-init window queue
+work that previously sat in the factory body: adopting a pre-init window queue
 (e.g., `window.elbLayer`), attaching DOM listeners, opening sockets,
 intercepting `window.dataLayer`. After `init` runs the collector flips
 `Source.Config.init` to `true`.

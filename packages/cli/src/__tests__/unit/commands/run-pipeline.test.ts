@@ -109,7 +109,8 @@ describe('runPipeline', () => {
       mockLogger,
       undefined,
       expect.any(Object), // healthServer
-      undefined, // telemetryHooks (no env vars set)
+      undefined, // observers (no env vars set)
+      undefined, // observeLevel supplier (gated on the observers)
     );
     expect(createHeartbeat).not.toHaveBeenCalled();
     expect(createPoller).not.toHaveBeenCalled();
