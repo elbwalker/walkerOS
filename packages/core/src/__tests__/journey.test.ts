@@ -212,6 +212,36 @@ describe('assembleJourneys — grouping and hops', () => {
     );
   });
 
+  test('(c3) seqless records differing only by platform are not deduped', () => {
+    // Same stepId/phase/eventId/branchId/elapsedMs, NO seq, but different
+    // platform: the fallback tuple must keep platforms distinct so a web and a
+    // server hop both survive rather than one being dropped as a duplicate.
+    const web = rec({
+      platform: 'web',
+      stepId: 'destination.gtag',
+      stepType: 'destination',
+      phase: 'out',
+      eventId: 'E1',
+      elapsedMs: 5,
+    });
+    const server = rec({
+      platform: 'server',
+      stepId: 'destination.gtag',
+      stepType: 'destination',
+      phase: 'out',
+      eventId: 'E1',
+      elapsedMs: 5,
+    });
+
+    const { journeys } = assembleJourneys([web, server], SETTLED);
+    expect(journeys).toHaveLength(1);
+
+    const { hops, platforms } = journeys[0];
+    expect(hops).toHaveLength(2);
+    expect([...platforms].sort()).toEqual(['server', 'web']);
+    expect(hops.map((h) => h.platform).sort()).toEqual(['server', 'web']);
+  });
+
   test("(d) legacy records without traceId: correlation 'legacy', id 'event:<id>'", () => {
     const legacy: FlowState[] = [
       rec({

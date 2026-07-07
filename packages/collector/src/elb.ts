@@ -35,9 +35,15 @@ export function createElb(collector: Collector.Instance): Elb.Fn {
       if (data && typeof data === 'object' && !Array.isArray(data)) {
         event.data = data as WalkerOS.Properties;
       }
-    } else if (eventOrCommand && typeof eventOrCommand === 'object') {
+    } else if (
+      eventOrCommand &&
+      typeof eventOrCommand === 'object' &&
+      // Exclude arrays passed by untyped runtime callers; Elb.Fn already forbids them
+      !Array.isArray(eventOrCommand)
+    ) {
       // Use object directly: elb({ name: 'page view', data: {...} })
-      event = eventOrCommand as WalkerOS.DeepPartialEvent;
+      // Shallow-clone so adapter writes never leak onto the caller's object
+      event = { ...(eventOrCommand as WalkerOS.DeepPartialEvent) };
       // Merge additional data if provided
       if (data && typeof data === 'object' && !Array.isArray(data)) {
         event.data = {

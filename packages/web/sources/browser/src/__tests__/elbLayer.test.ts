@@ -314,6 +314,36 @@ describe('createElbLayer controller', () => {
     expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
   });
 
+  test('a rejected enqueue does not wedge the shared chain', async () => {
+    setLayer([]);
+    const { context } = makeHarness();
+    const controller = createElbLayer(context, { window });
+    controller.start();
+    await flush();
+
+    // A rejecting unit of work. Catch the returned link so the rejection is
+    // observed here (no unhandled-rejection noise) and callers still see it.
+    const rejected = controller.enqueue(() =>
+      Promise.reject(new Error('boom')),
+    );
+    const rejection = rejected.catch((error: unknown) => error);
+
+    // A following unit of work queued strictly behind the rejected one.
+    let followUpRan = false;
+    const followUp = controller.enqueue(() => {
+      followUpRan = true;
+      return 'done';
+    });
+
+    await flush();
+
+    // The rejection surfaces to the awaiting caller of the rejected enqueue...
+    expect(await rejection).toEqual(new Error('boom'));
+    // ...but the shared chain continues: the follow-up still runs and resolves.
+    expect(followUpRan).toBe(true);
+    expect(await followUp).toBe('done');
+  });
+
   test('enqueue runs after a replayed backlog event', async () => {
     setLayer([['foo bar', {}]]);
     const { context, elb } = makeHarness();
@@ -338,5 +368,78 @@ describe('createElbLayer controller', () => {
     await enqueued;
     await flush();
     expect(order).toEqual(['event', 'enqueue']);
+  });
+
+  test('recreate on the same window resumes past the drained boundary', async () => {
+    setLayer([]);
+    const { context, dispatchLabels } = makeHarness();
+
+    // First controller drains both lanes: the command runs on intake, the
+    // event replays on start().
+    const first = createElbLayer(context, { window });
+    await first.intake(['walker consent', { functional: true }]);
+    await first.intake(['foo bar', { id: 'A' }]);
+    first.start();
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
+
+    first.destroy();
+
+    // A new controller adopts the SAME append-only window.elbLayer. It must
+    // resume past what the first controller already drained, not replay from 0.
+    const second = createElbLayer(context, { window });
+    second.start();
+    await flush();
+
+    // Neither the prior command nor the prior event re-routes.
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
+
+    // An entry pushed after the recreate still routes normally.
+    await second.intake(['baz qux', { id: 'B' }]);
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar', 'baz qux']);
+  });
+
+  test('recreate after a pre-start destroy replays held events exactly once', async () => {
+    setLayer([
+      ['walker consent', { functional: true }],
+      ['foo bar', { id: 'A' }],
+    ]);
+    const { context, dispatchLabels } = makeHarness();
+
+    // First controller runs the backlog command immediately but is destroyed
+    // before start(), so its event lane never drains.
+    const first = createElbLayer(context, { window });
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent']);
+    first.destroy();
+
+    // The recreate must NOT re-run the already-dispatched command, but MUST
+    // replay the still-undrained event exactly once.
+    const second = createElbLayer(context, { window });
+    second.start();
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
+  });
+
+  test('repeated destroy/recreate cycles never replay a drained entry', async () => {
+    setLayer([]);
+    const { context, dispatchLabels } = makeHarness();
+
+    let controller = createElbLayer(context, { window });
+    await controller.intake(['walker consent', {}]);
+    await controller.intake(['foo bar', {}]);
+    controller.start();
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
+
+    // Three further create/start cycles on the same array add nothing.
+    for (let i = 0; i < 3; i++) {
+      controller.destroy();
+      controller = createElbLayer(context, { window });
+      controller.start();
+      await flush();
+    }
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
   });
 });

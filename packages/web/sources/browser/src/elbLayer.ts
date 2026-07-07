@@ -14,6 +14,11 @@ import { translateToCoreCollector } from './translation';
  * held until `start()`, then replayed from a cursor in original push order. The
  * command chain seeds the post-start chain, so the last pre-start command
  * strictly precedes the first replayed event.
+ *
+ * A drained boundary is persisted on the array (see DRAIN_MARKER) so a
+ * controller adopting an already-populated array (destroy/recreate on the same
+ * window) resumes PAST what a prior controller dispatched instead of replaying
+ * the whole backlog and double-firing every command and event.
  */
 export interface ElbLayerController {
   /** Append an entry to the layer and route it. Returns the processing result. */
@@ -31,6 +36,48 @@ export interface ElbLayerController {
   /** Restore the array's native push and forget internal state. */
   destroy(): void;
 }
+
+/**
+ * Drained-boundary marker persisted on the layer array. Stored under a
+ * non-enumerable Symbol so it never appears in inspection, iteration, or JSON:
+ * the array stays append-only and reflects the page's full input history, yet a
+ * later controller can read where the lanes already drained. `Symbol.for` keeps
+ * the key stable across module instances, matching the window single-instance
+ * sentinel convention.
+ */
+const DRAIN_MARKER = Symbol.for(
+  '@walkeros/web-source-browser:elbLayer-drained',
+);
+
+interface DrainMarker {
+  // Leading entries whose command lane has drained: every `walker *` command at
+  // a lower index has already been routed.
+  commands: number;
+  // Leading entries whose event lane has drained: every non-command event at a
+  // lower index has already been replayed.
+  events: number;
+}
+
+const isDrainMarker = (value: unknown): value is DrainMarker =>
+  isObject(value) &&
+  typeof value.commands === 'number' &&
+  typeof value.events === 'number';
+
+// Return the array's existing marker (the same object, so this controller's
+// writes persist on the array) or install a fresh zeroed one. Non-enumerable +
+// configurable so it stays invisible to inspection yet re-readable later.
+const readOrCreateDrainMarker = (arr: unknown[]): DrainMarker => {
+  const existing: unknown = Reflect.get(arr, DRAIN_MARKER);
+  if (isDrainMarker(existing)) return existing;
+  const fresh: DrainMarker = { commands: 0, events: 0 };
+  Object.defineProperty(arr, DRAIN_MARKER, {
+    value: fresh,
+    writable: true,
+    enumerable: false,
+    configurable: true,
+  });
+  return fresh;
+};
 
 export function createElbLayer(
   context: Context,
@@ -64,10 +111,22 @@ export function createElbLayer(
     Reflect.set(windowObj, layerName, layer);
   }
 
+  // Adopt any drained boundary a prior controller left on this array. A fresh
+  // array reads {0, 0}, reproducing the original replay-the-whole-backlog-once
+  // behavior; a recreated one resumes past what already ran.
+  const drain = readOrCreateDrainMarker(layer);
   let started = false;
-  let eventCursor = 0;
+  let commandCursor = drain.commands;
+  let eventCursor = drain.events;
   let cmdTail: Promise<Elb.PushResult> = Promise.resolve(ok());
   let tail: Promise<unknown> = Promise.resolve();
+
+  // Mirror the live cursors onto the array-backed marker so the next controller
+  // adopting this array (destroy/recreate) resumes from the current boundary.
+  const persistDrain = (): void => {
+    drain.commands = commandCursor;
+    drain.events = eventCursor;
+  };
 
   const route = (item: unknown): Promise<Elb.PushResult> => {
     if (Array.isArray(item)) {
@@ -93,20 +152,29 @@ export function createElbLayer(
     return isString(first) && first.startsWith('walker ');
   };
 
-  const process = (item: unknown[]): Promise<Elb.PushResult> => {
+  const process = (item: unknown[], index: number): Promise<Elb.PushResult> => {
     if (!started) {
       if (isCommandEntry(item)) {
+        // A prior controller on this array already routed commands below the
+        // marker boundary — never route them a second time.
+        if (index < commandCursor) return Promise.resolve(ok());
         const link = cmdTail.then(() => routeSafe(item));
         cmdTail = link;
+        commandCursor = index + 1;
+        persistDrain();
         return link;
       }
       // Pre-start event: recorded in the layer, replayed on start().
       return Promise.resolve(ok());
     }
-    // Post-start every entry serializes on the shared tail. A later start() is
-    // barred by the started flag, so these are never replayed.
+    // Post-start every entry serializes on the shared tail and drains both
+    // lanes. A later start() is barred by the started flag, so these are never
+    // replayed.
     const link = tail.then(() => routeSafe(item));
     tail = link;
+    commandCursor = index + 1;
+    eventCursor = index + 1;
+    persistDrain();
     return link;
   };
 
@@ -115,9 +183,10 @@ export function createElbLayer(
     // Append the raw arg so inspection shows exactly what the page pushed.
     // Index-assign, not layer.push(raw): push here is our own wrappedPush
     // override, so calling it would recurse into this function.
-    layer[layer.length] = raw;
+    const index = layer.length;
+    layer[index] = raw;
     if (!normalized) return Promise.resolve(ok());
-    return process(normalized);
+    return process(normalized, index);
   };
 
   // Live capture: normalize, append raw, route. Returns the array's new length
@@ -133,7 +202,7 @@ export function createElbLayer(
   const backlogLength = layer.length;
   for (let i = 0; i < backlogLength; i++) {
     const normalized = normalizeItem(layer[i]);
-    if (normalized) process(normalized);
+    if (normalized) process(normalized, i);
   }
 
   const intake = (entry: unknown[]): Promise<Elb.PushResult> =>
@@ -155,12 +224,23 @@ export function createElbLayer(
       const item = normalized;
       tail = tail.then(() => routeSafe(item));
     }
+    // Both lanes are now drained up to the current length: every pre-start
+    // command ran on intake and every recorded event has been scheduled. Record
+    // the boundary so a later controller adopting this array resumes past it.
     eventCursor = layer.length;
+    commandCursor = layer.length;
+    persistDrain();
   };
 
   const enqueue = <T>(fn: () => Promise<T> | T): Promise<T> => {
     const link = tail.then(() => fn());
-    tail = link;
+    // A rejected enqueue must not wedge the shared chain: advance tail through a
+    // swallow so later enqueues and post-start events still run. The returned
+    // link stays rejectable so awaiting callers still observe the rejection.
+    tail = link.then(
+      () => undefined,
+      () => undefined,
+    );
     return link;
   };
 
@@ -168,9 +248,12 @@ export function createElbLayer(
     // Drop the own-property override so pushes fall back to Array.prototype.push.
     Reflect.deleteProperty(layer, 'push');
     started = false;
+    commandCursor = 0;
     eventCursor = 0;
     cmdTail = Promise.resolve(ok());
     tail = Promise.resolve();
+    // The array's drained marker is intentionally KEPT: it is the append-only
+    // array's memory of what already ran, so a recreate resumes past it.
   };
 
   return { intake, start, enqueue, destroy };

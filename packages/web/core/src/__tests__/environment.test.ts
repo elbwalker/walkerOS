@@ -104,6 +104,34 @@ describe('getEnv observe wrapping', () => {
     expect('observe' in env).toBe(false);
   });
 
+  it('still runs the underlying fn when the recorder throws', () => {
+    const realDataLayer: unknown[] = [];
+    const originalGtag = (...args: unknown[]) => {
+      realDataLayer.push(args);
+      return 'ret';
+    };
+    Reflect.set(window, 'gtag', originalGtag);
+
+    const throwingRecord = () => {
+      throw new Error('recorder boom');
+    };
+
+    const wrapped = getEnv<Env>({
+      observe: { paths: ['window.gtag'], record: throwingRecord },
+    }).window.gtag;
+
+    expect(typeof wrapped).toBe('function');
+
+    let result: unknown;
+    expect(() => {
+      if (typeof wrapped === 'function') result = wrapped('event', 'x');
+    }).not.toThrow();
+
+    // A throwing recorder must not suppress the real vendor call or its return.
+    expect(realDataLayer).toEqual([['event', 'x']]);
+    expect(result).toBe('ret');
+  });
+
   it('records through intermediate proxies for a deep path', () => {
     const { records, record } = makeRecorder();
     const leaf = () => undefined;

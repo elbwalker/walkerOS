@@ -243,7 +243,7 @@ describe('destination trace-level vendor-call capture', () => {
     expect(() => JSON.stringify(out?.calls)).not.toThrow();
   });
 
-  test('an error record never carries calls, even when capture recorded some', async () => {
+  test('an error record carries the calls made before the failure', async () => {
     const { collector, states, trackCalls } = await buildApiFlow({
       declareCalls: true,
       observeLevel: 'trace',
@@ -257,12 +257,16 @@ describe('destination trace-level vendor-call capture', () => {
 
     // The vendor call happened before the failure, so capture recorded it...
     expect(trackCalls).toHaveLength(1);
-    // ...but the error record must not leak it, and no out record exists.
+    // ...and the error record surfaces it, sanitized and JSON-safe, so the
+    // pre-failure vendor calls aren't lost. No out record exists on failure.
     const errRecord = states.find(
       (s) => s.stepId === 'destination.api' && s.phase === 'error',
     );
     expect(errRecord).toBeDefined();
-    expect(errRecord?.calls).toBeUndefined();
+    expect(errRecord?.calls).toHaveLength(1);
+    expect(errRecord?.calls?.[0]?.fn).toBe('api.track');
+    expect(errRecord?.calls?.[0]?.args).toEqual(['hit', 'page view']);
+    expect(() => JSON.stringify(errRecord?.calls)).not.toThrow();
     expect(outRecords(states)).toHaveLength(0);
   });
 

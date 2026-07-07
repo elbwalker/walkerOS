@@ -2727,6 +2727,37 @@
         },
         "required": ["examples"]
       },
+      "ObserveStepExample": {
+        "type": "object",
+        "properties": {
+          "in": {},
+          "out": {},
+          "mapping": {},
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "ObserveSaveExampleRequest": {
+        "type": "object",
+        "properties": {
+          "stepPath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scenario": {
+            "type": "string",
+            "minLength": 1
+          },
+          "example": {
+            "$ref": "#/components/schemas/ObserveStepExample"
+          }
+        },
+        "required": ["stepPath", "scenario", "example"]
+      },
       "SecretValuesResponse": {
         "type": "object",
         "properties": {
@@ -4845,6 +4876,40 @@
           "createdAt",
           "updatedAt"
         ]
+      },
+      "FlowJourneysResponse": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": ["string", "null"],
+            "pattern": "^ses_[a-zA-Z0-9_-]+$",
+            "example": "ses_abc123xyz456"
+          },
+          "flowId": {
+            "type": "string",
+            "pattern": "^flow_[a-zA-Z0-9_-]+$",
+            "example": "flow_a1b2c3d4"
+          },
+          "assembledAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "journeys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          }
+        },
+        "required": ["sessionId", "flowId", "assembledAt", "journeys", "gaps"]
       },
       "ListVersionsResponse": {
         "type": "object",
@@ -7591,6 +7656,116 @@
         }
       }
     },
+    "/api/projects/{projectId}/flows/{flowId}/observe-examples": {
+      "post": {
+        "tags": ["Observe Sessions"],
+        "summary": "Save an observed hop as a step example",
+        "description": "Persist an observed journey hop as a named example on a step of the DRAFT flow config. Gated by the 'observe' feature. The step path and scenario come from the body; `example.in` is stored verbatim (post-redaction). Rejects a duplicate scenario name with 409.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObserveSaveExampleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated examples object map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepExamplesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{projectId}/flows/{flowId}/deploy": {
       "get": {
         "tags": ["Deployments"],
@@ -9075,6 +9250,116 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ObserveSessionJourneysResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Observer unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/journeys": {
+      "get": {
+        "tags": ["Observe Sessions"],
+        "summary": "Get flow journeys",
+        "description": "Resolve the flow's single active Observe session and assemble its cross-runtime journeys server-side. `observe_sessions.flow_id` is UNIQUE, so a flow has at most one session; when none is active the response carries `sessionId: null` with empty journeys rather than a 404. Narrow with `traceId` (one trace) and `limit` (page cap, most recent kept). This is the MCP `observe_journeys` REST contract.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "traceId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assembled flow journeys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowJourneysResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

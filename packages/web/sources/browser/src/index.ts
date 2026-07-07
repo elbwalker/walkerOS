@@ -219,7 +219,9 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
             // the pageview lands after any queued events. Fire-and-forget: run
             // may arrive from inside a chain item, so awaiting would deadlock.
             controller.start();
-            controller.enqueue(() => sendPageview(settings));
+            // Fire-and-forget: the enqueue link is now rejectable, so swallow
+            // its rejection here to avoid an unhandled-rejection warning.
+            controller.enqueue(() => sendPageview(settings)).catch(() => {});
           } else {
             sendPageview(settings);
           }

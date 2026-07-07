@@ -1623,6 +1623,11 @@ export async function destinationPush<Destination extends Destination.Instance>(
         err instanceof Error
           ? { name: err.name, message: err.message }
           : { message: String(err) };
+      // Surface the vendor calls recorded before the failure, sanitized to a
+      // JSON-safe projection, so a mid-push error doesn't discard them.
+      if (recordedCalls && recordedCalls.length > 0) {
+        errState.calls = sanitizeCalls(recordedCalls);
+      }
       if (processed.mappingKey) errState.mappingKey = processed.mappingKey;
       emitStep(collector, errState);
       throw err;

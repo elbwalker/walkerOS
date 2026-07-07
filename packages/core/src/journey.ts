@@ -79,9 +79,9 @@ function dedupe(records: FlowState[]): FlowState[] {
     const key =
       r.seq !== undefined
         ? `seq${SEP}${r.platform ?? ''}${SEP}${r.seq}`
-        : `tuple${SEP}${r.stepId}${SEP}${r.phase}${SEP}${r.eventId}${SEP}${
-            r.branchId ?? ''
-          }${SEP}${r.elapsedMs}`;
+        : `tuple${SEP}${r.platform ?? ''}${SEP}${r.stepId}${SEP}${r.phase}${SEP}${
+            r.eventId
+          }${SEP}${r.branchId ?? ''}${SEP}${r.elapsedMs}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);

@@ -37,7 +37,11 @@ function wrapRoot(
 
         const fullPath = `${prefix}.${prop}`;
         const wrapper = (...args: unknown[]): unknown => {
-          record(fullPath, args);
+          try {
+            record(fullPath, args);
+          } catch {
+            // Telemetry must never suppress the real vendor call.
+          }
           return original.apply(t, args);
         };
         memo.set(prop, wrapper);
