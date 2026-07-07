@@ -38,13 +38,17 @@ describe('walkerOS Mapping Example', () => {
     ]);
   });
 
-  test('source-level config.mapping is inert on the direct elb path', async () => {
+  test('renames and reshapes events through source-level mapping', async () => {
     const { source } = await testMapping();
 
-    // The event is pushed through the collector elb directly, so it never
-    // routes through the custom source and the source's config.mapping is
-    // never applied: the event keeps its original name and the hand-rolled
-    // source push forwards only the event (dropping the data argument).
-    expect(source).toEqual([{ name: 'user login', data: {} }]);
+    // Pushed through the source instance, so the source's config.mapping runs:
+    // user login -> user authenticated, and policy adds the normalized
+    // `method` field to the event data that flows downstream.
+    expect(source).toEqual([
+      {
+        name: 'user authenticated',
+        data: { id: 'user-456', loginMethod: 'google', method: 'google' },
+      },
+    ]);
   });
 });

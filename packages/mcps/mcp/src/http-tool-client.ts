@@ -25,6 +25,7 @@ import {
   listDeployments,
   getDeploymentBySlug,
   deleteDeployment,
+  listJourneys,
   requestDeviceCode,
   pollForToken,
   whoami,
@@ -52,7 +53,7 @@ import type {
   FeedbackOptions,
 } from '@walkeros/cli';
 
-import type { ToolClient } from './tool-client.js';
+import type { ToolClient, JourneysResult } from './tool-client.js';
 
 /**
  * Default ToolClient implementation backed by @walkeros/cli. Every method
@@ -182,6 +183,15 @@ export class HttpToolClient implements ToolClient {
     projectId?: string;
   }): Promise<unknown> {
     return deleteDeployment(options);
+  }
+
+  async listJourneys(options: {
+    flowId: string;
+    projectId?: string;
+    traceId?: string;
+    limit?: number;
+  }): Promise<JourneysResult> {
+    return listJourneys(options);
   }
 
   async requestDeviceCode(): Promise<DeviceCodeResult> {

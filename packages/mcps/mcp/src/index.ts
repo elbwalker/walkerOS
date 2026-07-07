@@ -12,6 +12,7 @@ import { createProjectManageToolSpec } from './tools/project-manage.js';
 import { createFlowManageToolSpec } from './tools/flow-manage.js';
 import { createDeployManageToolSpec } from './tools/deploy-manage.js';
 import { createSecretManageToolSpec } from './tools/secret-manage.js';
+import { createObserveJourneysToolSpec } from './tools/observe-journeys.js';
 import { createFeedbackToolSpec } from './tools/feedback.js';
 
 import { createFlowValidateToolSpec } from './tools/validate.js';
@@ -31,7 +32,7 @@ export {
   type CreateServerOptions,
   type Logger,
 } from './server.js';
-export type { ToolClient } from './tool-client.js';
+export type { ToolClient, JourneysResult } from './tool-client.js';
 export { HttpToolClient } from './http-tool-client.js';
 export {
   createStreamableHttpHandler,
@@ -80,6 +81,7 @@ export function createToolHandlers(
     createFlowManageToolSpec(client),
     createDeployManageToolSpec(client),
     createSecretManageToolSpec(client),
+    createObserveJourneysToolSpec(client),
     createFeedbackToolSpec(client),
     createFlowValidateToolSpec(),
     createFlowBundleToolSpec(client),

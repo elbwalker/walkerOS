@@ -66,6 +66,7 @@ function stubClient(): ToolClient {
     listDeployments: notImpl,
     getDeploymentBySlug: notImpl,
     deleteDeployment: notImpl,
+    listJourneys: notImpl,
     requestDeviceCode: notImpl,
     pollForToken: notImpl,
     whoami: notImpl,
@@ -88,7 +89,7 @@ describe('createWalkerOSMcpServer', () => {
     expect(server.server).toBeDefined();
   });
 
-  it('registers all 15 tools', () => {
+  it('registers all 16 tools', () => {
     const server = createWalkerOSMcpServer({
       client: stubClient(),
       version: '0.0.0',
@@ -110,6 +111,7 @@ describe('createWalkerOSMcpServer', () => {
         'flow_push',
         'flow_simulate',
         'flow_validate',
+        'observe_journeys',
         'package_get',
         'package_search',
         'project_manage',

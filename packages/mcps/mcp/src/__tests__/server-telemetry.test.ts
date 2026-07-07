@@ -82,6 +82,7 @@ function stubClient(): ToolClient {
     listDeployments: notImpl,
     getDeploymentBySlug: notImpl,
     deleteDeployment: notImpl,
+    listJourneys: notImpl,
     requestDeviceCode: notImpl,
     pollForToken: notImpl,
     whoami: notImpl,

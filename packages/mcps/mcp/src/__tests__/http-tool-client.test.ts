@@ -25,6 +25,7 @@ jest.mock('@walkeros/cli', () => ({
   listDeployments: jest.fn(),
   getDeploymentBySlug: jest.fn(),
   deleteDeployment: jest.fn(),
+  listJourneys: jest.fn(),
   requestDeviceCode: jest.fn(),
   pollForToken: jest.fn(),
   whoami: jest.fn(),
@@ -55,6 +56,30 @@ describe('HttpToolClient', () => {
     const client = new HttpToolClient();
     await client.listProjects({ cursor: 'abc', limit: 10 });
     expect(cli.listProjects).toHaveBeenCalledWith({ cursor: 'abc', limit: 10 });
+  });
+
+  it('delegates listJourneys to cli.listJourneys with the flow options', async () => {
+    (cli.listJourneys as jest.Mock).mockResolvedValue({
+      sessionId: 'ses_1',
+      flowId: 'flow_1',
+      assembledAt: '2026-07-06T00:00:00.000Z',
+      journeys: [],
+      gaps: [],
+    });
+    const client = new HttpToolClient();
+    const result = await client.listJourneys({
+      flowId: 'flow_1',
+      projectId: 'proj_1',
+      traceId: 'T1',
+      limit: 10,
+    });
+    expect(cli.listJourneys).toHaveBeenCalledWith({
+      flowId: 'flow_1',
+      projectId: 'proj_1',
+      traceId: 'T1',
+      limit: 10,
+    });
+    expect(result.sessionId).toBe('ses_1');
   });
 
   it('delegates submitFeedback to cli.feedback', async () => {

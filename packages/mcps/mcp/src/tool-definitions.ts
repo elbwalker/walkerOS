@@ -153,6 +153,28 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     },
   },
   {
+    name: 'observe_journeys',
+    title: 'Observe Journeys',
+    description:
+      'Read the assembled, cross-runtime journeys for a flow that is currently being observed (an active Observe session). ' +
+      'Pass flowId; the active session is resolved for you (a flow has at most one). ' +
+      'Each journey is one traced event reconstructed end to end across web and server: its ordered hops, per-hop status, captured in/out payloads, consent, and vendor calls. ' +
+      'When the flow has no active session the result is { sessionId: null, journeys: [], gaps: [] }. ' +
+      'Narrow with traceId (one trace) and limit (1-100, most recent kept; default 50). Read-only.',
+    inputSchema: {
+      flowId: z.string(),
+      projectId: z.string().optional(),
+      traceId: z.string().optional(),
+      limit: z.number().int().min(1).max(100).optional(),
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
     name: 'flow_validate',
     title: 'Validate Flow',
     description:
