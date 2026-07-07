@@ -54,4 +54,21 @@ export type {
   FlowStateBatch,
 } from './telemetry';
 
+// Journey types, surfaced for journey assembly and its presenters.
+export type {
+  JourneyPlatform,
+  JourneyCorrelation,
+  JourneyHopStatus,
+  JourneyStatus,
+  JourneyTopologyNode,
+  JourneyTopology,
+  AssembleJourneysOptions,
+  JourneyEntry,
+  JourneyBranch,
+  JourneyHop,
+  JourneyGap,
+  Journey,
+  JourneyAssembly,
+} from './journey';
+
 export type { ObserverFn } from './observer';

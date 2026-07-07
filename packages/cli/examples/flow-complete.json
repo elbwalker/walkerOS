@@ -566,9 +566,6 @@
       },
       "config": {
         "platform": "web",
-        "settings": {
-          "windowCollector": "collector"
-        },
         "bundle": {
           "packages": {
             "@walkeros/collector": {},

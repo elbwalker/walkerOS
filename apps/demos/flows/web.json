@@ -62,10 +62,7 @@
         }
       },
       "config": {
-        "platform": "web",
-        "settings": {
-          "windowCollector": "collector"
-        }
+        "platform": "web"
       }
     }
   }

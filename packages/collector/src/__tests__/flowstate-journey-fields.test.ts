@@ -51,6 +51,14 @@ function pick(
   return states.find((s) => s.stepId === stepId && s.phase === phase);
 }
 
+function pickAll(
+  states: FlowState[],
+  stepId: string,
+  phase: FlowState['phase'],
+): FlowState[] {
+  return states.filter((s) => s.stepId === stepId && s.phase === phase);
+}
+
 describe('FlowState journey fields', () => {
   test('collector.push in/out records carry sourceId and a 32-hex traceId', async () => {
     const { collector, states } = await buildFlow();
@@ -268,6 +276,158 @@ describe('FlowState journey fields', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  test('a batched push emits a per-event in and out record, batch stamped on the out only', async () => {
+    jest.useFakeTimers();
+    try {
+      const states: FlowState[] = [];
+      let delivered: WalkerOS.Events = [];
+      const { collector } = await startFlow({
+        run: true,
+        destinations: {
+          batched: {
+            code: {
+              type: 'batched',
+              push: async () => undefined,
+              pushBatch: async (snapshot) => {
+                delivered = snapshot.events;
+              },
+              config: {
+                mapping: {
+                  page: { view: { batch: { wait: 1 } } },
+                },
+              },
+            },
+          },
+        },
+      });
+      collector.observers.add((state) => states.push(state));
+
+      const trace = 'abcdef0123456789abcdef0123456789';
+      await collector.push(
+        { name: 'page view', data: {}, source: { type: 'web', trace } },
+        { id: 'web', ingest: createIngest('web') },
+      );
+      await jest.advanceTimersByTimeAsync(10);
+
+      expect(delivered).toHaveLength(1);
+
+      const din = pick(states, 'destination.batched', 'in');
+      expect(din).toBeDefined();
+      expect(din?.inEvent).toEqual(delivered[0]);
+      expect(din?.mappingKey).toBe('page view');
+      expect(din?.traceId).toBe(trace);
+      expect(din?.sourceId).toBe('web');
+      // batch coordinates belong on the terminal out record, never the in.
+      expect(din?.batch).toBeUndefined();
+
+      const dout = pick(states, 'destination.batched', 'out');
+      expect(dout).toBeDefined();
+      expect(dout?.outEvent).toEqual(delivered[0]);
+      expect(dout?.mappingKey).toBe('page view');
+      expect(dout?.traceId).toBe(trace);
+      expect(dout?.sourceId).toBe('web');
+      expect(dout?.batch).toEqual({ size: 1, index: 0 });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('two pushes into the same batch produce out records with incrementing index and growing size', async () => {
+    jest.useFakeTimers();
+    try {
+      const states: FlowState[] = [];
+      const { collector } = await startFlow({
+        run: true,
+        destinations: {
+          batched: {
+            code: {
+              type: 'batched',
+              push: async () => undefined,
+              pushBatch: async () => undefined,
+              config: {
+                mapping: {
+                  page: { view: { batch: { wait: 1 } } },
+                },
+              },
+            },
+          },
+        },
+      });
+      collector.observers.add((state) => states.push(state));
+
+      // Both enqueue into the same window; no timer advance between them.
+      await collector.push(
+        { name: 'page view', data: {} },
+        { id: 'web', ingest: createIngest('web') },
+      );
+      await collector.push(
+        { name: 'page view', data: {} },
+        { id: 'web', ingest: createIngest('web') },
+      );
+
+      const outs = pickAll(states, 'destination.batched', 'out');
+      expect(outs).toHaveLength(2);
+      expect(outs[0]?.batch).toEqual({ size: 1, index: 0 });
+      expect(outs[1]?.batch).toEqual({ size: 2, index: 1 });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('the batch flush frame keeps its shape after per-event records are added', async () => {
+    jest.useFakeTimers();
+    try {
+      const states: FlowState[] = [];
+      const { collector } = await startFlow({
+        run: true,
+        destinations: {
+          batched: {
+            code: {
+              type: 'batched',
+              push: async () => undefined,
+              pushBatch: async () => undefined,
+              config: {
+                mapping: {
+                  page: { view: { batch: { wait: 1 } } },
+                },
+              },
+            },
+          },
+        },
+      });
+      collector.observers.add((state) => states.push(state));
+
+      await collector.push(
+        { name: 'page view', data: {} },
+        { id: 'web', ingest: createIngest('web') },
+      );
+      await jest.advanceTimersByTimeAsync(10);
+
+      const flush = pick(states, 'destination.batched', 'flush');
+      expect(flush).toBeDefined();
+      expect(flush?.phase).toBe('flush');
+      // The flush frame stays event-agnostic with batch-level coordinates.
+      expect(flush?.eventId).toBe('');
+      expect(flush?.batch).toEqual({ size: 1, index: 0 });
+      expect(flush?.traceId).toMatch(TRACE_HEX);
+      expect(flush?.sourceId).toBe('web');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('the non-batched destination path stamps no batch field on in or out records', async () => {
+    const { collector, states } = await buildFlow();
+
+    await collector.push(
+      { name: 'page view', data: {} },
+      { id: 'web', ingest: createIngest('web'), preChain: ['tagger'] },
+    );
+
+    expect(pick(states, 'destination.collect', 'in')?.batch).toBeUndefined();
+    expect(pick(states, 'destination.collect', 'out')?.batch).toBeUndefined();
   });
 
   test('a consent-skip record carries the journey trio', async () => {

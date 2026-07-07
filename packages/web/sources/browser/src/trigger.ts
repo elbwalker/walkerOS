@@ -166,10 +166,23 @@ export function destroyTriggers(_settings?: Settings): void {
     rootAbortController = undefined;
   }
 
+  // Two passes over the scope registry. `visibilityStates` is keyed per owner
+  // document (one shared observer state), while `scopeStates` holds many
+  // entries per document (the document scope plus every `walker init <el>`
+  // sub-scope). unobserveElement reads that shared per-document state, so every
+  // scope's armed dwell timers must be cancelled BEFORE any scope tears the
+  // shared state down; otherwise the first same-document destroy deletes the
+  // state and later scopes' unobserve calls no-op, leaking their timers.
   scopeStates.forEach((state, scope) => {
     state.abort.abort();
     state.intervalIds.forEach((id) => clearInterval(id));
     state.timeoutIds.forEach((id) => clearTimeout(id));
+    // Cancel armed visibility dwell timers and detach observed elements while
+    // the shared per-document state still exists. Mirrors resetScope's cleanup.
+    state.observed.forEach((element) => unobserveElement(scope, element));
+  });
+
+  scopeStates.forEach((_state, scope) => {
     // Normalizes to the owner document and disconnects the shared observer;
     // the second call for a same-document sub-scope is a harmless no-op.
     destroyVisibilityTracking(scope);

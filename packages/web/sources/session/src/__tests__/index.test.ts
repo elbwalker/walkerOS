@@ -78,7 +78,7 @@ describe('Session Source', () => {
         env: {
           push: collector.push.bind(collector),
           command: mockCommand,
-          elb: collector.sources?.elb?.push,
+          elb: collector.elb,
           logger: createMockLogger(),
         },
         id: 'test-session',

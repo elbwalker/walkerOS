@@ -64,7 +64,7 @@ export async function createSessionSource(
     env: {
       push: collector.push.bind(collector),
       command: collector.command.bind(collector),
-      elb: collector.sources?.elb?.push,
+      elb: collector.elb,
       logger: createMockLogger(),
       ...envOverrides,
     },

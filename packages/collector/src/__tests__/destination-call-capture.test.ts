@@ -1,5 +1,10 @@
 import type { Destination, FlowState, WalkerOS } from '@walkeros/core';
-import { createIngest } from '@walkeros/core';
+import {
+  createIngest,
+  isEnvObserve,
+  isObject,
+  OBSERVE_ENV_KEY,
+} from '@walkeros/core';
 import { startFlow } from '..';
 
 /**
@@ -282,5 +287,184 @@ describe('destination trace-level vendor-call capture', () => {
     expect(outs[0]?.calls?.[0]?.args).toEqual(['hit', 'page view']);
     expect(outs[1]?.calls).toHaveLength(1);
     expect(outs[1]?.calls?.[0]?.args).toEqual(['hit', 'order complete']);
+  });
+});
+
+/**
+ * Env for the observe-recorder scenarios: the untyped BaseEnv index signature
+ * mirrors what a live-web destination sees (an extra `OBSERVE_ENV_KEY` slot the
+ * destination never declares), so every access is narrowed via runtime guards.
+ */
+type ObserveEnv = Destination.BaseEnv;
+type ObserveTypes = Destination.Types<unknown, unknown, ObserveEnv>;
+
+/**
+ * Run a flow with one destination code instance and capture its FlowStates.
+ * `observeLevel` optionally installs the supplier; the destination is always
+ * registered under id `obs` so records land on `destination.obs`.
+ */
+async function runObserveFlow(
+  code: Destination.Instance<ObserveTypes>,
+  observeLevel?: ObserveLevel,
+): Promise<{
+  collector: Awaited<ReturnType<typeof startFlow>>['collector'];
+  states: FlowState[];
+}> {
+  const states: FlowState[] = [];
+  const { collector } = await startFlow({
+    run: true,
+    destinations: { obs: { code } },
+  });
+  if (observeLevel) {
+    const level = observeLevel;
+    collector.observeLevel = () => level;
+  }
+  collector.observers.add((state) => states.push(state));
+  return { collector, states };
+}
+
+function obsOutRecords(states: FlowState[]): FlowState[] {
+  return states.filter(
+    (s) => s.stepId === 'destination.obs' && s.phase === 'out',
+  );
+}
+
+describe('destination observe-recorder fallback for unresolved calls', () => {
+  test('trace + an unresolvable declared path attaches the recorder; record() lands sanitized on the out record', async () => {
+    let sawObserve = false;
+    let observedPaths: string[] | undefined;
+
+    const code: Destination.Instance<ObserveTypes> = {
+      type: 'obs',
+      config: {},
+      env: {}, // no `window` → `window.gtag` cannot resolve at wrap time
+      calls: ['call:window.gtag'],
+      push: async (_event, context) => {
+        const observe = context.env[OBSERVE_ENV_KEY];
+        if (isEnvObserve(observe)) {
+          sawObserve = true;
+          observedPaths = observe.paths;
+          observe.record('window.gtag', ['event', 'purchase', { value: 42 }]);
+        }
+      },
+    };
+
+    const { collector, states } = await runObserveFlow(code, 'trace');
+    await collector.push(
+      { name: 'page view', data: {} },
+      { id: 'web', ingest: createIngest('web') },
+    );
+
+    expect(sawObserve).toBe(true);
+    expect(observedPaths).toEqual(['window.gtag']);
+
+    const out = obsOutRecords(states)[0];
+    expect(out?.calls).toHaveLength(1);
+    expect(out?.calls?.[0]?.fn).toBe('window.gtag');
+    expect(out?.calls?.[0]?.args).toEqual(['event', 'purchase', { value: 42 }]);
+    expect(typeof out?.calls?.[0]?.ts).toBe('number');
+    expect(() => JSON.stringify(out?.calls)).not.toThrow();
+  });
+
+  test('malformed declared paths never reach observe.paths', async () => {
+    let observedPaths: string[] | undefined;
+
+    const code: Destination.Instance<ObserveTypes> = {
+      type: 'obs',
+      config: {},
+      env: {}, // `window.gtag` well-formed but unresolvable; 'a..b' malformed
+      calls: ['a..b', 'call:window.gtag'],
+      push: async (_event, context) => {
+        const observe = context.env[OBSERVE_ENV_KEY];
+        if (isEnvObserve(observe)) observedPaths = observe.paths;
+      },
+    };
+
+    const { collector } = await runObserveFlow(code, 'trace');
+    await collector.push(
+      { name: 'page view', data: {} },
+      { id: 'web', ingest: createIngest('web') },
+    );
+
+    expect(observedPaths).toEqual(['window.gtag']);
+  });
+
+  test('recorder calls sit alongside wrapped calls in the same out record', async () => {
+    const code: Destination.Instance<ObserveTypes> = {
+      type: 'obs',
+      config: {},
+      env: { api: { track: (..._args: unknown[]) => {} } },
+      calls: ['call:api.track', 'call:window.gtag'],
+      push: async (_event, context) => {
+        const api = context.env.api;
+        if (isObject(api) && typeof api.track === 'function')
+          api.track('wrapped');
+        const observe = context.env[OBSERVE_ENV_KEY];
+        if (isEnvObserve(observe)) observe.record('window.gtag', ['recorded']);
+      },
+    };
+
+    const { collector, states } = await runObserveFlow(code, 'trace');
+    await collector.push(
+      { name: 'page view', data: {} },
+      { id: 'web', ingest: createIngest('web') },
+    );
+
+    const out = obsOutRecords(states)[0];
+    expect(out?.calls).toHaveLength(2);
+    expect(out?.calls?.map((c) => c.fn)).toEqual(['api.track', 'window.gtag']);
+    expect(out?.calls?.[1]?.args).toEqual(['recorded']);
+  });
+
+  test('non-trace push attaches no observe key even with an unresolvable path', async () => {
+    let observeKeyPresent = true;
+
+    const code: Destination.Instance<ObserveTypes> = {
+      type: 'obs',
+      config: {},
+      env: {},
+      calls: ['call:window.gtag'],
+      push: async (_event, context) => {
+        observeKeyPresent = OBSERVE_ENV_KEY in context.env;
+      },
+    };
+
+    const { collector, states } = await runObserveFlow(code); // no supplier
+    await collector.push(
+      { name: 'page view', data: {} },
+      { id: 'web', ingest: createIngest('web') },
+    );
+
+    expect(observeKeyPresent).toBe(false);
+    expect(obsOutRecords(states)[0]?.calls).toBeUndefined();
+  });
+
+  test('trace + a fully-resolved env attaches no observe key (Phase A path unchanged)', async () => {
+    let observeKeyPresent = true;
+
+    const code: Destination.Instance<ObserveTypes> = {
+      type: 'obs',
+      config: {},
+      env: { api: { track: (..._args: unknown[]) => {} } },
+      calls: ['call:api.track'],
+      push: async (_event, context) => {
+        observeKeyPresent = OBSERVE_ENV_KEY in context.env;
+        const api = context.env.api;
+        if (isObject(api) && typeof api.track === 'function') api.track('hit');
+      },
+    };
+
+    const { collector, states } = await runObserveFlow(code, 'trace');
+    await collector.push(
+      { name: 'page view', data: {} },
+      { id: 'web', ingest: createIngest('web') },
+    );
+
+    // Everything resolved → unresolved empty → no recorder installed...
+    expect(observeKeyPresent).toBe(false);
+    // ...and the wrapped call is still recorded byte-identically.
+    const out = obsOutRecords(states)[0];
+    expect(out?.calls).toHaveLength(1);
+    expect(out?.calls?.[0]?.fn).toBe('api.track');
   });
 });

@@ -16,7 +16,7 @@ export async function ga4AddToCart(): Promise<unknown[]> {
   const calls: unknown[][] = [];
   const { elb } = await startFlow({
     destinations: {
-      gtag: {
+      ga4: {
         code: destinationGtag,
         config: {
           settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } },

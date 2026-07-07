@@ -309,4 +309,92 @@ describe('Scoped visible (end-to-end)', () => {
     await Promise.resolve();
     expect(pushed('visible')).toHaveLength(0);
   });
+
+  test('4i destroy cancels an already-armed visible dwell timer', async () => {
+    document.body.innerHTML = `
+      <div id="promo" data-elb="promo" data-elb-promo="id:p1"
+           data-elbaction="visible:view"></div>
+    `;
+    const promo = document.getElementById('promo')!;
+
+    const source = await createBrowserSource(collector, { pageview: false });
+    await source.on?.('run', collector); // document-scope observer
+
+    // Arm the dwell timer while tracking is live, but stay short of the 1000ms
+    // dwell so the trigger has not fired yet.
+    fireVisible(promo);
+
+    const destroyEnv: Source.Env<Types> = {
+      push: collector.push,
+      command: collector.command,
+      elb: collector.elb,
+      window,
+      document,
+      logger: createMockLogger(),
+    };
+    await source.destroy?.({
+      id: 'test-browser',
+      config: source.config,
+      env: destroyEnv,
+      logger: createMockLogger(),
+    });
+    mockPush.mockClear();
+
+    // The armed timer must be cancelled by destroy; advancing past the dwell
+    // fires nothing.
+    jest.advanceTimersByTime(1000);
+    await Promise.resolve();
+    expect(pushed('visible')).toHaveLength(0);
+  });
+
+  test('4j destroy cancels a sub-scope armed timer when a document scope shares the observer', async () => {
+    // Two scope-states share one per-document observer: the document scope
+    // (docel) and a `walker init` sub-scope (subel). The document scope is torn
+    // down first; its destroy must not delete the shared visibility state
+    // before the sub-scope's armed timer is cancelled.
+    document.body.innerHTML = `
+      <div id="docel" data-elb="d" data-elb-d="id:doc"
+           data-elbaction="visible:docsee"></div>
+    `;
+    const source = await createBrowserSource(collector, { pageview: false });
+    await source.on?.('run', collector); // document scope-state + shared observer
+
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<section id="c">
+         <div id="subel" data-elb="s" data-elb-s="id:sub"
+              data-elbaction="visible:see"></div>
+       </section>`,
+    );
+    const container = document.getElementById('c')!;
+    const subel = document.getElementById('subel')!;
+
+    await source.elb('walker init', container); // sub-scope, same document
+
+    // Arm the SUB-SCOPE element's dwell timer while the shared per-document
+    // visibility state is still live, short of the 1000ms dwell.
+    fireVisible(subel);
+
+    const destroyEnv: Source.Env<Types> = {
+      push: collector.push,
+      command: collector.command,
+      elb: collector.elb,
+      window,
+      document,
+      logger: createMockLogger(),
+    };
+    await source.destroy?.({
+      id: 'test-browser',
+      config: source.config,
+      env: destroyEnv,
+      logger: createMockLogger(),
+    });
+    mockPush.mockClear();
+
+    // Advancing past the dwell must fire nothing: the sub-scope timer was
+    // cancelled before any scope deleted the shared per-document state.
+    jest.advanceTimersByTime(1000);
+    await Promise.resolve();
+    expect(pushed('visible')).toHaveLength(0);
+  });
 });

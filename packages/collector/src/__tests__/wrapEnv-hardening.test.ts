@@ -85,4 +85,36 @@ describe('wrapEnv hardening', () => {
     call(asRecord(cursor).fn, 'x');
     expect(deepFn).toHaveBeenCalledWith('x');
   });
+
+  it('routes paths whose parent lies beyond the clone cap to unresolved', () => {
+    // A 9-segment path navigates 8 levels to its parent — exactly where the
+    // clone cap reuses ORIGINAL references. Wrapping there would permanently
+    // mutate the caller's env, so the path must go to unresolved instead.
+    const original = (..._args: unknown[]): void => {};
+    const leaf: Record<string, unknown> = { fn: original };
+    let node: Record<string, unknown> = leaf;
+    for (const key of ['h', 'g', 'f', 'e', 'd', 'c', 'b']) {
+      node = { [key]: node };
+    }
+    const env: Record<string, unknown> = { a: node };
+
+    const { wrappedEnv, unresolved, calls } = wrapEnv({
+      ...env,
+      simulation: ['a.b.c.d.e.f.g.h.fn'],
+    });
+
+    expect(unresolved).toEqual(['a.b.c.d.e.f.g.h.fn']);
+    // The original env leaf keeps its identity: nothing was installed on it.
+    expect(leaf.fn).toBe(original);
+
+    // Navigating the wrapped env reaches the SAME original parent (clone-cap
+    // reuse) — and its fn is still the untouched original.
+    let cursor: unknown = wrappedEnv;
+    for (const key of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
+      cursor = asRecord(cursor)[key];
+    }
+    expect(cursor).toBe(leaf);
+    call(asRecord(cursor).fn, 'x');
+    expect(calls).toHaveLength(0);
+  });
 });

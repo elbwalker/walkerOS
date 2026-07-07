@@ -24,6 +24,7 @@ import {
   isDefined,
   isFunction,
   isObject,
+  OBSERVE_ENV_KEY,
   processEventMapping,
   stepId,
   tryCatchAsync,
@@ -1440,6 +1441,51 @@ export async function destinationPush<Destination extends Destination.Instance>(
     batchState.batched.events.push(processed.event);
     if (isDefined(processed.data)) batchState.batched.data.push(processed.data);
 
+    // Emit a per-event in/out pair at enqueue time so observers see every
+    // event that entered the batch, not just the later flush frame. Enqueue is
+    // synchronous, so there is no vendor call to time and no durationMs. The
+    // terminal out record carries the batch coordinates the assembler reads to
+    // confirm batched delivery: size is the queue length after this enqueue,
+    // index is this entry's slot. The coordinates live on the out record only.
+    const batchEventId =
+      typeof processed.event.id === 'string' ? processed.event.id : '';
+    const batchJourney = journeyFields(event, ingest, collector);
+    const enqueuedAt = Date.now();
+    const batchInState = buildBaseState(collector, {
+      stepId: stepId('destination', destId),
+      stepType: 'destination',
+      phase: 'in',
+      eventId: batchEventId,
+      now: enqueuedAt,
+      traceId: batchJourney.traceId,
+      sourceId: batchJourney.sourceId,
+      parentEventId: batchJourney.parentEventId,
+    });
+    if (processed.mappingKey) batchInState.mappingKey = processed.mappingKey;
+    if (processed.event.consent) {
+      batchInState.consent = { ...processed.event.consent };
+    }
+    batchInState.inEvent = processed.event;
+    emitStep(collector, batchInState);
+
+    const batchOutState = buildBaseState(collector, {
+      stepId: stepId('destination', destId),
+      stepType: 'destination',
+      phase: 'out',
+      eventId: batchEventId,
+      now: enqueuedAt,
+      traceId: batchJourney.traceId,
+      sourceId: batchJourney.sourceId,
+      parentEventId: batchJourney.parentEventId,
+    });
+    if (processed.mappingKey) batchOutState.mappingKey = processed.mappingKey;
+    batchOutState.outEvent = processed.event;
+    batchOutState.batch = {
+      size: batchState.batched.entries.length,
+      index: batchState.batched.entries.length - 1,
+    };
+    emitStep(collector, batchOutState);
+
     // In-flight bookkeeping for operational visibility.
     const destIdResolved = destination.config.id || destId;
     const destStatus = ensureDestStatus(collector, destIdResolved);
@@ -1471,6 +1517,19 @@ export async function destinationPush<Destination extends Destination.Instance>(
       });
       context.env = wrapped.wrappedEnv;
       recordedCalls = wrapped.calls;
+
+      // Paths wrapEnv could not resolve here (e.g. a live-web global not yet
+      // installed) travel to the resolution-point wrapper (web-core getEnv) as
+      // a typed recorder. Both channels push onto the SAME calls array, so the
+      // out-record attach + sanitize below covers wrapped and recorded calls
+      // alike. getEnv strips this key before the destination sees the env.
+      if (wrapped.unresolved.length > 0) {
+        wrapped.wrappedEnv[OBSERVE_ENV_KEY] = {
+          paths: wrapped.unresolved,
+          record: (fn, args) =>
+            wrapped.calls.push({ fn, args, ts: Date.now() }),
+        } satisfies Destination.EnvObserve;
+      }
     }
 
     // Emit a per-event observer pair around the destination.push call so

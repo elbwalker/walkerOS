@@ -3317,6 +3317,85 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/journeys': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get observe session journeys
+     * @description Assemble the session's cross-runtime journeys server-side: fetch the raw records from the observer, derive the pipeline topology from the config snapshot, and run the pure assembler. Returns the journeys and per-platform loss gaps wrapped with the session scope.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          sessionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Assembled journeys */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ObserveSessionJourneysResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Observer unavailable */
+        502: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/heartbeat': {
     parameters: {
       query?: never;
@@ -6161,6 +6240,87 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/projects/{projectId}/flows/{flowId}/releases': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List flow releases
+     * @description List the release history for a flow across all of its deployment lineages, newest first, paginated. Each entry is a deployed version joined to its parent deployment (slug and type). Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+          offset?: number | null;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Flow release history */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListFlowReleasesResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/projects/{projectId}/deployments/{deploymentId}/versions/current/content': {
     parameters: {
       query?: never;
@@ -7530,16 +7690,11 @@ export interface paths {
     };
     /**
      * Search packages
-     * @description Search the npm registry for `@walkeros/*` packages. An empty query returns popular scope packages.
+     * @description Returns the full @walkeros/* package catalog; clients filter locally.
      */
     get: {
       parameters: {
-        query?: {
-          /** @description Search query. */
-          q?: string;
-          /** @description Filter by platform. */
-          platform?: string;
-        };
+        query?: never;
         header?: never;
         path?: never;
         cookie?: never;
@@ -7555,15 +7710,6 @@ export interface paths {
             'application/json': components['schemas']['PackageSearchResponse'];
           };
         };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
         /** @description Package search unavailable */
         502: {
           headers: {
@@ -7576,7 +7722,41 @@ export interface paths {
       };
     };
     put?: never;
-    post?: never;
+    /**
+     * Log a settled search
+     * @description Records one settled search outcome (the term the user paused on and whether the catalog matched it). Fire-and-forget; returns 204.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['PackageSearchLogRequest'];
+        };
+      };
+      responses: {
+        /** @description Search logged */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;
@@ -7793,7 +7973,7 @@ export interface components {
        * @example user
        * @enum {string}
        */
-      createdBy: 'user' | 'auto_save' | 'restore';
+      createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
       /** @example sha256:abc123... */
       contentHash?: string;
     };
@@ -8427,6 +8607,32 @@ export interface components {
       limit: number;
       offset: number;
     };
+    ListFlowReleasesResponse: {
+      releases: components['schemas']['FlowRelease'][];
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    FlowRelease: {
+      id: string;
+      /** @example dep_a1b2c3d4 */
+      deploymentId: string;
+      /** @example k7m2x9p4q1w8 */
+      deploymentSlug: string | null;
+      /**
+       * @example web
+       * @enum {string|null}
+       */
+      deploymentType: 'web' | 'server' | null;
+      versionNumber: number;
+      flowVersionNumber: number | null;
+      status: string;
+      source: string;
+      errorCode: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      createdBy: string | null;
+    };
     HeartbeatResponse: {
       /** @enum {boolean} */
       ack: true;
@@ -8507,6 +8713,20 @@ export interface components {
       /** Format: uri */
       bundleUrl: string;
     } | null;
+    ObserveSessionJourneysResponse: {
+      /** @example ses_abc123xyz456 */
+      sessionId: string;
+      /** @example flow_a1b2c3d4 */
+      flowId: string;
+      /** Format: date-time */
+      assembledAt: string;
+      journeys: {
+        [key: string]: unknown;
+      }[];
+      gaps: {
+        [key: string]: unknown;
+      }[];
+    };
     CreateObserveSessionRequest: {
       settingsName: string;
       force?: boolean;
@@ -9191,6 +9411,14 @@ export interface components {
       version: string;
       description: string;
     };
+    PackageSearchLogRequest: {
+      query: string;
+      /** @enum {string} */
+      result: 'hit' | 'miss';
+      /** @enum {string} */
+      platform?: 'web' | 'server';
+      projectId?: string;
+    };
     ListRunnersResponse: {
       runners: unknown[];
       total: number;
@@ -9398,7 +9626,7 @@ export interface components {
        */
       createdAt: string;
       /** @enum {string} */
-      createdBy: 'user' | 'auto_save' | 'restore';
+      createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
     };
     ListApiTokensResponse: {
       tokens: components['schemas']['ApiTokenSummary'][];
