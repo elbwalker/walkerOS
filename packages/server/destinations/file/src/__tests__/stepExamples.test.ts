@@ -6,6 +6,11 @@ import type { FileStepExample } from '../examples/step';
 import type { CapturedFile, SpyEnv, SpyState } from '../examples/env';
 import type { FileWriteStream } from '../types';
 
+// Build-time version define (jest injects the package version). The collector
+// stamps source.release with this on push, so the expected JSONL must track it
+// rather than a literal, else it breaks when the fixed version group is bumped.
+declare const __VERSION__: string;
+
 /**
  * Build a fresh spy env per test. The exported `examples.env.push` shares
  * its internal state map across all tests because `clone` deep-copies the
@@ -58,6 +63,7 @@ function flatten(out: unknown): CallRecord[] {
 describe('@walkeros/server-destination-file step examples', () => {
   it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
     const example = rawExample as FileStepExample;
+    const inEvent = example.in as WalkerOS.Event;
 
     const env = makeSpyEnv();
 
@@ -74,7 +80,7 @@ describe('@walkeros/server-destination-file step examples', () => {
       },
     });
 
-    await elb(example.in as WalkerOS.Event);
+    await elb(inEvent);
 
     // Convert the spy's per-file capture into intent-level call tuples:
     // one ['fs.writeFile', filename, line] per write. The destination uses
@@ -94,7 +100,17 @@ describe('@walkeros/server-destination-file step examples', () => {
         // JSONL = JSON.stringify(event) + '\n'. This is the only place
         // tests derive expected output for the default format.
         if (call[2] === 'jsonl:event') {
-          return [call[0], call[1], JSON.stringify(example.in) + '\n'];
+          // elb(example.in) pushes the event through an unconfigured collector,
+          // which appends source.release = { [platform ?? 'default']: __VERSION__ }
+          // as the last source key. Mirror that so the expected JSONL matches
+          // the written (post-collector) event byte-for-byte.
+          const src = inEvent.source ?? {};
+          const releaseKey = src.platform ?? 'default';
+          const stamped = {
+            ...inEvent,
+            source: { ...src, release: { [releaseKey]: __VERSION__ } },
+          };
+          return [call[0], call[1], JSON.stringify(stamped) + '\n'];
         }
         return call;
       },
