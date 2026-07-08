@@ -1,6 +1,7 @@
 ---
 title: Docker
 description: Get walkerOS running with Docker in 5 minutes
+sidebar_position: 3
 ---
 
 # Docker
@@ -55,7 +56,7 @@ Docker runtime requires **pre-built bundles**, not JSON configs.
 
 **Workflow:**
 
-1. Create JSON config: `flow.json`
+1. Create a [flow.json](/docs/getting-started/flow/) config
 2. Bundle with CLI: `walkeros bundle flow.json --output flow.mjs`
 3. Run in Docker: `docker run -e BUNDLE=/app/flow.mjs`
 

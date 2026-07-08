@@ -228,20 +228,15 @@ export function WalkerProvider({ children }: { children: React.ReactNode }) {
 
 ## See your event
 
-To check a flow offline before it ships, export it to a `flow.json` that carries
-`config.platform` and run the event through it with the destination mocked:
+The basic setup above logs every event it receives. Run it (Node, or your app's dev server) and push an event:
 
 <CodeSnippet
-  code={`npx walkeros push flow.json \\
-  -e '{"name":"page view"}' \\
-  --simulate destination.console`}
-  language="bash"
+  code={`await elb('page view', { title: 'Home' });
+// -> logs: Event: page view`}
+  language="typescript"
 />
 
-`push --simulate` builds the flow, runs the event through it with
-`destination.console` replaced by a mock, and prints the resolved outcome
-(`success` and `Duration`); add `--json` to get the same result as JSON.
-Nothing is sent to a vendor. Event names use a space (`page view`).
+Integrated mode verifies where it runs: in your console. For an offline CLI test loop with mocked destinations, use [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
 
 ---
 

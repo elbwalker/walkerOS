@@ -1,0 +1,69 @@
+---
+title: Bot detection
+description: Annotate every server event with a bot and AI-agent score
+sidebar_position: 1
+---
+
+# Bot detection
+
+This server flow scores every incoming event for bot and AI-agent traffic before it reaches your destinations. The Express source forwards the request user agent, the bot transformer reads it, and a demo destination logs the annotated events. Nothing is dropped: scoring is annotation, and you filter downstream.
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {},
+            "@walkeros/server-source-express": {},
+            "@walkeros/server-transformer-bot": {},
+            "@walkeros/destination-demo": {}
+          }
+        }
+      },
+      "sources": {
+        "express": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": { "port": 8080 },
+            "ingest": {
+              "map": {
+                "userAgent": { "key": "headers.user-agent" }
+              }
+            }
+          }
+        }
+      },
+      "transformers": {
+        "bot": {
+          "package": "@walkeros/server-transformer-bot"
+        }
+      },
+      "destinations": {
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": { "name": "Event Logger" }
+          }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## What you get
+
+Every event now carries `user.botScore` and `user.agentScore` (0-99, higher means more bot). To act on the scores, add a mapping condition on your real destinations that drops or segments events where `botScore` exceeds 50. See [Bot detection](/docs/transformers/bot) for the full filtering recipes.
+
+Test the flow offline first with [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
+
+## Next steps
+
+- [**Bot detection transformer**](/docs/transformers/bot): Scores, AI-agent map, and filtering recipes
+- [**Bundled mode**](/docs/getting-started/modes/bundled): Build and run the flow with the CLI

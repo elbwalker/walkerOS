@@ -249,11 +249,23 @@ Correlation crosses the wire via the W3C `traceparent` header:
 - **Emit.** The web `api` destination adds `traceparent: 00-<traceId>-<eventId>-01` to each non-batched send when the event carries both ids. A `traceparent` you configure yourself always wins (matched case-insensitively). Batched sends carry no `traceparent`, since one batch may aggregate distinct upstream traces.
 - **Adopt.** Any server source with a request header bag (for example an Express or fetch handler) reads a valid inbound `traceparent` and threads its trace and parent span into the ingest context, so the receiving flow's records share the caller's `traceId` and link back via `parentEventId`. An absent or malformed header is ignored. The AWS and GCP handlers do not yet adopt inbound request identity.
 
+### Journey status
+
+Records sharing a `traceId` assemble into a single journey, and each journey carries a status derived from the hops observed so far:
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | The journey is still settling: a record arrived recently, or an expected hop has no terminal record yet. |
+| `complete` | Every expected hop reached a terminal state (`out`, `error`, or `skip`). |
+| `partial` | The journey has settled, but an expected hop never produced a terminal record. |
+
+"Expected" comes from the flow's step topology when one is known (only steps downstream of a processed hop are expected); without a topology, a journey is `complete` once every observed hop is terminal. A separate `lossy` flag is orthogonal to status: a journey is `lossy` when a `seq` gap (see [Loss-visible transport](#loss-visible-transport)) overlaps its window, so a journey can be `complete` and `lossy`, or `partial` and `lossy`, at once.
+
 ### Vendor-call capture
 
-At `trace` level a destination can record the outgoing vendor calls it makes, so an observer sees not just the mapped event but the exact call that left for the vendor. A destination opts in by declaring its observable callables as dot-paths (the `gtag` destination declares `call:window.gtag`); the runtime then wraps that destination's env and records each `{ fn, args, ts }` onto the record's outbound payload, with arguments sanitized to JSON-safe markers.
+At `trace` level a destination can record the outgoing vendor calls it makes, so an observer sees not just the mapped event but the exact call that left for the vendor. A destination opts in by declaring its observable callables as dot-paths (the `gtag` destination declares `call:window.gtag`); the runtime then wraps those callables and records each `{ fn, args, ts }` onto the record's outbound payload, with arguments sanitized to JSON-safe markers.
 
-Capture requires the env to carry the callables, which holds for server and simulate runs. Live web env injection is separate wiring that is not yet in place, and the batched delivery path is not captured. Recorded calls are payload-class: they appear only when the outbound payload does (`trace`, or an explicit `includeOut`).
+Capture works whenever the destination reaches its callable through the env. Server and simulate runs carry the callable in the env directly. On live web a destination resolves a real global (for example `window.gtag`) through `@walkeros/web-core`'s `getEnv`; the runtime wraps the declared callables at that resolution point, so calls are recorded without the destination or the page changing. The batched delivery path is not captured: batched sends flush against the unwrapped env, so a batching destination shows its per-event input and output but not its vendor calls. Recorded calls are payload-class: they appear only when the outbound payload does (`trace`, or an explicit `includeOut`).
 
 ### Loss-visible transport
 

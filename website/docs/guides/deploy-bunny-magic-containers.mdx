@@ -50,12 +50,12 @@ walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json
 This creates `dist/bundle.mjs` with the credentials path baked in.
 
 :::tip[Quick Local Test]
-Test your flow before building Docker using `simulate` with a local credentials path:
+Test your flow before building Docker using `push --simulate` with a local credentials path:
 
 ```bash
 export SA_KEY_PATH="./sa-bigquery.json"
-walkeros simulate https://www.walkeros.io/flows/gcp-bigquery.json \
-  -e '{"name": "test", "data": {}}'
+walkeros push https://www.walkeros.io/flows/gcp-bigquery.json \
+  -e '{"name": "test", "data": {}}' --simulate destination.bigquery
 ```
 :::
 

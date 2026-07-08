@@ -1,0 +1,76 @@
+---
+title: One event, four tools
+description: Fan a single event stream out to GA4, Amplitude, Mixpanel, and PostHog
+sidebar_position: 3
+---
+
+# One event, four tools
+
+This web flow sends one event stream to four analytics tools at once, with no per-tool mapping. The collector fans a single event out to every destination, and each tool receives it in its own native call shape.
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {},
+            "@walkeros/web-source-browser": {},
+            "@walkeros/web-destination-gtag": {},
+            "@walkeros/web-destination-amplitude": {},
+            "@walkeros/web-destination-mixpanel": {},
+            "@walkeros/web-destination-posthog": {}
+          }
+        }
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": { "settings": { "pageview": true } }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": { "settings": { "ga4": { "measurementId": "G-XXXXXX-1" } } }
+        },
+        "amplitude": {
+          "package": "@walkeros/web-destination-amplitude",
+          "config": { "settings": { "apiKey": "test-project" } }
+        },
+        "mixpanel": {
+          "package": "@walkeros/web-destination-mixpanel",
+          "config": { "settings": { "apiKey": "test-project" } }
+        },
+        "posthog": {
+          "package": "@walkeros/web-destination-posthog",
+          "config": { "settings": { "apiKey": "phc_test" } }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## What each tool receives
+
+With no mapping, each destination forwards the event under its own default. For an `order complete` event:
+
+- GA4: `gtag('event', 'order_complete', { send_to: 'G-XXXXXX-1' })`
+- Amplitude: `amplitude.track('order complete', {})`
+- Mixpanel: `mixpanel.track('order complete', {})`
+- PostHog: `posthog.capture('order complete', {})`
+
+The three product-analytics tools keep the walkerOS event name and send empty properties. GA4 lowercases the name and always adds `send_to`.
+
+To reshape events per tool, see [GA4 ecommerce](/docs/getting-started/ga4-ecommerce).
+
+## Next steps
+
+- [**GA4 ecommerce**](/docs/getting-started/ga4-ecommerce): Map an order into a full GA4 purchase payload
+- [**Mapping**](/docs/mapping): Transform events per destination

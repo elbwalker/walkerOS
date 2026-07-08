@@ -61,7 +61,7 @@ A flow configuration uses the `Flow.Json` format with two required fields:
           }
         }
       },
-      "collector": {}
+      "collector": { "run": true }
     }
   }
 }`}
@@ -707,7 +707,7 @@ For browser bundles, you can configure the collector's window variable name via
 />
 
 **Properties:**
-- **`windowCollector`** - Global variable name for collector instance (default: `"collector"`)
+- **`windowCollector`** - Global variable name for collector instance (default: `"walkerOS"`)
 
 The `window.elb` function is owned by the browser source: set `elb` in the
 browser source's `config.settings` to change its global name (default:
@@ -887,7 +887,7 @@ Reference environment variables with optional defaults:
     "default": {
       "config": { "platform": "web" },
       "destinations": {
-        "gtag": {
+        "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
             "settings": {

@@ -87,6 +87,10 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl: `${vars.github}edit/main/website/`,
+          admonitions: {
+            keywords: ['cloud'],
+            extendDefaults: true,
+          },
         },
         blog: false,
         theme: {

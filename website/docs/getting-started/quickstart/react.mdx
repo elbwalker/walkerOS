@@ -65,10 +65,11 @@ export async function initializeWalker(): Promise<void> {
       },
     },
     destinations: {
-      // Your destinations - add console for testing
       console: {
-        push(event, data) {
-          console.log('Event:', event, data);
+        code: {
+          type: 'console',
+          config: {},
+          push: (event) => console.log('Event:', event.name),
         },
       },
     },
@@ -268,3 +269,5 @@ tracked events:
 
 - Configure [destinations](/docs/destinations) for your analytics tools
 - Set up [consent management](/docs/guides/consent)
+- **[Send it to GA4](/docs/getting-started/ga4-ecommerce)**: the same event arriving live in GA4 DebugView
+- **[Operating modes](/docs/getting-started/modes/)**: choose how to package and deploy
