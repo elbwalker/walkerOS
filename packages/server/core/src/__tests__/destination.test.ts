@@ -3,6 +3,11 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { createEvent } from '@walkeros/core';
 
+// Build-time version define (jest injects the package version). The collector
+// stamps source.release with this, so the expectation must track it rather than
+// a literal, else it breaks whenever the fixed version group is bumped (release).
+declare const __VERSION__: string;
+
 describe('Destination', () => {
   const eventCall = jest.fn();
   const mockPush = jest.fn().mockImplementation((event) => {
@@ -48,7 +53,10 @@ describe('Destination', () => {
     });
     // Mirror the collector's source.release provenance stamp: an unconfigured
     // collector stamps source.release = { default: <pkg version> } on push.
-    mockEvent.source = { ...mockEvent.source, release: { default: '4.2.1' } };
+    mockEvent.source = {
+      ...mockEvent.source,
+      release: { default: __VERSION__ },
+    };
   });
 
   test('init call', async () => {
@@ -421,7 +429,7 @@ describe('Destination', () => {
   test('policy', async () => {
     const event = createEvent();
     // Mirror the collector's source.release provenance stamp.
-    event.source = { ...event.source, release: { default: '4.2.1' } };
+    event.source = { ...event.source, release: { default: __VERSION__ } };
 
     const policy = {
       name: {
