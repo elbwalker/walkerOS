@@ -6,7 +6,12 @@
  */
 
 import { resolve, dirname } from 'path';
-import type { Collector, Logger, ObserverFn } from '@walkeros/core';
+import type {
+  Collector,
+  Logger,
+  ObserverFn,
+  TelemetryLevel,
+} from '@walkeros/core';
 import type { HealthServer } from './health-server.js';
 import { loadBundle } from './load-bundle.js';
 
@@ -27,10 +32,11 @@ export interface FlowHandle {
 /**
  * Load a pre-built flow bundle and return a handle for managing it.
  *
- * `observers` is the telemetry observer array built by `pipeline.ts`. The
- * generated bundle factory (see `generateServerEntry` in
- * `commands/bundle/bundler.ts`) installs each observer onto
- * `collector.observers` after `startFlow` returns.
+ * `observers` is the telemetry observer array built by `pipeline.ts`;
+ * `observeLevel` is the matching level supplier. The generated bundle factory
+ * (see `generateServerEntry` in `commands/bundle/bundler.ts`) installs each
+ * observer onto `collector.observers` and the supplier onto
+ * `collector.observeLevel` after `startFlow` returns.
  */
 /**
  * Load a bundle into a `FlowHandle` WITHOUT mounting its handler onto the
@@ -45,6 +51,7 @@ async function loadFlowHandle(
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
   observers?: Array<ObserverFn>,
+  observeLevel?: () => TelemetryLevel,
 ): Promise<FlowHandle> {
   const absolutePath = resolve(file);
   const flowDir = dirname(absolutePath);
@@ -55,6 +62,7 @@ async function loadFlowHandle(
     ...(loggerConfig ? { logger: loggerConfig } : {}),
     ...(healthServer ? { sourceSettings: { port: undefined } } : {}),
     ...(observers ? { observers } : {}),
+    ...(observeLevel ? { observeLevel } : {}),
   };
 
   const result = await loadBundle(absolutePath, flowContext, logger);
@@ -81,6 +89,7 @@ export type FlowLoader = (
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
   observers?: Array<ObserverFn>,
+  observeLevel?: () => TelemetryLevel,
 ) => Promise<FlowHandle>;
 
 export async function loadFlow(
@@ -90,6 +99,7 @@ export async function loadFlow(
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
   observers?: Array<ObserverFn>,
+  observeLevel?: () => TelemetryLevel,
 ): Promise<FlowHandle> {
   const handle = await loadFlowHandle(
     file,
@@ -98,6 +108,7 @@ export async function loadFlow(
     loggerConfig,
     healthServer,
     observers,
+    observeLevel,
   );
 
   // Mount flow's httpHandler onto runner's health server (opaque — no type inspection)
@@ -128,6 +139,7 @@ export async function swapFlow(
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
   observers?: Array<ObserverFn>,
+  observeLevel?: () => TelemetryLevel,
   load: FlowLoader = loadFlowHandle,
 ): Promise<FlowHandle> {
   logger.info('Loading new flow for hot-swap...');
@@ -143,6 +155,7 @@ export async function swapFlow(
       loggerConfig,
       healthServer,
       observers,
+      observeLevel,
     );
   } catch (error) {
     // Rollback: keep the OLD handler mounted, keep /ready true, return the OLD

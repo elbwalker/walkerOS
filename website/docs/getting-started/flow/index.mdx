@@ -691,15 +691,15 @@ See [Collector documentation](/docs/collector/) for complete options.
 
 ### Web-specific options
 
-For browser bundles, you can configure window variable names via `config.settings`:
+For browser bundles, you can configure the collector's window variable name via
+`config.settings`:
 
 <CodeSnippet
   code={`{
   "config": {
     "platform": "web",
     "settings": {
-      "windowCollector": "walkerCollector",
-      "windowElb": "elb"
+      "windowCollector": "walkerCollector"
     }
   }
 }`}
@@ -708,7 +708,11 @@ For browser bundles, you can configure window variable names via `config.setting
 
 **Properties:**
 - **`windowCollector`** - Global variable name for collector instance (default: `"collector"`)
-- **`windowElb`** - Global variable name for event tracking function (default: `"elb"`)
+
+The `window.elb` function is owned by the browser source: set `elb` in the
+browser source's `config.settings` to change its global name (default:
+`"elb"`). The former `windowElb` setting is deprecated; when set, its value is
+forwarded to the browser source's `settings.elb` with a warning.
 
 ## Multi-flow configuration
 

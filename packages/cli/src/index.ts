@@ -155,6 +155,8 @@ export type {
   CreatePreviewOptions,
   DeletePreviewOptions,
 } from './commands/previews/index.js';
+export { listJourneys } from './commands/journeys/index.js';
+export type { ListJourneysOptions } from './commands/journeys/index.js';
 export {
   listSecrets,
   createSecret,

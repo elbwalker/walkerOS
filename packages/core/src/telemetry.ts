@@ -116,7 +116,10 @@ export function createTelemetryObserver(
 
     const projected: FlowState = { ...state };
     if (!includeIn) delete projected.inEvent;
-    if (!includeOut) delete projected.outEvent;
+    if (!includeOut) {
+      delete projected.outEvent;
+      delete projected.calls;
+    }
     if (!includeMappingKey) delete projected.mappingKey;
 
     // Error message truncation: limit to 256 chars outside trace so stack

@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkeros/core';
-import type { Settings, Context } from './types';
+import type { Settings, Context, InitScope } from './types';
 import { tryCatch } from '@walkeros/core';
 import { isVisible } from '@walkeros/web-core';
 import { handleTrigger, Triggers } from './trigger';
@@ -39,7 +39,7 @@ const visibilityStates = new WeakMap<Document | Element, VisibilityState>();
  * would be meaningless; keying by ownerDocument gives one shared observer per
  * document and keeps the create/lookup keys aligned.
  */
-export function getScopeKey(scope: Document | Element): Document | Element {
+export function getScopeKey(scope: InitScope): Document | Element {
   return (scope as Element).ownerDocument || (scope as Document);
 }
 
@@ -67,10 +67,7 @@ function isElementVisible(element: HTMLElement): boolean {
 /**
  * Element cleanup (unobserve + timer + cache cleanup)
  */
-export function unobserveElement(
-  scope: Document | Element,
-  element: HTMLElement,
-): void {
+export function unobserveElement(scope: InitScope, element: HTMLElement): void {
   const state = visibilityStates.get(getScopeKey(scope));
   if (!state) return;
 
@@ -217,7 +214,7 @@ function handleIntersection(
  * Initializes visibility tracking for a scope (document/element)
  */
 export function initVisibilityTracking(
-  scope: Document | Element,
+  scope: InitScope,
   duration = 1000,
 ): void {
   const key = getScopeKey(scope);
@@ -260,7 +257,7 @@ export function triggerVisible(
 /**
  * Destroys visibility tracking for a scope, cleaning up all resources
  */
-export function destroyVisibilityTracking(scope?: Document | Element): void {
+export function destroyVisibilityTracking(scope?: InitScope): void {
   if (!scope) return; // No scope provided, nothing to clean up
 
   const key = getScopeKey(scope);

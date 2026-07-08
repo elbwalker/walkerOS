@@ -316,6 +316,8 @@ export interface Cascade {
 export interface Instance {
   push: PushFn;
   command: CommandFn;
+  /** Flexible elb() adapter: routes `walker *` to command, events to push. */
+  elb: ElbTypes.Fn;
   allowed: boolean;
   config: Config;
   consent: WalkerOS.Consent;
@@ -335,6 +337,14 @@ export interface Instance {
    * swallowed. Subscribers add/remove via the standard Set API.
    */
   observers: Set<ObserverFn>;
+  /**
+   * Optional observation-level supplier installed by bundle codegen. Returns
+   * the level currently active for this runtime. Absent means no capture. At
+   * `trace` the per-event destination push wraps its env (via `wrapEnv`) to
+   * record a destination's declared vendor `calls`; `off`/`standard` and
+   * absence leave the push path untouched (zero added per-push cost).
+   */
+  observeLevel?: () => 'off' | 'standard' | 'trace';
   logger: Logger.Instance;
   on: On.OnConfig;
   queue: WalkerOS.Events;

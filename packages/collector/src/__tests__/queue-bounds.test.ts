@@ -69,6 +69,7 @@ describe('queue bounds', () => {
       config,
       push: jest.fn(),
       command: jest.fn(),
+      elb: jest.fn(),
       on: {},
       custom: {},
     };

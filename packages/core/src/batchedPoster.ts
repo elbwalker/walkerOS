@@ -35,6 +35,38 @@ export type PosterFetch = (
   init: { method: string; headers: Record<string, string>; body: string },
 ) => Promise<PosterResponse>;
 
+/**
+ * UTF-8 byte length of a string. `String.length` counts UTF-16 code units,
+ * which under-measures multi-byte content (CJK, emoji) against byte-based
+ * body caps. Counted arithmetically rather than via TextEncoder because
+ * jsdom-style sandboxes lack a TextEncoder global; the arithmetic matches
+ * `TextEncoder().encode(str).length` exactly (unpaired surrogates count as
+ * the 3-byte U+FFFD replacement, per WHATWG encoding).
+ */
+function utf8ByteLength(str: string): number {
+  let bytes = 0;
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code < 0x80) {
+      bytes += 1;
+    } else if (code < 0x800) {
+      bytes += 2;
+    } else if (code >= 0xd800 && code <= 0xdbff && i + 1 < str.length) {
+      const next = str.charCodeAt(i + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        // Valid surrogate pair: one astral code point, 4 UTF-8 bytes.
+        bytes += 4;
+        i++;
+      } else {
+        bytes += 3;
+      }
+    } else {
+      bytes += 3;
+    }
+  }
+  return bytes;
+}
+
 export interface BatchedPosterOptions {
   /** Absolute HTTP endpoint URL. POST with JSON array body. */
   url: string;
@@ -44,6 +76,12 @@ export interface BatchedPosterOptions {
   batchMs?: number;
   /** Max records per batch. When reached, flushes immediately. Default 50. */
   batchSize?: number;
+  /**
+   * Max serialized body size in UTF-8 bytes (the wire size body caps are
+   * enforced in). A batch whose JSON exceeds this is split in half
+   * recursively until each chunk fits. Default 60000.
+   */
+  maxBodyBytes?: number;
   /** Test seam. Defaults to the global `fetch`. */
   fetch?: PosterFetch;
   /** Called when the underlying POST rejects. Defaults to swallowing. */
@@ -81,6 +119,14 @@ export function createBatchedPoster(
     rawBatchSize >= 1
       ? Math.floor(rawBatchSize)
       : 50;
+
+  const rawMaxBodyBytes = opts.maxBodyBytes;
+  const maxBodyBytes =
+    typeof rawMaxBodyBytes === 'number' &&
+    Number.isFinite(rawMaxBodyBytes) &&
+    rawMaxBodyBytes >= 1
+      ? Math.floor(rawMaxBodyBytes)
+      : 60000;
   // Lazy lookup of the global `fetch` so the helper imports cleanly even in
   // environments without one (it only fails when actually used). The cast
   // is to the narrowed PosterFetch surface, not to a broader type.
@@ -94,18 +140,35 @@ export function createBatchedPoster(
 
   let buffer: FlowState[] = [];
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let seq = 0;
 
-  function flush(): void {
-    if (buffer.length === 0) return;
-    const body = buffer;
-    buffer = [];
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
-    // Fire-and-forget. We deliberately do not await; the emit caller is
-    // synchronous and a slow observer must not block the pipeline.
-    Promise.resolve()
+  /**
+   * Serialize a batch into byte-bounded JSON bodies, preserving order. Each
+   * posted body is serialized exactly once: a batch that fits (or a single-
+   * record leaf) returns its own probe serialization; only oversized parents
+   * discard theirs before recursing into halves. A single record that alone
+   * exceeds the limit is emitted as its own body anyway: the server rejects
+   * it (413) and the resulting seq gap makes the loss visible, which is
+   * preferable to silently dropping it here.
+   */
+  function splitToBodies(batch: FlowState[]): string[] {
+    const body = JSON.stringify(batch);
+    if (batch.length <= 1) return [body];
+    if (utf8ByteLength(body) <= maxBodyBytes) return [body];
+    const mid = Math.floor(batch.length / 2);
+    return [
+      ...splitToBodies(batch.slice(0, mid)),
+      ...splitToBodies(batch.slice(mid)),
+    ];
+  }
+
+  /**
+   * POST one pre-serialized chunk body. Always resolves: non-2xx and
+   * rejections are routed to onError so the sequential flush loop can
+   * proceed to the next chunk.
+   */
+  function postChunk(body: string): Promise<void> {
+    return Promise.resolve()
       .then(() =>
         fetchImpl(opts.url, {
           method: 'POST',
@@ -113,7 +176,7 @@ export function createBatchedPoster(
             'Content-Type': 'application/json',
             Authorization: `Bearer ${opts.token}`,
           },
-          body: JSON.stringify(body),
+          body,
         }),
       )
       .then((res) => {
@@ -129,8 +192,31 @@ export function createBatchedPoster(
       });
   }
 
+  function flush(): void {
+    if (buffer.length === 0) return;
+    const batch = buffer;
+    buffer = [];
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    const bodies = splitToBodies(batch);
+    // Fire-and-forget. We deliberately do not await; the emit caller is
+    // synchronous and a slow observer must not block the pipeline. Chunks
+    // are POSTed sequentially (await previous before next) to preserve
+    // arrival order at the observer.
+    void (async () => {
+      for (const body of bodies) {
+        await postChunk(body);
+      }
+    })();
+  }
+
   return (state: FlowState): void => {
-    buffer.push(state);
+    // Stamp a monotonic seq for gap detection. Spread-copy rather than mutate:
+    // the emit callback is public and a caller may hand over a shared object.
+    // Failed POSTs are never re-sequenced, so a lost record leaves a seq gap.
+    buffer.push({ ...state, seq: ++seq });
     if (buffer.length >= batchSize) {
       flush();
       return;

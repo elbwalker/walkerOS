@@ -1,482 +1,445 @@
-import { startFlow } from '@walkeros/collector';
-import { createBrowserSource } from './test-utils';
-import { initElbLayer, drainNonWalkerEvents } from '../elbLayer';
-import type { WalkerOS, Collector, On, Elb } from '@walkeros/core';
+import { createPushResult } from '@walkeros/collector';
+import { isObject, isString } from '@walkeros/core';
+import type { Elb } from '@walkeros/core';
+import { createElbLayer } from '../elbLayer';
+import type { Context, Settings } from '../types';
+import { flushChain as flush } from './test-utils';
 
-/**
- * Drives the full elbLayer drain lifecycle for unit tests.
- *
- * Under the new lifecycle, `initElbLayer` only drains `walker *` commands;
- * non-walker events stay in the queue and are drained later from the
- * source's `on('run')` handler via `drainNonWalkerEvents`. Tests that
- * exercise the queue's behaviour as a whole (legacy `initElbLayer`
- * contract) need to invoke both phases.
- */
-const runFullElbLayerDrain = (
-  elb: Elb.Fn,
-  config: Parameters<typeof initElbLayer>[1] = {},
-): void => {
-  initElbLayer(elb, config);
-  const win = config?.window;
-  if (!win) return;
-  drainNonWalkerEvents(
-    elb,
-    {
-      prefix: config.prefix ?? 'data-elb',
-      elbLayer: typeof config.name === 'string' ? config.name : undefined,
-    },
-    win,
-    config.logger,
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+}
+
+const defer = <T>(): Deferred<T> => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+};
+
+const settings = (): Settings => ({
+  prefix: 'data-elb',
+  scope: document,
+  pageview: false,
+  elb: '',
+  elbLayer: 'elbLayer',
+});
+
+const okResult = (): Elb.PushResult => createPushResult({ ok: true });
+
+// A fake translation context: a spyable `elb` (both commands and events land
+// here through the real translation) and a spyable `initScope` for `walker
+// init`. Types are inferred from the jest.fn implementations, no casts.
+const makeHarness = () => {
+  const elb = jest.fn((_event?: unknown, _data?: unknown) =>
+    Promise.resolve(okResult()),
   );
+  const initScope = jest.fn((_context: Context) => {});
+  const context: Context = { elb, settings: settings(), initScope };
+
+  // Labels every elb dispatch in call order: a `walker *` command keeps its
+  // string, an event object collapses to its `name`.
+  const dispatchLabels = (): string[] =>
+    elb.mock.calls.map(([arg0]) => {
+      if (isString(arg0)) return arg0;
+      if (isObject(arg0) && isString(arg0.name)) return arg0.name;
+      return '?';
+    });
+
+  return { context, elb, initScope, dispatchLabels };
 };
 
-// Helper to access window.elbLayer safely
-const getWindowElbLayer = (): unknown[] | undefined =>
-  (window as unknown as { elbLayer?: unknown[] }).elbLayer;
-
-const setWindowElbLayer = (value: unknown[]): void => {
-  (window as unknown as { elbLayer: unknown[] }).elbLayer = value;
+const setLayer = (value: unknown[]): void => {
+  Reflect.set(window, 'elbLayer', value);
 };
 
-const deleteWindowElbLayer = (): void => {
-  (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+const getLayer = (): unknown[] | undefined => {
+  const value = Reflect.get(window, 'elbLayer');
+  return Array.isArray(value) ? value : undefined;
 };
 
-const pushToElbLayer = (item: unknown): void => {
-  const w = window as unknown as { elbLayer?: unknown[] };
-  if (!w.elbLayer) w.elbLayer = [];
-  w.elbLayer.push(item);
+const clearLayer = (): void => {
+  Reflect.set(window, 'elbLayer', undefined);
 };
 
-describe('Elb Layer', () => {
-  let collectedEvents: WalkerOS.Event[];
-  let collector: Collector.Instance;
-  let mockPush: jest.MockedFunction<Collector.Instance['push']>;
-  let mockElb: jest.MockedFunction<any>;
+const pushLayer = (entry: unknown): number => {
+  const layer = getLayer();
+  if (!layer) throw new Error('elbLayer missing');
+  return layer.push(entry);
+};
 
-  beforeEach(async () => {
-    // Clear any existing elbLayer
-    deleteWindowElbLayer();
-    collectedEvents = [];
-
-    // Create mock push function
-    mockPush = jest.fn().mockImplementation((...args: any[]) => {
-      collectedEvents.push(args[0] as WalkerOS.Event);
-      return Promise.resolve({
-        ok: true,
-      });
-    }) as jest.MockedFunction<Collector.Instance['push']>;
-
-    // Create mock elb function that handles both events and commands
-    mockElb = jest.fn().mockImplementation((arg1: any, arg2?: any) => {
-      // Pass through to mockPush with all arguments
-      return arg2 !== undefined ? mockPush(arg1, arg2) : mockPush(arg1);
-    }) as jest.MockedFunction<any>;
-
-    // Initialize collector
-    ({ collector } = await startFlow());
-
-    // Override push with mock
-    collector.push = mockPush;
-    // Ensure elb source exists for tests
-    if (collector.sources.elb) {
-      collector.sources.elb.push = mockElb;
-    }
+describe('createElbLayer controller', () => {
+  beforeEach(() => {
+    clearLayer();
   });
 
   afterEach(() => {
-    // Clean up window properties
-    deleteWindowElbLayer();
-    (window as Window & { customLayer?: unknown }).customLayer = undefined;
+    clearLayer();
   });
 
-  describe('Elb Layer Initialization', () => {
-    test('creates elbLayer array on window', () => {
-      expect(getWindowElbLayer()).toBeUndefined();
+  test('never mutates the layer array (append-only)', async () => {
+    setLayer([
+      ['walker consent', { functional: true }],
+      ['foo bar', {}],
+    ]);
 
-      initElbLayer(mockElb, { window });
+    const { context } = makeHarness();
+    const controller = createElbLayer(context, { window });
+    controller.start();
+    await flush();
 
-      expect(getWindowElbLayer()).toBeDefined();
-      expect(Array.isArray(getWindowElbLayer())).toBe(true);
-      expect(getWindowElbLayer()).toHaveLength(0);
-    });
-
-    test('uses custom layer name', () => {
-      expect(
-        (window as Window & { customLayer?: unknown }).customLayer,
-      ).toBeUndefined();
-
-      initElbLayer(mockElb, { name: 'customLayer', window });
-
-      expect(
-        (window as Window & { customLayer?: unknown }).customLayer,
-      ).toBeDefined();
-      expect(
-        Array.isArray(
-          (window as Window & { customLayer?: unknown }).customLayer,
-        ),
-      ).toBe(true);
-      expect(getWindowElbLayer()).toBeUndefined();
-    });
-
-    test('preserves existing elbLayer if present', () => {
-      setWindowElbLayer([['existing', 'commands'] as unknown[]]);
-
-      runFullElbLayerDrain(mockElb, { window });
-
-      expect(getWindowElbLayer()).toBeDefined();
-      expect(Array.isArray(getWindowElbLayer())).toBe(true);
-      // Commands should be processed and cleared
-      expect(getWindowElbLayer()).toHaveLength(0);
-    });
+    const layer = getLayer();
+    expect(layer).toHaveLength(2);
+    expect(layer?.[0]).toEqual(['walker consent', { functional: true }]);
+    expect(layer?.[1]).toEqual(['foo bar', {}]);
   });
 
-  describe('Command Processing', () => {
-    test('processes existing commands on initialization', () => {
-      // Pre-populate elbLayer with commands
-      setWindowElbLayer([
-        ['page view', { title: 'test' }] as unknown[],
-        ['product click', { id: 'test' }] as unknown[],
-      ]);
+  test('two lanes: backlog command dispatches before start, event waits for start', async () => {
+    setLayer([
+      ['walker consent', { functional: true }],
+      ['foo bar', {}],
+    ]);
 
-      runFullElbLayerDrain(mockElb, { window });
+    const { context, dispatchLabels } = makeHarness();
+    const controller = createElbLayer(context, { window });
+    await flush();
 
-      expect(mockPush).toHaveBeenCalledTimes(2);
-      expect(getWindowElbLayer()).toHaveLength(0); // Commands cleared after processing
-    });
+    // Command lane runs immediately; the event lane is recorded but idle.
+    expect(dispatchLabels()).toEqual(['walker consent']);
 
-    test('processes walker commands with priority', () => {
-      setWindowElbLayer([
-        ['product click', { id: 'product1' }] as unknown[], // Regular event
-        ['walker run', { consent: { marketing: true } }] as unknown[], // Walker command
-        ['page view', { title: 'test' }] as unknown[], // Regular event
-        ['walker user', { id: 'user123' }] as unknown[], // Walker command
-      ]);
+    controller.start();
+    await flush();
 
-      runFullElbLayerDrain(mockElb, { window });
-
-      // All commands should be processed, including walker run
-      expect(mockPush).toHaveBeenCalledTimes(4);
-
-      // Walker commands should be processed first
-      expect(mockPush).toHaveBeenNthCalledWith(1, 'walker run', {
-        consent: { marketing: true },
-      });
-      expect(mockPush).toHaveBeenNthCalledWith(2, 'walker user', {
-        id: 'user123',
-      });
-
-      // Then regular events. `initElbLayer` removes walker commands
-      // from the live array, so `drainNonWalkerEvents` finds anchor=-1
-      // and replays both `product click` and `page view`.
-      expect(mockPush).toHaveBeenNthCalledWith(
-        3,
-        expect.objectContaining({ name: 'product click' }),
-      );
-      expect(mockPush).toHaveBeenNthCalledWith(
-        4,
-        expect.objectContaining({ name: 'page view' }),
-      );
-    });
-
-    test('handles array-like commands', () => {
-      setWindowElbLayer([
-        ['test event', { key: 'value' }, 'load'] as unknown[],
-      ]);
-
-      runFullElbLayerDrain(mockElb, { window });
-
-      expect(mockPush).toHaveBeenCalledTimes(1);
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'test event',
-          data: { key: 'value' },
-          trigger: 'load',
-        }),
-      );
-    });
-
-    test('handles object commands', () => {
-      const eventObject: WalkerOS.DeepPartialEvent = {
-        name: 'custom event',
-        data: { test: 'data' },
-        context: { page: ['home', 0] as [string, number] },
-      };
-
-      setWindowElbLayer([eventObject as unknown]);
-
-      runFullElbLayerDrain(mockElb, { window });
-
-      expect(mockPush).toHaveBeenCalledTimes(1);
-      expect(mockPush).toHaveBeenCalledWith(eventObject);
-    });
-
-    test('ignores malformed commands', () => {
-      setWindowElbLayer([
-        [] as unknown, // Empty array
-        [''] as unknown, // Empty action array
-        {} as unknown, // Empty object
-      ]);
-
-      runFullElbLayerDrain(mockElb, { window });
-
-      // Should not throw and should not call push for invalid commands
-      expect(mockPush).not.toHaveBeenCalled();
-      expect(getWindowElbLayer()).toHaveLength(0);
-    });
+    // Event now replays, strictly after the command.
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
   });
 
-  describe('Source Integration', () => {
-    test('initializes elbLayer by default', async () => {
-      expect(getWindowElbLayer()).toBeUndefined();
+  test('walker init from the layer reaches initScope with a scope-aligned context', async () => {
+    setLayer([]);
 
-      await createBrowserSource(collector);
+    const { context, initScope } = makeHarness();
+    createElbLayer(context, { window });
 
-      expect(getWindowElbLayer()).toBeDefined();
-      expect(Array.isArray(getWindowElbLayer())).toBe(true);
-    });
+    const el = document.createElement('div');
+    pushLayer(['walker init', el]);
+    await flush();
 
-    test('uses custom elbLayer name from settings', async () => {
-      await createBrowserSource(collector, { elbLayer: 'myCustomLayer' });
-
-      expect(
-        (window as Window & { myCustomLayer?: unknown }).myCustomLayer,
-      ).toBeDefined();
-      expect(
-        Array.isArray(
-          (window as Window & { myCustomLayer?: unknown }).myCustomLayer,
-        ),
-      ).toBe(true);
-      expect(getWindowElbLayer()).toBeUndefined();
-    });
-
-    test('can disable elbLayer initialization', async () => {
-      await createBrowserSource(collector, { elbLayer: false });
-
-      expect(getWindowElbLayer()).toBeUndefined();
-    });
-
-    test('processes pre-initialization commands', async () => {
-      // Commands pushed before source initialization
-      setWindowElbLayer([
-        ['walker run', { consent: { marketing: true } }] as unknown[],
-        ['page view', { title: 'test' }] as unknown[],
-      ]);
-
-      // `runOnInit: true` drives the run lifecycle which drains non-walker
-      // events anchored at the last `walker run`.
-      await createBrowserSource(
-        collector,
-        { pageview: false },
-        {
-          runOnInit: true,
-        },
-      );
-
-      // Should process all commands (no walker on registration anymore)
-      expect(mockPush).toHaveBeenCalledTimes(2);
-      expect(mockPush).toHaveBeenNthCalledWith(1, 'walker run', {
-        consent: { marketing: true },
-      });
-      expect(mockPush).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({ name: 'page view' }),
-      );
-      expect(getWindowElbLayer()).toHaveLength(0);
-    });
+    expect(initScope).toHaveBeenCalledTimes(1);
+    const passedContext = initScope.mock.calls[0][0];
+    expect(passedContext.settings.scope).toBe(el);
   });
 
-  describe('Event Structure', () => {
-    test('creates proper WalkerOS.Event structure for regular events', () => {
-      setWindowElbLayer([
-        ['entity name', { prop: 'value' }, 'trigger_type'] as unknown[],
-      ]);
-
-      runFullElbLayerDrain(mockElb, { window });
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'entity name',
-          data: { prop: 'value' },
-          trigger: 'trigger_type',
-        }),
-      );
+  test('post-start entries serialize across lanes in push order', async () => {
+    setLayer([]);
+    const { context, elb, dispatchLabels } = makeHarness();
+    const deferreds: Deferred<Elb.PushResult>[] = [];
+    elb.mockImplementation(() => {
+      const d = defer<Elb.PushResult>();
+      deferreds.push(d);
+      return d.promise;
     });
 
-    test('passes walker commands directly', () => {
-      setWindowElbLayer([
-        [
-          'walker user',
-          { id: 'user123' },
-          'options',
-          { context: 'test' },
-        ] as unknown[],
-      ]);
+    const controller = createElbLayer(context, { window });
+    controller.start();
+    await flush();
 
-      initElbLayer(mockElb, { window });
+    pushLayer(['foo bar', { id: 'A' }]); // event A
+    pushLayer(['walker consent', { marketing: true }]); // command
+    pushLayer(['bar baz', { id: 'B' }]); // event B
+    await flush();
 
-      expect(mockPush).toHaveBeenCalledWith('walker user', { id: 'user123' });
-    });
+    // The chain blocks on A's pending dispatch; nothing races ahead.
+    expect(dispatchLabels()).toEqual(['foo bar']);
+
+    deferreds[0].resolve(okResult());
+    await flush();
+    expect(dispatchLabels()).toEqual(['foo bar', 'walker consent']);
+
+    deferreds[1].resolve(okResult());
+    await flush();
+    expect(dispatchLabels()).toEqual(['foo bar', 'walker consent', 'bar baz']);
+
+    deferreds[2].resolve(okResult());
+    await flush();
   });
 
-  describe('Error Handling', () => {
-    test('handles errors gracefully without breaking', () => {
-      // Mock push to throw error
-      mockPush.mockImplementation(() => {
-        throw new Error('Push failed');
-      });
-
-      setWindowElbLayer([
-        ['test event', { data: 'test' }] as unknown[],
-        ['another event', { data: 'test2' }] as unknown[],
-      ]);
-
-      // Should not throw
-      expect(() => {
-        runFullElbLayerDrain(mockElb, { window });
-      }).not.toThrow();
-
-      // Commands should still be cleared
-      expect(getWindowElbLayer()).toHaveLength(0);
+  test('pre-start commands serialize in push order', async () => {
+    setLayer([]);
+    const { context, elb, dispatchLabels } = makeHarness();
+    const deferreds: Deferred<Elb.PushResult>[] = [];
+    elb.mockImplementation(() => {
+      const d = defer<Elb.PushResult>();
+      deferreds.push(d);
+      return d.promise;
     });
 
-    test('handles circular references in commands', () => {
-      const circular: Record<string, unknown> = { name: 'test' };
-      circular.self = circular;
+    createElbLayer(context, { window });
 
-      setWindowElbLayer([['test event', circular] as unknown[]]);
+    pushLayer(['walker consent', { marketing: true }]);
+    pushLayer(['walker user', { id: 'u1' }]);
+    await flush();
 
-      expect(() => {
-        initElbLayer(mockElb, { window });
-      }).not.toThrow();
-    });
+    // Second command waits on the first via the command chain.
+    expect(dispatchLabels()).toEqual(['walker consent']);
+
+    deferreds[0].resolve(okResult());
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent', 'walker user']);
+
+    deferreds[1].resolve(okResult());
+    await flush();
   });
 
-  describe('Arguments Object Support', () => {
-    test('processes IArguments objects correctly', () => {
-      function testElb(...args: unknown[]) {
-        pushToElbLayer(arguments);
+  test('normalizes and routes arguments-object entries', async () => {
+    setLayer([]);
+    const { context, elb } = makeHarness();
+    const controller = createElbLayer(context, { window });
+    controller.start();
+    await flush();
+
+    (function pushArgs(..._args: unknown[]) {
+      pushLayer(arguments);
+    })('foo bar', { data: 1 });
+    await flush();
+
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'foo bar', data: { data: 1 } }),
+    );
+  });
+
+  test('start is idempotent and tolerates a route that pushes mid-dispatch', async () => {
+    setLayer([['foo bar', { id: 'X' }]]);
+    const { context, elb, dispatchLabels } = makeHarness();
+    let reentered = false;
+    elb.mockImplementation((arg0?: unknown) => {
+      if (isObject(arg0) && arg0.name === 'foo bar' && !reentered) {
+        reentered = true;
+        // Synchronously enqueue a new event from inside the running dispatch.
+        pushLayer(['bar baz', { id: 'Y' }]);
       }
-
-      testElb('test event', { key: 'value' }, 'load');
-
-      runFullElbLayerDrain(mockElb, { window });
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'test event',
-          data: { key: 'value' },
-          trigger: 'load',
-        }),
-      );
+      return Promise.resolve(okResult());
     });
 
-    test('enhanced elbLayer.push processes arguments immediately', () => {
-      initElbLayer(mockElb, { window });
+    const controller = createElbLayer(context, { window });
+    controller.start();
+    controller.start(); // second start must not replay the backlog again
+    await flush();
 
-      function testElb(...args: unknown[]) {
-        pushToElbLayer(arguments);
-      }
-
-      testElb('immediate event', { test: true });
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'immediate event',
-          data: { test: true },
-        }),
-      );
-    });
+    const labels = dispatchLabels();
+    expect(labels.filter((label) => label === 'foo bar')).toHaveLength(1);
+    expect(labels).toEqual(['foo bar', 'bar baz']);
   });
 
-  describe('Element Data Resolution', () => {
-    test('extracts data from elements', () => {
-      document.body.innerHTML = `
-        <div data-elb="product" data-elb-product="id:123;name:Test Product">
-          <button>Buy Now</button>
-        </div>
-      `;
+  test('intake resolves the dispatch result post-start and ok:true pre-start', async () => {
+    setLayer([]);
+    const { context, elb } = makeHarness();
+    const controller = createElbLayer(context, { window });
 
-      const element = document.querySelector(
-        'div[data-elb="product"]',
-      ) as Element;
+    // Pre-start event: recorded, resolves ok:true without dispatching.
+    const preResult = await controller.intake(['foo bar', {}]);
+    expect(preResult.ok).toBe(true);
+    expect(elb).not.toHaveBeenCalled();
 
-      setWindowElbLayer([['product', element] as unknown[]]);
+    // Post-start: intake resolves to the actual dispatch result.
+    const sentinel = createPushResult({ ok: true });
+    elb.mockImplementation(() => Promise.resolve(sentinel));
+    controller.start();
+    await flush();
 
-      runFullElbLayerDrain(mockElb, { window });
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'product',
-          data: expect.objectContaining({
-            id: 123, // Values are cast by castValue utility
-            name: 'Test Product',
-          }),
-        }),
-      );
-    });
-
-    test('page events get pathname id', () => {
-      window.history.replaceState({}, '', '/test-page');
-
-      setWindowElbLayer([['page view'] as unknown[]]);
-
-      runFullElbLayerDrain(mockElb, { window });
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'page view',
-          data: expect.objectContaining({
-            id: '/test-page',
-          }),
-        }),
-      );
-    });
-
-    test('source sends pageview when pageview enabled', async () => {
-      // Set URL path
-      window.history.replaceState({}, '', '/walker-run-test');
-
-      // Initialize source with pageview enabled
-      const source = await createBrowserSource(collector, { pageview: true });
-
-      // No pageview during init — waits for on('run')
-      expect(mockPush).not.toHaveBeenCalled();
-
-      // Trigger run — pageview fires here
-      if (source.on) {
-        await source.on('run', collector);
-      }
-
-      // Should have sent pageview on run
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'page view',
-          data: expect.objectContaining({
-            id: '/walker-run-test',
-          }),
-          trigger: 'load',
-        }),
-      );
-    });
+    const postResult = await controller.intake(['baz qux', {}]);
+    expect(postResult).toBe(sentinel);
   });
 
-  describe('Performance', () => {
-    test('handles large number of commands efficiently', () => {
-      const commands: unknown[] = [];
-      for (let i = 0; i < 1000; i++) {
-        commands.push([`event ${i}`, { index: i }] as unknown[]);
+  test('destroy restores native push: entries append without routing', async () => {
+    setLayer([]);
+    const { context, elb } = makeHarness();
+    const controller = createElbLayer(context, { window });
+    controller.destroy();
+
+    const newLength = pushLayer(['foo bar', {}]);
+    await flush();
+
+    expect(newLength).toBe(1);
+    expect(getLayer()).toHaveLength(1);
+    expect(elb).not.toHaveBeenCalled();
+  });
+
+  test('second start() is a no-op — replays nothing, chain order intact', async () => {
+    setLayer([]);
+    const { context, dispatchLabels } = makeHarness();
+    const controller = createElbLayer(context, { window });
+    controller.start();
+    await flush();
+
+    pushLayer(['foo bar', { id: 'X' }]); // delivered once, post-start
+    await flush();
+    expect(dispatchLabels()).toEqual(['foo bar']);
+
+    // Second start() short-circuits on the started flag: no replay, no re-seed
+    // of tail, chain order preserved. (Simulates a second walker run.)
+    controller.start();
+    await flush();
+    expect(dispatchLabels()).toEqual(['foo bar']);
+  });
+
+  test('start seeds the chain from the command lane', async () => {
+    setLayer([
+      ['walker consent', { marketing: true }],
+      ['foo bar', {}],
+    ]);
+    const { context, elb, dispatchLabels } = makeHarness();
+    const commandDeferred = defer<Elb.PushResult>();
+    let firstCall = true;
+    elb.mockImplementation(() => {
+      if (firstCall) {
+        firstCall = false;
+        return commandDeferred.promise; // hold the pre-start command
       }
-
-      setWindowElbLayer(commands as unknown[]);
-
-      const startTime = performance.now();
-      runFullElbLayerDrain(mockElb, { window });
-      const endTime = performance.now();
-
-      expect(endTime - startTime).toBeLessThan(100); // Should process in under 100ms
-      expect(mockPush).toHaveBeenCalledTimes(1000);
-      expect(getWindowElbLayer()).toHaveLength(0);
+      return Promise.resolve(okResult());
     });
+
+    const controller = createElbLayer(context, { window });
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent']);
+
+    controller.start();
+    await flush();
+    // Event stays blocked behind the unresolved command.
+    expect(dispatchLabels()).toEqual(['walker consent']);
+
+    commandDeferred.resolve(okResult());
+    await flush();
+    // Event dispatches strictly after the command completes.
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
+  });
+
+  test('a rejected enqueue does not wedge the shared chain', async () => {
+    setLayer([]);
+    const { context } = makeHarness();
+    const controller = createElbLayer(context, { window });
+    controller.start();
+    await flush();
+
+    // A rejecting unit of work. Catch the returned link so the rejection is
+    // observed here (no unhandled-rejection noise) and callers still see it.
+    const rejected = controller.enqueue(() =>
+      Promise.reject(new Error('boom')),
+    );
+    const rejection = rejected.catch((error: unknown) => error);
+
+    // A following unit of work queued strictly behind the rejected one.
+    let followUpRan = false;
+    const followUp = controller.enqueue(() => {
+      followUpRan = true;
+      return 'done';
+    });
+
+    await flush();
+
+    // The rejection surfaces to the awaiting caller of the rejected enqueue...
+    expect(await rejection).toEqual(new Error('boom'));
+    // ...but the shared chain continues: the follow-up still runs and resolves.
+    expect(followUpRan).toBe(true);
+    expect(await followUp).toBe('done');
+  });
+
+  test('enqueue runs after a replayed backlog event', async () => {
+    setLayer([['foo bar', {}]]);
+    const { context, elb } = makeHarness();
+    const order: string[] = [];
+    const eventDeferred = defer<Elb.PushResult>();
+    elb.mockImplementation(() => {
+      order.push('event');
+      return eventDeferred.promise; // hold the replayed event
+    });
+
+    const controller = createElbLayer(context, { window });
+    controller.start();
+    const enqueued = controller.enqueue(() => {
+      order.push('enqueue');
+    });
+    await flush();
+
+    // Event dispatch started; enqueue is queued behind it.
+    expect(order).toEqual(['event']);
+
+    eventDeferred.resolve(okResult());
+    await enqueued;
+    await flush();
+    expect(order).toEqual(['event', 'enqueue']);
+  });
+
+  test('recreate on the same window resumes past the drained boundary', async () => {
+    setLayer([]);
+    const { context, dispatchLabels } = makeHarness();
+
+    // First controller drains both lanes: the command runs on intake, the
+    // event replays on start().
+    const first = createElbLayer(context, { window });
+    await first.intake(['walker consent', { functional: true }]);
+    await first.intake(['foo bar', { id: 'A' }]);
+    first.start();
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
+
+    first.destroy();
+
+    // A new controller adopts the SAME append-only window.elbLayer. It must
+    // resume past what the first controller already drained, not replay from 0.
+    const second = createElbLayer(context, { window });
+    second.start();
+    await flush();
+
+    // Neither the prior command nor the prior event re-routes.
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
+
+    // An entry pushed after the recreate still routes normally.
+    await second.intake(['baz qux', { id: 'B' }]);
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar', 'baz qux']);
+  });
+
+  test('recreate after a pre-start destroy replays held events exactly once', async () => {
+    setLayer([
+      ['walker consent', { functional: true }],
+      ['foo bar', { id: 'A' }],
+    ]);
+    const { context, dispatchLabels } = makeHarness();
+
+    // First controller runs the backlog command immediately but is destroyed
+    // before start(), so its event lane never drains.
+    const first = createElbLayer(context, { window });
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent']);
+    first.destroy();
+
+    // The recreate must NOT re-run the already-dispatched command, but MUST
+    // replay the still-undrained event exactly once.
+    const second = createElbLayer(context, { window });
+    second.start();
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
+  });
+
+  test('repeated destroy/recreate cycles never replay a drained entry', async () => {
+    setLayer([]);
+    const { context, dispatchLabels } = makeHarness();
+
+    let controller = createElbLayer(context, { window });
+    await controller.intake(['walker consent', {}]);
+    await controller.intake(['foo bar', {}]);
+    controller.start();
+    await flush();
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
+
+    // Three further create/start cycles on the same array add nothing.
+    for (let i = 0; i < 3; i++) {
+      controller.destroy();
+      controller = createElbLayer(context, { window });
+      controller.start();
+      await flush();
+    }
+    expect(dispatchLabels()).toEqual(['walker consent', 'foo bar']);
   });
 });

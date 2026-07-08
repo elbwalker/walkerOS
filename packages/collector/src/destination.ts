@@ -6,6 +6,7 @@ import type {
   Destination,
   Transformer,
   Ingest,
+  Simulation,
 } from '@walkeros/core';
 import {
   assign,
@@ -23,6 +24,7 @@ import {
   isDefined,
   isFunction,
   isObject,
+  OBSERVE_ENV_KEY,
   processEventMapping,
   stepId,
   tryCatchAsync,
@@ -30,7 +32,9 @@ import {
   compileState,
   applyState,
 } from '@walkeros/core';
-import { buildBaseState } from './observerEmit';
+import { buildBaseState, journeyFields } from './observerEmit';
+import { wrapEnv } from './wrapEnv';
+import { sanitizeCalls } from './sanitizeArgs';
 import { callDestinationOn } from './on';
 import {
   runTransformerChain,
@@ -497,6 +501,7 @@ export async function pushToDestinations(
           phase: 'skip',
           eventId: typeof queuedEvent.id === 'string' ? queuedEvent.id : '',
           now: Date.now(),
+          ...journeyFields(queuedEvent, destIngest, collector),
         });
         skipState.skipReason = 'consent';
         if (consent) skipState.consent = { ...consent };
@@ -1186,6 +1191,15 @@ export async function destinationPush<Destination extends Destination.Instance>(
         currentBatched.data = [];
 
         const rep = snapshot.entries[0];
+        // Representative journey correlation for the batch record. A forwarded
+        // batch may aggregate events from distinct upstream traces, so
+        // first-entry stamping on the flush/error records is best-effort; the
+        // per-event in/out records carry each event's exact trace.
+        const {
+          traceId: batchTraceId,
+          sourceId: batchSourceId,
+          parentEventId: batchParentEventId,
+        } = journeyFields(rep.event, rep.ingest, collector);
         const batchContext: Destination.PushBatchContext = {
           collector,
           logger: destLogger,
@@ -1241,6 +1255,9 @@ export async function destinationPush<Destination extends Destination.Instance>(
           phase: 'flush',
           eventId: '',
           now: flushStarted,
+          traceId: batchTraceId,
+          sourceId: batchSourceId,
+          parentEventId: batchParentEventId,
         });
         flushState.batch = { size: snapshot.entries.length, index: 0 };
         emitStep(collector, flushState);
@@ -1317,6 +1334,9 @@ export async function destinationPush<Destination extends Destination.Instance>(
               phase: 'error',
               eventId: '',
               now: errFinished,
+              traceId: batchTraceId,
+              sourceId: batchSourceId,
+              parentEventId: batchParentEventId,
             });
             batchErrState.durationMs = errFinished - flushStarted;
             batchErrState.error =
@@ -1421,6 +1441,51 @@ export async function destinationPush<Destination extends Destination.Instance>(
     batchState.batched.events.push(processed.event);
     if (isDefined(processed.data)) batchState.batched.data.push(processed.data);
 
+    // Emit a per-event in/out pair at enqueue time so observers see every
+    // event that entered the batch, not just the later flush frame. Enqueue is
+    // synchronous, so there is no vendor call to time and no durationMs. The
+    // terminal out record carries the batch coordinates the assembler reads to
+    // confirm batched delivery: size is the queue length after this enqueue,
+    // index is this entry's slot. The coordinates live on the out record only.
+    const batchEventId =
+      typeof processed.event.id === 'string' ? processed.event.id : '';
+    const batchJourney = journeyFields(event, ingest, collector);
+    const enqueuedAt = Date.now();
+    const batchInState = buildBaseState(collector, {
+      stepId: stepId('destination', destId),
+      stepType: 'destination',
+      phase: 'in',
+      eventId: batchEventId,
+      now: enqueuedAt,
+      traceId: batchJourney.traceId,
+      sourceId: batchJourney.sourceId,
+      parentEventId: batchJourney.parentEventId,
+    });
+    if (processed.mappingKey) batchInState.mappingKey = processed.mappingKey;
+    if (processed.event.consent) {
+      batchInState.consent = { ...processed.event.consent };
+    }
+    batchInState.inEvent = processed.event;
+    emitStep(collector, batchInState);
+
+    const batchOutState = buildBaseState(collector, {
+      stepId: stepId('destination', destId),
+      stepType: 'destination',
+      phase: 'out',
+      eventId: batchEventId,
+      now: enqueuedAt,
+      traceId: batchJourney.traceId,
+      sourceId: batchJourney.sourceId,
+      parentEventId: batchJourney.parentEventId,
+    });
+    if (processed.mappingKey) batchOutState.mappingKey = processed.mappingKey;
+    batchOutState.outEvent = processed.event;
+    batchOutState.batch = {
+      size: batchState.batched.entries.length,
+      index: batchState.batched.entries.length - 1,
+    };
+    emitStep(collector, batchOutState);
+
     // In-flight bookkeeping for operational visibility.
     const destIdResolved = destination.config.id || destId;
     const destStatus = ensureDestStatus(collector, destIdResolved);
@@ -1435,10 +1500,47 @@ export async function destinationPush<Destination extends Destination.Instance>(
   } else {
     destLogger.debug('push', { event: processed.event.name });
 
+    // Trace-level vendor-call capture (presence-gated). Only when an
+    // observeLevel supplier reports 'trace' AND this destination declares
+    // observable callables do we wrap the merged env with recording proxies
+    // for this push. wrapEnv deep-clones the env per push, so this must never
+    // run on the default path; prod stays zero-cost beyond the guard check.
+    let recordedCalls: Simulation.Call[] | undefined;
+    if (
+      collector.observeLevel?.() === 'trace' &&
+      Array.isArray(destination.calls) &&
+      destination.calls.length > 0
+    ) {
+      const wrapped = wrapEnv({
+        ...context.env,
+        simulation: destination.calls,
+      });
+      context.env = wrapped.wrappedEnv;
+      recordedCalls = wrapped.calls;
+
+      // Paths wrapEnv could not resolve here (e.g. a live-web global not yet
+      // installed) travel to the resolution-point wrapper (web-core getEnv) as
+      // a typed recorder. Both channels push onto the SAME calls array, so the
+      // out-record attach + sanitize below covers wrapped and recorded calls
+      // alike. getEnv strips this key before the destination sees the env.
+      if (wrapped.unresolved.length > 0) {
+        wrapped.wrappedEnv[OBSERVE_ENV_KEY] = {
+          paths: wrapped.unresolved,
+          record: (fn, args) =>
+            wrapped.calls.push({ fn, args, ts: Date.now() }),
+        } satisfies Destination.EnvObserve;
+      }
+    }
+
     // Emit a per-event observer pair around the destination.push call so
     // observers see the work this destination did for this event.
     const eventIdValue =
       typeof processed.event.id === 'string' ? processed.event.id : '';
+    const { traceId, sourceId, parentEventId } = journeyFields(
+      event,
+      ingest,
+      collector,
+    );
     const pushStarted = Date.now();
     const inState = buildBaseState(collector, {
       stepId: stepId('destination', destId),
@@ -1446,6 +1548,9 @@ export async function destinationPush<Destination extends Destination.Instance>(
       phase: 'in',
       eventId: eventIdValue,
       now: pushStarted,
+      traceId,
+      sourceId,
+      parentEventId,
     });
     if (processed.mappingKey) inState.mappingKey = processed.mappingKey;
     if (processed.event.consent) {
@@ -1480,9 +1585,18 @@ export async function destinationPush<Destination extends Destination.Instance>(
         phase: 'out',
         eventId: eventIdValue,
         now: pushFinished,
+        traceId,
+        sourceId,
+        parentEventId,
       });
       outState.durationMs = pushFinished - pushStarted;
       outState.outEvent = processed.event;
+      // Attach the vendor calls recorded during this push, sanitized to a
+      // JSON-safe projection. Only when trace capture ran and something was
+      // recorded.
+      if (recordedCalls && recordedCalls.length > 0) {
+        outState.calls = sanitizeCalls(recordedCalls);
+      }
       if (isDefined(response)) {
         outState.meta = { ...outState.meta, response };
       }
@@ -1500,12 +1614,20 @@ export async function destinationPush<Destination extends Destination.Instance>(
         phase: 'error',
         eventId: eventIdValue,
         now: pushFinished,
+        traceId,
+        sourceId,
+        parentEventId,
       });
       errState.durationMs = pushFinished - pushStarted;
       errState.error =
         err instanceof Error
           ? { name: err.name, message: err.message }
           : { message: String(err) };
+      // Surface the vendor calls recorded before the failure, sanitized to a
+      // JSON-safe projection, so a mid-push error doesn't discard them.
+      if (recordedCalls && recordedCalls.length > 0) {
+        errState.calls = sanitizeCalls(recordedCalls);
+      }
       if (processed.mappingKey) errState.mappingKey = processed.mappingKey;
       emitStep(collector, errState);
       throw err;

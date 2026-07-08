@@ -56,10 +56,6 @@
       },
       "config": {
         "platform": "web",
-        "settings": {
-          "windowCollector": "collector",
-          "windowElb": "elb"
-        },
         "bundle": {
           "packages": {
             "@walkeros/collector": {

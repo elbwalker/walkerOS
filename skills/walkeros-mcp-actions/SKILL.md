@@ -27,7 +27,7 @@ a chain of one-by-one tool calls.
 This is the "Code Execution with MCP" / "Code Mode" pattern: treat MCP tools as
 functions you call in a sandbox, not as round-trips through the model context.
 
-## The Eight Pure Tools
+## The Seven Pure Tools
 
 These walkerOS MCP tools are pure and composable: same input, same output, no
 auth, no cloud side effects. Safe to call freely from code.
@@ -37,22 +37,29 @@ auth, no cloud side effects. Safe to call freely from code.
 | `walkeros:flow_validate`  | Validate a flow or step config; return issues       | small                           |
 | `walkeros:flow_simulate`  | Run a flow against an event, mock destination calls | **yes** (per-destination calls) |
 | `walkeros:flow_bundle`    | Bundle a flow config to a JS artifact               | medium (bundle/meta)            |
-| `walkeros:flow_push`      | Push a real event through a bundled flow            | medium                          |
 | `walkeros:flow_examples`  | Fetch canonical flow/step examples                  | **yes** (many examples)         |
 | `walkeros:package_search` | Find packages by type/platform/keyword              | **yes** (catalog)               |
 | `walkeros:package_get`    | Read a package's schemas, hints, examples           | **yes** (full schemas)          |
 | `walkeros:diagnostics`    | Report MCP/CLI versions, app URL, reachability      | small                           |
+
+To test an event against a flow, use `walkeros:flow_simulate`: it runs the event
+through the flow with destination calls **mocked**, so nothing leaves the
+sandbox. Do not use `walkeros:flow_push` for this (see below).
 
 Always use the **fully-qualified `walkeros:<tool>`** name (Agent Skills
 best-practice) so the call is unambiguous when multiple MCP servers are bound.
 
 ### Out of scope for this pattern
 
-The seven cloud/auth tools (`walkeros:auth`, `walkeros:project_manage`,
-`walkeros:flow_manage`, `walkeros:deploy_manage`, `walkeros:secret_manage`,
-`walkeros:feedback`, `walkeros:flow_load`) carry authentication, cloud state, or
-side effects. Do **not** drive them from this code-execution filtering pattern;
-they belong in an interactive, authorized session.
+The eight cloud/auth/side-effect tools (`walkeros:auth`,
+`walkeros:project_manage`, `walkeros:flow_manage`, `walkeros:deploy_manage`,
+`walkeros:secret_manage`, `walkeros:feedback`, `walkeros:flow_load`,
+`walkeros:flow_push`) carry authentication, cloud state, or side effects.
+`walkeros:flow_push` in particular sends a **real event to real destinations**
+(real API calls to live endpoints), so calling it "freely" would produce real,
+duplicated sends; use `walkeros:flow_simulate` to test without sending. Do
+**not** drive these tools from this code-execution filtering pattern; they
+belong in an interactive, authorized session.
 
 ## The Recommended Pattern
 

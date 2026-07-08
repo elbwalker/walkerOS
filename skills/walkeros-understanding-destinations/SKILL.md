@@ -78,6 +78,16 @@ expect(calls).toContainEqual({
 });
 ```
 
+### The env as observability seam
+
+The env pattern is also the interception seam for trace-level vendor-call
+capture. At `trace` level the collector may attach an `observe` recorder under
+the `observe` key of the env, and `@walkeros/web-core`'s `getEnv` wraps the
+callables the destination declared as observable, recording each call. A
+destination that reaches its vendor through `getEnv(env)` is automatically
+observable; one that reaches a global directly, bypassing `env`, is not. This is
+one more reason to route every external call through `env`.
+
 ## Destination Config
 
 ```typescript

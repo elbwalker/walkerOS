@@ -110,7 +110,7 @@ describe('Destination API', () => {
       url,
       expect.any(String),
       expect.objectContaining({
-        headers: { foo: 'bar' },
+        headers: expect.objectContaining({ foo: 'bar' }),
       }),
     );
   });
@@ -153,6 +153,97 @@ describe('Destination API', () => {
       JSON.stringify(event),
       expect.any(Object),
     );
+  });
+
+  describe('traceparent', () => {
+    test('adds header from event trace and id', () => {
+      destination.push(
+        event,
+        createMockContext({
+          config: { settings: { url } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      const [, , calledOptions] = mockSendWeb.mock.calls[0];
+      expect(calledOptions.headers).toEqual({
+        traceparent: `00-${event.source.trace}-${event.id}-01`,
+      });
+    });
+
+    test('preserves a user-configured traceparent', () => {
+      const traceparent =
+        '00-11111111111111111111111111111111-2222222222222222-01';
+
+      destination.push(
+        event,
+        createMockContext({
+          config: { settings: { url, headers: { traceparent } } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      const [, , calledOptions] = mockSendWeb.mock.calls[0];
+      expect(calledOptions.headers.traceparent).toBe(traceparent);
+    });
+
+    test('preserves a user-configured traceparent in any casing', () => {
+      const userValue =
+        '00-11111111111111111111111111111111-2222222222222222-01';
+
+      destination.push(
+        event,
+        createMockContext({
+          config: { settings: { url, headers: { Traceparent: userValue } } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      const [, , calledOptions] = mockSendWeb.mock.calls[0];
+      expect(calledOptions.headers).toEqual({ Traceparent: userValue });
+    });
+
+    test('omits header when event has no trace', () => {
+      const noTrace = createEvent();
+      delete noTrace.source.trace;
+
+      destination.push(
+        noTrace,
+        createMockContext({
+          config: { settings: { url } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      const [, , calledOptions] = mockSendWeb.mock.calls[0];
+      expect(calledOptions.headers?.traceparent).toBeUndefined();
+    });
+
+    test('merges the added traceparent with other user headers', () => {
+      destination.push(
+        event,
+        createMockContext({
+          config: { settings: { url, headers: { foo: 'bar' } } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      const [, , calledOptions] = mockSendWeb.mock.calls[0];
+      expect(calledOptions.headers).toEqual({
+        foo: 'bar',
+        traceparent: `00-${event.source.trace}-${event.id}-01`,
+      });
+    });
   });
 
   describe('init', () => {

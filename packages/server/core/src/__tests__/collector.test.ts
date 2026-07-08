@@ -46,8 +46,8 @@ describe('Server Collector', () => {
     const { elb, collector: instance } = await getCollector();
     expect(elb).toBeDefined();
     expect(instance).toBeDefined();
-    // ELB is now the ELB source's push function, not the collector's push
-    expect(instance.sources.elb).toBeDefined();
+    // The elb adapter lives on the collector, not as a pseudo-source
+    expect(instance.elb).toBeDefined();
     expect(instance.push).toBeDefined();
     expect(instance.command).toBeDefined();
   });

@@ -9,6 +9,7 @@ import {
   ENV_MARKER_PREFIX,
   SECRET_MARKER_PREFIX,
   isPathStepEntry,
+  isObject,
 } from '@walkeros/core';
 import {
   classifyStepProperties,
@@ -518,7 +519,7 @@ export async function bundleCore(
     // Step 4: Create split entry point (code skeleton + data payload)
     logger.debug('Creating entry point');
     const { codeEntry, dataPayload, hasFlow, devPackages } =
-      await createEntryPoint(flowSettings, buildOptions, packagePaths);
+      await createEntryPoint(flowSettings, buildOptions, packagePaths, logger);
 
     // outputPath was resolved at the top of bundleCore (alongside the stale
     // cleanup paths). Just ensure its directory exists.
@@ -552,6 +553,8 @@ export async function bundleCore(
       minify: buildOptions.minify,
       minifyOptions: buildOptions.minifyOptions,
       windowCollector: buildOptions.windowCollector,
+      // Retained but inert (deprecation surface): no codegen reads it anymore.
+      // Keeping it here only over-keys the code cache, which is harmless.
       windowElb: buildOptions.windowElb,
       versionsHash,
     };
@@ -1251,6 +1254,91 @@ export async function computeDevPackages(
   return devPackages;
 }
 
+/** Package name of the browser source, the single writer of window[settings.elb]. */
+const BROWSER_SOURCE_PACKAGE = '@walkeros/web-source-browser';
+
+/**
+ * Strip an optional version/range suffix from a package spec so
+ * `@walkeros/web-source-browser@2.0.0` matches the bare package name.
+ */
+function packageSpecName(spec: string): string {
+  const at = spec.lastIndexOf('@');
+  return at > 0 ? spec.slice(0, at) : spec;
+}
+
+/** Read `config.settings.elb` from a source step, or undefined if not a string. */
+function readSourceElb(source: Flow.Source): string | undefined {
+  if (!isObject(source.config)) return undefined;
+  const settings = source.config.settings;
+  if (!isObject(settings)) return undefined;
+  return typeof settings.elb === 'string' ? settings.elb : undefined;
+}
+
+/**
+ * Forward the deprecated `flow.config.settings.windowElb` build hint onto the
+ * browser source's own `config.settings.elb`.
+ *
+ * The browser source is the single writer of `window[settings.elb]` (default
+ * 'elb'); the bundle no longer emits a competing `window[windowElb] = elb`
+ * assignment. Forwarding keeps a custom global name working through the
+ * deprecation window. Runs before config embedding so the forwarded value lands
+ * inside the bundle's `__configData`.
+ *
+ * Matches only the canonical `@walkeros/web-source-browser` package by design:
+ * this is a conservative deprecation shim, so forks or renamed repackages of the
+ * browser source get the "no effect" warning rather than a silent forward.
+ *
+ * Never mutates the input flow. Warns once, naming both keys.
+ */
+export function bridgeWindowElb(flow: Flow, logger?: Logger.Instance): Flow {
+  const raw = flow.config?.settings?.windowElb;
+  if (typeof raw !== 'string' || raw === '') return flow;
+  const windowElb = raw;
+
+  const sources = flow.sources ?? {};
+  const browserEntries = Object.entries(sources).filter(
+    ([, source]) =>
+      typeof source.package === 'string' &&
+      packageSpecName(source.package) === BROWSER_SOURCE_PACKAGE,
+  );
+
+  if (browserEntries.length === 0) {
+    logger?.warn(
+      `config.settings.windowElb "${windowElb}" has no effect: the flow has no ${BROWSER_SOURCE_PACKAGE} source to install window["${windowElb}"]. Remove config.settings.windowElb or add a browser source.`,
+    );
+    return flow;
+  }
+
+  const toForward = browserEntries.filter(
+    ([, source]) => readSourceElb(source) === undefined,
+  );
+
+  if (toForward.length === 0) {
+    logger?.warn(
+      `config.settings.windowElb "${windowElb}" is ignored: the browser source already sets config.settings.elb. Remove the deprecated config.settings.windowElb.`,
+    );
+    return flow;
+  }
+
+  // Apply on a shallow clone so the input flow is never mutated.
+  const nextSources: Record<string, Flow.Source> = { ...sources };
+  for (const [id, source] of toForward) {
+    const config = isObject(source.config) ? source.config : {};
+    const settings = isObject(config.settings) ? config.settings : {};
+    nextSources[id] = {
+      ...source,
+      config: { ...config, settings: { ...settings, elb: windowElb } },
+    };
+  }
+
+  const forwardedIds = toForward.map(([id]) => id).join(', ');
+  logger?.warn(
+    `config.settings.windowElb is deprecated; set config.settings.elb on the browser source instead. Forwarded windowElb "${windowElb}" to config.settings.elb on sources.${forwardedIds}.`,
+  );
+
+  return { ...flow, sources: nextSources };
+}
+
 /**
  * Creates the entry point code for the bundle.
  * Generates imports, config object, and platform-specific wrapper programmatically.
@@ -1259,12 +1347,18 @@ export async function createEntryPoint(
   flowSettings: Flow,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
+  logger?: Logger.Instance,
 ): Promise<{
   codeEntry: string;
   dataPayload: string;
   hasFlow: boolean;
   devPackages: string[];
 }> {
+  // Bridge the deprecated windowElb build hint onto the browser source's
+  // settings.elb before any config embedding, so the forwarded value is baked
+  // into the __configData payload below.
+  flowSettings = bridgeWindowElb(flowSettings, logger);
+
   // Detect packages used by all step types
   const sourcePackages = detectStepPackages(flowSettings, 'sources');
   const destinationPackages = detectStepPackages(flowSettings, 'destinations');
@@ -1726,6 +1820,10 @@ export default async function(context = {}) {
     }
   }
 
+  // The host forwards the level supplier beside the observers; the collector
+  // capture path reads it to decide destination call capture at trace.
+  if (context.observeLevel) result.collector.observeLevel = context.observeLevel;
+
   const httpSource = Object.values(result.collector.sources || {})
     .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
 
@@ -1756,11 +1854,10 @@ export function generateWebEntry(
       `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
     );
   }
-  if (options.windowElb) {
-    assignments.push(
-      `  if (typeof window !== 'undefined') window['${options.windowElb}'] = elb;`,
-    );
-  }
+  // windowElb is intentionally NOT assigned here: the browser source is the
+  // single writer of window[settings.elb]. Emitting it too raced the source's
+  // own assignment. `windowElb` survives as a deprecated build hint that the
+  // config bridge forwards onto the browser source's settings.elb.
   const assignmentCode =
     assignments.length > 0 ? '\n' + assignments.join('\n') : '';
 
@@ -1798,6 +1895,7 @@ export function generateWebEntry(
       sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
     });
     collector.observers.add(__observer);
+    collector.observeLevel = function () { return ${JSON.stringify(options.telemetry.level ?? 'standard')}; };
   }`
     : '';
 
@@ -1863,11 +1961,8 @@ export function generateWrapEntry(
       `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
     );
   }
-  if (options.windowElb) {
-    assignments.push(
-      `  if (typeof window !== 'undefined') window['${options.windowElb}'] = elb;`,
-    );
-  }
+  // windowElb is intentionally NOT assigned here (see generateWebEntry): the
+  // browser source is the single writer of window[settings.elb].
   const assignmentCode =
     assignments.length > 0 ? '\n' + assignments.join('\n') : '';
 
@@ -2015,15 +2110,22 @@ function __pollTrace() {
       url: ${JSON.stringify(options.telemetry.observerUrl)},
       token: ${JSON.stringify(options.telemetry.ingestToken)},
     });
-    const __observer = __cto(__emit, () => __cto_resolve({
+    // Single resolver drives both the observer projection and observeLevel so
+    // the reported level can never drift from what the observer emits.
+    const __resolveTelemetry = () => __cto_resolve({
       flowId: ${JSON.stringify(options.telemetry.flowId)},
       observe: {
         level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
         sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
       },
       traceUntil: __traceUntil,
-    }));
+    });
+    const __observer = __cto(__emit, __resolveTelemetry);
     collector.observers.add(__observer);
+    collector.observeLevel = function () {
+      const __opts = __resolveTelemetry();
+      return __opts ? __opts.level : 'off';
+    };
     __pollTrace();
     setInterval(__pollTrace, 15000 + Math.floor(Math.random() * 5000));
   }`
@@ -2040,6 +2142,7 @@ function __pollTrace() {
       sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
     });
     collector.observers.add(__observer);
+    collector.observeLevel = function () { return ${JSON.stringify(options.telemetry.level ?? 'standard')}; };
   }`
     : '';
 
@@ -2088,6 +2191,10 @@ export default async function(context = {}) {
       result.collector.observers.add(observer);
     }
   }
+
+  // The host forwards the level supplier beside the observers; the collector
+  // capture path reads it to decide destination call capture at trace.
+  if (context.observeLevel) result.collector.observeLevel = context.observeLevel;
 
   const httpSource = Object.values(result.collector.sources || {})
     .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');

@@ -42,6 +42,7 @@ function makeCollector(observers: Set<ObserverFn>): Collector.Instance {
     seenEvents: new Set(),
     push: async () => ({ ok: true }),
     command: async () => ({ ok: true }),
+    elb: async () => ({ ok: true }),
   };
   return collector;
 }

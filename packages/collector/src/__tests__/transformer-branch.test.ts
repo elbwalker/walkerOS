@@ -42,6 +42,7 @@ function createMockCollector(
   const instance: Collector.Instance = {
     push: noopPush,
     command: noopCommand,
+    elb: async () => ({ ok: true }),
     allowed: true,
     config: { globalsStatic: {}, sessionStatic: {} },
     consent: {},

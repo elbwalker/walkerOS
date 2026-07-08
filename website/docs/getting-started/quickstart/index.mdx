@@ -178,12 +178,12 @@ mocked:
 <CodeSnippet
   code={`npx walkeros push flow.json \\
   -e '{"name":"page view"}' \\
-  --simulate destination.console`}
+  --simulate destination.ga4`}
   language="bash"
 />
 
 `push --simulate` builds the flow, runs the event through it with
-`destination.console` replaced by a mock, and prints the resolved outcome
+`destination.ga4` replaced by a mock, and prints the resolved outcome
 (`success` and `Duration`); add `--json` to get the same result as JSON.
 Nothing is sent to a vendor. Event names use a space (`page view`).
 

@@ -326,6 +326,42 @@ describe('Handle Commands', () => {
       expect(collector.hooks).toEqual(hooksBefore);
     });
   });
+
+  describe('unknown command', () => {
+    test("'init' is browser-only — collector warns and returns ok:false", async () => {
+      const { collector } = await startFlow();
+      const warnSpy = jest.spyOn(collector.logger, 'warn');
+
+      const result = await collector.command('init');
+
+      expect(result.ok).toBe(false);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('unknown command'),
+        expect.objectContaining({ command: 'init' }),
+      );
+    });
+
+    test('warns and returns ok:false for a genuinely unknown token', async () => {
+      const { collector } = await startFlow();
+      const warnSpy = jest.spyOn(collector.logger, 'warn');
+
+      const result = await collector.command('not-a-real-command');
+
+      expect(result.ok).toBe(false);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('unknown command'),
+        expect.objectContaining({ command: 'not-a-real-command' }),
+      );
+    });
+
+    test('a known command still returns ok:true', async () => {
+      const { collector } = await startFlow();
+
+      const result = await collector.command('consent', { functional: true });
+
+      expect(result.ok).toBe(true);
+    });
+  });
 });
 
 describe('prepareEvent', () => {

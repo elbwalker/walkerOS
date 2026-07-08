@@ -232,6 +232,33 @@ The resolver applies the value per emit:
 
 Only a `200` with a parseable body changes the active trace state. A network error, a non-200, or an unparseable response leaves the current window untouched, so a transient observer outage never silently disables (or enables) tracing.
 
+### Journey correlation across flows
+
+Every FlowState record carries correlation fields so a single observer can stitch one request across web and server flows. These fields survive every level, including `standard`; they are never gated behind `trace`.
+
+| Field | Meaning |
+|-------|---------|
+| `traceId` | W3C 32-hex trace id of the originating run. Resolved as `event.source.trace`, falling back to an inbound header's trace, then the run-scoped collector trace. Never synthesized per hop. |
+| `eventId` | W3C span id of the walker event at this hop (`event.id`). |
+| `parentEventId` | The upstream runtime's `event.id`, present when this flow was entered across a `$flow` crossing (from an inbound `traceparent`). |
+| `sourceId` | The originating source id. |
+| `seq` | Per-poster monotonic counter, stamped on transport (see [Loss-visible transport](#loss-visible-transport)). |
+
+Correlation crosses the wire via the W3C `traceparent` header:
+
+- **Emit.** The web `api` destination adds `traceparent: 00-<traceId>-<eventId>-01` to each non-batched send when the event carries both ids. A `traceparent` you configure yourself always wins (matched case-insensitively). Batched sends carry no `traceparent`, since one batch may aggregate distinct upstream traces.
+- **Adopt.** Any server source with a request header bag (for example an Express or fetch handler) reads a valid inbound `traceparent` and threads its trace and parent span into the ingest context, so the receiving flow's records share the caller's `traceId` and link back via `parentEventId`. An absent or malformed header is ignored. The AWS and GCP handlers do not yet adopt inbound request identity.
+
+### Vendor-call capture
+
+At `trace` level a destination can record the outgoing vendor calls it makes, so an observer sees not just the mapped event but the exact call that left for the vendor. A destination opts in by declaring its observable callables as dot-paths (the `gtag` destination declares `call:window.gtag`); the runtime then wraps that destination's env and records each `{ fn, args, ts }` onto the record's outbound payload, with arguments sanitized to JSON-safe markers.
+
+Capture requires the env to carry the callables, which holds for server and simulate runs. Live web env injection is separate wiring that is not yet in place, and the batched delivery path is not captured. Recorded calls are payload-class: they appear only when the outbound payload does (`trace`, or an explicit `includeOut`).
+
+### Loss-visible transport
+
+The batched poster stamps each record with a monotonic `seq` before sending. A dropped or rejected POST is never re-sequenced, so a gap in `seq` at the observer makes lost telemetry visible instead of silent. The poster also splits a batch by real UTF-8 byte size (`maxBodyBytes`, default 60000) rather than letting an oversized body fail with a 413.
+
 <details>
 <summary>Docker Compose examples</summary>
 

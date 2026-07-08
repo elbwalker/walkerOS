@@ -1,5 +1,34 @@
-import type { Collector, FlowState } from '@walkeros/core';
+import type { Collector, FlowState, Ingest, WalkerOS } from '@walkeros/core';
 import { emitStep } from '@walkeros/core';
+
+/** Journey-correlation trio shared by every FlowState-stamping site. */
+export interface JourneyFields {
+  traceId?: string;
+  sourceId?: string;
+  parentEventId?: string;
+}
+
+/**
+ * Resolve the journey-correlation trio for a stamping site. Trace precedence:
+ * a payload `event.source.trace` (origin identity) wins; a header-derived
+ * `ingest._meta.trace` fills the gap; the run-scoped `collector.trace` is the
+ * final fallback. `sourceId` and `parentEventId` come from the ingest context
+ * threaded through the pipeline. The event accepts both a full event and a
+ * DeepPartial incoming shape, since sites stamp at both pre- and
+ * post-enrichment positions.
+ */
+export function journeyFields(
+  event: WalkerOS.Event | WalkerOS.DeepPartialEvent,
+  ingest: Ingest | undefined,
+  collector: Collector.Instance,
+): JourneyFields {
+  return {
+    // Must match createEvent's trace precedence (handle.ts).
+    traceId: event.source?.trace ?? ingest?._meta.trace ?? collector.trace,
+    sourceId: ingest?._meta.path[0],
+    parentEventId: ingest?._meta.parentEventId,
+  };
+}
 
 export interface BuildBaseStateArgs {
   stepId: string;
@@ -7,6 +36,12 @@ export interface BuildBaseStateArgs {
   phase: FlowState['phase'];
   eventId: string;
   now: number;
+  /** W3C 32-hex trace id of the originating run (from event.source.trace). */
+  traceId?: string;
+  /** Originating source id (Ingest._meta.path[0]), when known. */
+  sourceId?: string;
+  /** Upstream runtime's event.id from an inbound $flow crossing. */
+  parentEventId?: string;
 }
 
 /**
@@ -23,7 +58,7 @@ export function buildBaseState(
   args: BuildBaseStateArgs,
 ): FlowState {
   const startedAt = collector.status.startedAt;
-  return {
+  const state: FlowState = {
     flowId: 'default',
     stepId: args.stepId,
     stepType: args.stepType,
@@ -32,6 +67,12 @@ export function buildBaseState(
     timestamp: new Date(args.now).toISOString(),
     elapsedMs: args.now - startedAt,
   };
+  // Stamp journey-correlation fields only when a truthy value is in scope;
+  // an undefined trace/source/parent must not appear as an explicit key.
+  if (args.traceId) state.traceId = args.traceId;
+  if (args.sourceId) state.sourceId = args.sourceId;
+  if (args.parentEventId) state.parentEventId = args.parentEventId;
+  return state;
 }
 
 /**

@@ -1,10 +1,32 @@
-import type { SendDataValue } from '@walkeros/core';
+import type { SendDataValue, SendHeaders, WalkerOS } from '@walkeros/core';
 import type { Settings, Destination } from './types';
 import { isDefined } from '@walkeros/core';
 import { sendWeb } from '@walkeros/web-core';
 
 // Types
 export * as DestinationAPI from './types';
+
+/**
+ * Adds a W3C `traceparent` header built from the event's trace id and span id
+ * so the receiving collector can stitch the span across the wire. Emission is
+ * best-effort and unconditional on presence: values are passed through verbatim
+ * (a malformed id yields a header the strict server-side parser rejects, which
+ * is intended). A user-configured `traceparent` always wins; header names are
+ * case-insensitive on the wire, so the check matches any casing.
+ */
+function withTraceparent(
+  event: WalkerOS.Event,
+  headers?: SendHeaders,
+): SendHeaders | undefined {
+  const trace = event.source?.trace;
+  const { id } = event;
+  const userSet =
+    headers &&
+    Object.keys(headers).some((key) => key.toLowerCase() === 'traceparent');
+  if (!trace || !id || userSet) return headers;
+
+  return { ...headers, traceparent: `00-${trace}-${id}-01` };
+}
 
 function send(
   body: SendDataValue,
@@ -40,7 +62,9 @@ export const destinationAPI: Destination = {
       ? transform(eventData, config, rule)
       : JSON.stringify(eventData);
 
-    send(body, { ...settings, url }, env.sendWeb || sendWeb);
+    const headers = withTraceparent(event, settings?.headers);
+
+    send(body, { ...settings, url, headers }, env.sendWeb || sendWeb);
   },
 
   pushBatch(batch, { config, rule, env, logger }) {
@@ -61,6 +85,9 @@ export const destinationAPI: Destination = {
       ? items.map((item) => transform(item, config, rule))
       : items;
 
+    // No traceparent here: a batch may aggregate events from distinct
+    // upstream traces, so there is no single identity to stamp. Per-event
+    // correlation is emitted on the non-batched push path only.
     send(JSON.stringify(payload), { ...settings, url }, env.sendWeb || sendWeb);
   },
 };

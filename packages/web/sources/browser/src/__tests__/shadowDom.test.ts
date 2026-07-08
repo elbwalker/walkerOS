@@ -1,13 +1,15 @@
 import type { Elb } from '@walkeros/core';
-import type { Settings } from '../types';
+import type { Settings, Context } from '../types';
 import { getAllEvents, getEvents, getGlobals } from '../walker';
 import {
+  destroyTriggers,
   handleTrigger,
   initGlobalTrigger,
   initScopeTrigger,
   resetScrollListener,
   Triggers,
 } from '../trigger';
+import { translateToCoreCollector } from '../translation';
 
 jest.mock('@walkeros/core', () => ({
   ...jest.requireActual('@walkeros/core'),
@@ -27,6 +29,18 @@ jest.mock('@walkeros/collector', () => ({
     },
   },
   onApply: jest.fn(),
+  createPushResult: (partial?: { ok?: boolean; failed?: unknown }) => ({
+    ok: !partial?.failed,
+    ...partial,
+  }),
+}));
+
+// Mock isVisible so the final visibility re-check inside the intersection timer
+// always passes (jsdom lays nothing out). This makes the visible/impression
+// block a WIRING test, not a visual one.
+jest.mock('@walkeros/web-core', () => ({
+  ...jest.requireActual('@walkeros/web-core'),
+  isVisible: jest.fn(() => true),
 }));
 
 const createTestSettings = (prefix = 'data-elb'): Settings => ({
@@ -325,6 +339,178 @@ describe('Shadow DOM', () => {
           context: { section: ['hero', 0] },
         },
       ]);
+    });
+  });
+
+  describe('Closed shadow root as walker init scope', () => {
+    // A closed shadow root is unreachable from the document (host.shadowRoot is
+    // null), so discovery can never find it. The app retains the closed-root
+    // reference and passes it straight to `walker init`. normalizeInitScopes
+    // must accept it (nodeType 11) and initScopeTrigger must scan it without
+    // calling getAttribute on the root itself.
+    afterEach(() => {
+      destroyTriggers();
+    });
+
+    test('closed shadow root passed to walker init is accepted, scanned, and fires load', async () => {
+      const host = document.createElement('div');
+      const root = host.attachShadow({ mode: 'closed' });
+      root.innerHTML =
+        '<div id="c" data-elb="widget" data-elb-widget="k:v" data-elbaction="load:show"></div>';
+
+      const context: Context = {
+        elb: mockElb,
+        settings: createTestSettings(),
+        initScope: initScopeTrigger,
+      };
+
+      const result = await translateToCoreCollector(
+        context,
+        'walker init',
+        root,
+      );
+
+      // Accepted, did not throw, resolved ok.
+      expect(result).toEqual(expect.objectContaining({ ok: true }));
+
+      // Scanned: load fires immediately on scan (no IntersectionObserver), with
+      // the entity resolved from the tagged child inside the closed root.
+      expect(mockElb).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'widget show',
+          entity: 'widget',
+          action: 'show',
+          trigger: 'load',
+        }),
+      );
+    });
+  });
+
+  describe('Visible/impression inside shadow DOM', () => {
+    // WIRING proof, not visual proof. isVisible is mocked true (jsdom lays
+    // nothing out) and the IntersectionObserver is stubbed, so this asserts
+    // only that an open-shadow element is DISCOVERED (queryAllComposed
+    // recurses the open root), OBSERVED (handleActionElem → triggerVisible +
+    // bucket.observed.add), and FIRES through the real trigger pipeline, with
+    // its entity resolved UPWARD across the shadow boundary via getParent.
+    // Visual visibility behavior is covered elsewhere (isVisible unit tests
+    // and the browser harness).
+    const instances: MockIntersectionObserver[] = [];
+
+    // Cast-free IntersectionObserver stub: a class implementing the interface,
+    // so it is assignable to `typeof IntersectionObserver` without casts.
+    class MockIntersectionObserver implements IntersectionObserver {
+      root: Document | Element | null = null;
+      rootMargin = '0px';
+      thresholds: ReadonlyArray<number> = [0, 0.5];
+      readonly callback: IntersectionObserverCallback;
+      observe = jest.fn();
+      unobserve = jest.fn();
+      disconnect = jest.fn();
+      takeRecords = jest.fn(() => []);
+
+      constructor(callback: IntersectionObserverCallback) {
+        this.callback = callback;
+        instances.push(this);
+      }
+    }
+
+    // Drive an intersection for an element across every captured observer; only
+    // the observer that registered the element's config fires a trigger.
+    const fireVisible = (el: Element) =>
+      instances.forEach((observer) => {
+        const entry: Partial<IntersectionObserverEntry> = {
+          target: el,
+          intersectionRatio: 0.6,
+        };
+        observer.callback([entry as IntersectionObserverEntry], observer);
+      });
+
+    let originalIO: typeof IntersectionObserver;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      // Earlier tests in this file call initScopeTrigger without tearing down,
+      // leaving a no-op observer in the shared per-document visibility state
+      // (jsdom has no IntersectionObserver). Clear it so this block's fresh
+      // MockIntersectionObserver is the one that gets installed.
+      destroyTriggers();
+      instances.length = 0;
+      originalIO = global.IntersectionObserver;
+      global.IntersectionObserver = MockIntersectionObserver;
+    });
+
+    afterEach(() => {
+      // Module-level trigger/visibility state is shared within the file; tear
+      // it down so observers and scope buckets do not leak into the next test.
+      destroyTriggers();
+      global.IntersectionObserver = originalIO;
+      jest.useRealTimers();
+    });
+
+    test('impression:view on an open-shadow element fires with the host entity', async () => {
+      document.body.innerHTML = `
+        <div id="host" data-elb="promo" data-elb-promo="id:p1"></div>
+      `;
+      const host = document.getElementById('host')!;
+      const shadowRoot = host.attachShadow({ mode: 'open' });
+      shadowRoot.innerHTML = `
+        <div id="inner" data-elbaction="impression:view"></div>
+      `;
+      const inner = shadowRoot.getElementById('inner')!;
+
+      // initScopeTrigger is the exact path `walker run` takes
+      // (processLoadTriggers → initScopeTrigger): it discovers `inner` via
+      // queryAllComposed and observes it via handleActionElem.
+      const context = { elb: mockElb, settings: createTestSettings() };
+      initScopeTrigger(context, createTestSettings());
+
+      fireVisible(inner);
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+
+      // Entity resolves UPWARD across the open boundary: the action lives on
+      // the shadow `inner`, the entity + data on the light-DOM host.
+      expect(mockElb).toHaveBeenCalledTimes(1);
+      expect(mockElb).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'promo view',
+          entity: 'promo',
+          action: 'view',
+          trigger: 'impression',
+          data: { id: 'p1' },
+        }),
+      );
+    });
+
+    test('visible:view on an open-shadow element fires the visible trigger', async () => {
+      document.body.innerHTML = `
+        <div id="host" data-elb="promo" data-elb-promo="id:p1"></div>
+      `;
+      const host = document.getElementById('host')!;
+      const shadowRoot = host.attachShadow({ mode: 'open' });
+      shadowRoot.innerHTML = `
+        <div id="inner" data-elbaction="visible:view"></div>
+      `;
+      const inner = shadowRoot.getElementById('inner')!;
+
+      const context = { elb: mockElb, settings: createTestSettings() };
+      initScopeTrigger(context, createTestSettings());
+
+      fireVisible(inner);
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+
+      expect(mockElb).toHaveBeenCalledTimes(1);
+      expect(mockElb).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'promo view',
+          entity: 'promo',
+          action: 'view',
+          trigger: 'visible',
+          data: { id: 'p1' },
+        }),
+      );
     });
   });
 });

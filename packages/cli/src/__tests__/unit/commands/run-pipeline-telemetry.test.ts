@@ -18,7 +18,7 @@
  * priority. A trace baseline also skips the trace poller.
  */
 import { resolveTelemetryOptions, setTraceUntil } from '@walkeros/core';
-import type { FlowState, ObserverFn } from '@walkeros/core';
+import type { FlowState, ObserverFn, TelemetryLevel } from '@walkeros/core';
 import type { PipelineOptions } from '../../../commands/run/pipeline.js';
 
 // Partial core mock: keep the real resolver semantics (spied for call
@@ -340,6 +340,61 @@ describe('runPipeline telemetry wiring', () => {
         throw new Error('trace poller was not created');
       }
       expect(pollerResult.value.start).toHaveBeenCalled();
+    });
+  });
+
+  describe('observeLevel supplier forwarded beside the observers', () => {
+    const setObserverEnv = () => {
+      process.env.WALKEROS_OBSERVER_URL = 'https://observer.example.com';
+      process.env.WALKEROS_INGEST_TOKEN = 'tok_test';
+      process.env.WALKEROS_DEPLOYMENT_ID = 'dep_42';
+    };
+
+    async function startAndGetLevelSupplier(): Promise<() => TelemetryLevel> {
+      void runPipeline(baseOptions);
+      await waitFor(() => jest.mocked(loadFlow).mock.calls.length > 0);
+      const firstCall = jest.mocked(loadFlow).mock.calls[0];
+      if (!firstCall) throw new Error('loadFlow was not called');
+      const supplier = firstCall[6];
+      if (!supplier) throw new Error('expected an observeLevel supplier');
+      return supplier;
+    }
+
+    it("returns 'trace' for a trace baseline", async () => {
+      setObserverEnv();
+      process.env.WALKEROS_OBSERVE_LEVEL = 'trace';
+
+      const supplier = await startAndGetLevelSupplier();
+      expect(supplier()).toBe('trace');
+    });
+
+    it("returns 'off' for an off baseline and follows the traceUntil window", async () => {
+      setObserverEnv();
+      process.env.WALKEROS_OBSERVE_LEVEL = 'off';
+
+      const supplier = await startAndGetLevelSupplier();
+      expect(supplier()).toBe('off');
+
+      setTraceUntil(new Date(Date.now() + 60_000).toISOString());
+      expect(supplier()).toBe('trace');
+
+      setTraceUntil(null);
+      expect(supplier()).toBe('off');
+    });
+
+    it("returns 'standard' when WALKEROS_OBSERVE_LEVEL is unset", async () => {
+      setObserverEnv();
+
+      const supplier = await startAndGetLevelSupplier();
+      expect(supplier()).toBe('standard');
+    });
+
+    it('is not forwarded when observer env is missing', async () => {
+      void runPipeline(baseOptions);
+      await waitFor(() => jest.mocked(loadFlow).mock.calls.length > 0);
+      const firstCall = jest.mocked(loadFlow).mock.calls[0];
+      if (!firstCall) throw new Error('loadFlow was not called');
+      expect(firstCall[6]).toBeUndefined();
     });
   });
 });

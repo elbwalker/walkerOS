@@ -92,14 +92,56 @@ These are pinned against drift by the doc-lint at
 `apps/scripts/validate-docs.ts` (run `npx tsx apps/scripts/validate-docs.ts`).
 It extracts canonical tokens from the Tier-1 source and asserts the docs
 snippets contain them, tolerating intentional doc simplifications (dropping the
-`seen` capture, arrow `push` instead of a method). It also enforces that bundled
-flow snippets carry `config.platform`, that quickstart Docker snippets use
-`BUNDLE` not `FLOW`, and forbids invalid CLI verbs (`walkeros serve`, standalone
-`walkeros simulate`) in getting-started docs.
+`seen` capture, arrow `push` instead of a method). `first-event.ts` is pinned on
+the quickstart, integrated-mode, and README pages, plus the GA4 ecommerce page;
+`react.mdx` is pinned shape-only (it has no `elb('page view')` push).
+
+The doc-lint also runs these structural and coherence checks:
+
+- **Bundled-snippet platform guard**: every JSON flow with `bundle` carries
+  `config.platform` (getting-started, README, flow reference).
+- **Docker env guard**: quickstart Docker snippets use `BUNDLE`, not `FLOW`.
+- **Forbidden CLI verbs**: no `walkeros serve` or standalone `walkeros simulate`
+  in getting-started, guides, or the gtag page.
+- **Same-page simulate-key resolution** (getting-started): every
+  `push --simulate <type>.<key>` must resolve to a step key declared in a
+  flow.json on the SAME page; a simulate command on a page with no flow.json
+  fails. This is what catches an integrated page showing a bundled push loop.
+- **Flow.json schema validation** (all docs): every full `version: 4` flow
+  snippet is run through `schemas.validateFlowConfig` from `@walkeros/core/dev`;
+  fragments and `version: 3` migration "before" snippets are out of scope.
+- **Boundary register + `:::cloud` placement** (getting-started + MCP page): no
+  prices, tier names, or upgrade language; `:::cloud` is forbidden on
+  golden-path pages and required where an app-only capability is documented.
 
 The rule: when you edit a pinned example, edit the Tier-1 `.ts` source and
 re-run the doc-lint. If the docs snippet must change too, update both so the
 lint passes.
+
+### Getting-started editorial rules
+
+Three rules govern the getting-started surface (decided 2026-07-06, encoded in
+the doc-lint):
+
+**See your event, per mode.** Integrated-mode pages (quickstart, react, nextjs,
+modes/integrated, ga4-ecommerce) verify via their own console output; they must
+never show `walkeros push --simulate`. Only bundled-mode pages may show it, and
+only targeting a `<type>.<key>` that a flow.json on the SAME page defines.
+
+**Open/paid boundary (Self-Host Sufficiency Rule).** Every getting-started task
+must reach a working result with MIT packages, the CLI, and reader-controlled
+infrastructure only. The hosted app appears at most once per page, only as a
+marked optional alternative, only via the `:::cloud` admonition, and only on the
+Deploy page and the MCP page. The `:::cloud` template: first sentence names the
+capability, second names the open-source path to the same result, optional third
+links `https://app.walkeros.io`. Never prices, tier names, or upgrade language
+anywhere in open docs. Self-host is always listed first.
+
+**Examples recipes.** Pages under `getting-started/examples/` are lean recipes:
+at most ~80 lines, one flow.json, a payoff line, next steps. Every snippet is
+derived from validated material (package examples, tested sources, existing
+validated docs snippets); never invent config or mappings. No simulate commands,
+no `:::cloud` on recipe pages.
 
 ### Validation Checklist
 

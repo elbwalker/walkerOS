@@ -26,14 +26,14 @@ type BaseSettings = z.infer<typeof SettingsSchema>;
 export interface InitSettings extends Partial<
   Omit<BaseSettings, 'scope' | 'elbLayer'>
 > {
-  scope?: Element | Document;
+  scope?: InitScope;
   elbLayer?: boolean | string | Elb.Layer;
 }
 
 // Settings: resolved configuration
 // Override specific fields with non-serializable types
 export interface Settings extends Omit<BaseSettings, 'scope' | 'elbLayer'> {
-  scope?: Element | Document;
+  scope?: InitScope;
   elbLayer: boolean | string | Elb.Layer;
 }
 
@@ -59,14 +59,15 @@ export interface Context {
   initScope?: (context: Context) => void;
 }
 
-// ELB Layer types for async command handling
-export type ELBLayer = Array<Elb.Layer | IArguments>;
-export interface ELBLayerConfig {
-  name?: string; // Property name for window.elbLayer (default: 'elbLayer')
-}
-
-// Scope type for DOM operations
+// Scope type for DOM operations. Deliberately excludes ShadowRoot: the DOM-scan
+// helpers (getGlobals, getPageViewData, getAllEvents) assume Element/Document
+// bodies (.matches/.body/getAttribute). ShadowRoot reaches only the
+// trigger/visibility carriers (InitScope), never these scans.
 export type Scope = Document | Element;
+
+// Init/trigger scope: adds ShadowRoot so `walker init` can target a retained
+// (e.g. closed) shadow root that discovery can never reach from the document.
+export type InitScope = Scope | ShadowRoot;
 
 // Everything a single scope's init installs, bucketed so a re-init can tear the
 // scope's prior state down before attaching fresh. Keyed by the scope node, so

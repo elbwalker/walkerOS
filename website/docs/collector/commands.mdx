@@ -10,7 +10,11 @@ package: '@walkeros/collector'
 
 The collector provides a core event processing engine that manages destinations,
 consent, user data, and custom properties. Commands are executed through the
-`elb` function
+`elb` function, which the collector also exposes as `collector.elb`.
+
+Unknown walker commands log a warning and return `{ ok: false }`. Commands like
+`walker init` are browser-specific and handled by the browser source before
+they reach the collector.
 
 :::note
 

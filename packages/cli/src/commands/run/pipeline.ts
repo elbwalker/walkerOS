@@ -158,6 +158,11 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
     api?.flowId ?? 'flow',
     observeLevel,
   );
+  // Gated on the observers: no telemetry wired means the bundle must see no
+  // observeLevel either (collector capture stays fully absent).
+  const telemetryObserveLevel = telemetryObservers
+    ? buildObserveLevelSupplier(api?.flowId ?? 'flow', observeLevel)
+    : undefined;
 
   // Load flow
   const runtimeConfig: RuntimeConfig = { port };
@@ -170,6 +175,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
       loggerConfig,
       healthServer,
       telemetryObservers,
+      telemetryObserveLevel,
     );
   } catch (error) {
     // Collector construction failed: keep /ready non-200 so an orchestrator
@@ -307,6 +313,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
             loggerConfig,
             healthServer,
             telemetryObservers,
+            telemetryObserveLevel,
           );
 
           // Rollback case: handle unchanged. Skip cache write and version
@@ -768,6 +775,34 @@ function buildTelemetryObservers(
       resolveTelemetryOptions({ flowId, observe, traceUntil: getTraceUntil() }),
     ),
   ];
+}
+
+/**
+ * Build the level supplier forwarded through the bundle context beside the
+ * observers. The generated server entry installs it as
+ * `collector.observeLevel`, which the collector's destination capture path
+ * reads to gate call capture at trace. Resolves through the SAME
+ * `resolveTelemetryOptions` inputs as the observer's per-emit supplier, so
+ * the reported level follows the trace-poller's `traceUntil` window exactly:
+ * null (off with no active trace) maps to 'off', otherwise the resolved
+ * level ('standard' fallback matches the observer's own default).
+ */
+function buildObserveLevelSupplier(
+  flowId: string,
+  observeLevel?: TelemetryLevel,
+): () => TelemetryLevel {
+  const observe =
+    observeLevel !== undefined ? { level: observeLevel } : undefined;
+  return () => {
+    const opts = resolveTelemetryOptions({
+      flowId,
+      observe,
+      traceUntil: getTraceUntil(),
+    });
+    // The ?? fallback satisfies the non-optional return type only; the
+    // resolver always sets level on a non-null result, so it never fires.
+    return opts ? (opts.level ?? 'standard') : 'off';
+  };
 }
 
 async function injectSecrets(

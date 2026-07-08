@@ -1,3 +1,5 @@
+import type { Simulation } from '.';
+
 /**
  * FlowState is the canonical observation record emitted at each hop in a
  * walkerOS pipeline. Telemetry helpers populate one of these per (step,
@@ -39,6 +41,21 @@ export interface FlowState {
   phase: FlowStatePhase;
   /** W3C span-id of the originating WalkerOS.Event. Sourced from event.id; never synthesized. */
   eventId: string;
+  /** W3C 32-hex trace id of the originating run. Sourced from event.source.trace; never synthesized here. */
+  traceId?: string;
+  /** Upstream runtime's event.id when this pipeline was entered via a $flow crossing (from traceparent). */
+  parentEventId?: string;
+  /** Originating source id (Ingest._meta.path[0]), when known. */
+  sourceId?: string;
+  /** Per-poster monotonic record counter for gap detection. Stamped by the batched poster, not emitters. */
+  seq?: number;
+  /**
+   * Vendor calls recorded via wrapEnv on destination out records. Captured only
+   * at trace level and only when the destination declares a `calls` list
+   * (dot-paths of observable env callables); the recorded array then survives
+   * projection when level === 'trace' or includeOut === true.
+   */
+  calls?: Simulation.Call[];
   /** ISO 8601 timestamp. */
   timestamp: string;
   /** Milliseconds since the runtime's startedAt origin. Monotonic. */

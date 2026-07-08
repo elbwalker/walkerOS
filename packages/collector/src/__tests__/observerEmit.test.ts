@@ -45,6 +45,7 @@ function makeCollector(observers: Set<ObserverFn>): Collector.Instance {
     pending: { destinations: {} },
     push: async () => ({ ok: true }),
     command: async () => ({ ok: true }),
+    elb: async () => ({ ok: true }),
   };
 }
 

@@ -1,6 +1,22 @@
 import { startFlow } from '@walkeros/collector';
-import { createBrowserSource } from './test-utils';
+import {
+  createBrowserSource,
+  destroyBrowserSource,
+  flushChain,
+} from './test-utils';
+import { __readInstanceGuardForTests } from '../index';
 import type { WalkerOS, Collector } from '@walkeros/core';
+import type { BrowserPush } from '../types';
+
+// Cast-free narrowing of the window global to the browser push signature.
+const isBrowserPush = (value: unknown): value is BrowserPush =>
+  typeof value === 'function';
+
+const readWindowElb = (): BrowserPush => {
+  const value = Reflect.get(window, 'elb');
+  if (!isBrowserPush(value)) throw new Error('window.elb not installed');
+  return value;
+};
 
 describe('walker init command', () => {
   let collector: Collector.Instance;
@@ -224,5 +240,140 @@ describe('walker hook command', () => {
     await elb('walker hook', { name: 'prePush', fn: hookFn });
 
     expect(collector.hooks.prePush).toBeDefined();
+  });
+});
+
+describe('window.elb installed by the source', () => {
+  let collector: Collector.Instance;
+  let mockPush: jest.Mock<Promise<{ ok: true }>, [WalkerOS.DeepPartialEvent]>;
+
+  beforeEach(async () => {
+    document.body.innerHTML = '';
+    Reflect.deleteProperty(window, 'elbLayer');
+    Reflect.deleteProperty(window, 'elb');
+
+    const pushImpl = jest.fn(async (event: WalkerOS.DeepPartialEvent) => {
+      return { ok: true } as const;
+    });
+    mockPush = pushImpl;
+
+    ({ collector } = await startFlow());
+    collector.push = pushImpl;
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    Reflect.deleteProperty(window, 'elbLayer');
+    Reflect.deleteProperty(window, 'elb');
+  });
+
+  test('window.elb handles walker init: resolves ok and attaches load triggers', async () => {
+    await createBrowserSource(collector, { pageview: false });
+    mockPush.mockClear();
+
+    const root = document.createElement('div');
+    root.innerHTML =
+      '<div data-elb="product" data-elbaction="load:view" data-elb-product="id:p1"></div>';
+    document.body.appendChild(root);
+
+    // Same funnel as window.elbLayer: appends to the layer and routes. Walker
+    // commands run immediately (pre-start command lane), so `walker init`
+    // reaches initScope without a `run` being driven.
+    const result = await readWindowElb()('walker init', root);
+    await flushChain();
+
+    expect(result).toEqual(expect.objectContaining({ ok: true }));
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'product view',
+        trigger: 'load',
+        data: expect.objectContaining({ id: 'p1' }),
+      }),
+    );
+  });
+
+  test('elbLayer:false — window.elb routes directly and run fires the pageview', async () => {
+    // No controller is built. window.elb falls back to the source push (direct
+    // route) and run fires the pageview via the no-controller branch.
+    const source = await createBrowserSource(collector, {
+      elbLayer: false,
+      elb: 'elb',
+      pageview: true,
+    });
+
+    // No layer adopted when elbLayer is disabled.
+    expect(Reflect.get(window, 'elbLayer')).toBeUndefined();
+
+    mockPush.mockClear();
+    await readWindowElb()('product view', { id: 'p9' });
+    await flushChain();
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'product view',
+        data: expect.objectContaining({ id: 'p9' }),
+      }),
+    );
+
+    mockPush.mockClear();
+    await source.on?.('run', collector);
+    await flushChain();
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'page view', trigger: 'load' }),
+    );
+  });
+});
+
+describe('browser source destroy contract', () => {
+  let collector: Collector.Instance;
+  let mockPush: jest.Mock<Promise<{ ok: true }>, [WalkerOS.DeepPartialEvent]>;
+
+  beforeEach(async () => {
+    document.body.innerHTML = '';
+    Reflect.deleteProperty(window, 'elbLayer');
+    Reflect.deleteProperty(window, 'elb');
+
+    const pushImpl = jest.fn(async (event: WalkerOS.DeepPartialEvent) => {
+      return { ok: true } as const;
+    });
+    mockPush = pushImpl;
+
+    ({ collector } = await startFlow());
+    collector.push = pushImpl;
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    Reflect.deleteProperty(window, 'elbLayer');
+    Reflect.deleteProperty(window, 'elb');
+  });
+
+  test('destroy removes window.elb, silences layer routing, and clears the guard', async () => {
+    const source = await createBrowserSource(collector, { pageview: false });
+    expect(isBrowserPush(Reflect.get(window, 'elb'))).toBe(true);
+
+    await destroyBrowserSource(source, collector);
+
+    // The function we installed is gone, and the single-instance sentinel is
+    // cleared so a fresh boot on this window is not treated as inert.
+    expect(Reflect.get(window, 'elb')).toBeUndefined();
+    expect(__readInstanceGuardForTests()).toBeUndefined();
+
+    // Native push restored: pushes append silently, nothing routes.
+    mockPush.mockClear();
+    const layer = Reflect.get(window, 'elbLayer');
+    if (!Array.isArray(layer)) throw new Error('elbLayer missing');
+    const before = layer.length;
+    layer.push(['product view', { id: 'X' }]);
+    await flushChain();
+
+    expect(layer.length).toBe(before + 1);
+    expect(mockPush).not.toHaveBeenCalled();
+
+    // A second boot succeeds and reinstalls a working window.elb.
+    const second = await createBrowserSource(collector, { pageview: false });
+    expect(second).toBeDefined();
+    expect(isBrowserPush(Reflect.get(window, 'elb'))).toBe(true);
   });
 });

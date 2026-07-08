@@ -1,4 +1,4 @@
-import type { Flow } from '@walkeros/core';
+import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
 /**
@@ -13,11 +13,19 @@ import { getEvent } from '@walkeros/core';
  */
 const URL = 'https://api.example.com/events';
 
+// The destination emits a W3C `traceparent` for any event carrying both a
+// `source.trace` and an `id`, so the expected `out` headers derive from the
+// same input event the example pushes.
+const traceparent = (event: WalkerOS.Event): string =>
+  `00-${event.source.trace}-${event.id}-01`;
+
+const entityActionEvent = getEvent('entity action', { timestamp: 1700000500 });
+
 export const entityAction: Flow.StepExample = {
   title: 'Entity action',
   description:
     'A generic entity action event is forwarded to the configured API endpoint with the mapped data JSON body.',
-  in: getEvent('entity action', { timestamp: 1700000500 }),
+  in: entityActionEvent,
   mapping: {
     data: 'data',
   },
@@ -31,16 +39,22 @@ export const entityAction: Flow.StepExample = {
         boolean: true,
         array: [0, 'text', false],
       }),
-      { headers: undefined, method: undefined, transport: 'fetch' },
+      {
+        headers: { traceparent: traceparent(entityActionEvent) },
+        method: undefined,
+        transport: 'fetch',
+      },
     ],
   ],
 };
+
+const pageViewEvent = getEvent('page view', { timestamp: 1700000501 });
 
 export const pageView: Flow.StepExample = {
   title: 'Page view',
   description:
     'A page view is POSTed to the configured API endpoint with the event data section as the JSON body.',
-  in: getEvent('page view', { timestamp: 1700000501 }),
+  in: pageViewEvent,
   mapping: {
     data: 'data',
   },
@@ -56,16 +70,24 @@ export const pageView: Flow.StepExample = {
         hash: '#hash',
         id: '/docs/',
       }),
-      { headers: undefined, method: undefined, transport: 'fetch' },
+      {
+        headers: { traceparent: traceparent(pageViewEvent) },
+        method: undefined,
+        transport: 'fetch',
+      },
     ],
   ],
 };
+
+const orderCompleteEvent = getEvent('order complete', {
+  timestamp: 1700000502,
+});
 
 export const customTransform: Flow.StepExample = {
   title: 'Custom payload',
   description:
     'An order event is reshaped via a data mapping into a custom JSON body for the API endpoint.',
-  in: getEvent('order complete', { timestamp: 1700000502 }),
+  in: orderCompleteEvent,
   mapping: {
     data: {
       map: {
@@ -92,7 +114,11 @@ export const customTransform: Flow.StepExample = {
         event_name: 'order complete',
         user_id: 'us3r',
       }),
-      { headers: undefined, method: undefined, transport: 'fetch' },
+      {
+        headers: { traceparent: traceparent(orderCompleteEvent) },
+        method: undefined,
+        transport: 'fetch',
+      },
     ],
   ],
 };

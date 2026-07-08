@@ -14,6 +14,23 @@ import type {
   DeleteSecretOptions,
   FeedbackOptions,
 } from '@walkeros/cli';
+import type { Journey, JourneyGap } from '@walkeros/core';
+
+/**
+ * The assembled cross-runtime journeys for a flow's active Observe session,
+ * mirroring the app's flowId-keyed REST envelope. `sessionId` is null when the
+ * flow has no active session (the empty result an agent gets when the flow is
+ * not currently being observed). `journeys`/`gaps` are the pure
+ * `assembleJourneys` output; typed against core's `Journey`/`JourneyGap` since
+ * `@walkeros/mcp` already depends on `@walkeros/core`.
+ */
+export interface JourneysResult {
+  sessionId: string | null;
+  flowId: string;
+  assembledAt: string;
+  journeys: Journey[];
+  gaps: JourneyGap[];
+}
 
 /**
  * Transport-agnostic client for network-reach MCP tools. The stdio build
@@ -90,6 +107,16 @@ export interface ToolClient {
     slug: string;
     projectId?: string;
   }): Promise<unknown>;
+
+  // Observe: assembled journeys for a flow's active session. Resolves the
+  // session from `flowId` app-side (`observe_sessions.flow_id` is UNIQUE); a
+  // flow with no active session resolves to `sessionId: null` + empty journeys.
+  listJourneys(options: {
+    flowId: string;
+    projectId?: string;
+    traceId?: string;
+    limit?: number;
+  }): Promise<JourneysResult>;
 
   // Auth
   requestDeviceCode(): Promise<DeviceCodeResult>;

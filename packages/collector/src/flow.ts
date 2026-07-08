@@ -1,7 +1,6 @@
 import type { Collector, Elb } from '@walkeros/core';
 import type { StartFlow } from './types';
 import { collector } from './collector';
-import { createElbSource } from './elb';
 import { initSources } from './source';
 
 export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
@@ -10,11 +9,7 @@ export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
   initConfig = initConfig || {};
   const instance = await collector(initConfig);
 
-  // Create and register ELB source first
-  const elbSource = createElbSource(instance);
-  instance.sources.elb = elbSource;
-
-  // Now initialize other sources with ELB source available
+  // Initialize sources; the collector's elb adapter is already available
   await initSources(instance, initConfig.sources || {});
 
   const { consent, user, globals, custom } = initConfig;
@@ -33,13 +28,11 @@ export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
 
   // Determine the primary elb:
   // 1. Use explicitly marked primary source
-  // 2. Use first non-elb source if any exist
-  // 3. Fallback to ELB source
-  let primaryElb: Elb.Fn = elbSource.push as Elb.Fn;
+  // 2. Use first source if any exist
+  // 3. Fallback to the collector's elb adapter
+  let primaryElb: Elb.Fn = instance.elb;
 
-  const sources = Object.values(instance.sources).filter(
-    (source) => source.type !== 'elb',
-  );
+  const sources = Object.values(instance.sources);
 
   // First, check for explicitly marked primary source
   const markedPrimary = sources.find(

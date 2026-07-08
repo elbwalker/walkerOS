@@ -204,8 +204,13 @@ export namespace Flow {
     /**
      * Arbitrary key-value settings consumed by the platform runtime.
      *
-     * For web: typical keys include `windowCollector`, `windowElb`.
+     * For web: typical keys include `windowCollector`.
      * For server: reserved for future server-specific options.
+     *
+     * The `windowElb` key is deprecated: the browser source is the single writer
+     * of `window[settings.elb]`, so set the browser source's
+     * `config.settings.elb` instead. The CLI forwards a `windowElb` value onto
+     * that field during bundling for backward compatibility.
      *
      * This is a free-form bag — type promotion happens later if patterns emerge.
      */

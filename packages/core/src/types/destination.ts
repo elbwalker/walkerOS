@@ -27,6 +27,29 @@ export interface BaseEnv {
 }
 
 /**
+ * Observe-mode call recorder injected into a per-push env (under the runtime
+ * `OBSERVE_ENV_KEY`) for vendor-call paths that could NOT be resolved at wrap
+ * time (root or leaf missing, e.g. a live-web global not yet installed). The
+ * resolution-point wrapper (web-core `getEnv`) reads this, wraps the matching
+ * globals via a transparent Proxy, and forwards each intercepted call to
+ * `record`. The key is stripped before the env reaches the destination.
+ */
+export interface EnvObserve {
+  /**
+   * Dot-paths to intercept, with any `call:` prefix already stripped (as
+   * `parseCallPath` returns them). Each is a `root.leaf` chain resolved against
+   * the merged env.
+   */
+  paths: string[];
+  /**
+   * Appends one recorded invocation. `fn` is the full intercepted dot-path,
+   * `args` the call arguments. Implementations push onto the shared `calls`
+   * array that backs the destination out record.
+   */
+  record: (fn: string, args: unknown[]) => void;
+}
+
+/**
  * Type bundle for destination generics.
  * Groups Settings, InitSettings, Mapping, Env, and Setup into a single type parameter.
  */
@@ -80,6 +103,15 @@ export interface Instance<T extends TypesGeneric = Types> {
   dlq?: DLQ;
   batches?: BatchRegistry<Mapping<T>>;
   type?: string;
+  /**
+   * Observable env callables for trace-level vendor-call capture. Dot-paths of
+   * the functions this destination invokes on its env, using the same grammar
+   * as the dev-env `simulation` lists (incl. an optional `call:` prefix), e.g.
+   * `['call:window.gtag']`. When present AND the collector reports trace level,
+   * the per-event push env is wrapped (via `wrapEnv`) so each listed call is
+   * recorded onto the destination out record. Absent or empty = no capture.
+   */
+  calls?: string[];
   env?: Env<T>;
   setup?: SetupFn<Config<T>, Env<T>>;
   init?: InitFn<T>;

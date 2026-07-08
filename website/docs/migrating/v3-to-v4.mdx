@@ -87,14 +87,18 @@ v4:
       "config": {
         "platform": "web",
         "settings": {
-          "windowCollector": "collector",
-          "windowElb": "elb"
+          "windowCollector": "collector"
         }
       }
     }
   }
 }
 ```
+
+The v3 `windowElb` name moves to the browser source: set `elb` in the browser
+source's `config.settings` (default `"elb"`, so it can usually be dropped).
+The `windowElb` key is deprecated in v4; when set, its value is forwarded to
+the browser source with a warning.
 
 For server flows, the transform is the same: drop `"server": {}`, add
 `"config": { "platform": "server" }`. Server flows can also set
@@ -188,8 +192,7 @@ The same flow in v4:
       "config": {
         "platform": "web",
         "settings": {
-          "windowCollector": "collector",
-          "windowElb": "elb"
+          "windowCollector": "collector"
         },
         "bundle": {
           "packages": {

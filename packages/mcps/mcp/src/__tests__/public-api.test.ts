@@ -29,6 +29,7 @@ jest.mock('@walkeros/cli', () => ({
   listDeployments: jest.fn(),
   getDeploymentBySlug: jest.fn(),
   deleteDeployment: jest.fn(),
+  listJourneys: jest.fn(),
   requestDeviceCode: jest.fn(),
   pollForToken: jest.fn(),
   whoami: jest.fn(),
@@ -75,7 +76,7 @@ describe('public API surface', () => {
 
   it('exports TOOL_DEFINITIONS array', () => {
     expect(Array.isArray(api.TOOL_DEFINITIONS)).toBe(true);
-    expect(api.TOOL_DEFINITIONS.length).toBe(14);
+    expect(api.TOOL_DEFINITIONS.length).toBe(15);
   });
 
   it('exports createToolHandlers', () => {

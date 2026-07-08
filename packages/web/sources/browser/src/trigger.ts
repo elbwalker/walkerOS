@@ -1,6 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Walker } from '@walkeros/web-core';
-import type { Scope, Settings, Context, ScopeState } from './types';
+import type { Scope, InitScope, Settings, Context, ScopeState } from './types';
 import { throttle, tryCatch } from '@walkeros/core';
 import { Const, onApply } from '@walkeros/collector';
 import { elb as elbOrg, getAttribute } from '@walkeros/web-core';
@@ -38,10 +38,10 @@ let rootAbortController: AbortController | undefined;
 // the DOM without a re-init or source destroy is retained until re-init
 // replaces its entry or destroyTriggers clears the Map. Bounded by the
 // source/page session and accepted per plan §4.
-const scopeStates = new Map<Document | Element, ScopeState>();
+const scopeStates = new Map<InitScope, ScopeState>();
 
 // Tear down a scope's prior state (if any), then install a fresh empty bucket.
-function resetScope(scope: Document | Element): ScopeState {
+function resetScope(scope: InitScope): ScopeState {
   const previous = scopeStates.get(scope);
   if (previous) {
     previous.abort.abort(); // removes hover + scroll listeners
@@ -166,10 +166,23 @@ export function destroyTriggers(_settings?: Settings): void {
     rootAbortController = undefined;
   }
 
+  // Two passes over the scope registry. `visibilityStates` is keyed per owner
+  // document (one shared observer state), while `scopeStates` holds many
+  // entries per document (the document scope plus every `walker init <el>`
+  // sub-scope). unobserveElement reads that shared per-document state, so every
+  // scope's armed dwell timers must be cancelled BEFORE any scope tears the
+  // shared state down; otherwise the first same-document destroy deletes the
+  // state and later scopes' unobserve calls no-op, leaking their timers.
   scopeStates.forEach((state, scope) => {
     state.abort.abort();
     state.intervalIds.forEach((id) => clearInterval(id));
     state.timeoutIds.forEach((id) => clearTimeout(id));
+    // Cancel armed visibility dwell timers and detach observed elements while
+    // the shared per-document state still exists. Mirrors resetScope's cleanup.
+    state.observed.forEach((element) => unobserveElement(scope, element));
+  });
+
+  scopeStates.forEach((_state, scope) => {
     // Normalizes to the owner document and disconnects the shared observer;
     // the second call for a same-document sub-scope is a harmless no-op.
     destroyVisibilityTracking(scope);
@@ -202,7 +215,12 @@ export function initScopeTrigger(context: Context, _settings?: Settings) {
     false,
   );
   const doc = (scope as Element).ownerDocument || (scope as Document);
-  if (scope !== doc) {
+  const win = doc.defaultView;
+  // The element self-check only applies to an Element sub-scope. A ShadowRoot
+  // scope has no getAttribute, so calling handleActionElem on it would throw;
+  // it is scanned by queryAllComposed below instead. A Document scope has
+  // scope === doc, so it never enters this branch.
+  if (scope !== doc && win && scope instanceof win.Element) {
     // Handle the elements action(s), too
     handleActionElem(context, scope as HTMLElement, selectorAction, bucket);
   }
@@ -359,7 +377,7 @@ function triggerWait(
   bucket.timeoutIds.push(timeoutId);
 }
 
-function scroll(context: Context, scope: Scope, bucket: ScopeState) {
+function scroll(context: Context, scope: InitScope, bucket: ScopeState) {
   const doc = (scope as Element).ownerDocument || (scope as Document);
   const win = doc.defaultView!;
   const scrolling = (
@@ -367,20 +385,19 @@ function scroll(context: Context, scope: Scope, bucket: ScopeState) {
     context: Context,
   ) => {
     return scrollElements.filter(([element, depth]: [Element, number]) => {
-      // Distance from top to the bottom of the visible screen
-      const windowBottom = win.scrollY + win.innerHeight;
-      // Distance from top to the elements relevant content
-      const elemTop = (element as HTMLElement).offsetTop;
+      // getBoundingClientRect is viewport-relative and composes across shadow
+      // boundaries, so scroll depth is correct for shadow-nested elements.
+      const rect = (element as HTMLElement).getBoundingClientRect();
 
-      // Skip calculations if not in viewport yet
-      if (windowBottom < elemTop) return true;
+      // Skip calculations if not in viewport yet (element top below the fold)
+      if (win.innerHeight < rect.top) return true;
 
       // Height of the elements box as 100 percent base
-      const elemHeight = element.clientHeight;
-      // Distance from top to the elements bottom
-      const elemBottom = elemTop + elemHeight;
-      // Height of the non-visible pixels below visible screen
-      const hidden = elemBottom - windowBottom;
+      const elemHeight = rect.height || element.clientHeight;
+      // Distance from the viewport top to the elements bottom
+      const elemBottom = rect.top + elemHeight;
+      // Height of the non-visible pixels below the visible screen
+      const hidden = elemBottom - win.innerHeight;
       // Visible percentage of the element
       const scrollDepth = (1 - hidden / (elemHeight || 1)) * 100;
 
