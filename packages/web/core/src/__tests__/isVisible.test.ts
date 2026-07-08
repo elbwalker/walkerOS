@@ -1,4 +1,9 @@
-import { isVisible } from '..';
+import {
+  isVisible,
+  deepElementFromPoint,
+  composedAncestors,
+  shadowHostsAbove,
+} from '..';
 
 describe('isVisible', () => {
   const w = window;
@@ -267,5 +272,242 @@ describe('isVisible', () => {
     expect(isVisible(elem, window, document)).toBeTruthy();
 
     document.elementFromPoint = originalElementFromPoint;
+  });
+});
+
+function mockGeometry(el: HTMLElement): void {
+  Object.defineProperty(el, 'offsetWidth', { value: 50, writable: true });
+  Object.defineProperty(el, 'offsetHeight', { value: 50, writable: true });
+  el.style.display = 'block';
+  el.style.visibility = 'visible';
+  el.getBoundingClientRect = jest.fn(() => ({
+    x: 25,
+    y: 25,
+    width: 50,
+    height: 50,
+    top: 25,
+    right: 75,
+    bottom: 75,
+    left: 25,
+    toJSON: jest.fn,
+  }));
+}
+
+describe('deepElementFromPoint', () => {
+  const originalElementFromPoint = document.elementFromPoint;
+
+  afterEach(() => {
+    document.elementFromPoint = originalElementFromPoint;
+  });
+
+  test('pierces an open shadow boundary to the inner element', () => {
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const inner = document.createElement('div');
+    shadow.appendChild(inner);
+
+    document.elementFromPoint = () => host;
+    shadow.elementFromPoint = jest.fn(() => inner);
+
+    expect(deepElementFromPoint(document, 0, 0)).toBe(inner);
+  });
+
+  test('stops at the host for a closed shadow root', () => {
+    const host = document.createElement('div');
+    host.attachShadow({ mode: 'closed' });
+
+    document.elementFromPoint = () => host;
+
+    expect(deepElementFromPoint(document, 0, 0)).toBe(host);
+  });
+
+  test('returns null when the point hits nothing', () => {
+    document.elementFromPoint = () => null;
+
+    expect(deepElementFromPoint(document, 0, 0)).toBeNull();
+  });
+
+  test('breaks the loop when the inner hit equals the host', () => {
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+
+    document.elementFromPoint = () => host;
+    shadow.elementFromPoint = jest.fn(() => host);
+
+    expect(deepElementFromPoint(document, 0, 0)).toBe(host);
+  });
+});
+
+describe('composedAncestors', () => {
+  test('walks light-DOM parents', () => {
+    const parent = document.createElement('div');
+    const child = document.createElement('div');
+    parent.appendChild(child);
+
+    expect(composedAncestors(child, window)).toEqual([parent]);
+  });
+
+  test('crosses an open shadow boundary to the host and light ancestors', () => {
+    const lightParent = document.createElement('div');
+    const host = document.createElement('div');
+    lightParent.appendChild(host);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const inner = document.createElement('div');
+    shadow.appendChild(inner);
+
+    expect(composedAncestors(inner, window)).toEqual([host, lightParent]);
+  });
+
+  test('crosses a closed shadow boundary to the host', () => {
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'closed' });
+    const inner = document.createElement('div');
+    shadow.appendChild(inner);
+
+    expect(composedAncestors(inner, window)).toEqual([host]);
+  });
+});
+
+describe('shadowHostsAbove', () => {
+  test('returns empty for a light-DOM element and excludes plain ancestors', () => {
+    const parent = document.createElement('div');
+    const child = document.createElement('div');
+    parent.appendChild(child);
+
+    expect(shadowHostsAbove(child, window)).toEqual([]);
+  });
+
+  test('returns the host for a closed-shadow element', () => {
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'closed' });
+    const inner = document.createElement('div');
+    shadow.appendChild(inner);
+
+    expect(shadowHostsAbove(inner, window)).toEqual([host]);
+  });
+
+  test('returns nested hosts inner-to-outer', () => {
+    const outerHost = document.createElement('div');
+    const outerRoot = outerHost.attachShadow({ mode: 'open' });
+    const innerHost = document.createElement('div');
+    outerRoot.appendChild(innerHost);
+    const innerRoot = innerHost.attachShadow({ mode: 'open' });
+    const target = document.createElement('div');
+    innerRoot.appendChild(target);
+
+    expect(shadowHostsAbove(target, window)).toEqual([innerHost, outerHost]);
+  });
+});
+
+describe('isVisible shadow DOM occlusion', () => {
+  const originalElementFromPoint = document.elementFromPoint;
+
+  afterEach(() => {
+    document.elementFromPoint = originalElementFromPoint;
+  });
+
+  test('light exact hit is visible', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    mockGeometry(target);
+
+    document.elementFromPoint = () => target;
+
+    expect(isVisible(target, window, document)).toBe(true);
+  });
+
+  test('light unrelated overlay is not visible', () => {
+    const target = document.createElement('div');
+    const overlay = document.createElement('div');
+    document.body.appendChild(target);
+    document.body.appendChild(overlay);
+    mockGeometry(target);
+
+    document.elementFromPoint = () => overlay;
+
+    expect(isVisible(target, window, document)).toBe(false);
+  });
+
+  test('light descendant hit is visible', () => {
+    const target = document.createElement('div');
+    const child = document.createElement('div');
+    target.appendChild(child);
+    document.body.appendChild(target);
+    mockGeometry(target);
+
+    document.elementFromPoint = () => child;
+
+    expect(isVisible(target, window, document)).toBe(true);
+  });
+
+  test('open-shadow inner hit equal to the target is visible', () => {
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const target = document.createElement('div');
+    shadow.appendChild(target);
+    document.body.appendChild(host);
+    mockGeometry(target);
+
+    document.elementFromPoint = () => host;
+    shadow.elementFromPoint = jest.fn(() => target);
+
+    expect(isVisible(target, window, document)).toBe(true);
+  });
+
+  test('open-shadow occluder that is not in either chain is not visible', () => {
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const target = document.createElement('div');
+    const occluder = document.createElement('div');
+    shadow.appendChild(target);
+    shadow.appendChild(occluder);
+    document.body.appendChild(host);
+    mockGeometry(target);
+
+    document.elementFromPoint = () => host;
+    shadow.elementFromPoint = jest.fn(() => occluder);
+
+    expect(isVisible(target, window, document)).toBe(false);
+  });
+
+  test('closed-shadow host hit resolves the target as visible', () => {
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'closed' });
+    const target = document.createElement('div');
+    shadow.appendChild(target);
+    document.body.appendChild(host);
+    mockGeometry(target);
+
+    document.elementFromPoint = () => host;
+
+    expect(isVisible(target, window, document)).toBe(true);
+  });
+
+  test('light plain ancestor hit does not loosen occlusion', () => {
+    const ancestor = document.createElement('div');
+    const target = document.createElement('div');
+    ancestor.appendChild(target);
+    document.body.appendChild(ancestor);
+    mockGeometry(target);
+
+    document.elementFromPoint = () => ancestor;
+
+    expect(isVisible(target, window, document)).toBe(false);
+  });
+
+  test('open-shadow wrapper ancestor within the same root preserves occlusion', () => {
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const wrapper = document.createElement('div');
+    const target = document.createElement('div');
+    wrapper.appendChild(target);
+    shadow.appendChild(wrapper);
+    document.body.appendChild(host);
+    mockGeometry(target);
+
+    document.elementFromPoint = () => host;
+    shadow.elementFromPoint = jest.fn(() => wrapper);
+
+    expect(isVisible(target, window, document)).toBe(false);
   });
 });

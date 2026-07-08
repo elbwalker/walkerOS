@@ -6,7 +6,7 @@ import type {
   BrowserPushOptions,
   BrowserPushContext,
 } from './types/elb';
-import type { Context, Settings } from './types';
+import type { Context, Settings, InitScope, Scope } from './types';
 import { getEntities, getGlobals } from './walker';
 
 /**
@@ -56,7 +56,9 @@ export function translateToCoreCollector(
 
     // Add globals if not already present
     if (!event.globals && settings.scope) {
-      event.globals = getGlobals(settings.prefix, settings.scope);
+      event.globals = isGlobalsScope(settings.scope)
+        ? getGlobals(settings.prefix, settings.scope)
+        : {};
     }
 
     return elb(event);
@@ -112,7 +114,10 @@ export function translateToCoreCollector(
   }
 
   // Collect globals from the DOM scope
-  const eventGlobals = getGlobals(settings.prefix, settings.scope);
+  const eventGlobals =
+    settings.scope && isGlobalsScope(settings.scope)
+      ? getGlobals(settings.prefix, settings.scope)
+      : {};
 
   // Build unified event from various elb usage patterns
   const event: WalkerOS.DeepPartialEvent = {
@@ -150,30 +155,47 @@ function getBrowserSource(win: Window, doc: Document): WalkerOS.Source {
  * runners). Returns an accurate `Element | Document` union so callers do
  * not need casts.
  */
-function isDomScope(value: unknown): value is Element | Document {
+function isDomScope(value: unknown): value is InitScope {
   if (!value || typeof value !== 'object') return false;
   if (typeof Element !== 'undefined' && value instanceof Element) return true;
   if (typeof Document !== 'undefined' && value instanceof Document) return true;
+  if (typeof ShadowRoot !== 'undefined' && value instanceof ShadowRoot)
+    return true;
   if ('nodeType' in value) {
     const nodeType = value.nodeType;
-    // 1 = ELEMENT_NODE, 9 = DOCUMENT_NODE per the WhatWG DOM standard.
-    return nodeType === 1 || nodeType === 9;
+    // 1 = ELEMENT_NODE, 9 = DOCUMENT_NODE, 11 = DOCUMENT_FRAGMENT_NODE (the
+    // node type of a ShadowRoot) per the WhatWG DOM standard. Accepting 11
+    // lets `walker init` target a retained closed shadow root, which discovery
+    // can never reach from the document.
+    return nodeType === 1 || nodeType === 9 || nodeType === 11;
   }
   return false;
 }
 
 /**
+ * getGlobals accepts the narrow Scope (Document | Element). Scope is kept narrow
+ * deliberately: widening it to ShadowRoot would ripple into its sibling scans
+ * getPageViewData/getAllEvents, whose bodies call .matches/.body/getAttribute
+ * and throw on a ShadowRoot. So a ShadowRoot init scope contributes no globals
+ * ({}) by design; this guard narrows the widened carrier back to what getGlobals
+ * accepts.
+ */
+function isGlobalsScope(scope: InitScope): scope is Scope {
+  return scope.nodeType !== 11; // exclude ShadowRoot (DOCUMENT_FRAGMENT_NODE)
+}
+
+/**
  * Normalize the `data` argument of `elb('walker init', data)` to an array
- * of Element/Document scopes. Falls back to `settings.scope` (or `document`
- * if settings.scope is not a DOM node) when no scope is provided.
+ * of Element/Document/ShadowRoot scopes. Falls back to `settings.scope` (or
+ * `document` if settings.scope is not a DOM node) when no scope is provided.
  */
 function normalizeInitScopes(
   data: unknown,
   settings: Settings,
-): Array<Element | Document> {
+): Array<InitScope> {
   if (isDomScope(data)) return [data];
   if (Array.isArray(data)) {
-    const filtered: Array<Element | Document> = [];
+    const filtered: Array<InitScope> = [];
     for (const entry of data) {
       if (isDomScope(entry)) filtered.push(entry);
     }

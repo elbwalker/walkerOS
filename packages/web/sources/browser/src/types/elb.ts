@@ -3,6 +3,11 @@ import type { DestinationWeb } from '@walkeros/web-core';
 
 // Forward declare types to avoid circular imports
 export type Scope = Element | Document;
+// `walker init` also accepts a retained ShadowRoot (e.g. a closed root the app
+// holds a reference to); the runtime scans it like any Element/Document scope.
+// Declared locally here (not imported from ./index) to keep this file free of
+// the circular import the forward declarations above avoid.
+export type InitScope = Scope | ShadowRoot;
 export type Trigger = string;
 
 // Browser-specific push interface (can be more flexible)
@@ -12,7 +17,7 @@ export interface BrowserPush<
   (event: WalkerOS.DeepPartialEvent): R;
 
   // Browser-specific commands (not in Elb.WalkerCommands)
-  (event: 'walker init', scope: Scope | Scope[]): R;
+  (event: 'walker init', scope: InitScope | InitScope[]): R;
   (event: 'walker run', state?: Partial<Collector.Instance>): R;
 
   // Browser-flexible event form

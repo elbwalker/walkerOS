@@ -921,4 +921,121 @@ describe('Trigger System', () => {
       destroyVisibilityTracking(document);
     });
   });
+
+  describe('Scroll geometry (viewport-relative, shadow DOM)', () => {
+    // jsdom returns all-zero rects, so geometry is driven by mocking
+    // getBoundingClientRect. Only top/height/bottom carry the values under test.
+    const makeRect = (top: number, height: number): DOMRect => ({
+      top,
+      bottom: top + height,
+      left: 0,
+      right: 0,
+      width: 0,
+      height,
+      x: 0,
+      y: top,
+      toJSON: () => ({}),
+    });
+
+    const firedScroll = (entity: string): boolean =>
+      mockElb.mock.calls.some(
+        (call) =>
+          isObject(call[0]) &&
+          call[0].trigger === Triggers.Scroll &&
+          call[0].entity === entity,
+      );
+
+    const runScrollListener = (): void => {
+      const listener = events.scroll;
+      if (typeof listener !== 'function')
+        throw new Error('scroll listener was not registered');
+      listener(new Event('scroll'));
+    };
+
+    test('light-DOM and open-shadow elements at the same visual position fire identically', () => {
+      // Same visual position: rect.top 380 in a 500px viewport, height 300 →
+      // computed depth 40%. With a 50% threshold neither element should fire.
+      // The shadow element's offsetTop is offsetParent-relative (30, wrong); its
+      // viewport rect is the true position (380). Sourcing geometry from the rect
+      // makes the shadow element behave exactly like its light-DOM twin.
+      Object.defineProperty(window, 'innerHeight', {
+        value: 500,
+        writable: true,
+      });
+      Object.defineProperty(window, 'scrollY', { value: 0, writable: true });
+
+      document.body.innerHTML = `
+        <div style="height: 1000px;">
+          <div id="light" data-elb="lightbox" data-elbaction="scroll(50):seen">Light</div>
+        </div>
+        <div id="host"></div>
+      `;
+
+      const light = document.getElementById('light')!;
+      Object.defineProperty(light, 'offsetTop', { value: 380 });
+      Object.defineProperty(light, 'clientHeight', { value: 300 });
+      light.getBoundingClientRect = () => makeRect(380, 300);
+
+      const host = document.getElementById('host')!;
+      const shadow = host.attachShadow({ mode: 'open' });
+      const shadowEl = document.createElement('div');
+      shadowEl.setAttribute('data-elb', 'shadowbox');
+      shadowEl.setAttribute('data-elbaction', 'scroll(50):seen');
+      shadow.appendChild(shadowEl);
+      // offsetParent-relative, understates the true page position.
+      Object.defineProperty(shadowEl, 'offsetTop', { value: 30 });
+      Object.defineProperty(shadowEl, 'clientHeight', { value: 300 });
+      // Viewport-relative rect matches the light twin exactly.
+      shadowEl.getBoundingClientRect = () => makeRect(380, 300);
+
+      initScopeTrigger(
+        { elb: mockElb, settings: createTestSettings('data-elb') },
+        createTestSettings('data-elb'),
+      );
+      runScrollListener();
+
+      // Baseline: the light-DOM element is below the 50% threshold (40%).
+      expect(firedScroll('lightbox')).toBe(false);
+      // Equal depth at the same visual position: the shadow twin must match the
+      // light twin. offsetTop geometry diverges (fires at ~157%); rects do not.
+      expect(firedScroll('shadowbox')).toBe(firedScroll('lightbox'));
+    });
+
+    test('scroll depth uses the 1 - hidden/elemHeight metric (viewport coordinates)', () => {
+      // Element taller than the viewport, top scrolled above the fold:
+      // rect.top -100, height 1000, viewport 500 →
+      //   hidden = (rect.top + height) - innerHeight = 400
+      //   depth  = (1 - hidden/height) * 100 = 60
+      // A "percent visible in viewport" metric would instead read 50 (500/1000),
+      // so a 60% threshold fires only under the intended metric, a 61% one never.
+      Object.defineProperty(window, 'innerHeight', {
+        value: 500,
+        writable: true,
+      });
+      // scrollY only feeds the pre-fix offsetTop path; keep old and new aligned.
+      Object.defineProperty(window, 'scrollY', { value: 600, writable: true });
+
+      document.body.innerHTML = `
+        <div id="pinlow" data-elb="pinlow" data-elbaction="scroll(60):seen">Low</div>
+        <div id="pinhigh" data-elb="pinhigh" data-elbaction="scroll(61):seen">High</div>
+      `;
+
+      for (const id of ['pinlow', 'pinhigh']) {
+        const el = document.getElementById(id)!;
+        Object.defineProperty(el, 'offsetTop', { value: 500 });
+        Object.defineProperty(el, 'clientHeight', { value: 1000 });
+        el.getBoundingClientRect = () => makeRect(-100, 1000);
+      }
+
+      initScopeTrigger(
+        { elb: mockElb, settings: createTestSettings('data-elb') },
+        createTestSettings('data-elb'),
+      );
+      runScrollListener();
+
+      // depth 60 ≥ 60 threshold → fires; 60 < 61 threshold → does not.
+      expect(firedScroll('pinlow')).toBe(true);
+      expect(firedScroll('pinhigh')).toBe(false);
+    });
+  });
 });
