@@ -88,4 +88,27 @@ describe('destination piano', () => {
     expect(script.src).toBe(SCRIPT_SRC);
     expect(appendChild).toHaveBeenCalledWith(script);
   });
+
+  test('loadScript defers configuration until the script loads', async () => {
+    const setConfigurations = jest.fn();
+    const env: Env = {
+      window: {
+        pa: { setConfigurations, sendEvent: jest.fn(), sendEvents: jest.fn() },
+      },
+    };
+
+    const script = document.createElement('script');
+    jest.spyOn(document, 'createElement').mockReturnValue(script);
+    jest.spyOn(document.head, 'appendChild').mockImplementation((node) => node);
+
+    const elb = await register(env, { loadScript: true });
+    await elb(getEvent());
+
+    // The SDK loads asynchronously, so nothing is configured yet.
+    expect(setConfigurations).not.toHaveBeenCalled();
+
+    // Once the script fires onload, configuration runs.
+    script.onload?.(new Event('load'));
+    expect(setConfigurations).toHaveBeenCalledWith({ site, collectDomain });
+  });
 });
