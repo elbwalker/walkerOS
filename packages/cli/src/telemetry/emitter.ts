@@ -87,9 +87,11 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
 
   const environment = getEnvironment();
 
+  // The emitter is its own flow. Its version is not stamped on source.version;
+  // it rides source.release under the emitter's surface key (cli/mcp), stamped
+  // by the collector from config.collector.{name,release} below.
   const baseSource: WalkerOS.Source = {
     ...opts.source,
-    version: opts.packageVersion,
   };
 
   // Lazy collector init: only pay the cost on first send.
@@ -105,6 +107,11 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
     });
 
     const collectorConfig: Collector.InitConfig = {
+      // Flow identity: the emitter surface (cli/mcp) keys source.release, its
+      // package version is the release. createEvent stamps
+      // source.release = { [type]: packageVersion } from these.
+      name: opts.source.type,
+      release: opts.packageVersion,
       consent: telemetryConfig.consent,
       user: telemetryConfig.user,
       destinations: {
@@ -143,6 +150,12 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
         };
         const preview = {
           ...partialEvent,
+          // The debug path bypasses the collector, so replicate the
+          // source.release stamp createEvent applies on the live path.
+          source: {
+            ...partialEvent.source,
+            release: { [opts.source.type]: opts.packageVersion },
+          },
           consent: { telemetry: true },
           user,
         };

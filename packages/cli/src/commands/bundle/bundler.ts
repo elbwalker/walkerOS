@@ -1511,6 +1511,30 @@ export function buildDataPayload(flowSettings: Flow): Record<string, unknown> {
 }
 
 /**
+ * Bake flow-config provenance onto the collector before codegen.
+ *
+ * The flow name keys this flow's entry in `event.source.release`; the release
+ * value stamps that key. Both are set only when absent, so a flow (or an
+ * upstream caller) that already authored `collector.name`/`collector.release`
+ * keeps its own values. The release falls back to an explicit id, then to a
+ * bundle-time timestamp so a standalone bundle still carries a distinguishable
+ * release instead of the runtime `__VERSION__` default.
+ *
+ * `now` is injectable so tests assert a fixed value; production uses wall time.
+ */
+export function applyCollectorProvenance(
+  flowSettings: Flow,
+  flowName: string,
+  release?: string,
+  now: () => string = () => new Date().toISOString(),
+): void {
+  const collector = flowSettings.collector ?? {};
+  collector.name ??= flowName;
+  collector.release ??= release ?? now();
+  flowSettings.collector = collector;
+}
+
+/**
  * Build split config object from flow configuration.
  * Produces THREE outputs:
  * - codeConfigObject: skeleton with code references and __data.* placeholders

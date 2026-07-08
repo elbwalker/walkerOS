@@ -14,6 +14,7 @@ import { bundle } from '../index.js';
 import type { BuildOptions } from '../../../types/bundle.js';
 
 jest.mock('../bundler.js', () => ({
+  ...jest.requireActual('../bundler.js'),
   bundleCore: jest.fn(),
 }));
 

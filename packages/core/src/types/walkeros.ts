@@ -89,6 +89,8 @@ export interface Source extends Properties {
   count?: number;
   /** Trace id shared by every event of a run (W3C trace-id shape). */
   trace?: string;
+  /** Per-flow config release map, keyed by flow name (source.release[flowName]). Accumulates across walkerOS→walkerOS crossings. */
+  release?: Record<string, string>;
   /** Walker-controlled standard suggestions (sources may set). */
   url?: string;
   referrer?: string;

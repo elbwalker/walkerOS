@@ -46,6 +46,9 @@ describe('Destination', () => {
       consent: { client: true },
       user: { session: 's3ss10n' },
     });
+    // Mirror the collector's source.release provenance stamp: an unconfigured
+    // collector stamps source.release = { default: <pkg version> } on push.
+    mockEvent.source = { ...mockEvent.source, release: { default: '4.2.1' } };
   });
 
   test('init call', async () => {
@@ -417,6 +420,8 @@ describe('Destination', () => {
 
   test('policy', async () => {
     const event = createEvent();
+    // Mirror the collector's source.release provenance stamp.
+    event.source = { ...event.source, release: { default: '4.2.1' } };
 
     const policy = {
       name: {

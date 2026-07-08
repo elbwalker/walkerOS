@@ -18,6 +18,24 @@ const SECTIONS: Record<string, (e: WalkerOS.DeepPartialEvent) => unknown> = {
   }),
 };
 
+// Recurse into plain objects (maps), joining keys with an underscore, so a
+// nested map becomes fully flattened leaf keys. Arrays are leaves and kept
+// as-is; only plain objects recurse.
+function flattenInto(
+  out: Record<string, unknown>,
+  prefix: string,
+  value: unknown,
+): void {
+  if (isObject(value)) {
+    for (const [k, v] of Object.entries(value)) {
+      if (v === undefined) continue;
+      flattenInto(out, `${prefix}_${k}`, v);
+    }
+  } else {
+    out[prefix] = value;
+  }
+}
+
 export function flattenIncludeSections(
   event: WalkerOS.DeepPartialEvent,
   sections: string[],
@@ -33,9 +51,10 @@ export function flattenIncludeSections(
 
     for (const [key, raw] of Object.entries(bag as Record<string, unknown>)) {
       if (raw === undefined) continue;
-      // Context values are OrderedProperties tuples - extract the label.
+      // Context values are OrderedProperties tuples - extract the label first,
+      // then flatten (the label is usually a string leaf).
       const value = section === 'context' && Array.isArray(raw) ? raw[0] : raw;
-      out[`${section}_${key}`] = value;
+      flattenInto(out, `${section}_${key}`, value);
     }
   }
 

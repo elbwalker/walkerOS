@@ -116,6 +116,12 @@ describe('walkerOS Web Basic Example', () => {
 
     // Test order complete event with full mapping using typical event structure
     const orderEvent = getEvent('order complete');
+    // Mirror the collector's source.release provenance stamp so the serialized
+    // expectation matches the pushed event (release is stamped last on source).
+    orderEvent.source = {
+      ...orderEvent.source,
+      release: { default: '4.2.1' },
+    };
     await elb(orderEvent);
 
     // Verify all destinations were called immediately

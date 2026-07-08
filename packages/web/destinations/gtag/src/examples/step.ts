@@ -407,6 +407,7 @@ export const ga4WithIncludeAll: Flow.StepExample = {
         source_schema: '4',
         source_count: 1,
         source_trace: '1700000106abcdef1700000106abcdef',
+        source_release_default: '4.2.1',
         // event_* params from event properties
         event_entity: 'page',
         event_action: 'view',

@@ -96,6 +96,10 @@ export interface Config {
    * destination backfill. Overflow drops oldest (FIFO). Default 1000.
    */
   queueMax?: number;
+  /** Flow name; keys this flow's entry in event.source.release and the observer flowId. */
+  name?: string;
+  /** Config release id stamped into event.source.release for this flow. */
+  release?: string;
 }
 
 /**
@@ -351,6 +355,10 @@ export interface Instance {
   round: number;
   /** Run-scoped W3C trace id, minted on each run and stamped onto events. */
   trace?: string;
+  /** Static flow name; keys source.release and the observer flowId. */
+  name?: string;
+  /** Static config release id stamped into source.release for this flow. */
+  release?: string;
   /** Per-run emission sequence; reset on each run, incremented per stamped event. */
   count: number;
   /**

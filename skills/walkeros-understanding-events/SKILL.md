@@ -65,6 +65,7 @@ for canonical types (Event interface, plus event helpers in `event.ts`).
 | `source.schema`   | string | Source-emitted schema/version (optional)                    | `"datalayer-v2"`                       |
 | `source.trace`    | string | Run-scoped W3C trace_id, shared by every event of a run     | `"0123...cdef"` (32 hex)               |
 | `source.count`    | number | Per-run emission sequence (1, 2, 3, ...)                    | `1`                                    |
+| `source.release`  | object | Per-flow config release map, accumulates across crossings   | `{ web: "3", server: "5" }`            |
 
 ### data Property
 
@@ -135,10 +136,11 @@ based on which source emitted it.
 source: {
   type: 'browser',         // source kind (browser, dataLayer, cookiefirst, ...)
   platform: 'web',         // runtime: 'web' or 'server'
-  version: '4.0.0',        // source package version
+  version: '4.0.0',        // external source-emitter version (collector no longer sets this)
   schema: 'datalayer-v2',  // optional schema/version emitted by the source
   trace: '0123...cdef',    // run-scoped W3C trace_id, groups all events of a run
   count: 1,                // per-run emission sequence (1, 2, 3, ...)
+  release: { web: '3' },   // per-flow config release map, accumulates web to server
   url: 'https://...',      // page URL (web only, set by web-context transformer)
   referrer: '...',         // page referrer (web only)
   tool: 'cli',             // tool that produced the event (optional)
@@ -153,6 +155,13 @@ that's the responsibility of a web-context transformer.
 trace_id on each run and stamps it (plus a per-run `source.count`) on every
 event when absent. It is preserved unchanged when an event is forwarded from web
 to server, so the whole pipeline shares one trace.
+
+`source.release` records which config handled the event, keyed by flow name.
+Each flow the event passes through adds its own entry (that flow's config
+release), so an event captured on the web and processed on the server carries
+both flow releases, and a warehouse row shows exactly which config version
+touched it. This is distinct from `source.version`, the source package version
+set only by external source emitters (the collector no longer stamps it).
 
 ## Migration from v3
 

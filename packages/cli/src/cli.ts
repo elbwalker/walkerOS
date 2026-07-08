@@ -100,6 +100,10 @@ program
   .option('--stats', 'show bundle statistics')
   .option('--json', 'output as JSON (implies --stats)')
   .option('--no-cache', 'disable package caching')
+  .option(
+    '--release <id>',
+    'config release id baked into config.collector.release (stamped on event.source.release)',
+  )
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
@@ -113,6 +117,7 @@ program
       cache: options.cache,
       verbose: options.verbose,
       silent: options.silent,
+      release: options.release,
     });
   });
 

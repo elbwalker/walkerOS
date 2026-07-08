@@ -187,6 +187,12 @@ tracking on the specified elements.
 
 :::
 
+For content that a SPA injects repeatedly into the same container, the
+[`data-elbobserve`](/docs/sources/web/browser/tagging/html-attributes#auto-init-with-data-elbobserve)
+attribute is a declarative alternative: mark the container once and injected
+tagged content is registered automatically, without a `walker init` call after
+each injection.
+
 ## run vs init comparison
 
 | Command | Triggers pageview | Re-scans DOM | Use case |

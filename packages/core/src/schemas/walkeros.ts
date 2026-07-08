@@ -208,6 +208,12 @@ export const SourceSchema = PropertiesSchema.and(
       .string()
       .optional()
       .describe('Trace id shared by every event of a run (W3C trace-id shape)'),
+    release: z
+      .record(z.string(), z.string())
+      .optional()
+      .describe(
+        'Per-flow config release map, keyed by flow name; accumulates across walkerOS crossings',
+      ),
     url: z.string().optional(),
     referrer: z.string().optional(),
     tool: z.string().optional(),

@@ -10,6 +10,7 @@ jest.mock('../../../commands/bundle/bundler.js', () => {
 });
 
 import {
+  applyCollectorProvenance,
   buildDataPayload,
   buildSplitConfigObject,
   createEntryPoint,
@@ -1603,6 +1604,13 @@ describe('bundle() target resolution', () => {
     expect(buildOptions.skipWrapper).toBe(false);
     expect(buildOptions.withDev).toBe(false);
   });
+
+  it('bakes release + flow name into the collector handed to the bundler', async () => {
+    const { bundle } = await import('../../../commands/bundle/index.js');
+    await bundle(MINIMAL_FLOW, { silent: true, release: 'v3' });
+    const flowArg = bundleCoreMock.mock.calls[0][0];
+    expect(flowArg.collector).toMatchObject({ name: 'default', release: 'v3' });
+  });
 });
 
 describe('data payload byte stability', () => {
@@ -1697,5 +1705,74 @@ describe('data payload byte stability', () => {
 
   it('buildDataPayload builds the same object the bundler bakes', () => {
     expect(buildDataPayload(flowSettings)).toEqual(expectedPayload);
+  });
+});
+
+describe('applyCollectorProvenance', () => {
+  it('bakes the flow name and passed release onto a plain collector', () => {
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+      sources: {},
+      destinations: {},
+      collector: { globals: { tenant: 'a' } },
+    };
+
+    applyCollectorProvenance(flowSettings, 'web', 'v3');
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+    // A plain collector still rides the data-payload passthrough (no new codegen).
+    expect(result.codeConfigObject).toContain('...__data.collector');
+    expect(result.dataPayloadObj).toMatchObject({
+      collector: { name: 'web', release: 'v3' },
+    });
+  });
+
+  it('leaves an authored collector.name and collector.release untouched', () => {
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+      sources: {},
+      destinations: {},
+      collector: { name: 'authored-name', release: 'authored' },
+    };
+
+    applyCollectorProvenance(flowSettings, 'web', 'v3');
+
+    expect(buildDataPayload(flowSettings)).toMatchObject({
+      collector: { name: 'authored-name', release: 'authored' },
+    });
+  });
+
+  it('falls back to the injected bundle-time clock when no release is given', () => {
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+      sources: {},
+      destinations: {},
+      collector: { globals: { tenant: 'a' } },
+    };
+
+    applyCollectorProvenance(
+      flowSettings,
+      'web',
+      undefined,
+      () => '2020-01-01T00:00:00.000Z',
+    );
+
+    expect(buildDataPayload(flowSettings)).toMatchObject({
+      collector: { name: 'web', release: '2020-01-01T00:00:00.000Z' },
+    });
+  });
+
+  it('creates a collector and stamps a string release when the flow authored none', () => {
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+      sources: {},
+      destinations: {},
+    };
+
+    applyCollectorProvenance(flowSettings, 'web');
+
+    expect(buildDataPayload(flowSettings)).toMatchObject({
+      collector: { name: 'web', release: expect.any(String) },
+    });
   });
 });

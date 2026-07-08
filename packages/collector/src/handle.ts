@@ -216,7 +216,7 @@ export function prepareEvent(
 ): WalkerOS.PartialEvent {
   return {
     timing: Math.round((Date.now() - collector.timing) / 10) / 100,
-    source: { type: 'collector', schema: '4', version: __VERSION__ },
+    source: { type: 'collector', schema: '4' },
     ...event,
   } as WalkerOS.PartialEvent;
 }
@@ -265,6 +265,13 @@ export function createEvent(
   const trace = source.trace ?? ingest?._meta.trace ?? collector.trace;
   const stampedSource: WalkerOS.Source = { ...source, count };
   if (trace !== undefined) stampedSource.trace = trace;
+
+  // Spread the incoming map so entries from upstream flows survive the crossing
+  // and the local flow's release is appended; release thus accumulates across a
+  // full-event walkerOS→walkerOS crossing.
+  const releaseKey = collector.name ?? source.platform ?? 'default';
+  const releaseValue = collector.release ?? __VERSION__;
+  stampedSource.release = { ...source.release, [releaseKey]: releaseValue };
 
   return {
     name,

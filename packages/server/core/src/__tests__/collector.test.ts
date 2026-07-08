@@ -36,6 +36,9 @@ describe('Server Collector', () => {
     jest.resetModules();
 
     mockEvent = createEvent();
+    // Mirror the collector's source.release provenance stamp: an unconfigured
+    // collector stamps source.release = { default: <pkg version> } on push.
+    mockEvent.source = { ...mockEvent.source, release: { default: '4.2.1' } };
   });
 
   afterEach(() => {

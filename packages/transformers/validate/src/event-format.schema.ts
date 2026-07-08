@@ -316,6 +316,17 @@ export const eventFormatSchema = Object.freeze({
                 'Trace id shared by every event of a run (W3C trace-id shape)',
               type: 'string',
             },
+            release: {
+              description:
+                'Per-flow config release map, keyed by flow name; accumulates across walkerOS crossings',
+              type: 'object',
+              propertyNames: {
+                type: 'string',
+              },
+              additionalProperties: {
+                type: 'string',
+              },
+            },
             url: {
               type: 'string',
             },
@@ -636,6 +647,17 @@ export const eventFormatSchema = Object.freeze({
                   description:
                     'Trace id shared by every event of a run (W3C trace-id shape)',
                   type: 'string',
+                },
+                release: {
+                  description:
+                    'Per-flow config release map, keyed by flow name; accumulates across walkerOS crossings',
+                  type: 'object',
+                  propertyNames: {
+                    type: 'string',
+                  },
+                  additionalProperties: {
+                    type: 'string',
+                  },
                 },
                 url: {
                   type: 'string',
