@@ -123,11 +123,13 @@ export function reapElement(el: HTMLElement): void {
   }
 
   if (registration.scroll && bucket) {
-    // scrollElements is a [HTMLElement, number] tuple array — match by element.
-    const index = bucket.scrollElements.findIndex(
-      ([element]) => element === el,
+    // scrollElements is a [HTMLElement, number] tuple array — remove EVERY entry
+    // for this element. A multi-scroll element (data-elbaction="scroll:50;scroll:75")
+    // pushes one tuple per trigger, so removing only the first would strand the
+    // rest and fire a phantom scroll on the detached element.
+    bucket.scrollElements = bucket.scrollElements.filter(
+      ([element]) => element !== el,
     );
-    if (index !== -1) bucket.scrollElements.splice(index, 1);
   }
 
   bucket?.registered.delete(el);

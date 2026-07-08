@@ -225,4 +225,30 @@ describe('handleRemovedNode (reaper)', () => {
       global.IntersectionObserver = originalIO;
     }
   });
+
+  test('reaps ALL scroll entries for a multi-scroll element (no stale tuple)', () => {
+    const scope = document.createElement('div');
+    document.body.appendChild(scope);
+    const bucket = resetScope(scope);
+    const context = {
+      elb: mockElb,
+      settings: createTestSettings('data-elb', scope),
+    };
+
+    // Two scroll triggers on one element push two [elem, depth] tuples.
+    const el = document.createElement('div');
+    el.setAttribute('data-elb', 'c');
+    el.setAttribute('data-elbaction', 'scroll(50):s;scroll(75):t');
+    scope.appendChild(el);
+
+    registerScanElement(context, el, 'data-elbaction', bucket, scope);
+    expect(bucket.scrollElements.filter(([e]) => e === el)).toHaveLength(2);
+
+    handleRemovedNode(context, el);
+
+    // Both tuples must be gone; a leftover fires a phantom scroll on the
+    // detached element when the scroll listener next runs.
+    expect(bucket.scrollElements.filter(([e]) => e === el)).toHaveLength(0);
+    expect(isRegistered(el)).toBe(false);
+  });
 });
