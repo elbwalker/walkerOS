@@ -189,6 +189,25 @@ export function getGlobals(
   return values;
 }
 
+export function getUser(
+  prefix: string = Const.Commands.Prefix,
+  scope?: Scope,
+): WalkerOS.User {
+  if (!scope) return {};
+  const userName = getElbAttributeName(prefix, Const.Commands.User, false);
+  const userSelector = `[${userName}]`;
+  let values: WalkerOS.User = {};
+
+  queryAll(scope, userSelector, (element) => {
+    values = assign(
+      values,
+      getElbValues(prefix, element, Const.Commands.User, false),
+    );
+  });
+
+  return values;
+}
+
 export function getPageViewData(
   prefix: string,
   scope: Scope,

@@ -494,10 +494,10 @@ farther up the tree, including an explicit entity property on a higher element.
 ## Globals
 
 There might be properties that don't belong to just one event but to **all
-events on a page**. Those properties are called **globals** and will be
-**collected once**, right before the first event, got fired. Globals are
-arbitrary, like the data property. What is unique about them is that you can
-define them anywhere on a page using the `data-elbglobals` attribute.
+events on a page**. Those properties are called **globals**, and are **read
+from the DOM for every event**. Globals are arbitrary, like the data property.
+What is unique about them is that you can define them anywhere on a page using
+the `data-elbglobals` attribute.
 
 <CodeSnippet
   code={`<div data-elbglobals="outof:scope"></div>
@@ -520,7 +520,48 @@ This example will lead to the following event:
 
 :::info
 
-For performance reasons, the globals are only collected **once per run**.
+Globals are collected fresh from the DOM on every event, so a `data-elbglobals`
+value changed between events is reflected in the next one.
+
+:::
+
+## User
+
+`data-elbuser` sets **user identity** that is applied to the **page view and
+every event after it**. Unlike globals, which are re-read from the DOM for
+every event, the user is collected **once per run**, right before the page
+view, and stored as persistent collector state, the same state the
+<Link to="/docs/collector/commands#user">walker user</Link> command writes to.
+Tag any element with the identifiers you have available:
+
+<CodeSnippet
+  code={`<div data-elbuser="id:u123;loggedin:true"></div>`}
+  language="html"
+/>
+
+The page view, and every event pushed after it, carries the user:
+
+<CodeSnippet
+  code={`{
+"event": "page view",
+"user": { "id": "u123", "loggedin": true }
+// other properties omitted
+}`}
+  language="javascript"
+/>
+
+Because the user is collected once, right before the page view, only the page
+view and later events carry it. Events that already fired earlier in the run,
+such as `window.elbLayer` pushes replayed before the page view, are not
+retroactively stamped. If multiple elements carry `data-elbuser`, their values
+are merged (last one in the DOM wins per key). An absent `data-elbuser`
+attribute leaves any existing user untouched; it never wipes a user set
+another way, such as by an earlier `walker user` call.
+
+:::warning
+
+Use fully anonymized & arbitrary IDs by default and check your options with
+persistent user IDs with your data protection officer.
 
 :::
 

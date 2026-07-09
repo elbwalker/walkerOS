@@ -13,7 +13,7 @@ import {
 import type { ElbLayerController } from './elbLayer';
 import { createElbLayer } from './elbLayer';
 import { translateToCoreCollector } from './translation';
-import { getPageViewData } from './walker';
+import { getPageViewData, getUser } from './walker';
 import { getConfig } from './config';
 
 export * as SourceBrowser from './types';
@@ -82,6 +82,7 @@ export {
   getAllEvents,
   getEvents,
   getGlobals,
+  getUser,
   getElbAttributeName,
   getElbValues,
 } from './walker';
@@ -169,6 +170,16 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     );
   };
 
+  // Collect declarative user identity (data-elbuser) from the scope and set it as
+  // persistent collector state via the existing `walker user` command. Returns the
+  // dispatch promise so the run chain can order it strictly before the pageview,
+  // or undefined when no data-elbuser is present (absent = no push, never a wipe).
+  const sendUser = (s: Source.Settings<Types>) => {
+    const user = getUser(s.prefix || 'data-elb', s.scope as Scope);
+    if (!Object.keys(user).length) return;
+    return translateToCoreCollector(translationContext, 'walker user', user);
+  };
+
   // Lifecycle method — eager. The collector calls this AFTER all source
   // factories have registered. Side effects allowed: adopts window.elbLayer
   // via the controller, sets up DOM listeners, installs window.elb.
@@ -215,14 +226,18 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
         if (actualDocument && actualWindow) {
           processLoadTriggers(translationContext, settings);
           if (controller) {
-            // Replay the recorded backlog, then the pageview, on one chain so
-            // the pageview lands after any queued events. Fire-and-forget: run
-            // may arrive from inside a chain item, so awaiting would deadlock.
+            // Replay the recorded backlog, then set the user, then the pageview, on
+            // one FIFO chain so the pageview (and every later event) carries the user.
             controller.start();
             // Fire-and-forget: the enqueue link is now rejectable, so swallow
             // its rejection here to avoid an unhandled-rejection warning.
+            controller.enqueue(() => sendUser(settings)).catch(() => {});
             controller.enqueue(() => sendPageview(settings)).catch(() => {});
           } else {
+            // No controller: await the user command so collector.user is set before
+            // the pageview's enrichment reads it. `sendUser` returns undefined when
+            // no data-elbuser is present, so this is a no-op await in that case.
+            await sendUser(settings);
             sendPageview(settings);
           }
         }
