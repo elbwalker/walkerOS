@@ -11,18 +11,32 @@ export const destinationPiano: Destination = {
 
   config: {},
 
-  init({ config, env }) {
+  init({ config, env, logger }) {
     const settings = config.settings || {};
 
-    if (config.loadScript) addScript();
+    const configure = () => {
+      const pa = resolvePa(env);
+      if (pa && isDefined(settings.site) && isDefined(settings.collectDomain)) {
+        pa.setConfigurations({
+          site: settings.site,
+          collectDomain: settings.collectDomain,
+          ...(isObject(settings.options) ? settings.options : {}),
+        });
+      }
+    };
 
-    const pa = resolvePa(env);
-    if (pa && isDefined(settings.site) && isDefined(settings.collectDomain)) {
-      pa.setConfigurations({
-        site: settings.site,
-        collectDomain: settings.collectDomain,
-        ...(isObject(settings.options) ? settings.options : {}),
-      });
+    // When we inject the SDK it loads asynchronously, so `window.pa` is not
+    // available in the same tick. Defer configuration until `onload` fires,
+    // and warn if the script never loads (e.g. blocked or network failure) so
+    // the destination does not silently send unconfigured events.
+    if (config.loadScript) {
+      addScript(SCRIPT_SRC, configure, () =>
+        logger.warn(
+          'Piano Analytics script failed to load, destination not configured',
+        ),
+      );
+    } else {
+      configure();
     }
 
     return config;
@@ -46,10 +60,16 @@ function resolvePa(env: Env): PianoAnalytics | undefined {
   );
 }
 
-function addScript(src = SCRIPT_SRC) {
+function addScript(
+  src = SCRIPT_SRC,
+  onReady?: () => void,
+  onError?: () => void,
+) {
   if (typeof document === 'undefined') return;
   const script = document.createElement('script');
   script.src = src;
+  if (onReady) script.onload = () => onReady();
+  if (onError) script.onerror = () => onError();
   document.head.appendChild(script);
 }
 
