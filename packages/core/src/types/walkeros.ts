@@ -78,7 +78,15 @@ export interface SourceMap {
   collector: { type: 'collector' };
 }
 
-export interface Source extends Properties {
+/**
+ * Declared (named) fields of an event Source. Kept as a standalone interface so
+ * its key set stays index-signature-free: `Source extends Properties` adds a
+ * string index signature that collapses `keyof Source` to `string | number`,
+ * which would defeat the type↔schema drift guard. The guard compares
+ * `keyof SourceFields` against `keyof z.infer<typeof SourceFieldsSchema>`
+ * (see schemas/__tests__/config-drift.test-d.ts).
+ */
+export interface SourceFields {
   type: string;
   platform?: SourcePlatform;
   /** Deployment version of the source emitter (string). */
@@ -97,6 +105,8 @@ export interface Source extends Properties {
   tool?: string;
   command?: string;
 }
+
+export interface Source extends Properties, SourceFields {}
 
 export type PropertyType =
   | boolean

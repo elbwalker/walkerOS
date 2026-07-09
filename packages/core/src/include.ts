@@ -32,6 +32,11 @@ function flattenInto(
       flattenInto(out, `${prefix}_${k}`, v);
     }
   } else {
+    // Leaf. Arrays land here intentionally (isObject is false for arrays): they
+    // are kept whole, NOT index-flattened into `${prefix}_0`, `${prefix}_1`.
+    // GA4-style vendors can't consume indexed array params meaningfully and
+    // list-heavy `data` would explode into hundreds of keys. Do not "fix" this
+    // to recurse arrays without a concrete destination that needs it.
     out[prefix] = value;
   }
 }

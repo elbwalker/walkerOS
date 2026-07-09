@@ -41,17 +41,17 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
 
     <script type="module">
-      import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector@latest/+esm';
-      import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser@latest/+esm';
-      import { sourceSession } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-session@latest/+esm';
-      import { destinationAPI } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-api@latest/+esm';
-      import { destinationGtag } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag@latest/+esm';
       import {
+        startFlow,
+        sourceBrowser,
+        sourceSession,
+        destinationAPI,
+        destinationGtag,
         storageRead,
         storageWrite,
         storageDelete,
-      } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-core@latest/+esm';
-      import { getId } from 'https://cdn.jsdelivr.net/npm/@walkeros/core@latest/+esm';
+        getId,
+      } from './local/walkeros.esm.js';
 
       // Mirrors flow.json structure: sources, destinations, consent.
       const { collector, elb } = await startFlow({

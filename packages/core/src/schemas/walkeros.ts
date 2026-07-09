@@ -181,45 +181,54 @@ export const UserSchema = PropertiesSchema.and(
  * (browser, dataLayer, gtag, ...). All other fields are optional since each
  * source kind augments this differently via `SourceMap`.
  */
-export const SourceSchema = PropertiesSchema.and(
-  z.object({
-    type: z.string().describe('Source kind (browser, dataLayer, gtag, ...)'),
-    platform: z
-      .string()
-      .optional()
-      .describe(
-        'Runtime platform (web, server, app, ios, android, terminal, ...)',
-      ),
-    version: z
-      .string()
-      .optional()
-      .describe('Deployment version of the source emitter'),
-    schema: z
-      .string()
-      .optional()
-      .describe('Event model spec version (collector defaults to "4")'),
-    count: z
-      .number()
-      .int()
-      .nonnegative()
-      .optional()
-      .describe('Emission sequence per run'),
-    trace: z
-      .string()
-      .optional()
-      .describe('Trace id shared by every event of a run (W3C trace-id shape)'),
-    release: z
-      .record(z.string(), z.string())
-      .optional()
-      .describe(
-        'Per-flow config release map, keyed by flow name; accumulates across walkerOS crossings',
-      ),
-    url: z.string().optional(),
-    referrer: z.string().optional(),
-    tool: z.string().optional(),
-    command: z.string().optional(),
-  }),
-)
+/**
+ * Declared Source fields as a standalone object schema. Composed into
+ * SourceSchema below. Also the drift guard's index-free key source: unlike
+ * `PropertiesSchema.and(...)`, a plain object schema keeps `keyof z.infer` to
+ * the declared field names, so it can be compared against
+ * `WalkerOS.SourceFields` (see __tests__/config-drift.test-d.ts). Not added to
+ * the schemas/index.ts curated exports and carries no `.meta` id, so it is not
+ * registered for JSON-schema/OpenAPI generation.
+ */
+export const SourceFieldsSchema = z.object({
+  type: z.string().describe('Source kind (browser, dataLayer, gtag, ...)'),
+  platform: z
+    .string()
+    .optional()
+    .describe(
+      'Runtime platform (web, server, app, ios, android, terminal, ...)',
+    ),
+  version: z
+    .string()
+    .optional()
+    .describe('Deployment version of the source emitter'),
+  schema: z
+    .string()
+    .optional()
+    .describe('Event model spec version (collector defaults to "4")'),
+  count: z
+    .number()
+    .int()
+    .nonnegative()
+    .optional()
+    .describe('Emission sequence per run'),
+  trace: z
+    .string()
+    .optional()
+    .describe('Trace id shared by every event of a run (W3C trace-id shape)'),
+  release: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe(
+      'Per-flow config release map, keyed by flow name; accumulates across walkerOS crossings',
+    ),
+  url: z.string().optional(),
+  referrer: z.string().optional(),
+  tool: z.string().optional(),
+  command: z.string().optional(),
+});
+
+export const SourceSchema = PropertiesSchema.and(SourceFieldsSchema)
   .meta({
     id: 'WalkerOSSource',
     title: 'WalkerOS.Source',
