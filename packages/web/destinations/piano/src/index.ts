@@ -11,7 +11,7 @@ export const destinationPiano: Destination = {
 
   config: {},
 
-  init({ config, env }) {
+  init({ config, env, logger }) {
     const settings = config.settings || {};
 
     const configure = () => {
@@ -26,9 +26,15 @@ export const destinationPiano: Destination = {
     };
 
     // When we inject the SDK it loads asynchronously, so `window.pa` is not
-    // available in the same tick. Defer configuration until `onload` fires.
+    // available in the same tick. Defer configuration until `onload` fires,
+    // and warn if the script never loads (e.g. blocked or network failure) so
+    // the destination does not silently send unconfigured events.
     if (config.loadScript) {
-      addScript(SCRIPT_SRC, configure);
+      addScript(SCRIPT_SRC, configure, () =>
+        logger.warn(
+          'Piano Analytics script failed to load, destination not configured',
+        ),
+      );
     } else {
       configure();
     }
@@ -54,11 +60,16 @@ function resolvePa(env: Env): PianoAnalytics | undefined {
   );
 }
 
-function addScript(src = SCRIPT_SRC, onReady?: () => void) {
+function addScript(
+  src = SCRIPT_SRC,
+  onReady?: () => void,
+  onError?: () => void,
+) {
   if (typeof document === 'undefined') return;
   const script = document.createElement('script');
   script.src = src;
   if (onReady) script.onload = () => onReady();
+  if (onError) script.onerror = () => onError();
   document.head.appendChild(script);
 }
 
