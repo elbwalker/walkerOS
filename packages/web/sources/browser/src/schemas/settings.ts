@@ -32,6 +32,13 @@ export const SettingsSchema = z.object({
     .default(true)
     .describe('Enable automatic pageview tracking'),
 
+  capture: z
+    .boolean()
+    .default(true)
+    .describe(
+      'Read click/submit triggers in the capture phase so tagged elements are resolved at click time before app handlers run (set false for the previous bubble-phase behavior)',
+    ),
+
   elb: JavaScriptVarName.default('elb').describe(
     'Name for global elb function',
   ),

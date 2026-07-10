@@ -263,14 +263,14 @@ export function initGlobalTrigger(context: Context, settings: Settings): void {
     tryCatch(function (this: Scope, ev: unknown) {
       triggerClick.call(this, context, ev as MouseEvent);
     }) as EventListener,
-    { signal },
+    { signal, capture: settings.capture },
   );
   scope.addEventListener(
     'submit',
     tryCatch(function (this: Scope, ev: unknown) {
       triggerSubmit.call(this, context, ev as SubmitEvent);
     }) as EventListener,
-    { signal },
+    { signal, capture: settings.capture },
   );
 }
 

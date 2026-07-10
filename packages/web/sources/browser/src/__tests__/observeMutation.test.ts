@@ -19,6 +19,7 @@ const createTestSettings = (
   prefix,
   scope,
   pageview: false,
+  capture: true,
   elb: '',
   elbLayer: false,
 });

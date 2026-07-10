@@ -213,12 +213,15 @@ result will only include the property values from the specific entities.
   language="html"
 />
 
-### Up-bubbling click trigger
+### Click trigger
 
-By clicking an element, the event bubbles up to the body element. If the walker
-finds a `data-elbaction` with the click trigger, it will fire the action. Often,
-the image or a whole div-block gets clicked, not the parent a-element. Using the
-bubbling-up flow, the walker still triggers the actions for you.
+When you click an element, the browser source reads the click in the capture
+phase, so it resolves the `data-elbaction` and the surrounding entity from the
+DOM as it exists at click time, before your app's own click handlers run. If it
+finds a `data-elbaction` with the `click` trigger on the clicked element or any
+of its parents, it fires the action. Often the image or a whole div inside a
+button gets clicked, not the button itself; the parent walk still resolves the
+action and entity for you.
 
 <CodeSnippet
   code={`<button data-elb="product" data-elbaction="click">
@@ -227,10 +230,13 @@ bubbling-up flow, the walker still triggers the actions for you.
   language="html"
 />
 
-:::warning
+:::info
 
-The click trigger uses the bubbling-up process. It will not work with
-stopPropagation or preventDefault.
+Reading in the capture phase means `stopPropagation` in your app or a
+third-party widget no longer prevents a tagged click from being captured, and
+the entity is read before a click-driven re-render can unmount it (a common
+cause of events falling back to `page` in single-page apps). To restore the
+previous bubbling behavior, set `capture: false` on the browser source.
 
 :::
 
