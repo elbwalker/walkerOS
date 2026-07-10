@@ -306,41 +306,7 @@ export async function bundleCore(
     }
 
     // Step 1.6: Auto-add step packages (sources, destinations, transformers, stores)
-    const stepPackages = collectAllStepPackages(flowSettings);
-    for (const pkg of stepPackages) {
-      const isLocalPath = pkg.startsWith('.') || pkg.startsWith('/');
-
-      if (isLocalPath) {
-        // Normalize: convert path-based package: to packages section entry.
-        // The synthetic key acts as the package name for downstream codegen,
-        // so the regular default-import flow wires it up automatically.
-        const varName = packageNameToVariable(pkg);
-        if (!buildOptions.packages[varName]) {
-          buildOptions.packages[varName] = {
-            path: pkg,
-          };
-        }
-
-        // Rewrite all components that reference the raw path to point at the
-        // synthetic packages-section key instead.
-        for (const section of [
-          'sources',
-          'destinations',
-          'transformers',
-          'stores',
-        ] as const) {
-          const steps = getFlowSection(flowSettings, section);
-          if (!steps) continue;
-          for (const step of Object.values(steps)) {
-            if (step.package === pkg) {
-              step.package = varName;
-            }
-          }
-        }
-      } else if (!buildOptions.packages[pkg]) {
-        buildOptions.packages[pkg] = {};
-      }
-    }
+    applyStepPackages(flowSettings, buildOptions.packages, logger);
 
     // Step 2: Download packages
     logger.debug('Downloading packages');
@@ -1085,6 +1051,119 @@ export function collectAllStepPackages(flowSettings: Flow): Set<string> {
 }
 
 /**
+ * Auto-adds every step-declared package (sources, destinations, transformers,
+ * stores) to `packages`, mutating `flowSettings` in place so each step's
+ * `package` field points at the key that ends up in `packages`.
+ *
+ * Local paths (`.` or `/` prefixed) are normalized to a synthetic
+ * `packageNameToVariable` key so the regular default-import codegen wires
+ * them up automatically.
+ *
+ * npm specs go through `parsePackageSpec` to split an inline version
+ * (`@walkeros/x@1.2.3`) from the bare name. Precedence policy:
+ * - An explicit `config.bundle.packages` version always wins; a disagreeing
+ *   inline version only warns (bundle pin is authoritative).
+ * - An unversioned bundle entry is filled from the first inline version seen
+ *   for that bare name, preserving any other fields already on the entry.
+ * - Two different inline versions for the same bare name, with no bundle
+ *   pin to arbitrate, are ambiguous — throw naming both steps' versions
+ *   rather than silently picking one.
+ * - Identical inline versions across steps are fine (no-op).
+ * Alias/git/file suffixes are not special-cased: `parsePackageSpec` splits on
+ * the last `@` and the resolver handles or rejects the rest downstream.
+ */
+export function applyStepPackages(
+  flowSettings: Flow,
+  packages: BuildOptions['packages'],
+  logger: Logger.Instance,
+): void {
+  const stepPackages = collectAllStepPackages(flowSettings);
+  // Bundle-pinned version per bare name, captured the first time each name is
+  // encountered — i.e. before this function's own fill-ins can be mistaken
+  // for a real `config.bundle.packages` pin on a later iteration.
+  const originalVersions = new Map<string, string | undefined>();
+  // Inline version already seen per bare name (with no real bundle pin),
+  // used to detect a second, different inline version for the same name.
+  const inlineSeen = new Map<string, string>();
+
+  const rewriteSteps = (from: string, to: string): void => {
+    for (const section of [
+      'sources',
+      'destinations',
+      'transformers',
+      'stores',
+    ] as const) {
+      const steps = getFlowSection(flowSettings, section);
+      if (!steps) continue;
+      for (const step of Object.values(steps)) {
+        if (step.package === from) {
+          step.package = to;
+        }
+      }
+    }
+  };
+
+  for (const pkg of stepPackages) {
+    const isLocalPath = pkg.startsWith('.') || pkg.startsWith('/');
+
+    if (isLocalPath) {
+      // Normalize: convert path-based package: to packages section entry.
+      // The synthetic key acts as the package name for downstream codegen,
+      // so the regular default-import flow wires it up automatically.
+      const varName = packageNameToVariable(pkg);
+      if (!packages[varName]) {
+        packages[varName] = {
+          path: pkg,
+        };
+      }
+
+      // Rewrite all components that reference the raw path to point at the
+      // synthetic packages-section key instead.
+      rewriteSteps(pkg, varName);
+      continue;
+    }
+
+    const { name, version } = parsePackageSpec(pkg);
+
+    if (!originalVersions.has(name)) {
+      originalVersions.set(name, packages[name]?.version);
+    }
+    const bundlePinnedVersion = originalVersions.get(name);
+
+    if (name !== pkg) {
+      // Rewrite every step that declared the versioned spec to the bare
+      // name, mirroring the local-path rewrite above.
+      rewriteSteps(pkg, name);
+    }
+
+    if (version && !bundlePinnedVersion) {
+      const seen = inlineSeen.get(name);
+      if (seen !== undefined && seen !== version) {
+        throw new Error(
+          `Conflicting inline versions for ${name}: "${seen}" and "${version}" are ` +
+            `declared by different steps. Pin one version in config.bundle.packages.`,
+        );
+      }
+      inlineSeen.set(name, version);
+    }
+
+    const existing = packages[name];
+    if (!existing) {
+      packages[name] = version ? { version } : {};
+    } else if (version) {
+      if (!existing.version) {
+        existing.version = version; // fill an unversioned bundle entry
+      } else if (existing.version !== version) {
+        logger.warn(
+          `Package ${name}: config.bundle.packages pins ${existing.version}; ` +
+            `a step declares ${version} inline. Using the bundle pin.`,
+        );
+      }
+    }
+  }
+}
+
+/**
  * Detects named-import requests across sources, destinations, transformers, stores.
  * Returns a map of package names to sets of export names that must be named-imported.
  */
@@ -1258,12 +1337,30 @@ export async function computeDevPackages(
 const BROWSER_SOURCE_PACKAGE = '@walkeros/web-source-browser';
 
 /**
+ * Split a step package spec into bare name and optional version suffix.
+ * `@walkeros/x@1.2.3` → { name: '@walkeros/x', version: '1.2.3' }.
+ * The scope `@` at index 0 is never a separator. A trailing `@` is ignored.
+ * Alias/git/file suffixes are not interpreted — the resolver handles or
+ * rejects them downstream.
+ */
+export function parsePackageSpec(spec: string): {
+  name: string;
+  version?: string;
+} {
+  const at = spec.lastIndexOf('@');
+  if (at <= 0) return { name: spec };
+  const version = spec.slice(at + 1);
+  return version
+    ? { name: spec.slice(0, at), version }
+    : { name: spec.slice(0, at) };
+}
+
+/**
  * Strip an optional version/range suffix from a package spec so
  * `@walkeros/web-source-browser@2.0.0` matches the bare package name.
  */
 function packageSpecName(spec: string): string {
-  const at = spec.lastIndexOf('@');
-  return at > 0 ? spec.slice(0, at) : spec;
+  return parsePackageSpec(spec).name;
 }
 
 /** Read `config.settings.elb` from a source step, or undefined if not a string. */
@@ -2018,30 +2115,29 @@ export function generateWrapEntry(
       var __clearPreviewCookie = function () {
         document.cookie = 'elbPreview=; path=/; max-age=0; SameSite=Lax' + __secure;
       };
-      try {
-        // Bound the HEAD probe so a hung CDN can never block the production
-        // walker. On abort/timeout we fall through to the catch branch and
-        // self-heal by clearing the cookie.
-        var __ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        var __timeoutId = __ctrl ? setTimeout(function () { __ctrl.abort(); }, 2000) : null;
-        var __probe = await fetch(__previewSrc, {
-          method: 'HEAD',
-          signal: __ctrl ? __ctrl.signal : undefined,
-        });
-        if (__timeoutId) clearTimeout(__timeoutId);
-        if (__probe && __probe.ok) {
-          var __s = document.createElement('script');
-          __s.src = __previewSrc;
-          document.head.appendChild(__s);
-          return;
-        }
-        // Preview bundle missing (404/5xx) — self-heal by clearing cookie and
-        // falling through to the production walker in this same bundle.
-        __clearPreviewCookie();
-      } catch (__err) {
-        // Network error, timeout, or abort — fall through to production too.
-        __clearPreviewCookie();
-      }
+      // Swap via a <script> element: script loads are CORS-exempt, unlike
+      // fetch, so this works on any site regardless of CDN CORS headers.
+      // onerror covers 404/5xx/network; the timer covers a hung CDN. On
+      // timeout the pending script is removed so a late load is best-effort
+      // prevented from booting a second walker (removing a pending script does
+      // not reliably abort an in-flight fetch).
+      var __swapped = await new Promise(function (__resolve) {
+        var __s = document.createElement('script');
+        var __done = function (__ok) {
+          clearTimeout(__timeoutId);
+          if (!__ok && __s.parentNode) __s.parentNode.removeChild(__s);
+          __resolve(__ok);
+        };
+        var __timeoutId = setTimeout(function () { __done(false); }, 5000);
+        __s.onload = function () { __done(true); };
+        __s.onerror = function () { __done(false); };
+        __s.src = __previewSrc;
+        document.head.appendChild(__s);
+      });
+      if (__swapped) return;
+      // Preview bundle missing or unreachable — self-heal by clearing the
+      // cookie and falling through to the production walker in this bundle.
+      __clearPreviewCookie();
     }
   }
   // --- End preview mode preflight ---

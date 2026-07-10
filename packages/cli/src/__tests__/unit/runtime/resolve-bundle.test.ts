@@ -70,16 +70,18 @@ function buildTarballBuffer(
 }
 
 /**
- * Build a Response-like object whose body streams the given buffer.
- * The runtime only reads ok/status/statusText/body/headers.get, so this
- * typed shape covers every accessed member (jest's mockResolvedValue takes it
- * without a cast).
+ * Build a Response-like object whose body streams the given buffer, and
+ * whose arrayBuffer() resolves to the same bytes (fetchArchive buffers the
+ * whole archive via arrayBuffer() before extraction; body/headers.get cover
+ * the remaining accessed members). jest's mockResolvedValue takes this
+ * shape without a cast.
  */
 interface FakeResponse {
   ok: boolean;
   status: number;
   statusText: string;
   body: ReadableStream<Uint8Array>;
+  arrayBuffer: () => Promise<ArrayBuffer>;
   headers: { get: (name: string) => string | null };
 }
 
@@ -93,11 +95,18 @@ function responseFromBuffer(
       controller.close();
     },
   });
+  // Copy into a fresh, exactly-sized ArrayBuffer: Node may back small
+  // buffers (these fixtures are well under the pooling threshold) with a
+  // shared, larger ArrayBufferLike, so buffer.buffer alone can carry
+  // unrelated bytes and isn't guaranteed to be a plain ArrayBuffer.
+  const arrayBuffer = new ArrayBuffer(buffer.byteLength);
+  new Uint8Array(arrayBuffer).set(buffer);
   return {
     ok: true,
     status: 200,
     statusText: 'OK',
     body,
+    arrayBuffer: () => Promise.resolve(arrayBuffer),
     headers: {
       get: (name: string) => (name === 'content-type' ? contentType : null),
     },

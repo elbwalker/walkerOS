@@ -40,14 +40,22 @@ function extractEvaluableScript(entry: string): string {
   `;
 }
 
-function createDom(url = 'https://example.com'): JSDOM {
+/**
+ * @param loadResources - When false, jsdom performs NO external resource
+ *   loading, so an injected preview <script> never fires load/error on its
+ *   own. Tests asserting on the swap outcome pass false and dispatch the
+ *   load/error event themselves (or let the preflight's own timer fire),
+ *   keeping the outcome deterministic instead of racing jsdom's real network
+ *   attempt against the fake CDN URL.
+ */
+function createDom(url = 'https://example.com', loadResources = true): JSDOM {
   const virtualConsole = new VirtualConsole();
   // Suppress jsdom errors about script loading (the preview script URL is fake)
   virtualConsole.on('jsdomError', () => {});
   return new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
     url,
     runScripts: 'dangerously',
-    resources: 'usable',
+    ...(loadResources ? { resources: 'usable' as const } : {}),
     virtualConsole,
   });
 }
@@ -265,8 +273,8 @@ describe('Preview preflight jsdom integration', () => {
     });
   });
 
-  describe('404 self-heal (missing preview bundle)', () => {
-    it('clears cookie and falls through to startFlow when HEAD returns 404', async () => {
+  describe('self-heal (preview script swap outcome)', () => {
+    it('clears cookie and falls through to startFlow when the preview script errors (missing bundle)', async () => {
       const token = 'k9x2m4p7abcd';
       const entry = generateWrapEntry('./skeleton.mjs', {
         previewOrigin: 'cdn.walkeros.io',
@@ -274,7 +282,7 @@ describe('Preview preflight jsdom integration', () => {
       });
 
       // Pre-set the cookie so the cookie-valid branch is taken (no query param)
-      const dom = createDom('https://example.com/page');
+      const dom = createDom('https://example.com/page', false);
       const win = dom.window;
       win.document.cookie = `elbPreview=${token}; path=/`;
 
@@ -288,30 +296,38 @@ describe('Preview preflight jsdom integration', () => {
       ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
 
-      const fetchCalls: Array<{ url: string; method?: string }> = [];
+      // The swap must not depend on fetch at all (script loads are
+      // CORS-exempt; fetch is not). Record any calls to prove none happen.
+      const fetchCalls: unknown[] = [];
       (win as unknown as Record<string, unknown>).fetch = (
-        url: string,
-        init?: { method?: string },
+        ...args: unknown[]
       ) => {
-        fetchCalls.push({ url, method: init?.method });
-        return Promise.resolve({ ok: false, status: 404 });
+        fetchCalls.push(args);
+        return Promise.resolve({ ok: true, status: 200 });
       };
 
       const script = win.document.createElement('script');
       script.textContent = extractEvaluableScript(entry);
       win.document.body.appendChild(script);
 
-      // Wait for async fetch + IIFE chain to settle
-      await new Promise((r) => setTimeout(r, 50));
-
-      // HEAD was issued to the preview URL
-      expect(fetchCalls.length).toBe(1);
-      expect(fetchCalls[0].method).toBe('HEAD');
-      expect(fetchCalls[0].url).toBe(
+      // The preflight injects the pending preview <script> synchronously.
+      // Simulate the CDN answering 404/5xx: a script element surfaces every
+      // load failure (missing bundle, HTTP error, network) as an error event.
+      const pendingScript =
+        win.document.querySelector<HTMLScriptElement>('head > script[src]');
+      if (!pendingScript) throw new Error('preview script was not injected');
+      expect(pendingScript.src).toBe(
         `https://cdn.walkeros.io/preview/proj_abc/walker.${token}.js`,
       );
+      pendingScript.dispatchEvent(new win.Event('error'));
 
-      // No preview <script> injected
+      // Wait for the swap promise + IIFE chain to settle
+      await new Promise((r) => setTimeout(r, 50));
+
+      // No fetch probe — the swap is gated on the script element itself
+      expect(fetchCalls.length).toBe(0);
+
+      // The failed script was removed from <head>
       const injected = win.document.querySelectorAll('head > script[src]');
       expect(injected.length).toBe(0);
 
@@ -324,14 +340,14 @@ describe('Preview preflight jsdom integration', () => {
       win.close();
     });
 
-    it('clears cookie and falls through to startFlow when fetch rejects (network error)', async () => {
+    it('clears cookie and falls through to startFlow when the preview script fails to load (network error)', async () => {
       const token = 'Ab3Df5Gh7j9L';
       const entry = generateWrapEntry('./skeleton.mjs', {
         previewOrigin: 'cdn.walkeros.io',
         previewScope: 'proj_abc',
       });
 
-      const dom = createDom('https://example.com/page');
+      const dom = createDom('https://example.com/page', false);
       const win = dom.window;
       win.document.cookie = `elbPreview=${token}; path=/`;
 
@@ -345,16 +361,20 @@ describe('Preview preflight jsdom integration', () => {
       ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
 
-      (win as unknown as Record<string, unknown>).fetch = () =>
-        Promise.reject(new Error('network failure'));
-
       const script = win.document.createElement('script');
       script.textContent = extractEvaluableScript(entry);
       win.document.body.appendChild(script);
 
+      // A network-level failure fires the same error event on the script
+      // element as an HTTP error would — the swap contract treats both alike.
+      const pendingScript =
+        win.document.querySelector<HTMLScriptElement>('head > script[src]');
+      if (!pendingScript) throw new Error('preview script was not injected');
+      pendingScript.dispatchEvent(new win.Event('error'));
+
       await new Promise((r) => setTimeout(r, 50));
 
-      // No preview <script> injected
+      // The failed script was removed from <head>
       const injected = win.document.querySelectorAll('head > script[src]');
       expect(injected.length).toBe(0);
 
@@ -367,14 +387,14 @@ describe('Preview preflight jsdom integration', () => {
       win.close();
     });
 
-    it('injects preview script and skips startFlow when HEAD returns 200', async () => {
+    it('keeps the preview script and skips startFlow when it loads', async () => {
       const token = 'k9x2m4p7abcd';
       const entry = generateWrapEntry('./skeleton.mjs', {
         previewOrigin: 'cdn.walkeros.io',
         previewScope: 'proj_abc',
       });
 
-      const dom = createDom('https://example.com/page');
+      const dom = createDom('https://example.com/page', false);
       const win = dom.window;
       win.document.cookie = `elbPreview=${token}; path=/`;
 
@@ -388,26 +408,19 @@ describe('Preview preflight jsdom integration', () => {
       ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
 
-      const fetchCalls: Array<{ url: string; method?: string }> = [];
-      (win as unknown as Record<string, unknown>).fetch = (
-        url: string,
-        init?: { method?: string },
-      ) => {
-        fetchCalls.push({ url, method: init?.method });
-        return Promise.resolve({ ok: true, status: 200 });
-      };
-
       const script = win.document.createElement('script');
       script.textContent = extractEvaluableScript(entry);
       win.document.body.appendChild(script);
 
+      // Simulate the preview bundle loading successfully.
+      const pendingScript =
+        win.document.querySelector<HTMLScriptElement>('head > script[src]');
+      if (!pendingScript) throw new Error('preview script was not injected');
+      pendingScript.dispatchEvent(new win.Event('load'));
+
       await new Promise((r) => setTimeout(r, 50));
 
-      // HEAD probe fired
-      expect(fetchCalls.length).toBe(1);
-      expect(fetchCalls[0].method).toBe('HEAD');
-
-      // Preview script injected
+      // Preview script stays in <head>
       const injected = win.document.querySelectorAll('head > script[src]');
       expect(injected.length).toBe(1);
       expect((injected[0] as HTMLScriptElement).src).toBe(
@@ -423,14 +436,20 @@ describe('Preview preflight jsdom integration', () => {
       win.close();
     });
 
-    it('self-heals when fetch never resolves (hung CDN) via AbortController timeout', async () => {
+    it('self-heals when the preview script neither loads nor errors (hung CDN) via the swap timeout', async () => {
       const token = 'k9x2m4p7abcd';
       const entry = generateWrapEntry('./skeleton.mjs', {
         previewOrigin: 'cdn.walkeros.io',
         previewScope: 'proj_abc',
       });
 
-      const dom = createDom(`https://example.com/page?elbPreview=${token}`);
+      // No resource loading and no dispatched events: the pending script
+      // never settles, so only the preflight's own 5s timer can resolve the
+      // swap — exactly the hung-CDN profile.
+      const dom = createDom(
+        `https://example.com/page?elbPreview=${token}`,
+        false,
+      );
       const win = dom.window;
 
       let startFlowCalled = false;
@@ -443,42 +462,31 @@ describe('Preview preflight jsdom integration', () => {
       ) => d;
       (win as unknown as Record<string, unknown>).__mockConfigData = {};
 
-      // Mock fetch that never resolves on its own — only rejects when aborted.
-      // This simulates a hung CDN. The preflight's AbortController must fire
-      // and the catch branch must self-heal.
-      (win as unknown as Record<string, unknown>).fetch = (
-        _url: string,
-        init?: { signal?: AbortSignal },
-      ) => {
-        return new Promise((_resolve, reject) => {
-          const signal = init?.signal;
-          if (signal) {
-            signal.addEventListener('abort', () => {
-              reject(new win.DOMException('Aborted', 'AbortError'));
-            });
-          }
-        });
-      };
-
       const script = win.document.createElement('script');
       script.textContent = extractEvaluableScript(entry);
       win.document.body.appendChild(script);
 
-      // Wait longer than the preflight's 2s timeout so AbortController fires.
-      await new Promise((r) => setTimeout(r, 2200));
+      // The pending preview script is injected while the timer runs.
+      const pendingScript =
+        win.document.querySelector<HTMLScriptElement>('head > script[src]');
+      if (!pendingScript) throw new Error('preview script was not injected');
+
+      // Wait past the preflight's 5s swap timeout.
+      await new Promise((r) => setTimeout(r, 5400));
+
+      // The pending script was removed so a late load cannot boot a second
+      // walker next to the production one.
+      const scripts = win.document.querySelectorAll('head > script[src]');
+      expect(scripts.length).toBe(0);
 
       // Cookie cleared by self-heal
       expect(win.document.cookie).not.toContain(`elbPreview=${token}`);
-
-      // No preview script injected
-      const scripts = win.document.querySelectorAll('head > script[src]');
-      expect(scripts.length).toBe(0);
 
       // Production walker ran
       expect(startFlowCalled).toBe(true);
 
       win.close();
-    }, 5000);
+    }, 10000);
   });
 
   describe('regression: no preflight without preview options', () => {

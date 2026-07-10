@@ -170,7 +170,7 @@ async function extractToDir(
 }
 
 /**
- * Stream a gzip tar response body and extract it into destDir.
+ * Buffer a gzip tar response body fully, then extract it into destDir.
  */
 async function fetchArchive(
   response: Response,
@@ -180,12 +180,13 @@ async function fetchArchive(
     throw new Error('Archive response has no body to extract');
   }
 
-  // Readable.fromWeb's web-stream param type differs across lib versions
-  // (DOM ReadableStream vs node:stream/web ReadableStream); they are the same
-  // object at runtime. Anchor to fromWeb's own declared parameter type rather
-  // than reaching for `any`.
-  const webStream = response.body as Parameters<typeof Readable.fromWeb>[0];
-  return extractToDir(Readable.fromWeb(webStream), destDir);
+  // Buffer the whole archive before extraction. Piping the fetch body
+  // straight into tar couples undici's parser to tar's backpressure: if the
+  // socket ends while the consumer has the stream paused, undici asserts
+  // (`assert(!this.paused)`) and kills the process. Archives are a few MB,
+  // so buffering is cheap and decouples download from extraction.
+  const archive = Buffer.from(await response.arrayBuffer());
+  return extractToDir(Readable.from(archive), destDir);
 }
 
 /**

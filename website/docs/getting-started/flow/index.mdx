@@ -215,6 +215,24 @@ For development or custom packages, use `path` to reference a local directory:
 
 See [Local Packages](/docs/apps/cli#local-packages) in the CLI documentation for more details.
 
+### Step-level package versions
+
+When configuring individual steps (sources, transformers, or destinations), the `package` field accepts an optional inline version suffix:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "browser": {
+      "package": "@walkeros/web-source-browser@2.1.0",
+      "config": { "settings": { "pageview": true } }
+    }
+  }
+}`}
+  language="json"
+/>
+
+If the same package is pinned in `config.bundle.packages` to a different version, the bundle-level pin takes precedence and the inline version is ignored (with a build warning).
+
 ### Sources
 
 Sources capture events from various inputs. Each source needs:
