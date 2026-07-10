@@ -40,68 +40,48 @@
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
 
-    <script type="module">
-      import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector@latest/+esm';
-      import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser@latest/+esm';
-      import { sourceSession } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-session@latest/+esm';
-      import { destinationAPI } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-api@latest/+esm';
-      import { destinationGtag } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag@latest/+esm';
-      import {
-        storageRead,
-        storageWrite,
-        storageDelete,
-      } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-core@latest/+esm';
-      import { getId } from 'https://cdn.jsdelivr.net/npm/@walkeros/core@latest/+esm';
-
-      // Mirrors flow.json structure: sources, destinations, consent.
-      const { collector, elb } = await startFlow({
-        sources: {
-          browser: {
-            code: sourceBrowser,
-            config: { settings: { pageview: true } },
-          },
-          session: {
-            code: sourceSession,
-            config: { settings: { consent: 'marketing' } },
-          },
-        },
-        destinations: {
-          console: {
-            code: { push: (event) => console.log(event) },
-            config: { consent: { functional: true } },
-          },
-          api: {
-            code: destinationAPI,
-            config: {
-              consent: { functional: true },
-              settings: {
-                url: 'https://server-side-tagging-ybbfvkxhia-ey.a.run.app/quokka',
-                transport: 'beacon',
-              },
-            },
-          },
-          ga4: {
-            code: destinationGtag,
-            config: {
-              consent: { marketing: true },
-              loadScript: true,
-              settings: { ga4: { measurementId: 'G-4WP1Y3GPLW' } },
-            },
-          },
-        },
-      });
-
-      window.collector = collector;
-
+    <script>
+      // Queue elb() calls fired before walker.js loads.
+      function elb() {
+        (window.elbLayer = window.elbLayer || []).push(arguments);
+      }
+    </script>
+    <!-- walkerOS flow "Tagging demo", bundled and hosted by the walkerOS app.
+         The bundle carries the elbPreview loader: append ?elbPreview=<token>
+         (from an app Observe session) to swap in the session bundle. -->
+    <script
+      async
+      src="https://stage.cdn.walkeros.io/d/pl4y9p4n0dea/walker.js"
+    ></script>
+    <script>
       // CMP simulation — drives the Accept/Deny/Reset buttons.
       const consentKey = 'consentState';
+      const userIdKey = 'elbUserId';
+
+      function readLocal(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch {
+          return null;
+        }
+      }
+      function writeLocal(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+        } catch {}
+        return value;
+      }
+      function removeLocal(key) {
+        try {
+          window.localStorage.removeItem(key);
+        } catch {}
+      }
 
       function applyConsent(granted) {
         if (granted) {
-          const key = 'elbUserId';
           const id =
-            storageRead(key, 'local') ||
-            storageWrite(key, getId(5), 60, 'local');
+            readLocal(userIdKey) ||
+            writeLocal(userIdKey, Math.random().toString(36).slice(2, 7));
           elb('walker user', { id });
           elb('walker consent', { functional: true, marketing: true });
         } else {
@@ -115,26 +95,27 @@
       }
 
       function refresh() {
-        const state = storageRead(consentKey, 'local');
+        const state = readLocal(consentKey);
         if (state) applyConsent(state === 'accepted');
         document.getElementById('consent_state').innerText =
           state || 'unknown';
       }
 
       window.consentAccept = () => {
-        storageWrite(consentKey, 'accepted', 60, 'local');
+        writeLocal(consentKey, 'accepted');
         refresh();
       };
       window.consentDeny = () => {
-        storageWrite(consentKey, 'denied', 60, 'local');
+        writeLocal(consentKey, 'denied');
         refresh();
       };
       window.consentReset = () => {
-        storageDelete(consentKey, 'local');
+        removeLocal(consentKey);
         refresh();
       };
 
-      refresh();
+      // The consent state span lives at the bottom of the body; wait for it.
+      document.addEventListener('DOMContentLoaded', refresh);
 
       // The Recommendations grid (#product_list) carries data-elbobserve, so the
       // walker auto-registers any product appended below. No elb() call here: the
