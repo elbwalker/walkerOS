@@ -57,18 +57,36 @@ This web flow sends one event stream to four analytics tools at once, with no pe
   language="json"
 />
 
+## Run it
+
+Save the config as `flow.json` and push an order event through the built flow with GA4 mocked. Nothing is sent to any vendor:
+
+<CodeSnippet
+  code={`npx walkeros push flow.json -e '{"name":"order complete"}' --simulate destination.ga4`}
+  language="bash"
+/>
+
+You should see:
+
+<CodeSnippet
+  code={`success: true
+  Duration: 42ms`}
+  language="bash"
+/>
+
 ## What each tool receives
 
-With no mapping, each destination forwards the event under its own default. For an `order complete` event:
+The collector fans the same event out to all four destinations, and each one forwards it in its own native call (from the packages' examples):
 
-- GA4: `gtag('event', 'order_complete', { send_to: 'G-XXXXXX-1' })`
-- Amplitude: `amplitude.track('order complete', {})`
-- Mixpanel: `mixpanel.track('order complete', {})`
-- PostHog: `posthog.capture('order complete', {})`
+<CodeSnippet
+  code={`gtag('event', 'order_complete', { send_to: 'G-XXXXXX-1' })
+amplitude.track('order complete', {})
+mixpanel.track('order complete', {})
+posthog.capture('order complete', {})`}
+  language="javascript"
+/>
 
-The three product-analytics tools keep the walkerOS event name and send empty properties. GA4 lowercases the name and always adds `send_to`.
-
-To reshape events per tool, see [GA4 ecommerce](/docs/getting-started/ga4-ecommerce).
+That is the routing half of the job: one stream, four tools, no per-tool code. The payload half is mapping: per-destination rules reshape the same event into each tool's expected schema, like the full GA4 purchase payload in [GA4 ecommerce](/docs/getting-started/ga4-ecommerce). Without mapping the name arrives in each tool's native call; with mapping the properties do too.
 
 ## Next steps
 

@@ -57,11 +57,40 @@ This server flow scores every incoming event for bot and AI-agent traffic before
   language="json"
 />
 
+## Run it
+
+Save the config as `flow.json` and push an event through the built flow with the destination mocked. Nothing is sent anywhere:
+
+<CodeSnippet
+  code={`npx walkeros push flow.json -e '{"name":"page view"}' --simulate destination.console`}
+  language="bash"
+/>
+
+You should see:
+
+<CodeSnippet
+  code={`success: true
+  Duration: 42ms`}
+  language="bash"
+/>
+
 ## What you get
 
-Every event now carries `user.botScore` and `user.agentScore` (0-99, higher means more bot). To act on the scores, add a mapping condition on your real destinations that drops or segments events where `botScore` exceeds 50. See [Bot detection](/docs/transformers/bot) for the full filtering recipes.
+Every event now carries `user.botScore` and `user.agentScore` (0-99, higher means more bot). In production the demo destination logs each annotated event; a request from GPTBot looks like this (from the transformer's examples):
 
-Test the flow offline first with [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
+<CodeSnippet
+  code={`[demo] {
+  "name": "page view",
+  "user": {
+    "botScore": 95,
+    "agentScore": 95
+  },
+  ...
+}`}
+  language="bash"
+/>
+
+Offline runs have no user agent, so simulated events score the missing-UA baseline of 70. To act on the scores, add a mapping condition on your real destinations that drops or segments events where `botScore` exceeds 50. See [Bot detection](/docs/transformers/bot) for the full filtering recipes.
 
 ## Next steps
 

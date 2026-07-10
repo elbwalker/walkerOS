@@ -108,14 +108,15 @@ Both modes use the same architecture. You choose at deploy time, after your firs
 
 The collector lives **inside your application code**.
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { elb } = await startFlow({
   sources: { browser: { code: sourceBrowser } },
-});
-```
+});`}
+  language="typescript"
+/>
 
 **Best for:** Building into your app, full TypeScript control, dynamic configuration.
 
@@ -127,8 +128,8 @@ const { elb } = await startFlow({
 
 The collector is a **separate artifact** you configure with JSON.
 
-```json
-{
+<CodeSnippet
+  code={`{
   "version": 4,
   "flows": {
     "default": {
@@ -136,8 +137,9 @@ The collector is a **separate artifact** you configure with JSON.
       "sources": { "browser": { "package": "@walkeros/web-source-browser" } }
     }
   }
-}
-```
+}`}
+  language="json"
+/>
 
 Then: `walkeros bundle flow.json` → standalone file.
 

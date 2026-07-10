@@ -6,13 +6,52 @@ sidebar_position: 7
 
 # Deploy
 
-You have a working flow. Two ways to run it in production.
+You have a working flow. Every path below runs on infrastructure you control;
+managed hosting is the optional alternative at the end.
+
+## Build once
+
+Bundle your `flow.json` into a standalone artifact:
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json --output flow.mjs`}
+  language="bash"
+/>
 
 ## Run it yourself
 
-- **Docker**: run the `walkeros/flow:latest` image with `-e BUNDLE=` pointing at your built bundle. See [Docker](/docs/getting-started/quickstart/docker).
-- **Node**: run `walkeros run flow.json`, or serve the built bundle directly. See [Bundled mode](/docs/getting-started/modes/bundled).
-- **Integrated**: the flow deploys with your application and needs nothing extra. See [Integrated mode](/docs/getting-started/modes/integrated).
+**Docker**, the standard path:
+
+<CodeSnippet
+  code={`docker run -d -p 8080:8080 \\
+  -v $(pwd)/flow.mjs:/app/flow.mjs \\
+  -e BUNDLE=/app/flow.mjs \\
+  walkeros/flow:latest`}
+  language="bash"
+/>
+
+**Node, from the config** (bundles on start, no separate build step):
+
+<CodeSnippet code={`npx walkeros run flow.json`} language="bash" />
+
+**Node, from the bundle**:
+
+<CodeSnippet code={`node flow.mjs`} language="bash" />
+
+Integrated mode needs none of this: the flow deploys with your application and
+needs nothing extra. See [integrated mode](/docs/getting-started/modes/integrated).
+
+The same `flow.json` drives every path, so switching between them (or between
+providers) is a redeploy, not a migration.
+
+## Before production
+
+- Test offline: run the event through the built flow with each destination
+  mocked, see [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
+- Gate CI: `walkeros validate flow.json --strict` turns contract violations
+  into errors, see [validate](/docs/getting-started/flow/validate).
+- Wire consent before real traffic, see the [consent guide](/docs/guides/consent).
+- Keep `flow.json` in git: deploys stay reviewable and reversible.
 
 ## Managed hosting
 
@@ -22,5 +61,5 @@ Hosting flow settings as a shared team space, managed deploys, and live observab
 
 ## Next steps
 
+- [Docker](/docs/getting-started/quickstart/docker): image, environment variables, compose
 - [CLI reference](/docs/apps/cli): all commands and options
-- [Consent](/docs/guides/consent): privacy-compliant consent handling

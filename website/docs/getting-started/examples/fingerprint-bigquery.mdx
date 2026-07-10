@@ -53,6 +53,7 @@ This server flow turns raw request signals into a privacy-friendly identifier be
       "destinations": {
         "bigquery": {
           "package": "@walkeros/server-destination-gcp",
+          "import": "destinationBigQuery",
           "config": {
             "settings": {
               "projectId": "my-analytics-project",
@@ -69,9 +70,39 @@ This server flow turns raw request signals into a privacy-friendly identifier be
   language="json"
 />
 
+## Run it
+
+Save the config as `flow.json` and push an event through the built flow with the destination mocked. Nothing is written to BigQuery:
+
+<CodeSnippet
+  code={`npx walkeros push flow.json -e '{"name":"page view"}' --simulate destination.bigquery`}
+  language="bash"
+/>
+
+You should see:
+
+<CodeSnippet
+  code={`success: true
+  Duration: 42ms`}
+  language="bash"
+/>
+
 ## What you get
 
-Every event lands in BigQuery with a `user.hash` in place of a raw IP or user agent. Add a daily rotation field to the fingerprint `fields` (see the transformer page) so the hash resets each day instead of persisting indefinitely. Test the flow offline first with [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
+In production every event lands as one row in your table, using the standard walkerOS schema (name, entity, action, timestamp, user, and more). The destination receives an `appendRows` call, and the `user` column carries the hash in place of a raw IP or user agent (from the package's examples):
+
+<CodeSnippet
+  code={`['appendRows', [{
+  "name": "page view",
+  "entity": "page",
+  "action": "view",
+  "user": "{\\"hash\\":\\"158f99cc06e33fd6\\"}",
+  ...
+}]]`}
+  language="bash"
+/>
+
+Add a daily rotation field to the fingerprint `fields` (see the transformer page) so the hash resets each day instead of persisting indefinitely.
 
 ## Next steps
 

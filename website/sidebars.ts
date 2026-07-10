@@ -13,6 +13,7 @@ const sidebars: SidebarsConfig = {
           id: 'getting-started/index',
           label: 'What is walkerOS',
         },
+        'getting-started/first-checks',
         {
           type: 'category',
           label: 'Quick starts',
