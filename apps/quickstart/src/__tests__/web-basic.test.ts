@@ -6,6 +6,11 @@ import sourceBrowser from '@walkeros/web-source-browser';
 import destinationAPI from '@walkeros/web-destination-api';
 import destinationGtag from '@walkeros/web-destination-gtag';
 
+// Build-time version define (jest injects the package version). The collector
+// stamps source.release with this, so the expectation must track it rather than
+// a literal, else it breaks whenever the fixed version group is bumped (release).
+declare const __VERSION__: string;
+
 describe('walkerOS Web Basic Example', () => {
   test('complete working setup with all destinations', async () => {
     // Mock functions for testing environment
@@ -116,6 +121,12 @@ describe('walkerOS Web Basic Example', () => {
 
     // Test order complete event with full mapping using typical event structure
     const orderEvent = getEvent('order complete');
+    // Mirror the collector's source.release provenance stamp so the serialized
+    // expectation matches the pushed event (release is stamped last on source).
+    orderEvent.source = {
+      ...orderEvent.source,
+      release: { default: __VERSION__ },
+    };
     await elb(orderEvent);
 
     // Verify all destinations were called immediately

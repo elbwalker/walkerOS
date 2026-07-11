@@ -1,5 +1,13 @@
-import { resolveVersionConflicts, type VersionSpec } from '../package-manager';
+import {
+  resolveVersionConflicts,
+  collectAllSpecs,
+  type VersionSpec,
+  type Package,
+} from '../package-manager';
+import { applyStepPackages } from '../bundler';
+import type { BuildOptions } from '../../../types/bundle.js';
 import { createMockLogger } from '@walkeros/core';
+import type { Flow } from '@walkeros/core';
 import * as pacote from 'pacote';
 
 describe('resolveVersionConflicts — range conflicts', () => {
@@ -220,5 +228,77 @@ describe('resolveVersionConflicts — manifest failure', () => {
     const entry = result.topLevel.get('somepkg');
     expect(entry).toBeDefined();
     expect(entry!.version).toMatch(/^\^[12]\.0\.0$/);
+  });
+});
+
+// When a step-declared inline prerelease version
+// (`@walkeros/web-source-browser@4.3.0-next-1783517345197`) has no
+// `config.bundle.packages` pin, the inline version is split from the name
+// before resolution, so the resolver receives a bare name plus exact version.
+// This test drives the production path: the flow's inline-versioned step spec
+// goes through `applyStepPackages` (which splits it via `parsePackageSpec` and
+// rewrites the step), the resulting packages map is converted to the `Package[]`
+// array exactly as `bundleCore` does, and THAT feeds `collectAllSpecs` →
+// `resolveVersionConflicts` under strict ranges default-on.
+describe('resolveVersionConflicts — step-declared inline prerelease (regression)', () => {
+  const logger = createMockLogger();
+  const PKG_NAME = '@walkeros/web-source-browser';
+  const PKG_VERSION = '4.3.0-next-1783517345197';
+  const PKG_SPEC = `${PKG_NAME}@${PKG_VERSION}`;
+  let originalStrict: string | undefined;
+
+  beforeEach(() => {
+    originalStrict = process.env.BUNDLER_STRICT_RANGES;
+    delete process.env.BUNDLER_STRICT_RANGES; // strict ranges default ON
+
+    // collectAllSpecs fetches the direct package's own manifest to walk its
+    // transitive deps. Answer only for the exact well-formed versioned spec
+    // (`<bare name>@<version>`); no spec of the shape `<name@version>@latest`
+    // reaches the resolver, ensuring only valid forms are processed.
+    jest.spyOn(pacote, 'manifest').mockImplementation(async (spec: string) => {
+      if (spec === PKG_SPEC) {
+        return { name: PKG_NAME, version: PKG_VERSION } as never;
+      }
+      throw new Error(`mock pacote.manifest: unknown spec ${spec}`);
+    });
+  });
+
+  afterEach(() => {
+    if (originalStrict === undefined) delete process.env.BUNDLER_STRICT_RANGES;
+    else process.env.BUNDLER_STRICT_RANGES = originalStrict;
+    jest.restoreAllMocks();
+  });
+
+  it('resolves a step-declared inline prerelease version under strict ranges', async () => {
+    // Stage shape: the source step declares the version inline; there is no
+    // bundle pin (`packages` starts empty).
+    const flow: Flow = {
+      sources: {
+        browser: { package: PKG_SPEC },
+      },
+    };
+    const packages: BuildOptions['packages'] = {};
+
+    // Step 1.6 of bundleCore: normalize step-declared packages.
+    applyStepPackages(flow, packages, logger);
+
+    // Same conversion bundleCore performs before downloadPackagesWithResolution.
+    const packagesArray: Package[] = Object.entries(packages).map(
+      ([name, packageConfig]) => ({
+        name,
+        version: packageConfig.version || 'latest',
+        path: packageConfig.path,
+      }),
+    );
+
+    const allSpecs = await collectAllSpecs(packagesArray, logger);
+    const result = await resolveVersionConflicts(allSpecs, logger);
+
+    const resolved = result.topLevel.get(PKG_NAME);
+    expect(resolved).toBeDefined();
+    expect(resolved!.version).toBe(PKG_VERSION);
+    expect(result.nested.find((n) => n.name === PKG_NAME)).toBeUndefined();
+    // The step itself was rewritten to the bare name.
+    expect(flow.sources?.browser?.package).toBe(PKG_NAME);
   });
 });

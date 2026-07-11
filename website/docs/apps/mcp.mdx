@@ -58,6 +58,16 @@ manually:
 
 Each server starts on STDIO and registers its tools automatically.
 
+### Your first flow via AI
+
+Everything in this loop runs locally, no account:
+
+1. Install the plugin: `/plugin install walkeros@elbwalker-walkerOS`
+2. Ask: "Create a web flow with a GA4 destination, validate it, and simulate a
+   page view."
+3. The assistant runs `flow_load` → `flow_validate` → `flow_simulate` and shows
+   you the result.
+
 ## Environment variables
 
 | Variable | Used by | Required | Default | Purpose |
@@ -119,7 +129,9 @@ and the \`walkeros-mcp\` bin entry, unchanged for end users.
 
 ### Tools
 
-#### `flow_load`
+#### Local tools (no account)
+
+##### `flow_load`
 
 Load an existing flow configuration from a local file path, URL, inline JSON, or
 the walkerOS API, or create a new empty flow by specifying a platform.
@@ -136,7 +148,7 @@ so a loaded config can be edited and sent straight back to
 `flow_manage({ action: "update" })` without altering anything you did not
 change.
 
-#### `flow_validate`
+##### `flow_validate`
 
 Validate walkerOS events, flow configurations, mapping rules, or data contracts.
 
@@ -147,7 +159,7 @@ Validate walkerOS events, flow configurations, mapping rules, or data contracts.
 | `flow` | string | No | Flow name for multi-flow configs |
 | `path` | string | No | Entry path for package schema validation |
 
-#### `flow_bundle`
+##### `flow_bundle`
 
 Bundle a walkerOS flow configuration into deployable JavaScript.
 
@@ -162,7 +174,7 @@ Bundle a walkerOS flow configuration into deployable JavaScript.
 without loading it to a file first. Bundle stats report the real total bundle
 size and the included package names (no per-package size estimate).
 
-#### `flow_simulate`
+##### `flow_simulate`
 
 Simulate events through a walkerOS flow without making real API calls.
 Returns summarized per-destination results.
@@ -202,7 +214,7 @@ without `_meta`. Supply it to test a request decoder standalone, for example a
 GA4 decoder that reads `ctx.ingest.url`: pass `ingest: { url: "..." }` alongside
 the event.
 
-#### `flow_push`
+##### `flow_push`
 
 Push a real event through a walkerOS flow to actual destinations.
 **This makes real API calls.** Best for server-side flows. Web destinations
@@ -215,7 +227,7 @@ require browser globals not available in Node.js.
 | `flow` | string | No | Flow name for multi-flow configs |
 | `platform` | `"web"` \| `"server"` | No | Override platform detection |
 
-#### `flow_examples`
+##### `flow_examples`
 
 List all step examples in a walkerOS flow configuration.
 
@@ -230,7 +242,7 @@ When a step has no inline examples, `flow_examples` falls back to the examples
 shipped with that step's package, tagged by source so you can tell inline
 examples from package-provided ones.
 
-#### `package_search`
+##### `package_search`
 
 Browse walkerOS packages or look up a specific one. Without package name: returns
 catalog filtered by type/platform. With package name: returns metadata.
@@ -246,7 +258,7 @@ In browse mode the tool returns the complete catalog. If it has to fall back to
 a partial source or omit packages, the response includes a `warnings` array
 explaining what is incomplete rather than silently returning a partial list.
 
-#### `package_get`
+##### `package_get`
 
 Fetch walkerOS package details from npm. By default returns schemas + hint texts +
 example summaries. Use `section` parameter for full content.
@@ -257,7 +269,7 @@ example summaries. Use `section` parameter for full content.
 | `version` | string | No | Package version (default: latest) |
 | `section` | `"hints"` \| `"examples"` \| `"all"` | No | Section to expand with full content |
 
-#### `diagnostics`
+##### `diagnostics`
 
 Report the MCP runtime surface. Read-only, takes no parameters, and works even
 when logged out. Reach for it when a request fails, to see which versions and
@@ -268,7 +280,13 @@ source served the last package catalog lookup.
 
 This tool has no parameters.
 
-#### `auth`
+#### Cloud tools
+
+:::cloud
+These tools manage flows in the hosted app: shared projects, deploys, secrets, and live-site previews. Self-hosting? Local `flow.json` files and the CLI cover the same flow-development loop. [What Cloud adds →](https://app.walkeros.io)
+:::
+
+##### `auth`
 
 Authenticate with the walkerOS cloud. Uses device code flow — the user receives
 a URL to open in a browser to complete login.
@@ -278,7 +296,7 @@ a URL to open in a browser to complete login.
 | `action` | `"status"` \| `"login"` \| `"logout"` | Yes | Auth action |
 | `deviceCode` | string | No | Device code from a previous pending login. Provide with `action: "login"` to resume polling without requesting a new code. |
 
-#### `project_manage`
+##### `project_manage`
 
 Manage walkerOS projects in the cloud.
 
@@ -288,7 +306,7 @@ Manage walkerOS projects in the cloud.
 | `projectId` | string | No | Project ID (`proj_...`). Required for: get, update, delete, set_default. Falls back to `WALKEROS_PROJECT_ID` env. |
 | `name` | string | No | Name for create/update operations |
 
-#### `flow_manage`
+##### `flow_manage`
 
 Manage walkerOS flow configurations and previews in the cloud.
 
@@ -314,7 +332,7 @@ Configs returned by `get` are round-trip safe: structural values (package
 names, platform, IDs) are returned literally, so a returned config can be edited
 and sent back to `update` unchanged.
 
-#### `deploy_manage`
+##### `deploy_manage`
 
 Deploy walkerOS flows and manage deployments.
 
@@ -346,7 +364,7 @@ When a flow has more than one active deployment and no `slug` is supplied, `get`
 }
 ```
 
-#### `secret_manage`
+##### `secret_manage`
 
 Manage a flow's secrets, the `$env.<NAME>` values its steps reference at deploy
 and run time.
@@ -492,12 +510,20 @@ which destinations received the event.
 
 ### Deploy a flow
 
+:::cloud
+Requires a walkerOS account. The local loop (create, validate, simulate) needs none.
+:::
+
 > "Deploy flow cfg_abc123 and wait for it to finish."
 
 The assistant calls `deploy_manage({ action: "deploy", flowId: "cfg_abc123" })` and
 streams progress updates through bundling, publishing, and activation.
 
 ### Preview a flow on a live site
+
+:::cloud
+Requires a walkerOS account. The local loop (create, validate, simulate) needs none.
+:::
 
 > "Create a preview of my demo settings on flow_abc123 and give me the link to
 > open on https://example.com."

@@ -25,10 +25,20 @@ It's built for analytics engineers, data leads, and developers who own analytics
   }}
 />
 
+## Try it now
+
+**[Send your first event in five minutes → Quickstart](/docs/getting-started/quickstart/)**
+
+Then: [send it to GA4 with mapping →](/docs/getting-started/ga4-ecommerce)
+
+:::tip Working with an AI assistant?
+Build and simulate a flow locally with the walkerOS MCP, no account needed: [With an AI assistant](/docs/apps/mcp).
+:::
+
 ## Why walkerOS?
 
 - **Open-Source:** MIT licensed, free forever, no restrictions
-- **Self-hostable:** Run it on your infrastructure, or use the hosted app
+- **Self-hostable:** Run it on your own infrastructure
 - **Config-as-Code:** Version control, PRs, deploy with confidence
 - **Composable:** Mix sources, destinations, and mappings freely
 - **Developer-first:** TypeScript and declarative tagging, with an optional hosted app and MCP/AI-assisted management
@@ -75,22 +85,38 @@ One transformation language works everywhere. This is what makes walkerOS truly 
 
 ---
 
+## Core concepts
+
+| Concept | What It Is | Learn More |
+|---------|------------|------------|
+| **Flow** | Sources + collector + destinations configuration | [Flow configuration](/docs/getting-started/flow/) |
+| **Event model** | How events are structured (`entity action` format) | [Event model](/docs/getting-started/event-model) |
+| **Mapping** | Event transformation rules | [Mapping](/docs/mapping) |
+| **Consent** | Privacy controls at destination and property level | [Consent management](/docs/guides/consent) |
+| **Sources** | Event capture from browser, server, or custom code | [Sources](/docs/sources) |
+| **Transformers** | Middleware for validating, enriching, routing, and redacting events | [Transformers](/docs/transformers) |
+| **Destinations** | Event delivery to analytics, APIs, warehouses | [Destinations](/docs/destinations) |
+| **Stores** | Shared key-value storage for caching, file serving, and session state | [Stores](/docs/stores) |
+
+---
+
 ## Two ways to use walkerOS
 
-Both modes use the same architecture. Choose based on how you want to configure and deploy.
+Both modes use the same architecture. You choose at deploy time, after your first event, see [operating modes](/docs/getting-started/modes/).
 
 ### Integrated mode
 
 The collector lives **inside your application code**.
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { elb } = await startFlow({
   sources: { browser: { code: sourceBrowser } },
-});
-```
+});`}
+  language="typescript"
+/>
 
 **Best for:** Building into your app, full TypeScript control, dynamic configuration.
 
@@ -102,8 +128,8 @@ const { elb } = await startFlow({
 
 The collector is a **separate artifact** you configure with JSON.
 
-```json
-{
+<CodeSnippet
+  code={`{
   "version": 4,
   "flows": {
     "default": {
@@ -111,8 +137,9 @@ The collector is a **separate artifact** you configure with JSON.
       "sources": { "browser": { "package": "@walkeros/web-source-browser" } }
     }
   }
-}
-```
+}`}
+  language="json"
+/>
 
 Then: `walkeros bundle flow.json` → standalone file.
 
@@ -122,31 +149,10 @@ Then: `walkeros bundle flow.json` → standalone file.
 
 ---
 
-## Core concepts
-
-| Concept | What It Is | Learn More |
-|---------|------------|------------|
-| **Flow** | Sources + collector + destinations configuration | [Flow configuration](/docs/getting-started/modes/bundled) |
-| **Event model** | How events are structured (`entity action` format) | [Event model](/docs/getting-started/event-model) |
-| **Mapping** | Event transformation rules | [Mapping](/docs/mapping) |
-| **Consent** | Privacy controls at destination and property level | [Consent management](/docs/guides/consent) |
-| **Sources** | Event capture from browser, server, or custom code | [Sources](/docs/sources) |
-| **Transformers** | Middleware for validating, enriching, routing, and redacting events | [Transformers](/docs/transformers) |
-| **Destinations** | Event delivery to analytics, APIs, warehouses | [Destinations](/docs/destinations) |
-| **Stores** | Shared key-value storage for caching, file serving, and session state | [Stores](/docs/stores) |
-
----
-
 ## Quick links
 
-**Just want to try it?**
-- [Quickstart](/docs/getting-started/quickstart/): your first event in five minutes
-- [GA4 ecommerce](/docs/getting-started/ga4-ecommerce): send a page view and a product add to GA4
-- [Integrated Quickstart](/docs/getting-started/modes/integrated#quickstart): npm install and go
-- [Bundled Quickstart](/docs/getting-started/modes/bundled#quickstart): JSON config and CLI
-
 **Deploying to production?**
-- [Docker Guide](/docs/apps/docker): Container deployment
+- [Deploy](/docs/getting-started/deploy): self-hosted or managed
 - [CLI Reference](/docs/apps/cli): Build and test commands
 
 **Already using walker.js?**

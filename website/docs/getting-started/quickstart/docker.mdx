@@ -1,44 +1,49 @@
 ---
 title: Docker
 description: Get walkerOS running with Docker in 5 minutes
+sidebar_position: 3
 ---
 
 # Docker
 
 ## Try the demo
 
-```bash
-docker run -p 8080:8080 -e BUNDLE=/app/demos/demo-collect.mjs walkeros/flow:latest
-```
+<CodeSnippet
+  code={`docker run -p 8080:8080 -e BUNDLE=/app/demos/demo-collect.mjs walkeros/flow:latest`}
+  language="bash"
+/>
 
 Output:
 
-```
-INFO [runner] Loading flow from /app/demos/demo-collect.mjs
+<CodeSnippet
+  code={`INFO [runner] Loading flow from /app/demos/demo-collect.mjs
 INFO [runner] Flow running
-INFO [runner] Port: 8080
-```
+INFO [runner] Port: 8080`}
+  language="bash"
+/>
 
 Test it:
 
-```bash
-curl -X POST http://localhost:8080/collect \
-  -H "Content-Type: application/json" \
-  -d '{"name":"page view","data":{"title":"Test Page"}}'
-```
+<CodeSnippet
+  code={`curl -X POST http://localhost:8080/collect \\
+  -H "Content-Type: application/json" \\
+  -d '{"name":"page view","data":{"title":"Test Page"}}'`}
+  language="bash"
+/>
 
 ## HTTP event collection
 
-```bash
-docker run -d -p 8080:8080 \
-  -e BUNDLE=/app/demos/demo-collect.mjs \
+<CodeSnippet
+  code={`docker run -d -p 8080:8080 \\
+  -e BUNDLE=/app/demos/demo-collect.mjs \\
   walkeros/flow
 
 # Send event
-curl -X POST http://localhost:8080/collect \
-  -H "Content-Type: application/json" \
-  -d '{"name":"page view","data":{"title":"Home"}}'
-```
+curl -X POST http://localhost:8080/collect \\
+  -H "Content-Type: application/json" \\
+  -d '{"name":"page view","data":{"title":"Home"}}'`}
+  language="bash"
+/>
 
 ## Built-in demos
 
@@ -55,27 +60,29 @@ Docker runtime requires **pre-built bundles**, not JSON configs.
 
 **Workflow:**
 
-1. Create JSON config: `flow.json`
+1. Create a [flow.json](/docs/getting-started/flow/) config
 2. Bundle with CLI: `walkeros bundle flow.json --output flow.mjs`
 3. Run in Docker: `docker run -e BUNDLE=/app/flow.mjs`
 
 ### Build custom image
 
-```dockerfile
-FROM walkeros/flow:latest
+<CodeSnippet
+  code={`FROM walkeros/flow:latest
 COPY flow.mjs /app/flow.mjs
-ENV BUNDLE=/app/flow.mjs
-```
+ENV BUNDLE=/app/flow.mjs`}
+  language="docker"
+/>
 
-```bash
-docker build -t my-walker .
-docker run -p 8080:8080 my-walker
-```
+<CodeSnippet
+  code={`docker build -t my-walker .
+docker run -p 8080:8080 my-walker`}
+  language="bash"
+/>
 
 ## Docker compose
 
-```yaml
-version: '3.8'
+<CodeSnippet
+  code={`version: '3.8'
 
 services:
   walkeros:
@@ -84,8 +91,9 @@ services:
       BUNDLE: /app/demos/demo-collect.mjs
     ports:
       - '8080:8080'
-    restart: unless-stopped
-```
+    restart: unless-stopped`}
+  language="yaml"
+/>
 
 ## Environment variables
 

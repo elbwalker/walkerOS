@@ -29,7 +29,7 @@ import {
 } from '../../config/index.js';
 import { isUrl } from '../../config/utils.js';
 import type { BuildOptions } from '../../types/bundle.js';
-import { bundleCore } from './bundler.js';
+import { applyCollectorProvenance, bundleCore } from './bundler.js';
 import type { BundleTarget } from './targets.js';
 import { resolveTarget } from './targets.js';
 import { uploadBundleToUrl, sanitizeUrl } from './upload.js';
@@ -45,6 +45,8 @@ export interface BundleCommandOptions {
   cache?: boolean;
   verbose?: boolean;
   silent?: boolean;
+  /** Config release id baked into config.collector.release (set-if-absent). */
+  release?: string;
 }
 
 /**
@@ -232,6 +234,10 @@ export async function bundleCommand(
           buildOptions.cache = options.cache;
         }
 
+        // Bake flow name + release into the collector before codegen so the
+        // deployed flow stamps real provenance on event.source.release.
+        applyCollectorProvenance(flowSettings, flowName, options.release);
+
         // Resolve output path
         const outputIsUrl = options.output ? isUrl(options.output) : false;
         const uploadUrl = outputIsUrl ? options.output : undefined;
@@ -414,6 +420,11 @@ export async function bundle(
     cache?: boolean;
     flowName?: string;
     /**
+     * Config release id baked into `config.collector.release` (set-if-absent),
+     * stamping this flow's entry in `event.source.release` at runtime.
+     */
+    release?: string;
+    /**
      * Named bundle target. If omitted, falls back to
      * `buildOverrides.skipWrapper` mapping (deprecated) or `'cdn'`.
      */
@@ -469,11 +480,15 @@ export async function bundle(
     withDev: preset.withDev,
     externalizeDev: preset.externalizeDev,
   };
-  const { flowSettings, buildOptions } = loadBundleConfig(rawConfig, {
+  const { flowSettings, buildOptions, flowName } = loadBundleConfig(rawConfig, {
     configPath,
     flowName: options.flowName,
     buildOverrides: mergedOverrides,
   });
+
+  // Bake flow name + release into the collector so the deployed flow stamps
+  // real provenance on event.source.release instead of the runtime fallback.
+  applyCollectorProvenance(flowSettings, flowName, options.release);
 
   // 3. Handle cache option
   if (options.cache !== undefined) {

@@ -13,6 +13,7 @@ const sidebars: SidebarsConfig = {
           id: 'getting-started/index',
           label: 'What is walkerOS',
         },
+        'getting-started/first-checks',
         {
           type: 'category',
           label: 'Quick starts',
@@ -27,6 +28,22 @@ const sidebars: SidebarsConfig = {
           ],
         },
         {
+          type: 'doc',
+          id: 'apps/mcp',
+          label: 'With an AI assistant',
+        },
+        'getting-started/event-model',
+        {
+          type: 'category',
+          label: 'Examples',
+          items: [
+            'getting-started/ga4-ecommerce',
+            'getting-started/examples/bot-detection',
+            'getting-started/examples/fingerprint-bigquery',
+            'getting-started/examples/mapping-comparison',
+          ],
+        },
+        {
           type: 'category',
           label: 'Operating modes',
           link: {
@@ -34,10 +51,11 @@ const sidebars: SidebarsConfig = {
             id: 'getting-started/modes/index',
           },
           items: [
-            'getting-started/modes/bundled',
             'getting-started/modes/integrated',
+            'getting-started/modes/bundled',
           ],
         },
+        'getting-started/deploy',
         {
           type: 'category',
           label: 'Flow',
@@ -51,9 +69,6 @@ const sidebars: SidebarsConfig = {
             'getting-started/flow/validate',
           ],
         },
-        'getting-started/event-model',
-        'getting-started/ga4-ecommerce',
-        'apps/mcp',
       ],
     },
 

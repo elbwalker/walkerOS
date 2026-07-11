@@ -18,6 +18,29 @@ const SECTIONS: Record<string, (e: WalkerOS.DeepPartialEvent) => unknown> = {
   }),
 };
 
+// Recurse into plain objects (maps), joining keys with an underscore, so a
+// nested map becomes fully flattened leaf keys. Arrays are leaves and kept
+// as-is; only plain objects recurse.
+function flattenInto(
+  out: Record<string, unknown>,
+  prefix: string,
+  value: unknown,
+): void {
+  if (isObject(value)) {
+    for (const [k, v] of Object.entries(value)) {
+      if (v === undefined) continue;
+      flattenInto(out, `${prefix}_${k}`, v);
+    }
+  } else {
+    // Leaf. Arrays land here intentionally (isObject is false for arrays): they
+    // are kept whole, NOT index-flattened into `${prefix}_0`, `${prefix}_1`.
+    // GA4-style vendors can't consume indexed array params meaningfully and
+    // list-heavy `data` would explode into hundreds of keys. Do not "fix" this
+    // to recurse arrays without a concrete destination that needs it.
+    out[prefix] = value;
+  }
+}
+
 export function flattenIncludeSections(
   event: WalkerOS.DeepPartialEvent,
   sections: string[],
@@ -33,9 +56,10 @@ export function flattenIncludeSections(
 
     for (const [key, raw] of Object.entries(bag as Record<string, unknown>)) {
       if (raw === undefined) continue;
-      // Context values are OrderedProperties tuples - extract the label.
+      // Context values are OrderedProperties tuples - extract the label first,
+      // then flatten (the label is usually a string leaf).
       const value = section === 'context' && Array.isArray(raw) ? raw[0] : raw;
-      out[`${section}_${key}`] = value;
+      flattenInto(out, `${section}_${key}`, value);
     }
   }
 

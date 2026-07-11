@@ -119,6 +119,18 @@ export const ConfigSchema = z
       .describe(
         'Maximum events retained in collector.queue (late-registration replay). FIFO drop on overflow. Default 1000.',
       ),
+    name: z
+      .string()
+      .optional()
+      .describe(
+        "Flow name; keys this flow's entry in event.source.release and the observer flowId.",
+      ),
+    release: z
+      .string()
+      .optional()
+      .describe(
+        'Config release id stamped into event.source.release for this flow.',
+      ),
   })
   .meta({
     id: 'CollectorConfig',

@@ -1,0 +1,94 @@
+---
+title: One event, four tools
+description: Fan a single event stream out to GA4, Amplitude, Mixpanel, and PostHog
+sidebar_position: 3
+---
+
+# One event, four tools
+
+This web flow sends one event stream to four analytics tools at once, with no per-tool mapping. The collector fans a single event out to every destination, and each tool receives it in its own native call shape.
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {},
+            "@walkeros/web-source-browser": {},
+            "@walkeros/web-destination-gtag": {},
+            "@walkeros/web-destination-amplitude": {},
+            "@walkeros/web-destination-mixpanel": {},
+            "@walkeros/web-destination-posthog": {}
+          }
+        }
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": { "settings": { "pageview": true } }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": { "settings": { "ga4": { "measurementId": "G-XXXXXX-1" } } }
+        },
+        "amplitude": {
+          "package": "@walkeros/web-destination-amplitude",
+          "config": { "settings": { "apiKey": "test-project" } }
+        },
+        "mixpanel": {
+          "package": "@walkeros/web-destination-mixpanel",
+          "config": { "settings": { "apiKey": "test-project" } }
+        },
+        "posthog": {
+          "package": "@walkeros/web-destination-posthog",
+          "config": { "settings": { "apiKey": "phc_test" } }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Run it
+
+Save the config as `flow.json` and push an order event through the built flow with GA4 mocked. Nothing is sent to any vendor:
+
+<CodeSnippet
+  code={`npx walkeros push flow.json -e '{"name":"order complete"}' --simulate destination.ga4`}
+  language="bash"
+/>
+
+You should see:
+
+<CodeSnippet
+  code={`success: true
+  Duration: 42ms`}
+  language="bash"
+/>
+
+## What each tool receives
+
+The collector fans the same event out to all four destinations, and each one forwards it in its own native call (from the packages' examples):
+
+<CodeSnippet
+  code={`gtag('event', 'order_complete', { send_to: 'G-XXXXXX-1' })
+amplitude.track('order complete', {})
+mixpanel.track('order complete', {})
+posthog.capture('order complete', {})`}
+  language="javascript"
+/>
+
+That is the routing half of the job: one stream, four tools, no per-tool code. The payload half is mapping: per-destination rules reshape the same event into each tool's expected schema, like the full GA4 purchase payload in [GA4 ecommerce](/docs/getting-started/ga4-ecommerce). Without mapping the name arrives in each tool's native call; with mapping the properties do too.
+
+## Next steps
+
+- [**GA4 ecommerce**](/docs/getting-started/ga4-ecommerce): Map an order into a full GA4 purchase payload
+- [**Mapping**](/docs/mapping): Transform events per destination

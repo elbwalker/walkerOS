@@ -1,8 +1,37 @@
 import { mkdirSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import type { SendDataValue, SendResponse } from '@walkeros/core';
+import type { SendServerOptions } from '@walkeros/server-core';
 import { createEmitter } from '../emitter.js';
 import { writeConfig, getConfigPath } from '../../lib/config-file.js';
+
+// Intercept the transport the API destination hands the serialized event to,
+// so a "real push" assertion can read the source the collector stamped without
+// opening a socket. The destination reads `sendServer` from
+// `@walkeros/server-core`; the arrow defers the `mockSendServer` reference to
+// call time so the const is initialized before the factory result is invoked.
+const mockSendServer = jest.fn(
+  (
+    _url: string,
+    _data?: SendDataValue,
+    _options?: SendServerOptions,
+  ): Promise<SendResponse> => Promise.resolve({ ok: true }),
+);
+
+jest.mock('@walkeros/server-core', () => {
+  const actual = jest.requireActual<typeof import('@walkeros/server-core')>(
+    '@walkeros/server-core',
+  );
+  return {
+    ...actual,
+    sendServer: (
+      url: string,
+      data?: SendDataValue,
+      options?: SendServerOptions,
+    ): Promise<SendResponse> => mockSendServer(url, data, options),
+  };
+});
 
 const testDir = join(tmpdir(), `emitter-test-${Date.now()}`);
 
@@ -21,6 +50,8 @@ describe('emitter', () => {
     // Ensure the config file does not exist between tests.
     const p = getConfigPath();
     if (existsSync(p)) rmSync(p, { force: true });
+    mockSendServer.mockClear();
+    mockSendServer.mockResolvedValue({ ok: true });
   });
 
   afterEach(() => {
@@ -56,15 +87,18 @@ describe('emitter', () => {
     expect(out).toContain('"name":"cmd invoke"');
     expect(out).toContain('"timing":42');
     expect(out).toContain('"source":{"type":"cli","platform":"terminal"');
-    expect(out).toContain('"version":"3.4.2"');
-    expect(out).not.toContain('"version":{');
+    // The emitter is its own flow: its version rides source.release under its
+    // own surface key (cli), not source.version.
+    expect(out).toContain('"release":{"cli":"3.4.2"}');
+    expect(out).not.toContain('"version":');
     expect(out).toContain('"consent":{"telemetry":true}');
     errSpy.mockRestore();
   });
 
-  it('swallows network errors and never throws', async () => {
+  it('swallows transport errors and never throws', async () => {
     writeConfig({ installationId: 'install-x', telemetryEnabled: true });
-    process.env.WALKEROS_APP_URL = 'http://127.0.0.1:1'; // unreachable
+    process.env.WALKEROS_APP_URL = 'http://telemetry.test';
+    mockSendServer.mockRejectedValueOnce(new Error('network down'));
     const emitter = await createEmitter({
       source: { type: 'cli', platform: 'terminal' },
       packageVersion: '3.4.2',
@@ -72,6 +106,26 @@ describe('emitter', () => {
     await expect(
       emitter.send('cmd invoke', { command: 'x', outcome: 'success' }),
     ).resolves.toBeUndefined();
+  });
+
+  it('sends source.release keyed by source type, without source.version', async () => {
+    writeConfig({ installationId: 'install-x', telemetryEnabled: true });
+    process.env.WALKEROS_APP_URL = 'http://telemetry.test';
+    const emitter = await createEmitter({
+      source: { type: 'cli', platform: 'terminal' },
+      packageVersion: '3.4.2',
+    });
+    await emitter.send('cmd invoke', { command: 'x', outcome: 'success' });
+
+    expect(mockSendServer).toHaveBeenCalledTimes(1);
+    const body = mockSendServer.mock.calls[0]?.[1];
+    if (typeof body !== 'string')
+      throw new Error('expected a serialized event body');
+    const parsed: unknown = JSON.parse(body);
+    expect(parsed).toMatchObject({
+      source: { type: 'cli', platform: 'terminal', release: { cli: '3.4.2' } },
+    });
+    expect(parsed).not.toHaveProperty('source.version');
   });
 
   it('passes user.session to the collector when provided (MCP case)', async () => {

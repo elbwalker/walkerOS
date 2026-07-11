@@ -18,6 +18,7 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
   prefix,
   scope: document,
   pageview: false,
+  capture: true,
   elb: '',
   elbLayer: false,
 });
@@ -124,6 +125,7 @@ describe('Trigger System', () => {
       prefix: 'data-elb',
       scope: document,
       pageview: true,
+      capture: true,
       elb: 'elb',
       elbLayer: 'elbLayer',
     });
@@ -256,6 +258,34 @@ describe('Trigger System', () => {
 
     // Verify scroll listener was added
     expect(events.scroll).toBeDefined();
+  });
+
+  test('scroll listener for a ShadowRoot scope attaches to the document, not the shadow root', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = `<div data-elb="content" data-elbaction="scroll:50">Content</div>`;
+
+    // A ShadowRoot never receives page scroll events, so a listener on it would
+    // never fire. The fix must route it to the owner document instead.
+    const rootAddEventListener = jest.spyOn(root, 'addEventListener');
+
+    initScopeTrigger(
+      {
+        elb: mockElb,
+        settings: { ...createTestSettings('data-elb'), scope: root },
+      },
+      createTestSettings('data-elb'),
+    );
+
+    // The document (mocked addEventListener) received the scroll listener...
+    expect(events.scroll).toBeDefined();
+    // ...and the shadow root did not.
+    expect(rootAddEventListener).not.toHaveBeenCalledWith(
+      'scroll',
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   describe('Trigger Parameters', () => {
@@ -588,6 +618,7 @@ describe('Trigger System', () => {
         prefix: 'data-elb',
         scope,
         pageview: false,
+        capture: true,
         elb: '',
         elbLayer: false,
       };

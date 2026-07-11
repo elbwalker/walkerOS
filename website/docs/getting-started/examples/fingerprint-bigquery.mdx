@@ -1,0 +1,110 @@
+---
+title: Fingerprint to BigQuery
+description: Hash IP and user agent into a privacy-friendly id, then land events in BigQuery
+sidebar_position: 2
+---
+
+# Fingerprint to BigQuery
+
+This server flow turns raw request signals into a privacy-friendly identifier before events reach BigQuery. The Express source extracts the client IP and user agent, the fingerprint transformer hashes them into `user.hash`, and the GCP destination writes the events to a table. The ingest keys (`ip`, `userAgent`) must match the fingerprint `fields` (`ingest.ip`, `ingest.userAgent`) exactly, or the hash is computed over empty strings.
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {},
+            "@walkeros/server-source-express": {},
+            "@walkeros/server-transformer-fingerprint": {},
+            "@walkeros/server-destination-gcp": {}
+          }
+        }
+      },
+      "sources": {
+        "express": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": { "port": 8080 },
+            "ingest": {
+              "map": {
+                "ip": { "key": "ip" },
+                "userAgent": { "key": "headers.user-agent" }
+              }
+            }
+          }
+        }
+      },
+      "transformers": {
+        "fingerprint": {
+          "package": "@walkeros/server-transformer-fingerprint",
+          "config": {
+            "settings": {
+              "fields": ["ingest.ip", "ingest.userAgent"],
+              "output": "user.hash",
+              "length": 16
+            }
+          }
+        }
+      },
+      "destinations": {
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "import": "destinationBigQuery",
+          "config": {
+            "settings": {
+              "projectId": "my-analytics-project",
+              "datasetId": "events",
+              "tableId": "raw_events"
+            }
+          }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Run it
+
+Save the config as `flow.json` and push an event through the built flow with the destination mocked. Nothing is written to BigQuery:
+
+<CodeSnippet
+  code={`npx walkeros push flow.json -e '{"name":"page view"}' --simulate destination.bigquery`}
+  language="bash"
+/>
+
+You should see:
+
+<CodeSnippet
+  code={`success: true
+  Duration: 42ms`}
+  language="bash"
+/>
+
+## What you get
+
+In production every event lands as one row in your table, using the standard walkerOS schema (name, entity, action, timestamp, user, and more). The destination receives an `appendRows` call, and the `user` column carries the hash in place of a raw IP or user agent (from the package's examples):
+
+<CodeSnippet
+  code={`['appendRows', [{
+  "name": "page view",
+  "entity": "page",
+  "action": "view",
+  "user": "{\\"hash\\":\\"158f99cc06e33fd6\\"}",
+  ...
+}]]`}
+  language="bash"
+/>
+
+Add a daily rotation field to the fingerprint `fields` (see the transformer page) so the hash resets each day instead of persisting indefinitely.
+
+## Next steps
+
+- [**Fingerprint transformer**](/docs/transformers/fingerprint): Rotation, IP anonymization, and hash fields
+- [**GCP destination**](/docs/destinations/server/gcp): BigQuery table setup and mapping

@@ -1,5 +1,10 @@
-import type { Flow } from '@walkeros/core';
+import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
+
+// Build-time version define. The upstream collector stamps source.release with
+// this on push, so the expected payload must mirror it rather than a literal,
+// else it breaks whenever the fixed version group is bumped (release).
+declare const __VERSION__: string;
 
 /**
  * Pub/Sub step examples. Each example's `out` is the array of recorded mock
@@ -35,8 +40,17 @@ const pageEvent = getEvent('page view', {
   },
 });
 
-function expectedPayload(event: unknown): Buffer {
-  return Buffer.from(JSON.stringify(event));
+function expectedPayload(event: WalkerOS.Event): Buffer {
+  // The harness pushes the event through an unconfigured collector, which stamps
+  // source.release = { [name ?? platform ?? 'default']: __VERSION__ }. With no
+  // collector name, the key is the event's platform. Mirror that here so the
+  // expected message body matches the published (post-collector) event.
+  const releaseKey = event.source.platform ?? 'default';
+  const stamped = {
+    ...event,
+    source: { ...event.source, release: { [releaseKey]: __VERSION__ } },
+  };
+  return Buffer.from(JSON.stringify(stamped));
 }
 
 /**
@@ -159,11 +173,15 @@ export const mappedData: Flow.StepExample = {
       'publishMessage',
       'events',
       {
-        data: expectedPayload({
-          order_id: 'ORD-500',
-          revenue: 199.99,
-          currency: 'EUR',
-        }),
+        // Mapped-data publish: the body is the mapping result (no event
+        // envelope, so no source.release), emitted verbatim.
+        data: Buffer.from(
+          JSON.stringify({
+            order_id: 'ORD-500',
+            revenue: 199.99,
+            currency: 'EUR',
+          }),
+        ),
       },
     ],
   ],

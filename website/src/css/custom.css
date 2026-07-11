@@ -200,6 +200,21 @@ h6 {
   color: var(--color-gray-200);
 }
 
+/* walkerOS Cloud admonition (:::cloud) */
+.admonition-cloud {
+  --ifm-alert-background-color: var(--color-elbwalker-100);
+  --ifm-alert-background-color-highlight: var(--color-elbwalker-200);
+  --ifm-alert-foreground-color: var(--color-elbwalker-700);
+  --ifm-alert-border-color: var(--color-elbwalker-500);
+}
+
+[data-theme='dark'] .admonition-cloud {
+  --ifm-alert-background-color: var(--color-elbwalker-800);
+  --ifm-alert-background-color-highlight: var(--color-elbwalker-700);
+  --ifm-alert-foreground-color: var(--color-elbwalker-300);
+  --ifm-alert-border-color: var(--color-elbwalker-500);
+}
+
 /* Override text colors */
 @layer base {
   .text-black {

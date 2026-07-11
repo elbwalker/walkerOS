@@ -77,6 +77,14 @@ export async function collector(
     elb: undefined as unknown as Elb.Fn, // Placeholder, will be set below
   };
 
+  // Mirror static flow identity from initConfig onto the instance.
+  // `assign(defaultConfig, initConfig, { extend: false })` copies a key only
+  // if it already exists in defaultConfig, so name/release never reach
+  // `collector.config`; read them from initConfig directly, once, at
+  // construction (they are static, unlike the per-run `trace`).
+  if (initConfig.name !== undefined) collector.name = initConfig.name;
+  if (initConfig.release !== undefined) collector.release = initConfig.release;
+
   // Set the push and command functions with the collector reference
   collector.push = createPush(collector, (event) =>
     prepareEvent(collector, event),

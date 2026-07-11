@@ -278,8 +278,9 @@ export function findSimulateKeyIssues(content: string): SimulateFinding[] {
 
 // Wire findSimulateKeyIssues over the getting-started surface as an ERROR check.
 // Scope decision (verified, do not widen): getting-started/**/*.mdx only. This
-// automatically covers the examples/* recipe pages (which carry no simulate
-// commands by their hard rule) and deploy.mdx; do not hand-list them. Known
+// automatically covers the examples/* recipe pages (whose run loops are
+// additionally shape-checked by checkRecipeProof) and deploy.mdx; do not
+// hand-list them. Known
 // out-of-scope gap: guides/debugging.mdx uses `--simulate destination.gtag`
 // with no same-page flow.json, which this check is deliberately not run against
 // (guides are reference material, not the copy-paste onboarding path).
@@ -295,6 +296,72 @@ function checkSimulateKeyResolution(): void {
       issues.push({
         file: relative(ROOT, abs),
         line: finding.line,
+        severity: 'error',
+        message: finding.message,
+      });
+    }
+  }
+}
+
+// Recipe pages are proof pages: exactly one flow.json, one run loop, and one
+// expected-output block (the fixed shape from the writing-documentation SKILL,
+// decided 2026-07-10). Without this gate a recipe can regress into a config
+// dump whose payoff is asserted but never shown. Block classification reuses
+// extractCodeBlocks: a full flow config is an object block naming "flows"; a
+// run block is any block carrying `--simulate` (key resolution itself is owned
+// by findSimulateKeyIssues); command blocks (npm/npx/walkeros/docker starters)
+// are neutral; every remaining block counts as shown output.
+type RecipeFinding = { message: string };
+
+export function findRecipeProofIssues(content: string): RecipeFinding[] {
+  const findings: RecipeFinding[] = [];
+  let flowJsonCount = 0;
+  let runCount = 0;
+  let outputCount = 0;
+  const commandStart = /^(npm|npx|walkeros|docker)\s/;
+  for (const block of extractCodeBlocks(content)) {
+    const trimmed = block.code.trim();
+    if (trimmed.startsWith('{') && trimmed.includes('"flows"')) {
+      flowJsonCount++;
+    } else if (trimmed.includes('--simulate')) {
+      runCount++;
+    } else if (commandStart.test(trimmed)) {
+      // Plain command blocks (install steps etc.) neither prove nor regress.
+    } else {
+      outputCount++;
+    }
+  }
+  if (flowJsonCount !== 1) {
+    findings.push({
+      message: `recipe page must contain exactly one flow.json block (found ${flowJsonCount})`,
+    });
+  }
+  if (runCount < 1) {
+    findings.push({
+      message:
+        'recipe page must contain a run loop (walkeros push ... --simulate <type>.<key>)',
+    });
+  }
+  if (outputCount < 1) {
+    findings.push({
+      message:
+        'recipe page must show an expected-output block (the captured call or logged event), not just config',
+    });
+  }
+  return findings;
+}
+
+function checkRecipeProof(): void {
+  const files = glob.sync('website/docs/getting-started/examples/*.mdx', {
+    cwd: ROOT,
+    ignore: ['**/node_modules/**', '**/dist/**'],
+    absolute: true,
+  });
+  for (const abs of files) {
+    const content = readFileSync(abs, 'utf-8');
+    for (const finding of findRecipeProofIssues(content)) {
+      issues.push({
+        file: relative(ROOT, abs),
         severity: 'error',
         message: finding.message,
       });
@@ -850,6 +917,7 @@ async function main() {
   checkForbiddenCliVerbs();
   checkGa4MappingSnippet();
   checkSimulateKeyResolution();
+  checkRecipeProof();
   checkFlowJsonSnippets();
   checkBoundaryRegister();
 

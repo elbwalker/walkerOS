@@ -327,9 +327,10 @@ For production server deployments:
 walkeros bundle flow.json
 
 # Run with Docker
-docker run -p 8080:8080 \\
+docker run -d -p 8080:8080 \\
   -v $(pwd)/dist/bundle.mjs:/app/flow.mjs \\
-  walkeros/docker:latest`}
+  -e BUNDLE=/app/flow.mjs \\
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -340,8 +341,27 @@ See [Docker documentation](/docs/apps/docker) for complete deployment guides.
 ## See your event
 
 Before you build and deploy, run the event through the flow offline with the
-named destination mocked. Using the **server** `flow.json` above (which defines
-the `console` destination), `push` builds and simulates it:
+named destination mocked.
+
+<Tabs>
+  <TabItem value="web" label="Web (browser)">
+
+Using the flow.json with destinations you created above, `push` builds the flow
+and runs the event through it with the named destination mocked. Nothing is sent
+to a vendor.
+
+<CodeSnippet
+  code={`npx walkeros push flow.json \\
+  -e '{"name":"page view"}' \\
+  --simulate destination.ga4`}
+  language="bash"
+/>
+
+  </TabItem>
+  <TabItem value="server" label="Server (Node.js)">
+
+Using the **server** `flow.json` above (which defines the `console`
+destination), `push` builds and simulates it:
 
 <CodeSnippet
   code={`npx walkeros push flow.json \\
@@ -354,6 +374,9 @@ the `console` destination), `push` builds and simulates it:
 `destination.console` replaced by a mock, and prints the resolved outcome
 (`success` and `Duration`); add `--json` to get the same result as JSON.
 Nothing is sent to a vendor. Event names use a space (`page view`).
+
+  </TabItem>
+</Tabs>
 
 ---
 

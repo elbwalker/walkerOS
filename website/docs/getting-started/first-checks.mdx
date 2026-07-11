@@ -1,0 +1,51 @@
+---
+title: First critical checks
+description: Evaluate walkerOS in 15 minutes, five proofs on your own machine
+sidebar_position: 2
+---
+
+# First critical checks
+
+Evaluating walkerOS? These five checks each take a few minutes, run on your own
+machine, and need no account. Together they test the claims everything else
+builds on: your tracking is code you can see, prove, and take with you.
+
+## 1. See a live event, end to end
+
+Send one event and watch it arrive. The [quickstart](/docs/getting-started/quickstart/)
+prints your first event from Node in under five minutes. Or run the
+[Docker demo](/docs/getting-started/quickstart/docker) and POST an event to
+`/collect`: it appears in the runner log of a container on your machine.
+
+## 2. Read your tracking as code
+
+Every pipeline is one `flow.json`: sources, transformers, destinations, and
+mapping as plain JSON you can diff in a pull request and roll back in git. Open
+any [example](/docs/getting-started/examples/bot-detection) and read the whole
+setup in one block. No UI state, nothing hidden.
+
+## 3. Let an agent build a flow
+
+The [walkerOS MCP](/docs/apps/mcp) runs locally without an account. Ask your
+AI assistant for a flow; it generates the `flow.json`, validates it against the
+schema, and simulates an event through it before you ever deploy. The output is
+a machine-checked artifact, not a demo.
+
+## 4. Break it on purpose
+
+Define a [contract](/docs/getting-started/flow/contract), then violate it and
+watch validation fail loudly with the exact path and message, at design time,
+before anything ships. See [validate](/docs/getting-started/flow/validate).
+Compare that with a tag manager silently dropping fields in production.
+
+## 5. Prove you can leave
+
+Bundle the same `flow.json` and run it anywhere: Docker, Node, your own
+infrastructure. [Deploy](/docs/getting-started/deploy) shows all three paths.
+Your events land in destinations you configured, so there is nothing to export
+and nothing to migrate away from.
+
+## Next steps
+
+- [Quickstart](/docs/getting-started/quickstart/): send your first event now
+- [GA4 ecommerce](/docs/getting-started/ga4-ecommerce): a real destination with mapping, verified in DebugView

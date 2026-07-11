@@ -16,6 +16,7 @@ import fs from 'fs-extra';
 import type { BuildOptions } from '../../../types/bundle.js';
 
 jest.mock('../../bundle/bundler.js', () => ({
+  ...jest.requireActual('../../bundle/bundler.js'),
   bundleCore: jest.fn(),
 }));
 

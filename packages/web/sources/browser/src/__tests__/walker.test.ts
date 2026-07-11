@@ -1,4 +1,4 @@
-import { getAllEvents, getEvents, getGlobals } from '../walker';
+import { getAllEvents, getEvents, getGlobals, getUser } from '../walker';
 import { Triggers } from '../trigger';
 import { createTagger } from '../tagger';
 import fs from 'fs';
@@ -538,6 +538,46 @@ describe('Walker', () => {
     expect(getEvents(el, Triggers.Click)).toMatchObject([
       { entity: 'product', action: 'click', data: { name: 'A', size: 'L' } },
     ]);
+  });
+});
+
+describe('getUser', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  test('collects a single data-elbuser element', () => {
+    document.body.innerHTML =
+      '<div data-elbuser="id:u123;loggedin:true"></div>';
+    // castValue turns 'true' into boolean true; 'u123' stays a string
+    expect(getUser(undefined, document)).toStrictEqual({
+      id: 'u123',
+      loggedin: true,
+    });
+  });
+
+  test('merges multiple elements, last wins', () => {
+    document.body.innerHTML =
+      '<div data-elbuser="id:first"></div>' +
+      '<div data-elbuser="id:second;device:d1"></div>';
+    expect(getUser(undefined, document)).toStrictEqual({
+      id: 'second',
+      device: 'd1',
+    });
+  });
+
+  test('returns empty object when no data-elbuser present', () => {
+    document.body.innerHTML = '<div data-elb="entity"></div>';
+    expect(getUser(undefined, document)).toStrictEqual({});
+  });
+
+  test('returns empty object with no scope', () => {
+    expect(getUser('data-elb', undefined)).toStrictEqual({});
+  });
+
+  test('honors a custom prefix', () => {
+    document.body.innerHTML = '<div data-usruser="id:x"></div>';
+    expect(getUser('data-usr', document)).toStrictEqual({ id: 'x' });
   });
 });
 

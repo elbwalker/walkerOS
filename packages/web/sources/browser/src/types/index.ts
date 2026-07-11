@@ -59,25 +59,24 @@ export interface Context {
   initScope?: (context: Context) => void;
 }
 
-// Scope type for DOM operations. Deliberately excludes ShadowRoot: the DOM-scan
-// helpers (getGlobals, getPageViewData, getAllEvents) assume Element/Document
-// bodies (.matches/.body/getAttribute). ShadowRoot reaches only the
-// trigger/visibility carriers (InitScope), never these scans.
-export type Scope = Document | Element;
-
-// Init/trigger scope: adds ShadowRoot so `walker init` can target a retained
-// (e.g. closed) shadow root that discovery can never reach from the document.
-export type InitScope = Scope | ShadowRoot;
+// Scope types live in the leaf `./scope` module so `types/elb.ts` can reuse
+// them without a circular import. Imported for local use (Settings.scope below)
+// and re-exported so `SourceBrowser.Scope` / `.InitScope` stay part of the
+// public surface.
+export type { Scope, InitScope } from './scope';
+import type { InitScope } from './scope';
 
 // Everything a single scope's init installs, bucketed so a re-init can tear the
 // scope's prior state down before attaching fresh. Keyed by the scope node, so
 // `walker run` (document) and `walker init <el>` (element) own independent
 // buckets that never reach into each other.
 export interface ScopeState {
-  abort: AbortController; // this scope's hover + scroll listeners
+  abort: AbortController; // this scope's scroll listener (hover is per-element)
   intervalIds: ReturnType<typeof setInterval>[]; // pulse
   timeoutIds: ReturnType<typeof setTimeout>[]; // wait
   scrollElements: Walker.ScrollElements; // this scope's scroll targets
   scrollListener?: EventListenerOrEventListenerObject;
   observed: Set<HTMLElement>; // elements registered on the shared per-doc observer
+  registered: Set<HTMLElement>; // every element this scope has wired triggers for
+  mutationObservers: MutationObserver[]; // this scope's observe-container observers
 }

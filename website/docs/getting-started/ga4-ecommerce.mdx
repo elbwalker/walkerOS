@@ -11,6 +11,8 @@ to Google Analytics 4 and watch both arrive in DebugView. You start with a singl
 console destination to see output immediately, then swap in the GA4 destination
 and add the ecommerce mapping that turns `product add` into `add_to_cart`.
 
+GA4 today, your warehouse next: the same event routes to [your own API](/docs/destinations/api/) or [BigQuery](/docs/destinations/server/gcp) by adding a destination, without touching your tracking code.
+
 ## Step 1: Install
 
 Install the collector and the gtag destination:
@@ -57,7 +59,7 @@ import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const { elb } = await startFlow({
   destinations: {
-    gtag: {
+    ga4: {
       code: destinationGtag,
       config: {
         settings: {

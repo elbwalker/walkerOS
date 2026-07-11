@@ -96,6 +96,55 @@ describe('flattenIncludeSections', () => {
     const result = flattenIncludeSections(minimal, ['data']);
     expect(result).toEqual({});
   });
+
+  test('fully flattens nested maps with underscore-joined keys', () => {
+    const partialEvent: WalkerOS.DeepPartialEvent = {
+      source: { release: { default: '4.2.1' } },
+    };
+    const result = flattenIncludeSections(partialEvent, ['source']);
+    expect(result).toEqual({ source_release_default: '4.2.1' });
+  });
+
+  test('recurses through deeper nesting', () => {
+    const partialEvent: WalkerOS.DeepPartialEvent = {
+      data: { a: { b: { c: 1 } } },
+    };
+    const result = flattenIncludeSections(partialEvent, ['data']);
+    expect(result).toEqual({ data_a_b_c: 1 });
+  });
+
+  test('primitive leaves are unchanged', () => {
+    const partialEvent: WalkerOS.DeepPartialEvent = {
+      source: { type: 'collector' },
+    };
+    const result = flattenIncludeSections(partialEvent, ['source']);
+    expect(result).toEqual({ source_type: 'collector' });
+  });
+
+  test('context tuple label is extracted, not flattened by index', () => {
+    const partialEvent: WalkerOS.DeepPartialEvent = {
+      context: { stage: ['checkout', 0] },
+    };
+    const result = flattenIncludeSections(partialEvent, ['context']);
+    expect(result).toEqual({ context_stage: 'checkout' });
+  });
+
+  test('arrays are kept as leaf values', () => {
+    const partialEvent: WalkerOS.DeepPartialEvent = {
+      data: { items: [1, 2] },
+    };
+    const result = flattenIncludeSections(partialEvent, ['data']);
+    expect(result).toEqual({ data_items: [1, 2] });
+  });
+
+  test('skips undefined values alongside nested maps', () => {
+    const partialEvent: WalkerOS.DeepPartialEvent = {
+      source: { release: { default: '4.2.1' }, schema: undefined },
+    };
+    const result = flattenIncludeSections(partialEvent, ['source']);
+    expect(result).toEqual({ source_release_default: '4.2.1' });
+    expect('source_schema' in result).toBe(false);
+  });
 });
 
 describe('processEventMapping with include', () => {

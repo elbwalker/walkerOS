@@ -49,9 +49,8 @@ export interface BuildBaseStateArgs {
  * fill in additional fields (consent, batch, error, meta, inEvent,
  * outEvent, mappingKey, durationMs) as relevant for the step site.
  *
- * `flowId` defaults to a literal `'default'` until flow-id wiring is
- * threaded through the collector instance. Treat as a forward-compatible
- * placeholder, not a final shape.
+ * `flowId` is the collector's static flow `name`, falling back to `'default'`
+ * when the flow is unnamed.
  */
 export function buildBaseState(
   collector: Collector.Instance,
@@ -59,7 +58,7 @@ export function buildBaseState(
 ): FlowState {
   const startedAt = collector.status.startedAt;
   const state: FlowState = {
-    flowId: 'default',
+    flowId: collector.name ?? 'default',
     stepId: args.stepId,
     stepType: args.stepType,
     phase: args.phase,

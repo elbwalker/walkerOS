@@ -61,7 +61,7 @@ A flow configuration uses the `Flow.Json` format with two required fields:
           }
         }
       },
-      "collector": {}
+      "collector": { "run": true }
     }
   }
 }`}
@@ -214,6 +214,24 @@ For development or custom packages, use `path` to reference a local directory:
 />
 
 See [Local Packages](/docs/apps/cli#local-packages) in the CLI documentation for more details.
+
+### Step-level package versions
+
+When configuring individual steps (sources, transformers, or destinations), the `package` field accepts an optional inline version suffix:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "browser": {
+      "package": "@walkeros/web-source-browser@2.1.0",
+      "config": { "settings": { "pageview": true } }
+    }
+  }
+}`}
+  language="json"
+/>
+
+If the same package is pinned in `config.bundle.packages` to a different version, the bundle-level pin takes precedence and the inline version is ignored (with a build warning).
 
 ### Sources
 
@@ -707,7 +725,7 @@ For browser bundles, you can configure the collector's window variable name via
 />
 
 **Properties:**
-- **`windowCollector`** - Global variable name for collector instance (default: `"collector"`)
+- **`windowCollector`** - Global variable name for collector instance (default: `"walkerOS"`)
 
 The `window.elb` function is owned by the browser source: set `elb` in the
 browser source's `config.settings` to change its global name (default:
@@ -887,7 +905,7 @@ Reference environment variables with optional defaults:
     "default": {
       "config": { "platform": "web" },
       "destinations": {
-        "gtag": {
+        "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
             "settings": {

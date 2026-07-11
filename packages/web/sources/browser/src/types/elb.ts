@@ -1,13 +1,9 @@
 import type { Collector, Elb, WalkerOS } from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
+// `./scope` is a leaf module (DOM globals only), so importing from it keeps this
+// file free of the circular import that the forward declarations below avoid.
+import type { Scope, InitScope } from './scope';
 
-// Forward declare types to avoid circular imports
-export type Scope = Element | Document;
-// `walker init` also accepts a retained ShadowRoot (e.g. a closed root the app
-// holds a reference to); the runtime scans it like any Element/Document scope.
-// Declared locally here (not imported from ./index) to keep this file free of
-// the circular import the forward declarations above avoid.
-export type InitScope = Scope | ShadowRoot;
 export type Trigger = string;
 
 // Browser-specific push interface (can be more flexible)

@@ -213,12 +213,15 @@ result will only include the property values from the specific entities.
   language="html"
 />
 
-### Up-bubbling click trigger
+### Click trigger
 
-By clicking an element, the event bubbles up to the body element. If the walker
-finds a `data-elbaction` with the click trigger, it will fire the action. Often,
-the image or a whole div-block gets clicked, not the parent a-element. Using the
-bubbling-up flow, the walker still triggers the actions for you.
+When you click an element, the browser source reads the click in the capture
+phase, so it resolves the `data-elbaction` and the surrounding entity from the
+DOM as it exists at click time, before your app's own click handlers run. If it
+finds a `data-elbaction` with the `click` trigger on the clicked element or any
+of its parents, it fires the action. Often the image or a whole div inside a
+button gets clicked, not the button itself; the parent walk still resolves the
+action and entity for you.
 
 <CodeSnippet
   code={`<button data-elb="product" data-elbaction="click">
@@ -227,10 +230,13 @@ bubbling-up flow, the walker still triggers the actions for you.
   language="html"
 />
 
-:::warning
+:::info
 
-The click trigger uses the bubbling-up process. It will not work with
-stopPropagation or preventDefault.
+Reading in the capture phase means `stopPropagation` in your app or a
+third-party widget no longer prevents a tagged click from being captured, and
+the entity is read before a click-driven re-render can unmount it (a common
+cause of events falling back to `page` in single-page apps). To restore the
+previous bubbling behavior, set `capture: false` on the browser source.
 
 :::
 
@@ -494,10 +500,10 @@ farther up the tree, including an explicit entity property on a higher element.
 ## Globals
 
 There might be properties that don't belong to just one event but to **all
-events on a page**. Those properties are called **globals** and will be
-**collected once**, right before the first event, got fired. Globals are
-arbitrary, like the data property. What is unique about them is that you can
-define them anywhere on a page using the `data-elbglobals` attribute.
+events on a page**. Those properties are called **globals**, and are **read
+from the DOM for every event**. Globals are arbitrary, like the data property.
+What is unique about them is that you can define them anywhere on a page using
+the `data-elbglobals` attribute.
 
 <CodeSnippet
   code={`<div data-elbglobals="outof:scope"></div>
@@ -520,7 +526,48 @@ This example will lead to the following event:
 
 :::info
 
-For performance reasons, the globals are only collected **once per run**.
+Globals are collected fresh from the DOM on every event, so a `data-elbglobals`
+value changed between events is reflected in the next one.
+
+:::
+
+## User
+
+`data-elbuser` sets **user identity** that is applied to the **page view and
+every event after it**. Unlike globals, which are re-read from the DOM for
+every event, the user is collected **once per run**, right before the page
+view, and stored as persistent collector state, the same state the
+<Link to="/docs/collector/commands#user">walker user</Link> command writes to.
+Tag any element with the identifiers you have available:
+
+<CodeSnippet
+  code={`<div data-elbuser="id:u123;loggedin:true"></div>`}
+  language="html"
+/>
+
+The page view, and every event pushed after it, carries the user:
+
+<CodeSnippet
+  code={`{
+"event": "page view",
+"user": { "id": "u123", "loggedin": true }
+// other properties omitted
+}`}
+  language="javascript"
+/>
+
+Because the user is collected once, right before the page view, only the page
+view and later events carry it. Events that already fired earlier in the run,
+such as `window.elbLayer` pushes replayed before the page view, are not
+retroactively stamped. If multiple elements carry `data-elbuser`, their values
+are merged (last one in the DOM wins per key). An absent `data-elbuser`
+attribute leaves any existing user untouched; it never wipes a user set
+another way, such as by an earlier `walker user` call.
+
+:::warning
+
+Use fully anonymized & arbitrary IDs by default and check your options with
+persistent user IDs with your data protection officer.
 
 :::
 
@@ -629,9 +676,121 @@ Learn more about the walkerOS event model in our documentation.
 
 ## Shadow DOM
 
-walkerOS supports tagging inside **open** shadow DOM. Elements and actions
-inside `mode: 'open'` shadow roots are automatically discovered and tracked.
+walkerOS tags elements inside shadow DOM. Entity and context resolution reaches
+upward through the shadow boundary: an element inside a shadow root resolves its
+`data-elb` entity and `data-elbcontext` from light-DOM ancestors above the host,
+for both open and closed roots.
 
-**Closed shadow DOM** (`mode: 'closed'`) is not supported by design. The
-browser prevents external access to closed shadow roots. Use `window.elb()` for
-manual event pushing from closed web components.
+One limit applies to every shadow root: `data-elbglobals` is not collected
+inside shadow DOM, so define globals in the light DOM.
+
+### Open shadow roots
+
+Elements inside `mode: 'open'` shadow roots are discovered and tracked
+automatically. Properties and context are collected, clicks and form
+submissions resolve to the inner element, and the `visible` and `impression`
+triggers fire when the element enters the viewport. Scroll depth is measured
+against the viewport, so it stays correct for elements nested inside a shadow
+root.
+
+### Closed shadow roots
+
+A closed shadow root is invisible from its host (`host.shadowRoot` is `null`),
+so the page scan cannot reach into it. To track a closed subtree, pass the root
+reference returned by `attachShadow` to `walker init`:
+
+<CodeSnippet
+  code={`const root = host.attachShadow({ mode: 'closed' });
+// render your tagged markup into root
+elb('walker init', root);`}
+  language="javascript"
+/>
+
+Its elements then behave like any other tagged markup: `load` triggers fire on
+the scan, and `visible` and `impression` fire on viewport entry. Two triggers
+still cannot reach inside a closed root:
+
+* **click and submit** resolve through the event's composed path, which stops
+  at the host, so an interaction inside a closed root is attributed to the host
+  rather than the inner element.
+* **automatic discovery** never reaches a closed root, only the explicit
+  `walker init` reference does.
+
+## Auto-init with data-elbobserve
+
+In a single-page app, tagged content often appears after the initial page scan:
+a route renders a new view, a list loads lazily, a chat streams in messages. The
+normal way to track that content is to call `walker init` on its container after
+each injection. Mark the container with `data-elbobserve` instead, and the
+browser source watches it: any tagged content injected into it is registered for
+tracking automatically, and its triggers are cleaned up when the content is
+removed. You no longer call `walker init` per injection.
+
+Statically present tagged content inside the container is still registered by the
+normal page scan. `data-elbobserve` only changes how **future** injections are
+handled.
+
+<CodeSnippet
+  code={`<!-- Mark the container that will receive injected content -->
+<div data-elbobserve>
+  <!-- Tagged content a SPA injects here is auto-registered -->
+</div>`}
+  language="html"
+/>
+
+When your app renders tagged markup into that container, no follow-up call is
+needed:
+
+<CodeSnippet
+  code={`// The SPA renders tagged markup into the observed container.
+// No walker init call is required afterwards.
+container.innerHTML = \`
+  <div data-elb="product" data-elbaction="visible:view">
+    <h2 data-elb-product="name:Everyday Ruck Snack">Everyday Ruck Snack</h2>
+  </div>
+\`;`}
+  language="javascript"
+/>
+
+`data-elbobserve` is a presence-only attribute: its presence marks the container
+and it takes no value.
+
+### Open shadow roots
+
+A `data-elbobserve` container inside an open shadow root is watched by its own
+observer, so tagged content injected into that shadow root is auto-registered the
+same way. A closed shadow root cannot be discovered, so keep using an explicit
+`walker init` with the root reference for closed roots (see
+[Shadow DOM](#shadow-dom) above).
+
+### Scope it tightly
+
+Put `data-elbobserve` on the smallest container that wraps the injected content,
+never on the app root. The observer watches the whole subtree below the marked
+container, so a tight scope keeps it cheap and avoids re-processing unrelated DOM.
+
+### Limitations
+
+* **Node recycling and virtualization**: a framework that reuses the *same*
+  element instance for new content is skipped, because that element is already
+  registered and this version does not watch attribute changes. A changed action
+  on a recycled node is missed. For virtualized lists that recycle nodes, keep
+  using explicit `walker init`, or ensure the framework creates fresh nodes.
+* **Overlapping scopes**: do not place a `walker init <element>` sub-scope
+  observe container over the same subtree as a document-scope observe container.
+  Injected content stays safe (an already-registered element is not registered
+  twice), but the adds are re-processed redundantly.
+* **SVG content**: only HTML elements are auto-registered. An SVG element
+  carrying `data-elbaction` inside an observed container is not picked up, the
+  same as with the static page scan.
+* **Closed shadow roots**: not reachable by discovery, use explicit
+  `walker init` with the root reference.
+
+### Not in this version
+
+These are deferred and may arrive later:
+
+* **Attribute-watching**: reacting to a `data-elbaction` added to an
+  already-present element.
+* **A throttle option** for high-frequency mutations.
+* **A function-callback parameter** on the attribute.

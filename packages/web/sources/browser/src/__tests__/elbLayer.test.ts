@@ -22,6 +22,7 @@ const settings = (): Settings => ({
   prefix: 'data-elb',
   scope: document,
   pageview: false,
+  capture: true,
   elb: '',
   elbLayer: 'elbLayer',
 });

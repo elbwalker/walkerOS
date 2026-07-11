@@ -137,11 +137,18 @@ capability, second names the open-source path to the same result, optional third
 links `https://app.walkeros.io`. Never prices, tier names, or upgrade language
 anywhere in open docs. Self-host is always listed first.
 
-**Examples recipes.** Pages under `getting-started/examples/` are lean recipes:
-at most ~80 lines, one flow.json, a payoff line, next steps. Every snippet is
-derived from validated material (package examples, tested sources, existing
-validated docs snippets); never invent config or mappings. No simulate commands,
-no `:::cloud` on recipe pages.
+**Examples recipes.** Pages under `getting-started/examples/` are lean proof
+recipes with a fixed shape: exactly one flow.json, one run loop, one
+expected-output block, plus a short intro and next steps. The run loop uses
+`walkeros push … --simulate <type>.<key>` where `<key>` is a step key declared
+in the page's own flow.json; recipes are bundled flows, so the per-mode rule
+applies and the same-page simulate gate enforces resolution. The expected-output
+block shows what actually arrives (the captured destination call or the logged
+event), derived from the package's step examples or the real CLI output; never
+invent config, mappings, or output. Every snippet is derived from validated
+material (package examples, tested sources, existing validated docs snippets).
+No `:::cloud` on recipe pages. The shape is enforced by `checkRecipeProof` in
+`apps/scripts/validate-docs.ts`.
 
 ### Validation Checklist
 

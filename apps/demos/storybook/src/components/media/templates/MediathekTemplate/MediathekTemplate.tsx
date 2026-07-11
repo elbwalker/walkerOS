@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { HeaderBar } from '../../organisms/HeaderBar';
 import { HeroBanner } from '../../organisms/HeroBanner';
 import { CarouselSection } from '../../organisms/CarouselSection';
@@ -47,6 +48,38 @@ const filmRecommendations = [
   },
 ];
 
+// Rows appended at runtime by the "Add row" button. Cycled so repeated clicks
+// keep producing fresh, tagged content.
+const extraRowCatalog = [
+  {
+    title: 'Trending Now',
+    items: [
+      { title: 'The Nightly Build' },
+      { title: 'Merge Conflict' },
+      { title: 'Ship It' },
+      { title: 'Rubber Duck Tales' },
+    ],
+  },
+  {
+    title: 'New Releases',
+    items: [
+      { title: 'Null and Void' },
+      { title: 'The Big O' },
+      { title: 'Race Condition' },
+      { title: 'Off By One' },
+    ],
+  },
+  {
+    title: 'Because You Watched',
+    items: [
+      { title: 'Kernel Panic' },
+      { title: 'The Legacy System' },
+      { title: 'Hotfix Heroes' },
+      { title: 'Semver Saga' },
+    ],
+  },
+];
+
 export const MediathekTemplate = ({
   activeMenuItem,
   onMenuItemClick,
@@ -62,6 +95,8 @@ export const MediathekTemplate = ({
     'MediathekTemplate',
   );
 
+  const [extraRows, setExtraRows] = useState(0);
+
   return (
     <div {...trackingProps} className="min-h-screen bg-background">
       <HeaderBar
@@ -69,7 +104,9 @@ export const MediathekTemplate = ({
         onMenuItemClick={onMenuItemClick}
       />
 
-      <main>
+      {/* data-elbobserve: the walker auto-registers rows added below at runtime,
+          so a new row's tagged items fire their events without a walker re-run. */}
+      <main data-elbobserve="">
         <HeroBanner
           title="Life in Code"
           subtitle="Balancing Passion and Work"
@@ -109,6 +146,27 @@ export const MediathekTemplate = ({
             },
           ]}
         />
+
+        {Array.from({ length: extraRows }).map((_, index) => {
+          const row = extraRowCatalog[index % extraRowCatalog.length];
+          return (
+            <CarouselSection
+              key={`extra-${index}`}
+              title={`${row.title} #${index + 1}`}
+              items={row.items}
+            />
+          );
+        })}
+
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <button
+            type="button"
+            onClick={() => setExtraRows((count) => count + 1)}
+            className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          >
+            Add row
+          </button>
+        </div>
       </main>
     </div>
   );

@@ -83,9 +83,22 @@ Filtering is the same mechanism, not a separate setting. Author an inline schema
 
 The CLI flow validator checks step examples (`destination.in`, `transformer.in`) against the resolved contract and reports violations before you deploy, so a sample event that breaks the contract is caught at authoring time.
 
-```bash
-walkeros validate flow.json
-```
+<CodeSnippet code={`walkeros validate flow.json`} language="bash" />
+
+## Break it on purpose
+
+Contracts are easiest to trust after watching one fail. Take the contract above (it requires `total` and `currency` on `order complete` data) and give a step example an event that misses `currency`. The validator names the exact path and problem:
+
+<CodeSnippet
+  code={`Validation Results:
+  ⚠ destination.ga4.examples.purchase.in: Example violates contract: #/data: Instance does not have required property "currency".
+    → Fix the example data to satisfy the contract schema.
+
+Summary: 0 error(s), 1 warning(s)`}
+  language="bash"
+/>
+
+Contract violations are warnings by default; add `--strict` to turn them into errors (exit code 1) and fail CI before a broken event shape ships. A tag manager drops the same broken field silently, in production.
 
 ## Next steps
 

@@ -50,7 +50,17 @@ export function assign<T extends object, U extends object>(
         [...targetProp],
       );
     } else if (options.extend || key in target) {
-      // Extend the target with new properties or update existing ones
+      // Extend the target with new properties or update existing ones.
+      //
+      // With `extend: false` a source key is copied ONLY if it already exists
+      // in target; keys absent from target are silently dropped. This is a
+      // deliberate narrow-subset filter, not a bug: the sole caller
+      // (collector.ts) picks a handful of config fields out of a much larger
+      // initConfig and reads the rest (name, release, logger, consent, ...)
+      // separately. Do NOT add an always-on "dropped key" warning here — it
+      // would fire on every collector construction. A field that must survive
+      // this filter has to exist in target (or be read directly, as the
+      // collector does for name/release).
       acc[key as keyof typeof acc] = sourceProp;
     }
 

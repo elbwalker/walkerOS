@@ -1,5 +1,5 @@
-import { startFlow } from '@walkeros/collector';
-import { createBrowserSource } from './test-utils';
+import { startFlow, Const } from '@walkeros/collector';
+import { createBrowserSource, flushChain } from './test-utils';
 import type { WalkerOS, Collector } from '@walkeros/core';
 
 describe('Browser Source Integration Tests', () => {
@@ -12,7 +12,7 @@ describe('Browser Source Integration Tests', () => {
     document.body.innerHTML = '';
 
     // Clear any existing elbLayer
-    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+    window.elbLayer = undefined;
 
     // Create mock push function
     mockPush = jest.fn().mockImplementation((...args: unknown[]) => {
@@ -31,7 +31,7 @@ describe('Browser Source Integration Tests', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
-    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+    window.elbLayer = undefined;
   });
 
   describe('Complete Event Flow', () => {
@@ -77,6 +77,9 @@ describe('Browser Source Integration Tests', () => {
       if (source.on) {
         await source.on('run', collector);
       }
+      // The controller chain now carries an extra link (sendUser precedes
+      // sendPageview), so drain the microtask queue before asserting.
+      await flushChain();
 
       // Should have processed pageview event
       expect(mockPush).toHaveBeenCalledWith(
@@ -243,5 +246,123 @@ describe('Browser Source Integration Tests', () => {
       // Should still process at least the valid element
       expect(mockPush).toHaveBeenCalled();
     });
+  });
+});
+
+// helper: real collector + a capturing destination for enriched events
+async function setup() {
+  const events: WalkerOS.Event[] = [];
+  const { collector } = await startFlow({
+    destinations: {
+      capture: {
+        code: {
+          type: 'capture',
+          config: {},
+          push: async (event: WalkerOS.Event) => {
+            events.push(event);
+          },
+        },
+      },
+    },
+  });
+  return { collector, events };
+}
+
+describe('data-elbuser', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    window.elbLayer = undefined;
+  });
+  afterEach(() => {
+    document.body.innerHTML = '';
+    window.elbLayer = undefined;
+  });
+
+  test('sets collector.user from the DOM on run', async () => {
+    const { collector } = await setup();
+    document.body.innerHTML =
+      '<div data-elbuser="id:u123;loggedin:true"></div>';
+    await createBrowserSource(
+      collector,
+      { pageview: true },
+      { runOnInit: true },
+    );
+    expect(collector.user).toEqual({ id: 'u123', loggedin: true });
+  });
+
+  test('the page view carries the user', async () => {
+    const { collector, events } = await setup();
+    document.body.innerHTML = '<div data-elbuser="id:u123"></div>';
+    await createBrowserSource(
+      collector,
+      { pageview: true },
+      { runOnInit: true },
+    );
+    const pageview = events.find((e) => e.name === 'page view');
+    expect(pageview?.user).toEqual(expect.objectContaining({ id: 'u123' }));
+  });
+
+  test('merges multiple data-elbuser elements', async () => {
+    const { collector } = await setup();
+    document.body.innerHTML =
+      '<div data-elbuser="id:a"></div><div data-elbuser="device:d1"></div>';
+    await createBrowserSource(
+      collector,
+      { pageview: true },
+      { runOnInit: true },
+    );
+    expect(collector.user).toEqual({ id: 'a', device: 'd1' });
+  });
+
+  test('does not push when no data-elbuser is present', async () => {
+    const { collector } = await setup();
+    const spy = jest.fn();
+    // Registering on('user') fires the callback ONCE immediately against the
+    // current (empty) state, the documented state-delivery catch-up contract:
+    // shouldDeliver = allowed (true, run:true default) && cellVersion['user'] 0
+    // > the subscriber's sentinel mark -1. That registration call is expected
+    // and unrelated to this feature. Clear it so the assertion isolates the one
+    // thing under test: "did the run push a walker user?" (a leak would fire it
+    // again). Equivalent alternative: skip mockClear and assert
+    // toHaveBeenCalledTimes(1) (registration only; a leaked push would be 2).
+    await collector.command('on', { type: Const.Commands.User, rules: spy });
+    spy.mockClear();
+    document.body.innerHTML = '<div data-elb="entity"></div>';
+    await createBrowserSource(
+      collector,
+      { pageview: true },
+      { runOnInit: true },
+    );
+    expect(collector.user).toEqual({});
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('does not wipe an existing user when absent', async () => {
+    const { collector } = await setup(); // seed after setup for clarity
+    await collector.command('user', { id: 'seed' });
+    document.body.innerHTML = '<div data-elb="entity"></div>';
+    await createBrowserSource(
+      collector,
+      { pageview: true },
+      { runOnInit: true },
+    );
+    expect(collector.user).toEqual({ id: 'seed' });
+  });
+
+  // Covers the no-controller branch (elbLayer:false), which carries the new
+  // `await sendUser` path and the entire deadlock argument. All the tests above
+  // use the elbLayer controller default, so without this the awaited branch is
+  // untested.
+  test('elbLayer:false, sets user and the page view carries it', async () => {
+    const { collector, events } = await setup();
+    document.body.innerHTML = '<div data-elbuser="id:u123"></div>';
+    await createBrowserSource(
+      collector,
+      { elbLayer: false, pageview: true },
+      { runOnInit: true },
+    );
+    expect(collector.user).toEqual({ id: 'u123' });
+    const pageview = events.find((e) => e.name === 'page view');
+    expect(pageview?.user).toEqual(expect.objectContaining({ id: 'u123' }));
   });
 });

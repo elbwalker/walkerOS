@@ -1,6 +1,11 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
 import { getEvent, isObject } from '@walkeros/core';
 
+// Build-time version define. The collector stamps source.release with this on
+// push, so the include-all expectation below must track it rather than a
+// literal, else it breaks whenever the fixed version group is bumped (release).
+declare const __VERSION__: string;
+
 /**
  * Fixed system time used by the step-examples test so init calls
  * that reference `new Date()` produce deterministic output.
@@ -407,6 +412,7 @@ export const ga4WithIncludeAll: Flow.StepExample = {
         source_schema: '4',
         source_count: 1,
         source_trace: '1700000106abcdef1700000106abcdef',
+        source_release_default: __VERSION__,
         // event_* params from event properties
         event_entity: 'page',
         event_action: 'view',

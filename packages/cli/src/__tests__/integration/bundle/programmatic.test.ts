@@ -5,6 +5,7 @@ import { getBuildDefaults, getDefaultOutput } from '../../../config/index.js';
 import type { BundleStats } from '../../../commands/bundle/bundler.js';
 
 jest.mock('../../../commands/bundle/bundler.js', () => ({
+  ...jest.requireActual('../../../commands/bundle/bundler.js'),
   bundleCore: jest.fn(),
 }));
 

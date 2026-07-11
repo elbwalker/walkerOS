@@ -14,7 +14,7 @@ declare global {
   interface Window {
     elbwalker: Collector;
     walkerjs: CoreCollector.Instance;
-    elbLayer: Layer;
+    elbLayer?: Layer;
     dataLayer: WalkerOS.Events | unknown | unknown[];
     elb: Elb.Fn<Promise<Elb.PushResult>>;
   }

@@ -5,6 +5,7 @@ import {
   serializeWithCode,
   validateComponentNames,
   collectAllStepPackages,
+  applyStepPackages,
   buildSplitConfigObject,
   generateServerEntry,
   generateWebEntry,
@@ -15,7 +16,8 @@ import {
 import { cacheBuild } from '../../../core/build-cache.js';
 import { createCLILogger } from '../../../core/cli-logger.js';
 import type { BuildOptions } from '../../../types/bundle.js';
-import type { Flow } from '@walkeros/core';
+import type { Flow, Logger } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 
 // Partial mocks: keep real implementations as default delegates so other
@@ -320,6 +322,80 @@ describe('collectAllStepPackages', () => {
     } as unknown as Flow;
     const result = collectAllStepPackages(settings);
     expect(result.size).toBe(1);
+  });
+});
+
+describe('applyStepPackages', () => {
+  const testLogger = createMockLogger();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const flowWith = (pkg: string) =>
+    ({
+      sources: { browser: { package: pkg } },
+      destinations: {},
+      transformers: {},
+      stores: {},
+    }) as unknown as Flow;
+
+  it('splits an inline version into the packages map and rewrites the step', () => {
+    const flow = flowWith(
+      '@walkeros/web-source-browser@4.3.0-next-1783517345197',
+    );
+    const packages: BuildOptions['packages'] = {};
+    applyStepPackages(flow, packages, testLogger);
+    expect(packages['@walkeros/web-source-browser']).toEqual({
+      version: '4.3.0-next-1783517345197',
+    });
+    expect(flow.sources?.browser?.package).toBe('@walkeros/web-source-browser');
+  });
+
+  it('lets an explicit bundle pin win and warns on disagreement', () => {
+    const flow = flowWith('@walkeros/web-source-browser@2.0.0');
+    const packages: BuildOptions['packages'] = {
+      '@walkeros/web-source-browser': { version: '1.0.0' },
+    };
+    applyStepPackages(flow, packages, testLogger);
+    expect(packages['@walkeros/web-source-browser']).toEqual({
+      version: '1.0.0',
+    });
+    expect(testLogger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('@walkeros/web-source-browser'),
+    );
+  });
+
+  it('fills an unversioned bundle entry and preserves its fields', () => {
+    const flow = flowWith('@walkeros/collector@3.1.0');
+    const packages: BuildOptions['packages'] = {
+      '@walkeros/collector': { imports: ['startFlow'] },
+    };
+    applyStepPackages(flow, packages, testLogger);
+    expect(packages['@walkeros/collector']).toEqual({
+      imports: ['startFlow'],
+      version: '3.1.0',
+    });
+  });
+
+  it('throws when two steps pin the same package to different inline versions', () => {
+    const flow = {
+      sources: { a: { package: '@walkeros/collector@1.0.0' } },
+      destinations: { b: { package: '@walkeros/collector@2.0.0' } },
+      transformers: {},
+      stores: {},
+    } as unknown as Flow;
+    expect(() => applyStepPackages(flow, {}, testLogger)).toThrow(
+      /Conflicting inline versions for @walkeros\/collector/,
+    );
+  });
+
+  it('keeps bare names untouched (no version, no rewrite)', () => {
+    const flow = flowWith('@walkeros/web-source-browser');
+    const packages: BuildOptions['packages'] = {};
+    applyStepPackages(flow, packages, testLogger);
+    expect(packages['@walkeros/web-source-browser']).toEqual({});
+    expect(flow.sources?.browser?.package).toBe('@walkeros/web-source-browser');
   });
 });
 

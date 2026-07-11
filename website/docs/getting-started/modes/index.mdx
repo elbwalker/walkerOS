@@ -6,20 +6,23 @@ sidebar_position: 2
 
 # Operating modes
 
+You have sent your first event. Now choose how to package and run walkerOS in production.
+
 walkerOS offers two ways to configure and deploy your event collection. Both use the same underlying architecture (Sources, Collector, Destinations), just packaged differently.
 
 ## Integrated mode
 
 The collector lives **inside your application code**.
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { elb } = await startFlow({
   sources: { browser: { code: sourceBrowser } },
-});
-```
+});`}
+  language="typescript"
+/>
 
 **Best for:**
 - Building walkerOS directly into your app
@@ -35,8 +38,8 @@ const { elb } = await startFlow({
 
 The collector is a **separate artifact** you configure with JSON and build with the CLI.
 
-```json
-{
+<CodeSnippet
+  code={`{
   "version": 4,
   "flows": {
     "default": {
@@ -44,8 +47,9 @@ The collector is a **separate artifact** you configure with JSON and build with 
       "sources": { "browser": { "package": "@walkeros/web-source-browser" } }
     }
   }
-}
-```
+}`}
+  language="json"
+/>
 
 Then: `walkeros bundle flow.json` → outputs standalone file.
 
@@ -80,3 +84,5 @@ The only difference is how you configure and deploy them.
 | Need dynamic runtime config | [Integrated](/docs/getting-started/modes/integrated) |
 | Want separate tracking script | [Bundled](/docs/getting-started/modes/bundled) |
 | Both? | You can use Integrated client-side and Bundled server-side |
+
+Then head to [Deploy](/docs/getting-started/deploy) to take it live.

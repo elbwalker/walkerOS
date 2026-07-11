@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-description: Ready-to-use code examples for walkerOS packages
+description: Send your first walkerOS event in five minutes
 sidebar_position: 1
 ---
 
@@ -10,6 +10,12 @@ Get started with walkerOS in minutes. These examples provide working code that
 you can copy, paste, and run immediately. All examples are maintained in our
 [quickstart app](https://github.com/elbwalker/walkerOS/tree/main/apps/quickstart)
 and tested with every release.
+
+This quickstart uses [integrated mode](/docs/getting-started/modes/integrated): the collector runs inside your own code. You can switch how you package it later, see [operating modes](/docs/getting-started/modes/).
+
+:::tip Working with an AI assistant?
+`@walkeros/mcp` runs locally without an account. Install the plugin and describe the flow you want: [With an AI assistant](/docs/apps/mcp).
+:::
 
 ## 1. Install packages
 
@@ -171,25 +177,19 @@ Add consent requirements to your destinations:
 
 ## See your event
 
-Once you have a `flow.json` with `config.platform` set (the Bundled-mode flows
-above), run the event through the flow offline with the named destination
-mocked:
+The step 2 setup runs directly in Node. Save it as `index.mjs` (the import and top-level `await` need ES modules) and run:
 
-<CodeSnippet
-  code={`npx walkeros push flow.json \\
-  -e '{"name":"page view"}' \\
-  --simulate destination.ga4`}
-  language="bash"
-/>
+<CodeSnippet code={`node index.mjs`} language="bash" />
 
-`push --simulate` builds the flow, runs the event through it with
-`destination.ga4` replaced by a mock, and prints the resolved outcome
-(`success` and `Duration`); add `--json` to get the same result as JSON.
-Nothing is sent to a vendor. Event names use a space (`page view`).
+You should see:
+
+<CodeSnippet code={`Event: page view`} language="bash" />
+
+That is the whole loop: an event pushed with `elb` reaching a destination. The browser setups in steps 3 and 4 verify the same way in your browser console once your app runs. To test flows offline with the CLI instead, see [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
 
 ## Next steps
 
-* **[DOM-based tagging](/docs/sources/web/browser/tagging/html-attributes)**:
-  Add data-elb attributes to HTML elements for automatic tracking
-* **[Event mapping](https://www.walkeros.io/docs/mapping)**:
-  Transform events before sending to destinations
+- **[Send it to GA4](/docs/getting-started/ga4-ecommerce)**: the same event arriving live in GA4 DebugView
+- **[DOM-based tagging](/docs/sources/web/browser/tagging/html-attributes)**: automatic tracking via data-elb attributes
+- **[Event mapping](/docs/mapping)**: transform events before sending
+- **[Operating modes](/docs/getting-started/modes/)**: choose how to package and deploy

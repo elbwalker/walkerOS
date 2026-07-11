@@ -13,6 +13,7 @@ export function getConfig(
   return {
     prefix: 'data-elb',
     pageview: true,
+    capture: true,
     elb: 'elb',
     elbLayer: 'elbLayer',
     scope: envDocument || undefined,

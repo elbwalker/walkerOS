@@ -11,4 +11,4 @@ set -euo pipefail
 
 PKG="${1:-${npm_config_pkg:-core}}"
 
-exec npx turbo run typecheck lint test --filter="@walkeros/${PKG}"
+exec npx turbo run typecheck lint test --filter="@walkeros/${PKG}" --summarize

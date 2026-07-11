@@ -29,6 +29,7 @@ import type * as SourceTypes from '../../types/source';
 import type * as TransformerTypes from '../../types/transformer';
 import type * as StoreTypes from '../../types/store';
 import type * as CollectorTypes from '../../types/collector';
+import type * as WalkerOSTypes from '../../types/walkeros';
 
 import type { ConfigSchema as DestConfigSchema } from '../destination';
 import type { ConfigSchema as SourceConfigSchema } from '../source';
@@ -38,6 +39,7 @@ import type {
   ConfigSchema as CollectorConfigSchema,
   InitConfigSchema as CollectorInitConfigSchema,
 } from '../collector';
+import type { SourceFieldsSchema } from '../walkeros';
 
 import type { Equal, Expect } from './type-utils';
 
@@ -76,3 +78,15 @@ type _CollectorInitConfigTsKeys = keyof CollectorTypes.InitConfig;
 type _collectorInitConfigCheck = Expect<
   Equal<_CollectorInitConfigZodKeys, _CollectorInitConfigTsKeys>
 >;
+
+// Event Source (WalkerOS.Source ↔ SourceSchema)
+//
+// Unlike the Config types above, the event `Source` extends `Properties`, which
+// carries a string index signature — so `keyof Source` collapses to
+// `string | number` and can't be compared directly. Both sides therefore expose
+// an index-free carrier of just the declared fields (`SourceFields` /
+// `SourceFieldsSchema`), which compose into the public `Source` / `SourceSchema`.
+// Guarding those keeps `source.release`/`trace`/etc. from drifting single-sided.
+type _SourceEventZodKeys = keyof z.infer<typeof SourceFieldsSchema>;
+type _SourceEventTsKeys = keyof WalkerOSTypes.SourceFields;
+type _sourceEventCheck = Expect<Equal<_SourceEventZodKeys, _SourceEventTsKeys>>;

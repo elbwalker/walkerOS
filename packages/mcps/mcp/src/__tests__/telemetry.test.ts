@@ -41,7 +41,7 @@ describe('MCP emitter wrapper', () => {
     rmSync(testDir, { recursive: true, force: true });
   });
 
-  it('emits mcp start with source.type=mcp, platform=server, no version block', async () => {
+  it('emits mcp start with source.type=mcp, platform=server, version in source.release', async () => {
     process.env.WALKEROS_TELEMETRY_DEBUG = '1';
     const errSpy = jest
       .spyOn(process.stderr, 'write')
@@ -56,8 +56,10 @@ describe('MCP emitter wrapper', () => {
     const out = errSpy.mock.calls.map((c) => String(c[0])).join('');
     expect(out).toContain('"name":"mcp start"');
     expect(out).toContain('"source":{"type":"mcp","platform":"server"');
-    expect(out).toContain('"version":"3.4.2"');
-    expect(out).not.toContain('"version":{');
+    // Version rides source.release keyed by the emitter surface, not a flat
+    // source.version field.
+    expect(out).toContain('"release":{"mcp":"3.4.2"}');
+    expect(out).not.toContain('"version":"3.4.2"');
     expect(out).toContain('"client":"claude-ai"');
 
     errSpy.mockRestore();
