@@ -12,14 +12,19 @@ describe('isVisible', () => {
     const innerHeight = w.innerHeight;
     w.innerHeight = 100; // Create a small window
 
+    // top/left/right/bottom must be internally consistent with x/y/width/height:
+    // isVisible clips against the viewport using left/top/right/bottom directly,
+    // so a rect where right/bottom don't match x+width/y+height would clip to a
+    // zero-area band and fail before the display/visibility/opacity checks below
+    // are even exercised.
     const x = 25,
       y = 25,
       width = 50,
       height = 50,
-      top = 10,
-      right = 25,
-      bottom = 25,
-      left = 25;
+      top = y,
+      right = x + width,
+      bottom = y + height,
+      left = x;
 
     // Create a mocked element
     const elem = document.createElement('div');
@@ -78,131 +83,201 @@ describe('isVisible', () => {
   });
 
   test('zero width/height elements should not be visible', () => {
+    const originalElementFromPoint = document.elementFromPoint;
+
+    // A zero-width (or zero-height) rect clips to an empty band regardless of
+    // where elementFromPoint would hit, so isVisible must return false without
+    // ever probing it.
+    document.elementFromPoint = jest.fn();
+
     // Test zero width
     const elemZeroWidth = document.createElement('div');
-    Object.defineProperty(elemZeroWidth, 'offsetWidth', { value: 0 });
-    Object.defineProperty(elemZeroWidth, 'offsetHeight', { value: 50 });
     elemZeroWidth.getBoundingClientRect = () =>
-      ({ x: 10, y: 10, width: 0, height: 50 }) as DOMRect;
+      ({
+        x: 10,
+        y: 10,
+        width: 0,
+        height: 50,
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: 60,
+      }) as DOMRect;
 
     expect(isVisible(elemZeroWidth, window, document)).toBeFalsy();
 
     // Test zero height
     const elemZeroHeight = document.createElement('div');
-    Object.defineProperty(elemZeroHeight, 'offsetWidth', { value: 50 });
-    Object.defineProperty(elemZeroHeight, 'offsetHeight', { value: 0 });
     elemZeroHeight.getBoundingClientRect = () =>
-      ({ x: 10, y: 10, width: 50, height: 0 }) as DOMRect;
+      ({
+        x: 10,
+        y: 10,
+        width: 50,
+        height: 0,
+        top: 10,
+        left: 10,
+        right: 60,
+        bottom: 10,
+      }) as DOMRect;
 
     expect(isVisible(elemZeroHeight, window, document)).toBeFalsy();
+
+    expect(document.elementFromPoint).not.toHaveBeenCalled();
+
+    document.elementFromPoint = originalElementFromPoint;
   });
 
   test('elements outside viewport bounds should not be visible', () => {
     const originalInnerWidth = window.innerWidth;
     const originalInnerHeight = window.innerHeight;
+    const originalElementFromPoint = document.elementFromPoint;
 
     window.innerWidth = 100;
     window.innerHeight = 100;
+    // Each rect below clips to an empty band against the 100x100 viewport, so
+    // isVisible must return false without ever probing elementFromPoint.
+    document.elementFromPoint = jest.fn();
 
     const elem = document.createElement('div');
-    Object.defineProperty(elem, 'offsetWidth', { value: 50 });
-    Object.defineProperty(elem, 'offsetHeight', { value: 50 });
 
-    // Element too far right (center x > viewport width)
+    // Element entirely right of the viewport
     elem.getBoundingClientRect = () =>
       ({
         x: 150,
         y: 25,
         width: 50,
         height: 50,
+        top: 25,
+        left: 150,
+        right: 200,
+        bottom: 75,
       }) as DOMRect;
     expect(isVisible(elem, window, document)).toBeFalsy();
 
-    // Element too far down (center y > viewport height)
+    // Element entirely below the viewport
     elem.getBoundingClientRect = () =>
       ({
         x: 25,
         y: 150,
         width: 50,
         height: 50,
+        top: 150,
+        left: 25,
+        right: 75,
+        bottom: 200,
       }) as DOMRect;
     expect(isVisible(elem, window, document)).toBeFalsy();
 
-    // Element too far left (center x < 0)
+    // Element entirely left of the viewport
     elem.getBoundingClientRect = () =>
       ({
         x: -100,
         y: 25,
         width: 50,
         height: 50,
+        top: 25,
+        left: -100,
+        right: -50,
+        bottom: 75,
       }) as DOMRect;
     expect(isVisible(elem, window, document)).toBeFalsy();
 
-    // Element too far up (center y < 0)
+    // Element entirely above the viewport
     elem.getBoundingClientRect = () =>
       ({
         x: 25,
         y: -100,
         width: 50,
         height: 50,
+        top: -100,
+        left: 25,
+        right: 75,
+        bottom: -50,
       }) as DOMRect;
     expect(isVisible(elem, window, document)).toBeFalsy();
 
+    expect(document.elementFromPoint).not.toHaveBeenCalled();
+
+    document.elementFromPoint = originalElementFromPoint;
     window.innerWidth = originalInnerWidth;
     window.innerHeight = originalInnerHeight;
   });
 
-  test('large elements visibility logic', () => {
+  // Renamed from 'large elements visibility logic': there is no longer a
+  // separate branch for elements taller than the viewport. The general
+  // viewport-clip in isVisible handles them the same way it handles anything
+  // else, probing the centre of the CLIPPED band rather than the element's own
+  // centre (which is what the old dedicated branch used to compute).
+  test('large elements: clipped-rect probing replaces the old dedicated branch', () => {
+    const originalInnerWidth = window.innerWidth;
     const originalInnerHeight = window.innerHeight;
+    window.innerWidth = 100;
     window.innerHeight = 100; // Small viewport
 
     const elem = document.createElement('div');
-    Object.defineProperty(elem, 'offsetWidth', { value: 50 });
-    Object.defineProperty(elem, 'offsetHeight', { value: 50 });
 
-    // Large element entirely above viewport center - should be invisible
+    // Large element entirely above the viewport: the clip against y:[0,100] is
+    // empty (top=0, bottom=-80), so isVisible returns false without ever
+    // probing elementFromPoint.
     elem.getBoundingClientRect = () =>
       ({
         x: 25,
-        y: -80,
+        y: -200,
         width: 50,
-        height: 120, // top=-80, bottom=40, viewport center=50
+        height: 120,
+        top: -200,
+        left: 25,
+        right: 75,
+        bottom: -80,
       }) as DOMRect;
 
     const originalElementFromPoint = document.elementFromPoint;
-    document.elementFromPoint = () => null;
+    document.elementFromPoint = jest.fn(() => null);
 
     expect(isVisible(elem, window, document)).toBeFalsy();
+    expect(document.elementFromPoint).not.toHaveBeenCalled();
 
-    // Large element entirely below viewport center - should be invisible
+    // Large element entirely below the viewport: clip is empty the other way
+    // (top=150, bottom=100).
     elem.getBoundingClientRect = () =>
       ({
         x: 25,
-        y: 80,
+        y: 150,
         width: 50,
-        height: 150, // top=80 > center=50, bottom=230 > viewport=100
+        height: 150,
+        top: 150,
+        left: 25,
+        right: 75,
+        bottom: 300,
       }) as DOMRect;
-    expect(isVisible(elem, window, document)).toBeFalsy();
+    document.elementFromPoint = jest.fn(() => null);
 
-    // Large element visible that spans viewport center - should call elementFromPoint at viewport center
+    expect(isVisible(elem, window, document)).toBeFalsy();
+    expect(document.elementFromPoint).not.toHaveBeenCalled();
+
+    // Large element that overlaps the viewport: probes the centre of the
+    // CLIPPED band, x:[25,75] -> 50, y:[20,100] -> 60. The old branch would
+    // have probed (50, 50): its own x-centre and windowHeight/2.
     const largeElem = document.createElement('div');
-    Object.defineProperty(largeElem, 'offsetWidth', { value: 50 });
-    Object.defineProperty(largeElem, 'offsetHeight', { value: 120 }); // Make it larger than viewport
     largeElem.getBoundingClientRect = () =>
       ({
         x: 25,
         y: 20,
         width: 50,
-        height: 120, // top=20, bottom=140, spans center=50
+        height: 120,
+        top: 20,
+        left: 25,
+        right: 75,
+        bottom: 140,
       }) as DOMRect;
 
-    // Mock elementFromPoint to return the element when called at viewport center
     document.elementFromPoint = jest.fn(() => largeElem);
 
     expect(isVisible(largeElem, window, document)).toBeTruthy();
-    expect(document.elementFromPoint).toHaveBeenCalledWith(50, 50); // center x, viewport center y
+    expect(document.elementFromPoint).toHaveBeenCalledWith(50, 60);
 
     document.elementFromPoint = originalElementFromPoint;
+    window.innerWidth = originalInnerWidth;
     window.innerHeight = originalInnerHeight;
   });
 
@@ -396,6 +471,116 @@ describe('shadowHostsAbove', () => {
     innerRoot.appendChild(target);
 
     expect(shadowHostsAbove(target, window)).toEqual([innerHost, outerHost]);
+  });
+});
+
+describe('isVisible occlusion oracle', () => {
+  const setRect = (el: HTMLElement, r: DOMRectInit): void => {
+    el.getBoundingClientRect = () =>
+      ({
+        x: r.x,
+        y: r.y,
+        top: r.y,
+        left: r.x,
+        width: r.width,
+        height: r.height,
+        right: (r.x ?? 0) + (r.width ?? 0),
+        bottom: (r.y ?? 0) + (r.height ?? 0),
+        toJSON: () => r,
+      }) as DOMRect;
+  };
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'innerWidth', {
+      value: 1000,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'innerHeight', {
+      value: 450,
+      configurable: true,
+    });
+    Object.defineProperty(document.documentElement, 'clientWidth', {
+      value: 1000,
+      configurable: true,
+    });
+    Object.defineProperty(document.documentElement, 'clientHeight', {
+      value: 450,
+      configurable: true,
+    });
+  });
+
+  // THE load-bearing test for this behaviour. The two tests below stub
+  // elementFromPoint with a function that ignores its arguments, so they pass
+  // whichever centre formula is used - they prove nothing on their own. This one
+  // asserts the actual PROBE POINT, so it fails if anyone reverts to probing the
+  // element's own centre.
+  test('probes the centre of the VISIBLE band, not the element centre', () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    // 2000px tall starting at -1500, in a 1000x450 viewport. It overflows the
+    // viewport at BOTH ends, so its own centre (y = -1500 + 1000 = -500) is off
+    // screen entirely. The visible band is y=[0,450], x=[0,1000] => centre
+    // (500, 225). Probing the element's centre would hand elementFromPoint a
+    // negative y and miss.
+    setRect(el, { x: 0, y: -1500, width: 1000, height: 2000 });
+    const probe = jest.fn(() => el);
+    document.elementFromPoint = probe;
+
+    expect(isVisible(el, window, document)).toBe(true);
+    expect(probe).toHaveBeenCalledWith(500, 225);
+  });
+
+  test('an element taller than the viewport is visible when it covers the screen', () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    // 716px tall, top at -100. Visible band y=[0,450] => probe centre y=225.
+    setRect(el, { x: 0, y: -100, width: 1000, height: 716 });
+    document.elementFromPoint = () => el;
+
+    expect(isVisible(el, window, document)).toBe(true);
+  });
+
+  test('an element whose own centre is off screen is still visible', () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    // 2000px tall starting at -1500: element centre is at y=-500, off screen.
+    // The old implementation rejected this. The visible band is y=[0,450].
+    setRect(el, { x: 0, y: -1500, width: 1000, height: 2000 });
+    document.elementFromPoint = () => el;
+
+    expect(isVisible(el, window, document)).toBe(true);
+  });
+
+  test('an ancestor with opacity 0 hides the element', () => {
+    const wrapper = document.createElement('div');
+    const el = document.createElement('div');
+    wrapper.style.opacity = '0';
+    wrapper.appendChild(el);
+    document.body.appendChild(wrapper);
+    setRect(el, { x: 0, y: 100, width: 200, height: 100 });
+    document.elementFromPoint = () => el;
+
+    expect(isVisible(el, window, document)).toBe(false);
+  });
+
+  test('an element entirely off screen is not visible', () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    setRect(el, { x: 0, y: 600, width: 200, height: 100 });
+    document.elementFromPoint = () => el;
+
+    expect(isVisible(el, window, document)).toBe(false);
+  });
+
+  test('an occluding overlay hides the element', () => {
+    const el = document.createElement('div');
+    const overlay = document.createElement('div');
+    document.body.appendChild(el);
+    document.body.appendChild(overlay);
+    setRect(el, { x: 0, y: 100, width: 200, height: 100 });
+    document.elementFromPoint = () => overlay;
+
+    expect(isVisible(el, window, document)).toBe(false);
   });
 });
 

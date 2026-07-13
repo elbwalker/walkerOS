@@ -37,6 +37,7 @@ export * from './fatalError';
 export * from './useHooks';
 export * from './telemetry';
 export * from './telemetryResolver';
+export * from './preview';
 export * from './journey';
 export { getTraceUntil, setTraceUntil } from './traceState';
 export { emitStep } from './emitStep';

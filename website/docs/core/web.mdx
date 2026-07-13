@@ -105,23 +105,28 @@ dimensions.
 
 ### isVisible
 
-`isVisible(element: HTMLElement): boolean` checks if an element is visible to
-the user.
+`isVisible(element: HTMLElement): boolean` checks whether an element is
+rendered and not painted over. It does not measure how much of the element is
+inside the viewport; that is the job of the `visible` and `impression`
+triggers.
 
 <CodeSnippet
   code={`const promoElement = document.getElementById('promotion');
 if (isVisible(promoElement)) {
-// Element is visible on screen
+// Element is rendered and nothing else is painted over it
 }`}
   language="javascript"
 />
 
 This function considers:
 
-* Element display and visibility styles
-* Element position within viewport
-* Parent element visibility
-* Intersection with the visible area
+* Computed `display`, `visibility`, and `opacity`, including transparent
+  ancestors
+* Clipping against the viewport itself, not against ancestor overflow boxes; a
+  parent with `overflow: hidden` is instead caught incidentally by the
+  occlusion hit test below
+* Occlusion, via a hit test at the centre of the element's visible area, so
+  something else painted on top of it counts as not visible
 
 ## Storage management
 

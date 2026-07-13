@@ -25,6 +25,7 @@ import {
   generateWrapEntryServer,
   getNodeExternals,
 } from './bundler.js';
+import type { WrapEntryPreview } from './bundler.js';
 import type { MinifyOptions } from '../../types/bundle.js';
 
 export interface WrapSkeletonOptions {
@@ -52,10 +53,12 @@ export interface WrapSkeletonOptions {
    */
   windowElb?: string;
 
-  /** Browser-only: CDN hostname for loading preview bundles. */
-  previewOrigin?: string;
-  /** Browser-only: project scope for preview URL isolation. */
-  previewScope?: string;
+  /**
+   * Browser-only: preview activation wiring. Only host (deploy) wraps set
+   * this; the preview-artifact wrap always omits it, per the anti-recursion
+   * invariant in `generateWrapEntry`.
+   */
+  preview?: WrapEntryPreview;
 
   /**
    * Browser-only: telemetry wiring. When provided, the wrapped bundle
@@ -160,16 +163,11 @@ export async function wrapSkeleton(
   } = options;
 
   if (
-    options.previewScope &&
-    !/^[a-zA-Z0-9_-]{1,64}$/.test(options.previewScope)
+    options.preview?.previewOrigin &&
+    !/^[a-z0-9.-]+$/.test(options.preview.previewOrigin)
   ) {
     throw new Error(
-      `Invalid previewScope "${options.previewScope}". Must match /^[a-zA-Z0-9_-]{1,64}$/.`,
-    );
-  }
-  if (options.previewOrigin && !/^[a-z0-9.-]+$/.test(options.previewOrigin)) {
-    throw new Error(
-      `Invalid previewOrigin "${options.previewOrigin}". Must be a bare hostname matching /^[a-z0-9.-]+$/.`,
+      `Invalid previewOrigin "${options.preview.previewOrigin}". Must be a bare hostname matching /^[a-z0-9.-]+$/.`,
     );
   }
 
@@ -211,12 +209,7 @@ export async function wrapSkeleton(
       ? generateWrapEntry(absoluteSkeletonPath, {
           ...(windowCollector ? { windowCollector } : {}),
           ...(windowElb ? { windowElb } : {}),
-          ...(options.previewOrigin
-            ? { previewOrigin: options.previewOrigin }
-            : {}),
-          ...(options.previewScope
-            ? { previewScope: options.previewScope }
-            : {}),
+          ...(options.preview ? { preview: options.preview } : {}),
           platform,
           ...(telemetry ? { telemetry } : {}),
         })
