@@ -17,10 +17,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   deploy:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
@@ -105,6 +110,7 @@ jobs:
   cleanup:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Delete preview folder
         run: |

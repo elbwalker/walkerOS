@@ -19,24 +19,6 @@ export { CodeSnippet } from './components/molecules/code-snippet';
 export { FlowMap } from './components/molecules/flow-map';
 export { PropertyTable } from './components/molecules/property-table';
 export {
-  TagSkeleton,
-  TagSkeletonOverlay,
-  TagCanvas,
-  TagTreeEditor,
-  layout,
-  clampRect,
-  makeTagId,
-  scopeToTagTree,
-} from './components/molecules/tag-skeleton';
-// The `Tag` atom (value) and `Tag` model type share one name; re-merge them
-// locally so both surface from the package root under a single symbol.
-import {
-  Tag as TagAtom,
-  type Tag as TagModel,
-} from './components/molecules/tag-skeleton';
-export const Tag = TagAtom;
-export type Tag = TagModel;
-export {
   Dropdown,
   DropdownItem,
   DropdownDivider,
@@ -59,24 +41,6 @@ export type {
   FlowStageConfig,
 } from './components/molecules/flow-map';
 export type { PropertyTableProps } from './components/molecules/property-table';
-export type {
-  TagSkeletonProps,
-  TagSkeletonNode,
-  TagSkeletonDetail,
-  TagSkeletonOverlayProps,
-  TagGrid,
-  TagOverlayBox,
-  TagOverlayRect,
-  TagProps,
-  TagCanvasProps,
-  TagTreeEditorProps,
-  PositionedTag,
-  LayoutResult,
-  LayoutOptions,
-  TagTree,
-  TagType,
-  TagRect,
-} from './components/molecules/tag-skeleton';
 export type {
   DropdownProps,
   DropdownItemProps,

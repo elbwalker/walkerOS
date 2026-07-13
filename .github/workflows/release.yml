@@ -18,6 +18,7 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: npm-publish
     permissions:
       contents: write
@@ -126,6 +127,16 @@ jobs:
       # No NPM_TOKEN. Provenance attestations are generated automatically.
       # Requires a Trusted Publisher configured per package on npmjs.com
       # (org elbwalker, repo walkerOS, workflow release.yml, env npm-publish).
+      # Persist the version bump before publishing so a mid-run failure leaves
+      # git ahead of npm (re-dispatchable: changeset publish ships the missing
+      # versions) rather than npm ahead of git (which re-bumps on re-dispatch).
+      - name: Commit version changes (stable only)
+        if: inputs.release_type == 'stable release'
+        run: |
+          git add -A
+          git commit -m "chore: version packages" || echo "No changes to commit"
+          git push
+
       - name: Publish to npm (Trusted Publishing via OIDC)
         run: |
           if [ "${{ inputs.release_type }}" = "pre-release (next)" ]; then
@@ -133,13 +144,6 @@ jobs:
           else
             npx changeset publish
           fi
-
-      - name: Commit version changes (stable only)
-        if: inputs.release_type == 'stable release'
-        run: |
-          git add -A
-          git commit -m "chore: version packages" || echo "No changes to commit"
-          git push
 
       - name: Create GitHub Release
         if: |
