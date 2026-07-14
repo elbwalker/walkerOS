@@ -1433,6 +1433,26 @@ describe('preview.previewOrigin validation', () => {
       }),
     ).rejects.toThrow(/Invalid previewOrigin/);
   });
+
+  it('throws on an empty previewOrigin', async () => {
+    // previewOrigin is required on WrapEntryPreview: an empty string must not
+    // slip past a falsy-string skip in the guard, since it would otherwise
+    // bake a broken `https:///preview/<art>.js` URL into the bundle.
+    const { wrapSkeleton } = await import('../../../commands/bundle/wrap.js');
+    await expect(
+      wrapSkeleton({
+        skeletonPath: '/tmp/fake.mjs',
+        platform: 'browser',
+        outputPath: '/tmp/out.js',
+        preview: {
+          enabled: true,
+          keyring: [],
+          iss: 'app:stage',
+          previewOrigin: '',
+        },
+      }),
+    ).rejects.toThrow(/Invalid previewOrigin/);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -3017,7 +3017,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['PreviewResponse'];
+            'application/json': components['schemas']['CreatePreviewResponse'];
           };
         };
         /** @description Validation error */
@@ -3190,6 +3190,107 @@ export interface paths {
         };
       };
     };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/previews/{previewId}/grant': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mint preview activation grant
+     * @description Mint a fresh, origin-bound activation grant for an existing preview. Grants are origin-bound, so a preview needs one grant per host origin — re-mint whenever the target origin changes.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          previewId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['MintGrantRequest'];
+        };
+      };
+      responses: {
+        /** @description Grant minted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MintGrantResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description No active web deployment / host bundle not preview-enabled */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -8856,10 +8957,13 @@ export interface components {
       token: string;
       /** Format: uri */
       bundleUrl: string;
-      activationUrl: string;
+      activationUrl: string | null;
       createdBy: string;
       /** Format: date-time */
       createdAt: string;
+    };
+    CreatePreviewResponse: components['schemas']['PreviewResponse'] & {
+      grant: string | null;
     };
     ListPreviewsResponse: {
       previews: components['schemas']['PreviewResponse'][];
@@ -8877,6 +8981,17 @@ export interface components {
             kind: 'deployment-version';
             deploymentVersionId: string;
           };
+    };
+    MintGrantRequest: {
+      origins: string[];
+      sessionId?: string;
+    };
+    MintGrantResponse: {
+      grant: string;
+      /** Format: uri */
+      activationUrl: string;
+      /** Format: date-time */
+      sessionExpiresAt: string;
     };
     ObserveSessionResponse: {
       /** @example ses_abc123xyz456 */
@@ -8899,7 +9014,7 @@ export interface components {
     };
     ObserveSessionWeb: {
       token: string;
-      activationUrl: string;
+      activationUrl: string | null;
       /** Format: uri */
       bundleUrl: string;
     } | null;
@@ -9301,6 +9416,9 @@ export interface components {
         /** @enum {string} */
         type: 'cli' | 'mcp';
         platform?: string;
+        release?: {
+          [key: string]: string;
+        };
         version?: string;
         schema?: string;
         tool?: string;

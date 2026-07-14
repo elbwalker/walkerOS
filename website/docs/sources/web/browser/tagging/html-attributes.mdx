@@ -184,9 +184,9 @@ past it and back.
 
 :::note
 
-Elements taller than roughly 10x the viewport may not be detected while
-scrolling, because the observer cannot sample finely enough to catch the
-element passing through.
+Extremely tall elements, beyond roughly 100x the viewport height, are not
+detected. Such an element never occupies enough of its own area to register,
+however far it is scrolled.
 
 :::
 

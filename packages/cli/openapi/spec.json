@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "2.1.0",
+    "version": "2.3.0",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -2204,8 +2204,7 @@
             "format": "uri"
           },
           "activationUrl": {
-            "type": "string",
-            "pattern": "^\\?elbPreview=[a-z0-9]{12}$"
+            "type": ["string", "null"]
           },
           "createdBy": {
             "type": "string"
@@ -2225,6 +2224,22 @@
           "activationUrl",
           "createdBy",
           "createdAt"
+        ]
+      },
+      "CreatePreviewResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PreviewResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "grant": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["grant"]
+          }
         ]
       },
       "ListPreviewsResponse": {
@@ -2278,6 +2293,42 @@
           }
         },
         "required": ["flowSettingsId"]
+      },
+      "MintGrantRequest": {
+        "type": "object",
+        "properties": {
+          "origins": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 253,
+              "example": "https://shop.example.com"
+            },
+            "minItems": 1,
+            "maxItems": 5
+          },
+          "sessionId": {
+            "type": "string"
+          }
+        },
+        "required": ["origins"]
+      },
+      "MintGrantResponse": {
+        "type": "object",
+        "properties": {
+          "grant": {
+            "type": "string"
+          },
+          "activationUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "sessionExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["grant", "activationUrl", "sessionExpiresAt"]
       },
       "ObserveSessionResponse": {
         "type": "object",
@@ -2347,7 +2398,7 @@
             "type": "string"
           },
           "activationUrl": {
-            "type": "string"
+            "type": ["string", "null"]
           },
           "bundleUrl": {
             "type": "string",
@@ -3258,6 +3309,12 @@
               },
               "platform": {
                 "type": "string"
+              },
+              "release": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
               },
               "version": {
                 "type": "string"
@@ -8673,7 +8730,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PreviewResponse"
+                  "$ref": "#/components/schemas/CreatePreviewResponse"
                 }
               }
             }
@@ -8932,6 +8989,126 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/previews/{previewId}/grant": {
+      "post": {
+        "tags": ["Previews"],
+        "summary": "Mint preview activation grant",
+        "description": "Mint a fresh, origin-bound activation grant for an existing preview. Grants are origin-bound, so a preview needs one grant per host origin — re-mint whenever the target origin changes.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^prv_[a-z0-9]+$",
+              "example": "prv_abc123xyz456"
+            },
+            "required": true,
+            "name": "previewId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MintGrantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Grant minted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MintGrantResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No active web deployment / host bundle not preview-enabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {

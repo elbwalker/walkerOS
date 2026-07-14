@@ -163,6 +163,26 @@ describe('browserSwapActivator', () => {
     stop();
   });
 
+  it('self-heals when the preview script neither loads nor errors (hung CDN), via the swap timeout', async () => {
+    // No autoResolveScripts here: the injected <script> is left in place with
+    // no load/error ever dispatched, so only preview.ts's SWAP_TIMEOUT_MS
+    // fallback (not any DOM event) can settle this promise. Fake timers let
+    // the 5s timeout elapse instantly; the real crypto verify above still
+    // resolves on Node's real event loop, unaffected by faked setTimeout.
+    jest.useFakeTimers();
+    const { cfg, sign } = await setup();
+    setUrl(`?elbPreview=${await sign()}`);
+
+    const result = browserSwapActivator(cfg);
+    await jest.advanceTimersByTimeAsync(5_000); // preview.ts's SWAP_TIMEOUT_MS
+
+    expect(await result).toBe(false);
+    expect(document.head.querySelector('script')).toBeNull();
+    expect(localStorage.getItem('elbPreview')).toBeNull();
+
+    jest.useRealTimers();
+  });
+
   it('clears an active session on ?elbPreview=off', async () => {
     const { cfg, sign } = await setup();
     localStorage.setItem('elbPreview', await sign());
