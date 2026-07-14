@@ -165,23 +165,20 @@ describe('browserSwapActivator', () => {
 
   it('self-heals when the preview script neither loads nor errors (hung CDN), via the swap timeout', async () => {
     // No autoResolveScripts here: the injected <script> is left in place with
-    // no load/error ever dispatched, so only preview.ts's SWAP_TIMEOUT_MS
-    // fallback (not any DOM event) can settle this promise. Fake timers let
-    // the 5s timeout elapse instantly; the real crypto verify above still
-    // resolves on Node's real event loop, unaffected by faked setTimeout.
-    jest.useFakeTimers();
+    // no load/error ever dispatched, so only preview.ts's real SWAP_TIMEOUT_MS
+    // fallback (5s) can settle this promise. Real timers, not fake ones: the
+    // activator awaits the real crypto verify BEFORE it registers the swap
+    // setTimeout, so faking timers races that await (a slow runner advances the
+    // fake clock before the timeout is registered, then nothing fires it and the
+    // promise hangs). Letting the genuine 5s elapse is deterministic; the Jest
+    // per-test timeout below sits well above it so CI cannot race it.
     const { cfg, sign } = await setup();
     setUrl(`?elbPreview=${await sign()}`);
 
-    const result = browserSwapActivator(cfg);
-    await jest.advanceTimersByTimeAsync(5_000); // preview.ts's SWAP_TIMEOUT_MS
-
-    expect(await result).toBe(false);
+    expect(await browserSwapActivator(cfg)).toBe(false);
     expect(document.head.querySelector('script')).toBeNull();
     expect(localStorage.getItem('elbPreview')).toBeNull();
-
-    jest.useRealTimers();
-  });
+  }, 15_000);
 
   it('clears an active session on ?elbPreview=off', async () => {
     const { cfg, sign } = await setup();
