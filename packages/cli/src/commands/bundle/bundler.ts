@@ -2088,6 +2088,19 @@ export function generateWrapEntry(
      * never re-verify its own grant and re-inject itself.
      */
     preview?: WrapEntryPreview;
+    /**
+     * Preview-ARTIFACT wiring (the third wrap variant). When set, the emitted
+     * entry reads the activation grant from `localStorage['elbPreview']` at
+     * boot and stamps it as the `X-Walkeros-Preview` header on each named
+     * server-bound destination (`config.destinations[k].config.settings.headers`),
+     * before `startFlow`. The grant is never baked into the artifact.
+     *
+     * Mutually exclusive with `preview`: a host bundle ACTIVATES a preview, an
+     * artifact INJECTS its grant. An artifact that also baked the activator
+     * would re-verify the stored grant and re-inject itself (infinite
+     * recursion), so setting both throws.
+     */
+    previewGrantTargets?: string[];
     /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
     platform?: 'browser' | 'node';
     /**
@@ -2110,6 +2123,21 @@ export function generateWrapEntry(
   const assignmentCode =
     assignments.length > 0 ? '\n' + assignments.join('\n') : '';
 
+  // A host bundle activates a preview; a preview artifact injects its grant.
+  // Baking both would let an activated artifact re-verify the stored grant and
+  // re-inject itself (infinite recursion), so refuse the combination loudly
+  // rather than pick a silent precedence that hides a caller bug.
+  if (
+    options.preview !== undefined &&
+    options.previewGrantTargets !== undefined
+  ) {
+    throw new Error(
+      'generateWrapEntry: `preview` (host activator) and `previewGrantTargets` ' +
+        '(preview-artifact injection) are mutually exclusive. A host bundle ' +
+        'activates a preview; an artifact injects its grant. Pass exactly one.',
+    );
+  }
+
   const preview = options.preview;
   const previewEnabled = !!preview?.enabled;
 
@@ -2118,6 +2146,42 @@ export function generateWrapEntry(
   const previewImport = previewEnabled
     ? `import { browserSwapActivator } from '@walkeros/core';\n`
     : '';
+
+  // Preview-artifact variant: read the activation grant from localStorage at
+  // boot and stamp it as the X-Walkeros-Preview header on each named
+  // server-bound destination, before startFlow. The grant value never appears
+  // as a literal — only the runtime localStorage read. localStorage access is
+  // wrapped in try/catch (Safari private mode throws) and an absent key skips
+  // injection entirely so a plain page boots normally.
+  const grantTargets = options.previewGrantTargets ?? [];
+  const previewGrantBlock =
+    grantTargets.length > 0
+      ? `
+  // --- Preview grant injection ---
+  try {
+    const __previewGrant =
+      typeof localStorage !== 'undefined'
+        ? localStorage.getItem('elbPreview')
+        : null;
+    if (__previewGrant && config.destinations) {
+${grantTargets
+  .map((key) => {
+    const ref = `config.destinations[${singleQuoteLiteral(key)}]`;
+    return `      if (${ref}) {
+        const __dest = ${ref};
+        const __cfg = __dest.config || (__dest.config = {});
+        const __settings = __cfg.settings || (__cfg.settings = {});
+        const __headers = __settings.headers || (__settings.headers = {});
+        __headers['X-Walkeros-Preview'] = __previewGrant;
+      }`;
+  })
+  .join('\n')}
+    }
+  } catch (__err) {
+    // localStorage can throw (Safari private mode); boot without the grant.
+  }
+  // --- End preview grant injection ---`
+      : '';
 
   const previewBlock =
     previewEnabled && preview
@@ -2260,9 +2324,19 @@ function __pollTrace() {
   return `${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';${telemetryImport}
 ${telemetryPoller}
 (async () => {${previewBlock}
-  const config = wireConfig(__configData);${envBlock}
+  const config = wireConfig(__configData);${envBlock}${previewGrantBlock}
   const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}
 })();`;
+}
+
+/**
+ * Emit a single-quoted JS string literal for a destination key. Destination
+ * keys come from a validated flow config, but escaping backslash and single
+ * quote keeps the emitted codegen well-formed for any key and matches the
+ * single-quote convention the preview-injection tests pin.
+ */
+function singleQuoteLiteral(value: string): string {
+  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
 /**

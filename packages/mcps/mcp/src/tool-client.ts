@@ -17,6 +17,19 @@ import type {
 import type { Journey, JourneyGap } from '@walkeros/core';
 
 /**
+ * Mint a fresh, origin-bound activation grant for an existing preview. All
+ * fields are opaque identifiers/strings — no host-internal shape leaks into
+ * this public interface. `origins` are bare `https://host[:port]` values the
+ * grant may activate on; the returned `activationUrl` targets the first.
+ */
+export interface RegrantPreviewOptions {
+  projectId: string;
+  flowId: string;
+  previewId: string;
+  origins: string[];
+}
+
+/**
  * The assembled cross-runtime journeys for a flow's active Observe session,
  * mirroring the app's flowId-keyed REST envelope. `sessionId` is null when the
  * flow has no active session (the empty result an agent gets when the flow is
@@ -87,8 +100,21 @@ export interface ToolClient {
   // Previews
   listPreviews(options: ListPreviewsOptions): Promise<unknown>;
   getPreview(options: GetPreviewOptions): Promise<unknown>;
-  createPreview(options: CreatePreviewOptions): Promise<unknown>;
+  // `siteUrl` is optional and host-specific: an in-process host can mint an
+  // origin-bound activation grant for it at create time; the CLI-backed HTTP
+  // client ignores it (create there always uses the flow's default host mint).
+  createPreview(
+    options: CreatePreviewOptions & { siteUrl?: string },
+  ): Promise<unknown>;
   deletePreview(options: DeletePreviewOptions): Promise<unknown>;
+  /**
+   * Mint a fresh, origin-bound activation grant for an existing preview.
+   * OPTIONAL: only in-process hosts (the walkerOS app itself) implement it; the
+   * CLI-backed HTTP client omits it, and the flow_manage handler guards on its
+   * presence before calling. Returns an already-redacted grant summary (never
+   * the ingest token or project id).
+   */
+  regrantPreview?(options: RegrantPreviewOptions): Promise<unknown>;
 
   // Secrets (per-flow; metadata only, values are write-only)
   listSecrets(options: ListSecretsOptions): Promise<unknown>;

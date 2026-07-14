@@ -61,6 +61,15 @@ export interface WrapSkeletonOptions {
   preview?: WrapEntryPreview;
 
   /**
+   * Browser-only: preview-ARTIFACT grant injection. The preview-artifact wrap
+   * sets this to the server-bound destination keys that should receive the
+   * `X-Walkeros-Preview` header read from `localStorage['elbPreview']` at boot.
+   * Mutually exclusive with `preview` (a host activates, an artifact injects);
+   * passing both throws.
+   */
+  previewGrantTargets?: string[];
+
+  /**
    * Browser-only: telemetry wiring. When provided, the wrapped bundle
    * installs an observer built via `createTelemetryObserver` onto
    * `collector.observers` and forwards FlowState records to `observerUrl`
@@ -162,6 +171,17 @@ export async function wrapSkeleton(
     minifyOptions,
   } = options;
 
+  // A host bundle activates a preview; a preview artifact injects its grant.
+  // Refuse the combination at the app-facing boundary (generateWrapEntry
+  // enforces the same invariant) so a caller wiring both surfaces a clear error
+  // here rather than a codegen-time throw.
+  if (options.preview && options.previewGrantTargets) {
+    throw new Error(
+      'wrapSkeleton: `preview` (host activator) and `previewGrantTargets` ' +
+        '(preview-artifact injection) are mutually exclusive. Pass exactly one.',
+    );
+  }
+
   // previewOrigin is non-optional on WrapEntryPreview: an empty string is
   // still a config error (it bakes a broken `https:///preview/<art>.js` URL
   // into the bundle), so it must fail the same charset check as a malformed
@@ -211,6 +231,9 @@ export async function wrapSkeleton(
           ...(windowCollector ? { windowCollector } : {}),
           ...(windowElb ? { windowElb } : {}),
           ...(options.preview ? { preview: options.preview } : {}),
+          ...(options.previewGrantTargets
+            ? { previewGrantTargets: options.previewGrantTargets }
+            : {}),
           platform,
           ...(telemetry ? { telemetry } : {}),
         })

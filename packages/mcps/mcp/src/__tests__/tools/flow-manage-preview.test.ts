@@ -201,14 +201,19 @@ describe('flow_manage tool — preview actions', () => {
       expect(result.isError).toBe(true);
     });
 
-    it('without siteUrl returns activationParam only (no activationUrl, no deactivationUrl)', async () => {
+    it("surfaces the client's redacted summary and synthesizes no token URL", async () => {
+      // The client returns an already-redacted preview summary (no token, no
+      // projectId). The handler passes it through verbatim and adds no
+      // token-derived activationParam/deactivationUrl of its own.
       const createPreview = jest.fn().mockResolvedValue({
-        id: 'prv_1',
-        token: 'tok_abc',
-        activationUrl: '?elbPreview=tok_abc',
-        bundleUrl: 'https://cdn.example.com/preview.js',
-        createdBy: 'user_1',
+        previewId: 'prv_1',
+        flowId: 'cfg_1',
+        bundleUrl: 'https://cdn.example.com/preview/art_x.js',
+        activationUrl: null,
+        sessionExpiresAt: null,
+        status: 'arming',
         createdAt: '2026-04-21T00:00:00Z',
+        observeFeed: { tool: 'observe_journeys', flowId: 'cfg_1' },
       });
       registerFlowManageTool(
         server as never,
@@ -229,19 +234,23 @@ describe('flow_manage tool — preview actions', () => {
       });
       expect(result.isError).toBeUndefined();
       const data = result.structuredContent;
-      expect(data.activationParam).toBe('?elbPreview=tok_abc');
-      expect(data.activationUrl).toBeUndefined();
+      expect(data.previewId).toBe('prv_1');
+      expect(data.activationUrl).toBeNull();
+      expect(data.activationParam).toBeUndefined();
       expect(data.deactivationUrl).toBeUndefined();
+      expect('token' in data).toBe(false);
     });
 
-    it('with siteUrl returns full activationUrl and deactivationUrl', async () => {
+    it('forwards siteUrl to the client and passes the grant-based activationUrl through unchanged', async () => {
       const createPreview = jest.fn().mockResolvedValue({
-        id: 'prv_1',
-        token: 'tok_abc',
-        activationUrl: '?elbPreview=tok_abc',
-        bundleUrl: 'https://cdn.example.com/preview.js',
-        createdBy: 'user_1',
+        previewId: 'prv_1',
+        flowId: 'cfg_1',
+        bundleUrl: 'https://cdn.example.com/preview/art_x.js',
+        activationUrl: 'https://example.com?elbPreview=gr_signedgrant',
+        sessionExpiresAt: '2026-04-21T01:00:00Z',
+        status: 'live',
         createdAt: '2026-04-21T00:00:00Z',
+        observeFeed: { tool: 'observe_journeys', flowId: 'cfg_1' },
       });
       registerFlowManageTool(
         server as never,
@@ -259,13 +268,23 @@ describe('flow_manage tool — preview actions', () => {
         mockExtra,
       )) as { isError?: boolean; structuredContent: Record<string, unknown> };
 
+      // siteUrl is forwarded to the client, which mints the origin-bound grant.
+      expect(createPreview).toHaveBeenCalledWith({
+        projectId: 'proj_default',
+        flowId: 'cfg_1',
+        flowName: 'demo',
+        flowSettingsId: undefined,
+        siteUrl: 'https://example.com',
+      });
       expect(result.isError).toBeUndefined();
       const data = result.structuredContent;
+      // Grant-based activationUrl passed through verbatim; the handler never
+      // rebuilds it from a token, and never emits a deactivationUrl.
       expect(data.activationUrl).toBe(
-        'https://example.com/?elbPreview=tok_abc',
+        'https://example.com?elbPreview=gr_signedgrant',
       );
-      expect(data.deactivationUrl).toBe('https://example.com/?elbPreview=off');
-      expect(data.activationParam).toBe('?elbPreview=tok_abc');
+      expect(data.deactivationUrl).toBeUndefined();
+      expect(data.activationParam).toBeUndefined();
     });
 
     it('forwards source to createPreview when provided', async () => {
@@ -483,6 +502,92 @@ describe('flow_manage tool — preview actions', () => {
         deleted: true,
         previewId: 'prv_1',
       });
+    });
+  });
+
+  describe('preview_regrant', () => {
+    it('requires flowId and previewId', async () => {
+      registerFlowManageTool(server as never, stubClient());
+      const tool = server.getTool('flow_manage')!;
+
+      const r1 = (await tool.handler(
+        { action: 'preview_regrant' },
+        mockExtra,
+      )) as { isError: boolean };
+      expect(r1.isError).toBe(true);
+
+      const r2 = (await tool.handler(
+        { action: 'preview_regrant', flowId: 'cfg_1' },
+        mockExtra,
+      )) as { isError: boolean };
+      expect(r2.isError).toBe(true);
+
+      const r3 = (await tool.handler(
+        { action: 'preview_regrant', previewId: 'prv_1' },
+        mockExtra,
+      )) as { isError: boolean };
+      expect(r3.isError).toBe(true);
+    });
+
+    it('errors when the client does not implement regrantPreview', async () => {
+      // The default stub client omits the optional regrantPreview method (the
+      // CLI-backed HTTP client is the real-world example). The handler must
+      // guard on its presence rather than crash.
+      registerFlowManageTool(
+        server as never,
+        stubClient({ getDefaultProject: () => 'proj_default' }),
+      );
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        {
+          action: 'preview_regrant',
+          flowId: 'cfg_1',
+          previewId: 'prv_1',
+          origins: ['https://shop.example.com'],
+        },
+        mockExtra,
+      )) as { isError: boolean; content: Array<{ text: string }> };
+
+      expect(result.isError).toBe(true);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.error).toContain('not supported');
+    });
+
+    it('forwards ids + origins to regrantPreview and passes the redacted grant through', async () => {
+      const regrantPreview = jest.fn().mockResolvedValue({
+        previewId: 'prv_1',
+        activationUrl: 'https://shop.example.com?elbPreview=gr_x',
+        sessionExpiresAt: '2026-04-21T01:00:00Z',
+      });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ regrantPreview, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        {
+          action: 'preview_regrant',
+          flowId: 'cfg_1',
+          previewId: 'prv_1',
+          origins: ['https://shop.example.com'],
+        },
+        mockExtra,
+      )) as { isError?: boolean; structuredContent: Record<string, unknown> };
+
+      expect(regrantPreview).toHaveBeenCalledWith({
+        projectId: 'proj_default',
+        flowId: 'cfg_1',
+        previewId: 'prv_1',
+        origins: ['https://shop.example.com'],
+      });
+      expect(result.isError).toBeUndefined();
+      const data = result.structuredContent;
+      expect(data.activationUrl).toBe(
+        'https://shop.example.com?elbPreview=gr_x',
+      );
+      expect('token' in data).toBe(false);
+      expect('projectId' in data).toBe(false);
     });
   });
 });

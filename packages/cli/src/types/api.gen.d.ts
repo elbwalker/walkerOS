@@ -9013,6 +9013,7 @@ export interface components {
       createdAt: string;
     };
     ObserveSessionWeb: {
+      previewId: string;
       token: string;
       activationUrl: string | null;
       /** Format: uri */

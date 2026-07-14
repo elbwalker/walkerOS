@@ -582,6 +582,9 @@ previewsCmd
         flowId,
         flowName: options.flow,
         flowSettingsId: options.settingsId,
+        // Pass the target URL so the server re-mints an origin-bound grant for
+        // it; the activation URL is app-signed and cannot be built client-side.
+        url: options.url,
       })) as Parameters<typeof printPreviewCreated>[0];
       printPreviewCreated(preview, { url: options.url });
     } catch (err) {

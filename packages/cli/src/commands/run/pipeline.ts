@@ -15,7 +15,12 @@
 
 import { writeFileSync } from 'fs';
 import fs from 'fs-extra';
-import type { Logger, ObserverFn, TelemetryLevel } from '@walkeros/core';
+import type {
+  Logger,
+  ObserverFn,
+  PreviewKey,
+  TelemetryLevel,
+} from '@walkeros/core';
 import {
   createBatchedPoster,
   createTelemetryObserver,
@@ -26,6 +31,7 @@ import { getTmpPath } from '../../core/tmp.js';
 import {
   createHealthServer,
   type HealthServer,
+  type PreviewGateConfig,
 } from '../../runtime/health-server.js';
 import {
   loadFlow,
@@ -119,8 +125,15 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
     logger.info('Config frozen: hot-swap disabled (heartbeat still active)');
   }
 
+  // Preview intake gate: resolved once from the boot env. A production
+  // container has no `WALKEROS_PREVIEW_*` vars, so this is undefined and the
+  // health server delegates exactly as before. A preview container is stamped
+  // with all five vars (by the app) and gets an armed gate. A partial or
+  // malformed set throws here, before the server binds — see resolvePreviewGate.
+  const previewGate = resolvePreviewGate();
+
   // Health server (always on)
-  const healthServer = await createHealthServer(port, logger);
+  const healthServer = await createHealthServer(port, logger, previewGate);
 
   // Wire the out-of-band degrade net into the already-registered guards. A
   // sustained loop of uncaught exceptions / unhandled rejections (a wedged
@@ -671,6 +684,120 @@ const OUT_OF_BAND_WINDOW_MS = 60_000;
  */
 export function resolveInitialEtag(bootEtag?: string): string | undefined {
   return bootEtag ?? process.env.WALKEROS_CONFIG_ETAG;
+}
+
+/**
+ * The five env vars that stamp a preview container's identity. All five are set
+ * together by the app when it boots a preview session container; a production
+ * container has none of them. `iss` and `pb` are as load-bearing as the keyring:
+ * without `pb`, `verifyActivation` returns `pb-mismatch` for every grant, and
+ * `iss` is a required verifier input — so three vars could never work.
+ */
+const PREVIEW_ENV_VARS = {
+  keyring: 'WALKEROS_PREVIEW_KEYRING',
+  ses: 'WALKEROS_PREVIEW_SES',
+  sb: 'WALKEROS_PREVIEW_SB',
+  iss: 'WALKEROS_PREVIEW_ISS',
+  pb: 'WALKEROS_PREVIEW_PB',
+} as const;
+
+type PreviewEnvKey = keyof typeof PREVIEW_ENV_VARS;
+const PREVIEW_ENV_KEYS = Object.keys(PREVIEW_ENV_VARS) as PreviewEnvKey[];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Parse `WALKEROS_PREVIEW_KEYRING` defensively — it is attacker-adjacent config.
+ * A malformed value throws (fail closed at boot), never falls through to inert:
+ * an inert-on-parse-error path would silently reopen the exact hole the gate
+ * closes. Expects a non-empty JSON array of `{ kid: string, spki: string }`.
+ */
+function parsePreviewKeyring(raw: string): PreviewKey[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(
+      `${PREVIEW_ENV_VARS.keyring} is not valid JSON (expected a JSON array of {kid, spki})`,
+    );
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error(
+      `${PREVIEW_ENV_VARS.keyring} must be a non-empty JSON array of {kid, spki}`,
+    );
+  }
+  const keyring: PreviewKey[] = [];
+  for (const entry of parsed) {
+    if (
+      !isRecord(entry) ||
+      typeof entry.kid !== 'string' ||
+      entry.kid === '' ||
+      typeof entry.spki !== 'string' ||
+      entry.spki === ''
+    ) {
+      throw new Error(
+        `${PREVIEW_ENV_VARS.keyring} entries must each be {kid: string, spki: string}`,
+      );
+    }
+    keyring.push({ kid: entry.kid, spki: entry.spki });
+  }
+  return keyring;
+}
+
+/**
+ * Resolve the preview intake gate from the boot env. Three outcomes, and the
+ * partial case is deliberately loud:
+ *
+ * - NONE of the five vars present → returns undefined. The runner is a
+ *   production container; intake stays byte-identical to today.
+ * - ALL five present → returns a resolved {@link PreviewGateConfig}. The gate is
+ *   armed and every delegated request must carry a session-bound grant.
+ * - A PARTIAL set (or malformed keyring) → throws. A partial set is an app-side
+ *   stamping bug; running unauthenticated would reopen the hole this gate
+ *   closes, and 401-ing everything would be undiagnosable, so we fail the boot
+ *   loudly naming the offending vars. An empty-string var counts as absent.
+ *
+ * Injectable `env` for testing; defaults to `process.env` at the boot site.
+ */
+export function resolvePreviewGate(
+  env: NodeJS.ProcessEnv = process.env,
+): PreviewGateConfig | undefined {
+  const value = (key: PreviewEnvKey): string | undefined => {
+    const raw = env[PREVIEW_ENV_VARS[key]];
+    return raw === undefined || raw === '' ? undefined : raw;
+  };
+
+  const present = PREVIEW_ENV_KEYS.filter((key) => value(key) !== undefined);
+  if (present.length === 0) return undefined;
+
+  if (present.length < PREVIEW_ENV_KEYS.length) {
+    const missing = PREVIEW_ENV_KEYS.filter(
+      (key) => value(key) === undefined,
+    ).map((key) => PREVIEW_ENV_VARS[key]);
+    throw new Error(
+      `Incomplete preview gate env: missing ${missing.join(', ')}. All of ` +
+        `${PREVIEW_ENV_KEYS.map((key) => PREVIEW_ENV_VARS[key]).join(', ')} ` +
+        `must be set together (app-side container stamping bug).`,
+    );
+  }
+
+  const keyringRaw = value('keyring');
+  const iss = value('iss');
+  const pb = value('pb');
+  const ses = value('ses');
+  const sb = value('sb');
+  // present.length === PREVIEW_ENV_KEYS.length guarantees all are defined; the
+  // guard keeps the types honest without a cast.
+  if (!keyringRaw || !iss || !pb || !ses || !sb) return undefined;
+
+  return {
+    keyring: parsePreviewKeyring(keyringRaw),
+    iss,
+    pb,
+    expectSession: { ses, sb },
+  };
 }
 
 /**

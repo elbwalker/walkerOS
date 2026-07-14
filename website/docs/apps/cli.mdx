@@ -1436,13 +1436,30 @@ All `deploy` subcommands support:
 
 ## Previews command
 
-The `previews` command group manages preview bundles — short-lived flow bundles
+The `previews` command group manages preview bundles: short-lived flow bundles
 used to test configuration changes on a real production site before deploying.
-Each preview gets a short token; visiting any page of your site with
-`?elbPreview={token}` activates preview mode for that browser (7-day cookie).
+Creating a preview mints an app-signed, origin-bound activation grant; opening
+`?elbPreview={grant}` on your site verifies the grant locally, with no network
+round trip, and swaps in the preview bundle for that browser for the life of
+the preview session.
 
 All commands require authentication and a project (set via `WALKEROS_PROJECT_ID`
 or `--project`).
+
+### How activation works
+
+A managed web bundle that supports preview activation is produced by the wrap
+step's `preview` option, which bakes in a public key keyring, the issuing
+environment, and an opaque per-project binding (never a project ID or secret).
+The emitted bundle imports `browserSwapActivator` from `@walkeros/core` to
+verify an activation grant and swap in the preview artifact. `preview` is the
+current wrap option for this; it replaces the earlier `previewOrigin` /
+`previewScope` options. A companion `previewGrantTargets` option exists for the
+preview artifact itself: it forwards the stored grant as an
+`X-Walkeros-Preview` header to named server-bound destinations, so a server
+flow can be previewed too. `preview` and `previewGrantTargets` are mutually
+exclusive on a single wrap invocation: a host bundle activates a preview, a
+preview artifact injects its grant, not both.
 
 ### previews list
 
@@ -1487,8 +1504,8 @@ Create a preview bundle for a specific flow settings entry.
 | `--project <id>` | Project ID (overrides default) |
 
 Without `--url`, the CLI prints the activation fragment (`?elbPreview=...`) to
-stdout — append it to any URL on your site to activate preview mode. With
-`--url`, it prints the full `{siteUrl}?elbPreview={token}` URL, plus a
+stdout: append it to any URL on your site to activate preview mode. With
+`--url`, it prints an activation URL for your site on stdout, plus a
 deactivation URL on stderr. Most modern terminals make the URL clickable.
 
 You must provide either `--flow` or `--settings-id` to pick which flow settings
@@ -1498,7 +1515,7 @@ the preview should bundle.
 
 Delete a preview. Removes both the DB row and the S3 bundle immediately; the
 production walker on visitors' browsers self-heals on the next page load by
-clearing the `elbPreview` cookie and loading the production flow.
+clearing the stored `elbPreview` grant and loading the production flow.
 
 <CodeSnippet
   code={`walkeros previews delete <flowId> <previewId> [options]`}

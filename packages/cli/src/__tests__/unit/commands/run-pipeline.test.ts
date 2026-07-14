@@ -102,7 +102,13 @@ describe('runPipeline', () => {
     // Let microtasks settle
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(createHealthServer).toHaveBeenCalledWith(8080, mockLogger);
+    // No WALKEROS_PREVIEW_* env in this standalone boot, so the preview gate
+    // resolves to undefined and intake stays byte-identical to production.
+    expect(createHealthServer).toHaveBeenCalledWith(
+      8080,
+      mockLogger,
+      undefined,
+    );
     expect(loadFlow).toHaveBeenCalledWith(
       '/tmp/test-bundle.mjs',
       { port: 8080 },

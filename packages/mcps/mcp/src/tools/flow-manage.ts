@@ -66,7 +66,7 @@ function safeDetail<T extends { name?: string; config?: unknown }>(flow: T): T {
 
 const TITLE = 'Flow Management';
 const DESCRIPTION =
-  'Manage walkerOS flows and their previews. List/get/create/update/delete/duplicate flows, or create/inspect/delete preview bundles for testing flow changes on live sites.';
+  'Manage walkerOS flows and their previews. List/get/create/update/delete/duplicate flows, or create/inspect/delete preview bundles and mint activation grants (preview_regrant) for testing flow changes on live sites.';
 
 const inputSchema = {
   action: z
@@ -81,13 +81,14 @@ const inputSchema = {
       'preview_get',
       'preview_create',
       'preview_delete',
+      'preview_regrant',
     ])
     .describe('Flow management action to perform'),
   flowId: z
     .string()
     .optional()
     .describe(
-      'Flow ID (flow_...) or config ID (cfg_...). Required for get, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete.',
+      'Flow ID (flow_...) or config ID (cfg_...). Required for get, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete, preview_regrant.',
     ),
   projectId: z
     .string()
@@ -141,7 +142,7 @@ const inputSchema = {
     .string()
     .optional()
     .describe(
-      'Preview ID (prv_...). Required for preview_get and preview_delete (both also require flowId).',
+      'Preview ID (prv_...). Required for preview_get, preview_delete, and preview_regrant (all also require flowId).',
     ),
   flowName: z
     .string()
@@ -171,7 +172,13 @@ const inputSchema = {
     .string()
     .optional()
     .describe(
-      'Optional site URL for preview_create. When provided, the response includes full activationUrl and deactivationUrl the user can click.',
+      'Optional site URL (e.g. https://shop.example.com) for preview_create. When provided, the activation grant is minted for that origin so the returned activationUrl works there.',
+    ),
+  origins: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Site origins (bare https://host[:port]) to mint a preview activation grant for. Used by preview_regrant; the returned activationUrl targets the first origin.',
     ),
 };
 
@@ -212,6 +219,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
     flowSettingsId,
     source,
     siteUrl,
+    origins,
   } = (input ?? {}) as {
     action?:
       | 'list'
@@ -223,7 +231,8 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       | 'preview_list'
       | 'preview_get'
       | 'preview_create'
-      | 'preview_delete';
+      | 'preview_delete'
+      | 'preview_regrant';
     flowId?: string;
     projectId?: string;
     name?: string;
@@ -242,6 +251,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       | { kind: 'draft' }
       | { kind: 'deployment-version'; deploymentVersionId: string };
     siteUrl?: string;
+    origins?: string[];
   };
   const validationError = validateActionInput(
     'flow_manage',
@@ -447,45 +457,23 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
         if (!resolvedProjectId) {
           return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
         }
+        // The client returns an already-redacted preview summary (previewId,
+        // flowId, bundleUrl, a grant-based activationUrl, sessionExpiresAt,
+        // status, observeFeed) — never the ingest token or project id. Surface
+        // it verbatim; the handler adds no token-derived URL of its own.
         const preview = await client.createPreview({
           projectId: resolvedProjectId,
           flowId,
           flowName,
           flowSettingsId,
           ...(source ? { source } : {}),
+          ...(siteUrl ? { siteUrl } : {}),
         });
-        const typedPreview = preview as {
-          id: string;
-          token: string;
-          activationUrl: string;
-          bundleUrl: string;
-          createdBy: string;
-          createdAt: string;
-          [key: string]: unknown;
-        };
-        const enriched: Record<string, unknown> = {
-          ...typedPreview,
-          activationParam: typedPreview.activationUrl,
-        };
-        if (siteUrl) {
-          const on = new URL(siteUrl);
-          on.searchParams.set('elbPreview', typedPreview.token);
-          enriched.activationUrl = on.toString();
-
-          const off = new URL(siteUrl);
-          off.searchParams.set('elbPreview', 'off');
-          enriched.deactivationUrl = off.toString();
-        } else {
-          delete enriched.activationUrl;
-        }
-        return mcpResult(enriched, {
-          next: siteUrl
-            ? [
-                'Open activationUrl to activate preview mode; open deactivationUrl to exit.',
-              ]
-            : [
-                'Append activationParam to any URL on your site to activate preview mode.',
-              ],
+        return mcpResult(preview, {
+          next: [
+            'Open activationUrl on your site to activate preview mode. When activationUrl is null, no grant has been minted for a site yet — use action "preview_regrant" with your site origins to mint one.',
+            'Poll observeFeed (observe_journeys with this flowId) to watch preview events arrive.',
+          ],
         });
       }
 
@@ -507,9 +495,36 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
         );
       }
 
+      case 'preview_regrant': {
+        assertParam(flowId, 'flowId', 'preview_regrant');
+        assertParam(previewId, 'previewId', 'preview_regrant');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
+        }
+        if (!client.regrantPreview) {
+          return mcpError(
+            new Error('preview_regrant is not supported by this client'),
+          );
+        }
+        // Returns an already-redacted grant summary (previewId, activationUrl,
+        // sessionExpiresAt) — no token or project id.
+        const data = await client.regrantPreview({
+          projectId: resolvedProjectId,
+          flowId,
+          previewId,
+          origins: origins ?? [],
+        });
+        return mcpResult(data, {
+          next: [
+            'Open activationUrl on the target origin to activate preview mode.',
+          ],
+        });
+      }
+
       default:
         throw new Error(
-          `Unknown action: ${action}. Use one of: list, get, create, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete`,
+          `Unknown action: ${action}. Use one of: list, get, create, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete, preview_regrant`,
         );
     }
   } catch (error) {
