@@ -121,7 +121,12 @@ export function createPush<T extends Collector.Instance>(
 
             // Chain was stopped - event dropped
             if (chainResult.event === null) {
-              return createPushResult({ ok: true });
+              collector.logger.debug(
+                `Event dropped by transformer chain${
+                  chainResult.droppedBy ? ` (${chainResult.droppedBy})` : ''
+                }`,
+              );
+              return createPushResult({ ok: true, dropped: true });
             }
 
             // Pipeline-halt signal from a pre-collector `cache.stop: true`
