@@ -2136,7 +2136,7 @@ export function generateWrapEntry(
     throw new Error(
       'generateWrapEntry: `preview` (host activator) and `previewGrantTargets` ' +
         '(preview-artifact injection) are mutually exclusive. A host bundle ' +
-        'activates a preview; an artifact injects its grant. Pass exactly one.',
+        'activates a preview; an artifact injects its grant. Pass at most one.',
     );
   }
 

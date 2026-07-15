@@ -505,6 +505,14 @@ describe('triggerVisible', () => {
         configurable: true,
       });
 
+      // The retry that was armed while hidden expires now — but its dwell was
+      // spent hidden, so it must NOT count: firing here could credit an
+      // impression after ~0ms of actually visible time.
+      jest.advanceTimersByTime(1000);
+      await drainMicrotasks();
+      expect(handleTrigger).not.toHaveBeenCalled();
+
+      // One fresh, fully visible dwell later it fires.
       jest.advanceTimersByTime(1000);
       await drainMicrotasks();
 
@@ -515,6 +523,51 @@ describe('triggerVisible', () => {
         configurable: true,
       });
     }
+  });
+
+  test('an occluded dwell re-arms and fires once the occlusion clears in place', async () => {
+    // Occlusion can clear without ANY geometry or intersection change: a cookie
+    // banner is dismissed, a carousel swaps slides in place. No scroll happens
+    // anywhere in this test, deliberately — the observer queues no entry, so
+    // only a re-armed retry can rescue the impression.
+    initVisibilityTracking(testScope, 1000);
+    const element = document.createElement('div');
+    document.body.appendChild(element);
+    setBox(element, { top: 0, left: 0, width: 300, height: 200 }); // eligible from the start
+
+    (isVisible as jest.Mock).mockReturnValue(false); // covered by an overlay
+    triggerVisible(createTestContext(mockElb), element);
+
+    // The dwell expires while occluded: re-arm, don't fire, don't strand.
+    jest.advanceTimersByTime(1000);
+    await drainMicrotasks();
+    expect(handleTrigger).not.toHaveBeenCalled();
+
+    // The overlay goes away. No geometry change, no observer entry.
+    (isVisible as jest.Mock).mockReturnValue(true);
+
+    jest.advanceTimersByTime(1000);
+    await drainMicrotasks();
+
+    expect(handleTrigger).toHaveBeenCalledTimes(1);
+  });
+
+  test('re-registering the same trigger replaces the config instead of duplicating it', async () => {
+    // Overlapping scans hit this: a document run registers the element, then a
+    // `walker init` on a container that already contained it registers it
+    // again. Appending would make one dwell fire duplicate events.
+    initVisibilityTracking(testScope, 1000);
+    const element = document.createElement('div');
+    document.body.appendChild(element);
+    setBox(element, { top: 0, left: 0, width: 300, height: 200 });
+
+    triggerVisible(createTestContext(mockElb), element);
+    triggerVisible(createTestContext(mockElb), element); // re-scan, same trigger
+
+    jest.advanceTimersByTime(1000);
+    await drainMicrotasks();
+
+    expect(handleTrigger).toHaveBeenCalledTimes(1);
   });
 
   test('a slow destination does not swallow the next visible event', async () => {

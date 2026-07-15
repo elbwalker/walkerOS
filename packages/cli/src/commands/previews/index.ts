@@ -133,7 +133,16 @@ export async function createPreview(
   );
   if (!grantResponse.ok) {
     const body = await grantResponse.json().catch(() => ({}));
-    throwApiError(body, 'Failed to mint preview activation grant');
+    // The preview already exists at this point. A failed mint must name it,
+    // or the caller has no handle to delete the orphan or retry the mint.
+    try {
+      throwApiError(body, 'Failed to mint preview activation grant');
+    } catch (error) {
+      if (error instanceof Error) {
+        error.message += ` (preview ${created.id} was created but has no working activation URL; delete it or mint a grant with regrantPreview)`;
+      }
+      throw error;
+    }
   }
   const grant: components['schemas']['MintGrantResponse'] =
     await grantResponse.json();

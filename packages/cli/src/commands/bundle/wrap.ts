@@ -178,7 +178,7 @@ export async function wrapSkeleton(
   if (options.preview && options.previewGrantTargets) {
     throw new Error(
       'wrapSkeleton: `preview` (host activator) and `previewGrantTargets` ' +
-        '(preview-artifact injection) are mutually exclusive. Pass exactly one.',
+        '(preview-artifact injection) are mutually exclusive. Pass at most one.',
     );
   }
 
@@ -186,7 +186,15 @@ export async function wrapSkeleton(
   // still a config error (it bakes a broken `https:///preview/<art>.js` URL
   // into the bundle), so it must fail the same charset check as a malformed
   // hostname rather than short-circuit past it via falsy-string skip.
-  if (options.preview && !/^[a-z0-9.-]+$/.test(options.preview.previewOrigin)) {
+  // The typeof gate matters despite the `string` type: an untyped JS/JSON
+  // caller can pass undefined, and RegExp.test coerces it to the string
+  // "undefined", which MATCHES the hostname charset and would bake
+  // `https://undefined/preview/…` into the bundle.
+  if (
+    options.preview &&
+    (typeof options.preview.previewOrigin !== 'string' ||
+      !/^[a-z0-9.-]+$/.test(options.preview.previewOrigin))
+  ) {
     throw new Error(
       `Invalid previewOrigin "${options.preview.previewOrigin}". Must be a bare hostname matching /^[a-z0-9.-]+$/.`,
     );

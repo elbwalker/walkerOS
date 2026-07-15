@@ -168,6 +168,7 @@ function handleIntersection(
 async function fire(
   scope: Document | Element,
   target: HTMLElement,
+  fromHidden = false,
 ): Promise<void> {
   const state = visibilityStates.get(scope);
   if (!state) return;
@@ -192,14 +193,42 @@ async function fire(
     state.timers.set(
       target,
       win.setTimeout(() => {
+        fire(scope, target, true);
+      }, state.duration),
+    );
+    return;
+  }
+
+  // The expiring timer was armed while the tab was hidden, so its dwell was
+  // spent hidden no matter when the user foregrounded: firing here could count
+  // an impression after ~0ms of actually visible time. Require one fresh,
+  // fully visible dwell instead.
+  if (fromHidden) {
+    state.timers.set(
+      target,
+      win.setTimeout(() => {
         fire(scope, target);
       }, state.duration),
     );
     return;
   }
 
-  // The one and only occlusion check, uncached, on one element.
-  if (!isVisible(target, win, doc)) return;
+  // The one and only occlusion check, uncached, on one element. A failed check
+  // re-arms rather than drops: occlusion can clear without any geometry or
+  // intersection change (an overlay dismissed, a carousel slide swapped in
+  // place), so the observer would queue no entry and the impression would be
+  // lost for the session. The retry stops on its own when the element leaves
+  // the eligible band (the below-the-bar branch cancels the timer) or is
+  // unobserved.
+  if (!isVisible(target, win, doc)) {
+    state.timers.set(
+      target,
+      win.setTimeout(() => {
+        fire(scope, target);
+      }, state.duration),
+    );
+    return;
+  }
 
   const configs = state.configs.get(target);
   if (!configs) return;
@@ -322,16 +351,23 @@ export function triggerVisible(
 
   const multiple = config.multiple ?? false;
   const configs = state.configs.get(element) ?? [];
-  configs.push({
-    multiple,
-    blocked: false,
-    context,
-    trigger: multiple ? Triggers.Visible : Triggers.Impression,
-  });
+  const hadConfigs = configs.length > 0;
+  const trigger = multiple ? Triggers.Visible : Triggers.Impression;
+  // Overlapping scans re-register the same element (a document run, then
+  // `walker init` on a container that was already inside it). Replace the
+  // same-trigger registration instead of appending, or every re-scan would
+  // add another config and one dwell would fire duplicate events. An element
+  // carries at most one `impression` plus one `visible` config.
+  const entry: ElementConfig = { multiple, blocked: false, context, trigger };
+  const existing = configs.findIndex(
+    (existingConfig) => existingConfig.trigger === trigger,
+  );
+  if (existing >= 0) configs[existing] = entry;
+  else configs.push(entry);
   state.configs.set(element, configs);
 
   // One element can carry both `impression` and `visible`; observe it once.
-  if (configs.length > 1) return;
+  if (hadConfigs) return;
 
   const box = element.getBoundingClientRect();
   if (box.width <= 0 || box.height <= 0) state.zeroArea.add(element);

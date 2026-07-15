@@ -18,7 +18,7 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: npm-publish
     permissions:
       contents: write
@@ -134,7 +134,11 @@ jobs:
         if: inputs.release_type == 'stable release'
         run: |
           git add -A
-          git commit -m "chore: version packages" || echo "No changes to commit"
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: version packages"
+          fi
           git push
 
       - name: Publish to npm (Trusted Publishing via OIDC)

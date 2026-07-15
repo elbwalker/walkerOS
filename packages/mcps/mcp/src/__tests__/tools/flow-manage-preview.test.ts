@@ -652,4 +652,133 @@ describe('flow_manage tool — preview actions', () => {
       expect(Object.keys(callArg)).not.toContain('sessionId');
     });
   });
+
+  describe('preview response redaction (boundary whitelist)', () => {
+    // The CLI-backed HTTP client returns the raw API response, which carries
+    // the ingest token and project id. The handler must whitelist fields at
+    // the MCP boundary — results end up in agent transcripts and logs.
+    const rawApiPreview = {
+      id: 'prv_raw',
+      flowId: 'cfg_1',
+      flowSettingsId: 'fs_a',
+      projectId: 'proj_secret',
+      token: 'k9x2m4p7abcd',
+      bundleUrl: 'https://cdn/preview/art_x.js',
+      activationUrl: 'https://shop.example.com?elbPreview=gr_signed',
+      createdBy: 'user_alex',
+      createdAt: '2026-04-21T00:00:00Z',
+    };
+
+    it('preview_create strips token and projectId from a raw API response', async () => {
+      const createPreview = jest.fn().mockResolvedValue(rawApiPreview);
+      registerFlowManageTool(
+        server as never,
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        { action: 'preview_create', flowId: 'cfg_1', flowName: 'demo' },
+        mockExtra,
+      )) as {
+        isError?: boolean;
+        structuredContent: Record<string, unknown>;
+        content: Array<{ text: string }>;
+      };
+
+      expect(result.isError).toBeUndefined();
+      const data = result.structuredContent;
+      expect('token' in data).toBe(false);
+      expect('projectId' in data).toBe(false);
+      // The documented summary survives the whitelist.
+      expect(data.id).toBe('prv_raw');
+      expect(data.activationUrl).toBe(rawApiPreview.activationUrl);
+      expect(data.bundleUrl).toBe(rawApiPreview.bundleUrl);
+      // The token must not appear anywhere in the serialized result either.
+      expect(result.content[0].text).not.toContain('k9x2m4p7abcd');
+      expect(result.content[0].text).not.toContain('proj_secret');
+    });
+
+    it('preview_get strips token and projectId from a raw API response', async () => {
+      const getPreview = jest.fn().mockResolvedValue(rawApiPreview);
+      registerFlowManageTool(server as never, stubClient({ getPreview }));
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        { action: 'preview_get', flowId: 'cfg_1', previewId: 'prv_raw' },
+        mockExtra,
+      )) as { isError?: boolean; structuredContent: Record<string, unknown> };
+
+      expect(result.isError).toBeUndefined();
+      expect('token' in result.structuredContent).toBe(false);
+      expect('projectId' in result.structuredContent).toBe(false);
+      expect(result.structuredContent.id).toBe('prv_raw');
+    });
+
+    it('preview_list strips token and projectId from every raw list entry', async () => {
+      const listPreviews = jest.fn().mockResolvedValue({
+        previews: [rawApiPreview, { ...rawApiPreview, id: 'prv_raw2' }],
+        total: 2,
+      });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ listPreviews, getDefaultProject: () => 'proj_default' }),
+      );
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        { action: 'preview_list', flowId: 'cfg_1' },
+        mockExtra,
+      )) as {
+        isError?: boolean;
+        structuredContent: {
+          previews: Array<Record<string, unknown>>;
+          total: number;
+        };
+        content: Array<{ text: string }>;
+      };
+
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent.total).toBe(2);
+      expect(result.structuredContent.previews).toHaveLength(2);
+      for (const entry of result.structuredContent.previews) {
+        expect('token' in entry).toBe(false);
+        expect('projectId' in entry).toBe(false);
+      }
+      expect(result.content[0].text).not.toContain('k9x2m4p7abcd');
+    });
+
+    it('preview_regrant strips the token but keeps the grant pair the caller needs', async () => {
+      const regrantPreview = jest.fn().mockResolvedValue({
+        grant: 'eyJ0.activ4tion.s1g',
+        sessionGrant: 'eyJ0.forw4rding.s1g',
+        activationUrl:
+          'https://shop.example.com?elbPreview=eyJ0.activ4tion.s1g&elbPreviewSession=eyJ0.forw4rding.s1g',
+        sessionExpiresAt: '2026-04-21T01:00:00Z',
+        token: 'k9x2m4p7abcd',
+        projectId: 'proj_secret',
+      });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ regrantPreview, getDefaultProject: () => 'proj_default' }),
+      );
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        {
+          action: 'preview_regrant',
+          flowId: 'cfg_1',
+          previewId: 'prv_1',
+          origins: ['https://shop.example.com'],
+          sessionId: 'ses_1',
+        },
+        mockExtra,
+      )) as { isError?: boolean; structuredContent: Record<string, unknown> };
+
+      expect(result.isError).toBeUndefined();
+      const data = result.structuredContent;
+      // Grants are deliberate outputs: the agent opens activationUrl and uses
+      // sessionGrant as the X-Walkeros-Preview header for server-hop events.
+      expect(data.grant).toBe('eyJ0.activ4tion.s1g');
+      expect(data.sessionGrant).toBe('eyJ0.forw4rding.s1g');
+      expect('token' in data).toBe(false);
+      expect('projectId' in data).toBe(false);
+    });
+  });
 });

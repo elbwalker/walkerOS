@@ -577,7 +577,7 @@ previewsCmd
       const { createPreview } = await import('./commands/previews/index.js');
       const { printPreviewCreated } =
         await import('./commands/previews/output.js');
-      const preview = (await createPreview({
+      const preview = await createPreview({
         projectId: options.project,
         flowId,
         flowName: options.flow,
@@ -585,7 +585,7 @@ previewsCmd
         // Pass the target URL so the server re-mints an origin-bound grant for
         // it; the activation URL is app-signed and cannot be built client-side.
         url: options.url,
-      })) as Parameters<typeof printPreviewCreated>[0];
+      });
       printPreviewCreated(preview, { url: options.url });
     } catch (err) {
       handleCliError(err);

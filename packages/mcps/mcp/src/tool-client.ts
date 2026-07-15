@@ -113,8 +113,9 @@ export interface ToolClient {
   /**
    * Mint a fresh, origin-bound activation grant for an existing preview.
    * OPTIONAL: clients that cannot mint grants may omit it, and the
-   * flow_manage handler guards on its presence before calling. Returns an
-   * already-redacted grant summary (never the ingest token or project id).
+   * flow_manage handler guards on its presence before calling. Clients may
+   * return their raw API response; the flow_manage handler whitelists the
+   * fields it surfaces (never the ingest token or project id).
    */
   regrantPreview?(options: RegrantPreviewOptions): Promise<unknown>;
 

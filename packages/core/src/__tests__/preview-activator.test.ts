@@ -296,6 +296,7 @@ describe('browserSwapActivator', () => {
       localStorage.setItem('elbPreviewSession', 'forwarding.raw.value');
 
       expect(await browserSwapActivator(cfg)).toBe(false);
+      expect(localStorage.getItem('elbPreview')).toBeNull();
       expect(localStorage.getItem('elbPreviewSession')).toBeNull();
     });
   });

@@ -140,18 +140,23 @@ const servers: Array<Awaited<ReturnType<typeof createHealthServer>>> = [];
 
 // Start a server (optionally armed) with a flow handler that echoes the request
 // body — an echo proves the gate did not consume the stream before delegating.
+// Pass `flowHandler` to test the gate against a misbehaving flow.
 async function startServer(
   gate?: PreviewGateConfig,
+  flowHandler?: http.RequestListener,
 ): Promise<{ port: number }> {
   const server = await createHealthServer(0, mockLogger, gate);
-  server.setFlowHandler((req, res) => {
-    let body = '';
-    req.on('data', (chunk) => (body += chunk));
-    req.on('end', () => {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, echo: body }));
-    });
-  });
+  server.setFlowHandler(
+    flowHandler ??
+      ((req, res) => {
+        let body = '';
+        req.on('data', (chunk) => (body += chunk));
+        req.on('end', () => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, echo: body }));
+        });
+      }),
+  );
   server.setReady(true);
   servers.push(server);
   return { port: (server.server.address() as { port: number }).port };
@@ -220,6 +225,31 @@ describe('preview intake gate', () => {
     expect(res.status).toBe(200);
     // Body survived the gate: the flow handler echoed exactly what was sent.
     expect(JSON.parse(res.body)).toEqual({ ok: true, echo: payload });
+  });
+
+  it('answers 500 (not the gate 401) when the flow handler throws after a valid grant', async () => {
+    // A downstream handler failure is the flow's own error, not a verification
+    // failure: answering 401 would misreport an authenticated request as
+    // unauthorized and mislabel the log.
+    const { port } = await startServer(armedGate(), () => {
+      throw new Error('flow handler exploded');
+    });
+    const grant = await signGrant(
+      activeKey.privateKey,
+      'pk_active',
+      grantFor('ses_this', 'sb_this'),
+    );
+    const res = await httpRequest(port, {
+      method: 'POST',
+      path: '/collect',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Walkeros-Preview': grant,
+      },
+      body: JSON.stringify({ event: 'page view' }),
+    });
+    expect(res.status).toBe(500);
+    expect(res.body).not.toContain('Unauthorized');
   });
 
   it('REJECTS a validly-signed grant minted for a DIFFERENT session (sb binding)', async () => {

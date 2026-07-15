@@ -39,9 +39,14 @@ describe('generateWrapEntry preview codegen', () => {
 
   it('emits the activator before startFlow so production never boots under preview', () => {
     const code = generateWrapEntry('/tmp/stage1.js', { preview });
-    expect(code.indexOf('browserSwapActivator')).toBeLessThan(
-      code.indexOf('startFlow'),
-    );
+    // Anchor on the CALL sites, not the identifiers: both names also appear in
+    // the import statement at the top, which would satisfy a bare indexOf even
+    // if the activator check moved below the production boot.
+    const activatorCall = code.indexOf('if (await browserSwapActivator(');
+    const bootCall = code.indexOf('await startFlow(config)');
+    expect(activatorCall).toBeGreaterThan(-1);
+    expect(bootCall).toBeGreaterThan(-1);
+    expect(activatorCall).toBeLessThan(bootCall);
   });
 });
 

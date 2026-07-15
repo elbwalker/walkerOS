@@ -195,6 +195,54 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
+// Preview results land in agent transcripts and logs, so the MCP boundary
+// enforces a field whitelist instead of trusting whatever shape a client
+// returns: the raw ingest `token` and `projectId` must never surface here.
+// Grants (`grant`, `sessionGrant`, `activationUrl`) are deliberate outputs —
+// short-lived, origin/session-bound capabilities the caller needs to activate
+// a preview or forward events to an observe session. The list covers both
+// client shapes: the app's in-process summary (`previewId`, `status`,
+// `observeFeed`) and the CLI-backed HTTP client's raw API response (`id`,
+// `createdBy`, `createdAt`).
+const PREVIEW_SUMMARY_FIELDS = [
+  'id',
+  'previewId',
+  'flowId',
+  'flowSettingsId',
+  'bundleUrl',
+  'activationUrl',
+  'grant',
+  'sessionGrant',
+  'sessionExpiresAt',
+  'status',
+  'observeFeed',
+  'createdBy',
+  'createdAt',
+] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function redactPreview(data: unknown): Record<string, unknown> {
+  if (!isRecord(data)) return {};
+  const out: Record<string, unknown> = {};
+  for (const field of PREVIEW_SUMMARY_FIELDS) {
+    if (data[field] !== undefined) out[field] = data[field];
+  }
+  return out;
+}
+
+function redactPreviewList(data: unknown): Record<string, unknown> {
+  if (!isRecord(data)) return { previews: [] };
+  return {
+    previews: Array.isArray(data.previews)
+      ? data.previews.map(redactPreview)
+      : [],
+    ...(data.total !== undefined ? { total: data.total } : {}),
+  };
+}
+
 export function createFlowManageToolSpec(client: ToolClient): ToolSpec {
   return {
     name: 'flow_manage',
@@ -445,7 +493,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           projectId: resolvedProjectId,
           flowId,
         });
-        return mcpResult(data);
+        return mcpResult(redactPreviewList(data));
       }
 
       case 'preview_get': {
@@ -456,7 +504,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           flowId,
           previewId,
         });
-        return mcpResult(data);
+        return mcpResult(redactPreview(data));
       }
 
       case 'preview_create': {
@@ -465,10 +513,10 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
         if (!resolvedProjectId) {
           return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
         }
-        // The client returns an already-redacted preview summary (previewId,
-        // flowId, bundleUrl, a grant-based activationUrl, sessionExpiresAt,
-        // status, observeFeed) — never the ingest token or project id. Surface
-        // it verbatim; the handler adds no token-derived URL of its own.
+        // Whitelist the summary at the boundary: the HTTP client returns the
+        // raw API response (which carries the ingest token and project id),
+        // and the handler must never surface those regardless of the client.
+        // It also adds no token-derived URL of its own.
         const preview = await client.createPreview({
           projectId: resolvedProjectId,
           flowId,
@@ -477,7 +525,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           ...(source ? { source } : {}),
           ...(siteUrl ? { siteUrl } : {}),
         });
-        return mcpResult(preview, {
+        return mcpResult(redactPreview(preview), {
           next: [
             'Open activationUrl on your site to activate preview mode. When activationUrl is null, no grant has been minted for a site yet — use action "preview_regrant" with your site origins to mint one.',
             'Poll observeFeed (observe_journeys with this flowId) to watch preview events arrive.',
@@ -515,8 +563,9 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
             new Error('preview_regrant is not supported by this client'),
           );
         }
-        // Returns an already-redacted grant summary (previewId, activationUrl,
-        // sessionExpiresAt) — no token or project id.
+        // Whitelisted grant summary: activationUrl plus the raw grant values
+        // the caller may need (`sessionGrant` is how an agent authenticates
+        // direct server-hop test events) — never the ingest token.
         const data = await client.regrantPreview({
           projectId: resolvedProjectId,
           flowId,
@@ -524,9 +573,11 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           origins: origins ?? [],
           ...(sessionId ? { sessionId } : {}),
         });
-        return mcpResult(data, {
+        return mcpResult(redactPreview(data), {
           next: [
-            'Open activationUrl on the target origin to activate preview mode.',
+            sessionId
+              ? 'Open activationUrl on the target origin: it activates the web preview AND forwards its events to the observe session. Use sessionGrant as the X-Walkeros-Preview header for direct server-hop test events.'
+              : 'Open activationUrl on the target origin to activate preview mode.',
           ],
         });
       }

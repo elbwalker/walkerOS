@@ -109,8 +109,11 @@ function readGrantHeader(req: http.IncomingMessage): string {
  * Verify the request's grant against the container's session, then delegate on
  * success or 401 on failure. Reads only headers — never touches the request body
  * stream, so the flow source receives the request intact after the gate passes.
- * `verifyActivation` never throws (it returns a reason), but the `.catch` fails
- * closed anyway so a surprise rejection can never fall through to the flow.
+ * `verifyActivation` never throws (it returns a reason), but the rejection
+ * handler fails closed anyway so a surprise rejection can never fall through
+ * to the flow. Downstream `onPass()` failures are handled separately: they are
+ * the flow's own errors, not verification errors, and must never answer 401 —
+ * by the time the handler runs, the response may already have started.
  */
 function guardPreviewIntake(
   req: http.IncomingMessage,
@@ -127,25 +130,40 @@ function guardPreviewIntake(
     source: 'storage',
     now: gate.now ? gate.now() : Date.now(),
     crypto: gate.crypto,
-  })
-    .then((result) => {
-      if (result.ok) {
-        onPass();
-      } else {
+  }).then(
+    (result) => {
+      if (!result.ok) {
         logger.info(
           `${PREVIEW_LOG} rejected ${req.method} ${req.url}: ${result.reason}`,
         );
         rejectPreview(res);
+        return;
       }
-    })
-    .catch((error) => {
+      try {
+        onPass();
+      } catch (error) {
+        logger.info(
+          `${PREVIEW_LOG} flow handler error on ${req.method} ${req.url}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Internal Server Error' }));
+        } else {
+          res.end();
+        }
+      }
+    },
+    (error) => {
       logger.info(
         `${PREVIEW_LOG} verification error on ${req.method} ${req.url}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
       rejectPreview(res);
-    });
+    },
+  );
 }
 
 export function createHealthServer(

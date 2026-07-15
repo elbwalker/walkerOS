@@ -333,6 +333,29 @@ describe('previews', () => {
           }),
         ).rejects.toThrow('Grant denied');
       });
+
+      it('names the orphaned preview when the grant mint fails after create', async () => {
+        // The preview exists once the first POST succeeded; a grant failure
+        // must surface its id so the caller can delete it or retry the mint.
+        mockApiFetch
+          .mockResolvedValueOnce(
+            new Response(JSON.stringify(createBody), { status: 201 }),
+          )
+          .mockResolvedValueOnce(
+            new Response(
+              JSON.stringify({ error: { message: 'Grant denied' } }),
+              { status: 403 },
+            ),
+          );
+        await expect(
+          createPreview({
+            projectId: 'proj_x',
+            flowId: 'fl_y',
+            flowSettingsId: 'fs_a',
+            url: 'https://my-site.com',
+          }),
+        ).rejects.toThrow(/preview prv_x/);
+      });
     });
   });
 

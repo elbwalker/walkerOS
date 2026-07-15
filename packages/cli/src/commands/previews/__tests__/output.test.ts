@@ -20,10 +20,24 @@ describe('formatPreviewCreated', () => {
     const { stdoutLast, stderr } = formatPreviewCreated(basePreview, {});
     expect(stdoutLast).toBe(grantActivationUrl);
     expect(stderr).toContain('prv_abc');
+    // The activation URL is complete as returned; the instructions must print
+    // it directly, never tell the user to append it to another URL.
+    expect(stderr).toContain(`Activate:   ${grantActivationUrl}`);
+    expect(stderr).not.toContain('Append https://');
     // The standalone Token info line is the owner's own secret in their own
     // terminal — allowed. It just must never end up inside a URL.
     expect(stderr).toContain('k9x2m4p7abcd');
     expect(stderr).toContain('user_alex');
+  });
+
+  it('without url and no minted grant, points at --url instead of printing null', () => {
+    const { stdoutLast, stderr } = formatPreviewCreated(
+      { ...basePreview, activationUrl: null },
+      {},
+    );
+    expect(stdoutLast).toBeNull();
+    expect(stderr).not.toContain('null');
+    expect(stderr).toContain('--url');
   });
 
   it('with url, prints the server grant activation URL, never the raw token', () => {
