@@ -184,7 +184,7 @@ const inputSchema = {
     .string()
     .optional()
     .describe(
-      'Observe session id — binds the re-minted grant to that session so forwarded events reach its container. Used by preview_regrant. CAUTION: a session-bound grant is rejected by the web page activator (sb-mismatch); omit sessionId when the grant should activate a preview in the browser.',
+      'Observe session id — when set, preview_regrant mints an activation/forwarding grant PAIR: the returned activationUrl both activates the web preview and lets the page forward events to the session container (elbPreviewSession param). Pass it to observe server-side hops; omit for a plain web preview.',
     ),
 };
 

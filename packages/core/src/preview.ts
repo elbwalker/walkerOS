@@ -405,6 +405,16 @@ export interface SwapActivatorConfig {
 }
 
 const STORAGE_KEY = 'elbPreview';
+/**
+ * Storage slot for the session-forwarding companion grant. The web arm never
+ * verifies it (it is session-bound by design; the session container is its
+ * verifier) — the activator only ferries it from the activation URL into
+ * storage, where the seamed preview artifact reads it to stamp the
+ * `X-Walkeros-Preview` header. It lives and dies with the activation state:
+ * set (or cleared) whenever a URL activation succeeds, cleared whenever the
+ * stored activation clears.
+ */
+export const SESSION_STORAGE_KEY = 'elbPreviewSession';
 const LOG = '[walkerOS:preview]';
 const SWAP_TIMEOUT_MS = 5000;
 
@@ -452,20 +462,20 @@ interface PreviewStore {
   clear(): void;
 }
 
-/** localStorage, with an in-memory fallback for Safari private mode. */
-function createStore(): PreviewStore {
+/** localStorage under `key`, with an in-memory fallback for Safari private mode. */
+function createStore(key: string): PreviewStore {
   let memory: string | null = null;
   return {
     get() {
       try {
-        return G.window?.localStorage.getItem(STORAGE_KEY) ?? memory;
+        return G.window?.localStorage.getItem(key) ?? memory;
       } catch {
         return memory;
       }
     },
     set(value) {
       try {
-        G.window?.localStorage.setItem(STORAGE_KEY, value);
+        G.window?.localStorage.setItem(key, value);
       } catch {
         memory = value;
       }
@@ -473,7 +483,7 @@ function createStore(): PreviewStore {
     clear() {
       memory = null;
       try {
-        G.window?.localStorage.removeItem(STORAGE_KEY);
+        G.window?.localStorage.removeItem(key);
       } catch {
         // in-memory copy already cleared
       }
@@ -494,6 +504,7 @@ function stripParam(): void {
     const path = qIdx >= 0 ? withoutHash.slice(0, qIdx) : withoutHash;
     const params = new USP(qIdx >= 0 ? withoutHash.slice(qIdx + 1) : '');
     params.delete('elbPreview');
+    params.delete('elbPreviewSession');
     const query = params.toString();
     win.history.replaceState(
       {},
@@ -549,25 +560,33 @@ export async function browserSwapActivator(
   const win = G.window;
   if (!win || !G.document) return false;
 
-  const store = createStore();
+  const store = createStore(STORAGE_KEY);
+  const sessionStore = createStore(SESSION_STORAGE_KEY);
   const now = cfg.now ?? (() => Date.now());
   const warn = (reason: string) => G.console?.warn(`${LOG} ${reason}`);
 
   let param: string | null = null;
+  let companion: string | null = null;
   const USP = G.URLSearchParams;
   if (USP) {
     try {
-      const values = new USP(win.location.search.replace(/^\?/, '')).getAll(
-        'elbPreview',
-      );
+      const search = new USP(win.location.search.replace(/^\?/, ''));
+      const values = search.getAll('elbPreview');
       param = values.length > 0 ? (values[values.length - 1] ?? null) : null;
+      const companions = search.getAll('elbPreviewSession');
+      companion =
+        companions.length > 0
+          ? (companions[companions.length - 1] ?? null)
+          : null;
     } catch {
       param = null;
+      companion = null;
     }
   }
 
   if (param === 'off') {
     store.clear();
+    sessionStore.clear();
     stripParam();
     return false;
   }
@@ -603,6 +622,11 @@ export async function browserSwapActivator(
     if (result.ok) {
       grant = result.grant;
       store.set(param);
+      // The URL activation defines the session context: carry its companion
+      // forwarding grant into storage, or clear a stale one from an earlier
+      // session. Never verified here — the session container is its verifier.
+      if (companion) sessionStore.set(companion);
+      else sessionStore.clear();
     } else {
       warn(result.reason);
     }
@@ -618,7 +642,10 @@ export async function browserSwapActivator(
       grant = result.grant;
     } else {
       warn(result.reason);
-      if (result.reason !== 'no-subtle') store.clear();
+      if (result.reason !== 'no-subtle') {
+        store.clear();
+        sessionStore.clear();
+      }
     }
   }
 
@@ -630,6 +657,7 @@ export async function browserSwapActivator(
   if (!loaded) {
     warn('swap-failed');
     store.clear();
+    sessionStore.clear();
     return false;
   }
 

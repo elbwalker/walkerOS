@@ -69,11 +69,15 @@ describe('generateWrapEntry preview-artifact grant injection', () => {
     expect(code).not.toMatch(/eyJhbGciOi/);
   });
 
-  it('reads the grant from the same localStorage key the activator persists', () => {
+  it('reads the SESSION-FORWARDING grant from the slot the activator persists it to', () => {
+    // The container arm only accepts session-bound grants, so the header must
+    // come from the companion slot (`elbPreviewSession`), never from the
+    // activation grant in `elbPreview` (that could only ever sb-mismatch).
     const code = generateWrapEntry('/tmp/stage1.js', {
       previewGrantTargets: ['api'],
     });
-    expect(code).toContain("localStorage.getItem('elbPreview')");
+    expect(code).toContain("localStorage.getItem('elbPreviewSession')");
+    expect(code).not.toContain("localStorage.getItem('elbPreview')");
   });
 
   it('injects into every declared target and leaves others untouched', () => {

@@ -1441,7 +1441,9 @@ used to test configuration changes on a real production site before deploying.
 Creating a preview mints an app-signed, origin-bound activation grant; opening
 `?elbPreview={grant}` on your site verifies the grant locally, with no network
 round trip, and swaps in the preview bundle for that browser for the life of
-the preview session.
+the preview session. Activation links minted for an Observe session
+additionally carry an `elbPreviewSession` companion grant, which the previewed
+page uses to forward server-bound events to that session's isolated container.
 
 All commands require authentication and a project (set via `WALKEROS_PROJECT_ID`
 or `--project`).

@@ -63,7 +63,7 @@ export interface WrapSkeletonOptions {
   /**
    * Browser-only: preview-ARTIFACT grant injection. The preview-artifact wrap
    * sets this to the server-bound destination keys that should receive the
-   * `X-Walkeros-Preview` header read from `localStorage['elbPreview']` at boot.
+   * `X-Walkeros-Preview` header read from `localStorage['elbPreviewSession']` at boot.
    * Mutually exclusive with `preview` (a host activates, an artifact injects);
    * passing both throws.
    */

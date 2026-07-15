@@ -351,6 +351,28 @@ describe('verifyActivation', () => {
     expect(result).toEqual({ ok: false, reason: 'aud-mismatch' });
   });
 
+  it('cross-arm: an activation/forwarding pair each verify ONLY on their own arm', async () => {
+    // The invariant the two-grant design rests on: ONE observe-session URL
+    // carries a non-session activation grant (web arm) plus a session-bound
+    // forwarding grant (container arm), and neither passes the other's arm.
+    const activation = await sign(base);
+    const forwarding = await sign({ ...base, ses: 'ses_1', sb: 'sb_one' });
+
+    const webOk = await verifyActivation(activation, params());
+    expect(webOk.ok).toBe(true);
+    expect(await verifyActivation(forwarding, params())).toEqual({
+      ok: false,
+      reason: 'sb-mismatch',
+    });
+
+    const containerOk = await verifyActivation(forwarding, containerParams());
+    expect(containerOk.ok).toBe(true);
+    expect(await verifyActivation(activation, containerParams())).toEqual({
+      ok: false,
+      reason: 'sb-mismatch',
+    });
+  });
+
   it('fails closed when crypto.subtle is unavailable', async () => {
     const result = await verifyActivation(
       await sign(base),

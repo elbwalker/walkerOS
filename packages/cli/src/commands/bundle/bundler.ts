@@ -2090,10 +2090,12 @@ export function generateWrapEntry(
     preview?: WrapEntryPreview;
     /**
      * Preview-ARTIFACT wiring (the third wrap variant). When set, the emitted
-     * entry reads the activation grant from `localStorage['elbPreview']` at
-     * boot and stamps it as the `X-Walkeros-Preview` header on each named
-     * server-bound destination (`config.destinations[k].config.settings.headers`),
-     * before `startFlow`. The grant is never baked into the artifact.
+     * entry reads the session-forwarding grant from
+     * `localStorage['elbPreviewSession']` (the companion slot the activator
+     * persists alongside the activation grant) at boot and stamps it as the
+     * `X-Walkeros-Preview` header on each named server-bound destination
+     * (`config.destinations[k].config.settings.headers`), before `startFlow`.
+     * The grant is never baked into the artifact.
      *
      * Mutually exclusive with `preview`: a host bundle ACTIVATES a preview, an
      * artifact INJECTS its grant. An artifact that also baked the activator
@@ -2147,12 +2149,16 @@ export function generateWrapEntry(
     ? `import { browserSwapActivator } from '@walkeros/core';\n`
     : '';
 
-  // Preview-artifact variant: read the activation grant from localStorage at
-  // boot and stamp it as the X-Walkeros-Preview header on each named
-  // server-bound destination, before startFlow. The grant value never appears
-  // as a literal — only the runtime localStorage read. localStorage access is
-  // wrapped in try/catch (Safari private mode throws) and an absent key skips
-  // injection entirely so a plain page boots normally.
+  // Preview-artifact variant: read the SESSION-FORWARDING grant (the
+  // companion the activator persists to localStorage['elbPreviewSession'])
+  // at boot and stamp it as the X-Walkeros-Preview header on each named
+  // server-bound destination, before startFlow. Never the activation grant
+  // in 'elbPreview': the session container only accepts session-bound
+  // grants, so that value could only ever be rejected (sb-mismatch). The
+  // grant value never appears as a literal — only the runtime localStorage
+  // read. localStorage access is wrapped in try/catch (Safari private mode
+  // throws) and an absent key skips injection entirely so a plain page
+  // boots normally.
   const grantTargets = options.previewGrantTargets ?? [];
   const previewGrantBlock =
     grantTargets.length > 0
@@ -2161,7 +2167,7 @@ export function generateWrapEntry(
   try {
     const __previewGrant =
       typeof localStorage !== 'undefined'
-        ? localStorage.getItem('elbPreview')
+        ? localStorage.getItem('elbPreviewSession')
         : null;
     if (__previewGrant && config.destinations) {
 ${grantTargets

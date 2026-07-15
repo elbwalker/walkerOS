@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -2326,6 +2326,9 @@
           "sessionExpiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "sessionGrant": {
+            "type": "string"
           }
         },
         "required": ["grant", "activationUrl", "sessionExpiresAt"]
@@ -4489,6 +4492,65 @@
         },
         "required": ["email"]
       },
+      "VerifyResponse": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["ok"]
+              },
+              "redirectTo": {
+                "type": "string",
+                "example": "/"
+              }
+            },
+            "required": ["status", "redirectTo"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["confirm_required"]
+              },
+              "email": {
+                "type": "string",
+                "example": "user@example.com"
+              }
+            },
+            "required": ["status", "email"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["expired", "used", "invalid", "malformed"]
+              }
+            },
+            "required": ["status"]
+          }
+        ]
+      },
+      "VerifyRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "redirect_to": {
+            "type": "string",
+            "example": "/dashboard"
+          },
+          "confirm": {
+            "type": "boolean"
+          }
+        },
+        "required": ["token"]
+      },
       "WhoamiResponse": {
         "type": "object",
         "properties": {
@@ -5467,10 +5529,46 @@
       }
     },
     "/api/auth/verify": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Redeem magic link token",
+        "description": "Redeem a magic link token and create an authenticated session. Redeems immediately when the browser-nonce cookie from the magic-link request matches; otherwise answers confirm_required and expects a follow-up call with confirm: true.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Redemption result. status=ok sets the session cookie and carries the redirect target.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": ["Auth"],
-        "summary": "Verify magic link token",
-        "description": "Verify a magic link token and create an authenticated session. Redirects to the specified URL or home page.",
+        "summary": "Legacy magic link entry point",
+        "description": "Side-effect-free redirector to the /auth/verify page for links minted before the page-URL change. Never consumes the token; redemption happens via POST.",
         "parameters": [
           {
             "schema": {
@@ -5497,8 +5595,8 @@
           }
         ],
         "responses": {
-          "302": {
-            "description": "Redirect to target URL with session cookie set"
+          "307": {
+            "description": "Redirect to the /auth/verify page with the token forwarded"
           }
         }
       }

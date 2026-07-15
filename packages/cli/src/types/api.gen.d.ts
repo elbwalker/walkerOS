@@ -64,8 +64,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Verify magic link token
-     * @description Verify a magic link token and create an authenticated session. Redirects to the specified URL or home page.
+     * Legacy magic link entry point
+     * @description Side-effect-free redirector to the /auth/verify page for links minted before the page-URL change. Never consumes the token; redemption happens via POST.
      */
     get: {
       parameters: {
@@ -81,8 +81,8 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Redirect to target URL with session cookie set */
-        302: {
+        /** @description Redirect to the /auth/verify page with the token forwarded */
+        307: {
           headers: {
             [name: string]: unknown;
           };
@@ -91,7 +91,43 @@ export interface paths {
       };
     };
     put?: never;
-    post?: never;
+    /**
+     * Redeem magic link token
+     * @description Redeem a magic link token and create an authenticated session. Redeems immediately when the browser-nonce cookie from the magic-link request matches; otherwise answers confirm_required and expects a follow-up call with confirm: true.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['VerifyRequest'];
+        };
+      };
+      responses: {
+        /** @description Redemption result. status=ok sets the session cookie and carries the redirect target. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['VerifyResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;
@@ -8992,6 +9028,7 @@ export interface components {
       activationUrl: string;
       /** Format: date-time */
       sessionExpiresAt: string;
+      sessionGrant?: string;
     };
     ObserveSessionResponse: {
       /** @example ses_abc123xyz456 */
@@ -9769,6 +9806,29 @@ export interface components {
       email: string;
       /** @example /dashboard */
       redirect_to?: string;
+    };
+    VerifyResponse:
+      | {
+          /** @enum {string} */
+          status: 'ok';
+          /** @example / */
+          redirectTo: string;
+        }
+      | {
+          /** @enum {string} */
+          status: 'confirm_required';
+          /** @example user@example.com */
+          email: string;
+        }
+      | {
+          /** @enum {string} */
+          status: 'expired' | 'used' | 'invalid' | 'malformed';
+        };
+    VerifyRequest: {
+      token: string;
+      /** @example /dashboard */
+      redirect_to?: string;
+      confirm?: boolean;
     };
     WhoamiResponse: {
       /** @example user_a1b2c3d4 */

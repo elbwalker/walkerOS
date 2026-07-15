@@ -72,6 +72,11 @@
       "outputs": [],
       "outputLogs": "errors-only"
     },
+    "test:e2e": {
+      "dependsOn": ["build"],
+      "outputs": [],
+      "outputLogs": "errors-only"
+    },
     "update": {}
   }
 }

@@ -232,6 +232,73 @@ describe('browserSwapActivator', () => {
     expect(await browserSwapActivator(cfg)).toBe(false);
     expect(localStorage.getItem('elbPreview')).toBeNull();
   });
+
+  describe('companion session-forwarding grant (elbPreviewSession)', () => {
+    it('stores the companion raw alongside a verified URL activation grant and strips both params', async () => {
+      const { cfg, sign } = await setup();
+      const grant = await sign();
+      const stop = autoResolveScripts(true);
+      setUrl(`?elbPreview=${grant}&elbPreviewSession=forwarding.raw.value`);
+
+      expect(await browserSwapActivator(cfg)).toBe(true);
+      expect(localStorage.getItem('elbPreview')).toBe(grant);
+      expect(localStorage.getItem('elbPreviewSession')).toBe(
+        'forwarding.raw.value',
+      );
+      expect(window.location.search).toBe('');
+      stop();
+    });
+
+    it('clears a stale companion when a fresh activation arrives without one', async () => {
+      const { cfg, sign } = await setup();
+      localStorage.setItem('elbPreviewSession', 'stale.forwarding.value');
+      const stop = autoResolveScripts(true);
+      setUrl(`?elbPreview=${await sign()}`);
+
+      expect(await browserSwapActivator(cfg)).toBe(true);
+      expect(localStorage.getItem('elbPreviewSession')).toBeNull();
+      stop();
+    });
+
+    it('does not touch either stored slot when the URL grant is rejected (anti-griefing)', async () => {
+      const { cfg, sign } = await setup();
+      const stored = await sign();
+      localStorage.setItem('elbPreview', stored);
+      localStorage.setItem('elbPreviewSession', 'kept.forwarding.value');
+      setUrl('?elbPreview=garbage&elbPreviewSession=hostile.value');
+      const stop = autoResolveScripts(true);
+
+      expect(await browserSwapActivator(cfg)).toBe(true);
+      expect(localStorage.getItem('elbPreview')).toBe(stored);
+      expect(localStorage.getItem('elbPreviewSession')).toBe(
+        'kept.forwarding.value',
+      );
+      stop();
+    });
+
+    it('clears both slots on ?elbPreview=off', async () => {
+      const { cfg, sign } = await setup();
+      localStorage.setItem('elbPreview', await sign());
+      localStorage.setItem('elbPreviewSession', 'forwarding.raw.value');
+      setUrl('?elbPreview=off');
+
+      expect(await browserSwapActivator(cfg)).toBe(false);
+      expect(localStorage.getItem('elbPreview')).toBeNull();
+      expect(localStorage.getItem('elbPreviewSession')).toBeNull();
+    });
+
+    it('clears both slots when the STORED grant fails verification (self-heal)', async () => {
+      const { cfg, sign } = await setup();
+      localStorage.setItem(
+        'elbPreview',
+        await sign({ aud: ['https://other.example.com'] }),
+      );
+      localStorage.setItem('elbPreviewSession', 'forwarding.raw.value');
+
+      expect(await browserSwapActivator(cfg)).toBe(false);
+      expect(localStorage.getItem('elbPreviewSession')).toBeNull();
+    });
+  });
 });
 
 describe('parseGrant art charset', () => {

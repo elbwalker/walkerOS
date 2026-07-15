@@ -120,8 +120,8 @@ jobs:
         # is exactly what the gate below tests and what publish ships.
         run: npx turbo run build --filter='!@walkeros/website'
 
-      - name: Test, typecheck, lint, integration
-        run: npx turbo run test typecheck lint test:integration
+      - name: Test, typecheck, lint, integration, e2e
+        run: npx turbo run test typecheck lint test:integration test:e2e
 
       # Trusted Publishing: npm exchanges the GitHub OIDC token at publish time.
       # No NPM_TOKEN. Provenance attestations are generated automatically.
