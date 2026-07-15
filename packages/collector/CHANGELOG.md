@@ -1,5 +1,41 @@
 # @walkeros/collector
 
+## 4.3.0
+
+### Minor Changes
+
+- e01036e: Unknown walker commands now log a warning and return `ok: false`
+  instead of silently succeeding. The elb function is exposed as
+  `collector.elb`, a new required field on `Collector.Instance`, replacing the
+  internal `sources.elb` pseudo-source.
+- e01036e: Flow observation records now carry per-event journey correlation: a
+  W3C `traceparent` links a web send to the server flow that receives it, plus
+  the originating source id and a monotonic sequence that makes dropped
+  telemetry visible. At trace level, destinations can opt in to recording their
+  outgoing vendor calls.
+- 98801c9: Flow observation records now assemble into per-event journeys
+  spanning web and server flows, each hop showing input, output, and status,
+  with loss flagged; the `observe_journeys` MCP tool exposes the same journeys
+  to agents. Batching destinations now emit per-event records, and live-web
+  vendor calls are captured when a destination reaches its callable through
+  `getEnv`, though batched sends stay uncaptured.
+- 9506e3e: Events now carry per-flow config provenance on
+  `event.source.release`, a flow-name to release map that accumulates as an
+  event crosses flows (web capture to server processing), so a delivered event
+  shows which config handled it. The collector no longer stamps `source.version`
+  (external source emitters may still set it). In this first version, aws and
+  gcp crossings are not yet covered.
+
+### Patch Changes
+
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [98801c9]
+- Updated dependencies [f8408fd]
+- Updated dependencies [907eed0]
+- Updated dependencies [9506e3e]
+  - @walkeros/core@4.3.0
+
 ## 4.2.1
 
 ### Patch Changes

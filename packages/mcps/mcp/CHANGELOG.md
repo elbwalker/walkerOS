@@ -1,5 +1,36 @@
 # @walkeros/mcp
 
+## 4.3.0
+
+### Minor Changes
+
+- 1559e17: The `preview_regrant` action now works over the CLI-backed MCP
+  client: mint a fresh, origin-bound activation grant for an existing preview,
+  optionally bound to an Observe session via `sessionId`. `preview_create` with
+  a `siteUrl` now mints a real activation grant instead of returning no
+  activation URL.
+- 98801c9: Flow observation records now assemble into per-event journeys
+  spanning web and server flows, each hop showing input, output, and status,
+  with loss flagged; the `observe_journeys` MCP tool exposes the same journeys
+  to agents. Batching destinations now emit per-event records, and live-web
+  vendor calls are captured when a destination reaches its callable through
+  `getEnv`, though batched sends stay uncaptured.
+
+### Patch Changes
+
+- Updated dependencies [07f0255]
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [1559e17]
+- Updated dependencies [06c93b4]
+- Updated dependencies [98801c9]
+- Updated dependencies [f8408fd]
+- Updated dependencies [907eed0]
+- Updated dependencies [9506e3e]
+  - @walkeros/cli@4.3.0
+  - @walkeros/core@4.3.0
+
 ## 4.2.1
 
 ### Patch Changes

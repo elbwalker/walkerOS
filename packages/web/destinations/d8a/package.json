@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-d8a",
   "description": "d8a web destination for walkerOS",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -38,11 +38,11 @@
   },
   "dependencies": {
     "@d8a-tech/wt": "^1.2.1",
-    "@walkeros/core": "4.2.1",
-    "@walkeros/web-core": "4.2.1"
+    "@walkeros/core": "4.3.0",
+    "@walkeros/web-core": "4.3.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "4.2.1"
+    "@walkeros/collector": "4.3.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

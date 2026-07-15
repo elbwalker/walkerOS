@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/transformer-ga4",
   "description": "Decodes GA4 Measurement Protocol v2 (gtag /g/collect) into walkerOS events",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -32,10 +32,10 @@
     "test": "jest"
   },
   "dependencies": {
-    "@walkeros/core": "4.2.1"
+    "@walkeros/core": "4.3.0"
   },
   "devDependencies": {
-    "@walkeros/core": "4.2.1"
+    "@walkeros/core": "4.3.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

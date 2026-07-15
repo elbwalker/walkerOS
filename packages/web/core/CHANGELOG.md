@@ -1,5 +1,42 @@
 # @walkeros/web-core
 
+## 4.3.0
+
+### Minor Changes
+
+- 83ea3c6: The visible and impression triggers now fire for elements inside open
+  shadow DOM, and scroll depth is computed correctly for shadow-nested elements.
+  Visibility still accounts for occlusion across open shadow roots, so a
+  genuinely covered element does not trigger. Closed shadow subtrees can be
+  tracked by passing the closed root reference to walker init.
+- 98801c9: Flow observation records now assemble into per-event journeys
+  spanning web and server flows, each hop showing input, output, and status,
+  with loss flagged; the `observe_journeys` MCP tool exposes the same journeys
+  to agents. Batching destinations now emit per-event records, and live-web
+  vendor calls are captured when a destination reaches its callable through
+  `getEnv`, though batched sends stay uncaptured.
+- d28a8ea: The `impression` and `visible` triggers now count an element as seen
+  when at least half of it, or half of the viewport, whichever is smaller, is on
+  screen along each axis for one continuous second in a foreground tab. Elements
+  larger than the viewport now fire, where previously they could not, and
+  elements are detected reliably when a framework injects them before rendering.
+  Expect an increase in impression volume, particularly on small viewports and
+  on pages with tall sections.
+
+### Patch Changes
+
+- ebd193f: The global `Window.elbLayer` type is now optional, matching reality:
+  the queue is absent until a source initializes it (the runtime already guards
+  for this). Code that reads `window.elbLayer` directly now correctly narrows it
+  as possibly undefined.
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [98801c9]
+- Updated dependencies [f8408fd]
+- Updated dependencies [907eed0]
+- Updated dependencies [9506e3e]
+  - @walkeros/core@4.3.0
+
 ## 4.2.1
 
 ### Patch Changes

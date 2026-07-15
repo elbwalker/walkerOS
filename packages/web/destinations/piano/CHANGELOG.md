@@ -1,5 +1,26 @@
 # @walkeros/web-destination-piano
 
+## 4.3.0
+
+### Patch Changes
+
+- 1ea8665: With `loadScript: true`, `site` and `collectDomain` now reach the
+  Piano SDK reliably. Configuration is applied after the injected script loads,
+  instead of being silently skipped on a cold page. If the script fails to load
+  (ad blocker, network, CDN), a warning is logged rather than sending
+  unconfigured events.
+- Updated dependencies [83ea3c6]
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [98801c9]
+- Updated dependencies [f8408fd]
+- Updated dependencies [907eed0]
+- Updated dependencies [9506e3e]
+- Updated dependencies [d28a8ea]
+- Updated dependencies [ebd193f]
+  - @walkeros/web-core@4.3.0
+  - @walkeros/core@4.3.0
+
 ## 4.2.1
 
 ### Patch Changes

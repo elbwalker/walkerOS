@@ -1,5 +1,40 @@
 # @walkeros/explorer
 
+## 4.3.0
+
+### Minor Changes
+
+- db6309c: Removed the experimental `TagSkeleton`, `TagSkeletonOverlay`,
+  `TagCanvas`, `TagTreeEditor` and `Tag` components, along with their layout and
+  tag-tree helpers. The draft tagging-plan visualization they prototyped is no
+  longer part of this package.
+
+### Patch Changes
+
+- c201c5f: Read-only code snippets now render their highlighted content during
+  server-side rendering instead of waiting for the browser, so code is visible
+  on first paint and in no-JS and search-engine contexts. `CodeSnippet` no
+  longer ships the Monaco editor for read-only display.
+- Updated dependencies [7527c41]
+- Updated dependencies [9506e3e]
+- Updated dependencies [ebd193f]
+- Updated dependencies [e01036e]
+- Updated dependencies [83ea3c6]
+- Updated dependencies [66a8c33]
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [98801c9]
+- Updated dependencies [f8408fd]
+- Updated dependencies [907eed0]
+- Updated dependencies [9506e3e]
+- Updated dependencies [d28a8ea]
+- Updated dependencies [e6613f8]
+- Updated dependencies [ebd193f]
+  - @walkeros/web-source-browser@4.3.0
+  - @walkeros/web-core@4.3.0
+  - @walkeros/collector@4.3.0
+  - @walkeros/core@4.3.0
+
 ## 4.2.1
 
 ### Patch Changes

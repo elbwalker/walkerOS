@@ -1,5 +1,18 @@
 # @walkeros/server-destination-pinterest
 
+## 4.3.0
+
+### Patch Changes
+
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [98801c9]
+- Updated dependencies [f8408fd]
+- Updated dependencies [907eed0]
+- Updated dependencies [9506e3e]
+  - @walkeros/core@4.3.0
+  - @walkeros/server-core@4.3.0
+
 ## 4.2.1
 
 ### Patch Changes

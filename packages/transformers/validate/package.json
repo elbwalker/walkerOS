@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/transformer-validate",
   "description": "JSON Schema contract validation transformer for walkerOS",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -33,11 +33,11 @@
     "test": "jest"
   },
   "dependencies": {
-    "@walkeros/core": "4.2.1",
+    "@walkeros/core": "4.3.0",
     "@cfworker/json-schema": "^4.1.1"
   },
   "devDependencies": {
-    "@walkeros/core": "4.2.1"
+    "@walkeros/core": "4.3.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
