@@ -6,6 +6,7 @@ import {
   getPreview,
   createPreview,
   deletePreview,
+  regrantPreview,
 } from '../index.js';
 
 jest.mock('../../../core/auth.js', () => ({
@@ -332,6 +333,100 @@ describe('previews', () => {
           }),
         ).rejects.toThrow('Grant denied');
       });
+    });
+  });
+
+  describe('regrantPreview', () => {
+    const grantBody = {
+      grant: 'eyJhbGciOiJFUzI1NiJ9.my5ite.s1g',
+      activationUrl:
+        'https://my-site.com/?elbPreview=eyJhbGciOiJFUzI1NiJ9.my5ite.s1g',
+      sessionExpiresAt: '2026-04-22T00:00:00Z',
+    };
+
+    it('POSTs origins to the grant route and returns the minted grant', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify(grantBody), { status: 200 }),
+      );
+      const result = await regrantPreview({
+        projectId: 'proj_x',
+        flowId: 'fl_y',
+        previewId: 'prv_x',
+        origins: ['https://my-site.com'],
+      });
+      expect(mockApiFetch).toHaveBeenCalledTimes(1);
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_x/flows/fl_y/previews/prv_x/grant',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ origins: ['https://my-site.com'] }),
+        }),
+      );
+      expect(result).toEqual(grantBody);
+    });
+
+    it('includes sessionId in the body when provided', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify(grantBody), { status: 200 }),
+      );
+      await regrantPreview({
+        projectId: 'proj_x',
+        flowId: 'fl_y',
+        previewId: 'prv_x',
+        origins: ['https://my-site.com'],
+        sessionId: 'ses_1',
+      });
+      const [, init] = mockApiFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(init.body as string)).toEqual({
+        origins: ['https://my-site.com'],
+        sessionId: 'ses_1',
+      });
+    });
+
+    it('omits sessionId from the body when not provided', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify(grantBody), { status: 200 }),
+      );
+      await regrantPreview({
+        projectId: 'proj_x',
+        flowId: 'fl_y',
+        previewId: 'prv_x',
+        origins: ['https://my-site.com'],
+      });
+      const [, init] = mockApiFetch.mock.calls[0] as [string, RequestInit];
+      expect(Object.keys(JSON.parse(init.body as string))).toEqual(['origins']);
+    });
+
+    it('falls back to requireProjectId()', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify(grantBody), { status: 200 }),
+      );
+      await regrantPreview({
+        flowId: 'fl_y',
+        previewId: 'prv_x',
+        origins: ['https://my-site.com'],
+      });
+      expect(mockRequireProjectId).toHaveBeenCalled();
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_default/flows/fl_y/previews/prv_x/grant',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('throws when the grant route fails', async () => {
+      mockApiFetch.mockResolvedValue(
+        new Response(JSON.stringify({ error: { message: 'Grant denied' } }), {
+          status: 403,
+        }),
+      );
+      await expect(
+        regrantPreview({
+          projectId: 'proj_x',
+          flowId: 'fl_y',
+          previewId: 'prv_x',
+          origins: ['https://my-site.com'],
+        }),
+      ).rejects.toThrow('Grant denied');
     });
   });
 

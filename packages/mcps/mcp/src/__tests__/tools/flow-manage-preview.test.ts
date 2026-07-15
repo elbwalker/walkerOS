@@ -589,5 +589,67 @@ describe('flow_manage tool — preview actions', () => {
       expect('token' in data).toBe(false);
       expect('projectId' in data).toBe(false);
     });
+
+    it('threads sessionId into regrantPreview when provided', async () => {
+      const regrantPreview = jest.fn().mockResolvedValue({
+        previewId: 'prv_1',
+        activationUrl: 'https://shop.example.com?elbPreview=gr_x',
+        sessionExpiresAt: '2026-04-21T01:00:00Z',
+      });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ regrantPreview, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        {
+          action: 'preview_regrant',
+          flowId: 'cfg_1',
+          previewId: 'prv_1',
+          origins: ['https://shop.example.com'],
+          sessionId: 'ses_1',
+        },
+        mockExtra,
+      )) as { isError?: boolean };
+
+      expect(regrantPreview).toHaveBeenCalledWith({
+        projectId: 'proj_default',
+        flowId: 'cfg_1',
+        previewId: 'prv_1',
+        origins: ['https://shop.example.com'],
+        sessionId: 'ses_1',
+      });
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('omits the sessionId key entirely when not provided', async () => {
+      const regrantPreview = jest.fn().mockResolvedValue({
+        previewId: 'prv_1',
+        activationUrl: 'https://shop.example.com?elbPreview=gr_x',
+        sessionExpiresAt: '2026-04-21T01:00:00Z',
+      });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ regrantPreview, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      await tool.handler(
+        {
+          action: 'preview_regrant',
+          flowId: 'cfg_1',
+          previewId: 'prv_1',
+          origins: ['https://shop.example.com'],
+        },
+        mockExtra,
+      );
+
+      const callArg = regrantPreview.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(Object.keys(callArg)).not.toContain('sessionId');
+    });
   });
 });

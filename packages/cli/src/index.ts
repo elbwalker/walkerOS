@@ -148,12 +148,14 @@ export {
   getPreview,
   createPreview,
   deletePreview,
+  regrantPreview,
 } from './commands/previews/index.js';
 export type {
   ListPreviewsOptions,
   GetPreviewOptions,
   CreatePreviewOptions,
   DeletePreviewOptions,
+  RegrantPreviewOptions,
 } from './commands/previews/index.js';
 export { listJourneys } from './commands/journeys/index.js';
 export type { ListJourneysOptions } from './commands/journeys/index.js';

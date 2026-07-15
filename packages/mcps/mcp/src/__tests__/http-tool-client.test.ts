@@ -17,6 +17,7 @@ jest.mock('@walkeros/cli', () => ({
   getPreview: jest.fn(),
   createPreview: jest.fn(),
   deletePreview: jest.fn(),
+  regrantPreview: jest.fn(),
   listSecrets: jest.fn(),
   createSecret: jest.fn(),
   updateSecret: jest.fn(),
@@ -80,6 +81,61 @@ describe('HttpToolClient', () => {
       limit: 10,
     });
     expect(result.sessionId).toBe('ses_1');
+  });
+
+  it('delegates regrantPreview to cli.regrantPreview with ids, origins, and sessionId', async () => {
+    (cli.regrantPreview as jest.Mock).mockResolvedValue({
+      grant: 'gr_x',
+      activationUrl: 'https://shop.example.com?elbPreview=gr_x',
+      sessionExpiresAt: '2026-04-21T01:00:00Z',
+    });
+    const client = new HttpToolClient();
+    const result = (await client.regrantPreview({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      previewId: 'prv_1',
+      origins: ['https://shop.example.com'],
+      sessionId: 'ses_1',
+    })) as { activationUrl: string };
+    expect(cli.regrantPreview).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      previewId: 'prv_1',
+      origins: ['https://shop.example.com'],
+      sessionId: 'ses_1',
+    });
+    expect(result.activationUrl).toBe(
+      'https://shop.example.com?elbPreview=gr_x',
+    );
+  });
+
+  it('createPreview bridges siteUrl to the CLI url option', async () => {
+    (cli.createPreview as jest.Mock).mockResolvedValue({ id: 'prv_1' });
+    const client = new HttpToolClient();
+    await client.createPreview({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      flowSettingsId: 'fs_1',
+      siteUrl: 'https://my-site.com',
+    });
+    expect(cli.createPreview).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://my-site.com' }),
+    );
+  });
+
+  it('createPreview keeps an explicit url over siteUrl', async () => {
+    (cli.createPreview as jest.Mock).mockResolvedValue({ id: 'prv_1' });
+    const client = new HttpToolClient();
+    await client.createPreview({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      flowSettingsId: 'fs_1',
+      url: 'https://explicit.example',
+      siteUrl: 'https://other.example',
+    });
+    expect(cli.createPreview).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://explicit.example' }),
+    );
   });
 
   it('delegates submitFeedback to cli.feedback', async () => {

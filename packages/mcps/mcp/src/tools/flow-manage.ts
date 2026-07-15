@@ -180,6 +180,12 @@ const inputSchema = {
     .describe(
       'Site origins (bare https://host[:port]) to mint a preview activation grant for. Used by preview_regrant; the returned activationUrl targets the first origin.',
     ),
+  sessionId: z
+    .string()
+    .optional()
+    .describe(
+      'Observe session id — binds the re-minted grant to that session so forwarded events reach its container. Used by preview_regrant. CAUTION: a session-bound grant is rejected by the web page activator (sb-mismatch); omit sessionId when the grant should activate a preview in the browser.',
+    ),
 };
 
 const annotations = {
@@ -220,6 +226,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
     source,
     siteUrl,
     origins,
+    sessionId,
   } = (input ?? {}) as {
     action?:
       | 'list'
@@ -252,6 +259,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       | { kind: 'deployment-version'; deploymentVersionId: string };
     siteUrl?: string;
     origins?: string[];
+    sessionId?: string;
   };
   const validationError = validateActionInput(
     'flow_manage',
@@ -514,6 +522,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           flowId,
           previewId,
           origins: origins ?? [],
+          ...(sessionId ? { sessionId } : {}),
         });
         return mcpResult(data, {
           next: [

@@ -140,6 +140,45 @@ export async function createPreview(
   return { ...created, activationUrl: grant.activationUrl };
 }
 
+export interface RegrantPreviewOptions {
+  projectId?: string;
+  flowId: string;
+  previewId: string;
+  /** Bare `https://host[:port]` origins the grant may activate on; the
+   *  returned `activationUrl` targets the first. */
+  origins: string[];
+  /** Observe session id — binds the minted grant to that session so
+   *  forwarded events reach its container. Opaque to the CLI. */
+  sessionId?: string;
+}
+
+/**
+ * Mint a fresh, origin-bound activation grant for an existing preview.
+ * Grants are app-signed and origin-bound, so a client cannot forge a working
+ * activation URL by string-appending a token — only the server can mint one.
+ */
+export async function regrantPreview(
+  options: RegrantPreviewOptions,
+): Promise<components['schemas']['MintGrantResponse']> {
+  const pid = options.projectId ?? requireProjectId();
+  const response = await apiFetch(
+    `/api/projects/${pid}/flows/${options.flowId}/previews/${options.previewId}/grant`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origins: options.origins,
+        ...(options.sessionId ? { sessionId: options.sessionId } : {}),
+      }),
+    },
+  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throwApiError(body, 'Failed to mint preview activation grant');
+  }
+  return response.json();
+}
+
 export interface DeletePreviewOptions {
   projectId?: string;
   flowId: string;

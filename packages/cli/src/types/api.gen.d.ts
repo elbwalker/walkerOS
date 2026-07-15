@@ -9015,7 +9015,7 @@ export interface components {
     ObserveSessionWeb: {
       previewId: string;
       token: string;
-      activationUrl: string | null;
+      previewEnabled: boolean;
       /** Format: uri */
       bundleUrl: string;
     } | null;

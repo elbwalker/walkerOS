@@ -27,6 +27,9 @@ export interface RegrantPreviewOptions {
   flowId: string;
   previewId: string;
   origins: string[];
+  /** Observe session id — binds the minted grant to that session so
+   *  forwarded events reach its container. Opaque identifier. */
+  sessionId?: string;
 }
 
 /**
@@ -109,10 +112,9 @@ export interface ToolClient {
   deletePreview(options: DeletePreviewOptions): Promise<unknown>;
   /**
    * Mint a fresh, origin-bound activation grant for an existing preview.
-   * OPTIONAL: only in-process hosts (the walkerOS app itself) implement it; the
-   * CLI-backed HTTP client omits it, and the flow_manage handler guards on its
-   * presence before calling. Returns an already-redacted grant summary (never
-   * the ingest token or project id).
+   * OPTIONAL: clients that cannot mint grants may omit it, and the
+   * flow_manage handler guards on its presence before calling. Returns an
+   * already-redacted grant summary (never the ingest token or project id).
    */
   regrantPreview?(options: RegrantPreviewOptions): Promise<unknown>;
 
