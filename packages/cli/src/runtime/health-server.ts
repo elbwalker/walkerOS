@@ -68,17 +68,31 @@ export interface HealthServer {
  * Answer a CORS preflight. The gate sits above the flow source's own `cors`
  * middleware, so when armed it owns `OPTIONS`. Reproduce today's wildcard answer
  * (the express source's `setCorsHeaders`: `*`, `GET, POST, OPTIONS`, 204 — it
- * does not echo Origin), and pin an explicit allow-headers list including the
- * grant header so a browser may send it on the real request. The grant is NEVER
- * required here: browsers cannot attach custom headers to a preflight, and no
- * credentials ride these requests (the grant header is the auth), so wildcard is
- * safe.
+ * does not echo Origin). Allow-headers REFLECTS whatever the browser asks for,
+ * exactly like the ungated production path's `cors` middleware: a static list
+ * silently blocks the real request whenever a destination adds a header (the
+ * api destination's `traceparent` trace stitching did exactly that — every
+ * browser-forwarded event to the session container failed preflight while
+ * production kept working). Reflection grants nothing: the preflight carries no
+ * auth and the actual request still has to pass the grant gate. The grant is
+ * NEVER required here: browsers cannot attach custom headers to a preflight,
+ * and no credentials ride these requests (the grant header is the auth), so
+ * wildcard is safe.
  */
-function answerPreviewPreflight(res: http.ServerResponse): void {
+function answerPreviewPreflight(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void {
+  const requested = req.headers['access-control-request-headers'];
+  const requestedHeaders = Array.isArray(requested)
+    ? requested.join(', ')
+    : requested;
   res.writeHead(204, {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Walkeros-Preview',
+    'Access-Control-Allow-Headers':
+      requestedHeaders || 'Content-Type, X-Walkeros-Preview',
+    Vary: 'Access-Control-Request-Headers',
   });
   res.end();
 }
@@ -230,7 +244,7 @@ export function createHealthServer(
       // (production), delegation is byte-identical to today.
       if (previewGate) {
         if (req.method === 'OPTIONS') {
-          answerPreviewPreflight(res);
+          answerPreviewPreflight(req, res);
           return;
         }
         guardPreviewIntake(req, res, previewGate, logger, delegate);

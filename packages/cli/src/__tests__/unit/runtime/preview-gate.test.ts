@@ -280,7 +280,7 @@ describe('preview intake gate', () => {
       path: '/collect',
       headers: {
         Origin: 'https://shop.example.com',
-        'Access-Control-Request-Headers': 'x-walkeros-preview',
+        'Access-Control-Request-Headers': 'content-type,x-walkeros-preview',
       },
     });
     expect(res.status).toBe(204);
@@ -289,6 +289,47 @@ describe('preview intake gate', () => {
     expect(String(allowHeaders).toLowerCase()).toContain('x-walkeros-preview');
     expect(String(allowHeaders).toLowerCase()).toContain('content-type');
     expect(res.headers['access-control-allow-origin']).toBe('*');
+  });
+
+  it('reflects EVERY requested preflight header, not a static allowlist', async () => {
+    // Regression: the api destination stamps a `traceparent` header for trace
+    // stitching. A pinned allow-headers list blocked the browser's preflight
+    // for exactly that header, so every browser-forwarded event to the session
+    // container was dropped while the ungated production path (whose cors
+    // middleware reflects) kept working. The gate must reflect like production.
+    const { port } = await startServer(armedGate());
+    const res = await httpRequest(port, {
+      method: 'OPTIONS',
+      path: '/collect',
+      headers: {
+        Origin: 'https://shop.example.com',
+        'Access-Control-Request-Headers':
+          'content-type,traceparent,x-walkeros-preview',
+      },
+    });
+    expect(res.status).toBe(204);
+    const allowHeaders = String(
+      res.headers['access-control-allow-headers'],
+    ).toLowerCase();
+    expect(allowHeaders).toContain('traceparent');
+    expect(allowHeaders).toContain('x-walkeros-preview');
+    expect(allowHeaders).toContain('content-type');
+    expect(res.headers['vary']).toContain('Access-Control-Request-Headers');
+  });
+
+  it('falls back to the grant-header allowlist when the preflight names none', async () => {
+    const { port } = await startServer(armedGate());
+    const res = await httpRequest(port, {
+      method: 'OPTIONS',
+      path: '/collect',
+      headers: { Origin: 'https://shop.example.com' },
+    });
+    expect(res.status).toBe(204);
+    const allowHeaders = String(
+      res.headers['access-control-allow-headers'],
+    ).toLowerCase();
+    expect(allowHeaders).toContain('x-walkeros-preview');
+    expect(allowHeaders).toContain('content-type');
   });
 
   it('accepts a grant signed by a RETIRED key still in the keyring (rotation safety)', async () => {
