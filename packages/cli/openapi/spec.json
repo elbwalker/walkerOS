@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "2.1.0",
+    "version": "3.1.0",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -2204,8 +2204,7 @@
             "format": "uri"
           },
           "activationUrl": {
-            "type": "string",
-            "pattern": "^\\?elbPreview=[a-z0-9]{12}$"
+            "type": ["string", "null"]
           },
           "createdBy": {
             "type": "string"
@@ -2225,6 +2224,22 @@
           "activationUrl",
           "createdBy",
           "createdAt"
+        ]
+      },
+      "CreatePreviewResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PreviewResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "grant": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["grant"]
+          }
         ]
       },
       "ListPreviewsResponse": {
@@ -2278,6 +2293,45 @@
           }
         },
         "required": ["flowSettingsId"]
+      },
+      "MintGrantRequest": {
+        "type": "object",
+        "properties": {
+          "origins": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 253,
+              "example": "https://shop.example.com"
+            },
+            "minItems": 1,
+            "maxItems": 5
+          },
+          "sessionId": {
+            "type": "string"
+          }
+        },
+        "required": ["origins"]
+      },
+      "MintGrantResponse": {
+        "type": "object",
+        "properties": {
+          "grant": {
+            "type": "string"
+          },
+          "activationUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "sessionExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sessionGrant": {
+            "type": "string"
+          }
+        },
+        "required": ["grant", "activationUrl", "sessionExpiresAt"]
       },
       "ObserveSessionResponse": {
         "type": "object",
@@ -2343,18 +2397,21 @@
       "ObserveSessionWeb": {
         "type": ["object", "null"],
         "properties": {
+          "previewId": {
+            "type": "string"
+          },
           "token": {
             "type": "string"
           },
-          "activationUrl": {
-            "type": "string"
+          "previewEnabled": {
+            "type": "boolean"
           },
           "bundleUrl": {
             "type": "string",
             "format": "uri"
           }
         },
-        "required": ["token", "activationUrl", "bundleUrl"]
+        "required": ["previewId", "token", "previewEnabled", "bundleUrl"]
       },
       "ObserveSessionJourneysResponse": {
         "type": "object",
@@ -3258,6 +3315,12 @@
               },
               "platform": {
                 "type": "string"
+              },
+              "release": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
               },
               "version": {
                 "type": "string"
@@ -4429,6 +4492,65 @@
         },
         "required": ["email"]
       },
+      "VerifyResponse": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["ok"]
+              },
+              "redirectTo": {
+                "type": "string",
+                "example": "/"
+              }
+            },
+            "required": ["status", "redirectTo"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["confirm_required"]
+              },
+              "email": {
+                "type": "string",
+                "example": "user@example.com"
+              }
+            },
+            "required": ["status", "email"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["expired", "used", "invalid", "malformed"]
+              }
+            },
+            "required": ["status"]
+          }
+        ]
+      },
+      "VerifyRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "redirect_to": {
+            "type": "string",
+            "example": "/dashboard"
+          },
+          "confirm": {
+            "type": "boolean"
+          }
+        },
+        "required": ["token"]
+      },
       "WhoamiResponse": {
         "type": "object",
         "properties": {
@@ -5407,10 +5529,46 @@
       }
     },
     "/api/auth/verify": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Redeem magic link token",
+        "description": "Redeem a magic link token and create an authenticated session. Redeems immediately when the browser-nonce cookie from the magic-link request matches; otherwise answers confirm_required and expects a follow-up call with confirm: true.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Redemption result. status=ok sets the session cookie and carries the redirect target.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": ["Auth"],
-        "summary": "Verify magic link token",
-        "description": "Verify a magic link token and create an authenticated session. Redirects to the specified URL or home page.",
+        "summary": "Legacy magic link entry point",
+        "description": "Side-effect-free redirector to the /auth/verify page for links minted before the page-URL change. Never consumes the token; redemption happens via POST.",
         "parameters": [
           {
             "schema": {
@@ -5437,8 +5595,8 @@
           }
         ],
         "responses": {
-          "302": {
-            "description": "Redirect to target URL with session cookie set"
+          "307": {
+            "description": "Redirect to the /auth/verify page with the token forwarded"
           }
         }
       }
@@ -8673,7 +8831,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PreviewResponse"
+                  "$ref": "#/components/schemas/CreatePreviewResponse"
                 }
               }
             }
@@ -8932,6 +9090,126 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/previews/{previewId}/grant": {
+      "post": {
+        "tags": ["Previews"],
+        "summary": "Mint preview activation grant",
+        "description": "Mint a fresh, origin-bound activation grant for an existing preview. Grants are origin-bound, so a preview needs one grant per host origin — re-mint whenever the target origin changes.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^prv_[a-z0-9]+$",
+              "example": "prv_abc123xyz456"
+            },
+            "required": true,
+            "name": "previewId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MintGrantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Grant minted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MintGrantResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No active web deployment / host bundle not preview-enabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {

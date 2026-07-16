@@ -100,6 +100,7 @@ export const FLOW_MANAGE_REQUIREMENTS: ActionRequirementMap = {
     oneOf: [['flowName', 'flowSettingsId']],
   },
   preview_delete: { required: ['flowId', 'previewId'] },
+  preview_regrant: { required: ['flowId', 'previewId'] },
 };
 
 export const DEPLOY_MANAGE_REQUIREMENTS: ActionRequirementMap = {

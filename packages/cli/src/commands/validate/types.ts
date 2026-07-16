@@ -27,6 +27,7 @@ export interface ValidationWarning {
   path: string;
   message: string;
   suggestion?: string;
+  code?: string;
 }
 
 export interface ValidateResult {

@@ -312,9 +312,9 @@ Manage walkerOS flow configurations and previews in the cloud.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"duplicate"` \| `"preview_list"` \| `"preview_get"` \| `"preview_create"` \| `"preview_delete"` | Yes | Flow action |
+| `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"duplicate"` \| `"preview_list"` \| `"preview_get"` \| `"preview_create"` \| `"preview_delete"` \| `"preview_regrant"` | Yes | Flow action |
 | `projectId` | string | No | Project ID (`proj_...`). Optional filter for list. Required for create if no default project set. Falls back to `WALKEROS_PROJECT_ID` env. |
-| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: get, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete. |
+| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: get, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete, preview_regrant. |
 | `name` | string | No | Flow name. Required for create. Optional for update (to rename) and duplicate. |
 | `content` | object | No | Flow.Json content. Used for create and update. |
 | `patch` | boolean | No | Merge-patch for update (default: `true`). When true, only provided fields are updated. |
@@ -322,11 +322,12 @@ Manage walkerOS flow configurations and previews in the cloud.
 | `sort` | `"name"` \| `"updated_at"` \| `"created_at"` | No | Sort field for list. |
 | `order` | `"asc"` \| `"desc"` | No | Sort order for list. |
 | `includeDeleted` | boolean | No | Include soft-deleted flows in list results. |
-| `previewId` | string | No | Preview ID (`prv_...`). Required for: preview_get, preview_delete. |
+| `previewId` | string | No | Preview ID (`prv_...`). Required for: preview_get, preview_delete, preview_regrant. |
 | `flowName` | string | No | Flow settings name. Used by preview_create as an alternative to `flowSettingsId`. |
 | `flowSettingsId` | string | No | Flow settings ID. Used by preview_create as an alternative to `flowName`. |
 | `source` | object | No | What preview_create should run: `{ "kind": "draft" }` (default) or `{ "kind": "deployment-version", "deploymentVersionId": "..." }` to preview a deployed version's stored config ("preview what's live"). |
-| `siteUrl` | string | No | Optional site URL for preview_create. When provided, the response includes full `activationUrl` and `deactivationUrl` the user can click. |
+| `siteUrl` | string | No | Optional site URL for preview_create. When provided, an app-signed activation grant is minted for that origin and the response's `activationUrl` works there; otherwise `activationUrl` is `null` until a grant is minted (see preview_regrant). |
+| `origins` | string[] | No | Site origins (bare `https://host[:port]`) to mint a preview activation grant for. Used by preview_regrant; the returned `activationUrl` targets the first origin. |
 
 Configs returned by `get` are round-trip safe: structural values (package
 names, platform, IDs) are returned literally, so a returned config can be edited
@@ -530,9 +531,12 @@ Requires a walkerOS account. The local loop (create, validate, simulate) needs n
 
 The assistant calls `flow_manage({ action: "preview_create", flowId:
 "flow_abc123", flowName: "demo", siteUrl: "https://example.com" })` and returns
-the `activationUrl` the user clicks to activate preview mode on their site.
-Running `flow_manage({ action: "preview_delete", … })` later removes the
-bundle; the production walker self-heals on visitors' next page load.
+the grant-based `activationUrl` the user clicks to activate preview mode on
+their site. To activate on additional origins later, the assistant calls
+`flow_manage({ action: "preview_regrant", flowId: "flow_abc123", previewId:
+"prv_...", origins: [...] })` to mint a fresh grant. Running
+`flow_manage({ action: "preview_delete", … })` later removes the bundle; the
+production walker self-heals on visitors' next page load.
 
 ### Set up event mapping
 

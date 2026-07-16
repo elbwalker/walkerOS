@@ -181,6 +181,8 @@ export interface ChainResult {
   event: WalkerOS.DeepPartialEvent | WalkerOS.DeepPartialEvent[] | null;
   respond?: import('../respond').RespondFn;
   stopped?: true;
+  /** Transformer that stopped the chain (returned false or threw). */
+  droppedBy?: string;
 }
 
 /**

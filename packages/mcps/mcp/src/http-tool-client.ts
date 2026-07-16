@@ -17,6 +17,7 @@ import {
   getPreview,
   createPreview,
   deletePreview,
+  regrantPreview,
   listSecrets,
   createSecret,
   updateSecret,
@@ -53,7 +54,11 @@ import type {
   FeedbackOptions,
 } from '@walkeros/cli';
 
-import type { ToolClient, JourneysResult } from './tool-client.js';
+import type {
+  ToolClient,
+  JourneysResult,
+  RegrantPreviewOptions,
+} from './tool-client.js';
 
 /**
  * Default ToolClient implementation backed by @walkeros/cli. Every method
@@ -146,11 +151,20 @@ export class HttpToolClient implements ToolClient {
   async getPreview(options: GetPreviewOptions): Promise<unknown> {
     return getPreview(options);
   }
-  async createPreview(options: CreatePreviewOptions): Promise<unknown> {
-    return createPreview(options);
+  async createPreview(
+    options: CreatePreviewOptions & { siteUrl?: string },
+  ): Promise<unknown> {
+    // flow-manage passes `siteUrl` (the shared handler's field); the CLI's
+    // createPreview mints an origin-bound grant when given `url`. Bridge the two
+    // so a preview_create with a site URL over the HTTP client mints a real
+    // grant instead of returning a null activationUrl.
+    return createPreview({ ...options, url: options.url ?? options.siteUrl });
   }
   async deletePreview(options: DeletePreviewOptions): Promise<unknown> {
     return deletePreview(options);
+  }
+  async regrantPreview(options: RegrantPreviewOptions): Promise<unknown> {
+    return regrantPreview(options);
   }
 
   async listSecrets(options: ListSecretsOptions): Promise<unknown> {

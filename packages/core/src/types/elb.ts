@@ -61,6 +61,8 @@ export interface PushResult {
   done?: Record<string, Destination.Ref>;
   queued?: Record<string, Destination.Ref>;
   failed?: Record<string, Destination.Ref>;
+  /** Event was intentionally not forwarded: a transformer chain stopped it. */
+  dropped?: boolean;
 }
 
 // Simplified Layer type for core collector

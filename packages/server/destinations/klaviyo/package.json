@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-klaviyo",
   "description": "Klaviyo marketing automation server destination for walkerOS (klaviyo-api SDK, events + profile upserts)",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "license": "MIT",
   "exports": {
     ".": {
@@ -36,11 +36,11 @@
   },
   "dependencies": {
     "klaviyo-api": "^22.0.0",
-    "@walkeros/core": "4.2.1",
-    "@walkeros/server-core": "4.2.1"
+    "@walkeros/core": "4.3.0",
+    "@walkeros/server-core": "4.3.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "4.2.1"
+    "@walkeros/collector": "4.3.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

@@ -1,5 +1,33 @@
 # @walkeros/web-destination-gtag
 
+## 4.3.0
+
+### Minor Changes
+
+- e01036e: Flow observation records now carry per-event journey correlation: a
+  W3C `traceparent` links a web send to the server flow that receives it, plus
+  the originating source id and a monotonic sequence that makes dropped
+  telemetry visible. At trace level, destinations can opt in to recording their
+  outgoing vendor calls.
+
+### Patch Changes
+
+- 3aa2cd9: Consent Mode now sets the denied `consent default` before `config`,
+  as Google requires. Add `como_advanced` to enable advanced mode (default at
+  page load with `wait_for_update`) for non-EU setups. Sites that do not use
+  consent are unaffected.
+- Updated dependencies [83ea3c6]
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [98801c9]
+- Updated dependencies [f8408fd]
+- Updated dependencies [907eed0]
+- Updated dependencies [9506e3e]
+- Updated dependencies [d28a8ea]
+- Updated dependencies [ebd193f]
+  - @walkeros/web-core@4.3.0
+  - @walkeros/core@4.3.0
+
 ## 4.2.1
 
 ### Patch Changes

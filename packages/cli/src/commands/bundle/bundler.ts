@@ -3,7 +3,7 @@ import esbuild from 'esbuild';
 import { builtinModules } from 'module';
 import path from 'path';
 import fs from 'fs-extra';
-import type { Flow, Transformer } from '@walkeros/core';
+import type { Flow, PreviewKey, Transformer } from '@walkeros/core';
 import {
   packageNameToVariable,
   ENV_MARKER_PREFIX,
@@ -2058,13 +2058,51 @@ export interface WrapEntryTelemetry {
   sample?: number;
 }
 
+/**
+ * Preview activation wiring. When present and enabled, the generated entry
+ * imports the activator from core and lets it decide whether a preview bundle
+ * boots in place of this flow. The bundle carries only PUBLIC values: a keyring,
+ * an issuer, and opaque bindings. Never a project id, never a secret.
+ */
+export interface WrapEntryPreview {
+  enabled: boolean;
+  keyring: PreviewKey[];
+  iss: string;
+  /** Opaque project binding. Omitted only on demo hosts. */
+  pb?: string;
+  /** Demo hosts only: accept another project's preview, confined to demoAllowlist. */
+  acceptForeign?: boolean;
+  demoAllowlist?: string[];
+  /** Bare CDN hostname. */
+  previewOrigin: string;
+}
+
 export function generateWrapEntry(
   stage1Path: string,
   options: {
     windowCollector?: string;
     windowElb?: string;
-    previewOrigin?: string;
-    previewScope?: string;
+    /**
+     * Preview activation wiring. Only host (deploy) wraps set this: the
+     * preview-artifact wrap always omits it, so an activated preview can
+     * never re-verify its own grant and re-inject itself.
+     */
+    preview?: WrapEntryPreview;
+    /**
+     * Preview-ARTIFACT wiring (the third wrap variant). When set, the emitted
+     * entry reads the session-forwarding grant from
+     * `localStorage['elbPreviewSession']` (the companion slot the activator
+     * persists alongside the activation grant) at boot and stamps it as the
+     * `X-Walkeros-Preview` header on each named server-bound destination
+     * (`config.destinations[k].config.settings.headers`), before `startFlow`.
+     * The grant is never baked into the artifact.
+     *
+     * Mutually exclusive with `preview`: a host bundle ACTIVATES a preview, an
+     * artifact INJECTS its grant. An artifact that also baked the activator
+     * would re-verify the stored grant and re-inject itself (infinite
+     * recursion), so setting both throws.
+     */
+    previewGrantTargets?: string[];
     /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
     platform?: 'browser' | 'node';
     /**
@@ -2087,62 +2125,85 @@ export function generateWrapEntry(
   const assignmentCode =
     assignments.length > 0 ? '\n' + assignments.join('\n') : '';
 
-  const hasPreview = !!(options.previewOrigin && options.previewScope);
-  const previewOriginLiteral = JSON.stringify(options.previewOrigin ?? '');
-  const previewScopeLiteral = JSON.stringify(options.previewScope ?? '');
-
-  const preflightBlock = hasPreview
-    ? `
-  // --- Preview mode preflight ---
-  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-    var __previewOrigin = ${previewOriginLiteral};
-    var __previewScope = ${previewScopeLiteral};
-    var __params = new URLSearchParams(location.search);
-    var __tokens = __params.getAll('elbPreview');
-    var __param = __tokens.length > 0 ? __tokens[__tokens.length - 1] : null;
-    var __secure = location.protocol === 'https:' ? '; Secure' : '';
-
-    if (__param === 'off') {
-      document.cookie = 'elbPreview=; path=/; max-age=0; SameSite=Lax' + __secure;
-    } else if (__param && /^[a-zA-Z0-9_-]{8,32}$/.test(__param)) {
-      document.cookie = 'elbPreview=' + __param + '; path=/; max-age=604800; SameSite=Lax' + __secure;
-    }
-
-    var __match = /(?:^|; )elbPreview=([^;]+)/.exec(document.cookie);
-    var __token = __match && __match[1];
-    if (__token && /^[a-zA-Z0-9_-]{8,32}$/.test(__token)) {
-      var __previewSrc = 'https://' + __previewOrigin + '/preview/' + __previewScope + '/walker.' + __token + '.js';
-      var __clearPreviewCookie = function () {
-        document.cookie = 'elbPreview=; path=/; max-age=0; SameSite=Lax' + __secure;
-      };
-      // Swap via a <script> element: script loads are CORS-exempt, unlike
-      // fetch, so this works on any site regardless of CDN CORS headers.
-      // onerror covers 404/5xx/network; the timer covers a hung CDN. On
-      // timeout the pending script is removed so a late load is best-effort
-      // prevented from booting a second walker (removing a pending script does
-      // not reliably abort an in-flight fetch).
-      var __swapped = await new Promise(function (__resolve) {
-        var __s = document.createElement('script');
-        var __done = function (__ok) {
-          clearTimeout(__timeoutId);
-          if (!__ok && __s.parentNode) __s.parentNode.removeChild(__s);
-          __resolve(__ok);
-        };
-        var __timeoutId = setTimeout(function () { __done(false); }, 5000);
-        __s.onload = function () { __done(true); };
-        __s.onerror = function () { __done(false); };
-        __s.src = __previewSrc;
-        document.head.appendChild(__s);
-      });
-      if (__swapped) return;
-      // Preview bundle missing or unreachable — self-heal by clearing the
-      // cookie and falling through to the production walker in this bundle.
-      __clearPreviewCookie();
-    }
+  // A host bundle activates a preview; a preview artifact injects its grant.
+  // Baking both would let an activated artifact re-verify the stored grant and
+  // re-inject itself (infinite recursion), so refuse the combination loudly
+  // rather than pick a silent precedence that hides a caller bug.
+  if (
+    options.preview !== undefined &&
+    options.previewGrantTargets !== undefined
+  ) {
+    throw new Error(
+      'generateWrapEntry: `preview` (host activator) and `previewGrantTargets` ' +
+        '(preview-artifact injection) are mutually exclusive. A host bundle ' +
+        'activates a preview; an artifact injects its grant. Pass at most one.',
+    );
   }
-  // --- End preview mode preflight ---
-`
+
+  const preview = options.preview;
+  const previewEnabled = !!preview?.enabled;
+
+  // The activator is imported (not inlined) so its logic is tested as a module
+  // and DCE keeps it out of every bundle that does not enable preview.
+  const previewImport = previewEnabled
+    ? `import { browserSwapActivator } from '@walkeros/core';\n`
     : '';
+
+  // Preview-artifact variant: read the SESSION-FORWARDING grant (the
+  // companion the activator persists to localStorage['elbPreviewSession'])
+  // at boot and stamp it as the X-Walkeros-Preview header on each named
+  // server-bound destination, before startFlow. Never the activation grant
+  // in 'elbPreview': the session container only accepts session-bound
+  // grants, so that value could only ever be rejected (sb-mismatch). The
+  // grant value never appears as a literal — only the runtime localStorage
+  // read. localStorage access is wrapped in try/catch (Safari private mode
+  // throws) and an absent key skips injection entirely so a plain page
+  // boots normally.
+  const grantTargets = options.previewGrantTargets ?? [];
+  const previewGrantBlock =
+    grantTargets.length > 0
+      ? `
+  // --- Preview grant injection ---
+  try {
+    const __previewGrant =
+      typeof localStorage !== 'undefined'
+        ? localStorage.getItem('elbPreviewSession')
+        : null;
+    if (__previewGrant && config.destinations) {
+${grantTargets
+  .map((key) => {
+    const ref = `config.destinations[${singleQuoteLiteral(key)}]`;
+    return `      if (${ref}) {
+        const __dest = ${ref};
+        const __cfg = __dest.config || (__dest.config = {});
+        const __settings = __cfg.settings || (__cfg.settings = {});
+        const __headers = __settings.headers || (__settings.headers = {});
+        __headers['X-Walkeros-Preview'] = __previewGrant;
+      }`;
+  })
+  .join('\n')}
+    }
+  } catch (__err) {
+    // localStorage can throw (Safari private mode); boot without the grant.
+  }
+  // --- End preview grant injection ---`
+      : '';
+
+  const previewBlock =
+    previewEnabled && preview
+      ? `
+  // --- Preview activation ---
+  if (await browserSwapActivator(${JSON.stringify({
+    keyring: preview.keyring,
+    iss: preview.iss,
+    pb: preview.pb,
+    acceptForeign: preview.acceptForeign,
+    demoAllowlist: preview.demoAllowlist,
+    previewOrigin: preview.previewOrigin,
+  })})) return;
+  // --- End preview activation ---
+`
+      : '';
 
   const platform = options.platform ?? 'browser';
   const envBlock =
@@ -2266,12 +2327,22 @@ function __pollTrace() {
   }`
     : '';
 
-  return `import { startFlow, wireConfig, __configData } from '${stage1Specifier}';${telemetryImport}
+  return `${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';${telemetryImport}
 ${telemetryPoller}
-(async () => {${preflightBlock}
-  const config = wireConfig(__configData);${envBlock}
+(async () => {${previewBlock}
+  const config = wireConfig(__configData);${envBlock}${previewGrantBlock}
   const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}
 })();`;
+}
+
+/**
+ * Emit a single-quoted JS string literal for a destination key. Destination
+ * keys come from a validated flow config, but escaping backslash and single
+ * quote keeps the emitted codegen well-formed for any key and matches the
+ * single-quote convention the preview-injection tests pin.
+ */
+function singleQuoteLiteral(value: string): string {
+  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
 /**

@@ -54,12 +54,31 @@ export interface CreatePreviewOptions {
    *  version's stored config. Anchored to the generated API contract so a new
    *  request field becomes a type error here rather than silent drift. */
   source?: components['schemas']['CreatePreviewRequest']['source'];
+  /** Target site URL. When present, the CLI asks the server to re-mint an
+   *  origin-bound activation grant for this URL's origin. Grants are
+   *  app-signed and origin-bound, so a client cannot forge a working activation
+   *  URL for an arbitrary origin by string-appending a token — only the server
+   *  can mint one. The returned preview's `activationUrl` is the grant URL for
+   *  this origin. */
+  url?: string;
 }
 
 export async function createPreview(
   options: CreatePreviewOptions,
 ): Promise<components['schemas']['PreviewResponse']> {
   const pid = options.projectId ?? requireProjectId();
+
+  // Derive (and validate) the target origin up front so an invalid --url fails
+  // before we create a server-side preview, which would otherwise waste a quota
+  // slot and force manual cleanup.
+  let origin: string | undefined;
+  if (options.url !== undefined) {
+    try {
+      origin = new URL(options.url).origin;
+    } catch {
+      throw new Error(`Invalid --url value: ${options.url}`);
+    }
+  }
 
   let settingsId = options.flowSettingsId;
   if (!settingsId) {
@@ -94,6 +113,77 @@ export async function createPreview(
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throwApiError(body, 'Failed to create preview');
+  }
+  const created: components['schemas']['PreviewResponse'] =
+    await response.json();
+
+  // No target URL: the create response already carries a valid grant-based
+  // activationUrl for the flow's default/configured origin. Return it as-is.
+  if (origin === undefined) return created;
+
+  // Target URL given: re-mint an origin-bound grant for that origin. The
+  // server signs the grant; the CLI cannot produce a valid one client-side.
+  const grantResponse = await apiFetch(
+    `/api/projects/${pid}/flows/${options.flowId}/previews/${created.id}/grant`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origins: [origin] }),
+    },
+  );
+  if (!grantResponse.ok) {
+    const body = await grantResponse.json().catch(() => ({}));
+    // The preview already exists at this point. A failed mint must name it,
+    // or the caller has no handle to delete the orphan or retry the mint.
+    try {
+      throwApiError(body, 'Failed to mint preview activation grant');
+    } catch (error) {
+      if (error instanceof Error) {
+        error.message += ` (preview ${created.id} was created but has no working activation URL; delete it or mint a grant with regrantPreview)`;
+      }
+      throw error;
+    }
+  }
+  const grant: components['schemas']['MintGrantResponse'] =
+    await grantResponse.json();
+  return { ...created, activationUrl: grant.activationUrl };
+}
+
+export interface RegrantPreviewOptions {
+  projectId?: string;
+  flowId: string;
+  previewId: string;
+  /** Bare `https://host[:port]` origins the grant may activate on; the
+   *  returned `activationUrl` targets the first. */
+  origins: string[];
+  /** Observe session id — binds the minted grant to that session so
+   *  forwarded events reach its container. Opaque to the CLI. */
+  sessionId?: string;
+}
+
+/**
+ * Mint a fresh, origin-bound activation grant for an existing preview.
+ * Grants are app-signed and origin-bound, so a client cannot forge a working
+ * activation URL by string-appending a token — only the server can mint one.
+ */
+export async function regrantPreview(
+  options: RegrantPreviewOptions,
+): Promise<components['schemas']['MintGrantResponse']> {
+  const pid = options.projectId ?? requireProjectId();
+  const response = await apiFetch(
+    `/api/projects/${pid}/flows/${options.flowId}/previews/${options.previewId}/grant`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origins: options.origins,
+        ...(options.sessionId ? { sessionId: options.sessionId } : {}),
+      }),
+    },
+  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throwApiError(body, 'Failed to mint preview activation grant');
   }
   return response.json();
 }

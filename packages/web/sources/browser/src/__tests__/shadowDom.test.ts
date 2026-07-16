@@ -416,15 +416,49 @@ describe('Shadow DOM', () => {
       }
     }
 
+    // Cast-free DOMRectReadOnly literal: the only way to construct one, since
+    // its getters are read-only on the real interface.
+    const rect = (r: {
+      top: number;
+      left: number;
+      width: number;
+      height: number;
+    }): DOMRectReadOnly =>
+      ({
+        x: r.left,
+        y: r.top,
+        top: r.top,
+        left: r.left,
+        width: r.width,
+        height: r.height,
+        right: r.left + r.width,
+        bottom: r.top + r.height,
+        toJSON: () => r,
+      }) as DOMRectReadOnly;
+
     // Drive an intersection for an element across every captured observer; only
-    // the observer that registered the element's config fires a trigger.
+    // the observer that registered the element's config fires a trigger. Fully
+    // on screen (boundingClientRect === intersectionRect), well inside the
+    // window's default size, so isEligible's coverage check passes regardless
+    // of the target's real (jsdom-zeroed) layout.
     const fireVisible = (el: Element) =>
       instances.forEach((observer) => {
-        const entry: Partial<IntersectionObserverEntry> = {
+        const box = { top: 0, left: 0, width: 200, height: 200 };
+        const entry: IntersectionObserverEntry = {
           target: el,
-          intersectionRatio: 0.6,
-        };
-        observer.callback([entry as IntersectionObserverEntry], observer);
+          time: 0,
+          isIntersecting: true,
+          intersectionRatio: 1,
+          boundingClientRect: rect(box),
+          intersectionRect: rect(box),
+          rootBounds: rect({
+            top: 0,
+            left: 0,
+            width: window.innerWidth,
+            height: window.innerHeight,
+          }),
+        } as IntersectionObserverEntry;
+        observer.callback([entry], observer);
       });
 
     let originalIO: typeof IntersectionObserver;

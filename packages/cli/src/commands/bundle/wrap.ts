@@ -25,6 +25,7 @@ import {
   generateWrapEntryServer,
   getNodeExternals,
 } from './bundler.js';
+import type { WrapEntryPreview } from './bundler.js';
 import type { MinifyOptions } from '../../types/bundle.js';
 
 export interface WrapSkeletonOptions {
@@ -52,10 +53,21 @@ export interface WrapSkeletonOptions {
    */
   windowElb?: string;
 
-  /** Browser-only: CDN hostname for loading preview bundles. */
-  previewOrigin?: string;
-  /** Browser-only: project scope for preview URL isolation. */
-  previewScope?: string;
+  /**
+   * Browser-only: preview activation wiring. Only host (deploy) wraps set
+   * this; the preview-artifact wrap always omits it, per the anti-recursion
+   * invariant in `generateWrapEntry`.
+   */
+  preview?: WrapEntryPreview;
+
+  /**
+   * Browser-only: preview-ARTIFACT grant injection. The preview-artifact wrap
+   * sets this to the server-bound destination keys that should receive the
+   * `X-Walkeros-Preview` header read from `localStorage['elbPreviewSession']` at boot.
+   * Mutually exclusive with `preview` (a host activates, an artifact injects);
+   * passing both throws.
+   */
+  previewGrantTargets?: string[];
 
   /**
    * Browser-only: telemetry wiring. When provided, the wrapped bundle
@@ -159,17 +171,32 @@ export async function wrapSkeleton(
     minifyOptions,
   } = options;
 
-  if (
-    options.previewScope &&
-    !/^[a-zA-Z0-9_-]{1,64}$/.test(options.previewScope)
-  ) {
+  // A host bundle activates a preview; a preview artifact injects its grant.
+  // Refuse the combination at the app-facing boundary (generateWrapEntry
+  // enforces the same invariant) so a caller wiring both surfaces a clear error
+  // here rather than a codegen-time throw.
+  if (options.preview && options.previewGrantTargets) {
     throw new Error(
-      `Invalid previewScope "${options.previewScope}". Must match /^[a-zA-Z0-9_-]{1,64}$/.`,
+      'wrapSkeleton: `preview` (host activator) and `previewGrantTargets` ' +
+        '(preview-artifact injection) are mutually exclusive. Pass at most one.',
     );
   }
-  if (options.previewOrigin && !/^[a-z0-9.-]+$/.test(options.previewOrigin)) {
+
+  // previewOrigin is non-optional on WrapEntryPreview: an empty string is
+  // still a config error (it bakes a broken `https:///preview/<art>.js` URL
+  // into the bundle), so it must fail the same charset check as a malformed
+  // hostname rather than short-circuit past it via falsy-string skip.
+  // The typeof gate matters despite the `string` type: an untyped JS/JSON
+  // caller can pass undefined, and RegExp.test coerces it to the string
+  // "undefined", which MATCHES the hostname charset and would bake
+  // `https://undefined/preview/…` into the bundle.
+  if (
+    options.preview &&
+    (typeof options.preview.previewOrigin !== 'string' ||
+      !/^[a-z0-9.-]+$/.test(options.preview.previewOrigin))
+  ) {
     throw new Error(
-      `Invalid previewOrigin "${options.previewOrigin}". Must be a bare hostname matching /^[a-z0-9.-]+$/.`,
+      `Invalid previewOrigin "${options.preview.previewOrigin}". Must be a bare hostname matching /^[a-z0-9.-]+$/.`,
     );
   }
 
@@ -211,11 +238,9 @@ export async function wrapSkeleton(
       ? generateWrapEntry(absoluteSkeletonPath, {
           ...(windowCollector ? { windowCollector } : {}),
           ...(windowElb ? { windowElb } : {}),
-          ...(options.previewOrigin
-            ? { previewOrigin: options.previewOrigin }
-            : {}),
-          ...(options.previewScope
-            ? { previewScope: options.previewScope }
+          ...(options.preview ? { preview: options.preview } : {}),
+          ...(options.previewGrantTargets
+            ? { previewGrantTargets: options.previewGrantTargets }
             : {}),
           platform,
           ...(telemetry ? { telemetry } : {}),

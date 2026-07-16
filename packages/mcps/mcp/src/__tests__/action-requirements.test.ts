@@ -123,6 +123,7 @@ describe('validateActionInput', () => {
           'preview_delete',
           'preview_get',
           'preview_list',
+          'preview_regrant',
           'update',
         ].sort(),
       );

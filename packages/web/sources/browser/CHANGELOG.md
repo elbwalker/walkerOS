@@ -1,5 +1,67 @@
 # @walkeros/web-source-browser
 
+## 4.3.0
+
+### Minor Changes
+
+- 7527c41: Click and submit triggers now fire in the capture phase, reading
+  tagged elements at click time. This fixes lost tagging in single-page apps
+  where a click re-renders and unmounts the tagged element (events previously
+  fell back to `page` with no data), and means `stopPropagation` no longer
+  suppresses a tagged click. Set `capture: false` on the source to restore the
+  previous bubble-phase behavior.
+- 9506e3e: The browser source now supports a `data-elbobserve` attribute. Mark a
+  container with it and any tagged content a SPA injects into that container is
+  auto-registered for tracking, and cleaned up when removed, without calling
+  `walker init` after each injection. Works in light DOM and open shadow roots.
+- ebd193f: The browser source now supports a `data-elbuser` attribute to set
+  persistent user identity from the DOM. Tag any element with
+  `data-elbuser="id:u123;loggedin:true"` and the source applies it as collector
+  user state right before the page view, so the page view and every event after
+  it carry the user. Multiple elements merge, and an absent attribute leaves any
+  existing user untouched.
+- e01036e: The elbLayer is append-only with guaranteed ordering: walker commands
+  apply immediately, events process in push order once the source starts, and
+  entries stay inspectable in the array. `walker init` now works from every
+  entry point, including `elbLayer.push`. The browser source owns `window.elb`
+  (name via `settings.elb`) and returns a result promise; the `ELBLayer` and
+  `ELBLayerConfig` types were removed.
+- 83ea3c6: The visible and impression triggers now fire for elements inside open
+  shadow DOM, and scroll depth is computed correctly for shadow-nested elements.
+  Visibility still accounts for occlusion across open shadow roots, so a
+  genuinely covered element does not trigger. Closed shadow subtrees can be
+  tracked by passing the closed root reference to walker init.
+- d28a8ea: The `impression` and `visible` triggers now count an element as seen
+  when at least half of it, or half of the viewport, whichever is smaller, is on
+  screen along each axis for one continuous second in a foreground tab. Elements
+  larger than the viewport now fire, where previously they could not, and
+  elements are detected reliably when a framework injects them before rendering.
+  Expect an increase in impression volume, particularly on small viewports and
+  on pages with tall sections.
+
+### Patch Changes
+
+- 66a8c33: Fix a case where a `visible` / `impression` trigger could still fire
+  shortly after the source or its scope was destroyed. Pending visibility timers
+  are now cancelled during teardown.
+- e6613f8: `walker init <element>` now re-initializes a scope cleanly: `visible`
+  and `impression` triggers on elements in the re-initialized scope fire
+  (previously silent), and re-initializing the same scope no longer stacks
+  duplicate `pulse`, `wait`, `hover`, or visibility triggers. One-shot `load`
+  triggers still fire on each call.
+- Updated dependencies [83ea3c6]
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [98801c9]
+- Updated dependencies [f8408fd]
+- Updated dependencies [907eed0]
+- Updated dependencies [9506e3e]
+- Updated dependencies [d28a8ea]
+- Updated dependencies [ebd193f]
+  - @walkeros/web-core@4.3.0
+  - @walkeros/collector@4.3.0
+  - @walkeros/core@4.3.0
+
 ## 4.2.1
 
 ### Patch Changes

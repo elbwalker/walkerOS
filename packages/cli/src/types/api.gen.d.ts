@@ -64,8 +64,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Verify magic link token
-     * @description Verify a magic link token and create an authenticated session. Redirects to the specified URL or home page.
+     * Legacy magic link entry point
+     * @description Side-effect-free redirector to the /auth/verify page for links minted before the page-URL change. Never consumes the token; redemption happens via POST.
      */
     get: {
       parameters: {
@@ -81,8 +81,8 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Redirect to target URL with session cookie set */
-        302: {
+        /** @description Redirect to the /auth/verify page with the token forwarded */
+        307: {
           headers: {
             [name: string]: unknown;
           };
@@ -91,7 +91,43 @@ export interface paths {
       };
     };
     put?: never;
-    post?: never;
+    /**
+     * Redeem magic link token
+     * @description Redeem a magic link token and create an authenticated session. Redeems immediately when the browser-nonce cookie from the magic-link request matches; otherwise answers confirm_required and expects a follow-up call with confirm: true.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['VerifyRequest'];
+        };
+      };
+      responses: {
+        /** @description Redemption result. status=ok sets the session cookie and carries the redirect target. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['VerifyResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;
@@ -3017,7 +3053,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['PreviewResponse'];
+            'application/json': components['schemas']['CreatePreviewResponse'];
           };
         };
         /** @description Validation error */
@@ -3190,6 +3226,107 @@ export interface paths {
         };
       };
     };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/previews/{previewId}/grant': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mint preview activation grant
+     * @description Mint a fresh, origin-bound activation grant for an existing preview. Grants are origin-bound, so a preview needs one grant per host origin — re-mint whenever the target origin changes.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          previewId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['MintGrantRequest'];
+        };
+      };
+      responses: {
+        /** @description Grant minted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MintGrantResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description No active web deployment / host bundle not preview-enabled */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -8856,10 +8993,13 @@ export interface components {
       token: string;
       /** Format: uri */
       bundleUrl: string;
-      activationUrl: string;
+      activationUrl: string | null;
       createdBy: string;
       /** Format: date-time */
       createdAt: string;
+    };
+    CreatePreviewResponse: components['schemas']['PreviewResponse'] & {
+      grant: string | null;
     };
     ListPreviewsResponse: {
       previews: components['schemas']['PreviewResponse'][];
@@ -8877,6 +9017,18 @@ export interface components {
             kind: 'deployment-version';
             deploymentVersionId: string;
           };
+    };
+    MintGrantRequest: {
+      origins: string[];
+      sessionId?: string;
+    };
+    MintGrantResponse: {
+      grant: string;
+      /** Format: uri */
+      activationUrl: string;
+      /** Format: date-time */
+      sessionExpiresAt: string;
+      sessionGrant?: string;
     };
     ObserveSessionResponse: {
       /** @example ses_abc123xyz456 */
@@ -8898,8 +9050,9 @@ export interface components {
       createdAt: string;
     };
     ObserveSessionWeb: {
+      previewId: string;
       token: string;
-      activationUrl: string;
+      previewEnabled: boolean;
       /** Format: uri */
       bundleUrl: string;
     } | null;
@@ -9301,6 +9454,9 @@ export interface components {
         /** @enum {string} */
         type: 'cli' | 'mcp';
         platform?: string;
+        release?: {
+          [key: string]: string;
+        };
         version?: string;
         schema?: string;
         tool?: string;
@@ -9650,6 +9806,29 @@ export interface components {
       email: string;
       /** @example /dashboard */
       redirect_to?: string;
+    };
+    VerifyResponse:
+      | {
+          /** @enum {string} */
+          status: 'ok';
+          /** @example / */
+          redirectTo: string;
+        }
+      | {
+          /** @enum {string} */
+          status: 'confirm_required';
+          /** @example user@example.com */
+          email: string;
+        }
+      | {
+          /** @enum {string} */
+          status: 'expired' | 'used' | 'invalid' | 'malformed';
+        };
+    VerifyRequest: {
+      token: string;
+      /** @example /dashboard */
+      redirect_to?: string;
+      confirm?: boolean;
     };
     WhoamiResponse: {
       /** @example user_a1b2c3d4 */

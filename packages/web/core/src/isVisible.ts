@@ -71,75 +71,66 @@ export function shadowHostsAbove(node: Element, win: Window): Element[] {
   return hosts;
 }
 
+/**
+ * True when the composed chain renders the element at all. `visibility`
+ * inherits, so the element's own computed value is enough. `opacity` does NOT
+ * inherit: a transparent ancestor leaves the element's own opacity at 1 while
+ * hiding it, and elementFromPoint does not help because a transparent element
+ * is still hit-testable. Walk the chain, crossing shadow-host boundaries.
+ */
+function isRendered(element: HTMLElement, win: Window): boolean {
+  const style = win.getComputedStyle(element);
+  if (style.display === 'none') return false;
+  if (style.visibility !== 'visible') return false;
+
+  let current: Element | null = element;
+  while (current) {
+    const opacity = win.getComputedStyle(current).opacity;
+    if (opacity && Number(opacity) < 0.1) return false;
+
+    const parent: Element | null = current.parentElement;
+    if (parent) {
+      current = parent;
+      continue;
+    }
+    const root = current.getRootNode();
+    current = root instanceof win.self.ShadowRoot ? root.host : null;
+  }
+
+  return true;
+}
+
+/**
+ * Whether the element is actually seen by the user: rendered, on screen, and
+ * not painted over. Geometry (how much of it is showing) is decided by the
+ * IntersectionObserver, which computes it during layout for free; this function
+ * answers only the two questions the observer is blind to, so it runs once per
+ * candidate impression rather than on every scroll frame.
+ */
 export function isVisible(
   element: HTMLElement,
   win: Window,
   doc: Document,
 ): boolean {
-  // Check for hiding styles
-  const style = win.getComputedStyle(element);
-  if (style.display === 'none') return false;
-  if (style.visibility !== 'visible') return false;
-  if (style.opacity && Number(style.opacity) < 0.1) return false;
+  if (!isRendered(element, win)) return false;
 
-  // Window positions
-  const windowHeight = win.innerHeight; // Height of the viewport
+  const rect = element.getBoundingClientRect();
+  const viewportWidth = doc.documentElement.clientWidth || win.innerWidth;
+  const viewportHeight = doc.documentElement.clientHeight || win.innerHeight;
 
-  // Element positions
-  const elemRectRel = element.getBoundingClientRect(); // Get the elements relative to the viewport
-  const elementHeight = elemRectRel.height; // Height of the element
-  const elementTopRel = elemRectRel.y; // Relative distance from window top to element top
-  const elementBottomRel = elementTopRel + elementHeight; // Relative distance from window to to element bottom
-  const elemCenterRel = {
-    // Relative position on viewport of the elements center
-    x: elemRectRel.x + element.offsetWidth / 2,
-    y: elemRectRel.y + element.offsetHeight / 2,
-  };
+  // Clip the element against the viewport. Probing the centre of this visible
+  // band, rather than the centre of the element, is what removes the need for a
+  // separate large-element branch: an element taller than the viewport has its
+  // own centre off screen, which the previous implementation read as hidden.
+  const left = Math.max(rect.left, 0);
+  const top = Math.max(rect.top, 0);
+  const right = Math.min(rect.right, viewportWidth);
+  const bottom = Math.min(rect.bottom, viewportHeight);
+  if (right <= left || bottom <= top) return false;
 
-  // Point to probe for the topmost element
-  let pointX: number;
-  let pointY: number;
+  const pointX = (left + right) / 2;
+  const pointY = (top + bottom) / 2;
 
-  // Differentiate between small and large elements
-  if (elementHeight <= windowHeight) {
-    // Smaller than the viewport
-
-    // Must have a width and height
-    if (
-      element.offsetWidth + elemRectRel.width === 0 ||
-      element.offsetHeight + elemRectRel.height === 0
-    )
-      return false;
-
-    if (elemCenterRel.x < 0) return false;
-    if (elemCenterRel.x > (doc.documentElement.clientWidth || win.innerWidth))
-      return false;
-    if (elemCenterRel.y < 0) return false;
-    if (elemCenterRel.y > (doc.documentElement.clientHeight || win.innerHeight))
-      return false;
-
-    // Probe the center of the target
-    pointX = elemCenterRel.x;
-    pointY = elemCenterRel.y;
-  } else {
-    // Bigger than the viewport
-
-    // that are considered visible if they fill half of the screen
-    const viewportCenter = windowHeight / 2;
-
-    // Check if upper part is above the viewports center
-    if (elementTopRel < 0 && elementBottomRel < viewportCenter) return false;
-
-    // Check if lower part is below the viewports center
-    if (elementBottomRel > windowHeight && elementTopRel > viewportCenter)
-      return false;
-
-    // Probe the middle of the screen
-    pointX = elemCenterRel.x;
-    pointY = windowHeight / 2;
-  }
-
-  // Resolve the topmost element at the point, piercing shadow boundaries
   const hit = deepElementFromPoint(doc, pointX, pointY);
   if (!hit) return false;
   if (hit === element) return true;

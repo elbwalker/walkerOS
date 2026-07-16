@@ -1,5 +1,73 @@
 # @walkeros/cli
 
+## 4.3.0
+
+### Minor Changes
+
+- e01036e: Web bundles no longer assign `window.elb`; the browser source owns
+  that global. The `windowElb` setting is deprecated: its value is forwarded to
+  the browser source's `config.settings.elb` with a warning, so custom global
+  names keep working.
+- e01036e: Flow observation records now carry per-event journey correlation: a
+  W3C `traceparent` links a web send to the server flow that receives it, plus
+  the originating source id and a monotonic sequence that makes dropped
+  telemetry visible. At trace level, destinations can opt in to recording their
+  outgoing vendor calls.
+- 1559e17: The `preview_regrant` action now works over the CLI-backed MCP
+  client: mint a fresh, origin-bound activation grant for an existing preview,
+  optionally bound to an Observe session via `sessionId`. `preview_create` with
+  a `siteUrl` now mints a real activation grant instead of returning no
+  activation URL.
+- 98801c9: Flow observation records now assemble into per-event journeys
+  spanning web and server flows, each hop showing input, output, and status,
+  with loss flagged; the `observe_journeys` MCP tool exposes the same journeys
+  to agents. Batching destinations now emit per-event records, and live-web
+  vendor calls are captured when a destination reaches its callable through
+  `getEnv`, though batched sends stay uncaptured.
+- f8408fd: Preview links are now app-signed and bound to your site's origin,
+  verified locally in the bundle with no server round trip. Bundles that support
+  preview activation import a new `browserSwapActivator` from `@walkeros/core`.
+  The CLI wrap step's `preview` option replaces `previewOrigin`/`previewScope`,
+  and a new `previewGrantTargets` option lets a preview forward its grant to
+  server-bound destinations too.
+- 907eed0: Observe-session activation URLs now carry a companion
+  session-forwarding grant (`elbPreviewSession`). The browser activator stores
+  it alongside the activation grant, and seamed preview bundles use it to
+  forward events to the session container — so one preview link shows web and
+  server journeys together.
+- 9506e3e: Events now carry per-flow config provenance on
+  `event.source.release`, a flow-name to release map that accumulates as an
+  event crosses flows (web capture to server processing), so a delivered event
+  shows which config handled it. The collector no longer stamps `source.version`
+  (external source emitters may still set it). In this first version, aws and
+  gcp crossings are not yet covered.
+
+### Patch Changes
+
+- 07f0255: Bundling a flow whose step `package` carries an inline version (e.g.
+  `@walkeros/web-source-browser@2.1.0`) no longer fails package resolution: the
+  version suffix is parsed and honored instead of being treated as part of the
+  package name, and an explicit `config.bundle.packages` pin still wins. The
+  elbPreview loader now activates previews via a script-element swap instead of
+  a CORS-bound fetch probe, so previews work on any site regardless of CDN CORS
+  headers. The flow runtime also buffers bundle archives fully before
+  extraction, fixing a rare boot crash when the download stream ended while
+  extraction had it paused.
+- 06c93b4: Update the runtime Docker base image to Node.js 22.23.0, which
+  patches the Node.js June 2026 security release. The `walkeros/flow` and
+  `walkeros/cli` images now pin a fixed, digest-locked Node version.
+- Updated dependencies [e01036e]
+- Updated dependencies [e01036e]
+- Updated dependencies [98801c9]
+- Updated dependencies [f8408fd]
+- Updated dependencies [907eed0]
+- Updated dependencies [9506e3e]
+  - @walkeros/collector@4.3.0
+  - @walkeros/core@4.3.0
+  - @walkeros/server-core@4.3.0
+  - @walkeros/server-destination-api@4.3.0
+  - @walkeros/transformer-validate@4.3.0
+
 ## 4.2.1
 
 ### Patch Changes

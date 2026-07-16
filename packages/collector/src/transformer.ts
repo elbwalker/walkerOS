@@ -871,8 +871,13 @@ export async function runTransformerChain(
 
     // Handle result
     if (result === false) {
-      // Transformer explicitly stopped the chain
-      return { event: null, respond: currentRespond };
+      // Transformer explicitly stopped the chain (returned false, or threw
+      // and was converted to false by the error handler above).
+      return {
+        event: null,
+        respond: currentRespond,
+        droppedBy: transformerName,
+      };
     }
 
     // Handle Result array (fan-out) — MUST be before typeof === 'object'

@@ -244,11 +244,24 @@ walkeros deploy list --type server
 
 ## previews
 
-Manage preview bundles — short-lived flow bundles used to test configuration
-changes on a real production site before deploying. Each preview has a token;
-visiting any page of your site with `?elbPreview={token}` activates preview mode
-for that browser (7-day cookie, 30-day CDN bundle). The production walker
-self-heals on a deleted preview by clearing the cookie and loading production.
+Manage preview bundles: short-lived flow bundles used to test configuration
+changes on a real production site before deploying. Creating a preview mints an
+app-signed, origin-bound activation grant (30-day CDN bundle); visiting any page
+of your site with `?elbPreview={grant}` verifies the grant locally and activates
+preview mode for that browser, for the life of the preview session. The
+production walker self-heals on a deleted preview by clearing the stored grant
+and loading production.
+
+A managed bundle that supports preview activation is built with the wrap step's
+`preview` option (public keyring + issuer + opaque project binding); the emitted
+bundle imports `browserSwapActivator` from `@walkeros/core` to verify and swap
+in the preview artifact. `preview` replaces the earlier `previewOrigin` /
+`previewScope` wrap options. A companion `previewGrantTargets` option exists for
+the preview artifact itself: it forwards the stored grant as an
+`X-Walkeros-Preview` header to named server-bound destinations, so a server flow
+can be previewed too. `preview` and `previewGrantTargets` are mutually exclusive
+on a single wrap invocation: a host bundle activates a preview, a preview
+artifact injects its grant, not both.
 
 ### Subcommands
 
@@ -285,8 +298,8 @@ walkeros previews create <flowId> [options]
 | `--project <id>`         | Project ID (overrides default)                        |
 
 Without `--url`, stdout contains the activation fragment (`?elbPreview=...`) to
-append to any URL on your site. With `--url`, stdout contains the complete
-`{url}?elbPreview={token}` URL plus a deactivation URL on stderr.
+append to any URL on your site. With `--url`, stdout contains an activation URL
+for your site, plus a deactivation URL on stderr.
 
 ### previews delete
 

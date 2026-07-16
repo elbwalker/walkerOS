@@ -66,7 +66,7 @@ function safeDetail<T extends { name?: string; config?: unknown }>(flow: T): T {
 
 const TITLE = 'Flow Management';
 const DESCRIPTION =
-  'Manage walkerOS flows and their previews. List/get/create/update/delete/duplicate flows, or create/inspect/delete preview bundles for testing flow changes on live sites.';
+  'Manage walkerOS flows and their previews. List/get/create/update/delete/duplicate flows, or create/inspect/delete preview bundles and mint activation grants (preview_regrant) for testing flow changes on live sites.';
 
 const inputSchema = {
   action: z
@@ -81,13 +81,14 @@ const inputSchema = {
       'preview_get',
       'preview_create',
       'preview_delete',
+      'preview_regrant',
     ])
     .describe('Flow management action to perform'),
   flowId: z
     .string()
     .optional()
     .describe(
-      'Flow ID (flow_...) or config ID (cfg_...). Required for get, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete.',
+      'Flow ID (flow_...) or config ID (cfg_...). Required for get, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete, preview_regrant.',
     ),
   projectId: z
     .string()
@@ -141,7 +142,7 @@ const inputSchema = {
     .string()
     .optional()
     .describe(
-      'Preview ID (prv_...). Required for preview_get and preview_delete (both also require flowId).',
+      'Preview ID (prv_...). Required for preview_get, preview_delete, and preview_regrant (all also require flowId).',
     ),
   flowName: z
     .string()
@@ -171,7 +172,19 @@ const inputSchema = {
     .string()
     .optional()
     .describe(
-      'Optional site URL for preview_create. When provided, the response includes full activationUrl and deactivationUrl the user can click.',
+      'Optional site URL (e.g. https://shop.example.com) for preview_create. When provided, the activation grant is minted for that origin so the returned activationUrl works there.',
+    ),
+  origins: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Site origins (bare https://host[:port]) to mint a preview activation grant for. Used by preview_regrant; the returned activationUrl targets the first origin.',
+    ),
+  sessionId: z
+    .string()
+    .optional()
+    .describe(
+      'Observe session id — when set, preview_regrant mints an activation/forwarding grant PAIR: the returned activationUrl both activates the web preview and lets the page forward events to the session container (elbPreviewSession param). Pass it to observe server-side hops; omit for a plain web preview.',
     ),
 };
 
@@ -181,6 +194,54 @@ const annotations = {
   idempotentHint: false,
   openWorldHint: true,
 } as const;
+
+// Preview results land in agent transcripts and logs, so the MCP boundary
+// enforces a field whitelist instead of trusting whatever shape a client
+// returns: the raw ingest `token` and `projectId` must never surface here.
+// Grants (`grant`, `sessionGrant`, `activationUrl`) are deliberate outputs —
+// short-lived, origin/session-bound capabilities the caller needs to activate
+// a preview or forward events to an observe session. The list covers both
+// client shapes: the app's in-process summary (`previewId`, `status`,
+// `observeFeed`) and the CLI-backed HTTP client's raw API response (`id`,
+// `createdBy`, `createdAt`).
+const PREVIEW_SUMMARY_FIELDS = [
+  'id',
+  'previewId',
+  'flowId',
+  'flowSettingsId',
+  'bundleUrl',
+  'activationUrl',
+  'grant',
+  'sessionGrant',
+  'sessionExpiresAt',
+  'status',
+  'observeFeed',
+  'createdBy',
+  'createdAt',
+] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function redactPreview(data: unknown): Record<string, unknown> {
+  if (!isRecord(data)) return {};
+  const out: Record<string, unknown> = {};
+  for (const field of PREVIEW_SUMMARY_FIELDS) {
+    if (data[field] !== undefined) out[field] = data[field];
+  }
+  return out;
+}
+
+function redactPreviewList(data: unknown): Record<string, unknown> {
+  if (!isRecord(data)) return { previews: [] };
+  return {
+    previews: Array.isArray(data.previews)
+      ? data.previews.map(redactPreview)
+      : [],
+    ...(data.total !== undefined ? { total: data.total } : {}),
+  };
+}
 
 export function createFlowManageToolSpec(client: ToolClient): ToolSpec {
   return {
@@ -212,6 +273,8 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
     flowSettingsId,
     source,
     siteUrl,
+    origins,
+    sessionId,
   } = (input ?? {}) as {
     action?:
       | 'list'
@@ -223,7 +286,8 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       | 'preview_list'
       | 'preview_get'
       | 'preview_create'
-      | 'preview_delete';
+      | 'preview_delete'
+      | 'preview_regrant';
     flowId?: string;
     projectId?: string;
     name?: string;
@@ -242,6 +306,8 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       | { kind: 'draft' }
       | { kind: 'deployment-version'; deploymentVersionId: string };
     siteUrl?: string;
+    origins?: string[];
+    sessionId?: string;
   };
   const validationError = validateActionInput(
     'flow_manage',
@@ -427,7 +493,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           projectId: resolvedProjectId,
           flowId,
         });
-        return mcpResult(data);
+        return mcpResult(redactPreviewList(data));
       }
 
       case 'preview_get': {
@@ -438,7 +504,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           flowId,
           previewId,
         });
-        return mcpResult(data);
+        return mcpResult(redactPreview(data));
       }
 
       case 'preview_create': {
@@ -447,45 +513,23 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
         if (!resolvedProjectId) {
           return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
         }
+        // Whitelist the summary at the boundary: the HTTP client returns the
+        // raw API response (which carries the ingest token and project id),
+        // and the handler must never surface those regardless of the client.
+        // It also adds no token-derived URL of its own.
         const preview = await client.createPreview({
           projectId: resolvedProjectId,
           flowId,
           flowName,
           flowSettingsId,
           ...(source ? { source } : {}),
+          ...(siteUrl ? { siteUrl } : {}),
         });
-        const typedPreview = preview as {
-          id: string;
-          token: string;
-          activationUrl: string;
-          bundleUrl: string;
-          createdBy: string;
-          createdAt: string;
-          [key: string]: unknown;
-        };
-        const enriched: Record<string, unknown> = {
-          ...typedPreview,
-          activationParam: typedPreview.activationUrl,
-        };
-        if (siteUrl) {
-          const on = new URL(siteUrl);
-          on.searchParams.set('elbPreview', typedPreview.token);
-          enriched.activationUrl = on.toString();
-
-          const off = new URL(siteUrl);
-          off.searchParams.set('elbPreview', 'off');
-          enriched.deactivationUrl = off.toString();
-        } else {
-          delete enriched.activationUrl;
-        }
-        return mcpResult(enriched, {
-          next: siteUrl
-            ? [
-                'Open activationUrl to activate preview mode; open deactivationUrl to exit.',
-              ]
-            : [
-                'Append activationParam to any URL on your site to activate preview mode.',
-              ],
+        return mcpResult(redactPreview(preview), {
+          next: [
+            'Open activationUrl on your site to activate preview mode. When activationUrl is null, no grant has been minted for a site yet — use action "preview_regrant" with your site origins to mint one.',
+            'Poll observeFeed (observe_journeys with this flowId) to watch preview events arrive.',
+          ],
         });
       }
 
@@ -507,9 +551,40 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
         );
       }
 
+      case 'preview_regrant': {
+        assertParam(flowId, 'flowId', 'preview_regrant');
+        assertParam(previewId, 'previewId', 'preview_regrant');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
+        }
+        if (!client.regrantPreview) {
+          return mcpError(
+            new Error('preview_regrant is not supported by this client'),
+          );
+        }
+        // Whitelisted grant summary: activationUrl plus the raw grant values
+        // the caller may need (`sessionGrant` is how an agent authenticates
+        // direct server-hop test events) — never the ingest token.
+        const data = await client.regrantPreview({
+          projectId: resolvedProjectId,
+          flowId,
+          previewId,
+          origins: origins ?? [],
+          ...(sessionId ? { sessionId } : {}),
+        });
+        return mcpResult(redactPreview(data), {
+          next: [
+            sessionId
+              ? 'Open activationUrl on the target origin: it activates the web preview AND forwards its events to the observe session. Use sessionGrant as the X-Walkeros-Preview header for direct server-hop test events.'
+              : 'Open activationUrl on the target origin to activate preview mode.',
+          ],
+        });
+      }
+
       default:
         throw new Error(
-          `Unknown action: ${action}. Use one of: list, get, create, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete`,
+          `Unknown action: ${action}. Use one of: list, get, create, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete, preview_regrant`,
         );
     }
   } catch (error) {

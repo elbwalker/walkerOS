@@ -154,8 +154,8 @@ listener or mutation observer initialization.
 | ----------- | ------------------------------------------------------------------------------------ |
 | load        | after loading a page when DOM is ready                                               |
 | click       | when an element or a child is clicked                                                |
-| impression  | after an element has been in the viewport for at least 50% for one second            |
-| visible     | each time an element re-enters the viewport after being out of view                  |
+| impression  | once, after the element has been on screen for one continuous second                 |
+| visible     | like impression, but re-arms and fires again each time the element re-qualifies      |
 | hover       | each time the mouse enters the corresponding element                                 |
 | submit      | on valid form submission                                                             |
 | wait(ms)    | waits ms seconds (15 seconds by default) until triggering                            |
@@ -165,6 +165,28 @@ listener or mutation observer initialization.
 
 Trigger names are predefined and to be selected from the list, while the
 `action` can be an arbitrarily defined name.
+
+:::
+
+### Impression and visible triggers
+
+`impression` fires once, and `visible` fires every time, after an element has
+been on screen for one continuous second in a foreground tab. "On screen"
+means at least half the element, or half the viewport, whichever is smaller,
+along each axis. A 716px card on a 450px-tall viewport therefore qualifies
+once about 225px of it is showing, rather than the 358px the previous rule
+required: an element bigger than the viewport no longer needs to cover almost
+the entire screen to count. The exact point is sampled rather than measured
+continuously, so it can land within about 1% of the element's height either
+side of that mark. `visible` re-arms only once the element drops back below
+that bar and then requalifies, so it can fire repeatedly as a user scrolls
+past it and back.
+
+:::note
+
+Extremely tall elements, beyond roughly 100x the viewport height, are not
+detected. Such an element never occupies enough of its own area to register,
+however far it is scrolled.
 
 :::
 

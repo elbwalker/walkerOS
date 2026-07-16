@@ -875,56 +875,26 @@ describe('generateSplitWireConfigModule', () => {
   });
 });
 
-describe('generateWrapEntry preview preflight', () => {
-  it('includes preflight when previewOrigin and previewScope are set', () => {
-    const output = generateWrapEntry('./skeleton.mjs', {
-      previewOrigin: 'cdn.walkeros.io',
-      previewScope: 'proj_abc123',
-    });
-    expect(output).toContain('elbPreview');
-    expect(output).toContain('URLSearchParams');
-    expect(output).toContain('cdn.walkeros.io');
-    expect(output).toContain('proj_abc123');
-  });
+describe('generateWrapEntry preview activation', () => {
+  const preview = {
+    enabled: true,
+    keyring: [{ kid: 'kid1', spki: 'c3BraQ' }],
+    iss: 'app:stage',
+    pb: 'pb_a',
+    previewOrigin: 'cdn.walkeros.io',
+  };
 
-  it('preflight runs BEFORE startFlow', () => {
-    const output = generateWrapEntry('./skeleton.mjs', {
-      previewOrigin: 'cdn.walkeros.io',
-      previewScope: 'proj_abc123',
-    });
-    const previewIdx = output.indexOf('elbPreview');
-    const startFlowIdx = output.indexOf('startFlow(config)');
-    expect(previewIdx).toBeLessThan(startFlowIdx);
-  });
-
-  it('omits preflight entirely when previewOrigin is absent', () => {
-    const output = generateWrapEntry('./skeleton.mjs', {});
-    expect(output).not.toContain('elbPreview');
-    // Config is built from __configData via wireConfig, then passed to startFlow
-    expect(output).toContain('wireConfig(__configData)');
-    expect(output).toContain('startFlow(config)');
-  });
-
-  it('omits preflight when previewScope is empty string', () => {
-    const output = generateWrapEntry('./skeleton.mjs', {
-      previewOrigin: 'cdn.walkeros.io',
-      previewScope: '',
-    });
-    expect(output).not.toContain('elbPreview');
-  });
-
-  it('preserves the collector window assignment alongside preflight', () => {
+  it('preserves the collector window assignment alongside preview activation', () => {
     const output = generateWrapEntry('./skeleton.mjs', {
       windowCollector: 'collector',
       windowElb: 'elb',
-      previewOrigin: 'cdn.walkeros.io',
-      previewScope: 'proj_test',
+      preview,
     });
     expect(output).toContain("window['collector']");
     // windowElb no longer emits its own assignment; the browser source is the
     // single writer of window[settings.elb].
     expect(output).not.toContain("window['elb']");
-    expect(output).toContain('elbPreview');
+    expect(output).toContain('browserSwapActivator');
   });
 });
 
@@ -1118,15 +1088,20 @@ describe('generateWrapEntry platform gating', () => {
     expect(output).not.toContain('Object.keys(config.sources)');
   });
 
-  it('env injection appears AFTER preview preflight block', () => {
+  it('env injection appears AFTER the preview activation block', () => {
     const output = generateWrapEntry('./skeleton.mjs', {
       platform: 'browser',
-      previewOrigin: 'cdn.walkeros.io',
-      previewScope: 'proj_abc123',
+      preview: {
+        enabled: true,
+        keyring: [{ kid: 'kid1', spki: 'c3BraQ' }],
+        iss: 'app:stage',
+        pb: 'pb_a',
+        previewOrigin: 'cdn.walkeros.io',
+      },
     });
-    // Preflight block returns early when a valid token cookie exists; env
+    // The activation block returns early when a grant activates a preview; env
     // injection must sit AFTER that return to avoid running in preview mode.
-    const previewReturnIdx = output.indexOf('head.appendChild(__s);');
+    const previewReturnIdx = output.indexOf('if (await browserSwapActivator(');
     const envBlockIdx = output.indexOf('Object.keys(config.sources)');
     expect(previewReturnIdx).toBeGreaterThan(-1);
     expect(envBlockIdx).toBeGreaterThan(-1);
@@ -1441,19 +1416,7 @@ describe('telemetry observeLevel install', () => {
   });
 });
 
-describe('previewScope / previewOrigin validation', () => {
-  it('throws on path-traversal previewScope', async () => {
-    const { wrapSkeleton } = await import('../../../commands/bundle/wrap.js');
-    await expect(
-      wrapSkeleton({
-        skeletonPath: '/tmp/fake.mjs',
-        platform: 'browser',
-        outputPath: '/tmp/out.js',
-        previewScope: '../evil',
-      }),
-    ).rejects.toThrow(/Invalid previewScope/);
-  });
-
+describe('preview.previewOrigin validation', () => {
   it('throws on previewOrigin with special characters', async () => {
     const { wrapSkeleton } = await import('../../../commands/bundle/wrap.js');
     await expect(
@@ -1461,7 +1424,32 @@ describe('previewScope / previewOrigin validation', () => {
         skeletonPath: '/tmp/fake.mjs',
         platform: 'browser',
         outputPath: '/tmp/out.js',
-        previewOrigin: 'evil.com/x?',
+        preview: {
+          enabled: true,
+          keyring: [],
+          iss: 'app:stage',
+          previewOrigin: 'evil.com/x?',
+        },
+      }),
+    ).rejects.toThrow(/Invalid previewOrigin/);
+  });
+
+  it('throws on an empty previewOrigin', async () => {
+    // previewOrigin is required on WrapEntryPreview: an empty string must not
+    // slip past a falsy-string skip in the guard, since it would otherwise
+    // bake a broken `https:///preview/<art>.js` URL into the bundle.
+    const { wrapSkeleton } = await import('../../../commands/bundle/wrap.js');
+    await expect(
+      wrapSkeleton({
+        skeletonPath: '/tmp/fake.mjs',
+        platform: 'browser',
+        outputPath: '/tmp/out.js',
+        preview: {
+          enabled: true,
+          keyring: [],
+          iss: 'app:stage',
+          previewOrigin: '',
+        },
       }),
     ).rejects.toThrow(/Invalid previewOrigin/);
   });
