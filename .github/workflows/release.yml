@@ -27,11 +27,36 @@ jobs:
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      # The tag that follows the newest release of this kind.
+      MOVING_TAG: ${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
+
+      # A re-run replays the ORIGINAL head SHA, not the branch tip. If a prior
+      # attempt already pushed "chore: version packages", that SHA is now behind
+      # origin and still carries the changesets the prior attempt consumed, so
+      # this run would double-bump and its push would be rejected 5+ minutes in.
+      # Fail in seconds instead. Re-running an attempt that died before the push
+      # is still fine: the tip has not moved, so this passes.
+      - name: Preflight - releasing the branch tip
+        run: |
+          git fetch --quiet origin "${GITHUB_REF_NAME}"
+          LOCAL="$(git rev-parse HEAD)"
+          REMOTE="$(git rev-parse FETCH_HEAD)"
+          if [ "$LOCAL" != "$REMOTE" ]; then
+            echo "::error::Refusing to release: checked-out commit is not the tip of ${GITHUB_REF_NAME}."
+            echo "  checked out: $LOCAL"
+            echo "  branch tip : $REMOTE"
+            echo ""
+            echo "This usually means 'Re-run' was clicked. Re-runs replay the original"
+            echo "commit, and a previous attempt has since pushed to this branch."
+            echo "Dispatch a FRESH release run instead."
+            exit 1
+          fi
+          echo "OK: releasing ${GITHUB_REF_NAME} at $LOCAL (branch tip)."
 
       # Node 24 LTS bundles npm 11.x. Trusted Publishing (OIDC) needs npm >= 11.5.1,
       # so we take it from the runtime rather than self-upgrading a running npm
@@ -77,11 +102,19 @@ jobs:
             fi
           done
 
-          # Dedupe raw bare names (one per line) and markdown-formatted variants
-          PACKAGES_RAW=$(echo -e "$PACKAGES" | sort -u | grep -v '^$')
-          PACKAGES_FORMATTED=$(echo "$PACKAGES_RAW" | while read pkg; do
-            echo "- [$pkg](https://www.npmjs.com/package/$pkg)"
-          done)
+          # Zero changesets is a valid state: it is what a re-dispatch that
+          # recovers a half-finished release looks like. `grep -v` exits 1 when
+          # it filters everything out, which under `bash -e -o pipefail` would
+          # kill this step with no message, so tolerate the empty match.
+          PACKAGES_RAW=$(printf '%b' "$PACKAGES" | sort -u | grep -v '^$' || true)
+          PACKAGES_FORMATTED=""
+          if [ -n "$PACKAGES_RAW" ]; then
+            PACKAGES_FORMATTED=$(echo "$PACKAGES_RAW" | while read -r pkg; do
+              echo "- [$pkg](https://www.npmjs.com/package/$pkg)"
+            done)
+          else
+            echo "No changesets found: recovery re-dispatch, nothing new to version."
+          fi
 
           echo "changes<<EOF" >> $GITHUB_OUTPUT
           echo -e "$CHANGES" >> $GITHUB_OUTPUT
@@ -155,22 +188,26 @@ jobs:
           steps.changesets.outputs.release_needed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Changeset-authored text is read from the environment, never spliced
+          # into the script body, where it could break out into the shell.
+          CHANGES: ${{ steps.changesets.outputs.changes }}
+          PACKAGES: ${{ steps.changesets.outputs.packages }}
         run: |
           VERSION="v$(node -p "require('./packages/collector/package.json').version")"
 
-          cat > /tmp/release-notes.md << 'NOTES_EOF'
-          ## Changes
+          printf '## Changes\n\n%s\n\n## Published Packages\n\n%s\n' \
+            "$CHANGES" "$PACKAGES" > /tmp/release-notes.md
 
-          ${{ steps.changesets.outputs.changes }}
-
-          ## Published Packages
-
-          ${{ steps.changesets.outputs.packages }}
-          NOTES_EOF
-
-          gh release create "$VERSION" \
-            --title "walkerOS $VERSION" \
-            --notes-file /tmp/release-notes.md
+          # Idempotent: a re-dispatch that recovers a partial release must not
+          # die here just because the tag already landed.
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists, refreshing notes"
+            gh release edit "$VERSION" --notes-file /tmp/release-notes.md
+          else
+            gh release create "$VERSION" \
+              --title "walkerOS $VERSION" \
+              --notes-file /tmp/release-notes.md
+          fi
 
       # Docker image publishing
       - name: Get CLI version
@@ -180,23 +217,43 @@ jobs:
           echo "cli=$CLI_VERSION" >> $GITHUB_OUTPUT
 
       - name: Verify CLI published to npm
+        env:
+          CLI_VERSION: ${{ steps.versions.outputs.cli }}
         run: |
-          CLI_VERSION=${{ steps.versions.outputs.cli }}
-          for i in $(seq 1 12); do
-            if npm view "@walkeros/cli@$CLI_VERSION" version 2>/dev/null; then
-              echo "Verified: @walkeros/cli@$CLI_VERSION exists on npm"
+          # The image builds below run `npm install @walkeros/cli@$CLI_VERSION`
+          # in a fresh container: no local cache, no .npmrc. Ask the registry the
+          # same way, rather than through the runner's `npm view`, whose packument
+          # cache is primed by `changeset publish` moments earlier and can serve a
+          # pre-publish document for minutes (and whose setup-node .npmrc carries
+          # an unset _authToken under Trusted Publishing). The budget must clear
+          # the registry's ~5min packument max-age.
+          URL="https://registry.npmjs.org/@walkeros%2Fcli/${CLI_VERSION}"
+          for i in $(seq 1 30); do
+            CODE="$(curl -sS -o /tmp/npm-probe.json -w '%{http_code}' \
+              -H 'Cache-Control: no-cache' "$URL" || echo 000)"
+            if [ "$CODE" = "200" ]; then
+              echo "Verified: @walkeros/cli@${CLI_VERSION} resolves on the registry"
               exit 0
             fi
-            echo "Attempt $i/12: waiting for npm propagation..."
+            echo "Attempt $i/30 (HTTP $CODE): waiting for npm propagation..."
             sleep 15
           done
-          echo "ERROR: @walkeros/cli@$CLI_VERSION not found on npm after publish"
+          echo "::error::@walkeros/cli@${CLI_VERSION} not resolvable after ~7min (last HTTP $CODE)"
+          head -c 2000 /tmp/npm-probe.json || true
           exit 1
+
+      # Log in before the existence probes: anonymous `docker manifest inspect`
+      # is rate limited, and a 429 is indistinguishable from "missing" below.
+      - name: Login to Docker Hub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Check if Flow image exists
         id: check-flow
         run: |
-          if docker manifest inspect walkeros/flow:${{ steps.versions.outputs.cli }} 2>/dev/null; then
+          if docker manifest inspect walkeros/flow:${{ steps.versions.outputs.cli }} >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -205,20 +262,11 @@ jobs:
       - name: Check if CLI image exists
         id: check-cli
         run: |
-          if docker manifest inspect walkeros/cli:${{ steps.versions.outputs.cli }} 2>/dev/null; then
+          if docker manifest inspect walkeros/cli:${{ steps.versions.outputs.cli }} >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Login to Docker Hub
-        if:
-          steps.check-flow.outputs.exists == 'false' ||
-          steps.check-cli.outputs.exists == 'false'
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push Flow image
         if: steps.check-flow.outputs.exists == 'false'
@@ -231,7 +279,16 @@ jobs:
             CLI_VERSION=${{ steps.versions.outputs.cli }}
           tags: |
             walkeros/flow:${{ steps.versions.outputs.cli }}
-            walkeros/flow:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
+            walkeros/flow:${{ env.MOVING_TAG }}
+
+      # Skipping the build must not also skip the moving tag: the two are
+      # independent facts. Point it at the existing image instead of rebuilding.
+      - name: Point flow moving tag at existing image
+        if: steps.check-flow.outputs.exists == 'true'
+        run: |
+          docker buildx imagetools create \
+            --tag walkeros/flow:${MOVING_TAG} \
+            walkeros/flow:${{ steps.versions.outputs.cli }}
 
       - name: Build and push CLI image
         if: steps.check-cli.outputs.exists == 'false'
@@ -244,56 +301,59 @@ jobs:
             CLI_VERSION=${{ steps.versions.outputs.cli }}
           tags: |
             walkeros/cli:${{ steps.versions.outputs.cli }}
-            walkeros/cli:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
+            walkeros/cli:${{ env.MOVING_TAG }}
+
+      - name: Point cli moving tag at existing image
+        if: steps.check-cli.outputs.exists == 'true'
+        run: |
+          docker buildx imagetools create \
+            --tag walkeros/cli:${MOVING_TAG} \
+            walkeros/cli:${{ steps.versions.outputs.cli }}
 
       - name: Comment on PR
         if: steps.changesets.outputs.packages != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # As with the release notes: changeset-authored text stays in env.
+          PACKAGES: ${{ steps.changesets.outputs.packages }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+          CLI_VERSION: ${{ steps.versions.outputs.cli }}
+          FLOW_EXISTS: ${{ steps.check-flow.outputs.exists }}
+          CLI_EXISTS: ${{ steps.check-cli.outputs.exists }}
         run: |
-          PR_NUMBER=$(gh pr list --head "${{ github.ref_name }}" --state open --json number --jq '.[0].number' || true)
+          PR_NUMBER=$(gh pr list --head "${GITHUB_REF_NAME}" --state open --json number --jq '.[0].number' || true)
 
-          if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
-            if [ "${{ inputs.release_type }}" = "pre-release (next)" ]; then
-              EMOJI="📦"
-              TITLE="Pre-release published (next)"
-              INSTALL_TAG="@next"
-              DOCKER_TAG=":next"
-            else
-              EMOJI="🚀"
-              TITLE="Stable release published"
-              INSTALL_TAG="@latest"
-              DOCKER_TAG=":latest"
-            fi
-
-            # Build Docker section if any image was published
-            DOCKER_SECTION=""
-            if [ "${{ steps.check-flow.outputs.exists }}" = "false" ] || [ "${{ steps.check-cli.outputs.exists }}" = "false" ]; then
-              DOCKER_SECTION="
-
-          🐳 **Docker images published**"
-              if [ "${{ steps.check-flow.outputs.exists }}" = "false" ]; then
-                DOCKER_SECTION="$DOCKER_SECTION
-          - walkeros/flow:${{ steps.versions.outputs.cli }} ($DOCKER_TAG)"
-              fi
-              if [ "${{ steps.check-cli.outputs.exists }}" = "false" ]; then
-                DOCKER_SECTION="$DOCKER_SECTION
-          - walkeros/cli:${{ steps.versions.outputs.cli }} ($DOCKER_TAG)"
-              fi
-              DOCKER_SECTION="$DOCKER_SECTION
-
-          Docker: \`docker pull walkeros/flow$DOCKER_TAG\`"
-            fi
-
-            BODY="$EMOJI **$TITLE**
-
-          **Packages**
-          ${{ steps.changesets.outputs.packages }}
-
-          Install: \`npm i @walkeros/core$INSTALL_TAG\`$DOCKER_SECTION"
-
-            gh pr comment "$PR_NUMBER" --body "$BODY"
-            echo "Commented on PR #$PR_NUMBER"
-          else
-            echo "No open PR found for branch ${{ github.ref_name }}"
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+            echo "No open PR found for branch ${GITHUB_REF_NAME}"
+            exit 0
           fi
+
+          if [ "$RELEASE_TYPE" = "pre-release (next)" ]; then
+            EMOJI="📦"
+            TITLE="Pre-release published (next)"
+          else
+            EMOJI="🚀"
+            TITLE="Stable release published"
+          fi
+
+          DOCKER_SECTION=""
+          if [ "$FLOW_EXISTS" = "false" ] || [ "$CLI_EXISTS" = "false" ]; then
+            DOCKER_SECTION=$(printf '\n\n🐳 **Docker images published**')
+            if [ "$FLOW_EXISTS" = "false" ]; then
+              DOCKER_SECTION=$(printf '%s\n- walkeros/flow:%s (:%s)' \
+                "$DOCKER_SECTION" "$CLI_VERSION" "$MOVING_TAG")
+            fi
+            if [ "$CLI_EXISTS" = "false" ]; then
+              DOCKER_SECTION=$(printf '%s\n- walkeros/cli:%s (:%s)' \
+                "$DOCKER_SECTION" "$CLI_VERSION" "$MOVING_TAG")
+            fi
+            DOCKER_SECTION=$(printf '%s\n\nDocker: `docker pull walkeros/flow:%s`' \
+              "$DOCKER_SECTION" "$MOVING_TAG")
+          fi
+
+          printf '%s **%s**\n\n**Packages**\n%s\n\nInstall: `npm i @walkeros/core@%s`%s\n' \
+            "$EMOJI" "$TITLE" "$PACKAGES" "$MOVING_TAG" "$DOCKER_SECTION" \
+            > /tmp/pr-comment.md
+
+          gh pr comment "$PR_NUMBER" --body-file /tmp/pr-comment.md
+          echo "Commented on PR #$PR_NUMBER"
