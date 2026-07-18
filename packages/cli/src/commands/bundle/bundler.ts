@@ -1954,16 +1954,20 @@ export default async function(context = {}) {
 }
 
 /**
- * Read the STATIC observe connect pair from a flow's `config.observe`.
- * Returns the public `{ url, binding }` pair (trimmed) only when both are
- * non-empty strings; anything else yields undefined so the web entry emits
- * zero observe wiring bytes. A block that names `url` or `binding` but does
- * not form a usable pair (missing, empty, or whitespace-only member) warns
- * at build time, because silent zero-wiring in a minified bundle is
- * invisible to the author. A pure level/sample block is valid
- * managed-telemetry config, not a failed connect pair, and stays silent.
- * Secrets never live in flow config: the runtime connect module reads the
- * per-session credential out-of-band at boot.
+ * Read the STATIC observe connect config from a flow's `config.observe`.
+ * Returns the public `{ url, binding }` pair (trimmed) plus the optional
+ * `level`/`sample` controls only when both pair members are non-empty
+ * strings; anything else yields undefined so the web entry emits zero
+ * observe wiring bytes. Every carried field is public; dropping `level`
+ * here would silently override an explicit `level: 'off'` with the
+ * runtime's `standard` default once a credential attaches. A block that
+ * names `url` or `binding` but does not form a usable pair (missing,
+ * empty, or whitespace-only member) warns at build time, because silent
+ * zero-wiring in a minified bundle is invisible to the author. A pure
+ * level/sample block is valid managed-telemetry config, not a failed
+ * connect pair, and stays silent. Secrets never live in flow config: the
+ * runtime connect module reads the per-session credential out-of-band at
+ * boot.
  */
 export function readObserveConnect(
   flowSettings: Flow,
@@ -1971,12 +1975,23 @@ export function readObserveConnect(
 ): ObserveWeb | undefined {
   const observe = flowSettings.config?.observe;
   if (!observe) return undefined;
-  const { url, binding } = observe;
+  const { url, binding, level, sample } = observe;
   if (url === undefined && binding === undefined) return undefined;
   const trimmedUrl = typeof url === 'string' ? url.trim() : '';
   const trimmedBinding = typeof binding === 'string' ? binding.trim() : '';
   if (trimmedUrl !== '' && trimmedBinding !== '') {
-    return { url: trimmedUrl, binding: trimmedBinding };
+    return {
+      url: trimmedUrl,
+      binding: trimmedBinding,
+      // Same JSON-borne prudence as the pair: only known-shaped public
+      // values reach the emitted literal.
+      ...(level === 'off' || level === 'standard' || level === 'trace'
+        ? { level }
+        : {}),
+      ...(typeof sample === 'number' && Number.isFinite(sample)
+        ? { sample }
+        : {}),
+    };
   }
   const missing = [
     ...(trimmedUrl === '' ? ['url'] : []),
@@ -2021,8 +2036,6 @@ export function generateWebEntry(
     windowElb?: string;
     /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
     platform?: 'browser' | 'node';
-    /** Telemetry wiring (see generateWrapEntry). */
-    telemetry?: WrapEntryTelemetry;
     /**
      * STATIC observe connect config baked onto the startFlow config. PUBLIC
      * values only (url + binding); the runtime connect module reads the
@@ -2032,18 +2045,6 @@ export function generateWebEntry(
     observe?: ObserveWeb;
   } = {},
 ): string {
-  // Same invariant as generateWrapEntry: the bake-nothing connect module and
-  // the baked-token telemetry block are mutually exclusive observer wirings.
-  // Refuse the combination loudly rather than emit both side by side.
-  if (options.observe !== undefined && options.telemetry !== undefined) {
-    throw new Error(
-      'generateWebEntry: `observe` (bake-nothing connect module) and ' +
-        '`telemetry` (baked ingest token) are mutually exclusive observer ' +
-        'wirings. Pass `observe` alone; the per-session credential arrives ' +
-        'out-of-band at boot instead of being baked.',
-    );
-  }
-
   const assignments: string[] = [];
   if (options.windowCollector) {
     assignments.push(
@@ -2078,34 +2079,13 @@ export function generateWebEntry(
     ? emitObserveAssignment(options.observe)
     : '';
 
-  const telemetryImport = options.telemetry
-    ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
-    : '';
-  const telemetryBlock = options.telemetry
-    ? `
-  // --- Telemetry wiring ---
-  {
-    const __emit = __cbp({
-      url: ${JSON.stringify(options.telemetry.observerUrl)},
-      token: ${JSON.stringify(options.telemetry.ingestToken)},
-    });
-    const __observer = __cto(__emit, {
-      flowId: ${JSON.stringify(options.telemetry.flowId)},
-      level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
-      sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
-    });
-    collector.observers.add(__observer);
-    collector.observeLevel = function () { return ${JSON.stringify(options.telemetry.level ?? 'standard')}; };
-  }`
-    : '';
-
-  return `import { startFlow, wireConfig } from '${stage1Specifier}';${telemetryImport}
+  return `import { startFlow, wireConfig } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
 (async () => {
   const config = wireConfig(__configData);${envBlock}${observeBlock}
-  const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}
+  const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
 }
 
@@ -2118,32 +2098,6 @@ const __configData = ${dataPayload};
  * produced via `bundle({ skipWrapper: true })` — those skeletons already
  * export `__configData` alongside `wireConfig` and `startFlow`.
  */
-/**
- * @deprecated Bakes a plaintext ingest token into the emitted (world-readable)
- * bundle bytes. Use the `observe` option instead: it bakes only public connect
- * values and the per-session credential arrives out-of-band at boot via the
- * `elbObserve` slot. Its only production caller is the app's preview wrap,
- * which moves to `observe` in F3'; this bake path is then retired.
- */
-export interface WrapEntryTelemetry {
-  observerUrl: string;
-  /**
-   * Full deployment-scoped trace endpoint, e.g.
-   * `https://observer.example.com/trace/<deploymentId>`. Baked verbatim and
-   * polled by the browser; the bundle never constructs it from a base.
-   *
-   * Optional: when omitted, the bundle installs the observer at a fixed
-   * `level` with no polling. Suits short-lived, URL-opted-in sessions (e.g.
-   * a preview at `level: 'trace'`) where the opt-in is the URL itself and
-   * there is nothing to poll for.
-   */
-  traceUrl?: string;
-  ingestToken: string;
-  flowId: string;
-  level?: 'off' | 'standard' | 'trace';
-  sample?: number;
-}
-
 /**
  * Preview activation wiring. When present and enabled, the generated entry
  * imports the activator from core and lets it decide whether a preview bundle
@@ -2192,19 +2146,11 @@ export function generateWrapEntry(
     /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
     platform?: 'browser' | 'node';
     /**
-     * Telemetry wiring. When set, the IIFE imports
-     * `createTelemetryObserver` + `createBatchedPoster` from `@walkeros/core`,
-     * builds an observer, and installs it on `collector.observers` after
-     * `startFlow` returns.
-     */
-    telemetry?: WrapEntryTelemetry;
-    /**
      * STATIC observe connect config baked onto the startFlow config. PUBLIC
      * values only (`url` + `binding`, plus optional `flowId`/`level`/`sample`
      * scoping); the runtime connect module reads the per-session credential
      * out-of-band at boot via the `elbObserve` slot. This is the
-     * preview-artifact observation wiring: unlike `telemetry`, it bakes no
-     * ingest token. Mutually exclusive with `telemetry`.
+     * preview-artifact observation wiring: it bakes no ingest token.
      */
     observe?: ObserveWeb;
   } = {},
@@ -2232,19 +2178,6 @@ export function generateWrapEntry(
       'generateWrapEntry: `preview` (host activator) and `previewGrantTargets` ' +
         '(preview-artifact injection) are mutually exclusive. A host bundle ' +
         'activates a preview; an artifact injects its grant. Pass at most one.',
-    );
-  }
-
-  // Two observation wirings, one bundle: the bake-nothing connect module
-  // (`observe`) replaces the baked-token telemetry block (`telemetry`).
-  // Passing both is a caller bug; refuse loudly rather than bake a token
-  // literal next to the tokenless path it was meant to retire.
-  if (options.observe !== undefined && options.telemetry !== undefined) {
-    throw new Error(
-      'generateWrapEntry: `observe` (bake-nothing connect module) and ' +
-        '`telemetry` (baked ingest token) are mutually exclusive observer ' +
-        'wirings. Pass `observe` alone; the per-session credential arrives ' +
-        'out-of-band at boot instead of being baked.',
     );
   }
 
@@ -2330,111 +2263,6 @@ ${grantTargets
 
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
-  // Telemetry block: when telemetry options are present, import the helpers
-  // from @walkeros/core and install the observer on collector.observers AFTER
-  // startFlow returns.
-  //
-  // Two shapes, picked by whether a `traceUrl` is baked:
-  //  - POLL form (traceUrl present): the observer is wired as a SUPPLIER so the
-  //    operator's runtime trace flag reaches each emit: a module-level
-  //    `__traceUntil` is refreshed by polling the baked full `traceUrl`, and
-  //    `resolveTelemetryOptions` re-resolves the projection per emit. This lets
-  //    a deploy-time `level: 'off'` baseline be flipped to trace by the poll
-  //    without a redeploy.
-  //  - STATIC form (traceUrl omitted): a fixed-level observer with no poll,
-  //    mirroring `generateWebEntry`. The session opts in via its URL and emits
-  //    for the session's life; there is nothing to poll for.
-  const hasPoll = !!options.telemetry?.traceUrl;
-  const telemetryImport = options.telemetry
-    ? hasPoll
-      ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto, resolveTelemetryOptions as __cto_resolve } from '@walkeros/core';`
-      : `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
-    : '';
-  const telemetryPoller =
-    options.telemetry && hasPoll
-      ? `
-let __traceUntil = null;
-let __tracePollInFlight = false;
-function __pollTrace() {
-  if (typeof fetch === 'undefined' || __tracePollInFlight) return;
-  __tracePollInFlight = true;
-  // Bound each poll so a stalled trace endpoint can't pin the in-flight guard
-  // forever (and stack concurrent fetches via setInterval).
-  var __ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  var __t = __ctrl ? setTimeout(function () { __ctrl.abort(); }, 10000) : null;
-  fetch(${JSON.stringify(options.telemetry.traceUrl)}, {
-    headers: { Authorization: ${JSON.stringify(`Bearer ${options.telemetry.ingestToken}`)} },
-    signal: __ctrl ? __ctrl.signal : undefined,
-  })
-    .then(function (__res) {
-      if (!__res || __res.status !== 200) return;
-      return __res.json().then(function (__body) {
-        if (!__body || typeof __body !== 'object') return;
-        var __value = __body.traceUntil;
-        // Mirror the server poller: set on a non-empty string, clear on null,
-        // leave unchanged on anything else. The null path is the disable case
-        // (stop a trace early) and MUST be honored so web deployments can be
-        // turned off without waiting for the old timestamp to lapse.
-        if (typeof __value === 'string' && __value.length > 0) {
-          __traceUntil = __value;
-        } else if (__value === null) {
-          __traceUntil = null;
-        }
-      });
-    })
-    .catch(function () {})
-    .finally(function () {
-      if (__t) clearTimeout(__t);
-      __tracePollInFlight = false;
-    });
-}
-`
-      : '';
-  const telemetryBlock = options.telemetry
-    ? hasPoll
-      ? `
-  // --- Telemetry wiring ---
-  {
-    const __emit = __cbp({
-      url: ${JSON.stringify(options.telemetry.observerUrl)},
-      token: ${JSON.stringify(options.telemetry.ingestToken)},
-    });
-    // Single resolver drives both the observer projection and observeLevel so
-    // the reported level can never drift from what the observer emits.
-    const __resolveTelemetry = () => __cto_resolve({
-      flowId: ${JSON.stringify(options.telemetry.flowId)},
-      observe: {
-        level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
-        sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
-      },
-      traceUntil: __traceUntil,
-    });
-    const __observer = __cto(__emit, __resolveTelemetry);
-    collector.observers.add(__observer);
-    collector.observeLevel = function () {
-      const __opts = __resolveTelemetry();
-      return __opts ? __opts.level : 'off';
-    };
-    __pollTrace();
-    setInterval(__pollTrace, 15000 + Math.floor(Math.random() * 5000));
-  }`
-      : `
-  // --- Telemetry wiring ---
-  {
-    const __emit = __cbp({
-      url: ${JSON.stringify(options.telemetry.observerUrl)},
-      token: ${JSON.stringify(options.telemetry.ingestToken)},
-    });
-    const __observer = __cto(__emit, {
-      flowId: ${JSON.stringify(options.telemetry.flowId)},
-      level: ${JSON.stringify(options.telemetry.level ?? 'standard')},
-      sample: ${JSON.stringify(options.telemetry.sample ?? 1)},
-    });
-    collector.observers.add(__observer);
-    collector.observeLevel = function () { return ${JSON.stringify(options.telemetry.level ?? 'standard')}; };
-  }`
-    : '';
-
   // STATIC observe connect wiring (see emitObserveAssignment): baked inside
   // the IIFE AFTER the activator's early return, so an activated page (the
   // artifact swapped in) never also installs the host's connect module.
@@ -2442,11 +2270,11 @@ function __pollTrace() {
     ? emitObserveAssignment(options.observe)
     : '';
 
-  return `${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';${telemetryImport}
-${telemetryPoller}
+  return `${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
+
 (async () => {${previewBlock}
   const config = wireConfig(__configData);${envBlock}${previewGrantBlock}${observeBlock}
-  const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}
+  const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
 }
 

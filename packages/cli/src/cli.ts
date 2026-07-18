@@ -631,7 +631,7 @@ observeCmd
   .option('--project <projectId>', 'Project ID (overrides default)')
   .option(
     '--level <level>',
-    'Observation detail level (reserved; not yet supported by the API)',
+    'Observation detail level: off, standard, or trace',
   )
   .option('--replace', 'Replace an existing active session for this flow')
   .option('--no-wait', 'Do not wait for the session to settle')

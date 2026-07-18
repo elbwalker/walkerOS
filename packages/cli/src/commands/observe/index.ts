@@ -10,16 +10,25 @@ import { getFlow } from '../flows/index.js';
 type ObserveSessionResponse = components['schemas']['ObserveSessionResponse'];
 type CreateObserveSessionRequest =
   components['schemas']['CreateObserveSessionRequest'];
+type ObserveLevel = components['schemas']['ObserveLevel'];
+
+const OBSERVE_LEVELS: readonly ObserveLevel[] = ['off', 'standard', 'trace'];
+
+function isObserveLevel(value: string): value is ObserveLevel {
+  return (OBSERVE_LEVELS as readonly string[]).includes(value);
+}
 
 // === Programmatic API ===
 
 export interface StartObserveSessionOptions {
   projectId?: string;
   flowId: string;
-  /** Flow settings name; the current mint contract requires it. */
+  /** Flow settings name; the mint contract requires it. */
   settingsName: string;
   /** Replace an existing active session for the flow (`--replace`). */
-  force?: boolean;
+  replace?: boolean;
+  /** Observation detail level for the session. */
+  level?: ObserveLevel;
 }
 
 /**
@@ -34,7 +43,8 @@ export async function startObserveSession(
   const pid = options.projectId ?? requireProjectId();
   const body: CreateObserveSessionRequest = {
     settingsName: options.settingsName,
-    ...(options.force ? { force: true } : {}),
+    ...(options.replace ? { replace: true } : {}),
+    ...(options.level !== undefined ? { level: options.level } : {}),
   };
   const response = await apiFetch(
     `/api/projects/${pid}/flows/${options.flowId}/observe-sessions`,
@@ -76,10 +86,35 @@ export async function getObserveSession(
 }
 
 /**
+ * POST the session heartbeat, swallowing every failure. The heartbeat extends
+ * the janitor's idle grace while the CLI user is actively setting up - it
+ * never gates anything, so an unreachable app or a 5xx must not surface into
+ * the poll loop. Session liveness never depends on this process.
+ */
+export async function heartbeatObserveSession(options: {
+  projectId?: string;
+  flowId: string;
+  sessionId: string;
+}): Promise<void> {
+  const pid = options.projectId ?? requireProjectId();
+  try {
+    await apiFetch(
+      `/api/projects/${pid}/flows/${options.flowId}/observe-sessions/${options.sessionId}/heartbeat`,
+      { method: 'POST' },
+    );
+  } catch {
+    // Best-effort by design; the next tick tries again.
+  }
+}
+
+/**
  * Poll GET until the session leaves `arming` (or the deadline passes). Always
  * runs at least one GET: the mint response never carries the web/server parts,
- * the app assembles them on GET once provisioning settles. Session liveness is
- * server-managed - abandoning this poll never ends the session.
+ * the app assembles them on GET once provisioning settles. Each tick also
+ * heartbeats the session so the janitor's idle reaper cannot claim it while
+ * the user is actively waiting; the heartbeat extends grace, never gates
+ * (failures are swallowed). Session liveness is server-managed - abandoning
+ * this poll never ends the session.
  */
 export async function waitForObserveSessionSettled(options: {
   projectId?: string;
@@ -90,9 +125,15 @@ export async function waitForObserveSessionSettled(options: {
 }): Promise<ObserveSessionResponse> {
   const deadline = Date.now() + options.timeoutMs;
   for (;;) {
+    await heartbeatObserveSession(options);
     const session = await getObserveSession(options);
-    if (session.status !== 'arming' || Date.now() >= deadline) return session;
-    await new Promise((resolve) => setTimeout(resolve, options.pollIntervalMs));
+    const remainingMs = deadline - Date.now();
+    if (session.status !== 'arming' || remainingMs <= 0) return session;
+    // Cap the sleep to the remaining budget so the deadline is honored
+    // precisely instead of overshooting by up to a full poll interval.
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(options.pollIntervalMs, remainingMs)),
+    );
   }
 }
 
@@ -105,10 +146,12 @@ export interface FormatObserveSessionResult {
 }
 
 /**
- * Render a session from the fields the CURRENT API contract actually carries.
- * The web activation link is app-minted (grants are app-signed and
- * origin-bound), so the CLI never builds one from the raw token; it points at
- * the app's Observe window instead.
+ * Render a session from the fields the API contract carries. The web
+ * activation URL is app-minted (grants are app-signed and origin-bound) and
+ * already rides the `elbObserve` credential companion, so the CLI echoes it
+ * verbatim and never builds one client-side. The server part is read from
+ * `server.endpoint`/`server.env` (the transitional top-level `serverEndpoint`
+ * mirror is not consumed).
  */
 export function formatObserveSession(
   session: ObserveSessionResponse,
@@ -120,37 +163,66 @@ export function formatObserveSession(
 
   if (session.web) {
     lines.push('  Web');
-    lines.push(`    Preview:    ${session.web.previewId}`);
-    lines.push(`    Token:      ${session.web.token}`);
     lines.push(`    Bundle URL: ${session.web.bundleUrl}`);
-    lines.push(
-      session.web.previewEnabled
-        ? '    Activate:   open the Observe window in the app to mint the activation link (app-signed; the CLI cannot build it from the token)'
-        : '    Activate:   not available: the deployed web bundle cannot verify activation grants (redeploy the web flow first)',
-    );
+    lines.push(`    Credential: ${session.web.credential}`);
+    if (session.web.activationUrl) {
+      // App-minted, origin-bound; carries the elbObserve companion so the
+      // observed tab picks up the session credential from the link itself.
+      lines.push(`    Activate:   ${session.web.activationUrl}`);
+    } else if (session.web.previewEnabled) {
+      lines.push(
+        `    Activate:   no activation link minted yet${arming ? ' (still arming)' : ''}; open the Observe window in the app to mint one`,
+      );
+    } else {
+      lines.push(
+        '    Activate:   not available: the deployed web bundle cannot verify activation grants (redeploy the web flow first)',
+      );
+    }
   } else {
     lines.push(`  Web: no web part${arming ? ' yet (still arming)' : ''}`);
   }
   lines.push('');
 
-  if (session.serverEndpoint) {
+  if (session.server) {
     lines.push('  Server');
     if (session.serverFlowName) {
       lines.push(`    Flow:       ${session.serverFlowName}`);
     }
-    lines.push(`    Endpoint:   ${session.serverEndpoint}`);
+    lines.push(
+      session.server.endpoint
+        ? `    Endpoint:   ${session.server.endpoint}`
+        : `    Endpoint:   not live${arming ? ' yet (still arming)' : ''}`,
+    );
+    // The env trio is the session's own identity: export it into a server
+    // runtime to feed this exact session.
+    lines.push('    Env:');
+    lines.push(
+      `      WALKEROS_OBSERVER_URL=${session.server.env.WALKEROS_OBSERVER_URL}`,
+    );
+    lines.push(
+      `      WALKEROS_DEPLOYMENT_ID=${session.server.env.WALKEROS_DEPLOYMENT_ID}`,
+    );
+    lines.push(
+      `      WALKEROS_INGEST_TOKEN=${session.server.env.WALKEROS_INGEST_TOKEN}`,
+    );
   } else {
     lines.push(
-      `  Server: no live endpoint${arming ? ' yet (still arming)' : ''}`,
+      `  Server: no server part${arming ? ' yet (still arming)' : ''}`,
     );
   }
+  lines.push('');
+  lines.push(`  Expires:  ${session.expiresAt}`);
+  lines.push(`  Records:  ${session.recordsReceived}`);
   lines.push('');
   lines.push(
     '  The session lives server-side; closing this terminal does not end it.',
   );
+  lines.push(
+    '  Sessions idle out server-side when no tab or traffic keeps them alive.',
+  );
 
   return {
-    stdoutLast: session.serverEndpoint ?? null,
+    stdoutLast: session.server?.endpoint ?? null,
     stderr: lines.join('\n'),
   };
 }
@@ -161,9 +233,9 @@ export interface ObserveStartCommandOptions extends GlobalOptions {
   project?: string;
   /** Flow settings name; auto-resolved when the flow has exactly one. */
   flow?: string;
-  /** Reserved for a later contract; the current mint body has no level field. */
+  /** Observation detail level: off, standard, or trace. */
   level?: string;
-  /** Maps onto the current contract's `force` field. */
+  /** Maps onto the contract's `replace` field. */
   replace?: boolean;
   /** Wait for the session to settle (default true; `--no-wait` disables). */
   wait?: boolean;
@@ -226,19 +298,26 @@ export async function observeStartCommand(
       return;
     }
 
+    // Validate flags BEFORE any network call: a session should not be minted
+    // for an invalid flag (the previews validate-before-create precedent).
+    let level: ObserveLevel | undefined;
     if (options.level !== undefined) {
-      process.stderr.write(
-        'Note: --level is not supported by the current API contract; starting without it.\n',
-      );
+      if (!isObserveLevel(options.level)) {
+        throw new Error(
+          `Invalid --level value: ${options.level} (expected ${OBSERVE_LEVELS.join(', ')})`,
+        );
+      }
+      level = options.level;
     }
 
-    // Validate --timeout before any network call: a NaN deadline would make
-    // the poll loop never expire, and a session should not be minted for an
-    // invalid flag (the previews validate-before-create precedent).
+    // An invalid deadline would make the poll loop never expire. Full-string
+    // numeric parse, not parseInt: `5m` must error loudly, not silently
+    // truncate to 5 seconds.
     let timeoutSeconds = DEFAULT_WAIT_SECONDS;
     if (options.timeout !== undefined) {
-      timeoutSeconds = parseInt(options.timeout, 10);
-      if (Number.isNaN(timeoutSeconds) || timeoutSeconds < 0) {
+      const rawTimeout = options.timeout.trim();
+      timeoutSeconds = rawTimeout === '' ? Number.NaN : Number(rawTimeout);
+      if (!Number.isFinite(timeoutSeconds) || timeoutSeconds < 0) {
         throw new Error(
           `Invalid --timeout value: ${options.timeout} (expected a non-negative number of seconds)`,
         );
@@ -253,7 +332,8 @@ export async function observeStartCommand(
       projectId,
       flowId,
       settingsName,
-      force: options.replace === true,
+      ...(options.replace === true ? { replace: true } : {}),
+      ...(level !== undefined ? { level } : {}),
     });
 
     // Always at least one GET when waiting: even a session born live gets its

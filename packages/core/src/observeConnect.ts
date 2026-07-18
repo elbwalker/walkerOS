@@ -73,8 +73,11 @@ function isLevel(value: string): value is 'off' | 'standard' | 'trace' {
  * own env (e.g. `process.env`); core never reads globals. Returns an
  * `ObserveServer` only when the full trio (`WALKEROS_OBSERVER_URL`,
  * `WALKEROS_DEPLOYMENT_ID`, `WALKEROS_INGEST_TOKEN`) is present, carrying
- * `WALKEROS_OBSERVE_LEVEL` into `level` when it names a known level.
- * Otherwise undefined: an unconfigured deployment does zero observation work.
+ * `WALKEROS_OBSERVE_LEVEL` into `level`. An explicitly set level that names
+ * no known value (e.g. a typo'd `offf`) rejects the whole config: silently
+ * observing at the default `standard` against a probable opt-out intent is
+ * the one failure mode this parser must never produce. Otherwise undefined:
+ * an unconfigured deployment does zero observation work.
  */
 export function observeFromEnv(
   env: Record<string, string | undefined>,
@@ -85,6 +88,9 @@ export function observeFromEnv(
   if (!url || !sessionId || !token) return undefined;
   const server: ObserveServer = { url, sessionId, token };
   const level = env.WALKEROS_OBSERVE_LEVEL;
-  if (level !== undefined && isLevel(level)) server.level = level;
+  if (level !== undefined) {
+    if (!isLevel(level)) return undefined;
+    server.level = level;
+  }
   return server;
 }

@@ -5,17 +5,19 @@
  * Env-injection only: tests set WALKEROS_* env vars and replace
  * `globalThis.fetch` with a router closure; no module mocks. The command sends
  * and renders the CURRENT generated API contract
- * (`CreateObserveSessionRequest { settingsName, force? }`,
- * `ObserveSessionResponse { ..., web, serverEndpoint }`). The F3'-shaped body
- * (`{ kind, level, replace }`) and response (elbObserve activation URL, server
- * env credential block, expiry) are not in the contract yet; the tests pin
- * that the CLI does not fabricate them.
+ * (`CreateObserveSessionRequest { settingsName, replace?, level? }`,
+ * `ObserveSessionResponse { ..., web: { activationUrl, credential, ... },
+ * server: { endpoint, env }, expiresAt, recordsReceived }`). The pins assert
+ * the CLI renders exactly what the contract carries - the app-minted
+ * activation URL (which rides the elbObserve companion), the web credential,
+ * the server env trio, the expiry deadline, and the record count - and reads
+ * the server part from `server.env`/`server.endpoint`, never the transitional
+ * top-level `serverEndpoint` mirror.
  */
 import { mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import type { components } from '../../../types/api.gen.js';
-import { ApiError } from '../../../core/api-error.js';
 import {
   startObserveSession,
   formatObserveSession,
@@ -74,6 +76,11 @@ function json(body: unknown, status: number): Response {
 
 // === Fixtures (shaped by the CURRENT ObserveSessionResponse contract) ===
 
+const ACTIVATION_URL =
+  'https://shop.example/?elbPreview=eyJncjRudA.gr4nt.s1g&elbObserve=obsw_pb1.ses_abc123.webtok';
+const CREDENTIAL = 'obsw_pb1.ses_abc123.webtok';
+const SERVER_ENDPOINT = 'https://obs-ses-abc123.containers.test';
+
 const liveSession: ObserveSessionResponse = {
   id: 'ses_abc123',
   projectId: 'proj_test',
@@ -83,13 +90,24 @@ const liveSession: ObserveSessionResponse = {
   configSnapshot: {},
   observedFlowName: 'web',
   serverFlowName: 'server',
-  serverEndpoint: 'https://obs-ses-abc123.containers.test',
+  // Transitional mirror of server.endpoint; the CLI must not consume it.
+  serverEndpoint: SERVER_ENDPOINT,
   web: {
-    previewId: 'prv_x',
-    token: 'k9x2m4p7abcd',
+    activationUrl: ACTIVATION_URL,
+    credential: CREDENTIAL,
     previewEnabled: true,
     bundleUrl: 'https://cdn.test/preview/proj_test/walker.k9x2m4p7abcd.js',
   },
+  server: {
+    endpoint: SERVER_ENDPOINT,
+    env: {
+      WALKEROS_OBSERVER_URL: 'https://observer.test',
+      WALKEROS_DEPLOYMENT_ID: 'ses_abc123',
+      WALKEROS_INGEST_TOKEN: 'srv_ingest_tok',
+    },
+  },
+  expiresAt: '2026-07-19T00:00:00.000Z',
+  recordsReceived: 42,
   createdBy: 'user_1',
   createdAt: '2026-07-18T00:00:00.000Z',
 };
@@ -99,6 +117,8 @@ const armingSession: ObserveSessionResponse = {
   status: 'arming',
   serverEndpoint: null,
   web: null,
+  server: null,
+  recordsReceived: 0,
 };
 
 const failedSession: ObserveSessionResponse = {
@@ -135,28 +155,53 @@ afterEach(() => {
 // === Formatter ===
 
 describe('formatObserveSession', () => {
-  it('renders the web block and the server endpoint block from a live session', () => {
-    const { stdoutLast, stderr } = formatObserveSession(liveSession);
+  it('renders the web block from a live session: activation URL, credential, bundle URL', () => {
+    const { stderr } = formatObserveSession(liveSession);
     expect(stderr).toContain('ses_abc123');
     expect(stderr).toContain('live');
-    expect(stderr).toContain('prv_x');
-    expect(stderr).toContain('k9x2m4p7abcd');
+    // The app-minted activation URL is echoed verbatim; it already carries the
+    // elbObserve companion, so the credential rides the link.
+    expect(stderr).toContain(ACTIVATION_URL);
+    expect(stderr).toContain('elbObserve=');
+    expect(stderr).toContain(CREDENTIAL);
     expect(stderr).toContain(
       'https://cdn.test/preview/proj_test/walker.k9x2m4p7abcd.js',
     );
-    expect(stderr).toContain('https://obs-ses-abc123.containers.test');
-    // Machine-readable stdout payload: the endpoint events are sent to.
-    expect(stdoutLast).toBe('https://obs-ses-abc123.containers.test');
   });
 
-  it('does not fabricate the F3 env block or an elbObserve URL the contract cannot back', () => {
+  it('renders the server env trio, expiry, and record count from the contract', () => {
     const { stderr } = formatObserveSession(liveSession);
-    // These land app-side in F3'; until the generated contract carries them
-    // the CLI must not invent values for them.
-    expect(stderr).not.toContain('WALKEROS_OBSERVER_URL');
-    expect(stderr).not.toContain('WALKEROS_DEPLOYMENT_ID');
-    expect(stderr).not.toContain('WALKEROS_INGEST_TOKEN');
-    expect(stderr).not.toContain('elbObserve=');
+    expect(stderr).toContain('WALKEROS_OBSERVER_URL=https://observer.test');
+    expect(stderr).toContain('WALKEROS_DEPLOYMENT_ID=ses_abc123');
+    expect(stderr).toContain('WALKEROS_INGEST_TOKEN=srv_ingest_tok');
+    expect(stderr).toContain('2026-07-19T00:00:00.000Z');
+    expect(stderr).toContain('42');
+  });
+
+  it('consumes server.endpoint, never the transitional top-level serverEndpoint', () => {
+    // A divergent fixture proves which field the CLI reads. The app mirrors
+    // server.endpoint onto serverEndpoint for published consumers; this CLI
+    // consumes the new shape.
+    const divergent: ObserveSessionResponse = {
+      ...liveSession,
+      serverEndpoint: 'https://legacy.transitional.test',
+    };
+    const { stdoutLast, stderr } = formatObserveSession(divergent);
+    expect(stdoutLast).toBe(SERVER_ENDPOINT);
+    expect(stderr).toContain(SERVER_ENDPOINT);
+    expect(stderr).not.toContain('https://legacy.transitional.test');
+  });
+
+  it('points at a redeploy when the web deployment cannot verify grants', () => {
+    const withoutPreview: ObserveSessionResponse = {
+      ...liveSession,
+      web: liveSession.web
+        ? { ...liveSession.web, activationUrl: null, previewEnabled: false }
+        : null,
+    };
+    const { stderr } = formatObserveSession(withoutPreview);
+    expect(stderr).toContain('redeploy');
+    expect(stderr).not.toContain('null');
   });
 
   it('renders an arming session without printing null', () => {
@@ -172,29 +217,39 @@ describe('formatObserveSession', () => {
     expect(stderr).toContain('container provision timed out');
     expect(stdoutLast).toBeNull();
   });
+
+  it('states once that sessions idle out server-side', () => {
+    const { stderr } = formatObserveSession(liveSession);
+    expect(stderr.match(/idle out server-side/g)).toHaveLength(1);
+  });
 });
 
 // === Programmatic mint ===
 
 describe('startObserveSession', () => {
-  it('POSTs settingsName and force to the observe-sessions mint route', async () => {
+  it('POSTs settingsName, replace, and level to the observe-sessions mint route', async () => {
     const calls = installFetch(() => json(armingSession, 201));
     const result = await startObserveSession({
       projectId: 'proj_x',
       flowId: 'fl_1',
       settingsName: 'demo',
-      force: true,
+      replace: true,
+      level: 'trace',
     });
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe(
       'https://app.test/api/projects/proj_x/flows/fl_1/observe-sessions',
     );
     expect(calls[0]?.method).toBe('POST');
-    expect(calls[0]?.body).toEqual({ settingsName: 'demo', force: true });
+    expect(calls[0]?.body).toEqual({
+      settingsName: 'demo',
+      replace: true,
+      level: 'trace',
+    });
     expect(result).toEqual(armingSession);
   });
 
-  it('falls back to WALKEROS_PROJECT_ID and omits force when not set', async () => {
+  it('falls back to WALKEROS_PROJECT_ID and omits replace/level when not set', async () => {
     const calls = installFetch(() => json(armingSession, 201));
     await startObserveSession({ flowId: 'fl_1', settingsName: 'demo' });
     expect(calls[0]?.url).toBe(
@@ -259,6 +314,9 @@ describe('observeStartCommand', () => {
       if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
         return json(armingSession, 201);
       }
+      if (url.endsWith('/heartbeat') && init?.method === 'POST') {
+        return json({ ok: true }, 200);
+      }
       if (url.endsWith('/observe-sessions/ses_abc123')) {
         sessionGets += 1;
         return json(sessionGets === 1 ? armingSession : liveSession, 200);
@@ -274,18 +332,91 @@ describe('observeStartCommand', () => {
     expect(sessionGets).toBeGreaterThanOrEqual(2);
     const err = stderrText();
     expect(err).toContain('ses_abc123');
-    expect(err).toContain('k9x2m4p7abcd');
-    expect(err).toContain('https://obs-ses-abc123.containers.test');
-    expect(stdoutText()).toContain('https://obs-ses-abc123.containers.test');
+    expect(err).toContain(ACTIVATION_URL);
+    expect(err).toContain('WALKEROS_INGEST_TOKEN=srv_ingest_tok');
+    expect(err).toContain(SERVER_ENDPOINT);
+    expect(stdoutText()).toContain(SERVER_ENDPOINT);
     expect(exitSpy).not.toHaveBeenCalled();
     expect(process.exitCode).toBeUndefined();
   });
 
-  it('maps --replace onto the current contract force field', async () => {
+  it('heartbeats the session on each wait poll tick', async () => {
+    let sessionGets = 0;
     const calls = installFetch((url, init) => {
       if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
         return json(armingSession, 201);
       }
+      if (url.endsWith('/heartbeat') && init?.method === 'POST') {
+        return json({ ok: true }, 200);
+      }
+      if (url.endsWith('/observe-sessions/ses_abc123')) {
+        sessionGets += 1;
+        return json(sessionGets < 3 ? armingSession : liveSession, 200);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    await observeStartCommand('fl_1', { flow: 'demo', pollIntervalMs: 0 });
+
+    const heartbeats = calls.filter(
+      (call) =>
+        call.method === 'POST' &&
+        call.url ===
+          'https://app.test/api/projects/proj_test/flows/fl_1/observe-sessions/ses_abc123/heartbeat',
+    );
+    // One heartbeat per poll tick keeps the session out of janitor reach
+    // while the user is actively setting up.
+    expect(heartbeats.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('a failing heartbeat never gates the poll: the session still settles', async () => {
+    let sessionGets = 0;
+    installFetch((url, init) => {
+      if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
+        return json(armingSession, 201);
+      }
+      if (url.endsWith('/heartbeat') && init?.method === 'POST') {
+        // Heartbeat extends grace, never gates: a 500 here must not surface.
+        return json({ error: { code: 'INTERNAL', message: 'boom' } }, 500);
+      }
+      if (url.endsWith('/observe-sessions/ses_abc123')) {
+        sessionGets += 1;
+        return json(sessionGets === 1 ? armingSession : liveSession, 200);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    await observeStartCommand('fl_1', { flow: 'demo', pollIntervalMs: 0 });
+
+    expect(stderrText()).toContain(SERVER_ENDPOINT);
+    expect(process.exitCode).toBeUndefined();
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it('with --no-wait sends no heartbeat: liveness never depends on this process', async () => {
+    const calls = installFetch((url, init) => {
+      if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
+        return json(armingSession, 201);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    await observeStartCommand('fl_1', {
+      flow: 'demo',
+      wait: false,
+      pollIntervalMs: 0,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls.some((call) => call.url.endsWith('/heartbeat'))).toBe(false);
+  });
+
+  it('maps --replace onto the contract replace field', async () => {
+    const calls = installFetch((url, init) => {
+      if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
+        return json(armingSession, 201);
+      }
+      if (url.endsWith('/heartbeat')) return json({ ok: true }, 200);
       return json(liveSession, 200);
     });
 
@@ -295,7 +426,41 @@ describe('observeStartCommand', () => {
       pollIntervalMs: 0,
     });
 
-    expect(calls[0]?.body).toEqual({ settingsName: 'demo', force: true });
+    expect(calls[0]?.body).toEqual({ settingsName: 'demo', replace: true });
+  });
+
+  it('sends --level through to the mint body', async () => {
+    const calls = installFetch((url, init) => {
+      if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
+        return json(armingSession, 201);
+      }
+      if (url.endsWith('/heartbeat')) return json({ ok: true }, 200);
+      return json(liveSession, 200);
+    });
+
+    await observeStartCommand('fl_1', {
+      flow: 'demo',
+      level: 'trace',
+      pollIntervalMs: 0,
+    });
+
+    expect(calls[0]?.body).toEqual({ settingsName: 'demo', level: 'trace' });
+  });
+
+  it('rejects an invalid --level loudly before any network call', async () => {
+    const calls = installFetch(() => json(armingSession, 201));
+
+    await expect(
+      observeStartCommand('fl_1', {
+        flow: 'demo',
+        level: 'full',
+        pollIntervalMs: 0,
+      }),
+    ).rejects.toThrow('process.exit(1)');
+
+    expect(calls).toHaveLength(0);
+    expect(consoleErrorText()).toContain('Invalid --level');
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it('resolves the settings name from the flow when --flow is omitted and only one exists', async () => {
@@ -317,31 +482,16 @@ describe('observeStartCommand', () => {
       if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
         return json(armingSession, 201);
       }
+      if (url.endsWith('/heartbeat')) return json({ ok: true }, 200);
       return json(liveSession, 200);
     });
 
     await observeStartCommand('fl_1', { pollIntervalMs: 0 });
 
-    const mint = calls.find((call) => call.method === 'POST');
+    const mint = calls.find(
+      (call) => call.method === 'POST' && !call.url.endsWith('/heartbeat'),
+    );
     expect(mint?.body).toEqual({ settingsName: 'production' });
-  });
-
-  it('notes that --level is not yet supported instead of sending it', async () => {
-    const calls = installFetch((url, init) => {
-      if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
-        return json(armingSession, 201);
-      }
-      return json(liveSession, 200);
-    });
-
-    await observeStartCommand('fl_1', {
-      flow: 'demo',
-      level: 'full',
-      pollIntervalMs: 0,
-    });
-
-    expect(calls[0]?.body).toEqual({ settingsName: 'demo' });
-    expect(stderrText()).toContain('--level');
   });
 
   it('with a token, a 401 fails loudly via the machine error line, not the CTA', async () => {
@@ -378,6 +528,7 @@ describe('observeStartCommand', () => {
       if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
         return json(armingSession, 201);
       }
+      if (url.endsWith('/heartbeat')) return json({ ok: true }, 200);
       return json(armingSession, 200);
     });
 
@@ -412,11 +563,31 @@ describe('observeStartCommand', () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
+  it('rejects a partially-numeric or empty --timeout (no silent truncation)', async () => {
+    // parseInt would read `10seconds` as 10; a unit typo like `5m` must not
+    // silently become 5 seconds. Empty and non-finite values are equally out.
+    for (const bad of ['10seconds', '5m', '', '  ', 'Infinity']) {
+      const calls = installFetch(() => json(armingSession, 201));
+
+      await expect(
+        observeStartCommand('fl_1', {
+          flow: 'demo',
+          timeout: bad,
+          pollIntervalMs: 0,
+        }),
+      ).rejects.toThrow('process.exit(1)');
+
+      expect(calls).toHaveLength(0);
+      expect(consoleErrorText()).toContain('Invalid --timeout');
+    }
+  });
+
   it('sets a non-zero exit code when the session settles failed', async () => {
     installFetch((url, init) => {
       if (url.endsWith('/observe-sessions') && init?.method === 'POST') {
         return json(armingSession, 201);
       }
+      if (url.endsWith('/heartbeat')) return json({ ok: true }, 200);
       return json(failedSession, 200);
     });
 

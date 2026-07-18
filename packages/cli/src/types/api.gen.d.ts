@@ -8989,8 +8989,6 @@ export interface components {
       flowId: string;
       flowSettingsId: string;
       projectId: string;
-      /** @example k9x2m4p7abcd */
-      token: string;
       /** Format: uri */
       bundleUrl: string;
       activationUrl: string | null;
@@ -9045,17 +9043,33 @@ export interface components {
       serverFlowName: string | null;
       serverEndpoint: string | null;
       web: components['schemas']['ObserveSessionWeb'];
+      server: components['schemas']['ObserveSessionServer'];
+      /** Format: date-time */
+      expiresAt: string;
+      recordsReceived: number;
       createdBy: string;
       /** Format: date-time */
       createdAt: string;
     };
     ObserveSessionWeb: {
-      previewId: string;
-      token: string;
+      /** Format: uri */
+      activationUrl: string | null;
+      credential: string;
       previewEnabled: boolean;
       /** Format: uri */
       bundleUrl: string;
     } | null;
+    ObserveSessionServer: {
+      /** Format: uri */
+      endpoint: string | null;
+      env: components['schemas']['ObserveSessionServerEnv'];
+    } | null;
+    ObserveSessionServerEnv: {
+      /** Format: uri */
+      WALKEROS_OBSERVER_URL: string;
+      WALKEROS_DEPLOYMENT_ID: string;
+      WALKEROS_INGEST_TOKEN: string;
+    };
     ObserveSessionJourneysResponse: {
       /** @example ses_abc123xyz456 */
       sessionId: string;
@@ -9073,7 +9087,12 @@ export interface components {
     CreateObserveSessionRequest: {
       settingsName: string;
       force?: boolean;
+      replace?: boolean;
+      level?: components['schemas']['ObserveLevel'];
+      origins?: string[];
     };
+    /** @enum {string} */
+    ObserveLevel: 'off' | 'standard' | 'trace';
     ObserveSessionHeartbeatResponse: {
       /** @enum {boolean} */
       ok: true;

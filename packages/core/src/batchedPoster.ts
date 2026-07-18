@@ -102,7 +102,9 @@ export interface BatchedPosterOptions {
   onError?: (err: unknown) => void;
   /**
    * Extra headers merged into every request (e.g. `X-Walkeros-Binding`).
-   * The fixed `Content-Type` and `Authorization` headers win on collision.
+   * The fixed `Content-Type` and `Authorization` headers win on collision,
+   * matched case-insensitively (header names are case-insensitive on the
+   * wire, so a lowercase `authorization` is dropped too).
    */
   headers?: Record<string, string>;
   /**
@@ -164,6 +166,18 @@ export function createBatchedPoster(
       // swallow
     });
 
+  // Sanitize caller headers once: HTTP header names are case-insensitive,
+  // and fetch's Headers normalization would merge a surviving lowercase
+  // `authorization`/`content-type` with the fixed pair into one invalid
+  // combined value. Dropping every casing here is what makes the documented
+  // "fixed headers win on collision" hold on the wire.
+  const callerHeaders: Record<string, string> = {};
+  for (const [name, value] of Object.entries(opts.headers ?? {})) {
+    const lower = name.toLowerCase();
+    if (lower === 'authorization' || lower === 'content-type') continue;
+    callerHeaders[name] = value;
+  }
+
   let buffer: FlowState[] = [];
   let timer: ReturnType<typeof setTimeout> | null = null;
   let seq = 0;
@@ -202,8 +216,9 @@ export function createBatchedPoster(
         fetchImpl(opts.url, {
           method: 'POST',
           headers: {
-            // Caller headers first so the fixed pair wins on collision.
-            ...opts.headers,
+            // Pre-sanitized caller headers (reserved names removed in every
+            // casing) so the fixed pair wins on collision.
+            ...callerHeaders,
             'Content-Type': 'application/json',
             Authorization: `Bearer ${opts.token}`,
           },

@@ -103,9 +103,8 @@ describe('previews', () => {
         new Response(
           JSON.stringify({
             id: 'prv_x',
-            token: 't',
-            activationUrl: '?elbPreview=t',
-            bundleUrl: 'https://cdn/walker.t.js',
+            activationUrl: 'https://site.example/?elbPreview=eyJ0.gr4nt.s1g',
+            bundleUrl: 'https://cdn/walker.abc.js',
             createdBy: 'u',
             createdAt: '2026-04-21T00:00:00Z',
           }),
@@ -239,7 +238,6 @@ describe('previews', () => {
         flowId: 'fl_y',
         flowSettingsId: 'fs_a',
         projectId: 'proj_x',
-        token: 'k9x2m4p7abcd',
         bundleUrl: 'https://cdn/walker.k9x2m4p7abcd.js',
         activationUrl:
           'https://default-origin.example/?elbPreview=eyJ0.def4ult.s1g',
@@ -284,8 +282,6 @@ describe('previews', () => {
           }),
         );
         expect(result.activationUrl).toBe(grantBody.activationUrl);
-        // The raw ingest token must never appear inside the activation URL.
-        expect(result.activationUrl).not.toContain(createBody.token);
       });
 
       it('does not mint a grant without url (single call, keeps the default activationUrl)', async () => {

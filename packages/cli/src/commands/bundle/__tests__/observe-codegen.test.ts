@@ -53,28 +53,17 @@ describe('generateWebEntry observe connect codegen', () => {
     expect(out).not.toMatch(/token/i);
     expect(out).not.toMatch(/Bearer/);
     expect(out).not.toMatch(/sessionId/);
+    // No baked observer machinery or trace-poll loop either: the connect
+    // module is pure config and the runtime installs the observer at boot.
+    expect(out).not.toContain('__pollTrace');
+    expect(out).not.toContain('setInterval');
+    expect(out).not.toContain('collector.observers.add');
   });
 
   it('omits all observe wiring when config.observe is absent (zero bytes)', () => {
     const out = wrapWebEntryFor({ config: { platform: 'web' } });
     expect(out).not.toContain('elbObserve');
     expect(out).not.toMatch(/observe/i);
-  });
-
-  it('rejects the legacy baked-token telemetry combined with the connect module', () => {
-    // Same invariant as the wrap boundaries: two observer wirings, one entry,
-    // is a caller bug. Refuse loudly rather than emit a token literal next to
-    // the tokenless path it was meant to retire.
-    expect(() =>
-      generateWebEntry('./skel.mjs', DATA_PAYLOAD, {
-        observe: { url: 'https://obs.example', binding: 'pb_x' },
-        telemetry: {
-          observerUrl: 'https://obs.example/ingest/dep_1',
-          ingestToken: 'tok_secret',
-          flowId: 'flow_1',
-        },
-      }),
-    ).toThrow(/mutually exclusive/i);
   });
 
   it('emits valid JS string literals for values needing escaping', () => {
@@ -96,7 +85,10 @@ describe('readObserveConnect', () => {
     });
   });
 
-  it('returns ONLY url and binding, dropping any other observe fields', () => {
+  it('carries the public level and sample controls beside the pair', () => {
+    // Dropping level here would silently override an explicit opt-out: the
+    // runtime defaults an absent level to 'standard' once a credential
+    // attaches.
     const result = readObserveConnect({
       config: {
         platform: 'web',
@@ -108,7 +100,34 @@ describe('readObserveConnect', () => {
         },
       },
     });
-    expect(result).toEqual({ url: 'https://obs.example', binding: 'pb_x' });
+    expect(result).toEqual({
+      url: 'https://obs.example',
+      binding: 'pb_x',
+      level: 'trace',
+      sample: 0.5,
+    });
+  });
+
+  it('preserves an explicit level off (the opt-out must survive the bake)', () => {
+    expect(
+      readObserveConnect({
+        config: {
+          platform: 'web',
+          observe: {
+            url: 'https://obs.example',
+            binding: 'pb_x',
+            level: 'off',
+          },
+        },
+      }),
+    ).toEqual({ url: 'https://obs.example', binding: 'pb_x', level: 'off' });
+  });
+
+  it('omits level and sample when the flow config does not set them', () => {
+    expect(readObserveConnect(flowWithObserve)).toEqual({
+      url: 'https://obs.example',
+      binding: 'pb_x',
+    });
   });
 
   it('returns undefined when config or observe is absent', () => {

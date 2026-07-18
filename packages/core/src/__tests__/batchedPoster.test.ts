@@ -259,6 +259,38 @@ describe('createBatchedPoster', () => {
     }
   });
 
+  it('drops reserved caller headers case-insensitively (no shadow duplicates)', async () => {
+    const harness = makeFetchHarness(async () => ok());
+    const emit = createBatchedPoster({
+      url: URL,
+      token: TOKEN,
+      headers: {
+        'X-Walkeros-Binding': 'pb_x',
+        'content-type': 'text/plain',
+        authorization: 'Bearer forged',
+        AUTHORIZATION: 'Bearer forged-2',
+      },
+      fetch: harness.fetch,
+    });
+
+    emit(makeState('h3'));
+    jest.advanceTimersByTime(50);
+    await flushMicrotasks();
+
+    expect(harness.callCount()).toBe(1);
+    const headers = harness.calls[0].init.headers;
+    // The fixed values are the ONLY casings present: a surviving lowercase
+    // duplicate would be merged by fetch's Headers normalization into one
+    // invalid combined value on the wire.
+    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers.Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(headers['X-Walkeros-Binding']).toBe('pb_x');
+    const reserved = Object.keys(headers).filter((name) =>
+      ['authorization', 'content-type'].includes(name.toLowerCase()),
+    );
+    expect(reserved.sort()).toEqual(['Authorization', 'Content-Type']);
+  });
+
   it('fires onStatus with the response status whenever a response exists', async () => {
     const log: string[] = [];
     // First response 401, second 200.

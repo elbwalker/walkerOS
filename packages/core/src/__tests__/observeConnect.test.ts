@@ -50,4 +50,15 @@ describe('observeFromEnv', () => {
       }),
     ).toBeUndefined();
   });
+  it('fails closed on an unknown explicit level (never silently standard)', () => {
+    // A typo'd opt-out (`offf`) must not degrade into active observation.
+    expect(
+      observeFromEnv({
+        WALKEROS_OBSERVER_URL: 'https://obs.example',
+        WALKEROS_DEPLOYMENT_ID: 'ses_1',
+        WALKEROS_INGEST_TOKEN: 'tok',
+        WALKEROS_OBSERVE_LEVEL: 'offf',
+      }),
+    ).toBeUndefined();
+  });
 });

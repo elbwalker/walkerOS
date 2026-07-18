@@ -108,6 +108,29 @@ describe('startFlow observe wiring', () => {
         },
       });
       expect(collector.observers.size).toBe(0);
+      expect(collector.observeLevel).toBeUndefined();
+    });
+
+    it('installs the collector-wide capture supplier for a configured level', async () => {
+      // Mirrors the web arm: without the supplier, destination call capture
+      // never runs at trace even though the observer emits trace records.
+      const { collector } = await startFlow({
+        observe: {
+          url: OBSERVER_URL,
+          sessionId: 'ses_1',
+          token: 'tok',
+          level: 'trace',
+        },
+      });
+      expect(collector.observeLevel?.()).toBe('trace');
+    });
+
+    it('leaves the capture supplier unset when no level is configured', async () => {
+      const { collector } = await startFlow({
+        observe: { url: OBSERVER_URL, sessionId: 'ses_1', token: 'tok' },
+      });
+      expect(collector.observers.size).toBe(1);
+      expect(collector.observeLevel).toBeUndefined();
     });
   });
 

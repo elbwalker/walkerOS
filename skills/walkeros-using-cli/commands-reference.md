@@ -297,9 +297,14 @@ walkeros previews create <flowId> [options]
 | `-u, --url <siteUrl>`    | Your site URL; prints a full activation URL on stdout |
 | `--project <id>`         | Project ID (overrides default)                        |
 
-Without `--url`, stdout contains the activation fragment (`?elbPreview=...`) to
-append to any URL on your site. With `--url`, stdout contains an activation URL
-for your site, plus a deactivation URL on stderr.
+The human-readable summary (preview id, creator, bundle URL, activate and
+deactivate lines) goes to stderr; stdout carries only the machine-readable
+activation URL. Activation URLs are always app-minted and origin-bound, so the
+CLI never builds one client-side (the API response carries no raw token to build
+one from). With `--url`, the grant is minted for that origin: stdout is the full
+activation URL, and stderr includes a `?elbPreview=off` deactivation URL.
+Without `--url`, the server may not have minted a grant for any site yet; stdout
+is then empty and the summary points at re-running with `--url`.
 
 ### previews delete
 
@@ -333,6 +338,89 @@ walkeros previews delete flow_abc123 prv_xyz456 --yes
 - **Project:** `WALKEROS_PROJECT_ID` or `--project`
 - **Target site** must be running a walkerOS-built `walker.js` with the preview
   preflight baked in (all bundles from `@walkeros/cli >= 3.0` include it)
+
+---
+
+## observe
+
+Start a live observation session for a flow and print the attach info for both
+arms: the web activation link and the server environment trio. The session is
+minted via the app's authenticated boundary; the mint response usually comes
+back `arming`, so the command polls until the session settles (or `--no-wait`
+skips the wait).
+
+### observe start
+
+```bash
+walkeros observe start <flowId> [options]
+```
+
+| Option                | Description                                                      |
+| --------------------- | ---------------------------------------------------------------- |
+| `-f, --flow <name>`   | Flow settings name (auto-resolved when the flow has exactly one) |
+| `--project <id>`      | Project ID (overrides default)                                   |
+| `--level <level>`     | Observation detail level: `off`, `standard`, or `trace`          |
+| `--replace`           | Replace an existing active session for this flow                 |
+| `--no-wait`           | Do not wait for the session to settle                            |
+| `--timeout <seconds>` | Seconds to wait for the session to settle (default: 300)         |
+| `--json`              | Output the raw session as JSON                                   |
+
+### Output
+
+The human-readable session report goes to stderr; stdout carries only the live
+server endpoint (when armed) for scripting:
+
+```
+Observe session ses_abc123 (live)
+
+  Web
+    Bundle URL: https://cdn.test/preview/proj_test/walker.k9x2m4p7abcd.js
+    Credential: obsw_pb1.ses_abc123.webtok
+    Activate:   https://shop.example/?elbPreview=eyJncjRudA.gr4nt.s1g&elbObserve=obsw_pb1.ses_abc123.webtok
+
+  Server
+    Flow:       server
+    Endpoint:   https://obs-ses-abc123.containers.test
+    Env:
+      WALKEROS_OBSERVER_URL=https://observer.test
+      WALKEROS_DEPLOYMENT_ID=ses_abc123
+      WALKEROS_INGEST_TOKEN=srv_ingest_tok
+
+  Expires:  2026-07-19T00:00:00.000Z
+  Records:  42
+
+  The session lives server-side; closing this terminal does not end it.
+  Sessions idle out server-side when no tab or traffic keeps them alive.
+```
+
+### Semantics
+
+- **Activation URL is app-minted.** Grants are app-signed and origin-bound, and
+  the link already carries the `elbObserve` credential companion, so the
+  observed tab picks up the session credential from the link itself. The CLI
+  echoes the URL verbatim and never builds one client-side. When no link is
+  minted yet, the report says so; when the deployed web bundle cannot verify
+  grants, it points at redeploying the web flow first.
+- **The env trio is the session's identity.** Export `WALKEROS_OBSERVER_URL`,
+  `WALKEROS_DEPLOYMENT_ID`, and `WALKEROS_INGEST_TOKEN` into a server runtime
+  (read via `observeFromEnv`) to feed that exact session.
+- **Waiting heartbeats the session.** Each poll tick also POSTs the session
+  heartbeat so the idle reaper cannot claim the session while you set up.
+  Heartbeats extend grace, never gate: failures are swallowed, and session
+  liveness never depends on this process.
+- **Sessions are server-managed.** Closing the terminal or abandoning the wait
+  never ends a session; sessions idle out server-side when no tab or traffic
+  keeps them alive, and every session carries an expiry.
+- **Exit codes.** A wait that expires with the session still `arming` exits 1
+  (the session keeps arming server-side); a `failed` session exits 1. With no
+  resolvable credentials at all, the command prints a login CTA
+  (`walkeros auth login`) and exits 0 without a network call; a 401 despite a
+  token still fails loudly.
+
+### Prerequisites
+
+- **Authentication:** `WALKEROS_TOKEN` env var or `walkeros auth`
+- **Project:** `WALKEROS_PROJECT_ID` or `--project`
 
 ---
 

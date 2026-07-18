@@ -234,6 +234,12 @@ function installObserve(
   // Server arm: the config trio is the credential; attach directly.
   // 'off' opts out entirely (no observer, zero emit-path work).
   if (observe.level === 'off') return;
+  // Mirror the web arm: a configured level also drives the collector-wide
+  // capture supplier, so 'trace' enables destination call capture.
+  const serverLevel = observe.level;
+  if (serverLevel !== undefined) {
+    instance.observeLevel = () => serverLevel;
+  }
   instance.observers.add(
     createTelemetryObserver(
       withRelease(

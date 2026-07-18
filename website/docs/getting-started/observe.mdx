@@ -136,9 +136,11 @@ WALKEROS_OBSERVE_LEVEL=standard # optional: off | standard | trace`}
 
 `observeFromEnv` returns a config only when the full trio (`URL`,
 `DEPLOYMENT_ID`, `INGEST_TOKEN`) is present; otherwise it returns `undefined`
-and the deployment does no observation work. The ingest token is the one
-secret in this setup, which is why it lives in the deployment environment and
-nowhere else.
+and the deployment does no observation work. A set but unrecognized
+`WALKEROS_OBSERVE_LEVEL` (a typo like `offf`) also disables observation
+entirely rather than silently observing at `standard`. The ingest token is
+the one secret in this setup, which is why it lives in the deployment
+environment and nowhere else.
 
 ## Connect values vs telemetry knobs
 
@@ -178,9 +180,13 @@ records to your own endpoint, a log pipeline, or a test assertion.
 
 :::cloud
 Observation sessions with a live feed and minted per-session credentials are
-part of the hosted app; `walkeros observe start <flowId>` starts one from the
-terminal. Self-hosting? The `observers` escape hatch above streams the same
-records to any function or endpoint you control. [What Cloud adds](https://app.walkeros.io)
+part of the hosted app; `walkeros observe start <flowId>` mints one from the
+terminal and prints the web activation link (the `?elbObserve=` credential
+already appended), the server environment trio, the session expiry, and the
+received-record count, while sessions themselves live server-side and idle
+out when nothing keeps them alive. Self-hosting? The `observers` escape hatch
+above streams the same records to any function or endpoint you control.
+[What Cloud adds](https://app.walkeros.io)
 :::
 
 ## Next steps

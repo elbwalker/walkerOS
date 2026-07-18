@@ -110,94 +110,11 @@ export const __configData = { test: true };
     expect(output).toContain('httpHandler');
   });
 
-  it('emits telemetry wiring in the browser IIFE when telemetry is enabled', async () => {
-    const skeletonPath = await writeFakeSkeleton();
-    const outputPath = path.join(tmpDir, 'walker.js');
-
-    await wrapSkeleton({
-      skeletonPath,
-      platform: 'browser',
-      outputPath,
-      minify: false,
-      telemetry: {
-        observerUrl: 'https://observer.example.com/ingest/dep_42',
-        traceUrl: 'https://observer.example.com/trace/dep_42',
-        ingestToken: 'tok_test_value',
-        flowId: 'flow_x',
-        level: 'standard',
-      },
-    });
-
-    const output = await fs.readFile(outputPath, 'utf-8');
-
-    // Configured literals must end up in the bundle.
-    expect(output).toContain('https://observer.example.com/ingest/dep_42');
-    expect(output).toContain('https://observer.example.com/trace/dep_42');
-    expect(output).toContain('tok_test_value');
-    expect(output).toContain('flow_x');
-    // The observer is installed onto collector.observers (Set#add). The
-    // legacy config.hooks merge must not appear.
-    expect(output).toMatch(/observers\.add/);
-    expect(output).not.toContain('config.hooks');
-  });
-
-  it('still wires telemetry when the baseline level is off', async () => {
-    const skeletonPath = await writeFakeSkeleton();
-    const outputPath = path.join(tmpDir, 'walker.js');
-
-    await wrapSkeleton({
-      skeletonPath,
-      platform: 'browser',
-      outputPath,
-      minify: false,
-      telemetry: {
-        observerUrl: 'https://observer.example.com/ingest/dep_42',
-        traceUrl: 'https://observer.example.com/trace/dep_42',
-        ingestToken: 'tok_test_value',
-        flowId: 'flow_x',
-        level: 'off',
-      },
-    });
-
-    const output = await fs.readFile(outputPath, 'utf-8');
-    // An 'off' baseline is still wired as a supplier so the runtime trace
-    // poll can flip it to trace: literals, observer, and poller all present.
-    expect(output).toContain('https://observer.example.com/ingest/dep_42');
-    expect(output).toContain('https://observer.example.com/trace/dep_42');
-    expect(output).toContain('tok_test_value');
-    expect(output).toMatch(/observers\.add/);
-  });
-
-  it('emits a static observer with no trace poll when traceUrl is omitted', async () => {
-    const skeletonPath = await writeFakeSkeleton();
-    const outputPath = path.join(tmpDir, 'walker.js');
-
-    await wrapSkeleton({
-      skeletonPath,
-      platform: 'browser',
-      outputPath,
-      minify: false,
-      telemetry: {
-        observerUrl: 'https://observer.example.com/ingest/preview/prv_9',
-        ingestToken: 'tok_preview_value',
-        flowId: 'flow_x',
-        level: 'trace',
-      },
-    });
-
-    const output = await fs.readFile(outputPath, 'utf-8');
-    // The preview ingest URL and token are baked, and the observer is wired.
-    expect(output).toContain(
-      'https://observer.example.com/ingest/preview/prv_9',
-    );
-    expect(output).toContain('tok_preview_value');
-    expect(output).toMatch(/observers\.add/);
-    // No poll machinery when traceUrl is omitted.
-    expect(output).not.toMatch(/setInterval/);
-    expect(output).not.toMatch(/\/trace\//);
-  });
-
-  it('omits telemetry wiring when telemetry option is absent', async () => {
+  it('a plain browser wrap contains no baked observer machinery or poll loop', async () => {
+    // The baked-token telemetry path no longer exists as an input, so every
+    // wrapped browser bundle must be free of observer installs and trace-poll
+    // machinery; observation wiring is the bake-nothing `observe` connect
+    // config alone, installed by the runtime at boot.
     const skeletonPath = await writeFakeSkeleton();
     const outputPath = path.join(tmpDir, 'walker.js');
 
@@ -211,6 +128,8 @@ export const __configData = { test: true };
     const output = await fs.readFile(outputPath, 'utf-8');
     expect(output).not.toMatch(/observers\.add/);
     expect(output).not.toContain('config.hooks');
+    expect(output).not.toMatch(/setInterval/);
+    expect(output).not.toMatch(/\/trace\//);
   });
 
   it('preview wrap bakes only public connect values, never an ingest token literal', async () => {
@@ -264,27 +183,6 @@ export const __configData = { test: true };
 
     const output = await fs.readFile(outputPath, 'utf-8');
     expect(output).not.toContain('browserSwapActivator');
-  });
-
-  it('rejects the legacy telemetry token wiring combined with the connect module', async () => {
-    const skeletonPath = await writeFakeSkeleton();
-    const outputPath = path.join(tmpDir, 'walker.js');
-
-    await expect(
-      wrapSkeleton({
-        skeletonPath,
-        platform: 'browser',
-        outputPath,
-        minify: false,
-        observe: { url: 'https://observer.example.com', binding: 'pb_a' },
-        telemetry: {
-          observerUrl: 'https://observer.example.com/ingest/preview/prv_9',
-          ingestToken: 'tok_preview_value',
-          flowId: 'flow_x',
-          level: 'trace',
-        },
-      }),
-    ).rejects.toThrow(/mutually exclusive/i);
   });
 
   it('throws when the skeleton does not exist', async () => {

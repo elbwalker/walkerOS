@@ -164,7 +164,7 @@ describe('generateWrapEntry preview-artifact observe connect', () => {
     });
     expect(code).not.toContain('browserSwapActivator');
     // The connect module is pure config; the artifact entry needs zero core
-    // imports (the old telemetry block was the only importer).
+    // imports.
     expect(code).not.toContain("from '@walkeros/core'");
   });
 
@@ -185,20 +185,6 @@ describe('generateWrapEntry preview-artifact observe connect', () => {
     expect(code).not.toContain('flowId');
     expect(code).not.toContain('level');
     expect(code).not.toContain('sample');
-  });
-
-  it('rejects the legacy baked-token telemetry combined with the connect module', () => {
-    expect(() =>
-      generateWrapEntry('/tmp/stage1.js', {
-        observe,
-        telemetry: {
-          observerUrl: 'https://obs.example/ingest/preview/prv_1',
-          ingestToken: 'tok_secret',
-          flowId: 'flow_1',
-          level: 'trace',
-        },
-      }),
-    ).toThrow(/mutually exclusive/i);
   });
 
   it('the activator-true path returns before the host connect module installs', () => {
