@@ -247,6 +247,19 @@ export namespace Flow {
     level?: 'off' | 'standard' | 'trace';
     /** Deterministic sample fraction in [0, 1]. Defaults to 1. */
     sample?: number;
+    /**
+     * Observer base URL for the web connect form. Public, safe to commit.
+     * When `url` and `binding` are both set on a web flow, the bundler bakes
+     * exactly this pair into the generated startFlow config; the runtime
+     * attaches only when an out-of-band `elbObserve` credential is present.
+     * Secrets never live in flow config.
+     */
+    url?: string;
+    /**
+     * Public project binding a web observe credential must match. Paired
+     * with `url`; public, safe to commit.
+     */
+    binding?: string;
   }
 
   /**

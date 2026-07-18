@@ -47,6 +47,7 @@ export * from './wrapInlineCode';
 export * from './cdn';
 export * from './contract';
 export * from './observeEnv';
+export * from './observeConnect';
 export * from './mcpHelpers';
 export * from './respond';
 export * from './matcher';

@@ -3,7 +3,7 @@ import esbuild from 'esbuild';
 import { builtinModules } from 'module';
 import path from 'path';
 import fs from 'fs-extra';
-import type { Flow, PreviewKey, Transformer } from '@walkeros/core';
+import type { Flow, ObserveWeb, PreviewKey, Transformer } from '@walkeros/core';
 import {
   packageNameToVariable,
   ENV_MARKER_PREFIX,
@@ -615,6 +615,7 @@ export async function bundleCore(
               windowCollector: buildOptions.windowCollector,
               windowElb: buildOptions.windowElb,
               platform: buildOptions.platform as 'browser' | 'node',
+              observe: readObserveConnect(flowSettings, logger),
             })
           : generateServerEntry(stage1Path, dataPayload);
 
@@ -1953,6 +1954,61 @@ export default async function(context = {}) {
 }
 
 /**
+ * Read the STATIC observe connect pair from a flow's `config.observe`.
+ * Returns the public `{ url, binding }` pair (trimmed) only when both are
+ * non-empty strings; anything else yields undefined so the web entry emits
+ * zero observe wiring bytes. A block that names `url` or `binding` but does
+ * not form a usable pair (missing, empty, or whitespace-only member) warns
+ * at build time, because silent zero-wiring in a minified bundle is
+ * invisible to the author. A pure level/sample block is valid
+ * managed-telemetry config, not a failed connect pair, and stays silent.
+ * Secrets never live in flow config: the runtime connect module reads the
+ * per-session credential out-of-band at boot.
+ */
+export function readObserveConnect(
+  flowSettings: Flow,
+  logger?: Logger.Instance,
+): ObserveWeb | undefined {
+  const observe = flowSettings.config?.observe;
+  if (!observe) return undefined;
+  const { url, binding } = observe;
+  if (url === undefined && binding === undefined) return undefined;
+  const trimmedUrl = typeof url === 'string' ? url.trim() : '';
+  const trimmedBinding = typeof binding === 'string' ? binding.trim() : '';
+  if (trimmedUrl !== '' && trimmedBinding !== '') {
+    return { url: trimmedUrl, binding: trimmedBinding };
+  }
+  const missing = [
+    ...(trimmedUrl === '' ? ['url'] : []),
+    ...(trimmedBinding === '' ? ['binding'] : []),
+  ].join(' and ');
+  logger?.warn(
+    `config.observe has no effect: missing or empty ${missing}. Observe connect wiring was skipped; set both config.observe.url and config.observe.binding to non-empty public values.`,
+  );
+  return undefined;
+}
+
+/**
+ * Emit the STATIC observe connect assignment for a generated entry: bake
+ * ONLY the public connect values (`url` + `binding`, plus the optional
+ * `flowId`/`level`/`sample` scoping) onto the startFlow config. The runtime
+ * connect module inside startFlow does the credential/slot work at boot
+ * (the per-session secret arrives out-of-band via the `elbObserve`
+ * companion); no emitted byte here is ever secret.
+ */
+function emitObserveAssignment(observe: ObserveWeb): string {
+  const literal: ObserveWeb = {
+    url: observe.url,
+    binding: observe.binding,
+    ...(observe.flowId !== undefined ? { flowId: observe.flowId } : {}),
+    ...(observe.level !== undefined ? { level: observe.level } : {}),
+    ...(observe.sample !== undefined ? { sample: observe.sample } : {}),
+  };
+  return `
+  config.observe = ${JSON.stringify(literal)};`;
+}
+
+/**
  * Generate a stage 2 entry file for web/browser bundles.
  * Imports startFlow and wireConfig from the stage 1 .mjs file,
  * embeds the data payload, and wraps in an async IIFE with window assignments.
@@ -1967,8 +2023,27 @@ export function generateWebEntry(
     platform?: 'browser' | 'node';
     /** Telemetry wiring (see generateWrapEntry). */
     telemetry?: WrapEntryTelemetry;
+    /**
+     * STATIC observe connect config baked onto the startFlow config. PUBLIC
+     * values only (url + binding); the runtime connect module reads the
+     * per-session credential out-of-band at boot. Absent = zero observe
+     * wiring bytes in the emitted entry.
+     */
+    observe?: ObserveWeb;
   } = {},
 ): string {
+  // Same invariant as generateWrapEntry: the bake-nothing connect module and
+  // the baked-token telemetry block are mutually exclusive observer wirings.
+  // Refuse the combination loudly rather than emit both side by side.
+  if (options.observe !== undefined && options.telemetry !== undefined) {
+    throw new Error(
+      'generateWebEntry: `observe` (bake-nothing connect module) and ' +
+        '`telemetry` (baked ingest token) are mutually exclusive observer ' +
+        'wirings. Pass `observe` alone; the per-session credential arrives ' +
+        'out-of-band at boot instead of being baked.',
+    );
+  }
+
   const assignments: string[] = [];
   if (options.windowCollector) {
     assignments.push(
@@ -1999,6 +2074,10 @@ export function generateWebEntry(
 
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
+  const observeBlock = options.observe
+    ? emitObserveAssignment(options.observe)
+    : '';
+
   const telemetryImport = options.telemetry
     ? `\nimport { createBatchedPoster as __cbp, createTelemetryObserver as __cto } from '@walkeros/core';`
     : '';
@@ -2025,7 +2104,7 @@ export function generateWebEntry(
 const __configData = ${dataPayload};
 
 (async () => {
-  const config = wireConfig(__configData);${envBlock}
+  const config = wireConfig(__configData);${envBlock}${observeBlock}
   const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}
 })();`;
 }
@@ -2038,6 +2117,13 @@ const __configData = ${dataPayload};
  * publish-time `wrapSkeleton` helper, which runs on a stage 1 skeleton
  * produced via `bundle({ skipWrapper: true })` — those skeletons already
  * export `__configData` alongside `wireConfig` and `startFlow`.
+ */
+/**
+ * @deprecated Bakes a plaintext ingest token into the emitted (world-readable)
+ * bundle bytes. Use the `observe` option instead: it bakes only public connect
+ * values and the per-session credential arrives out-of-band at boot via the
+ * `elbObserve` slot. Its only production caller is the app's preview wrap,
+ * which moves to `observe` in F3'; this bake path is then retired.
  */
 export interface WrapEntryTelemetry {
   observerUrl: string;
@@ -2112,6 +2198,15 @@ export function generateWrapEntry(
      * `startFlow` returns.
      */
     telemetry?: WrapEntryTelemetry;
+    /**
+     * STATIC observe connect config baked onto the startFlow config. PUBLIC
+     * values only (`url` + `binding`, plus optional `flowId`/`level`/`sample`
+     * scoping); the runtime connect module reads the per-session credential
+     * out-of-band at boot via the `elbObserve` slot. This is the
+     * preview-artifact observation wiring: unlike `telemetry`, it bakes no
+     * ingest token. Mutually exclusive with `telemetry`.
+     */
+    observe?: ObserveWeb;
   } = {},
 ): string {
   const assignments: string[] = [];
@@ -2137,6 +2232,19 @@ export function generateWrapEntry(
       'generateWrapEntry: `preview` (host activator) and `previewGrantTargets` ' +
         '(preview-artifact injection) are mutually exclusive. A host bundle ' +
         'activates a preview; an artifact injects its grant. Pass at most one.',
+    );
+  }
+
+  // Two observation wirings, one bundle: the bake-nothing connect module
+  // (`observe`) replaces the baked-token telemetry block (`telemetry`).
+  // Passing both is a caller bug; refuse loudly rather than bake a token
+  // literal next to the tokenless path it was meant to retire.
+  if (options.observe !== undefined && options.telemetry !== undefined) {
+    throw new Error(
+      'generateWrapEntry: `observe` (bake-nothing connect module) and ' +
+        '`telemetry` (baked ingest token) are mutually exclusive observer ' +
+        'wirings. Pass `observe` alone; the per-session credential arrives ' +
+        'out-of-band at boot instead of being baked.',
     );
   }
 
@@ -2327,10 +2435,17 @@ function __pollTrace() {
   }`
     : '';
 
+  // STATIC observe connect wiring (see emitObserveAssignment): baked inside
+  // the IIFE AFTER the activator's early return, so an activated page (the
+  // artifact swapped in) never also installs the host's connect module.
+  const observeBlock = options.observe
+    ? emitObserveAssignment(options.observe)
+    : '';
+
   return `${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';${telemetryImport}
 ${telemetryPoller}
 (async () => {${previewBlock}
-  const config = wireConfig(__configData);${envBlock}${previewGrantBlock}
+  const config = wireConfig(__configData);${envBlock}${previewGrantBlock}${observeBlock}
   const { collector, elb } = await startFlow(config);${telemetryBlock}${assignmentCode}
 })();`;
 }

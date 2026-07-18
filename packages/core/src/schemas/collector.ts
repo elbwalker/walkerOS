@@ -241,6 +241,46 @@ export const InitConfigSchema = ConfigSchema.partial()
       })
       .optional()
       .describe('Pipeline observation hooks'),
+    observe: z
+      .union([
+        z.object({
+          url: z.string().describe('Observer base URL'),
+          binding: z
+            .string()
+            .describe('Public project binding the web credential must match'),
+        }),
+        z.object({
+          url: z.string().describe('Observer base URL'),
+          sessionId: z.string().describe('Session id the runtime posts under'),
+          token: z.string().describe('Ingest bearer token'),
+          level: z
+            .enum(['off', 'standard', 'trace'])
+            .optional()
+            .describe('Telemetry level'),
+          sample: z
+            .number()
+            .optional()
+            .describe('Deterministic sample fraction in [0, 1]'),
+        }),
+      ])
+      .meta({
+        id: 'CollectorObserve',
+        title: 'Observe',
+        description:
+          'Observation session connect config: web arm (url + binding) or server arm (url + sessionId + token).',
+      })
+      .optional()
+      .describe('Observation session connect config'),
+    observers: z
+      .unknown()
+      .meta({
+        id: 'CollectorObservers',
+        title: 'Collector.Observers',
+        description:
+          'Caller-supplied advisory observer functions (runtime objects).',
+      })
+      .optional()
+      .describe('Caller-supplied advisory observer functions'),
   })
   .meta({
     id: 'CollectorInitConfig',

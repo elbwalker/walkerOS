@@ -49,6 +49,8 @@ export interface FlowState {
   sourceId?: string;
   /** Per-poster monotonic record counter for gap detection. Stamped by the batched poster, not emitters. */
   seq?: number;
+  /** Release provenance of the runtime that produced this state, e.g. a deployment id. Stamped by the wiring layer, not emitters. */
+  release?: string;
   /**
    * Vendor calls recorded via wrapEnv on destination out records. Captured only
    * at trace level and only when the destination declares a `calls` list

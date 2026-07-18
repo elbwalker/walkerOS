@@ -43,6 +43,7 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 | `run`      | Local HTTP event collection                              | ✅    |
 | `deploy`   | Deploy flows to cloud                                    | ⚠️    |
 | `previews` | Manage preview bundles for testing on live sites         | ⚠️    |
+| `observe`  | Start a live observation session for a flow (app login)  | ⚠️    |
 | `validate` | Validate configs/events                                  | ✅    |
 | `cache`    | Manage caching                                           | ✅    |
 
@@ -133,7 +134,8 @@ runtime override it.
           "packages": {},               // NPM packages pacote will install
           "overrides": {},              // Transitive dep version pins (npm-style)
           "traceInclude": []            // Optional: nft escape hatch (paths/globs)
-        }
+        },
+        "observe": {}                   // Optional: public observe connect pair (url + binding)
       },
       "sources": {},                    // Event sources
       "destinations": {},               // Event destinations
@@ -160,6 +162,12 @@ win over overrides; overrides only substitute transitive resolution.
 `flow.<name>.config.bundle.{packages, overrides, traceInclude}`. The
 `flow.<name>.config.bundle.external` sub-field is no longer supported in
 @walkeros/cli@4.x.
+
+**`config.observe` bakes only public values.** For web flows, `walkeros bundle`
+emits the `url` + `binding` connect pair statically into the bundle; the
+per-session credential arrives out-of-band at runtime (`?elbObserve=` URL
+param), so no secret ever enters the artifact. A partial pair (only one of the
+two set) warns at build time and wires nothing.
 
 For detailed configuration options, see
 [flow-configuration.md](flow-configuration.md).

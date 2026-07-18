@@ -380,6 +380,32 @@ Nothing is sent to a vendor. Event names use a space (`page view`).
 
 ---
 
+## Observe a running flow
+
+To watch a deployed web bundle's events live, add the public connect pair to
+the flow's `config` and rebuild once:
+
+<CodeSnippet
+  code={`"config": {
+  "platform": "web",
+  "observe": {
+    "url": "https://observer.example.com",
+    "binding": "pb_x"
+  }
+}`}
+  language="json"
+/>
+
+Rebuild: `walkeros bundle flow.json`
+
+Both values are public and safe to commit; set both, a partial pair warns at
+build time and wires nothing. The bundle never contains a credential: the
+per-session credential arrives at runtime via a `?elbObserve=` URL parameter.
+See [Observe](/docs/getting-started/observe) for the full setup and the
+credential lifecycle.
+
+---
+
 ## Next steps
 
 - [**CLI documentation**](/docs/apps/cli): All CLI commands and options

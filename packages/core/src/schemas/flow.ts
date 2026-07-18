@@ -662,11 +662,56 @@ export const ContractSchema = z
 // ========================================
 
 /**
+ * Observe schema (Flow.Observe).
+ *
+ * @remarks
+ * Observability configuration block. `url` + `binding` form the public web
+ * connect pair (safe to commit; the per-session credential arrives
+ * out-of-band). `level` and `sample` are managed-telemetry knobs.
+ */
+export const ObserveSchema = z
+  .object({
+    level: z
+      .enum(['off', 'standard', 'trace'])
+      .optional()
+      .describe(
+        "Managed-telemetry verbosity. 'off' disables telemetry entirely, 'standard' emits structural records, 'trace' emits full payloads.",
+      ),
+    sample: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe('Deterministic sample fraction in [0, 1]. Defaults to 1.'),
+    url: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Observer base URL for the web connect form. Public, safe to commit. Paired with binding.',
+      ),
+    binding: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Public project binding a web observe credential must match. Paired with url; public, safe to commit.',
+      ),
+  })
+  .meta({
+    id: 'FlowObserve',
+    title: 'Flow.Observe',
+    description:
+      'Observability configuration: public web connect pair (url + binding) and managed-telemetry knobs (level + sample).',
+  })
+  .describe('Observability configuration block');
+
+/**
  * Per-flow Config schema (Flow.Config).
  *
  * @remarks
  * Groups platform identity, optional public URL, free-form settings bag,
- * and bundle (build-time) configuration.
+ * bundle (build-time) configuration, and observability configuration.
  */
 export const ConfigSchema = z
   .object({
@@ -688,12 +733,15 @@ export const ConfigSchema = z
     bundle: BundleSchema.optional().describe(
       'Bundle configuration: NPM packages, transitive dependency overrides.',
     ),
+    observe: ObserveSchema.optional().describe(
+      'Observability configuration: public web connect pair, managed-telemetry level and sample.',
+    ),
   })
   .meta({
     id: 'FlowConfig',
     title: 'Flow.Config',
     description:
-      'Per-flow configuration block: platform identity, optional public URL, settings, bundle.',
+      'Per-flow configuration block: platform identity, optional public URL, settings, bundle, observe.',
   })
   .describe('Per-flow configuration block');
 

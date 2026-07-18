@@ -213,6 +213,80 @@ export const __configData = { test: true };
     expect(output).not.toContain('config.hooks');
   });
 
+  it('preview wrap bakes only public connect values, never an ingest token literal', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrapSkeleton({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+      previewGrantTargets: ['api'],
+      observe: {
+        url: 'https://observer.example.com',
+        binding: 'pb_a',
+        flowId: 'flow_x',
+        level: 'trace',
+      },
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+
+    // The STATIC connect module bakes ONLY the public values.
+    expect(output).toContain('config.observe');
+    expect(output).toContain('https://observer.example.com');
+    expect(output).toContain('pb_a');
+    expect(output).toContain('flow_x');
+    // Former bake sites: no credential prefix, no bearer literal, no
+    // ingest-token-shaped string anywhere in the wrapped preview output. The
+    // per-session secret arrives via the elbObserve slot at boot instead
+    // (startFlow's connect module; pinned in the collector's observe tests).
+    expect(output).not.toMatch(/obsw_/);
+    expect(output).not.toMatch(/Bearer\s+[A-Za-z0-9]/);
+    expect(output).not.toMatch(/ingestToken|tok_/);
+    // And no baked observer machinery: the runtime installs it at boot.
+    expect(output).not.toMatch(/observers\.add/);
+  });
+
+  it('preview artifact output still never bakes the activator (anti-recursion)', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrapSkeleton({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+      previewGrantTargets: ['api'],
+      observe: { url: 'https://observer.example.com', binding: 'pb_a' },
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+    expect(output).not.toContain('browserSwapActivator');
+  });
+
+  it('rejects the legacy telemetry token wiring combined with the connect module', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await expect(
+      wrapSkeleton({
+        skeletonPath,
+        platform: 'browser',
+        outputPath,
+        minify: false,
+        observe: { url: 'https://observer.example.com', binding: 'pb_a' },
+        telemetry: {
+          observerUrl: 'https://observer.example.com/ingest/preview/prv_9',
+          ingestToken: 'tok_preview_value',
+          flowId: 'flow_x',
+          level: 'trace',
+        },
+      }),
+    ).rejects.toThrow(/mutually exclusive/i);
+  });
+
   it('throws when the skeleton does not exist', async () => {
     const outputPath = path.join(tmpDir, 'walker.js');
     await expect(

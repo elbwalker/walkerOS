@@ -614,6 +614,45 @@ previewsCmd
     }
   });
 
+// Observe command group
+const observeCmd = program
+  .command('observe')
+  .description('Observe live events flowing through a flow');
+
+observeCmd
+  .command('start <flowId>')
+  .description(
+    'Start an observe session: mints it via the app and prints the web and server attach info',
+  )
+  .option(
+    '-f, --flow <name>',
+    'Flow settings name (auto-resolved when the flow has exactly one)',
+  )
+  .option('--project <projectId>', 'Project ID (overrides default)')
+  .option(
+    '--level <level>',
+    'Observation detail level (reserved; not yet supported by the API)',
+  )
+  .option('--replace', 'Replace an existing active session for this flow')
+  .option('--no-wait', 'Do not wait for the session to settle')
+  .option(
+    '--timeout <seconds>',
+    'Seconds to wait for the session to settle (default: 300)',
+  )
+  .option('--json', 'Output the session as JSON')
+  .action(async (flowId, options) => {
+    const { observeStartCommand } = await import('./commands/observe/index.js');
+    await observeStartCommand(flowId, {
+      project: options.project,
+      flow: options.flow,
+      level: options.level,
+      replace: options.replace,
+      wait: options.wait,
+      timeout: options.timeout,
+      json: options.json,
+    });
+  });
+
 // Run command
 program
   .command('run [file]')

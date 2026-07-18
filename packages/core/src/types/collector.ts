@@ -11,6 +11,7 @@ import type {
   Mapping,
 } from '.';
 import type { Ingest } from './ingest';
+import type { Observe } from '../observeConnect';
 import type { ObserverFn } from './observer';
 
 /** Identifies which kind of step a stepId belongs to. */
@@ -124,6 +125,20 @@ export interface InitConfig extends Partial<Config> {
   custom?: WalkerOS.Properties;
   /** Hooks for pipeline observation and interception */
   hooks?: Hooks.Functions;
+  /**
+   * Observation session connect config, wired by `startFlow` before the run
+   * command. The server form attaches a telemetry poster directly from its
+   * config trio; the web form attaches only when an `elbObserve` credential
+   * is present (URL param or storage slot) and its binding matches. Purely
+   * advisory: nothing on this path can affect event processing.
+   */
+  observe?: Observe;
+  /**
+   * Caller-supplied observers, added verbatim to `collector.observers` by
+   * `startFlow`. Escape hatch for custom emit targets; same advisory
+   * contract as every observer (thrown values are swallowed by emitStep).
+   */
+  observers?: ObserverFn[];
 }
 
 export interface SessionData extends WalkerOS.Properties {

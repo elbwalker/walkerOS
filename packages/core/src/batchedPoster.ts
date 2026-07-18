@@ -67,8 +67,22 @@ function utf8ByteLength(str: string): number {
   return bytes;
 }
 
+/**
+ * Versioned ingest wire format. Every POST body is one envelope; a batch
+ * split into multiple chunks posts one complete envelope per chunk. The
+ * version field lets the observer evolve its parse without sniffing shapes:
+ * runtimes pinned to this poster keep emitting `v: 1` and the server keeps
+ * accepting it.
+ */
+export interface IngestEnvelope {
+  /** Wire format version. */
+  v: 1;
+  /** FlowState records in arrival order, each stamped with a seq. */
+  records: FlowState[];
+}
+
 export interface BatchedPosterOptions {
-  /** Absolute HTTP endpoint URL. POST with JSON array body. */
+  /** Absolute HTTP endpoint URL. POST with a versioned envelope JSON body. */
   url: string;
   /** Bearer token sent in the `Authorization` header. */
   token: string;
@@ -86,6 +100,18 @@ export interface BatchedPosterOptions {
   fetch?: PosterFetch;
   /** Called when the underlying POST rejects. Defaults to swallowing. */
   onError?: (err: unknown) => void;
+  /**
+   * Extra headers merged into every request (e.g. `X-Walkeros-Binding`).
+   * The fixed `Content-Type` and `Authorization` headers win on collision.
+   */
+  headers?: Record<string, string>;
+  /**
+   * Called with the HTTP status of every response, before any non-2xx
+   * error handling. Lets callers react to a 401/404 (stop posting,
+   * self-heal) without parsing error strings. Not called when the fetch
+   * rejects, since no response exists.
+   */
+  onStatus?: (status: number) => void;
 }
 
 /**
@@ -144,15 +170,18 @@ export function createBatchedPoster(
 
   /**
    * Serialize a batch into byte-bounded JSON bodies, preserving order. Each
-   * posted body is serialized exactly once: a batch that fits (or a single-
-   * record leaf) returns its own probe serialization; only oversized parents
-   * discard theirs before recursing into halves. A single record that alone
-   * exceeds the limit is emitted as its own body anyway: the server rejects
-   * it (413) and the resulting seq gap makes the loss visible, which is
+   * body is a complete versioned envelope, and the byte limit is enforced
+   * on that full wrapped serialization (the wire size). Each posted body is
+   * serialized exactly once: a batch that fits (or a single-record leaf)
+   * returns its own probe serialization; only oversized parents discard
+   * theirs before recursing into halves. A single record that alone exceeds
+   * the limit is emitted as its own body anyway: the server rejects it
+   * (413) and the resulting seq gap makes the loss visible, which is
    * preferable to silently dropping it here.
    */
   function splitToBodies(batch: FlowState[]): string[] {
-    const body = JSON.stringify(batch);
+    const envelope: IngestEnvelope = { v: 1, records: batch };
+    const body = JSON.stringify(envelope);
     if (batch.length <= 1) return [body];
     if (utf8ByteLength(body) <= maxBodyBytes) return [body];
     const mid = Math.floor(batch.length / 2);
@@ -173,6 +202,8 @@ export function createBatchedPoster(
         fetchImpl(opts.url, {
           method: 'POST',
           headers: {
+            // Caller headers first so the fixed pair wins on collision.
+            ...opts.headers,
             'Content-Type': 'application/json',
             Authorization: `Bearer ${opts.token}`,
           },
@@ -180,6 +211,12 @@ export function createBatchedPoster(
         }),
       )
       .then((res) => {
+        // Surface the raw status first so callers can react to 401/404
+        // (stop posting, self-heal) without parsing error strings. Only
+        // when a response actually exists; rejections carry no status.
+        if (res && typeof res === 'object' && typeof res.status === 'number') {
+          opts.onStatus?.(res.status);
+        }
         // 4xx/5xx is not an exception per fetch contract. Surface non-2xx
         // through onError so callers can record telemetry-of-telemetry,
         // but never throw out of this helper.

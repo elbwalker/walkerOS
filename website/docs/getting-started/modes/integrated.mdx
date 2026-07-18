@@ -240,6 +240,39 @@ Integrated mode verifies where it runs: in your console. For an offline CLI test
 
 ---
 
+## Observe a running flow
+
+The console loop above is local. To watch a running flow's events live, add
+the public connect pair to `startFlow` once:
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  // Both values are public and safe to commit
+  observe: { url: 'https://observer.example.com', binding: 'pb_x' },
+  // ...your sources and destinations
+});`}
+  language="typescript"
+/>
+
+Nothing is sent yet: the per-session credential arrives out-of-band as a
+`?elbObserve=` URL parameter, so committed code never contains a secret. On
+the server, read the connect config from the environment instead:
+
+<CodeSnippet
+  code={`import { observeFromEnv } from '@walkeros/core';
+
+const { elb } = await startFlow({
+  observe: observeFromEnv(process.env),
+  // ...your sources and destinations
+});`}
+  language="typescript"
+/>
+
+See [Observe](/docs/getting-started/observe) for the full setup, the
+environment variables, and the credential lifecycle.
+
+---
+
 ## Next steps
 
 - [**Event Model**](/docs/getting-started/event-model): How events are structured

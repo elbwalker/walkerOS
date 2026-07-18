@@ -1,3 +1,4 @@
+import type { ObserveWeb } from '@walkeros/core';
 import { generateWrapEntry } from '../../../commands/bundle/bundler';
 
 describe('generateWrapEntry preview codegen', () => {
@@ -115,5 +116,102 @@ describe('generateWrapEntry preview-artifact grant injection', () => {
         previewGrantTargets: ['api'],
       }),
     ).toThrow(/mutually exclusive/i);
+  });
+});
+
+describe('generateWrapEntry preview-artifact observe connect', () => {
+  const preview = {
+    enabled: true,
+    keyring: [{ kid: 'kid1', spki: 'c3BraQ' }],
+    iss: 'app:stage',
+    pb: 'pb_a',
+    previewOrigin: 'cdn.example.com',
+  };
+
+  const observe: ObserveWeb = {
+    url: 'https://obs.example',
+    binding: 'pb_a',
+    flowId: 'flow_1',
+    level: 'trace',
+  };
+
+  it('bakes only public connect values, never an ingest token literal', () => {
+    const code = generateWrapEntry('/tmp/stage1.js', {
+      previewGrantTargets: ['api'],
+      observe,
+    });
+    // The STATIC connect module rides the startFlow config: set before boot.
+    expect(code).toContain('config.observe');
+    expect(code).toContain('"url":"https://obs.example"');
+    expect(code).toContain('"binding":"pb_a"');
+    expect(code).toContain('"flowId":"flow_1"');
+    expect(code).toContain('"level":"trace"');
+    const observeIdx = code.indexOf('config.observe');
+    const bootIdx = code.indexOf('await startFlow(config)');
+    expect(observeIdx).toBeGreaterThan(-1);
+    expect(bootIdx).toBeGreaterThan(observeIdx);
+    // Former bake sites: no credential prefix, no bearer literal, no
+    // token-shaped string may appear anywhere in the artifact entry.
+    expect(code).not.toMatch(/obsw_/);
+    expect(code).not.toMatch(/Bearer\s+[A-Za-z0-9]/);
+    expect(code).not.toMatch(/token/i);
+  });
+
+  it('still never bakes the activator (anti-recursion holds with the connect module)', () => {
+    const code = generateWrapEntry('/tmp/stage1.js', {
+      previewGrantTargets: ['api'],
+      observe,
+    });
+    expect(code).not.toContain('browserSwapActivator');
+    // The connect module is pure config; the artifact entry needs zero core
+    // imports (the old telemetry block was the only importer).
+    expect(code).not.toContain("from '@walkeros/core'");
+  });
+
+  it('bakes the connect module for a web-only artifact (no grant targets)', () => {
+    const code = generateWrapEntry('/tmp/stage1.js', { observe });
+    expect(code).toContain('config.observe');
+    expect(code).not.toContain('X-Walkeros-Preview');
+    expect(code).not.toMatch(/obsw_/);
+    expect(code).not.toMatch(/Bearer\s+[A-Za-z0-9]/);
+    expect(code).not.toMatch(/token/i);
+  });
+
+  it('omits optional scoping fields that are not set', () => {
+    const code = generateWrapEntry('/tmp/stage1.js', {
+      observe: { url: 'https://obs.example', binding: 'pb_a' },
+    });
+    expect(code).toContain('config.observe');
+    expect(code).not.toContain('flowId');
+    expect(code).not.toContain('level');
+    expect(code).not.toContain('sample');
+  });
+
+  it('rejects the legacy baked-token telemetry combined with the connect module', () => {
+    expect(() =>
+      generateWrapEntry('/tmp/stage1.js', {
+        observe,
+        telemetry: {
+          observerUrl: 'https://obs.example/ingest/preview/prv_1',
+          ingestToken: 'tok_secret',
+          flowId: 'flow_1',
+          level: 'trace',
+        },
+      }),
+    ).toThrow(/mutually exclusive/i);
+  });
+
+  it('the activator-true path returns before the host connect module installs', () => {
+    // Double-install guard: a host bundle that carries BOTH the activator and
+    // its own connect module must never install the connect module once the
+    // activator swaps the artifact in. The activator's early return precedes
+    // the observe bake (and the boot), so an activated page runs neither.
+    const code = generateWrapEntry('/tmp/stage1.js', { preview, observe });
+    const activatorIdx = code.indexOf('if (await browserSwapActivator(');
+    const observeIdx = code.indexOf('config.observe');
+    const bootIdx = code.indexOf('await startFlow(config)');
+    expect(activatorIdx).toBeGreaterThan(-1);
+    expect(observeIdx).toBeGreaterThan(activatorIdx);
+    expect(bootIdx).toBeGreaterThan(observeIdx);
   });
 });

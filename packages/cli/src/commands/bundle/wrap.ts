@@ -25,6 +25,7 @@ import {
   generateWrapEntryServer,
   getNodeExternals,
 } from './bundler.js';
+import type { ObserveWeb } from '@walkeros/core';
 import type { WrapEntryPreview } from './bundler.js';
 import type { MinifyOptions } from '../../types/bundle.js';
 
@@ -76,9 +77,20 @@ export interface WrapSkeletonOptions {
    * using `createBatchedPoster`.
    *
    * Omit (or pass `level: 'off'`) to ship a bundle with zero telemetry
-   * plumbing.
+   * plumbing. Mutually exclusive with `observe`.
    */
   telemetry?: TelemetryBundleOptions;
+
+  /**
+   * Browser-only: STATIC observe connect config baked onto the startFlow
+   * config. PUBLIC values only (`url` + `binding`, plus optional
+   * `flowId`/`level`/`sample` scoping); the runtime connect module reads the
+   * per-session credential out-of-band at boot via the `elbObserve` slot.
+   * This is the preview-artifact observation wiring: unlike `telemetry`, it
+   * bakes no ingest token into the emitted bytes. Mutually exclusive with
+   * `telemetry`.
+   */
+  observe?: ObserveWeb;
 
   /**
    * esbuild target. @default 'es2018' for browser, 'node18' for node.
@@ -92,6 +104,14 @@ export interface WrapSkeletonOptions {
   minifyOptions?: MinifyOptions;
 }
 
+/**
+ * @deprecated Bakes a plaintext ingest token into the emitted (world-readable)
+ * bundle bytes. Use `WrapSkeletonOptions.observe` instead: it bakes only
+ * public connect values and the per-session credential arrives out-of-band at
+ * boot via the `elbObserve` slot. Its only production caller is the app's
+ * preview wrap, which moves to `observe` in F3'; this bake path is then
+ * retired.
+ */
 export interface TelemetryBundleOptions {
   /** Absolute ingest URL. POST receives JSON array of FlowState. */
   observerUrl: string;
@@ -182,6 +202,18 @@ export async function wrapSkeleton(
     );
   }
 
+  // The bake-nothing connect module and the baked-token telemetry block are
+  // mutually exclusive observer wirings (generateWrapEntry enforces the same
+  // invariant); surface the caller bug here at the app-facing boundary.
+  if (options.observe && options.telemetry) {
+    throw new Error(
+      'wrapSkeleton: `observe` (bake-nothing connect module) and `telemetry` ' +
+        '(baked ingest token) are mutually exclusive. Pass `observe` alone; ' +
+        'the per-session credential arrives out-of-band at boot instead of ' +
+        'being baked.',
+    );
+  }
+
   // previewOrigin is non-optional on WrapEntryPreview: an empty string is
   // still a config error (it bakes a broken `https:///preview/<art>.js` URL
   // into the bundle), so it must fail the same charset check as a malformed
@@ -244,6 +276,7 @@ export async function wrapSkeleton(
             : {}),
           platform,
           ...(telemetry ? { telemetry } : {}),
+          ...(options.observe ? { observe: options.observe } : {}),
         })
       : generateWrapEntryServer(absoluteSkeletonPath);
 
