@@ -1988,7 +1988,9 @@ export function readObserveConnect(
       ...(level === 'off' || level === 'standard' || level === 'trace'
         ? { level }
         : {}),
-      ...(typeof sample === 'number' && Number.isFinite(sample)
+      // Sample is a fraction in [0, 1] per the Flow.Observe contract; the
+      // range test also drops NaN and the infinities.
+      ...(typeof sample === 'number' && sample >= 0 && sample <= 1
         ? { sample }
         : {}),
     };

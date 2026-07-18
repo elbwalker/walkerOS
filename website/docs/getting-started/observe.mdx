@@ -117,7 +117,7 @@ Server deployments read their connect config from the environment:
 import { observeFromEnv } from '@walkeros/core';
 
 const { elb } = await startFlow({
-  // undefined unless all three variables are set: then zero observation work
+  // undefined unless all three variables are set; undefined means zero observation work
   observe: observeFromEnv(process.env),
   // ...your sources and destinations
 });`}

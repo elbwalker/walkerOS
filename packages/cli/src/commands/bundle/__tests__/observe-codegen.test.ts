@@ -123,6 +123,47 @@ describe('readObserveConnect', () => {
     ).toEqual({ url: 'https://obs.example', binding: 'pb_x', level: 'off' });
   });
 
+  it('keeps the sample range boundaries 0 and 1', () => {
+    for (const boundary of [0, 1]) {
+      expect(
+        readObserveConnect({
+          config: {
+            platform: 'web',
+            observe: {
+              url: 'https://obs.example',
+              binding: 'pb_x',
+              sample: boundary,
+            },
+          },
+        }),
+      ).toEqual({
+        url: 'https://obs.example',
+        binding: 'pb_x',
+        sample: boundary,
+      });
+    }
+  });
+
+  it('drops an out-of-range or non-finite sample (contract is [0, 1])', () => {
+    // The runtime clamps (>= 1 passes all, <= 0 passes none), so baking -1
+    // would silently mean "sample nothing"; garbage is dropped instead,
+    // like every other JSON-borne value that fails its shape check.
+    for (const bad of [-1, 1.5, 2, Number.NaN, Infinity, -Infinity]) {
+      expect(
+        readObserveConnect({
+          config: {
+            platform: 'web',
+            observe: {
+              url: 'https://obs.example',
+              binding: 'pb_x',
+              sample: bad,
+            },
+          },
+        }),
+      ).toEqual({ url: 'https://obs.example', binding: 'pb_x' });
+    }
+  });
+
   it('omits level and sample when the flow config does not set them', () => {
     expect(readObserveConnect(flowWithObserve)).toEqual({
       url: 'https://obs.example',

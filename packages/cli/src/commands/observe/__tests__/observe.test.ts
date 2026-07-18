@@ -567,6 +567,10 @@ describe('observeStartCommand', () => {
     // parseInt would read `10seconds` as 10; a unit typo like `5m` must not
     // silently become 5 seconds. Empty and non-finite values are equally out.
     for (const bad of ['10seconds', '5m', '', '  ', 'Infinity']) {
+      // Each case must prove its own rejection: the spies accumulate across
+      // iterations, so a stale message from a prior case could mask a miss.
+      consoleErrorSpy.mockClear();
+      exitSpy.mockClear();
       const calls = installFetch(() => json(armingSession, 201));
 
       await expect(
@@ -579,6 +583,7 @@ describe('observeStartCommand', () => {
 
       expect(calls).toHaveLength(0);
       expect(consoleErrorText()).toContain('Invalid --timeout');
+      expect(exitSpy).toHaveBeenCalledWith(1);
     }
   });
 
