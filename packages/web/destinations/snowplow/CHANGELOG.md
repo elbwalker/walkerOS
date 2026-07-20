@@ -1,5 +1,15 @@
 # @walkeros/web-destination-snowplow
 
+## 4.3.1
+
+### Patch Changes
+
+- Updated dependencies [f2030ab]
+- Updated dependencies [2d6ab82]
+- Updated dependencies [74eacdd]
+  - @walkeros/core@4.3.1
+  - @walkeros/web-core@4.3.1
+
 ## 4.3.0
 
 ### Patch Changes
