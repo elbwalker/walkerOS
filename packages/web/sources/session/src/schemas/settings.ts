@@ -1,4 +1,12 @@
 import { z, ClickIdEntrySchema } from '@walkeros/core/dev';
+import { Const } from '@walkeros/core';
+
+// Values sourced from core so a rename fails typecheck
+const StorageTypeEnum = z.enum([
+  Const.Utils.Storage.Local,
+  Const.Utils.Storage.Session,
+  Const.Utils.Storage.Cookie,
+]);
 
 /**
  * Session source settings schema
@@ -33,9 +41,7 @@ export const SettingsSchema = z.object({
     .describe('Storage key for session ID')
     .optional(),
 
-  sessionStorage: z
-    .enum(['local', 'session'])
-    .default('local')
+  sessionStorage: StorageTypeEnum.default('local')
     .describe('Storage type for session')
     .optional(),
 
@@ -45,9 +51,7 @@ export const SettingsSchema = z.object({
     .describe('Storage key for device ID')
     .optional(),
 
-  deviceStorage: z
-    .enum(['local', 'session'])
-    .default('local')
+  deviceStorage: StorageTypeEnum.default('local')
     .describe('Storage type for device')
     .optional(),
 
@@ -55,6 +59,13 @@ export const SettingsSchema = z.object({
     .number()
     .default(30)
     .describe('Device ID age in days')
+    .optional(),
+
+  domain: z
+    .string()
+    .describe(
+      "Cookie domain for session and device IDs, e.g. 'example.com' to share across subdomains (cookie storage only)",
+    )
     .optional(),
 
   // Note: Using z.any() because z.custom() cannot be converted to JSON Schema

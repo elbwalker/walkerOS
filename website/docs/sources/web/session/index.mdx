@@ -169,12 +169,15 @@ With `storage: true`, sessions persist across page loads:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Storage keys:**
+**Storage settings:**
 
-| Key | Default | Description |
+| Setting | Default | Description |
 |-----|---------|-------------|
-| `sessionKey` | `elbSessionId` | localStorage key for session ID |
-| `deviceKey` | `elbDeviceId` | localStorage key for device ID |
+| `sessionKey` | `elbSessionId` | Storage key for the session ID |
+| `deviceKey` | `elbDeviceId` | Storage key for the device ID |
+| `sessionStorage` | `local` | Storage type for the session ID (`local`, `session`, `cookie`) |
+| `deviceStorage` | `local` | Storage type for the device ID (`local`, `session`, `cookie`) |
+| `domain` | | Cookie domain, e.g. `example.com` to share IDs across subdomains (cookie storage only) |
 
 ## Session start event
 

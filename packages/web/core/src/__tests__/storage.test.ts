@@ -59,7 +59,7 @@ describe('Storage env injection', () => {
     };
 
     storageWrite('key', 'value', 30, 'session', undefined, env);
-    storageDelete('key', 'session', env);
+    storageDelete('key', 'session', undefined, env);
     expect(mockSession.removeItem).toHaveBeenCalledWith('key');
   });
 
@@ -169,8 +169,8 @@ describe('Storage error handling', () => {
         sessionStorage: throwingStorage('delete'),
       } as unknown as Window & typeof globalThis,
     };
-    expect(() => storageDelete('k', 'local', env)).not.toThrow();
-    expect(() => storageDelete('k', 'session', env)).not.toThrow();
+    expect(() => storageDelete('k', 'local', undefined, env)).not.toThrow();
+    expect(() => storageDelete('k', 'session', undefined, env)).not.toThrow();
   });
 
   test('cookie storageWrite does not throw when document.cookie setter throws', () => {
@@ -187,5 +187,37 @@ describe('Storage error handling', () => {
     expect(() =>
       storageWrite('k', 'v', 30, 'cookie', undefined, env),
     ).not.toThrow();
+  });
+});
+
+describe('Cookie domain', () => {
+  const createCookieEnv = () => {
+    const writes: string[] = [];
+    const env = {
+      document: {
+        get cookie() {
+          return writes[writes.length - 1] ?? '';
+        },
+        set cookie(val: string) {
+          writes.push(val);
+        },
+      } as unknown as Document,
+    };
+    return { env, writes };
+  };
+
+  test('storageWrite appends the domain attribute for cookies', () => {
+    const { env, writes } = createCookieEnv();
+    storageWrite('ck', 'val', 30, 'cookie', 'example.com', env);
+    expect(writes[0]).toContain('ck=val');
+    expect(writes[0]).toContain('domain=example.com');
+  });
+
+  test('storageDelete passes domain through to the expiry write', () => {
+    const { env, writes } = createCookieEnv();
+    storageDelete('ck', 'cookie', 'example.com', env);
+    expect(writes[0]).toContain('ck=');
+    expect(writes[0]).toContain('max-age=0');
+    expect(writes[0]).toContain('domain=example.com');
   });
 });
