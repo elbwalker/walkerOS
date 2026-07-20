@@ -11,7 +11,6 @@ export interface FormatResult {
 
 export interface PreviewPrintable {
   id: string;
-  token: string;
   activationUrl: string | null;
   bundleUrl: string;
   createdBy: string;
@@ -24,11 +23,11 @@ export function formatPreviewCreated(
 ): FormatResult {
   // The activation URL is always server-minted: an app-signed, origin-bound
   // grant. The CLI cannot forge one for an arbitrary origin, so it never
-  // reconstructs it client-side and never puts the raw ingest token in a URL.
-  // For --url, createPreview already re-minted it for the target origin, so we
-  // echo it verbatim here. Without --url the server may not have minted a
-  // grant for any site yet (activationUrl null); point at --url instead of
-  // printing a literal "null".
+  // reconstructs it client-side (the response carries no raw token to build
+  // one from). For --url, createPreview already re-minted it for the target
+  // origin, so we echo it verbatim here. Without --url the server may not
+  // have minted a grant for any site yet (activationUrl null); point at
+  // --url instead of printing a literal "null".
   const stdoutLast = preview.activationUrl;
   let deactivationUrl: string | null = null;
 
@@ -42,7 +41,6 @@ export function formatPreviewCreated(
 
   const lines = [
     `Preview created (${preview.id})`,
-    `  Token:      ${preview.token}`,
     `  Created by: ${preview.createdBy}`,
     `  Bundle URL: ${preview.bundleUrl}`,
     '',

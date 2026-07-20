@@ -14,10 +14,11 @@ export interface Settings extends SessionConfig {
   // - storage?: boolean
   // - cb?: SessionCallback | false
   // - pulse?: boolean
-  // - sessionStorage?: 'local' | 'session'
-  // - deviceStorage?: 'local' | 'session'
+  // - sessionStorage?: 'local' | 'session' | 'cookie'
+  // - deviceStorage?: 'local' | 'session' | 'cookie'
   // - sessionKey?: string
   // - deviceKey?: string
+  // - domain?: string (cookie domain, shared across subdomains)
   // - length?: number (session timeout in minutes)
 }
 

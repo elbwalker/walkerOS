@@ -15,12 +15,13 @@ export interface StorageEnv {
 export function storageDelete(
   key: string,
   storage: StorageType = Const.Utils.Storage.Session,
+  domain?: string,
   env?: StorageEnv,
 ) {
   try {
     switch (storage) {
       case Const.Utils.Storage.Cookie:
-        storageWrite(key, '', 0, storage, undefined, env);
+        storageWrite(key, '', 0, storage, domain, env);
         break;
       case Const.Utils.Storage.Local:
         (env?.window ?? window).localStorage.removeItem(key);
@@ -86,7 +87,7 @@ export function storageRead(
     value = item.v;
 
     if (item.e != 0 && item.e < Date.now()) {
-      storageDelete(key, storage, env);
+      storageDelete(key, storage, undefined, env);
       value = ''; // Conceal the outdated value
     }
   }

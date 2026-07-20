@@ -207,15 +207,16 @@ callback --> returnSession
 
 Additional config parameters for storage-based session detection:
 
-| Property       | Type    | Description                                                  | Default      |
-| -------------- | ------- | ------------------------------------------------------------ | ------------ |
-| deviceKey      | string  | The key to store the device ID in the storage                | elbDeviceId  |
-| deviceStorage  | string  | The storage type to use for the device id                    | local        |
-| deviceAge      | number  | The age in days to consider the device ID as expired         | 30           |
-| sessionKey     | string  | The key to store the session ID in the storage               | elbSessionId |
-| sessionStorage | string  | The storage type to use for the session id                   | local        |
-| length         | number  | Minutes after the last update to consider session as expired | 30           |
-| pulse          | boolean | Update the current session to stay active                    | false        |
+| Property       | Type    | Description                                                                   | Default      |
+| -------------- | ------- | ----------------------------------------------------------------------------- | ------------ |
+| deviceKey      | string  | The key to store the device ID in the storage                                 | elbDeviceId  |
+| deviceStorage  | string  | The storage type for the device ID (`local`, `session`, `cookie`)             | local        |
+| deviceAge      | number  | The age in days to consider the device ID as expired                          | 30           |
+| sessionKey     | string  | The key to store the session ID in the storage                                | elbSessionId |
+| sessionStorage | string  | The storage type for the session ID (`local`, `session`, `cookie`)            | local        |
+| domain         | string  | Cookie domain, e.g. `example.com` to share IDs across subdomains (cookie only) |              |
+| length         | number  | Minutes after the last update to consider session as expired                  | 30           |
+| pulse          | boolean | Update the current session to stay active                                     | false        |
 
 :::info
 
@@ -223,6 +224,27 @@ There are additional config parameters for [sessionWindow](#sessionwindow)
 available.
 
 :::
+
+#### Cookie storage
+
+Set `deviceStorage` and/or `sessionStorage` to `cookie` to persist the IDs as
+cookies. Use `domain` to set the cookie on a parent domain so all subdomains
+share the same session and device IDs:
+
+<CodeSnippet
+  code={`sessionStart({
+  storage: true,
+  deviceStorage: 'cookie',
+  sessionStorage: 'cookie',
+  domain: 'example.com', // Shared across www.example.com, shop.example.com, ...
+});`}
+  language="javascript"
+/>
+
+Without `domain`, cookies are host-only and bound to the exact (sub)domain that
+set them. When adding `domain` to an existing setup, previously written
+host-only cookies remain until they expire, so both variants can coexist
+temporarily.
 
 ### Detection process
 

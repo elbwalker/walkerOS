@@ -12,6 +12,7 @@ export interface SessionStorageConfig extends SessionWindowConfig {
   deviceAge?: number;
   sessionKey?: string;
   sessionStorage?: StorageType;
+  domain?: string; // Cookie domain to share IDs across subdomains ('cookie' storage only)
   length?: number; // Minutes after last update to consider session as expired (default: 30)
   pulse?: boolean;
 }
@@ -27,6 +28,7 @@ export function sessionStorage(
     deviceAge = 30, // Device ID age in days
     sessionKey = 'elbSessionId',
     sessionStorage = 'local',
+    domain,
     pulse = false, // Handle the counting
   } = config;
   const storageEnv: StorageEnv | undefined =
@@ -41,7 +43,7 @@ export function sessionStorage(
     let id = storageRead(key, storage, storageEnv);
     if (!id) {
       id = getId(16); // Create a new device ID
-      storageWrite(key, id, age * 1440, storage, undefined, storageEnv); // Write device ID to storage
+      storageWrite(key, id, age * 1440, storage, domain, storageEnv); // Write device ID to storage
     }
     return String(id);
   })(deviceKey, deviceAge, deviceStorage);
@@ -113,7 +115,7 @@ export function sessionStorage(
     JSON.stringify(session),
     length * 2,
     sessionStorage,
-    undefined,
+    domain,
     storageEnv,
   );
 

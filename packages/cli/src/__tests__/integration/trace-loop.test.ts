@@ -7,7 +7,8 @@
  *
  * This test stands up a minimal Node `http` server playing the observer:
  *   GET  /trace/:id   -> returns `{ traceUntil: <seeded value> }`
- *   POST /ingest/:id  -> captures the posted FlowState records
+ *   POST /ingest/:id  -> captures FlowState records posted inside the
+ *                        versioned `{ v: 1, records }` ingest envelope
  *
  * It then drives the REAL composition `pipeline.ts buildTelemetryObservers`
  * uses, over real HTTP, with the global `fetch`:
@@ -71,6 +72,8 @@ interface StubObserver {
   base: string;
   /** Records posted to /ingest/:id, in arrival order, flattened across batches. */
   ingested: FlowState[];
+  /** Raw POST bodies that failed the `{ v: 1, records }` envelope check. */
+  rejectedBodies: string[];
   /** Flip the value the next GET /trace/:id returns. */
   setTraceUntil(value: string | null): void;
   close(): Promise<void>;
@@ -83,6 +86,7 @@ interface StubObserver {
 async function startStubObserver(): Promise<StubObserver> {
   let seededTraceUntil: string | null = null;
   const ingested: FlowState[] = [];
+  const rejectedBodies: string[] = [];
 
   const server: Server = createServer((req, res) => {
     void (async () => {
@@ -103,11 +107,16 @@ async function startStubObserver(): Promise<StubObserver> {
 
       if (req.method === 'POST' && url === `/ingest/${DEPLOYMENT_ID}`) {
         const body = await readBody(req);
-        const parsed: unknown = body.length > 0 ? JSON.parse(body) : [];
-        if (Array.isArray(parsed)) {
-          for (const record of parsed) {
+        const parsed: unknown = body.length > 0 ? JSON.parse(body) : null;
+        // The wire is the versioned `{ v: 1, records }` envelope; anything
+        // else (bare arrays included) is captured as rejected so the tests
+        // can assert the poster never posts a malformed body.
+        if (isIngestEnvelope(parsed)) {
+          for (const record of parsed.records) {
             if (isFlowState(record)) ingested.push(record);
           }
+        } else {
+          rejectedBodies.push(body);
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
@@ -132,6 +141,7 @@ async function startStubObserver(): Promise<StubObserver> {
   return {
     base,
     ingested,
+    rejectedBodies,
     setTraceUntil(value: string | null): void {
       seededTraceUntil = value;
     },
@@ -141,6 +151,18 @@ async function startStubObserver(): Promise<StubObserver> {
       );
     },
   };
+}
+
+/**
+ * Narrow a parsed JSON value to the versioned ingest envelope the batched
+ * poster emits. Records are narrowed individually via `isFlowState`.
+ */
+function isIngestEnvelope(
+  value: unknown,
+): value is { v: 1; records: unknown[] } {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('v' in value) || !('records' in value)) return false;
+  return value.v === 1 && Array.isArray(value.records);
 }
 
 /** Narrow a parsed JSON value to a FlowState (validates the load-bearing fields). */
@@ -280,6 +302,10 @@ describe('server trace loop (local, stub observer)', () => {
     expect(disabledRecord?.inEvent).toBeUndefined();
     expect(disabledRecord?.outEvent).toBeUndefined();
     expect(disabledRecord?.mappingKey).toBeUndefined();
+
+    // Every POST body across all three phases was a valid {v:1, records}
+    // envelope; a bare array (or any other shape) would land here.
+    expect(stub.rejectedBodies).toEqual([]);
   });
 
   it('would go red if the supplier ignored the traceUntil holder', async () => {
@@ -311,5 +337,7 @@ describe('server trace loop (local, stub observer)', () => {
     // window in the holder.
     expect(record?.inEvent).toBeUndefined();
     expect(record?.outEvent).toBeUndefined();
+    // The body arrived as a valid {v:1, records} envelope.
+    expect(stub.rejectedBodies).toEqual([]);
   });
 });

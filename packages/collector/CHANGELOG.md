@@ -1,5 +1,24 @@
 # @walkeros/collector
 
+## 4.3.1
+
+### Patch Changes
+
+- f2030ab: Push results now report when an event was intentionally dropped by a
+  transformer chain, via a new `PushResult.dropped` flag, instead of a drop
+  looking identical to a normal delivery. The chain result also names which
+  transformer stopped the chain (`ChainResult.droppedBy`), and the collector
+  logs the drop at debug level.
+- 2d6ab82: Connect a running flow to an observation session and watch its live
+  events from web, server, or bundled runtimes. Commit only a public observer
+  URL and project binding; the per-session credential arrives out-of-band, so no
+  secrets land in code or artifacts. Ingest posts carry a versioned envelope
+  with release provenance, and `walkeros observe start` opens sessions from the
+  terminal.
+- Updated dependencies [f2030ab]
+- Updated dependencies [2d6ab82]
+  - @walkeros/core@4.3.1
+
 ## 4.3.0
 
 ### Minor Changes

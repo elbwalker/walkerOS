@@ -276,11 +276,13 @@ walkeros validate flow.json
 
 The contract validator checks:
 
-- `tagging` is a non-negative integer (if present)
+- The root is an object of named contract entries; a flat entity-action map or a `$`-prefixed root key is rejected as the flat shape
+- `tagging` is a number (if present)
 - `extend` references exist and are not circular
 - Entity and action keys are non-empty
 - `schema`, if present, is a valid JSON Schema object
 - Each event entry is a valid JSON Schema object
+- A key outside `extend`, `tagging`, `description`, `events`, `schema` is a warning, not an error
 
 <details>
 <summary>Advanced: shared schema fragments via `variables`</summary>

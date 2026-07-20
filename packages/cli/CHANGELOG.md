@@ -1,5 +1,33 @@
 # @walkeros/cli
 
+## 4.3.1
+
+### Patch Changes
+
+- f2030ab: `walkeros validate --type contract` now rejects the flat contract
+  shape (a bare entity-action map, or a `$`-prefixed root key) with a
+  `FLAT_CONTRACT_SHAPE` error, and warns on unrecognized keys instead of
+  ignoring them. Rule-level `tagging` and `schema` fields are also checked for
+  their expected types.
+- 2d6ab82: Connect a running flow to an observation session and watch its live
+  events from web, server, or bundled runtimes. Commit only a public observer
+  URL and project binding; the per-session credential arrives out-of-band, so no
+  secrets land in code or artifacts. Ingest posts carry a versioned envelope
+  with release provenance, and `walkeros observe start` opens sessions from the
+  terminal.
+- 747e42f: The deprecated telemetry bundle options that baked a plaintext ingest
+  token into wrapped browser bundles are removed; observation wiring now always
+  uses the bake-nothing `observe` connect config. `walkeros observe start` sends
+  `level` and `replace`, renders the activation URL, web credential, server env
+  block, expiry, and record count, and keeps the session warm while waiting.
+- Updated dependencies [f2030ab]
+- Updated dependencies [2d6ab82]
+  - @walkeros/core@4.3.1
+  - @walkeros/collector@4.3.1
+  - @walkeros/server-core@4.3.1
+  - @walkeros/server-destination-api@4.3.1
+  - @walkeros/transformer-validate@4.3.1
+
 ## 4.3.0
 
 ### Minor Changes

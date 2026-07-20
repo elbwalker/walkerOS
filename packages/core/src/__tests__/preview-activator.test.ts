@@ -300,6 +300,82 @@ describe('browserSwapActivator', () => {
       expect(localStorage.getItem('elbPreviewSession')).toBeNull();
     });
   });
+
+  // The elbObserve companion is a PLAINTEXT BEARER credential riding the
+  // activation URL. The activator NEVER verifies it (the observer is its
+  // verifier): it only ferries it into storage on activation success, strips
+  // it from the URL (the load-bearing leak prevention), and ties its
+  // lifecycle to the activation slots exactly like elbPreviewSession.
+  describe('observe ingest companion (elbObserve)', () => {
+    it('stripParam removes elbObserve alongside the preview params while keeping innocent params', async () => {
+      const { cfg, sign } = await setup();
+      const stop = autoResolveScripts(true);
+      setUrl(
+        `?elbPreview=${await sign()}&elbObserve=obsw_pb.ses.secret&keep=1`,
+      );
+
+      expect(await browserSwapActivator(cfg)).toBe(true);
+      expect(window.location.search).toBe('?keep=1');
+      stop();
+    });
+
+    it('a successful URL activation ferries the elbObserve companion into the elbObserve slot', async () => {
+      const { cfg, sign } = await setup();
+      const stop = autoResolveScripts(true);
+      setUrl(`?elbPreview=${await sign()}&elbObserve=obsw_pb.ses.secret`);
+
+      expect(await browserSwapActivator(cfg)).toBe(true);
+      expect(localStorage.getItem('elbObserve')).toBe('obsw_pb.ses.secret');
+      stop();
+    });
+
+    it('a rejected URL activation never clears an existing stored elbObserve slot (anti-griefing)', async () => {
+      const { cfg, sign } = await setup();
+      const stored = await sign();
+      localStorage.setItem('elbPreview', stored);
+      localStorage.setItem('elbObserve', 'obsw_pb.ses.kept');
+      setUrl('?elbPreview=garbage&elbObserve=obsw_pb.ses.hostile');
+      const stop = autoResolveScripts(true);
+
+      expect(await browserSwapActivator(cfg)).toBe(true);
+      expect(localStorage.getItem('elbPreview')).toBe(stored);
+      expect(localStorage.getItem('elbObserve')).toBe('obsw_pb.ses.kept');
+      stop();
+    });
+
+    it('clears a stale elbObserve companion when a fresh activation arrives without one', async () => {
+      const { cfg, sign } = await setup();
+      localStorage.setItem('elbObserve', 'obsw_pb.ses.stale');
+      const stop = autoResolveScripts(true);
+      setUrl(`?elbPreview=${await sign()}`);
+
+      expect(await browserSwapActivator(cfg)).toBe(true);
+      expect(localStorage.getItem('elbObserve')).toBeNull();
+      stop();
+    });
+
+    it('clears the elbObserve slot on ?elbPreview=off', async () => {
+      const { cfg, sign } = await setup();
+      localStorage.setItem('elbPreview', await sign());
+      localStorage.setItem('elbObserve', 'obsw_pb.ses.secret');
+      setUrl('?elbPreview=off');
+
+      expect(await browserSwapActivator(cfg)).toBe(false);
+      expect(localStorage.getItem('elbObserve')).toBeNull();
+    });
+
+    it('clears the elbObserve slot when the STORED grant fails verification (self-heal)', async () => {
+      const { cfg, sign } = await setup();
+      localStorage.setItem(
+        'elbPreview',
+        await sign({ aud: ['https://other.example.com'] }),
+      );
+      localStorage.setItem('elbObserve', 'obsw_pb.ses.secret');
+
+      expect(await browserSwapActivator(cfg)).toBe(false);
+      expect(localStorage.getItem('elbObserve')).toBeNull();
+    });
+  });
 });
 
 describe('parseGrant art charset', () => {

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "3.1.0",
+    "version": "4.0.0",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -2192,13 +2192,6 @@
           "projectId": {
             "type": "string"
           },
-          "token": {
-            "type": "string",
-            "minLength": 12,
-            "maxLength": 12,
-            "pattern": "^[a-z0-9]+$",
-            "example": "k9x2m4p7abcd"
-          },
           "bundleUrl": {
             "type": "string",
             "format": "uri"
@@ -2219,7 +2212,6 @@
           "flowId",
           "flowSettingsId",
           "projectId",
-          "token",
           "bundleUrl",
           "activationUrl",
           "createdBy",
@@ -2371,6 +2363,17 @@
           "web": {
             "$ref": "#/components/schemas/ObserveSessionWeb"
           },
+          "server": {
+            "$ref": "#/components/schemas/ObserveSessionServer"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recordsReceived": {
+            "type": "integer",
+            "minimum": 0
+          },
           "createdBy": {
             "type": "string"
           },
@@ -2390,6 +2393,9 @@
           "serverFlowName",
           "serverEndpoint",
           "web",
+          "server",
+          "expiresAt",
+          "recordsReceived",
           "createdBy",
           "createdAt"
         ]
@@ -2397,10 +2403,11 @@
       "ObserveSessionWeb": {
         "type": ["object", "null"],
         "properties": {
-          "previewId": {
-            "type": "string"
+          "activationUrl": {
+            "type": ["string", "null"],
+            "format": "uri"
           },
-          "token": {
+          "credential": {
             "type": "string"
           },
           "previewEnabled": {
@@ -2411,7 +2418,45 @@
             "format": "uri"
           }
         },
-        "required": ["previewId", "token", "previewEnabled", "bundleUrl"]
+        "required": [
+          "activationUrl",
+          "credential",
+          "previewEnabled",
+          "bundleUrl"
+        ]
+      },
+      "ObserveSessionServer": {
+        "type": ["object", "null"],
+        "properties": {
+          "endpoint": {
+            "type": ["string", "null"],
+            "format": "uri"
+          },
+          "env": {
+            "$ref": "#/components/schemas/ObserveSessionServerEnv"
+          }
+        },
+        "required": ["endpoint", "env"]
+      },
+      "ObserveSessionServerEnv": {
+        "type": "object",
+        "properties": {
+          "WALKEROS_OBSERVER_URL": {
+            "type": "string",
+            "format": "uri"
+          },
+          "WALKEROS_DEPLOYMENT_ID": {
+            "type": "string"
+          },
+          "WALKEROS_INGEST_TOKEN": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "WALKEROS_OBSERVER_URL",
+          "WALKEROS_DEPLOYMENT_ID",
+          "WALKEROS_INGEST_TOKEN"
+        ]
       },
       "ObserveSessionJourneysResponse": {
         "type": "object",
@@ -2456,9 +2501,28 @@
           },
           "force": {
             "type": "boolean"
+          },
+          "replace": {
+            "type": "boolean"
+          },
+          "level": {
+            "$ref": "#/components/schemas/ObserveLevel"
+          },
+          "origins": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 253,
+              "example": "https://shop.example.com"
+            },
+            "maxItems": 20
           }
         },
         "required": ["settingsName"]
+      },
+      "ObserveLevel": {
+        "type": "string",
+        "enum": ["off", "standard", "trace"]
       },
       "ObserveSessionHeartbeatResponse": {
         "type": "object",

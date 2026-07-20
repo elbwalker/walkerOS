@@ -1,0 +1,196 @@
+---
+title: Observe
+description: Watch live events from a running flow, web or server
+sidebar_position: 8
+---
+
+# Observe
+
+You can verify a flow at three levels, each one step closer to production:
+
+1. **Simulate**: run an event through the built flow offline, with
+   destinations mocked, see [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
+2. **Preview**: open your page in the browser and watch events locally, see
+   [integrated mode](/docs/getting-started/modes/integrated#see-your-event).
+3. **Observe**: attach a running flow to an observation session and watch its
+   live records arrive in a feed, from any browser or server deployment.
+
+This page covers the third rung: connecting a flow to an observer.
+
+## What you commit vs what arrives later
+
+Your code and config carry only public connect values: the observer `url` and
+the project `binding`. Neither is a secret, both are safe to commit.
+
+The per-session credential arrives out-of-band: as a URL parameter in the
+browser, or as environment variables on the server. **No credentials ever live
+in committed artifacts**, not in `flow.json`, not in a built bundle, not in
+your application code.
+
+## Web, integrated mode
+
+Add the public connect pair to `startFlow`:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+const { elb } = await startFlow({
+  sources: {
+    browser: { code: sourceBrowser, config: { settings: { pageview: true } } },
+  },
+  observe: {
+    url: 'https://observer.example.com', // public, safe to commit
+    binding: 'pb_x', // public project binding, safe to commit
+  },
+});`}
+  language="typescript"
+/>
+
+Then open your dev URL with a session credential appended:
+
+<CodeSnippet
+  code={`https://localhost:3000/?elbObserve=obsw_pb_x.ses_9.sec_1`}
+  language="text"
+/>
+
+On load, the runtime checks that the credential's binding matches the one in
+your config, persists the credential in the browser, removes the parameter
+from the address bar, and starts posting flow records to the observer. Later
+page loads reuse the stored credential, so one activation covers a whole
+browsing session.
+
+Without a credential, the same page does zero observation work: nothing is
+parsed, stored, or sent. When the session ends, the observer rejects the next
+post and the runtime detaches and clears the stored credential on its own.
+
+## Web, bundled mode
+
+The same connect pair goes into `flow.json` under `config.observe`:
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "web",
+        "observe": {
+          "url": "https://observer.example.com",
+          "binding": "pb_x"
+        },
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {},
+            "@walkeros/web-source-browser": {}
+          }
+        }
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": { "settings": { "pageview": true } }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Build once:
+
+<CodeSnippet code={`walkeros bundle flow.json -o ./dist/walker.js`} language="bash" />
+
+The bundle carries only the public pair. `url` and `binding` must both be set:
+a partial pair warns at build time and wires nothing. Activation works exactly
+as in integrated mode, via the `?elbObserve=` parameter on any page that loads
+the bundle.
+
+## Server
+
+Server deployments read their connect config from the environment:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { observeFromEnv } from '@walkeros/core';
+
+const { elb } = await startFlow({
+  // undefined unless all three variables are set; undefined means zero observation work
+  observe: observeFromEnv(process.env),
+  // ...your sources and destinations
+});`}
+  language="typescript"
+/>
+
+Set the environment on the deployment, never in code or config files:
+
+<CodeSnippet
+  code={`WALKEROS_OBSERVER_URL=https://observer.example.com
+WALKEROS_DEPLOYMENT_ID=ses_1a2b3c
+WALKEROS_INGEST_TOKEN=... # secret, inject via deployment env only
+WALKEROS_OBSERVE_LEVEL=standard # optional: off | standard | trace`}
+  language="bash"
+/>
+
+`observeFromEnv` returns a config only when the full trio (`URL`,
+`DEPLOYMENT_ID`, `INGEST_TOKEN`) is present; otherwise it returns `undefined`
+and the deployment does no observation work. A set but unrecognized
+`WALKEROS_OBSERVE_LEVEL` (a typo like `offf`) also disables observation
+entirely rather than silently observing at `standard`. The ingest token is
+the one secret in this setup, which is why it lives in the deployment
+environment and nowhere else.
+
+## Connect values vs telemetry knobs
+
+The `observe` block carries two kinds of fields, and they answer different
+questions:
+
+| Fields | Question | Who sets them |
+| --- | --- | --- |
+| `url`, `binding` | Where to attach, and which project may attach | You, committed once |
+| `level`, `sample` | How verbose managed telemetry is, and what fraction of records it emits | The managing platform, per deployment |
+
+The web connect pair is `url` and `binding`, nothing else. `level`
+(`off` | `standard` | `trace`) and `sample` (a fraction from 0 to 1) are
+managed-telemetry knobs: leave them unset in your own config and let the
+session decide what gets captured. On the server, `WALKEROS_OBSERVE_LEVEL` is
+the same knob in environment form.
+
+## Bring your own observer
+
+Observation is an open channel, not a hosted-only feature. Any function can
+receive the same flow records via `observers`:
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  observers: [
+    (state) => console.log('flow state', state.stepId, state.phase),
+  ],
+});`}
+  language="typescript"
+/>
+
+Observers are advisory by contract: they run inside the collector's emit loop,
+and a throwing observer never breaks event processing. Use this to stream
+records to your own endpoint, a log pipeline, or a test assertion.
+
+## Starting a session
+
+:::cloud
+Observation sessions with a live feed and minted per-session credentials are
+part of the hosted app; `walkeros observe start <flowId>` mints one from the
+terminal and prints the web activation link (the `?elbObserve=` credential
+already appended), the server environment trio, the session expiry, and the
+received-record count, while sessions themselves live server-side and idle
+out when nothing keeps them alive. Self-hosting? The `observers` escape hatch
+above streams the same records to any function or endpoint you control.
+[What Cloud adds](https://app.walkeros.io)
+:::
+
+## Next steps
+
+- [Deploy](/docs/getting-started/deploy): take the flow to production first
+- [Bundled mode](/docs/getting-started/modes/bundled): the `flow.json` workflow
+- [Collector reference](/docs/collector): full `startFlow()` API documentation

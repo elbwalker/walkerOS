@@ -783,7 +783,7 @@ Before bundling or deploying your flow, you want to:
 - Catch configuration errors early
 - Verify event structure follows walkerOS conventions
 - Check mapping patterns are valid
-- Validate contracts define proper entity-action schemas
+- Validate contracts follow the named-entry shape, with entity-action schemas nested under `events`
 - Validate a specific destination, source, or transformer entry against its package's published JSON Schema
 - Integrate validation into CI/CD pipelines
 
@@ -818,7 +818,7 @@ The `--type` option accepts four validation types. Default is `flow`:
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
 | `flow` (default) | Flow.Json config: schema, references, packages, and cross-step example compatibility |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
-| `contract` | Contract structure: entity-action entries map to JSON Schema objects, optional `$tagging` metadata |
+| `contract` | Contract structure: named entries with optional `extend`, `tagging`, `description`, `events`, and `schema` fields |
 
 Use `--path` for entry validation against package schemas (e.g., `--path destinations.snowplow`).
 
@@ -1003,20 +1003,27 @@ walkeros validate '{
 
 Contract validation checks (see [contract.ts](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/src/commands/validate/validators/contract.ts)):
 
-1. **Root structure** - Must be an object (not array or primitive)
-2. **`$tagging` metadata** - If present, must be a non-negative integer
-3. **Entity keys** - Cannot be empty strings
-4. **Action entries** - Each entity must contain an object of action entries
-5. **Schema entries** - Each action value must be a JSON Schema object
+1. **Root structure** - Must be an object of named contract entries, not an array or primitive
+2. **Named-entry shape enforced** - A flat entity-action map, or a `$`-prefixed root key, is rejected as the flat shape
+3. **Unknown keys** - A key on a contract entry outside `extend`, `tagging`, `description`, `events`, `schema` is a warning, not an error
+4. **`tagging`** - If present, must be a number
+5. **`schema`** - If present, must be a JSON Schema object
+6. **`extend`** - Must reference an existing contract entry; circular chains are rejected
+7. **Entity and action keys** - Cannot be empty strings
+8. **Event entries** - Each `events.<entity>.<action>` value must be a JSON Schema object
 
 <CodeSnippet
   code={`# Valid contract
 walkeros validate '{
-  "page": {
-    "view": {
-      "type": "object",
-      "properties": {
-        "title": { "type": "string" }
+  "web": {
+    "tagging": 1,
+    "events": {
+      "page": {
+        "view": {
+          "properties": {
+            "title": { "type": "string" }
+          }
+        }
       }
     }
   }

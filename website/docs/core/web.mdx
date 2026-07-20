@@ -142,7 +142,7 @@ data from browser storage with automatic type conversion.
 const userId = storageRead('walker_user_id');
 
 // Use sessionStorage
-const sessionData = storageRead('session_data', 'sessionStorage');`}
+const sessionData = storageRead('session_data', 'session');`}
   language="javascript"
 />
 
@@ -156,7 +156,7 @@ writes data to storage with expiration and domain options.
 storageWrite('user_preference', 'dark-mode', 30);
 
 // Store in sessionStorage
-storageWrite('temp_data', { id: 123 }, undefined, 'sessionStorage');
+storageWrite('temp_data', { id: 123 }, undefined, 'session');
 
 // Store with custom domain for cookies
 storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');`}
@@ -165,11 +165,14 @@ storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');`}
 
 #### storageDelete
 
-`storageDelete(key: string, storage?: StorageType, env?: StorageEnv)` removes data from storage.
+`storageDelete(key: string, storage?: StorageType, domain?: string, env?: StorageEnv)` removes data from storage.
 
 <CodeSnippet
   code={`storageDelete('expired_data');
-storageDelete('session_temp', 'sessionStorage');`}
+storageDelete('session_temp', 'session');
+
+// Delete a cookie that was written with a domain attribute
+storageDelete('tracking_id', 'cookie', 'example.com');`}
   language="javascript"
 />
 

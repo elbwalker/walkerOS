@@ -7,6 +7,7 @@ import {
   type PreviewKey,
   type VerifyParams,
 } from '../preview';
+import type { FlowState } from '../types/telemetry';
 import { webcrypto } from 'node:crypto';
 
 const b64url = (s: string) => Buffer.from(s).toString('base64url');
@@ -466,5 +467,24 @@ describe('verifyActivation', () => {
     const grant = { ...base, iat: nearFutureIat, sxp: nearFutureIat + 3600 };
     const result = await verifyActivation(await sign(grant), params());
     expect(result.ok).toBe(true);
+  });
+});
+
+describe('FlowState release provenance', () => {
+  it('carries an optional release provenance string', () => {
+    // Compile-time contract: `release` is stamped by the wiring layer (like
+    // `seq` is stamped by the poster), never by emitting sites, so the field
+    // must exist on FlowState and stay optional.
+    const state: FlowState = {
+      flowId: 'flow_1',
+      stepId: 'collector.push',
+      stepType: 'collector',
+      phase: 'in',
+      eventId: 'evt_1',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      elapsedMs: 0,
+      release: 'dep_abc',
+    };
+    expect(state.release).toBe('dep_abc');
   });
 });

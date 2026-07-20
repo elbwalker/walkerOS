@@ -51,8 +51,17 @@ function fail(status: number): PosterResponse {
   return { ok: false, status };
 }
 
-function readBody(init: CapturedCall['init']): FlowState[] {
+interface IngestBody {
+  v: number;
+  records: FlowState[];
+}
+
+function readEnvelope(init: CapturedCall['init']): IngestBody {
   return JSON.parse(init.body);
+}
+
+function readBody(init: CapturedCall['init']): FlowState[] {
+  return readEnvelope(init).records;
 }
 
 /**
@@ -153,12 +162,14 @@ describe('createBatchedPoster seq + size split', () => {
 
     expect(harness.callCount()).toBeGreaterThan(1);
 
-    // Every chunk parses to an array; multi-record chunks stay within the
-    // limit (single-record chunks are allowed to exceed it).
+    // Every chunk parses to a complete versioned envelope; multi-record
+    // chunks stay within the limit measured on the full wrapped body
+    // (single-record chunks are allowed to exceed it).
     for (const call of harness.calls) {
-      const body = readBody(call.init);
-      expect(Array.isArray(body)).toBe(true);
-      if (body.length > 1) {
+      const envelope = readEnvelope(call.init);
+      expect(envelope.v).toBe(1);
+      expect(Array.isArray(envelope.records)).toBe(true);
+      if (envelope.records.length > 1) {
         expect(call.init.body.length).toBeLessThanOrEqual(maxBodyBytes);
       }
     }
@@ -190,13 +201,15 @@ describe('createBatchedPoster seq + size split', () => {
     const recB = makeState('cjk1');
     recB.meta = { text: 'あ'.repeat(cjkPerRecord) };
 
-    // Precondition: the stamped batch is under the limit in UTF-16 code
-    // units but over it in UTF-8 bytes (each CJK char adds 2 extra bytes).
+    // Precondition: the stamped WRAPPED body (the split limit is enforced
+    // on the full envelope serialization) is under the limit in UTF-16
+    // code units but over it in UTF-8 bytes (each CJK char adds 2 extra
+    // bytes).
     const stamped: FlowState[] = [
       { ...recA, seq: 1 },
       { ...recB, seq: 2 },
     ];
-    const json = JSON.stringify(stamped);
+    const json = JSON.stringify({ v: 1, records: stamped });
     const utf8Bytes = json.length + 2 * (2 * cjkPerRecord);
     expect(json.length).toBeLessThanOrEqual(maxBodyBytes);
     expect(utf8Bytes).toBeGreaterThan(maxBodyBytes);

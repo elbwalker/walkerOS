@@ -1,5 +1,16 @@
 # @walkeros/mcp
 
+## 4.3.1
+
+### Patch Changes
+
+- Updated dependencies [f2030ab]
+- Updated dependencies [f2030ab]
+- Updated dependencies [2d6ab82]
+- Updated dependencies [747e42f]
+  - @walkeros/cli@4.3.1
+  - @walkeros/core@4.3.1
+
 ## 4.3.0
 
 ### Minor Changes

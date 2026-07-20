@@ -357,4 +357,29 @@ describe('SessionStorage', () => {
     expect(mockStorageWrite.mock.calls[0][2]).toBe(60480); // 42 days in minutes
     expect(mockStorageWrite.mock.calls[1][2]).toBe(120); // double the session length
   });
+
+  test('Cookie storage with domain', () => {
+    sessionStorage({
+      deviceStorage: 'cookie',
+      sessionStorage: 'cookie',
+      domain: 'example.com',
+    });
+
+    expect(mockStorageWrite).toHaveBeenCalledWith(
+      'elbDeviceId',
+      expect.any(String),
+      43200, // 30 days in minutes
+      'cookie',
+      'example.com',
+      undefined,
+    );
+    expect(mockStorageWrite).toHaveBeenCalledWith(
+      'elbSessionId',
+      expect.any(String),
+      60, // double the default session length
+      'cookie',
+      'example.com',
+      undefined,
+    );
+  });
 });

@@ -25,6 +25,7 @@ import {
   generateWrapEntryServer,
   getNodeExternals,
 } from './bundler.js';
+import type { ObserveWeb } from '@walkeros/core';
 import type { WrapEntryPreview } from './bundler.js';
 import type { MinifyOptions } from '../../types/bundle.js';
 
@@ -70,15 +71,14 @@ export interface WrapSkeletonOptions {
   previewGrantTargets?: string[];
 
   /**
-   * Browser-only: telemetry wiring. When provided, the wrapped bundle
-   * installs an observer built via `createTelemetryObserver` onto
-   * `collector.observers` and forwards FlowState records to `observerUrl`
-   * using `createBatchedPoster`.
-   *
-   * Omit (or pass `level: 'off'`) to ship a bundle with zero telemetry
-   * plumbing.
+   * Browser-only: STATIC observe connect config baked onto the startFlow
+   * config. PUBLIC values only (`url` + `binding`, plus optional
+   * `flowId`/`level`/`sample` scoping); the runtime connect module reads the
+   * per-session credential out-of-band at boot via the `elbObserve` slot.
+   * This is the preview-artifact observation wiring: it bakes no ingest
+   * token into the emitted bytes.
    */
-  telemetry?: TelemetryBundleOptions;
+  observe?: ObserveWeb;
 
   /**
    * esbuild target. @default 'es2018' for browser, 'node18' for node.
@@ -90,32 +90,6 @@ export interface WrapSkeletonOptions {
 
   /** Fine-grained minification options, forwarded to esbuild. */
   minifyOptions?: MinifyOptions;
-}
-
-export interface TelemetryBundleOptions {
-  /** Absolute ingest URL. POST receives JSON array of FlowState. */
-  observerUrl: string;
-  /**
-   * Full deployment-scoped trace endpoint, e.g.
-   * `https://observer.example.com/trace/<deploymentId>`. Baked into the bundle
-   * and polled verbatim; the browser never constructs it from a base.
-   *
-   * Optional: when omitted, the bundle wires the observer at a fixed `level`
-   * with no polling. Suits short-lived, URL-opted-in sessions (e.g. a preview
-   * at `level: 'trace'`).
-   */
-  traceUrl?: string;
-  /** Deployment-scoped plaintext token. Sent as `Authorization: Bearer`. */
-  ingestToken: string;
-  /** Used as the `flowId` on every emitted FlowState. */
-  flowId: string;
-  /**
-   * Baseline verbosity. Default 'standard'. Even an 'off' baseline is wired
-   * (as a supplier) so the runtime trace poll can flip it to trace.
-   */
-  level?: 'off' | 'standard' | 'trace';
-  /** Deterministic sample fraction in [0, 1]. Default 1. */
-  sample?: number;
 }
 
 /**
@@ -216,22 +190,6 @@ export async function wrapSkeleton(
   const skeletonText = await fs.readFile(absoluteSkeletonPath, 'utf-8');
   const devExternals = extractDevExternals(skeletonText);
 
-  // Normalize the telemetry options for the entry generator. Telemetry is
-  // wired whenever an ingest token exists, even for an 'off' baseline: the
-  // observer is a supplier and the runtime trace poll can flip 'off' to trace.
-  const tInput = options.telemetry;
-  const tLevel = tInput?.level ?? 'standard';
-  const telemetry = tInput
-    ? {
-        observerUrl: tInput.observerUrl,
-        ingestToken: tInput.ingestToken,
-        flowId: tInput.flowId,
-        level: tLevel,
-        ...(tInput.traceUrl !== undefined ? { traceUrl: tInput.traceUrl } : {}),
-        ...(tInput.sample !== undefined ? { sample: tInput.sample } : {}),
-      }
-    : undefined;
-
   // Stage 2 entry imports from the skeleton via an absolute path.
   const entryText =
     platform === 'browser'
@@ -243,7 +201,7 @@ export async function wrapSkeleton(
             ? { previewGrantTargets: options.previewGrantTargets }
             : {}),
           platform,
-          ...(telemetry ? { telemetry } : {}),
+          ...(options.observe ? { observe: options.observe } : {}),
         })
       : generateWrapEntryServer(absoluteSkeletonPath);
 
@@ -262,7 +220,7 @@ export async function wrapSkeleton(
       format: 'esm',
       platform,
       outfile: outputPath,
-      // Resolve `@walkeros/core` (used by the telemetry block) from the CLI
+      // Resolve `@walkeros/core` (used by the preview activator) from the CLI
       // package's own dependency tree and the workspace root. Without this,
       // esbuild looks under the temp entryDir which has no node_modules.
       // The wrap step always runs from inside the CLI process; both the

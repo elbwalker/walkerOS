@@ -415,6 +415,16 @@ const STORAGE_KEY = 'elbPreview';
  * stored activation clears.
  */
 export const SESSION_STORAGE_KEY = 'elbPreviewSession';
+/**
+ * Storage slot for the observe ingest credential companion (`obsw_...`), a
+ * plaintext bearer credential riding the activation URL. The web arm never
+ * verifies it (the observer is its verifier): the activator only ferries it
+ * from the activation URL into storage, where the observe wiring reads it to
+ * attach to the observation session. Same lifecycle as the session companion:
+ * set (or cleared) whenever a URL activation succeeds, cleared whenever the
+ * stored activation clears.
+ */
+export const OBSERVE_STORAGE_KEY = 'elbObserve';
 const LOG = '[walkerOS:preview]';
 const SWAP_TIMEOUT_MS = 5000;
 
@@ -505,6 +515,7 @@ function stripParam(): void {
     const params = new USP(qIdx >= 0 ? withoutHash.slice(qIdx + 1) : '');
     params.delete('elbPreview');
     params.delete('elbPreviewSession');
+    params.delete('elbObserve');
     const query = params.toString();
     win.history.replaceState(
       {},
@@ -562,11 +573,13 @@ export async function browserSwapActivator(
 
   const store = createStore(STORAGE_KEY);
   const sessionStore = createStore(SESSION_STORAGE_KEY);
+  const observeStore = createStore(OBSERVE_STORAGE_KEY);
   const now = cfg.now ?? (() => Date.now());
   const warn = (reason: string) => G.console?.warn(`${LOG} ${reason}`);
 
   let param: string | null = null;
   let companion: string | null = null;
+  let observeCompanion: string | null = null;
   const USP = G.URLSearchParams;
   if (USP) {
     try {
@@ -578,15 +591,20 @@ export async function browserSwapActivator(
         companions.length > 0
           ? (companions[companions.length - 1] ?? null)
           : null;
+      const observes = search.getAll('elbObserve');
+      observeCompanion =
+        observes.length > 0 ? (observes[observes.length - 1] ?? null) : null;
     } catch {
       param = null;
       companion = null;
+      observeCompanion = null;
     }
   }
 
   if (param === 'off') {
     store.clear();
     sessionStore.clear();
+    observeStore.clear();
     stripParam();
     return false;
   }
@@ -627,6 +645,10 @@ export async function browserSwapActivator(
       // session. Never verified here — the session container is its verifier.
       if (companion) sessionStore.set(companion);
       else sessionStore.clear();
+      // Same rule for the observe ingest credential: ferried raw, never
+      // verified here (the observer is its verifier).
+      if (observeCompanion) observeStore.set(observeCompanion);
+      else observeStore.clear();
     } else {
       warn(result.reason);
     }
@@ -645,6 +667,7 @@ export async function browserSwapActivator(
       if (result.reason !== 'no-subtle') {
         store.clear();
         sessionStore.clear();
+        observeStore.clear();
       }
     }
   }
@@ -658,6 +681,7 @@ export async function browserSwapActivator(
     warn('swap-failed');
     store.clear();
     sessionStore.clear();
+    observeStore.clear();
     return false;
   }
 
