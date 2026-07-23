@@ -20,6 +20,8 @@ import { join } from 'path';
 import type { components } from '../../../types/api.gen.js';
 import {
   startObserveSession,
+  getObserveSession,
+  endObserveSession,
   formatObserveSession,
   observeStartCommand,
 } from '../index.js';
@@ -258,6 +260,29 @@ describe('startObserveSession', () => {
     expect(calls[0]?.body).toEqual({ settingsName: 'demo' });
   });
 
+  it('sends origins through to the mint body when given', async () => {
+    const calls = installFetch(() => json(armingSession, 201));
+    await startObserveSession({
+      flowId: 'fl_1',
+      settingsName: 'demo',
+      origins: ['https://shop.example', 'https://checkout.example'],
+    });
+    expect(calls[0]?.body).toEqual({
+      settingsName: 'demo',
+      origins: ['https://shop.example', 'https://checkout.example'],
+    });
+  });
+
+  it('omits an empty origins array rather than sending a bare []', async () => {
+    const calls = installFetch(() => json(armingSession, 201));
+    await startObserveSession({
+      flowId: 'fl_1',
+      settingsName: 'demo',
+      origins: [],
+    });
+    expect(calls[0]?.body).toEqual({ settingsName: 'demo' });
+  });
+
   it('throws an ApiError carrying the HTTP status on failure', async () => {
     installFetch(() =>
       json(
@@ -272,6 +297,76 @@ describe('startObserveSession', () => {
       status: 409,
       message: 'Flow topology not supported',
     });
+  });
+});
+
+describe('getObserveSession', () => {
+  it('GETs the session route and returns the contract envelope', async () => {
+    const calls = installFetch(() => json(liveSession, 200));
+    const result = await getObserveSession({
+      projectId: 'proj_x',
+      flowId: 'fl_1',
+      sessionId: 'ses_abc123',
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe(
+      'https://app.test/api/projects/proj_x/flows/fl_1/observe-sessions/ses_abc123',
+    );
+    expect(calls[0]?.method).toBe('GET');
+    expect(result).toEqual(liveSession);
+  });
+});
+
+// === Programmatic end ===
+
+describe('endObserveSession', () => {
+  it('DELETEs the session route and resolves on 204', async () => {
+    const calls = installFetch(() => new Response(null, { status: 204 }));
+    await expect(
+      endObserveSession({
+        projectId: 'proj_x',
+        flowId: 'fl_1',
+        sessionId: 'ses_abc123',
+      }),
+    ).resolves.toBeUndefined();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe(
+      'https://app.test/api/projects/proj_x/flows/fl_1/observe-sessions/ses_abc123',
+    );
+    expect(calls[0]?.method).toBe('DELETE');
+    // The end route takes no body; the session is addressed by path alone.
+    expect(calls[0]?.body).toBeUndefined();
+  });
+
+  it('falls back to WALKEROS_PROJECT_ID when no project is given', async () => {
+    const calls = installFetch(() => new Response(null, { status: 204 }));
+    await endObserveSession({ flowId: 'fl_1', sessionId: 'ses_abc123' });
+    expect(calls[0]?.url).toBe(
+      'https://app.test/api/projects/proj_test/flows/fl_1/observe-sessions/ses_abc123',
+    );
+  });
+
+  it('throws an ApiError carrying the HTTP status on failure', async () => {
+    installFetch(() =>
+      json(
+        { error: { code: 'NOT_FOUND', message: 'Observe session not found' } },
+        404,
+      ),
+    );
+    await expect(
+      endObserveSession({ flowId: 'fl_1', sessionId: 'ses_gone' }),
+    ).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 404,
+      message: 'Observe session not found',
+    });
+  });
+
+  it('surfaces a 401 as an ApiError so a stale token fails loudly', async () => {
+    installFetch(() => json(unauthorizedBody, 401));
+    await expect(
+      endObserveSession({ flowId: 'fl_1', sessionId: 'ses_abc123' }),
+    ).rejects.toMatchObject({ name: 'ApiError', status: 401 });
   });
 });
 

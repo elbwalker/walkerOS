@@ -153,6 +153,37 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     },
   },
   {
+    name: 'observe_session',
+    title: 'Observe Session',
+    description:
+      'Open, inspect, or end an Observe session: a time-boxed window on one flow that runtimes attach to as arms. ' +
+      'A preview arm streams from a browser, a container arm runs server-side, and both feed ONE shared journeys feed. ' +
+      'start opens the window (arms picks which runtimes attach), status reports per-arm state plus recordsReceived and expiresAt, stop ends the whole session including every arm. ' +
+      'A flow has at most one session, so status/stop resolve it from flowId when sessionId is omitted. ' +
+      'Read the events with observe_journeys; this tool never returns event data and never judges whether events are correct.',
+    inputSchema: {
+      action: z.enum(['start', 'status', 'stop']),
+      flowId: z.string(),
+      projectId: z.string().optional(),
+      sessionId: z.string().optional(),
+      arms: z
+        .object({
+          container: z.literal(true).optional(),
+          preview: z.string().optional(),
+        })
+        .optional(),
+      origins: z.array(z.string()).optional(),
+      level: z.enum(['off', 'standard', 'trace']).optional(),
+      replace: z.boolean().optional(),
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
     name: 'observe_journeys',
     title: 'Observe Journeys',
     description:

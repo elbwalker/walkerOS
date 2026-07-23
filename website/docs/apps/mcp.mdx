@@ -405,6 +405,56 @@ Reference a secret from any flow step as `$env.<NAME>`, for example
 }
 ```
 
+##### `observe_session`
+
+Open, inspect, or end an Observe session: a time-boxed window on one flow that
+runtimes attach to as arms. A preview arm streams from a browser, a container
+arm runs server-side, and both feed one shared journeys feed.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"start"` \| `"status"` \| `"stop"` | Yes | `start` opens a session, `status` reports arm state, `stop` ends the whole session. |
+| `flowId` | string | Yes | Flow the Observe session runs on. |
+| `projectId` | string | No | Project ID. Optional; falls back to the default project. |
+| `sessionId` | string | No | Session to act on for `status`/`stop`. Optional; the flow has at most one session and it is resolved for you. |
+| `arms` | object | No | Which runtimes attach. Omit to attach the default preview arm; a web settings that references a server flow brings its container arm with it. |
+| `arms.container` | `true` | No | Pass `true` to attach the server container arm, which selects the flow's server settings when no preview arm is named. Only `true` is accepted: a web settings that references a server flow always brings its container arm along, so a container cannot be suppressed here. |
+| `arms.preview` | string | No | Name the flow settings this session observes. A web settings attaches the browser preview arm (plus the container arm of any server flow it references); a server settings attaches the container arm alone. Omit to use the flow's single web settings. |
+| `origins` | string[] | No | Bare https origins (`https://host[:port]`) the session may ingest web events from. |
+| `level` | `"off"` \| `"standard"` \| `"trace"` | No | Container observation verbosity. Defaults to the app's own. |
+| `replace` | boolean | No | Replace the flow's existing window instead of attaching to it. Re-provisions from the new config. |
+
+A flow has at most one session, so `status` and `stop` resolve it from `flowId`
+when `sessionId` is omitted. `status` reports per-arm state plus
+`recordsReceived` and `expiresAt`; `stop` ends the whole session including every
+arm.
+
+This tool never returns event data and never judges whether events are correct.
+Read the events with `observe_journeys`.
+
+##### `observe_journeys`
+
+Read the assembled, cross-runtime journeys for a flow that is currently being
+observed (an active Observe session). Read-only.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `flowId` | string | Yes | Flow to read journeys for (its active Observe session). |
+| `projectId` | string | No | Project ID. Optional; falls back to the default project. |
+| `traceId` | string | No | Return only the journeys for this trace id. |
+| `limit` | number | No | Max journeys to return (1-100, most recent kept). Defaults to 50. |
+
+Each journey is one traced event reconstructed end to end across web and server:
+its ordered hops (source, transformer, collector, destination), each hop status
+(pending/done/skipped/error), captured in/out payloads, consent, and vendor
+calls. Use it to see which destinations fired, what mapping ran, where an event
+was skipped or errored, and whether records were lost (`gaps` plus a journey
+`lossy` flag).
+
+When the flow has no active Observe session the result is
+`{ "sessionId": null, "journeys": [], "gaps": [] }`. Start an Observe session and
+drive traffic first, then read again.
+
 ### Resources
 
 | URI | Description |

@@ -29,6 +29,8 @@ export interface StartObserveSessionOptions {
   replace?: boolean;
   /** Observation detail level for the session. */
   level?: ObserveLevel;
+  /** Origins the session's web activation grant may activate on. */
+  origins?: string[];
 }
 
 /**
@@ -45,6 +47,9 @@ export async function startObserveSession(
     settingsName: options.settingsName,
     ...(options.replace ? { replace: true } : {}),
     ...(options.level !== undefined ? { level: options.level } : {}),
+    // An empty list carries no origin the grant could bind to, so it is
+    // omitted rather than sent as a bare [] the app would have to interpret.
+    ...(options.origins?.length ? { origins: options.origins } : {}),
   };
   const response = await apiFetch(
     `/api/projects/${pid}/flows/${options.flowId}/observe-sessions`,
@@ -83,6 +88,33 @@ export async function getObserveSession(
     throwApiResponseError(response, errorBody, 'Failed to get observe session');
   }
   return response.json();
+}
+
+export interface EndObserveSessionOptions {
+  projectId?: string;
+  flowId: string;
+  sessionId: string;
+}
+
+/**
+ * End a session through the app's authenticated boundary: the app tears down
+ * the container, revokes credentials, deletes the web preview, and drops the
+ * row. Ends the WHOLE session including every attached arm. Idempotent
+ * app-side, and the 204 carries no body, so this resolves with nothing; a
+ * session scoped to another flow or project is a 404, never a cross-tenant end.
+ */
+export async function endObserveSession(
+  options: EndObserveSessionOptions,
+): Promise<void> {
+  const pid = options.projectId ?? requireProjectId();
+  const response = await apiFetch(
+    `/api/projects/${pid}/flows/${options.flowId}/observe-sessions/${options.sessionId}`,
+    { method: 'DELETE' },
+  );
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throwApiResponseError(response, errorBody, 'Failed to end observe session');
+  }
 }
 
 /**
