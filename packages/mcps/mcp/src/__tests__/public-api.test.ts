@@ -61,6 +61,22 @@ jest.mock('@walkeros/cli/dev', () => {
 
 import * as api from '../index.js';
 
+/**
+ * The `observe_session` wording a host embeds against. Re-exported from the
+ * entry point so a consumer asserts parity against these strings instead of
+ * retyping them, which only holds if the entry point keeps exporting them.
+ */
+const PINNED_OBSERVE_SESSION_STRINGS = [
+  'OBSERVE_SESSION_DESCRIPTION',
+  'HINT_SIMULATE_FIRST',
+  'HINT_PREVIEW_STREAMS',
+  'HINT_READ',
+  'HINT_STOP',
+  'HINT_EMPTY_FEED',
+  'HINT_ENDED',
+  'HINT_NO_WINDOW',
+];
+
 describe('public API surface', () => {
   it('exports createWalkerOSMcpServer', () => {
     expect(typeof api.createWalkerOSMcpServer).toBe('function');
@@ -76,7 +92,19 @@ describe('public API surface', () => {
 
   it('exports TOOL_DEFINITIONS array', () => {
     expect(Array.isArray(api.TOOL_DEFINITIONS)).toBe(true);
-    expect(api.TOOL_DEFINITIONS.length).toBe(15);
+    expect(api.TOOL_DEFINITIONS.length).toBe(16);
+  });
+
+  it('exports the observe_session description and every next-hint', () => {
+    const stringExports = new Set(
+      Object.entries(api)
+        .filter(([, value]) => typeof value === 'string')
+        .map(([name]) => name),
+    );
+    const missing = PINNED_OBSERVE_SESSION_STRINGS.filter(
+      (name) => !stringExports.has(name),
+    );
+    expect(missing).toEqual([]);
   });
 
   it('exports createToolHandlers', () => {

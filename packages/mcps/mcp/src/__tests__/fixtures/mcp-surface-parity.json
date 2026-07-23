@@ -1,0 +1,107 @@
+{
+  "$comment": "Shared MCP surface contract for the local plane (walkerOS packages/mcps/mcp) and the hosted plane (app src/lib/mcp). Both planes pin their own copy of this file and assert the tools they actually expose against it, so a rename, an added or dropped field, a changed description, or a reworded hint fails a test on the side that drifted instead of silently diverging. Edit it only together with the matching copy in the other repo.",
+  "toolNames": [
+    "auth",
+    "deploy_manage",
+    "diagnostics",
+    "feedback",
+    "flow_bundle",
+    "flow_examples",
+    "flow_load",
+    "flow_manage",
+    "flow_push",
+    "flow_simulate",
+    "flow_validate",
+    "observe_journeys",
+    "observe_session",
+    "package_get",
+    "package_search",
+    "project_manage",
+    "secret_manage"
+  ],
+  "observeSession": {
+    "name": "observe_session",
+    "title": "Observe Session",
+    "description": "Open, inspect, or end an Observe session: a time-boxed window on one flow that runtimes attach to as arms. A preview arm streams from a browser, a container arm runs server-side, and both feed ONE shared journeys feed. start opens the window (arms picks which runtimes attach), status reports per-arm state plus recordsReceived and expiresAt, stop ends the whole session including every arm. A flow has at most one session, so status/stop resolve it from flowId when sessionId is omitted. Read the events with observe_journeys; this tool never returns event data and never judges whether events are correct.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["start", "status", "stop"],
+          "description": "start opens a session, status reports arm state, stop ends the whole session."
+        },
+        "flowId": {
+          "type": "string",
+          "description": "Flow the Observe session runs on."
+        },
+        "projectId": {
+          "description": "Project ID. Optional; falls back to the default project.",
+          "type": "string"
+        },
+        "sessionId": {
+          "description": "Session to act on for status/stop. Optional; the flow has at most one session and it is resolved for you.",
+          "type": "string"
+        },
+        "arms": {
+          "description": "Which runtimes attach. Omit to attach the default preview arm; a web settings that references a server flow brings its container arm with it.",
+          "type": "object",
+          "properties": {
+            "container": {
+              "description": "Pass true to attach the server container arm, which selects the flow's server settings when no preview arm is named. Only true is accepted: a web settings that references a server flow always brings its container arm along, so a container cannot be suppressed here.",
+              "type": "boolean",
+              "const": true
+            },
+            "preview": {
+              "description": "Name the flow settings this session observes. A web settings attaches the browser preview arm (plus the container arm of any server flow it references); a server settings attaches the container arm alone. Omit to use the flow's single web settings.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "origins": {
+          "description": "Bare https origins (https://host[:port]) the session may ingest web events from.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "level": {
+          "description": "Container observation verbosity. Defaults to the app's own.",
+          "type": "string",
+          "enum": ["off", "standard", "trace"]
+        },
+        "replace": {
+          "description": "Replace the flow's existing window instead of attaching to it. Re-provisions from the new config.",
+          "type": "boolean"
+        }
+      },
+      "required": ["action", "flowId"],
+      "additionalProperties": false
+    },
+    "hints": {
+      "SIMULATE_FIRST": "Simulate before preview: flow_simulate checks mapping with no browser.",
+      "PREVIEW_STREAMS": "Preview streams into this session: mint a link with flow_manage preview_regrant, then open it on your site.",
+      "READ": "Read with observe_journeys (flowId); it is the only read.",
+      "STOP": "End both arms with observe_session stop.",
+      "EMPTY_FEED": "recordsReceived is 0: nothing has reached the feed yet. Drive traffic on an attached arm.",
+      "ENDED": "Session ended and both arms detached. Start a new one with observe_session start.",
+      "NO_WINDOW": "No Observe session on this flow. Open one with observe_session start."
+    },
+    "hintOrder": {
+      "start": ["SIMULATE_FIRST", "PREVIEW_STREAMS", "READ"],
+      "statusWithRecords": ["READ", "STOP"],
+      "statusEmptyFeed": ["EMPTY_FEED", "READ", "STOP"],
+      "statusNoWindow": ["NO_WINDOW", "SIMULATE_FIRST"],
+      "stopEnded": ["ENDED"],
+      "stopNoWindow": ["NO_WINDOW"]
+    }
+  }
+}

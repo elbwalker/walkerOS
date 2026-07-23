@@ -651,6 +651,43 @@ describe('flow_manage tool — preview actions', () => {
       >;
       expect(Object.keys(callArg)).not.toContain('sessionId');
     });
+
+    it('passes the observe session the mint streams into through the boundary whitelist', async () => {
+      // The whitelist drops every field it does not name, so a session id the
+      // API returns is invisible to the caller unless it is listed.
+      const regrantPreview = jest.fn().mockResolvedValue({
+        previewId: 'prv_1',
+        activationUrl: 'https://shop.example.com?elbPreview=gr_x',
+        sessionExpiresAt: '2026-04-21T01:00:00Z',
+        sessionId: 'ses_streamed_into',
+        token: 'k9x2m4p7abcd',
+      });
+      registerFlowManageTool(
+        server as never,
+        stubClient({ regrantPreview, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler(
+        {
+          action: 'preview_regrant',
+          flowId: 'cfg_1',
+          previewId: 'prv_1',
+          origins: ['https://shop.example.com'],
+        },
+        mockExtra,
+      )) as {
+        isError?: boolean;
+        structuredContent: Record<string, unknown>;
+        content: Array<{ text: string }>;
+      };
+
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent.sessionId).toBe('ses_streamed_into');
+      // The whitelist still does its job around the addition.
+      expect('token' in result.structuredContent).toBe(false);
+      expect(result.content[0].text).not.toContain('k9x2m4p7abcd');
+    });
   });
 
   describe('preview response redaction (boundary whitelist)', () => {
