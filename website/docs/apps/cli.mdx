@@ -1575,7 +1575,7 @@ Mint an Observe session for a flow and print the attach info for each arm.
 
 | Option | Description |
 |--------|-------------|
-| `-f, --flow <name>` | Flow settings name (auto-resolved when the flow has exactly one) |
+| `-f, --flow <name>` | Flow settings name, which also picks the arms (auto-resolved when the flow has exactly one) |
 | `--project <id>` | Project ID (overrides default) |
 | `--level <level>` | Observation detail level: `off`, `standard`, or `trace` |
 | `--replace` | Replace an existing active session for this flow |
@@ -1586,15 +1586,21 @@ Mint an Observe session for a flow and print the attach info for each arm.
 `--level` steers the provisioned container arm; the web arm's observation detail
 does not follow it.
 
-A settled session renders both arms:
+The observed settings picks the arms: a web settings attaches the preview arm,
+plus the container arm of any server flow it references; a server settings
+attaches the container arm alone.
+
+A settled session renders both arms. An arm this session did not attach renders
+as `Web: no web part` or `Server: no server part` in place of its block, so the
+output below is the both-arms case:
 
 <CodeSnippet
   code={`Observe session ses_abc123 (live)
 
   Web
     Bundle URL: https://cdn.test/preview/proj_test/walker.k9x2m4p7abcd.js
-    Credential: obsw_pb1.ses_abc123.webtok
-    Activate:   https://shop.example/?elbPreview=eyJncjRudA.gr4nt.s1g&elbObserve=obsw_pb1.ses_abc123.webtok
+    Credential: obsw_pb_x.ses_abc123.sec_1
+    Activate:   https://shop.example/?elbPreview=header.payload.signature&elbObserve=obsw_pb_x.ses_abc123.sec_1
 
   Server
     Flow:       server
@@ -1604,7 +1610,7 @@ A settled session renders both arms:
       WALKEROS_DEPLOYMENT_ID=ses_abc123
       WALKEROS_INGEST_TOKEN=srv_ingest_tok
 
-  Expires:  2026-07-19T00:00:00.000Z
+  Expires:  <ISO timestamp>
   Records:  42
 
   The session lives server-side; closing this terminal does not end it.

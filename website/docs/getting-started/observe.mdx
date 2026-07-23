@@ -157,8 +157,10 @@ questions:
 The web connect pair is `url` and `binding`, nothing else. `level`
 (`off` | `standard` | `trace`) and `sample` (a fraction from 0 to 1) are
 managed-telemetry knobs: leave them unset in your own config and let the
-Observe session decide what gets captured. On the server,
-`WALKEROS_OBSERVE_LEVEL` is the same knob in environment form.
+managing platform decide what gets captured. It sets them per runtime, not per
+session: an Observe session's `--level` steers the container arm it provisions,
+while the web arm captures at the level baked into the bundle it loads. On the
+server, `WALKEROS_OBSERVE_LEVEL` is the same knob in environment form.
 
 ## Bring your own observer
 
@@ -183,11 +185,13 @@ records to your own endpoint, a log pipeline, or a test assertion.
 :::cloud
 Observe sessions with a live feed and minted credentials are part of the
 hosted app; `walkeros observe start <flowId>` mints one from the terminal and
-prints the web activation link (the `?elbObserve=` credential already
-appended), the server environment trio, the session expiry, and the
-received-record count, while the session itself lives server-side and idles
-out when nothing keeps it alive. Self-hosting? The `observers` escape hatch
-above streams the same records to any function or endpoint you control.
+prints what each attached arm needs, the session expiry, and the
+received-record count. A preview arm prints the web activation link (the
+`?elbObserve=` credential already appended), a container arm prints the server
+environment trio, and which of the two attach follows the settings being
+observed. The session itself lives server-side and idles out when nothing
+keeps it alive. Self-hosting? The `observers` escape hatch above streams the
+same records to any function or endpoint you control.
 [What Cloud adds](https://app.walkeros.io)
 :::
 
