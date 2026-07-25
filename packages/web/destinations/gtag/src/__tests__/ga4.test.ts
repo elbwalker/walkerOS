@@ -1,4 +1,5 @@
 import { initGA4, pushGA4Event } from '../ga4';
+import { resetLoadedScripts } from '../shared/gtag';
 import { examples } from '../dev';
 import { clone, createMockLogger, getEvent } from '@walkeros/core';
 import type { GA4Settings } from '../types';
@@ -77,6 +78,69 @@ describe('GA4 Implementation', () => {
 
       expect(mockGtag).toHaveBeenCalledWith('config', 'G-XXXXXXXXXX', {
         send_page_view: false,
+      });
+    });
+
+    describe('first-party gtag.js loading', () => {
+      // Build an env whose document.createElement captures the injected script
+      // so the resolved `script.src` can be asserted.
+      const setupCapture = () => {
+        resetLoadedScripts();
+        let createdScript:
+          | {
+              src: string;
+              setAttribute: (name: string, value: string) => void;
+              removeAttribute: (name: string) => void;
+            }
+          | undefined;
+        const env = clone(examples.env.push);
+        env.window.gtag = mockGtag;
+        env.document.createElement = () => {
+          createdScript = {
+            src: '',
+            setAttribute: () => {},
+            removeAttribute: () => {},
+          };
+          return createdScript;
+        };
+        return { env, getSrc: () => createdScript?.src };
+      };
+
+      it('loads gtag.js from the server container when server_container_url is set', () => {
+        const { env, getSrc } = setupCapture();
+        const settings: GA4Settings = {
+          measurementId: 'G-FIRSTPARTY',
+          server_container_url: 'https://sgtm.example.com',
+        };
+
+        initGA4(settings, true, env, createMockLogger());
+
+        expect(getSrc()).toBe(
+          'https://sgtm.example.com/gtag/js?id=G-FIRSTPARTY',
+        );
+      });
+
+      it('trims a trailing slash on server_container_url', () => {
+        const { env, getSrc } = setupCapture();
+        const settings: GA4Settings = {
+          measurementId: 'G-TRAILING',
+          server_container_url: 'https://sgtm.example.com/',
+        };
+
+        initGA4(settings, true, env, createMockLogger());
+
+        expect(getSrc()).toBe('https://sgtm.example.com/gtag/js?id=G-TRAILING');
+      });
+
+      it('falls back to googletagmanager.com when server_container_url is absent', () => {
+        const { env, getSrc } = setupCapture();
+        const settings: GA4Settings = { measurementId: 'G-DEFAULT' };
+
+        initGA4(settings, true, env, createMockLogger());
+
+        expect(getSrc()).toBe(
+          'https://www.googletagmanager.com/gtag/js?id=G-DEFAULT',
+        );
       });
     });
   });
