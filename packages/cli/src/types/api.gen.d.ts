@@ -9027,6 +9027,7 @@ export interface components {
       /** Format: date-time */
       sessionExpiresAt: string;
       sessionGrant?: string;
+      sessionId?: string;
     };
     ObserveSessionResponse: {
       /** @example ses_abc123xyz456 */
@@ -9058,6 +9059,9 @@ export interface components {
       previewEnabled: boolean;
       /** Format: uri */
       bundleUrl: string;
+      /** Format: uri */
+      url?: string;
+      binding?: string;
     } | null;
     ObserveSessionServer: {
       /** Format: uri */

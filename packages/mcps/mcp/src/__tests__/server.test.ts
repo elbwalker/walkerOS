@@ -89,7 +89,7 @@ describe('createWalkerOSMcpServer', () => {
     expect(server.server).toBeDefined();
   });
 
-  it('registers all 16 tools', () => {
+  it('registers all 17 tools', () => {
     const server = createWalkerOSMcpServer({
       client: stubClient(),
       version: '0.0.0',
@@ -112,6 +112,7 @@ describe('createWalkerOSMcpServer', () => {
         'flow_simulate',
         'flow_validate',
         'observe_journeys',
+        'observe_session',
         'package_get',
         'package_search',
         'project_manage',

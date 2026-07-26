@@ -50,6 +50,7 @@ npx walkeros --version`}
 | `flows` | Manage walkerOS flows | Create, list, update, delete, duplicate flows |
 | `deploy` | Create and manage deployments | Deploy flows to walkerOS cloud or self-hosted |
 | `previews` | Manage preview bundles | Test flow changes on live sites before deploying |
+| `observe` | Open an Observe session on a flow | Watch a running flow's live events from the terminal |
 
 The `push` command accepts either a config JSON or a pre-built bundle as input.
 
@@ -1551,6 +1552,97 @@ walkeros previews list flow_abc123
 walkeros previews delete flow_abc123 prv_xyz456 --yes`}
   language="bash"
 />
+
+## Observe command
+
+The `observe` command group opens an Observe session: a time-boxed window on one
+flow that runtimes attach to as arms. A preview arm streams from a browser, a
+container arm runs server-side, and both feed one shared journeys feed. See
+[Observe](/docs/getting-started/observe) for how a flow connects to an observer
+in the first place.
+
+Requires authentication and a project (set via `WALKEROS_PROJECT_ID` or
+`--project`).
+
+### observe start
+
+Mint an Observe session for a flow and print the attach info for each arm.
+
+<CodeSnippet
+  code={`walkeros observe start <flowId> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `-f, --flow <name>` | Flow settings name, which also picks the arms (auto-resolved when the flow has exactly one) |
+| `--project <id>` | Project ID (overrides default) |
+| `--level <level>` | Observation detail level: `off`, `standard`, or `trace` |
+| `--replace` | Replace an existing active session for this flow |
+| `--no-wait` | Do not wait for the session to settle |
+| `--timeout <seconds>` | Seconds to wait for the session to settle (default: 300) |
+| `--json` | Output the session as JSON |
+
+`--level` steers the provisioned container arm; the web arm's observation detail
+does not follow it.
+
+The observed settings picks the arms: a web settings attaches the preview arm,
+plus the container arm of any server flow it references; a server settings
+attaches the container arm alone.
+
+A settled session renders both arms. An arm this session did not attach renders
+as `Web: no web part` or `Server: no server part` in place of its block, so the
+output below is the both-arms case:
+
+<CodeSnippet
+  code={`Observe session ses_abc123 (live)
+
+  Web
+    Bundle URL: https://cdn.test/preview/proj_test/walker.k9x2m4p7abcd.js
+    Credential: obsw_pb_x.ses_abc123.sec_1
+    Activate:   https://shop.example/?elbPreview=header.payload.signature&elbObserve=obsw_pb_x.ses_abc123.sec_1
+
+  Server
+    Flow:       server
+    Endpoint:   https://obs-ses-abc123.containers.test
+    Env:
+      WALKEROS_OBSERVER_URL=https://observer.test
+      WALKEROS_DEPLOYMENT_ID=ses_abc123
+      WALKEROS_INGEST_TOKEN=srv_ingest_tok
+
+  Expires:  <ISO timestamp>
+  Records:  42
+
+  The session lives server-side; closing this terminal does not end it.
+  Sessions idle out server-side when no tab or traffic keeps them alive.`}
+  language="text"
+/>
+
+Open the `Activate:` URL on your site to attach the web arm: the link carries
+the session credential, so the page starts posting records without any further
+setup. Export the three `WALKEROS_*` variables into a server runtime to attach a
+runtime the app did not provision; both arms then feed the same journeys feed.
+
+That block goes to stderr. Stdout carries the live server endpoint alone, so it
+pipes cleanly:
+
+<CodeSnippet
+  code={`ENDPOINT=$(walkeros observe start flow_abc123 --flow web)`}
+  language="bash"
+/>
+
+`--json` prints the whole session to stdout instead, for scripts that need the
+credential or the expiry.
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Session settled (or `--no-wait` returned the mint immediately) |
+| `1` | Session failed to arm, or `--timeout` elapsed while it was still arming |
+
+A timeout is not a teardown: the session keeps arming server-side, and it is the
+app or a re-run of `observe start` that reports where it landed.
 
 ## Run command
 

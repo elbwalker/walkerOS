@@ -27,6 +27,9 @@ import {
   getDeploymentBySlug,
   deleteDeployment,
   listJourneys,
+  startObserveSession,
+  getObserveSession,
+  endObserveSession,
   requestDeviceCode,
   pollForToken,
   whoami,
@@ -58,6 +61,9 @@ import type {
   ToolClient,
   JourneysResult,
   RegrantPreviewOptions,
+  ObserveSessionResult,
+  ObserveSessionRef,
+  StartObserveSessionOptions,
 } from './tool-client.js';
 
 /**
@@ -206,6 +212,26 @@ export class HttpToolClient implements ToolClient {
     limit?: number;
   }): Promise<JourneysResult> {
     return listJourneys(options);
+  }
+
+  /**
+   * Observe session lifecycle over the CLI's authenticated boundary. The trio
+   * routes through the same `apiFetch` as every other method here, so token
+   * resolution, base URL, and `ApiError` shaping (which `isAuthError` reads)
+   * stay identical to the rest of the client.
+   */
+  async startObserveSession(
+    options: StartObserveSessionOptions,
+  ): Promise<ObserveSessionResult> {
+    return startObserveSession(options);
+  }
+  async getObserveSession(
+    options: ObserveSessionRef,
+  ): Promise<ObserveSessionResult> {
+    return getObserveSession(options);
+  }
+  async endObserveSession(options: ObserveSessionRef): Promise<void> {
+    return endObserveSession(options);
   }
 
   async requestDeviceCode(): Promise<DeviceCodeResult> {

@@ -160,6 +160,16 @@ export type {
 export { listJourneys } from './commands/journeys/index.js';
 export type { ListJourneysOptions } from './commands/journeys/index.js';
 export {
+  startObserveSession,
+  getObserveSession,
+  endObserveSession,
+} from './commands/observe/index.js';
+export type {
+  StartObserveSessionOptions,
+  GetObserveSessionOptions,
+  EndObserveSessionOptions,
+} from './commands/observe/index.js';
+export {
   listSecrets,
   createSecret,
   updateSecret,

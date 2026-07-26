@@ -48,6 +48,77 @@ export interface JourneysResult {
   gaps: JourneyGap[];
 }
 
+/** Observation verbosity a session's container is provisioned with. */
+export type ObserveLevel = 'off' | 'standard' | 'trace';
+
+/**
+ * The session's web part. Present once a preview arm is attached; null while
+ * the window has no web half. `credential` and the server `env` trio are
+ * connect secrets: the tool layer reads the part for arm presence and never
+ * surfaces them.
+ */
+export interface ObserveSessionWebPart {
+  activationUrl: string | null;
+  credential: string;
+  previewEnabled: boolean;
+  bundleUrl: string;
+  /** Observer both arms post to, in the field name a `config.observe` declares. */
+  url?: string;
+  /** Project binding the collector cross-checks an arriving credential against. */
+  binding?: string;
+}
+
+/** The session's container part. Present once a container arm is provisioned. */
+export interface ObserveSessionServerPart {
+  endpoint: string | null;
+  env: {
+    WALKEROS_OBSERVER_URL: string;
+    WALKEROS_DEPLOYMENT_ID: string;
+    WALKEROS_INGEST_TOKEN: string;
+  };
+}
+
+/**
+ * One Observe session: a time-boxed window on a flow that runtimes attach to
+ * as arms. `observedFlowName`/`serverFlowName` name the settings each arm runs;
+ * `web`/`server` being non-null is what makes an arm attached. Mirrors the
+ * app's session envelope.
+ */
+export interface ObserveSessionResult {
+  id: string;
+  projectId: string;
+  flowId: string;
+  status: string;
+  errorMessage: string | null;
+  observedFlowName: string | null;
+  serverFlowName: string | null;
+  web: ObserveSessionWebPart | null;
+  server: ObserveSessionServerPart | null;
+  expiresAt: string;
+  recordsReceived: number;
+  createdAt: string;
+}
+
+/**
+ * Start a session on one flow. `settingsName` is the single knob the window is
+ * opened on: the flow's topology under that name decides which arms the app
+ * provisions, so the tool layer translates its arms input into this one field.
+ */
+export interface StartObserveSessionOptions {
+  projectId: string;
+  flowId: string;
+  settingsName: string;
+  origins?: string[];
+  level?: ObserveLevel;
+  replace?: boolean;
+}
+
+export interface ObserveSessionRef {
+  projectId: string;
+  flowId: string;
+  sessionId: string;
+}
+
 /**
  * Transport-agnostic client for network-reach MCP tools. The stdio build
  * plugs in HttpToolClient (talks to the walkerOS app over HTTPS via the
@@ -146,6 +217,19 @@ export interface ToolClient {
     traceId?: string;
     limit?: number;
   }): Promise<JourneysResult>;
+
+  /**
+   * Observe session lifecycle. OPTIONAL as a trio: a client that cannot reach
+   * the session endpoints omits all three, and the `observe_session` handler
+   * guards on presence before calling. Reads stay with `listJourneys`, which
+   * doubles as the flow-to-live-window resolver (`observe_sessions.flow_id` is
+   * UNIQUE, so its `sessionId` IS the flow's live window).
+   */
+  startObserveSession?(
+    options: StartObserveSessionOptions,
+  ): Promise<ObserveSessionResult>;
+  getObserveSession?(options: ObserveSessionRef): Promise<ObserveSessionResult>;
+  endObserveSession?(options: ObserveSessionRef): Promise<void>;
 
   // Auth
   requestDeviceCode(): Promise<DeviceCodeResult>;

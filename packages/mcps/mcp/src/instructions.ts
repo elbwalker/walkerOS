@@ -22,6 +22,9 @@ export const SERVER_INSTRUCTIONS = `walkerOS is an open-source, privacy-first ev
 10. \`flow_simulate({ configPath: "flow.json", event: "..." })\` — test
 11. \`flow_manage({ action: "update", flowId: "...", content: {...} })\` — save to cloud
 12. \`deploy_manage({ action: "deploy", flowId: "..." })\` — deploy
+13. \`observe_session({ action: "start", flowId: "..." })\` - open an Observe session: a time-boxed window on one flow that runtimes attach to as arms
+14. \`flow_manage({ action: "preview_regrant", flowId: "...", previewId: "...", origins: [...] })\` - mint an activation link; minted while the flow is observed, it pairs with that Observe session automatically, so the previewed page streams into the same feed
+15. \`observe_journeys({ flowId: "..." })\` - read what arrived; it is the only read, and it never judges whether events are correct
 
 ## Architecture: Source → Collector → Destination(s)
 

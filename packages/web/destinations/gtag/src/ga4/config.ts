@@ -15,8 +15,14 @@ export function initGA4(
 
   if (!measurementId) logger.throw('Config settings ga4.measurementId missing');
 
-  // Load the gtag script
-  if (loadScript) addScript(measurementId, undefined, document);
+  // Load the gtag script. With a GA4 server container configured, load gtag.js
+  // first-party from that container instead of googletagmanager.com.
+  if (loadScript) {
+    const src = server_container_url
+      ? `${server_container_url.replace(/\/$/, '')}/gtag/js?id=`
+      : undefined;
+    addScript(measurementId, src, document);
+  }
 
   // Initialize gtag infrastructure
   initializeGtag(window);

@@ -214,6 +214,7 @@ const PREVIEW_SUMMARY_FIELDS = [
   'grant',
   'sessionGrant',
   'sessionExpiresAt',
+  'sessionId',
   'status',
   'observeFeed',
   'createdBy',
@@ -241,6 +242,32 @@ function redactPreviewList(data: unknown): Record<string, unknown> {
       : [],
     ...(data.total !== undefined ? { total: data.total } : {}),
   };
+}
+
+/**
+ * Resolve the flow's live Observe session, or null when there is none.
+ *
+ * `listJourneys` is the flow-keyed read the app already exposes and its
+ * `sessionId` IS the flow's single active window, so it doubles as the
+ * resolver. Best-effort by design: this only enriches a regrant, so a failing
+ * or unavailable read degrades to a plain web preview grant instead of failing
+ * the mint the caller actually asked for.
+ */
+async function resolveLiveSessionId(
+  client: ToolClient,
+  flowId: string,
+  projectId: string | undefined,
+): Promise<string | null> {
+  try {
+    const result = await client.listJourneys({
+      flowId,
+      ...(projectId !== undefined && { projectId }),
+      limit: 1,
+    });
+    return result.sessionId;
+  } catch {
+    return null;
+  }
 }
 
 export function createFlowManageToolSpec(client: ToolClient): ToolSpec {
@@ -563,6 +590,15 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
             new Error('preview_regrant is not supported by this client'),
           );
         }
+        // Auto-pair with the flow's live Observe window so a regrant made
+        // while the flow is being observed forwards into it by default. An
+        // explicit sessionId stays the override, and an unresolvable window is
+        // not a failure: it degrades to a plain web preview grant.
+        // Resolve under the SAME project the regrant is sent to: this path
+        // degrades silently, so a project mismatch would never surface.
+        const pairedSessionId =
+          sessionId ??
+          (await resolveLiveSessionId(client, flowId, resolvedProjectId));
         // Whitelisted grant summary: activationUrl plus the raw grant values
         // the caller may need (`sessionGrant` is how an agent authenticates
         // direct server-hop test events) — never the ingest token.
@@ -571,11 +607,11 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           flowId,
           previewId,
           origins: origins ?? [],
-          ...(sessionId ? { sessionId } : {}),
+          ...(pairedSessionId ? { sessionId: pairedSessionId } : {}),
         });
         return mcpResult(redactPreview(data), {
           next: [
-            sessionId
+            pairedSessionId
               ? 'Open activationUrl on the target origin: it activates the web preview AND forwards its events to the observe session. Use sessionGrant as the X-Walkeros-Preview header for direct server-hop test events.'
               : 'Open activationUrl on the target origin to activate preview mode.',
           ],

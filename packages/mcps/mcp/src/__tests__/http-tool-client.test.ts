@@ -27,6 +27,9 @@ jest.mock('@walkeros/cli', () => ({
   getDeploymentBySlug: jest.fn(),
   deleteDeployment: jest.fn(),
   listJourneys: jest.fn(),
+  startObserveSession: jest.fn(),
+  getObserveSession: jest.fn(),
+  endObserveSession: jest.fn(),
   requestDeviceCode: jest.fn(),
   pollForToken: jest.fn(),
   whoami: jest.fn(),
@@ -40,6 +43,34 @@ jest.mock('@walkeros/cli', () => ({
 
 import * as cli from '@walkeros/cli';
 import { HttpToolClient } from '../http-tool-client.js';
+import type { ObserveSessionResult } from '../tool-client.js';
+
+const observeSession: ObserveSessionResult = {
+  id: 'ses_1',
+  projectId: 'proj_1',
+  flowId: 'fl_1',
+  status: 'live',
+  errorMessage: null,
+  observedFlowName: 'web',
+  serverFlowName: 'server',
+  web: {
+    activationUrl: 'https://shop.example/?elbObserve=obsw_pb1.ses_1.tok',
+    credential: 'obsw_pb1.ses_1.tok',
+    previewEnabled: true,
+    bundleUrl: 'https://cdn.test/preview/proj_1/walker.abcd1234.js',
+  },
+  server: {
+    endpoint: 'https://obs-ses-1.containers.test',
+    env: {
+      WALKEROS_OBSERVER_URL: 'https://observer.test',
+      WALKEROS_DEPLOYMENT_ID: 'ses_1',
+      WALKEROS_INGEST_TOKEN: 'srv_ingest_tok',
+    },
+  },
+  expiresAt: '2026-07-21T00:00:00.000Z',
+  recordsReceived: 7,
+  createdAt: '2026-07-20T00:00:00.000Z',
+};
 
 describe('HttpToolClient', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -81,6 +112,66 @@ describe('HttpToolClient', () => {
       limit: 10,
     });
     expect(result.sessionId).toBe('ses_1');
+  });
+
+  it('provides the observe session lifecycle trio, so the local plane is never degraded', () => {
+    const client = new HttpToolClient();
+    expect(typeof client.startObserveSession).toBe('function');
+    expect(typeof client.getObserveSession).toBe('function');
+    expect(typeof client.endObserveSession).toBe('function');
+  });
+
+  it('delegates startObserveSession with settingsName, origins, level, and replace', async () => {
+    (cli.startObserveSession as jest.Mock).mockResolvedValue(observeSession);
+    const client = new HttpToolClient();
+    const result = await client.startObserveSession({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      settingsName: 'web',
+      origins: ['https://shop.example'],
+      level: 'trace',
+      replace: true,
+    });
+    expect(cli.startObserveSession).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      settingsName: 'web',
+      origins: ['https://shop.example'],
+      level: 'trace',
+      replace: true,
+    });
+    expect(result.id).toBe('ses_1');
+  });
+
+  it('delegates getObserveSession with the session ref', async () => {
+    (cli.getObserveSession as jest.Mock).mockResolvedValue(observeSession);
+    const client = new HttpToolClient();
+    const result = await client.getObserveSession({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      sessionId: 'ses_1',
+    });
+    expect(cli.getObserveSession).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      sessionId: 'ses_1',
+    });
+    expect(result.recordsReceived).toBe(7);
+  });
+
+  it('delegates endObserveSession with the session ref', async () => {
+    (cli.endObserveSession as jest.Mock).mockResolvedValue(undefined);
+    const client = new HttpToolClient();
+    await client.endObserveSession({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      sessionId: 'ses_1',
+    });
+    expect(cli.endObserveSession).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'fl_1',
+      sessionId: 'ses_1',
+    });
   });
 
   it('delegates regrantPreview to cli.regrantPreview with ids, origins, and sessionId', async () => {

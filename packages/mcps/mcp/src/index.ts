@@ -13,6 +13,7 @@ import { createFlowManageToolSpec } from './tools/flow-manage.js';
 import { createDeployManageToolSpec } from './tools/deploy-manage.js';
 import { createSecretManageToolSpec } from './tools/secret-manage.js';
 import { createObserveJourneysToolSpec } from './tools/observe-journeys.js';
+import { createObserveSessionToolSpec } from './tools/observe-session.js';
 import { createFeedbackToolSpec } from './tools/feedback.js';
 
 import { createFlowValidateToolSpec } from './tools/validate.js';
@@ -45,6 +46,21 @@ export {
 } from './tool-definitions.js';
 
 export type { ToolSpec } from './tool-spec.js';
+
+/**
+ * The `observe_session` description and next-hints, so a host embedding this
+ * tool asserts parity against these strings rather than retyping them.
+ */
+export {
+  DESCRIPTION as OBSERVE_SESSION_DESCRIPTION,
+  HINT_SIMULATE_FIRST,
+  HINT_PREVIEW_STREAMS,
+  HINT_READ,
+  HINT_STOP,
+  HINT_EMPTY_FEED,
+  HINT_ENDED,
+  HINT_NO_WINDOW,
+} from './tools/observe-session.js';
 
 export {
   wrapUserData,
@@ -81,6 +97,7 @@ export function createToolHandlers(
     createFlowManageToolSpec(client),
     createDeployManageToolSpec(client),
     createSecretManageToolSpec(client),
+    createObserveSessionToolSpec(client),
     createObserveJourneysToolSpec(client),
     createFeedbackToolSpec(client),
     createFlowValidateToolSpec(),
