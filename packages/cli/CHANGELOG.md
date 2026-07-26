@@ -1,5 +1,20 @@
 # @walkeros/cli
 
+## 4.3.2
+
+### Patch Changes
+
+- a32ac49: The Observe session lifecycle is now available programmatically:
+  `startObserveSession`, `getObserveSession`, and the new `endObserveSession`
+  are exported from `@walkeros/cli`, so tools built on the CLI can open an
+  Observe session on a flow, read its status and record count, and end it.
+  Starting one also accepts `origins` to bind its web activation grant.
+  - @walkeros/collector@4.3.2
+  - @walkeros/core@4.3.2
+  - @walkeros/server-core@4.3.2
+  - @walkeros/server-destination-api@4.3.2
+  - @walkeros/transformer-validate@4.3.2
+
 ## 4.3.1
 
 ### Patch Changes

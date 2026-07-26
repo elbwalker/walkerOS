@@ -1,5 +1,18 @@
 # @walkeros/mcp
 
+## 4.3.2
+
+### Patch Changes
+
+- a32ac49: Agents can now open, inspect, and end an Observe session on a flow
+  with the new `observe_session` tool. It reports per-arm state, records
+  received, and expiry, and a preview grant minted while the flow is observed
+  pairs with that Observe session automatically. Read the events with
+  `observe_journeys`.
+- Updated dependencies [a32ac49]
+  - @walkeros/cli@4.3.2
+  - @walkeros/core@4.3.2
+
 ## 4.3.1
 
 ### Patch Changes
