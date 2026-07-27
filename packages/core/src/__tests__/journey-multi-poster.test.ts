@@ -7,6 +7,11 @@ import { assembleJourneys } from '../journey';
  * at 1, so records from different posters may carry overlapping (platform,
  * seq) pairs. Assembly must keep them all, dedupe only genuine replays, and
  * keep gap detection truthful.
+ *
+ * Dedupe and gap detection both run before grouping and key on
+ * (platform, traceId, seq), so the event grain leaves them untouched. The
+ * journey counts below track EVENTS, not posters; each fixture poster happens
+ * to emit exactly one event.
  */
 
 const BASE = Date.parse('2026-07-27T10:00:00.000Z');
@@ -234,9 +239,9 @@ describe('assembleJourneys - multi-poster survival', () => {
   });
 
   test('seq-stamped trace-less records survive across posters (timestamp-extended fallback)', () => {
-    // No traceId, eventId set: legacy grouping. Live, the only trace-less
-    // records are init/flush frames, but the fallback must hold for any
-    // trace-less emitter.
+    // No traceId, eventId set: the event id alone carries the grouping. Live,
+    // the only trace-less records are init/flush frames, but the fallback must
+    // hold for any trace-less emitter.
     const loadOne = posterRecords({
       eventId: 'legacy-a',
       name: 'page view',
@@ -253,10 +258,7 @@ describe('assembleJourneys - multi-poster survival', () => {
     const out = assembleJourneys([...loadOne, ...loadTwo], SETTLED);
 
     expect(out.journeys).toHaveLength(2);
-    expect(out.journeys.map((j) => j.correlation)).toEqual([
-      'legacy',
-      'legacy',
-    ]);
+    expect(out.journeys.map((j) => j.id)).toEqual(['legacy-a', 'legacy-b']);
   });
 
   test('exact replay of a multi-poster stream is idempotent', () => {

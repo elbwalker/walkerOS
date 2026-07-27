@@ -14,7 +14,7 @@ import type {
   DeleteSecretOptions,
   FeedbackOptions,
 } from '@walkeros/cli';
-import type { Journey, JourneyGap } from '@walkeros/core';
+import type { Journey, JourneyGap, JourneyUnattributed } from '@walkeros/core';
 
 /**
  * Mint a fresh, origin-bound activation grant for an existing preview. All
@@ -36,9 +36,10 @@ export interface RegrantPreviewOptions {
  * The assembled cross-runtime journeys for a flow's active Observe session,
  * mirroring the app's flowId-keyed REST envelope. `sessionId` is null when the
  * flow has no active session (the empty result an agent gets when the flow is
- * not currently being observed). `journeys`/`gaps` are the pure
- * `assembleJourneys` output; typed against core's `Journey`/`JourneyGap` since
- * `@walkeros/mcp` already depends on `@walkeros/core`.
+ * not currently being observed). `journeys`/`gaps`/`unattributed` are the pure
+ * `assembleJourneys` output; typed against core's `Journey`/`JourneyGap`/
+ * `JourneyUnattributed` since `@walkeros/mcp` already depends on
+ * `@walkeros/core`.
  */
 export interface JourneysResult {
   sessionId: string | null;
@@ -46,6 +47,12 @@ export interface JourneysResult {
   assembledAt: string;
   journeys: Journey[];
   gaps: JourneyGap[];
+  /**
+   * Records that belonged to an event run but could not be attributed to any
+   * event, per platform. Absent when there are none, and session-level like
+   * `gaps`: `traceId`/`limit` narrow `journeys` only.
+   */
+  unattributed?: JourneyUnattributed[];
 }
 
 /** Observation verbosity a session's container is provisioned with. */

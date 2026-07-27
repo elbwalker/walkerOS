@@ -248,6 +248,8 @@ export function createEvent(
     user = collector.user,
     nested = [],
     consent = collector.consent,
+    // A supplied id is preserved: sources and the push wrap mint the span
+    // early so pre-enrichment records can carry it.
     id = getSpanId(),
     trigger = '',
     entity = entityValue,

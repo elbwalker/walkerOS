@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "4.1.0",
+    "version": "4.2.0",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -2493,6 +2493,13 @@
             }
           },
           "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "unattributed": {
             "type": "array",
             "items": {
               "type": "object",
@@ -5098,6 +5105,13 @@
             }
           },
           "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "unattributed": {
             "type": "array",
             "items": {
               "type": "object",

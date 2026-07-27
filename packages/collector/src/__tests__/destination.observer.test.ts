@@ -73,7 +73,7 @@ describe('destination self-emission', () => {
     expect(destStates.some((s) => s.phase === 'out')).toBe(true);
   });
 
-  test('destination.pushBatch emits a flush state with batch size', async () => {
+  test('destination.pushBatch emits one flush state per batch entry', async () => {
     jest.useFakeTimers();
     try {
       const states: FlowState[] = [];
@@ -109,15 +109,18 @@ describe('destination self-emission', () => {
 
       expect(batchCalls.length).toBeGreaterThan(0);
 
-      const flush = states.find(
+      const flushes = states.filter(
         (s) =>
           s.stepType === 'destination' &&
           s.stepId === 'destination.gtag' &&
           s.phase === 'flush',
       );
-      expect(flush).toBeDefined();
-      expect(flush?.batch?.size).toBeGreaterThan(0);
-      expect(flush?.batch?.index).toBe(0);
+      expect(flushes).toHaveLength(2);
+      expect(flushes.map((s) => s.batch)).toEqual([
+        { size: 2, index: 0 },
+        { size: 2, index: 1 },
+      ]);
+      expect(flushes.every((s) => s.eventId !== '')).toBe(true);
     } finally {
       jest.useRealTimers();
     }

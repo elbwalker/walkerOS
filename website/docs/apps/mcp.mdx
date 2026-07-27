@@ -441,15 +441,20 @@ observed (an active Observe session). Read-only.
 |-----------|------|----------|-------------|
 | `flowId` | string | Yes | Flow to read journeys for (its active Observe session). |
 | `projectId` | string | No | Project ID. Optional; falls back to the default project. |
-| `traceId` | string | No | Return only the journeys for this trace id. |
+| `traceId` | string | No | Return only the journeys of this run, which is every event of one page load or container run. |
 | `limit` | number | No | Max journeys to return (1-100, most recent kept). Defaults to 50. |
 
-Each journey is one traced event reconstructed end to end across web and server:
+Each journey is one event reconstructed end to end across web and server:
 its ordered hops (source, transformer, collector, destination), each hop status
 (pending/done/skipped/error), captured in/out payloads, consent, and vendor
 calls. Use it to see which destinations fired, what mapping ran, where an event
 was skipped or errored, and whether records were lost (`gaps` plus a journey
 `lossy` flag).
+
+The result also carries an optional `unattributed` summary: records that
+belonged to a run but could not be attributed to any event. It is absent when
+there are none, and it counts the whole session rather than the returned page,
+so `limit` never hides loss.
 
 When the flow has no active Observe session the result is
 `{ "sessionId": null, "journeys": [], "gaps": [] }`. Start an Observe session and

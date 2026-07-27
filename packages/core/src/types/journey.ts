@@ -2,10 +2,13 @@ import type { Simulation } from '.';
 import type { FlowStatePhase, FlowStepType } from './telemetry';
 
 /**
- * Journey types describe the assembled, cross-runtime life of one traced event
- * as reconstructed from raw `FlowState` records by `assembleJourneys`. The
- * assembler is pure and presentation-free: no session scoping, no display copy,
- * no formatting. Presenters map a `Journey` into their own view shapes.
+ * Journey types describe the assembled, cross-runtime life of ONE EVENT as
+ * reconstructed from raw `FlowState` records by `assembleJourneys`. The unit is
+ * the event (`FlowState.eventId`, a W3C span id), not the run: a `traceId` is
+ * run-scoped and covers every event of a page load or container run, so it is
+ * carried as the run handle for optional grouping rather than as the identity.
+ * The assembler is pure and presentation-free: no session scoping, no display
+ * copy, no formatting. Presenters map a `Journey` into their own view shapes.
  *
  * Optional fields are populated only when the underlying records carry the
  * corresponding data (e.g. trace-level payloads, consent snapshots, vendor
@@ -16,11 +19,16 @@ import type { FlowStatePhase, FlowStepType } from './telemetry';
 export type JourneyPlatform = 'web' | 'server';
 
 /**
- * How a journey's records were correlated into one journey. `trace` groups by
- * the shared `traceId`; `legacy` is the fallback for records that predate trace
- * propagation and are grouped by their `eventId` alone.
+ * How a journey's records were correlated into one journey. `event` is the only
+ * value the assembler produces: records group by their `eventId`, with $flow
+ * crossing continuations joined through `parentEventId`.
+ *
+ * @remarks `trace` (grouped by the run-scoped `traceId`) and `legacy` (grouped
+ * by `eventId` when no trace was propagated) are retained so envelopes
+ * serialized by older assemblers still type. Neither is produced any more; both
+ * are removal candidates in the next major.
  */
-export type JourneyCorrelation = 'trace' | 'legacy';
+export type JourneyCorrelation = 'event' | 'trace' | 'legacy';
 
 /**
  * Collapsed outcome of a single hop, derived from its terminal phase. `pending`
@@ -84,7 +92,13 @@ export interface AssembleJourneysOptions {
   now?: number;
 }
 
-/** The originating event of a journey, taken from its entry collector hop. */
+/**
+ * The originating event of a journey, taken from its entry collector hop.
+ * `eventId` always equals the journey's `id`, by construction: the entry is
+ * chosen from the originating arm's records alone, so a crossing's far arm can
+ * never supply it, and `name` therefore always describes the event the journey
+ * is named after rather than the far arm's rendering of it.
+ */
 export interface JourneyEntry {
   /** Originating event's id (W3C span-id). */
   eventId: string;
@@ -205,13 +219,43 @@ export interface JourneyGap {
   beforeSeq: number;
 }
 
+/**
+ * Records that carried a `traceId` (so they belonged to a real event run) but
+ * could not be attributed to any event, grouped per platform. Emitted by
+ * runtimes that predate the early span-id mint, whose `collector.push` records
+ * carry no event id. Records that carry no `traceId` (destination `init`, store
+ * lifecycle) belong to no event by design and are never counted here, so a
+ * nonzero value always means information was lost.
+ */
+export interface JourneyUnattributed {
+  /** Poster runtime the records came from, when stamped. */
+  platform?: JourneyPlatform;
+  /** How many records were dropped from grouping. */
+  count: number;
+  /** Wall-clock lower bound of the dropped records (epoch ms). */
+  fromMs: number;
+  /** Wall-clock upper bound of the dropped records (epoch ms). */
+  toMs: number;
+  /** Distinct stepIds the dropped records came from, sorted. */
+  stepIds: string[];
+}
+
 /** One reconstructed event lifetime across the pipeline. */
 export interface Journey {
-  /** `traceId` when trace-correlated, else `event:<eventId>`. */
+  /**
+   * The originating event's id (bare W3C span-id). For a $flow crossing, the
+   * id of the arm the crossing started from.
+   */
   id: string;
-  /** How the journey's records were correlated. */
+  /** How the journey's records were correlated. Always `event`. */
   correlation: JourneyCorrelation;
-  /** Shared trace id, when trace-correlated. */
+  /**
+   * Run handle of the originating arm: the run-scoped trace every event of one
+   * page load or container run shares. Presenters group rows by it; it is not
+   * the journey's identity. When the originating arm's records carry no trace
+   * (an emitter predating trace propagation), the first trace among the
+   * journey's remaining records stands in rather than dropping the handle.
+   */
   traceId?: string;
   /** Originating event of the journey. */
   entry: JourneyEntry;
@@ -242,4 +286,10 @@ export interface JourneyAssembly {
   journeys: Journey[];
   /** Session-level per-platform loss windows. */
   gaps: JourneyGap[];
+  /**
+   * Records that belonged to an event run but could not be attributed to any
+   * event, per platform. Absent when there are none. Computed over every input
+   * record, so callers that cap `journeys` still report the full figure.
+   */
+  unattributed?: JourneyUnattributed[];
 }

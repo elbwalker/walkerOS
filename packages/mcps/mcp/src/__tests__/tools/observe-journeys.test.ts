@@ -50,11 +50,15 @@ function createMockServer() {
  * (traceId/stepId/eventId/mappingKey — must stay literal, they are filter input)
  * and captured event payloads (entry.name/in/out/error/meta — must be wrapped).
  */
-function journeysResult(sessionId: string | null): JourneysResult {
+function journeysResult(
+  sessionId: string | null,
+  unattributed?: JourneysResult['unattributed'],
+): JourneysResult {
   return {
     sessionId,
     flowId: 'flow_1',
     assembledAt: '2026-07-06T00:00:00.000Z',
+    ...(unattributed !== undefined && { unattributed }),
     journeys:
       sessionId === null
         ? []
@@ -273,6 +277,63 @@ describe('observe_journeys tool', () => {
     );
     expect(branch.error.message).toBe('<user_data>branch boom</user_data>');
     expect(branch.calls[0].args[1].user).toBe('<user_data>z@z.z</user_data>');
+  });
+
+  it('passes unattributed through, literal, so the agent sees the loss the REST surface reports', async () => {
+    // The handler builds an explicit allowlist, so a field the client returns is
+    // dropped unless it is named. Dropping this one would make the agent surface
+    // under-report loss while REST reports it: silence, not a smaller number.
+    // Nothing in it is event-controlled (platform enum, numbers, and stepIds
+    // from the user's own config), so no <user_data> wrapping applies.
+    const listJourneys = jest.fn().mockResolvedValue(
+      journeysResult('ses_1', [
+        {
+          platform: 'web',
+          count: 3,
+          fromMs: 10,
+          toMs: 20,
+          stepIds: ['destination.gtag', 'source.browser'],
+        },
+      ]),
+    );
+    registerObserveJourneysTool(server as never, stubClient({ listJourneys }));
+
+    const tool = server.getTool('observe_journeys')!;
+    const result = (await tool.handler({ flowId: 'flow_1' })) as {
+      structuredContent: {
+        unattributed?: Array<{
+          platform?: string;
+          count: number;
+          fromMs: number;
+          toMs: number;
+          stepIds: string[];
+        }>;
+      };
+    };
+
+    expect(result.structuredContent.unattributed).toEqual([
+      {
+        platform: 'web',
+        count: 3,
+        fromMs: 10,
+        toMs: 20,
+        stepIds: ['destination.gtag', 'source.browser'],
+      },
+    ]);
+  });
+
+  it('leaves unattributed absent when the client reports none', async () => {
+    // Absent means "no loss to report", which reads differently from an empty
+    // array; the app envelope spreads it conditionally for the same reason.
+    const listJourneys = jest.fn().mockResolvedValue(journeysResult('ses_1'));
+    registerObserveJourneysTool(server as never, stubClient({ listJourneys }));
+
+    const tool = server.getTool('observe_journeys')!;
+    const result = (await tool.handler({ flowId: 'flow_1' })) as {
+      structuredContent: Record<string, unknown>;
+    };
+
+    expect('unattributed' in result.structuredContent).toBe(false);
   });
 
   it('surfaces the no-active-session result with a start-a-session hint', async () => {

@@ -9087,6 +9087,9 @@ export interface components {
       gaps: {
         [key: string]: unknown;
       }[];
+      unattributed?: {
+        [key: string]: unknown;
+      }[];
     };
     CreateObserveSessionRequest: {
       settingsName: string;
@@ -10022,6 +10025,9 @@ export interface components {
         [key: string]: unknown;
       }[];
       gaps: {
+        [key: string]: unknown;
+      }[];
+      unattributed?: {
         [key: string]: unknown;
       }[];
     };
