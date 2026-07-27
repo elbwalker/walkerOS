@@ -178,6 +178,8 @@ export interface JourneyHop {
    * non-terminal and is not a confirmation.
    */
   flushConfirmed?: boolean;
+  /** Release provenance of the runtime that produced this hop's records, when stamped. */
+  release?: string;
   /** Free-form metadata carried by the hop's records. */
   meta?: Record<string, unknown>;
 }

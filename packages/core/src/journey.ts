@@ -68,8 +68,13 @@ function compareRecords(a: FlowState, b: FlowState): number {
 }
 
 /**
- * Drop replayed duplicates. Prefer the poster's `(platform, seq)` identity when
- * `seq` is present; otherwise fall back to the structural tuple. First
+ * Drop replayed duplicates. `seq` is a PER-POSTER-INSTANCE counter (it
+ * restarts at 1 on every page load and container restart), so it is only an
+ * identity within one event run: the key scopes it with `traceId`, which a
+ * genuine replay repeats and a new poster never does. A seq-stamped record
+ * without a traceId falls back to its structural tuple extended with
+ * `timestamp` (a replay repeats the timestamp exactly; distinct posters
+ * differ). Seq-less records keep the plain structural tuple. First
  * occurrence wins.
  */
 function dedupe(records: FlowState[]): FlowState[] {
@@ -77,11 +82,15 @@ function dedupe(records: FlowState[]): FlowState[] {
   const out: FlowState[] = [];
   for (const r of records) {
     const key =
-      r.seq !== undefined
-        ? `seq${SEP}${r.platform ?? ''}${SEP}${r.seq}`
-        : `tuple${SEP}${r.platform ?? ''}${SEP}${r.stepId}${SEP}${r.phase}${SEP}${
-            r.eventId
-          }${SEP}${r.branchId ?? ''}${SEP}${r.elapsedMs}`;
+      r.seq !== undefined && r.traceId
+        ? `seq${SEP}${r.platform ?? ''}${SEP}${r.traceId}${SEP}${r.seq}`
+        : r.seq !== undefined
+          ? `seqt${SEP}${r.platform ?? ''}${SEP}${r.stepId}${SEP}${r.phase}${SEP}${
+              r.eventId
+            }${SEP}${r.branchId ?? ''}${SEP}${r.elapsedMs}${SEP}${r.timestamp}${SEP}${r.seq}`
+          : `tuple${SEP}${r.platform ?? ''}${SEP}${r.stepId}${SEP}${r.phase}${SEP}${
+              r.eventId
+            }${SEP}${r.branchId ?? ''}${SEP}${r.elapsedMs}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -476,6 +485,7 @@ function collapseHop(group: FlowState[]): JourneyHop {
   let consentApplied: Record<string, boolean> | undefined;
   let meta: Record<string, unknown> | undefined;
   let parentEventId: string | undefined;
+  let release: string | undefined;
 
   for (const r of source) {
     if (r.elapsedMs < identity.elapsedMs) identity = r;
@@ -491,6 +501,7 @@ function collapseHop(group: FlowState[]): JourneyHop {
     if (r.meta !== undefined) meta = r.meta;
     if (r.parentEventId !== undefined && parentEventId === undefined)
       parentEventId = r.parentEventId;
+    if (r.release !== undefined) release = r.release;
   }
 
   const terminalPhase = terminal.phase;
@@ -538,6 +549,7 @@ function collapseHop(group: FlowState[]): JourneyHop {
     ...(branches !== undefined ? { branches } : {}),
     ...(batched !== undefined ? { batched } : {}),
     ...(flushConfirmed !== undefined ? { flushConfirmed } : {}),
+    ...(release !== undefined ? { release } : {}),
     ...(meta !== undefined ? { meta } : {}),
   };
 }

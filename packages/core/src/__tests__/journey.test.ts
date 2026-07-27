@@ -1641,3 +1641,27 @@ describe('assembleJourneys — entry and structural edge cases', () => {
     expect([...journeys[0].platforms].sort()).toEqual(['server', 'web']);
   });
 });
+
+describe('assembleJourneys - release provenance', () => {
+  test('a hop carries the release its records were stamped with', () => {
+    const records = [
+      rec({
+        phase: 'in',
+        elapsedMs: 0,
+        release: '14',
+        inEvent: { name: 'page view' },
+      }),
+      rec({ phase: 'out', elapsedMs: 5, release: '14' }),
+    ];
+
+    const { journeys } = assembleJourneys(records, SETTLED);
+
+    expect(journeys[0].hops[0].release).toBe('14');
+  });
+
+  test('a hop whose records carry no release has no release field', () => {
+    const { journeys } = assembleJourneys([rec({ phase: 'in' })], SETTLED);
+
+    expect(journeys[0].hops[0].release).toBeUndefined();
+  });
+});
