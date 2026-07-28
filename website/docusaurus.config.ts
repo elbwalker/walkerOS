@@ -3,6 +3,8 @@ import type { Config, Plugin } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plugin-llms-txt';
 import { version as coreVersion } from '../packages/core/package.json';
+import restoreExpressionIndent from './src/remark/restore-expression-indent';
+import normalizeExportLinks from './src/remark/normalize-export-links';
 
 const vars = {
   github: 'https://github.com/elbwalker/walkerOS/',
@@ -84,6 +86,11 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
+          // MDX eats up to two leading spaces per line inside a JSX attribute
+          // expression, which flattens every nested snippet written as
+          // `<CodeSnippet code={`...`} />`. Put that indentation back before
+          // any other plugin sees the tree.
+          beforeDefaultRemarkPlugins: [restoreExpressionIndent],
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl: `${vars.github}edit/main/website/`,
@@ -286,6 +293,11 @@ const config: Config = {
           enableMarkdownFiles: true,
           enableLlmsFullTxt: true,
           excludeRoutes: ['/search', '/404', '/tags/**'],
+          // The export appends `.md` to the route path, so a trailing-slash
+          // route yields `/docs/mapping/.md` while the page is written to
+          // `/docs/mapping.md`. Rewrite those targets after the export's own
+          // link handling.
+          remarkPlugins: [normalizeExportLinks],
         },
       } satisfies LlmsTxtOptions,
     ],

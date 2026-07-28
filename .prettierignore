@@ -30,5 +30,6 @@ logs/
 # Handlebars templates (JavaScript generation)
 **/*.hbs
 
-# MDX files (formatted by remark-mdx instead)
+# MDX docs are not formatted by any tool: both prettier and remark rewrite the
+# `code={`...`}` template literals that carry the documentation snippets.
 website/docs/**/*.mdx

@@ -484,10 +484,10 @@ describe('FlowState journey fields', () => {
       const ids = delivered.map((event) => event.id);
       expect(new Set(ids).size).toBe(3);
 
-      // Bundles emitting the pre-fan-out frame stamp eventId '' here, so the
-      // batch failure attributes to no event; those frames are unattributable
-      // by construction and are reported through the assembler's unattributed
-      // surface rather than silently dropped.
+      // A batch failure stays attributable per event: every error frame carries
+      // its own entry's id and its position in the batch, so one transport
+      // failure reports three attributed errors rather than a single anonymous
+      // one.
       const errors = pickAll(states, 'destination.batched', 'error');
       expect(errors).toHaveLength(3);
       expect(errors.map((s) => s.eventId)).toEqual(ids);

@@ -92,12 +92,20 @@ describe('window.elb writer versus flow.elb', () => {
 
     // The layer chain orders the pageview strictly before anything the page
     // pushes through the installed writer. flow.elb bypasses that chain.
-    expect(names().indexOf('page view')).toBeLessThan(
-      names().indexOf('order complete'),
-    );
-    expect(names().indexOf('order refund')).toBeLessThan(
-      names().indexOf('order complete'),
-    );
+    // Presence is asserted before position: indexOf reports -1 for a missing
+    // name, and -1 precedes every real index, so an ordering check alone would
+    // hold even if an event never arrived.
+    const order = names();
+    const pageview = order.indexOf('page view');
+    const refund = order.indexOf('order refund');
+    const complete = order.indexOf('order complete');
+
+    expect(pageview).toBeGreaterThanOrEqual(0);
+    expect(refund).toBeGreaterThanOrEqual(0);
+    expect(complete).toBeGreaterThanOrEqual(0);
+
+    expect(pageview).toBeLessThan(complete);
+    expect(refund).toBeLessThan(complete);
   });
 
   test('a pre-run event survives the writer and is dropped by flow.elb', async () => {

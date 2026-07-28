@@ -80,7 +80,6 @@ describe('Walker.js Integration Tests', () => {
       // Initialize walker.js with mock destination to capture events
       const instance = await createWalkerjs({
         session: false,
-        run: false,
         browser: {
           pageview: false,
         },
@@ -125,7 +124,6 @@ describe('Walker.js Integration Tests', () => {
     test('should support manual event tracking', async () => {
       const instance = await createWalkerjs({
         session: false,
-        run: false,
         browser: {
           pageview: false,
         },

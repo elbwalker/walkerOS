@@ -31,14 +31,22 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
     session: true,
     dataLayer: false,
     elb: 'elb',
-    run: true,
   };
 
   const fullConfig = assign(defaultConfig, config);
 
-  // Build collector config with sources
+  // Build collector config with sources.
+  //
+  // `run` is deliberately absent from defaultConfig: the collector already
+  // defaults it to true, and leaving it unset here is what makes "the caller
+  // asked for a run mode" distinguishable from "nobody said anything". The
+  // top-level flag is the documented walker.js surface (it is what an inline
+  // `data-elbconfig="run:false"` parses into), so it wins over the `collector`
+  // passthrough; with it omitted, `collector.run` and then the collector's own
+  // default apply.
   const collectorConfig: Collector.InitConfig = {
     ...fullConfig.collector,
+    ...(fullConfig.run !== undefined ? { run: fullConfig.run } : {}),
     sources: {
       browser: {
         code: sourceBrowser,
