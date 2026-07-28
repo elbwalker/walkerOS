@@ -1,10 +1,9 @@
 import type { Source, WalkerOS, Collector, Logger } from '@walkeros/core';
 import { Level } from '@walkeros/core';
 import { startFlow, createPushResult } from '@walkeros/collector';
-import { sourceBrowser, __resetInstanceCountForTests } from '../index';
-import { destroyTriggers } from '../trigger';
-import { flushChain } from './test-utils';
-import type { BrowserPush } from '../types';
+import { sourceBrowser } from '../index';
+import { destroyBrowserSource, flushChain } from './test-utils';
+import type { BrowserPush, Types } from '../types';
 
 /**
  * Regression contract for the mitgas.de production funnel.
@@ -12,7 +11,7 @@ import type { BrowserPush } from '../types';
  * On mitgas.de an Angular app injects a tagged product slider and then pushes
  * `['walker init', sliderElement]` into `window.elbLayer`. Under the old
  * architecture the elbLayer wrapper short-circuited walker commands to the
- * collector, which had no `init` handler and silently returned ok:true — so
+ * collector, which had no `init` handler and silently returned ok:true, so
  * IntersectionObserver was never attached and `product visible` never fired.
  *
  * The flow mirrors mitgas's shape: `cmp` occupies sources[0], `browser` is the
@@ -58,7 +57,7 @@ interface LogEntry {
   scope: string[];
 }
 
-// A minimal, side-effect-free source that only occupies a slot in the flow —
+// A minimal, side-effect-free source that only occupies a slot in the flow -
 // used to place `cmp` at sources[0] and `session` after the browser so the
 // browser is the consent-gated primary that is NOT the first source.
 const createDummySource =
@@ -74,6 +73,13 @@ interface Booted {
   recorded: WalkerOS.Event[];
   logs: LogEntry[];
 }
+
+// The booted browser source and its collector, so teardown can drive the real
+// destroy: a source's trigger state lives on its own registry, which is
+// closure state and has no accessor.
+let booted:
+  | { source: Source.Instance<Types>; collector: Collector.Instance }
+  | undefined;
 
 // The chains span the multi-source consent/run cascade plus the controller's
 // serialized replay, which is deeper than a single package suite. Drain twice
@@ -99,6 +105,13 @@ const bootFlow = async (
     logs.push({ level, message, context, scope });
   };
 
+  let source: Source.Instance<Types> | undefined;
+  const captureBrowser: Source.Init<Types> = async (sourceContext) => {
+    const instance = await sourceBrowser(sourceContext);
+    source = instance;
+    return instance;
+  };
+
   const { collector } = await startFlow({
     run: true,
     logger: { level: 'WARN', handler },
@@ -116,7 +129,7 @@ const bootFlow = async (
     sources: {
       cmp: { code: createDummySource('cmp') },
       browser: {
-        code: sourceBrowser,
+        code: captureBrowser,
         primary: true,
         config: {
           require: ['consent'],
@@ -128,6 +141,7 @@ const bootFlow = async (
   });
 
   await settle();
+  if (source) booted = { source, collector };
   return { collector, recorded, logs };
 };
 
@@ -176,18 +190,18 @@ describe('elbLayer funnel (mitgas shape)', () => {
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'elbLayer');
     Reflect.deleteProperty(window, 'elb');
-    __resetInstanceCountForTests();
 
+    booted = undefined;
     observerInstances.length = 0;
     originalIO = global.IntersectionObserver;
     global.IntersectionObserver = MockIntersectionObserver;
   });
 
-  afterEach(() => {
-    // Transitively disconnects the per-document IntersectionObserver: it
-    // iterates the scope registry and calls destroyVisibilityTracking for each
-    // scope, so no observer leaks into the next test (mirrors scopedVisible).
-    destroyTriggers();
+  afterEach(async () => {
+    // The source's destroy iterates its own registry and disconnects its
+    // per-document IntersectionObserver, so no observer leaks into the next
+    // test (mirrors scopedVisible).
+    if (booted) await destroyBrowserSource(booted.source, booted.collector);
     global.IntersectionObserver = originalIO;
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'elbLayer');
@@ -257,7 +271,7 @@ describe('elbLayer funnel (mitgas shape)', () => {
     expect(collector.sources.browser.config.require?.length || 0).toBe(0);
     expect(collector.sources.browser.config.init).toBe(true);
 
-    // The queued event was replayed to the destination — nothing dropped.
+    // The queued event was replayed to the destination, nothing dropped.
     expect(
       recorded.some(
         (event) => event.name === 'product view' && event.data.id === 'queued',

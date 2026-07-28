@@ -1,5 +1,9 @@
 import { startFlow } from '@walkeros/collector';
-import { createBrowserSource, flushChain } from './test-utils';
+import {
+  createBrowserSource,
+  destroyAllTestSources,
+  flushChain,
+} from './test-utils';
 import type { WalkerOS } from '@walkeros/core';
 
 // Real collector + capturing destination; returns emitted events.
@@ -68,7 +72,10 @@ describe('capture-phase trigger', () => {
     document.body.innerHTML = '';
     window.elbLayer = undefined;
   });
-  afterEach(() => {
+  afterEach(async () => {
+    // A source holds the layer and window.elb, and keeps its timers and
+    // observers running, until it is destroyed.
+    await destroyAllTestSources();
     document.body.innerHTML = '';
     window.elbLayer = undefined;
   });

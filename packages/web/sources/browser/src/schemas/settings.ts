@@ -39,9 +39,10 @@ export const SettingsSchema = z.object({
       'Read click/submit triggers in the capture phase so tagged elements are resolved at click time before app handlers run (set false for the previous bubble-phase behavior)',
     ),
 
-  elb: JavaScriptVarName.default('elb').describe(
-    'Name for global elb function',
-  ),
+  elb: z
+    .union([JavaScriptVarName, z.literal(false)])
+    .default('elb')
+    .describe('Name for global elb function, or false to install none'),
 
   name: z.string().describe('Custom name for source instance').optional(),
 

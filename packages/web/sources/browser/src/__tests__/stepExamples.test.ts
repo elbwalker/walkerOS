@@ -1,6 +1,6 @@
 import type { Elb } from '@walkeros/core';
 import { getConfig } from '../config';
-import { handleTrigger } from '../trigger';
+import { createRegistry, handleTrigger } from '../trigger';
 import { translateToCoreCollector } from '../translation';
 import { getPageViewData } from '../walker';
 import { examples } from '../dev';
@@ -20,7 +20,7 @@ describe('Step Examples', () => {
     document.body.innerHTML = '';
   });
 
-  // Impression needs IntersectionObserver mock — tested separately
+  // Impression needs IntersectionObserver mock, tested separately
   const supported = Object.entries(examples.step).filter(
     ([name]) => name !== 'impressionEvent',
   );
@@ -65,6 +65,7 @@ describe('Step Examples', () => {
     const context: Context = {
       elb: mockElb,
       settings,
+      registry: createRegistry(),
     };
 
     const type = triggerInfo?.type;

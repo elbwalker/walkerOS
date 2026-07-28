@@ -49,9 +49,17 @@ elb({event: "entity action", data: { foo: "bar"}});`}
   language="javascript"
 />
 
-The browser source owns the `window.elb` name: during initialization it
-assigns the function to `window[settings.elb]` (default `elb`). Calls return a
-promise that resolves with the processing result.
+During initialization the source installs its writer at `window[settings.elb]`
+(default `elb`). The name is a single slot and belongs to the first source that
+installs it: a source that finds the name held by another one logs an error,
+skips the install, and keeps capturing through its own `push`. Set `elb: false`
+to install no window property at all, which is the posture for an embedded
+source that should leave no page-window footprint. Calls return a promise that
+resolves with the processing result.
+
+See
+[Multiple sources on one page](/docs/sources/web/browser#multiple-sources-on-one-page)
+for running several sources side by side.
 
 ### elbLayer processing
 
@@ -68,6 +76,12 @@ Processing order:
   `walker run`), in the order they were pushed.
 * From then on, all entries are processed strictly in push order.
 
+One named layer belongs to one source, because a queue is drained once. The
+first source to adopt `window[settings.elbLayer]` keeps it, and a source that
+asks for a name another one already adopted logs an error and runs without a
+layer, capturing from its scope as usual. Parallel flows use separate layer
+names or `elbLayer: false`.
+
 ## config
 
 Configure the browser source during initialization through `startFlow`. These
@@ -83,7 +97,7 @@ browser: {
 code: sourceBrowser,
 config: {
   settings: {
-    elb: 'elb', // Name to assign the elb function to the window
+    elb: 'elb', // Name for the global elb function, or false to install none
     elbLayer: true, // Enable elbLayer for async command queuing
     pageview: true, // Trigger a page view event by default
     prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning

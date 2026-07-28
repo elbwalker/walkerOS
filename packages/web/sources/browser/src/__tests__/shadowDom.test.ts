@@ -1,12 +1,12 @@
 import type { Elb } from '@walkeros/core';
-import type { Settings, Context } from '../types';
+import type { Settings, Context, Registry } from '../types';
 import { getAllEvents, getEvents, getGlobals } from '../walker';
 import {
+  createRegistry,
   destroyTriggers,
   handleTrigger,
   initGlobalTrigger,
   initScopeTrigger,
-  resetScrollListener,
   Triggers,
 } from '../trigger';
 import { translateToCoreCollector } from '../translation';
@@ -48,21 +48,35 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
   scope: document,
   pageview: false,
   capture: true,
-  elb: '',
+  elb: false,
   elbLayer: false,
 });
 
 describe('Shadow DOM', () => {
   let mockElb: jest.MockedFunction<Elb.Fn>;
+  let registry: Registry;
+  let context: Context;
+
+  // File-local context builder. One registry per test, so no listener, timer or
+  // observer can reach across a test boundary.
+  const makeContext = (prefix = 'data-elb'): Context => ({
+    elb: mockElb,
+    settings: createTestSettings(prefix),
+    registry,
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
-    resetScrollListener();
     document.body.innerHTML = '';
     mockElb = jest.fn().mockResolvedValue({ ok: true });
+    registry = createRegistry();
+    context = makeContext();
   });
 
   afterEach(() => {
+    // Releases this test's listeners, timers and observers. Idempotent when a
+    // test already tore its context down.
+    destroyTriggers(context);
     document.body.innerHTML = '';
   });
 
@@ -100,8 +114,7 @@ describe('Shadow DOM', () => {
       });
 
       // Set up the global click listener via the production code path
-      const context = { elb: mockElb, settings: createTestSettings() };
-      initGlobalTrigger(context, createTestSettings());
+      initGlobalTrigger(context);
 
       document.dispatchEvent(clickEvent);
 
@@ -121,7 +134,7 @@ describe('Shadow DOM', () => {
     test('handleTrigger with host element directly finds no action', () => {
       // When handleTrigger is called with the host element directly
       // (bypassing composedPath), no action fires because the host
-      // has no data-elbaction — the action is inside the shadow root.
+      // has no data-elbaction, the action is inside the shadow root.
       // This is expected: composedPath is what makes click delegation work.
       document.body.innerHTML = `
         <div id="host" data-elb="product" data-elb-product="id:123">
@@ -134,7 +147,6 @@ describe('Shadow DOM', () => {
         <button id="shadow-btn" data-elbaction="click:add">Add to Cart</button>
       `;
 
-      const context = { elb: mockElb, settings: createTestSettings() };
       handleTrigger(context, host, Triggers.Click);
 
       expect(mockElb).not.toHaveBeenCalled();
@@ -185,8 +197,7 @@ describe('Shadow DOM', () => {
         <div data-elbaction="load:impression">Track me</div>
       `;
 
-      const context = { elb: mockElb, settings: createTestSettings() };
-      initScopeTrigger(context, createTestSettings());
+      initScopeTrigger(context);
 
       // BUG: querySelectorAll won't find the load trigger inside shadow DOM
       // Expected: load event should fire for the shadow element
@@ -350,7 +361,7 @@ describe('Shadow DOM', () => {
     // must accept it (nodeType 11) and initScopeTrigger must scan it without
     // calling getAttribute on the root itself.
     afterEach(() => {
-      destroyTriggers();
+      destroyTriggers(context);
     });
 
     test('closed shadow root passed to walker init is accepted, scanned, and fires load', async () => {
@@ -359,14 +370,13 @@ describe('Shadow DOM', () => {
       root.innerHTML =
         '<div id="c" data-elb="widget" data-elb-widget="k:v" data-elbaction="load:show"></div>';
 
-      const context: Context = {
-        elb: mockElb,
-        settings: createTestSettings(),
+      const initContext: Context = {
+        ...makeContext(),
         initScope: initScopeTrigger,
       };
 
       const result = await translateToCoreCollector(
-        context,
+        initContext,
         'walker init',
         root,
       );
@@ -391,7 +401,7 @@ describe('Shadow DOM', () => {
     // WIRING proof, not visual proof. isVisible is mocked true (jsdom lays
     // nothing out) and the IntersectionObserver is stubbed, so this asserts
     // only that an open-shadow element is DISCOVERED (queryAllComposed
-    // recurses the open root), OBSERVED (handleActionElem → triggerVisible +
+    // recurses the open root), OBSERVED (handleActionElem -> triggerVisible +
     // bucket.observed.add), and FIRES through the real trigger pipeline, with
     // its entity resolved UPWARD across the shadow boundary via getParent.
     // Visual visibility behavior is covered elsewhere (isVisible unit tests
@@ -465,20 +475,15 @@ describe('Shadow DOM', () => {
 
     beforeEach(() => {
       jest.useFakeTimers();
-      // Earlier tests in this file call initScopeTrigger without tearing down,
-      // leaving a no-op observer in the shared per-document visibility state
-      // (jsdom has no IntersectionObserver). Clear it so this block's fresh
-      // MockIntersectionObserver is the one that gets installed.
-      destroyTriggers();
       instances.length = 0;
       originalIO = global.IntersectionObserver;
       global.IntersectionObserver = MockIntersectionObserver;
     });
 
     afterEach(() => {
-      // Module-level trigger/visibility state is shared within the file; tear
-      // it down so observers and scope buckets do not leak into the next test.
-      destroyTriggers();
+      // Release this test's observers and scope buckets through the same
+      // teardown the source drives.
+      destroyTriggers(context);
       global.IntersectionObserver = originalIO;
       jest.useRealTimers();
     });
@@ -495,10 +500,9 @@ describe('Shadow DOM', () => {
       const inner = shadowRoot.getElementById('inner')!;
 
       // initScopeTrigger is the exact path `walker run` takes
-      // (processLoadTriggers → initScopeTrigger): it discovers `inner` via
+      // (processLoadTriggers -> initScopeTrigger): it discovers `inner` via
       // queryAllComposed and observes it via handleActionElem.
-      const context = { elb: mockElb, settings: createTestSettings() };
-      initScopeTrigger(context, createTestSettings());
+      initScopeTrigger(context);
 
       fireVisible(inner);
       jest.advanceTimersByTime(1000);
@@ -529,8 +533,7 @@ describe('Shadow DOM', () => {
       `;
       const inner = shadowRoot.getElementById('inner')!;
 
-      const context = { elb: mockElb, settings: createTestSettings() };
-      initScopeTrigger(context, createTestSettings());
+      initScopeTrigger(context);
 
       fireVisible(inner);
       jest.advanceTimersByTime(1000);

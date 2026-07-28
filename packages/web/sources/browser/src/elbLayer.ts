@@ -1,8 +1,9 @@
 import type { Elb, Logger } from '@walkeros/core';
-import { isString, isObject } from '@walkeros/core';
+import { isString, isObject, tryCatch } from '@walkeros/core';
 import { createPushResult } from '@walkeros/collector';
 import type { Context } from './types';
 import { translateToCoreCollector } from './translation';
+import { mark, owner, release } from './ownership';
 
 /**
  * Controller for the append-only `window.elbLayer` command queue.
@@ -29,8 +30,8 @@ export interface ElbLayerController {
    * Append arbitrary work to the FIFO chain, after everything queued so far.
    * `fn` must not await the controller's own chain: calling `enqueue`/`intake`
    * from inside a chain item and awaiting the result deadlocks (it waits on a
-   * promise scheduled behind itself). Pushing new entries mid-dispatch is safe
-   * — that appends a link, it does not await one.
+   * promise scheduled behind itself). Pushing new entries mid-dispatch is safe:
+   * that appends a link, it does not await one.
    */
   enqueue<T>(fn: () => Promise<T> | T): Promise<T>;
   /** Restore the array's native push and forget internal state. */
@@ -42,8 +43,8 @@ export interface ElbLayerController {
  * non-enumerable Symbol so it never appears in inspection, iteration, or JSON:
  * the array stays append-only and reflects the page's full input history, yet a
  * later controller can read where the lanes already drained. `Symbol.for` keeps
- * the key stable across module instances, matching the window single-instance
- * sentinel convention.
+ * the key stable across module instances, the same agent-wide registry the
+ * ownership mark uses.
  */
 const DRAIN_MARKER = Symbol.for(
   '@walkeros/web-source-browser:elbLayer-drained',
@@ -66,16 +67,21 @@ const isDrainMarker = (value: unknown): value is DrainMarker =>
 // Return the array's existing marker (the same object, so this controller's
 // writes persist on the array) or install a fresh zeroed one. Non-enumerable +
 // configurable so it stays invisible to inspection yet re-readable later.
+// A sealed array rejects the definition: the boundary then lives for this
+// controller only, which replays a backlog a prior controller already drained
+// but never throws into the collector's init.
 const readOrCreateDrainMarker = (arr: unknown[]): DrainMarker => {
   const existing: unknown = Reflect.get(arr, DRAIN_MARKER);
   if (isDrainMarker(existing)) return existing;
   const fresh: DrainMarker = { commands: 0, events: 0 };
-  Object.defineProperty(arr, DRAIN_MARKER, {
-    value: fresh,
-    writable: true,
-    enumerable: false,
-    configurable: true,
-  });
+  tryCatch(() => {
+    Object.defineProperty(arr, DRAIN_MARKER, {
+      value: fresh,
+      writable: true,
+      enumerable: false,
+      configurable: true,
+    });
+  })();
   return fresh;
 };
 
@@ -89,17 +95,18 @@ export function createElbLayer(
 
   const ok = (): Elb.PushResult => createPushResult({ ok: true });
 
+  // Controller that touches nothing, for callers that cannot get a layer.
+  const inert = (): ElbLayerController => ({
+    intake: () => Promise.resolve(ok()),
+    start: () => {},
+    enqueue: <T>(fn: () => Promise<T> | T) =>
+      Promise.resolve().then(() => fn()),
+    destroy: () => {},
+  });
+
   // Window-less environments (SSR/node) cannot host a layer. Return an inert
   // controller so callers never branch on undefined.
-  if (!windowObj) {
-    return {
-      intake: () => Promise.resolve(ok()),
-      start: () => {},
-      enqueue: <T>(fn: () => Promise<T> | T) =>
-        Promise.resolve().then(() => fn()),
-      destroy: () => {},
-    };
-  }
+  if (!windowObj) return inert();
 
   // Ensure the named array exists without ever replacing an existing one.
   const existing = Reflect.get(windowObj, layerName);
@@ -110,6 +117,26 @@ export function createElbLayer(
     layer = [];
     Reflect.set(windowObj, layerName, layer);
   }
+
+  // One named layer belongs to one source. Two push overrides on one array
+  // starve each other's drain cursor, interleave their persisted boundaries,
+  // and orphan the survivor when either destroys, so a layer another source
+  // adopted is refused instead of shared. Parallel flows use separate layer
+  // names, or `elbLayer: false` and the DOM as their shared surface.
+  //
+  // The mark sits on the ARRAY, not on the installed push: a page that
+  // re-wraps `elbLayer.push` would otherwise leave an unmarked function in the
+  // slot. An unmarked array is free, which is what makes a page's pre-load
+  // bootstrap array adoptable.
+  const { registry } = context;
+  const layerOwner = owner(layer);
+  if (layerOwner && layerOwner !== registry) {
+    logger?.error(
+      `elbLayer "${layerName}" is already adopted by another source`,
+    );
+    return inert();
+  }
+  mark(layer, registry);
 
   // Adopt any drained boundary a prior controller left on this array. A fresh
   // array reads {0, 0}, reproducing the original replay-the-whole-backlog-once
@@ -156,7 +183,7 @@ export function createElbLayer(
     if (!started) {
       if (isCommandEntry(item)) {
         // A prior controller on this array already routed commands below the
-        // marker boundary — never route them a second time.
+        // marker boundary, never route them a second time.
         if (index < commandCursor) return Promise.resolve(ok());
         const link = cmdTail.then(() => routeSafe(item));
         cmdTail = link;
@@ -178,15 +205,44 @@ export function createElbLayer(
     return link;
   };
 
+  // Entries the array refused. A page can freeze `window.elbLayer` after this
+  // controller adopted it, and an entry with no array position must still
+  // reach the collector: the inspection history is lost, the data is not.
+  // Pre-start ones wait here for start(), exactly as recorded ones wait in the
+  // array.
+  const orphans: unknown[][] = [];
+
+  // Route an entry the array could not record. It holds no array position, so
+  // it never moves the drain cursors: those are a boundary INTO the array.
+  const processOrphan = (item: unknown[]): Promise<Elb.PushResult> => {
+    if (!started) {
+      if (isCommandEntry(item)) {
+        const link = cmdTail.then(() => routeSafe(item));
+        cmdTail = link;
+        return link;
+      }
+      orphans.push(item);
+      return Promise.resolve(ok());
+    }
+    const link = tail.then(() => routeSafe(item));
+    tail = link;
+    return link;
+  };
+
   const appendAndProcess = (raw: unknown): Promise<Elb.PushResult> => {
     const normalized = normalizeItem(raw);
     // Append the raw arg so inspection shows exactly what the page pushed.
     // Index-assign, not layer.push(raw): push here is our own wrappedPush
-    // override, so calling it would recurse into this function.
+    // override, so calling it would recurse into this function. A frozen array
+    // refuses the write, and the refusal must not reach the caller: this runs
+    // inside the page's own `window.elb` call.
     const index = layer.length;
-    layer[index] = raw;
+    const appended = tryCatch(() => {
+      layer[index] = raw;
+      return true;
+    })();
     if (!normalized) return Promise.resolve(ok());
-    return process(normalized, index);
+    return appended ? process(normalized, index) : processOrphan(normalized);
   };
 
   // Live capture: normalize, append raw, route. Returns the array's new length
@@ -195,7 +251,12 @@ export function createElbLayer(
     for (const arg of args) appendAndProcess(arg);
     return layer.length;
   };
-  layer.push = wrappedPush;
+  // A frozen array rejects the override. Live capture is then lost (direct
+  // `intake` calls still route) and the identity check in destroy sees a push
+  // that is not ours, so nothing is deleted. Never throws into init.
+  tryCatch(() => {
+    layer.push = wrappedPush;
+  })();
 
   // Backlog present at creation flows through the same lanes without being
   // re-appended: commands run now via the command chain, events wait for start.
@@ -210,7 +271,7 @@ export function createElbLayer(
 
   const start = (): void => {
     // Runs at most once (started flag). A second call must not re-seed tail
-    // from cmdTail — that would rewind the chain past work enqueued after
+    // from cmdTail, that would rewind the chain past work enqueued after
     // start and orphan it. The cursor only marks the pre-start backlog boundary.
     if (started) return;
     started = true;
@@ -224,6 +285,12 @@ export function createElbLayer(
       const item = normalized;
       tail = tail.then(() => routeSafe(item));
     }
+    // Entries the array refused, replayed after the recorded ones: the array
+    // holds everything pushed while it still accepted writes, these are what
+    // came after.
+    orphans.splice(0, orphans.length).forEach((item) => {
+      tail = tail.then(() => routeSafe(item));
+    });
     // Both lanes are now drained up to the current length: every pre-start
     // command ran on intake and every recorded event has been scheduled. Record
     // the boundary so a later controller adopting this array resumes past it.
@@ -245,9 +312,14 @@ export function createElbLayer(
   };
 
   const destroy = (): void => {
-    // Drop the own-property override so pushes fall back to Array.prototype.push.
-    Reflect.deleteProperty(layer, 'push');
+    // Drop the own-property override so pushes fall back to
+    // Array.prototype.push, but only while it is still ours: deleting a slot
+    // another writer installed would orphan it and silence the whole layer.
+    if (layer.push === wrappedPush) Reflect.deleteProperty(layer, 'push');
+    // Hand the array back so the next source can adopt it.
+    release(layer);
     started = false;
+    orphans.length = 0;
     commandCursor = 0;
     eventCursor = 0;
     cmdTail = Promise.resolve(ok());

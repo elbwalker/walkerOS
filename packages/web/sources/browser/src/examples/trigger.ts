@@ -1,6 +1,6 @@
 import type { Trigger, Collector } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { handleTrigger } from '../trigger';
+import { createRegistry, handleTrigger } from '../trigger';
 import type { Context } from '../types';
 
 type BrowserTriggerType =
@@ -36,7 +36,7 @@ interface BrowserInput {
  * Browser source createTrigger.
  *
  * Injects HTML into the DOM, lazily starts the flow, then calls
- * handleTrigger directly — the same convergence point as production.
+ * handleTrigger directly, the same convergence point as production.
  * For load triggers, the source's DOM scan during startFlow handles
  * event capture automatically.
  *
@@ -45,14 +45,15 @@ interface BrowserInput {
  * await trigger('click', 'button')('<button data-elb="cta" data-elbaction="click:cta click">Click</button>');
  *
  * @example
- * // Impression trigger — handleTrigger reads data-elbaction directly
+ * // Impression trigger, handleTrigger reads data-elbaction directly
  * await trigger('impression', '[data-elb="promo"]')('<div data-elb="promo" data-elbaction="visible:promo seen">Ad</div>');
  */
 const createTrigger: Trigger.CreateFn<string, void> = async (
   config: Collector.InitConfig,
   options?: unknown,
 ) => {
-  const sourceId = (options as { sourceId?: string } | undefined)?.sourceId || 'browser';
+  const sourceId =
+    (options as { sourceId?: string } | undefined)?.sourceId || 'browser';
   let flow: Trigger.FlowHandle | undefined;
   const doc = document;
   const win = window;
@@ -78,17 +79,17 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
         }
       }
 
-      // 2. Inject HTML content into DOM — replaces to create fresh state
+      // 2. Inject HTML content into DOM, replaces to create fresh state
       if (content) doc.body.innerHTML = content;
 
-      // 3. Lazy startFlow — first call initializes the flow
+      // 3. Lazy startFlow, first call initializes the flow
       //    Default run: true so sources scan the DOM and set up listeners
       if (!flow) {
         const result = await startFlow({ ...config, run: config.run ?? true });
         flow = { collector: result.collector, elb: result.elb };
       }
 
-      // 4. For load triggers, source already scanned DOM during init — done
+      // 4. For load triggers, source already scanned DOM during init, done
       if (!type || type === 'load') return;
 
       // 5. Find target element
@@ -107,12 +108,15 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
         return;
       }
 
+      // handleTrigger reads the settings and the elb only, so this registry
+      // stays empty: it never wires a listener, a timer or an observer.
       const context: Context = {
         elb: flow.elb,
         settings: source.config.settings as Context['settings'],
+        registry: createRegistry(),
       };
 
-      // 7. Call handleTrigger directly — same convergence point as production
+      // 7. Call handleTrigger directly, same convergence point as production
       await handleTrigger(context, target, type);
     };
 

@@ -45,11 +45,13 @@ describe('Shared Utilities', () => {
       expect(mockAppendChild).toHaveBeenCalledWith(mockScript);
     });
 
-    it('should use custom src when provided', () => {
-      addScript('G-XXXXXXXXXX', 'https://custom.domain.com/gtag/js?id=');
+    // A first-party serving path maps to the id inside the server container,
+    // so the id must not be appended.
+    it('should use a custom src verbatim, without appending the id', () => {
+      addScript('G-XXXXXXXXXX', 'https://custom.domain.com/tag_serving_path/');
 
       expect(mockScript.src).toBe(
-        'https://custom.domain.com/gtag/js?id=G-XXXXXXXXXX',
+        'https://custom.domain.com/tag_serving_path/',
       );
     });
 

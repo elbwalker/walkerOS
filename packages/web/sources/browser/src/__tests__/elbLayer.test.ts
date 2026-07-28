@@ -2,6 +2,7 @@ import { createPushResult } from '@walkeros/collector';
 import { isObject, isString } from '@walkeros/core';
 import type { Elb } from '@walkeros/core';
 import { createElbLayer } from '../elbLayer';
+import { createRegistry } from '../trigger';
 import type { Context, Settings } from '../types';
 import { flushChain as flush } from './test-utils';
 
@@ -23,7 +24,7 @@ const settings = (): Settings => ({
   scope: document,
   pageview: false,
   capture: true,
-  elb: '',
+  elb: false,
   elbLayer: 'elbLayer',
 });
 
@@ -37,7 +38,12 @@ const makeHarness = () => {
     Promise.resolve(okResult()),
   );
   const initScope = jest.fn((_context: Context) => {});
-  const context: Context = { elb, settings: settings(), initScope };
+  const context: Context = {
+    elb,
+    settings: settings(),
+    registry: createRegistry(),
+    initScope,
+  };
 
   // Labels every elb dispatch in call order: a `walker *` command keeps its
   // string, an event object collapses to its `name`.
@@ -266,7 +272,7 @@ describe('createElbLayer controller', () => {
     expect(elb).not.toHaveBeenCalled();
   });
 
-  test('second start() is a no-op — replays nothing, chain order intact', async () => {
+  test('second start() is a no-op, replays nothing, chain order intact', async () => {
     setLayer([]);
     const { context, dispatchLabels } = makeHarness();
     const controller = createElbLayer(context, { window });

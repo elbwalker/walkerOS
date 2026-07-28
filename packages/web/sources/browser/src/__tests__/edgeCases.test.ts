@@ -221,6 +221,24 @@ describe('Browser Source Edge Cases', () => {
 
       expect(() => {}).not.toThrow();
     });
+
+    // Settings arrive as flow JSON and reach the install site unparsed, so a
+    // value outside `string | false` is reachable at runtime. `elbLayer` takes
+    // a boolean, so `elb: true` is the neighbouring guess a caller makes; it
+    // must install nothing rather than write a window property named "true".
+    // Parsed rather than cast, because that is the path the value travels.
+    test('handles a truthy non-string elb configuration', async () => {
+      const before = new Set(Object.getOwnPropertyNames(window));
+
+      await createBrowserSource(
+        collector,
+        JSON.parse('{"elb": true, "elbLayer": false}'),
+      );
+
+      expect(
+        Object.getOwnPropertyNames(window).filter((name) => !before.has(name)),
+      ).toEqual([]);
+    });
   });
 
   describe('Memory and Performance Edge Cases', () => {

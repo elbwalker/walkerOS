@@ -284,10 +284,20 @@
 
 <!-- Test cases for data-elbaction vs data-elbactions -->
 <div data-elb="parent" data-elb-parent="scope:outer">
-  <div id="test-nearest-only" data-elb="child" data-elb-child="scope:inner" data-elbaction="click:test">
+  <div
+    id="test-nearest-only"
+    data-elb="child"
+    data-elb-child="scope:inner"
+    data-elbaction="click:test"
+  >
     <!-- data-elbaction should only apply to nearest entity (child) -->
   </div>
-  <div id="test-all-entities" data-elb="child" data-elb-child="scope:inner" data-elbactions="click:test">
+  <div
+    id="test-all-entities"
+    data-elb="child"
+    data-elb-child="scope:inner"
+    data-elbactions="click:test"
+  >
     <!-- data-elbactions should apply to all entities (child and parent) -->
   </div>
 </div>
