@@ -146,8 +146,10 @@ describe('walkerOS Web Basic Example', () => {
       }),
     );
 
-    // Verify gtag destination call details for purchase event
-    expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
+    // Verify gtag destination call details for purchase event.
+    // The env supplies gtag, so it was initialised elsewhere: walkerOS must not
+    // send a second `js`, which would assert a false initialisation time.
+    expect(mockGtag).not.toHaveBeenCalledWith('js', expect.anything());
     expect(mockGtag).toHaveBeenCalledWith(
       'config',
       'G-XXXXXXXXXX',
