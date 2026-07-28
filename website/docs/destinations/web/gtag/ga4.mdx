@@ -48,6 +48,29 @@ await startFlow({
   language="typescript"
 />
 
+## Let a tag manager own the configuration
+
+If a container (for example GTM) already configures your measurement ID, set
+`init: false`. walkerOS then skips the gtag bootstrap entirely, no `js`, no
+`config`, no script load, and only sends events, routed by `send_to`.
+
+<CodeSnippet
+  code={`settings: {
+  ga4: {
+    measurementId: 'G-XXXXXXXX',
+    init: false,
+  },
+}`}
+  language="typescript"
+/>
+
+This matters for attribution. A `config` command affects user and session
+identity for the rest of the page, so a second one arriving later than the
+container's own can disturb the session GA4 already established. When the
+container configures the tag, let it stay authoritative and put
+`server_container_url` and related settings on the container's tag rather than
+here.
+
 ## Serve gtag.js first-party
 
 By default gtag.js loads from `googletagmanager.com`. To serve it from your own

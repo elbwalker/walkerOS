@@ -198,7 +198,7 @@ describe('gtag web destination -- step examples', () => {
           'AW-123456789',
           { allow_enhanced_conversions: true },
         ];
-        bootstrapOut = [adsInitOut[0], ecConfigCall];
+        bootstrapOut = [ecConfigCall];
       } else {
         bootstrapConfig = adsInitIn;
         bootstrapOut = adsInitOut;

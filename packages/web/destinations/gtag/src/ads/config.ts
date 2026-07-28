@@ -8,6 +8,7 @@ export function initAds(
   loadScript: boolean | undefined,
   env: Env | undefined,
   logger: Logger.Instance,
+  gtagExternal = false,
 ): void {
   const { window, document } = getEnv<Env>(env);
   const { conversionId } = settings;
@@ -23,7 +24,9 @@ export function initAds(
   initializeGtag(window);
 
   const gtag = window.gtag!;
-  gtag('js', new Date());
+
+  // See ga4/config.ts: only signal initialisation if walkerOS did it.
+  if (!gtagExternal) gtag('js', new Date());
 
   // gtag init call
   if (settings.enhancedConversions) {

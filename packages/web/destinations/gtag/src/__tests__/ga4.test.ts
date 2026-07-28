@@ -33,13 +33,28 @@ describe('GA4 Implementation', () => {
       );
     });
 
-    it('should initialize GA4 with basic settings', () => {
+    // `js` announces that gtag was initialised here. When gtag already exists
+    // an external tag manager bootstrapped it, usually much earlier, so a
+    // second `js` carrying a later timestamp is a false initialisation signal.
+    it('does NOT send js when gtag already exists, but still configures', () => {
       const settings: GA4Settings = { measurementId: 'G-XXXXXXXXXX' };
 
-      initGA4(settings, true, mockEnv, createMockLogger());
+      initGA4(settings, true, mockEnv, createMockLogger(), true);
 
-      expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
+      expect(mockGtag).not.toHaveBeenCalledWith('js', expect.anything());
       expect(mockGtag).toHaveBeenCalledWith('config', 'G-XXXXXXXXXX', {});
+    });
+
+    it('sends js when walkerOS bootstraps gtag itself', () => {
+      const env = clone(examples.env.init!); // gtag absent
+      const dl: unknown[] = [];
+      env.window.dataLayer = dl;
+
+      initGA4({ measurementId: 'G-BOOTSTRAP' }, false, env, createMockLogger());
+
+      const commands = dl.map((a) => (a as IArguments)[0]);
+      expect(commands).toContain('js');
+      expect(commands).toContain('config');
     });
 
     it('should initialize GA4 with transport_url', () => {
@@ -155,6 +170,37 @@ describe('GA4 Implementation', () => {
         expect(getSrc()).toBe(
           'https://www.googletagmanager.com/gtag/js?id=G-DEFAULT',
         );
+      });
+
+      // With `init: false` an external tag manager owns the gtag bootstrap.
+      // walkerOS must not push `js` or `config`, and must not load the script,
+      // so the container's own (earlier) config stays authoritative.
+      it('skips the gtag bootstrap entirely when init is false', () => {
+        const { env, getSrc } = setupCapture();
+        const settings: GA4Settings = {
+          measurementId: 'G-EXTERNAL',
+          server_container_url: 'https://sgtm.example.com',
+          init: false,
+        };
+
+        initGA4(settings, true, env, createMockLogger());
+
+        expect(mockGtag).not.toHaveBeenCalledWith('js', expect.anything());
+        expect(mockGtag).not.toHaveBeenCalledWith(
+          'config',
+          expect.anything(),
+          expect.anything(),
+        );
+        expect(getSrc()).toBeUndefined();
+      });
+
+      it('still bootstraps when init is omitted (default true)', () => {
+        const { env } = setupCapture();
+        const settings: GA4Settings = { measurementId: 'G-DEFAULTINIT' };
+
+        initGA4(settings, false, env, createMockLogger());
+
+        expect(mockGtag).toHaveBeenCalledWith('config', 'G-DEFAULTINIT', {});
       });
 
       // https://developers.google.com/tag-platform/tag-manager/server-side/dependency-serving

@@ -64,17 +64,21 @@ export const destinationGtag: Destination = {
       );
     }
 
+    // Observe gtag's origin BEFORE anything (including the consent default)
+    // installs a stub, so a later `js` is only sent if walkerOS bootstrapped.
+    const gtagExternal = !!getEnv<Env>(env).window.gtag;
+
     // Emit the denied consent default before any tool's config call.
     setupConsentDefault(config, env);
 
     // Initialize GA4 if configured
     if (ga4?.measurementId) {
-      initGA4(ga4, loadScript, env, logger);
+      initGA4(ga4, loadScript, env, logger, gtagExternal);
     }
 
     // Initialize Google Ads if configured
     if (ads?.conversionId) {
-      initAds(ads, loadScript, env, logger);
+      initAds(ads, loadScript, env, logger, gtagExternal);
     }
 
     // Initialize GTM if configured
