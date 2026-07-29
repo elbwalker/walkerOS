@@ -548,8 +548,11 @@ This example will lead to the following event:
 
 :::info
 
-Globals are collected fresh from the DOM on every event, so a `data-elbglobals`
-value changed between events is reflected in the next one.
+Globals are collected fresh from the DOM for every event, so a
+`data-elbglobals` value changed between events is reflected in the next one.
+They are page level: the scan always covers the source's own scope (the whole
+document by default), so `elb('walker init', element)` narrows which elements
+get wired without narrowing the globals those elements report.
 
 :::
 

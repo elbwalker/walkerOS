@@ -8992,6 +8992,7 @@ export interface components {
       /** Format: uri */
       bundleUrl: string;
       activationUrl: string | null;
+      tagMode: boolean;
       createdBy: string;
       /** Format: date-time */
       createdAt: string;
@@ -9015,6 +9016,8 @@ export interface components {
             kind: 'deployment-version';
             deploymentVersionId: string;
           };
+      /** @default true */
+      tagMode: boolean;
     };
     MintGrantRequest: {
       origins: string[];

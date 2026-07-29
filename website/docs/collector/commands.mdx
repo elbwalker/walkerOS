@@ -224,6 +224,19 @@ Set global properties that are added to each event processed by the collector.
   language="javascript"
 />
 
+These values are the base for every event the collector processes, including
+events from server sources and any source with no DOM to read. A browser
+source adds what it finds in `data-elbglobals` on top, and those values win
+per key. Defaults that should survive a `walker run` belong in the collector's
+`globalsStatic` config instead: it seeds the base at startup, and a run that
+supplies its own globals resets the base to it. An event carries the globals
+known when it was created, so a global set after an event is captured does not
+reach one already waiting, whether it waits for consent, for a destination's
+`require` gate, or for a destination to be added at all.
+
+A transformer that runs before the collector, in a source's `next` chain, sees
+the event before enrichment and therefore before the base globals are merged.
+
 ## State delivery
 
 State commands (`consent`, `user`, `globals`, `custom`) set values on the

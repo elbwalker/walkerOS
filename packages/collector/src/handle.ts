@@ -243,7 +243,7 @@ export function createEvent(
     name = `${entityValue} ${actionValue}`,
     data = {},
     context = {},
-    globals = collector.globals,
+    globals = {},
     custom = {},
     user = collector.user,
     nested = [],
@@ -275,11 +275,15 @@ export function createEvent(
   const releaseValue = collector.release ?? __VERSION__;
   stampedSource.release = { ...source.release, [releaseKey]: releaseValue };
 
+  // The collector's globals (config statics plus `walker globals`) are the
+  // floor for every event; values the event carries win per key.
+  const mergedGlobals = assign(collector.globals, globals);
+
   return {
     name,
     data,
     context,
-    globals,
+    globals: mergedGlobals,
     custom,
     user,
     nested,

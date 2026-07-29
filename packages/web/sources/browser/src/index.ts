@@ -89,6 +89,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   const translationContext: Context = {
     elb,
     settings,
+    root: settings.scope,
     registry,
     logger,
     initScope: initScopeTrigger,

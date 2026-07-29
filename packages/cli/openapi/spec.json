@@ -2199,6 +2199,9 @@
           "activationUrl": {
             "type": ["string", "null"]
           },
+          "tagMode": {
+            "type": "boolean"
+          },
           "createdBy": {
             "type": "string"
           },
@@ -2214,6 +2217,7 @@
           "projectId",
           "bundleUrl",
           "activationUrl",
+          "tagMode",
           "createdBy",
           "createdAt"
         ]
@@ -2282,6 +2286,10 @@
                 "required": ["kind", "deploymentVersionId"]
               }
             ]
+          },
+          "tagMode": {
+            "type": "boolean",
+            "default": true
           }
         },
         "required": ["flowSettingsId"]

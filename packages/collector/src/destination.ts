@@ -311,7 +311,7 @@ export async function pushToDestinations(
   } = {},
   destinations?: Collector.Destinations,
 ): Promise<Elb.PushResult> {
-  const { allowed, consent, globals, user } = collector;
+  const { allowed, consent, user } = collector;
 
   // Check if collector is allowed to push
   if (!allowed) return createPushResult({ ok: false });
@@ -412,7 +412,7 @@ export async function pushToDestinations(
       };
 
       // Queued events: refresh consent (full replace — stale consent must not persist).
-      // User/globals merge happens for all events below in allowedEvents.map.
+      // User merge happens for all events below in allowedEvents.map.
       let currentQueue = (destination.queuePush || []).map((event) => ({
         ...event,
         consent,
@@ -634,8 +634,7 @@ export async function pushToDestinations(
       let batchedCount = 0;
       await Promise.all(
         allowedEvents.map(async (event) => {
-          // Merge collector state into event (collector as base, event overrides)
-          event.globals = assign(globals, event.globals);
+          // Merge collector user into event (collector as base, event overrides)
           event.user = assign(user, event.user);
 
           // Full cache check: before the before chain (skips everything on HIT)

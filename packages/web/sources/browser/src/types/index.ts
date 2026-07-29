@@ -59,6 +59,12 @@ export type Config = Source.Config<Types>;
 export interface Context {
   elb: Elb.Fn;
   settings: Settings;
+  // The scope this source was constructed with. Carried separately from
+  // settings.scope so a scope-aligned context (walker init <el>) narrows
+  // discovery without narrowing globals, which resolve against this scope: a
+  // source scoped to an element reads that subtree only. Optional: contexts
+  // built by hand fall back to settings.scope.
+  root?: InitScope;
   // Every mutable trigger container this source owns. Required: an optional
   // field with a module-level fallback would put the containers back in module
   // scope, which is the state parallel sources must not share.

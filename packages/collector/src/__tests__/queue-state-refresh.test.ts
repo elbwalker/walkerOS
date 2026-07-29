@@ -31,7 +31,7 @@ describe('queue state refresh', () => {
     );
   });
 
-  test('queued events receive updated globals after globals command', async () => {
+  test('queued events keep the globals they were captured with', async () => {
     const pushCalls: any[] = [];
     const mockPush = jest.fn().mockImplementation((event) => {
       pushCalls.push(event);
@@ -51,9 +51,7 @@ describe('queue state refresh', () => {
     await elb('walker user', { id: 'u1' });
 
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(pushCalls[0].globals).toEqual(
-      expect.objectContaining({ appVersion: '2.0' }),
-    );
+    expect(pushCalls[0].globals).toEqual({});
   });
 
   test('user flush does not bypass consent check', async () => {
