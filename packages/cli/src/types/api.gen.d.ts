@@ -9100,6 +9100,7 @@ export interface components {
       replace?: boolean;
       level?: components['schemas']['ObserveLevel'];
       origins?: string[];
+      tagMode?: boolean;
     };
     /** @enum {string} */
     ObserveLevel: 'off' | 'standard' | 'trace';
