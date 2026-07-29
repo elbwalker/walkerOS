@@ -111,4 +111,19 @@ describe('globals merge', () => {
     expect(pushed).toHaveLength(1);
     expect(pushed[0]?.globals).toEqual({});
   });
+
+  test('an event override does not become the base for the next event', async () => {
+    const { collector } = await startFlow({ globalsStatic: { env: 'prod' } });
+
+    const first = enrichEvent(collector, {
+      name: 'order complete',
+      globals: { plan: 'pro' },
+    });
+    const second = enrichEvent(collector, { name: 'page view' });
+
+    expect(first.globals).toEqual({ env: 'prod', plan: 'pro' });
+    expect(second.globals).toEqual({ env: 'prod' });
+    expect(collector.globals).toEqual({ env: 'prod' });
+    expect(first.globals).not.toBe(collector.globals);
+  });
 });

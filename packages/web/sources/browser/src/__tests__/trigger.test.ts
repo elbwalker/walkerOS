@@ -445,7 +445,7 @@ describe('Trigger System', () => {
 
       jest.advanceTimersByTime(1000);
 
-      // RED today: two intervals stack -> two events per tick.
+      // A second init must not stack a second interval on the element.
       expect(countTrigger('pulse')).toBe(1);
     });
 
@@ -461,7 +461,7 @@ describe('Trigger System', () => {
 
       jest.advanceTimersByTime(1000);
 
-      // RED today: two timeouts stack -> fires twice.
+      // A second init must not stack a second timeout on the element.
       expect(countTrigger('wait')).toBe(1);
     });
 
@@ -478,7 +478,7 @@ describe('Trigger System', () => {
 
       element.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
 
-      // RED today: two listeners stack -> fires twice on one dispatch.
+      // A second init must not stack a second listener on the element.
       expect(countTrigger('hover')).toBe(1);
     });
 
@@ -492,7 +492,7 @@ describe('Trigger System', () => {
       initScopeTrigger(context);
       initScopeTrigger(context);
 
-      // GREEN today and after: load is immediate and re-fires per init.
+      // load is immediate and re-fires per init, by design.
       expect(countTrigger('load')).toBe(2);
     });
 
@@ -532,7 +532,7 @@ describe('Trigger System', () => {
         .querySelector('button')!
         .dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      // GREEN today and after: the root click listener survives the sub init.
+      // The root click listener survives a sub-scope init.
       expect(countTrigger('click')).toBe(1);
     });
   });

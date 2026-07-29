@@ -1383,9 +1383,11 @@ export async function destinationPush<Destination extends Destination.Instance>(
             parentEventId: journey.parentEventId,
           });
           state.batch = { size: snapshot.entries.length, index };
+          // Every frame carries the transport latency, so a batched delivery
+          // is as measurable as the non-batched `out` path.
+          state.durationMs = settledAt - flushStarted;
           if (failed) {
             const err = batchThrew ? batchError : failedRows.get(index);
-            state.durationMs = settledAt - flushStarted;
             state.error =
               err instanceof Error
                 ? { name: err.name, message: err.message }
