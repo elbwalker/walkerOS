@@ -1,7 +1,11 @@
 import type { Flow } from './types';
 import { throwError } from './throwError';
 
-/** Annotation keys to strip from AJV-compatible schemas. */
+/**
+ * Annotation keywords removed at schema positions when stripping. JSON Schema
+ * defines them as annotations: validators ignore them, so removing them never
+ * changes a verdict, it only trims resolved artifacts.
+ */
 const ANNOTATION_KEYS = new Set([
   'description',
   'examples',
@@ -9,13 +13,80 @@ const ANNOTATION_KEYS = new Set([
   '$comment',
 ]);
 
+/**
+ * Stripping walks ONLY the positions the spec defines as holding schemas.
+ * Everything else is the author's data and passes through byte-for-byte, so
+ * an unknown or vendor keyword (`x-tagging: { title: ... }`) can never lose
+ * its contents. The three sets below enumerate those positions; together with
+ * ANNOTATION_KEYS they are the complete traversal rule.
+ *
+ * Keywords whose value is a single sub-schema. A boolean there (draft
+ * 2020-12 allows `additionalProperties: false`) is not an object and passes
+ * through.
+ */
+const SCHEMA_KEYWORDS = new Set([
+  'additionalItems',
+  'additionalProperties',
+  'contains',
+  'contentSchema',
+  'else',
+  'if',
+  'items',
+  'not',
+  'propertyNames',
+  'then',
+  'unevaluatedItems',
+  'unevaluatedProperties',
+]);
+
+/**
+ * Keywords whose value is an ARRAY of sub-schemas; each element is a schema
+ * position. `items` appears here and in SCHEMA_KEYWORDS because draft-07
+ * tuples use its array form; the runtime type decides which rule applies.
+ *
+ * Only these arrays are walked. A blanket array walk would be actively wrong:
+ * `enum` and `const` members are matched by DEEP EQUALITY, so rewriting
+ * `enum: [{ title: 'Tee' }]` to `enum: [{}]` does not merely drop an
+ * annotation, it inverts the constraint into one that rejects the very value
+ * the author declared.
+ */
+const SCHEMA_ARRAY_KEYWORDS = new Set([
+  'allOf',
+  'anyOf',
+  'items',
+  'oneOf',
+  'prefixItems',
+]);
+
+/**
+ * Keywords whose value is a MAP keyed by author-chosen names rather than by
+ * schema keywords. `properties: { title: ... }` names a data key called
+ * `title`, which is ordinary e-commerce markup, not an annotation. Nothing is
+ * stripped at that level; each value is a schema position again.
+ *
+ * A value is a sub-schema under most of these, a key LIST under
+ * `dependentRequired`, and either one under the draft-07 combined
+ * `dependencies`. All three are handled: only object values are descended into.
+ */
+const NAME_MAP_KEYWORDS = new Set([
+  'properties',
+  'patternProperties',
+  'dependentSchemas',
+  'dependentRequired',
+  'dependencies',
+  '$defs',
+  'definitions',
+]);
+
 /** Options for {@link resolveContracts}. */
 export interface ResolveContractsOptions {
   /**
-   * When true (default), annotation keys (`description`, `examples`, `title`,
-   * `$comment`) are stripped from event schemas so the result is AJV-clean for
-   * runtime validation. Set to false to keep annotations (e.g. for IntelliSense
-   * that surfaces property descriptions).
+   * When true (default), annotation keywords (`description`, `examples`,
+   * `title`, `$comment`) are stripped from event schemas. Validators ignore
+   * annotations, so this never changes a validation verdict; it only trims
+   * resolved artifacts, e.g. contracts inlined into shipped bundles. Set to
+   * false to keep annotations (e.g. for IntelliSense that surfaces property
+   * descriptions).
    */
   stripAnnotations?: boolean;
 }
@@ -27,9 +98,8 @@ export interface ResolveContractsOptions {
  * Returns a fully resolved map where each contract entry has inherited
  * properties merged in and wildcards expanded into concrete actions.
  *
- * By default annotations are stripped (AJV-clean). Pass
- * `{ stripAnnotations: false }` to preserve `description`/`examples`/`title`
- * on event schemas.
+ * By default annotations are stripped. Pass `{ stripAnnotations: false }` to
+ * preserve `description`/`examples`/`title` on event schemas.
  */
 export function resolveContracts(
   contracts: Flow.Contract,
@@ -263,7 +333,14 @@ export function mergeContractSchemas(
 }
 
 /**
- * Strip annotation-only keys from a schema (deep).
+ * Strip annotation-only keys from a schema (deep), at schema-KEYWORD positions
+ * only. A data key named `title` or `description` keeps its whole sub-schema:
+ * only a keyword that annotates a schema is an annotation.
+ *
+ * Traversal is an allowlist over the spec-defined schema positions and is
+ * fail-safe: a keyword in none of the sets (instance data like `const`,
+ * `default`, `enum`; vendor extensions; anything future drafts add) is copied
+ * through untouched, never descended into.
  */
 function stripAnnotations(
   schema: Record<string, unknown>,
@@ -271,11 +348,30 @@ function stripAnnotations(
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(schema)) {
     if (ANNOTATION_KEYS.has(key)) continue;
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      result[key] = stripAnnotations(value as Record<string, unknown>);
+    if (NAME_MAP_KEYWORDS.has(key) && isPlainObject(value)) {
+      result[key] = stripNameMap(value);
+    } else if (SCHEMA_ARRAY_KEYWORDS.has(key) && Array.isArray(value)) {
+      result[key] = value.map((element) =>
+        isPlainObject(element) ? stripAnnotations(element) : element,
+      );
+    } else if (SCHEMA_KEYWORDS.has(key) && isPlainObject(value)) {
+      result[key] = stripAnnotations(value);
     } else {
       result[key] = value;
     }
+  }
+  return result;
+}
+
+/**
+ * Every key here is an author-chosen name, so all of them survive; each value
+ * is a schema position again (or, under `dependentRequired`, a key list, which
+ * is not an object and passes through).
+ */
+function stripNameMap(map: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(map)) {
+    result[name] = isPlainObject(value) ? stripAnnotations(value) : value;
   }
   return result;
 }
