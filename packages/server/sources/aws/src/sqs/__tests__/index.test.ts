@@ -59,14 +59,39 @@ async function destroyInstance(
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-async function waitForCall(method: string, timeoutMs = 2000): Promise<boolean> {
+async function waitFor(
+  predicate: () => boolean,
+  timeoutMs = 2000,
+): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const calls = __getMockCalls();
-    if (calls.some((c) => c.method === method)) return true;
+    if (predicate()) return true;
     await sleep(20);
   }
   return false;
+}
+
+const called = (method: string): boolean =>
+  __getMockCalls().some((c) => c.method === method);
+
+async function waitForCall(method: string, timeoutMs = 2000): Promise<boolean> {
+  return waitFor(() => called(method), timeoutMs);
+}
+
+/**
+ * Build the source AND open consumption.
+ *
+ * Polling is gated on the collector's run lifecycle, so any test that asserts
+ * on the long-poll loop has to drive `on('run')` the way the collector does.
+ * Tests that only exercise the synthetic `push()` path use `sourceSqs`
+ * directly, since that path deliberately bypasses the gate.
+ */
+async function bootSqs(
+  ctx: Source.Context<Types>,
+): Promise<Source.Instance<Types>> {
+  const instance = await sourceSqs(ctx);
+  await instance.on?.('run');
+  return instance;
 }
 
 describe('SQS source', () => {
@@ -133,7 +158,7 @@ describe('SQS source', () => {
   it('long-poll loop calls ReceiveMessage with declared maxMessages and waitTimeSeconds', async () => {
     __setQueueHarness('walkeros-events', {});
     const ctx = buildContext({});
-    const instance = await sourceSqs(ctx);
+    const instance = await bootSqs(ctx);
     try {
       const found = await waitForCall('ReceiveMessageCommand');
       expect(found).toBe(true);
@@ -193,7 +218,7 @@ describe('SQS source', () => {
           respond,
         } as never),
     };
-    const instance = await sourceSqs(ctx);
+    const instance = await bootSqs(ctx);
     try {
       const start = Date.now();
       while (Date.now() - start < 2000) {
@@ -220,8 +245,14 @@ describe('SQS source', () => {
         ],
       },
     ]);
+    // Counting the attempts is what makes the negative assertion below mean
+    // something: "no DeleteMessage" is also true of a message that was never
+    // received at all, so the test first proves the message reached the
+    // handler and the push was attempted.
+    let attempts = 0;
     const env = {
       push: async () => {
+        attempts++;
         throw new Error('downstream failed');
       },
       command: async () => ({ ok: true }),
@@ -246,12 +277,19 @@ describe('SQS source', () => {
           respond,
         } as never),
     };
-    const instance = await sourceSqs(ctx);
+    const instance = await bootSqs(ctx);
     try {
-      // Wait for the receive call so we know the loop ran.
-      await waitForCall('ReceiveMessageCommand');
-      await sleep(150);
-      expect(__getDeletedReceiptHandles()).not.toContain('rh-fail');
+      // First prove the message actually reached the handler...
+      expect(await waitFor(() => attempts > 0)).toBe(true);
+      // ...then that no DeleteMessage ever follows it. The wait is a refutation
+      // window, not a guess at timing: an ack would be issued in the handler's
+      // catch, one turn after the attempt counted above.
+      expect(
+        await waitFor(
+          () => __getDeletedReceiptHandles().includes('rh-fail'),
+          100,
+        ),
+      ).toBe(false);
     } finally {
       await destroyInstance(instance, ctx);
     }
@@ -296,7 +334,7 @@ describe('SQS source', () => {
           respond,
         } as never),
     };
-    const instance = await sourceSqs(ctx);
+    const instance = await bootSqs(ctx);
     try {
       const start = Date.now();
       while (Date.now() - start < 2000) {
@@ -419,22 +457,89 @@ describe('SQS source', () => {
     }
   });
 
+  it('does not poll before on("run")', async () => {
+    __setQueueHarness('walkeros-events', {});
+    const ctx = buildContext({});
+    // Deliberately NOT bootSqs: the point is the state before the run
+    // lifecycle arrives.
+    const instance = await sourceSqs(ctx);
+    try {
+      // Refutation window: a loop launched at construction issues its first
+      // poll immediately, and a no-batch iteration only takes 50ms, so a poll
+      // would have been recorded well inside this wait.
+      expect(await waitForCall('ReceiveMessageCommand', 150)).toBe(false);
+
+      // The collector's run lifecycle opens consumption.
+      // Idempotence of the start guard is asserted in the pubsub-pull suite,
+      // where handler attachment is directly observable; SQS has no equivalent
+      // per-start signal, so only the gate itself is asserted here.
+      await instance.on?.('run');
+      expect(await waitForCall('ReceiveMessageCommand')).toBe(true);
+    } finally {
+      await destroyInstance(instance, ctx);
+    }
+  });
+
+  it('a push resolving ok:false is nacked, not acked', async () => {
+    // Never DeleteMessage a message the pipeline did not accept. Existing
+    // failure coverage only makes push THROW; a resolved ok:false is the
+    // quiet case.
+    __setQueueHarness('walkeros-events', {});
+    const env = {
+      push: async () => ({ ok: false }),
+      command: async () => ({ ok: true }),
+      elb: async () => ({ ok: true }),
+      logger: pushEnv.logger,
+    };
+    const base = createMockContext<Types>({
+      config: { settings: { queueName: 'walkeros-events' } },
+      env,
+    });
+    const ctx: Source.Context<Types> = {
+      ...base,
+      id: 'sqs',
+      env,
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: pushEnv.push,
+          ingest: createIngest('sqs'),
+          respond,
+        } as never),
+    };
+    const instance = await sourceSqs(ctx);
+    try {
+      const result = await instance.push({
+        MessageId: 'syn-reject',
+        Body: JSON.stringify({ name: 'page view' }),
+      });
+      if (!result || typeof result !== 'object') {
+        throw new Error('expected SyntheticPushResult');
+      }
+      expect(result.nacked).toBe(true);
+      expect(result.acked).toBe(false);
+    } finally {
+      await destroyInstance(instance, ctx);
+    }
+  });
+
   it('destroy stops the loop', async () => {
     __setQueueHarness('walkeros-events', {});
-    const ctx = buildContext({ shutdownTimeoutMs: 100 });
-    const instance = await sourceSqs(ctx);
-    await waitForCall('ReceiveMessageCommand');
+    // The shutdown timeout is deliberately generous: it is a forced-close
+    // escape hatch, and letting it win the race is what previously forced this
+    // assertion to tolerate one extra in-flight poll. With destroy awaiting the
+    // loop's real exit, the count must not move at all.
+    const ctx = buildContext({ shutdownTimeoutMs: 5000 });
+    const instance = await bootSqs(ctx);
+    expect(await waitForCall('ReceiveMessageCommand')).toBe(true);
+
     await destroyInstance(instance, ctx);
-    const callsBefore = __getMockCalls().filter(
-      (c) => c.method === 'ReceiveMessageCommand',
-    ).length;
+    const receives = () =>
+      __getMockCalls().filter((c) => c.method === 'ReceiveMessageCommand')
+        .length;
+    const callsAfterDestroy = receives();
+
     await sleep(200);
-    const callsAfter = __getMockCalls().filter(
-      (c) => c.method === 'ReceiveMessageCommand',
-    ).length;
-    // After destroy, no new ReceiveMessageCommand calls should be recorded.
-    // Allow a small tolerance for an in-flight call that completed late, but
-    // the count should not keep growing.
-    expect(callsAfter).toBeLessThanOrEqual(callsBefore + 1);
+    expect(receives()).toBe(callsAfterDestroy);
   });
 });

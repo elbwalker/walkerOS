@@ -184,6 +184,22 @@ added dynamically after the initial page load.
 Re-initializing a scope clears and rebuilds that scope's `pulse`, `wait`,
 `hover`, `scroll`, `visible`, and `impression` triggers. The `load` trigger fires (again) on each call.
 
+This applies to every action-tagged element in the target's subtree, including
+elements that are already tracked from an earlier scan. So the SPA pattern of
+re-tagging an existing element and re-initializing it works: the updated
+attribute values are read fresh and the `load` trigger fires again.
+
+<CodeSnippet
+  code={`// The step element was already tracked by the initial page scan.
+const step = document.getElementById('checkout-step');
+step.setAttribute('data-elb-checkout', 'step:3');
+elb('walker init', step); // fires 'checkout view' again, now with step: 3`}
+  language="javascript"
+/>
+
+Each `walker run` does the same for the whole document, so a virtual pageview
+also re-fires document `load` triggers.
+
 <CodeSnippet
   code={`// After loading new products via AJAX
 const productList = document.getElementById('product-list');

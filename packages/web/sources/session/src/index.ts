@@ -54,10 +54,11 @@ export const sourceSession: Source.Init<Types> = async (context) => {
   // rule with the collector, which replays it at the run barrier and guarantees
   // exactly-once delivery, so the source does not react to consent itself.
   //
-  // Ungated: the emit must wait for the run lifecycle. Calling sessionStart in
-  // init() would push `session start` while the collector is not yet `allowed`,
-  // dropping it at the dormant destination gate. Registering an on('run') rule
-  // defers the emit into the now-allowed pipeline.
+  // Ungated: the emit waits for the run lifecycle for ORDERING, not for loss
+  // protection. Pushing `session start` from init() would not lose it (the
+  // collector holds pre-run events and replays them at run), but the replay
+  // lands ahead of everything the run lifecycle itself emits. Registering an
+  // on('run') rule emits directly into the now-allowed pipeline instead.
   const init = async (): Promise<void> => {
     if (settings.consent) {
       runSessionStart();

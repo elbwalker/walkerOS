@@ -108,15 +108,25 @@ describe('window.elb writer versus flow.elb', () => {
     expect(refund).toBeLessThan(complete);
   });
 
-  test('a pre-run event survives the writer and is dropped by flow.elb', async () => {
+  test('a pre-run event survives both lanes, each buffered at its own gate', async () => {
     const flow = await start({ pageview: false, scope: createScope() }, false);
 
+    // Two independent buffers, two different predicates. The installed writer
+    // parks in elbLayer because the SOURCE has not started; flow.elb reaches
+    // collector.push directly and parks in collector.preRunQueue because the
+    // COLLECTOR is not allowed. Both report accepted-and-held, and neither
+    // delivers yet.
     expect(await getInstalledElb()('pre a')).toStrictEqual({ ok: true });
-    expect(await flow.elb('pre b')).toStrictEqual({ ok: false });
+    expect(await flow.elb('pre b')).toStrictEqual({ ok: true });
     expect(received).toHaveLength(0);
 
     await flow.collector.command('run');
 
-    expect(names()).toStrictEqual(['pre a']);
+    // Each lane replays in its own order, and the lanes drain in run-phase
+    // order rather than in global push order: runCollector flushes
+    // collector.preRunQueue while opening the barrier, before it broadcasts
+    // `on('run')` to the sources that flush elbLayer. So 'pre b' lands first
+    // even though 'pre a' was pushed first.
+    expect(names()).toStrictEqual(['pre b', 'pre a']);
   });
 });

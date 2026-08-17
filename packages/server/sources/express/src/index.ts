@@ -158,9 +158,14 @@ export const sourceExpress = async (
               env.logger.error(toError(err));
             });
           } else {
-            // Synchronous ack: wait for delivery to settle before responding.
-            await env.push(eventData);
-            respond({ body: { success: true, timestamp: Date.now() } });
+            // Synchronous ack: wait for delivery to settle before responding,
+            // and reflect the outcome instead of claiming success blindly.
+            const result = await env.push(eventData);
+            const ok = result?.ok !== false;
+            respond({
+              status: ok ? undefined : 500,
+              body: { success: ok, timestamp: Date.now() },
+            });
           }
           return;
         }

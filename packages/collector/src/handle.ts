@@ -397,6 +397,17 @@ export async function runCollector(
   // collide with these state re-deliveries.
   await redeliverStateAtRun(collector);
 
+  // Replay events held while the collector was dormant (FIFO, wall-clock
+  // order). Splice first so replayed pushes (now allowed) can never
+  // re-enter the buffer, and a second run finds it empty.
+  if (collector.preRunQueue.length) {
+    const held = collector.preRunQueue.splice(0);
+    collector.logger.debug('replaying pre-run events', { count: held.length });
+    for (const { event, options } of held) {
+      await collector.push(event, options);
+    }
+  }
+
   // Process any queued events now that the collector is allowed
   const result = await pushToDestinations(collector);
 

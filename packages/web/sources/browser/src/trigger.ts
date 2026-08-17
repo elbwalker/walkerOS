@@ -352,6 +352,31 @@ export function initScopeTrigger(context: Context) {
   );
   const doc = (scope as Element).ownerDocument || (scope as Document);
   const win = doc.defaultView;
+
+  // Reclaim: release any element in this scope that ANOTHER scope of this
+  // source registered, so the rescan below re-registers it here and re-fires
+  // its one-shot triggers. Without this, a document-scan-owned element makes
+  // every later `walker init <el>` a permanent no-op. reapElement
+  // self-derives the true owning bucket, so cross-scope release is safe
+  // (same contract handleRemovedNode relies on).
+  if (
+    scope !== doc &&
+    win &&
+    scope instanceof win.HTMLElement &&
+    isRegistered(context.registry, scope)
+  ) {
+    reapElement(context.registry, scope);
+  }
+  queryAllComposed(scope, `[${selectorAction}]`, (elem) => {
+    if (
+      win &&
+      elem instanceof win.HTMLElement &&
+      isRegistered(context.registry, elem)
+    ) {
+      reapElement(context.registry, elem);
+    }
+  });
+
   // The element self-check only applies to an Element sub-scope. A ShadowRoot
   // scope has no getAttribute, so calling handleActionElem on it would throw;
   // it is scanned by queryAllComposed below instead. A Document scope has

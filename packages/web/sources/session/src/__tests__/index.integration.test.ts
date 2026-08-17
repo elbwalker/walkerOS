@@ -152,9 +152,10 @@ describe('Session Source: ungated path respects run', () => {
   });
 
   // No `consent` setting: the source has no consent rule to replay at the run
-  // barrier. The emit must instead wait for the run lifecycle, otherwise the
-  // `session start` pushed during init() (while !allowed) is dropped at the
-  // dormant destination gate and never delivered.
+  // barrier, so the emit waits for the run lifecycle instead. That deferral is
+  // about ordering: a `session start` pushed during init() (while !allowed)
+  // would be held in the collector's pre-run buffer and replayed at run, not
+  // lost, but it would land ahead of what the run lifecycle itself emits.
   async function startUngatedFlow(options: {
     run: boolean;
     captured: WalkerOS.Event[];

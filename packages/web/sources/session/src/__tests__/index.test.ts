@@ -59,8 +59,9 @@ describe('Session Source', () => {
       await createSessionSource(collector);
 
       // No consent configured: the emit is deferred to the run lifecycle, so
-      // init registers a single on('run') rule rather than emitting at init
-      // (which would be dropped at the collector's dormant gate).
+      // init registers a single on('run') rule rather than emitting at init.
+      // The deferral is about ordering; an init-time emit would be held and
+      // replayed by the collector, not lost.
       const runRegistrations = mockCommand.mock.calls.filter(
         ([cmd, data]) =>
           cmd === 'on' &&

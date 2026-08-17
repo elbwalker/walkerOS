@@ -262,6 +262,35 @@ This gives three practical guarantees:
 This means sources don't need their own deduplication for state deliveries: the
 collector enforces exactly-once.
 
+### Pre-run events
+
+The same record-immediately, deliver-at-run rule applies to events. An event
+pushed while the collector has not run yet is held in a bounded FIFO buffer
+instead of being discarded, and replayed once the collector starts:
+
+<CodeSnippet
+  code={`const { collector, elb } = await startFlow({ run: false, destinations: { ... } });
+
+await elb('walker consent', { essential: true });
+await elb({ name: 'page view' }); // held, not delivered yet
+
+await elb('walker run'); // 'page view' is delivered now`}
+  language="javascript"
+/>
+
+* **Replayed in push order.** Held events reach destinations in the order they
+  were pushed, after the run-barrier state delivery, so each one carries the
+  consent, user, globals and custom state that is current at `run`.
+* **The pipeline runs once, at replay.** Mapping, transformer chains and
+  enrichment are applied when the event is replayed, not when it is held.
+* **Exactly-once.** A second `run` does not re-deliver events an earlier run
+  already replayed.
+* **Bounded.** The buffer holds at most `queueMax` events (default `1000`,
+  shared with the destination replay buffer) and drops the oldest entries on
+  overflow. Each hold and drop is logged at `debug` level.
+
+Commands are unaffected: they continue to apply immediately, as described above.
+
 ## hook
 
 Hooks customize the default behavior of the collector. Available hooks include

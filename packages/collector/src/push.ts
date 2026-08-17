@@ -9,6 +9,7 @@ import {
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
+import { pushBounded } from './buffers';
 import { createEvent, enrichEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
 import { buildBaseState, journeyFields } from './observerEmit';
@@ -52,6 +53,28 @@ export function createPush<T extends Collector.Instance>(
     ): Promise<Elb.PushResult> => {
       return await tryCatchAsync(
         async (): Promise<Elb.PushResult> => {
+          // Dormant hold: an event born before run is held raw and replayed
+          // by runCollector, so the pipeline (mapping, chains, enrichment)
+          // runs exactly once, with post-run state. See prerun-hold.test.ts.
+          if (!collector.allowed) {
+            const max = collector.config.queueMax;
+            if (max === undefined) {
+              throw new Error(
+                'Collector.Config.queueMax is undefined; defaults must be seeded by collector()',
+              );
+            }
+            const held = pushBounded(
+              collector.preRunQueue,
+              { event, options },
+              { max },
+            );
+            collector.logger.debug('event held until run', {
+              name: event.name,
+              dropped: held.dropped,
+            });
+            return createPushResult({ ok: true });
+          }
+
           const pushStart = Date.now();
           const {
             id,

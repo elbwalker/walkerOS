@@ -45,6 +45,7 @@ describe('queue bounds', () => {
       user: {},
       consent: args.consent || {},
       queue: [],
+      preRunQueue: [],
       round: 0,
       count: 0,
       stateVersion: 0,

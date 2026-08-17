@@ -124,6 +124,23 @@ bootstrap, `Destination.Config.init` is the collector-managed "init has run"
 flag, and `Destination.Config.require` gates event delivery the same way. See
 [walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md).
 
+### Pre-run events are held and replayed by the collector
+
+Events a source emits before the collector runs are held in a bounded FIFO
+buffer (`collector.preRunQueue`, capped by `config.queueMax`) and replayed at
+`run`, with the pipeline running once at replay time. A source therefore does
+**not** need bespoke `on('run')` deferral to avoid losing its startup events.
+Deferring emission to `on('run')` is still fine and often clearer for
+**ordering** (the session source does this so `session start` lands in the
+post-run pipeline), but it is no longer a loss-protection requirement.
+
+The one case that still needs an explicit run gate is a **queue consumer**
+(`pubsub-pull`, `sqs`): starting to consume means acknowledging messages to a
+broker, and an ack must never precede delivery. These sources start their
+subscription or poll loop in `on('run')` and never ack a message the pipeline
+did not accept (`result.ok === false` routes to the source's `onPushError`
+disposition, nack by default).
+
 ## Push Signatures by Type
 
 | Source Type    | Signature                           | Example      |
