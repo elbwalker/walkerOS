@@ -22,7 +22,7 @@ export type {
  */
 export const sourceSession: Source.Init<Types> = async (context) => {
   const { config, env } = context;
-  const { elb, command } = env;
+  const { elb, push, command } = env;
 
   const settings: Settings = {
     ...config?.settings,
@@ -32,9 +32,12 @@ export const sourceSession: Source.Init<Types> = async (context) => {
     settings,
   };
 
-  // Create minimal collector interface for sessionStart
+  // Minimal collector interface for sessionStart. `push` is the collector's
+  // source pipeline (so this source's next/before/mapping and status apply to
+  // `session start`); `command` carries the identity updates, which are
+  // commands and must stay off the pipeline.
   const collectorInterface: Partial<Collector.Instance> = {
-    push: elb,
+    push,
     command,
   };
 
@@ -70,6 +73,9 @@ export const sourceSession: Source.Init<Types> = async (context) => {
   return {
     type: 'session',
     config: fullConfig,
+    // The outward-facing slot, deliberately `elb` and not the pipeline `push`:
+    // this source captures nothing from callers, it emits `session start`
+    // itself (via collectorInterface above, which does use the pipeline).
     push: elb,
     init,
   };

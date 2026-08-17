@@ -59,7 +59,10 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  */
 export const sourceBrowser: Source.Init<Types> = async (context) => {
   const { config, env, logger } = context;
-  const { elb, command, window, document } = env;
+  // `env.push` is the collector's source-pipeline entry for EVENTS. Aliased
+  // because this module's own `push` (below) is the source's outward-facing
+  // BrowserPush, which accepts commands and flexible argument forms too.
+  const { elb, push: pipelinePush, command, window, document } = env;
 
   const userSettings = config?.settings || {};
   const actualWindow =
@@ -88,6 +91,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   const registry = createRegistry();
   const translationContext: Context = {
     elb,
+    push: pipelinePush,
     settings,
     root: settings.scope,
     registry,

@@ -22,7 +22,10 @@ export function translateToCoreCollector(
   nested?: WalkerOS.Entities,
   custom?: WalkerOS.Properties,
 ): Promise<Elb.PushResult> {
-  const { elb, settings } = context;
+  // Events exit via `push` (the source pipeline); `walker *` commands exit via
+  // `elb` (the raw collector). Keeping them apart is what lets a source declare
+  // `next`/`before`/mapping and have it apply to its events only.
+  const { elb, push, settings } = context;
   // Globals resolve against the scope this source was constructed with, so a
   // source scoped to an element reads that subtree only. The scope a
   // `walker init <el>` runs under narrows discovery, never globals.
@@ -65,7 +68,7 @@ export function translateToCoreCollector(
         : {};
     }
 
-    return elb(event);
+    return push(event);
   }
 
   // Extract entity name from event string
@@ -136,7 +139,7 @@ export function translateToCoreCollector(
       scopeWin && scopeDoc ? getBrowserSource(scopeWin, scopeDoc) : undefined,
   };
 
-  return elb(event);
+  return push(event);
 }
 
 /**

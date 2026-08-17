@@ -18,6 +18,7 @@ let registry: Registry;
 // Helper function to create test context
 const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
   elb,
+  push: elb,
   settings: {
     prefix,
     scope: document,
@@ -307,6 +308,7 @@ describe('triggerVisible', () => {
   describe('Scope-aligned re-init', () => {
     const buildContext = (scope: Document | Element): Context => ({
       elb: mockElb,
+      push: mockElb,
       settings: {
         prefix: 'data-elb',
         scope,

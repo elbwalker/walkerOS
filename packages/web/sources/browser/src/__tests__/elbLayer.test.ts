@@ -40,6 +40,7 @@ const makeHarness = () => {
   const initScope = jest.fn((_context: Context) => {});
   const context: Context = {
     elb,
+    push: elb,
     settings: settings(),
     registry: createRegistry(),
     initScope,

@@ -13,7 +13,9 @@ export const sourceDemo: Source.Init<Types> = async (
   context,
 ): Promise<Source.Instance<Types>> => {
   const { config, env } = context;
-  const { elb } = env;
+  // Synthetic events exit via `push` (the collector's source pipeline), so a
+  // demo flow's next/before chain, mapping and status apply to them.
+  const { elb, push } = env;
 
   const fullConfig: Source.Config<Types> = {
     ...config,
@@ -25,12 +27,15 @@ export const sourceDemo: Source.Init<Types> = async (
   // Push each event with optional delay
   events.forEach((event) => {
     const { delay, ...partialEvent } = event;
-    setTimeout(() => elb(partialEvent), delay || 0);
+    setTimeout(() => push(partialEvent), delay || 0);
   });
 
   return {
     type: 'demo',
     config: fullConfig,
+    // The outward-facing slot, deliberately `elb` and not the pipeline `push`:
+    // callers do not feed this source events, it emits its configured ones
+    // above (through `push`, so the pipeline applies to them).
     push: elb,
   };
 };

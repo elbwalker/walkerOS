@@ -168,6 +168,7 @@ let registry: Registry;
 // Helper function to create test context (mirrors triggerVisible.test.ts).
 const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
   elb,
+  push: elb,
   settings: {
     prefix,
     scope: document,

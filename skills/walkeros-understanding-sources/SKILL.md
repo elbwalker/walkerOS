@@ -156,6 +156,20 @@ disposition, nack by default).
 http('handler', source.push);
 ```
 
+**Do not confuse `Instance.push` with `env.push`.** They point opposite ways:
+
+- `Instance.push` is **inward**: the handler callers hand input to (an HTTP
+  request, a `window.elb(...)` call, a synthetic test message). `startFlow`
+  exports the primary source's `Instance.push` as its `elb`.
+- `env.push` is **outward**: where the source sends the events it produced.
+
+A source can legitimately have both, and they need not be related: the browser
+source's `Instance.push` is a flexible `BrowserPush` that accepts commands and
+argument forms, while its events leave via `env.push`. The dataLayer and session
+sources keep `Instance.push: env.elb`, because callers do not feed them events
+at all — they capture from `dataLayer.push` and from session detection
+respectively.
+
 When a test or integration code needs to invoke a source's `push` through the
 collector bag, `collector.sources` erases the per-source generic on read. Use
 `Source.getSource<T>(collector, id)` to recover the narrow signature without a
@@ -276,6 +290,46 @@ export interface Env extends Source.BaseEnv {
 
 Tests inject mocks via `env` instead of mocking globals. See
 [testing-strategy](../walkeros-testing-strategy/SKILL.md).
+
+### `env.push` for events, `env.elb` for commands
+
+`BaseEnv` gives every source two outward exits, and they are not
+interchangeable:
+
+| Exit       | Use for                         | What it is                                          |
+| ---------- | ------------------------------- | --------------------------------------------------- |
+| `env.push` | **Events** (event objects only) | The collector's per-source pipeline (`wrappedPush`) |
+| `env.elb`  | **`walker *` commands**         | The raw collector adapter                           |
+
+Emit events through `env.push`. That is what makes the source's own
+`next`/`before` chains, `mapping` (including `ignore` and `consent`), `cache`,
+`state`, per-source `Ingest`, and `collector.status.sources.<id>` apply. A
+source that emits events through `env.elb` bypasses all of it, so those config
+fields become silently dead: accepted, never executed.
+
+Commands must keep using `env.elb`. `env.push` takes `WalkerOS.DeepPartialEvent`
+only, so a command string has no meaning there.
+
+```typescript
+// Event → pipeline
+await env.push({ name: 'page view', data: { title } });
+
+// Command → raw collector
+await env.elb('walker consent', { marketing: true });
+```
+
+Call `env.push` with the event alone. The collector supplies `id`, `ingest`,
+`mapping` and `preChain` itself; passing your own `options` is for server
+sources threading a per-request scope via `context.withScope`.
+
+Two consequences worth knowing when testing a source:
+
+- The pipeline captures its terminus (`collector.push`) **when the source is
+  constructed**. Replacing `collector.push` after `startFlow` resolves is
+  invisible to pipeline pushes, so assert on a spy **destination** instead of a
+  `collector.push` mock.
+- A `next`/`before` chain adds `await` hops between the emit and delivery. For a
+  fire-and-forget emit, settle microtasks before asserting.
 
 ## Transformer Wiring
 

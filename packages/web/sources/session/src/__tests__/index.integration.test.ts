@@ -1,5 +1,5 @@
 import { startFlow } from '@walkeros/collector';
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { sourceSession } from '../index';
 
 // Back web-core storage with an in-memory map so the session source's
@@ -202,5 +202,55 @@ describe('Session Source: ungated path respects run', () => {
     await startUngatedFlow({ run: true, captured });
 
     expect(sessionStartCount(captured)).toBe(1);
+  });
+
+  test('a next chain on the session source runs for session start', async () => {
+    const seen: string[] = [];
+    const captured: WalkerOS.Event[] = [];
+
+    const { collector } = await startFlow({
+      sources: {
+        session: {
+          code: sourceSession,
+          config: { settings: { storage: true } },
+          next: 'tap',
+        },
+      },
+      transformers: {
+        tap: {
+          code: async (context): Promise<Transformer.Instance> => ({
+            type: 'tap',
+            config: context.config,
+            push: async (event) => {
+              seen.push(event.name ?? '');
+              return { event };
+            },
+          }),
+        },
+      },
+      destinations: {
+        capture: {
+          code: {
+            type: 'capture',
+            config: {},
+            push: (event: WalkerOS.Event): void => {
+              captured.push(event);
+            },
+          },
+        },
+      },
+    });
+
+    // The run-lifecycle emit is fire-and-forget, and the source pipeline adds
+    // await hops (before/next chain) between it and the destination, so settle
+    // microtasks before asserting delivery. Fake timers are global here, so
+    // this must stay microtask-only.
+    for (let i = 0; i < 50; i++) await Promise.resolve();
+
+    // The EVENT travelled the source pipeline...
+    expect(seen).toContain('session start');
+    expect(sessionStartCount(captured)).toBe(1);
+    // ...while identity still arrives via the command exit, untouched.
+    expect(collector.user.session).toBeDefined();
   });
 });

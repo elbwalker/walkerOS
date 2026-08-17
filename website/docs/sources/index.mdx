@@ -193,6 +193,23 @@ package-specific `settings` field, which is documented on each source's page.
 
 <PropertyTable schema={sourceConfig} />
 
+### Events and commands take different routes
+
+A source has two ways out, and the pipeline fields above apply to only one of
+them:
+
+* **Events** go through the source pipeline. This is where `before`, `next`,
+  `mapping`, `cache` and `state` run, where the event picks up its per-source
+  ingest, and what makes the source show up in `collector.status.sources`.
+* **`walker *` commands** (`walker consent`, `walker user`, `walker run`, …) go
+  straight to the collector. They are control signals, not data, so no mapping
+  or chain applies to them.
+
+This holds for every source on both platforms, web and server alike. So a
+`next` chain declared on the browser or dataLayer source runs for the events it
+captures, while a consent grant coming from a CMP source reaches the collector
+untouched.
+
 ## Next steps
 
 * **[Browser source](./web/browser/)** - DOM-based tracking

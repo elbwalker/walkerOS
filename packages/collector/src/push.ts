@@ -9,7 +9,8 @@ import {
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
-import { pushBounded } from './buffers';
+import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
+import { bumpDropped } from './report-error';
 import { createEvent, enrichEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
 import { buildBaseState, journeyFields } from './observerEmit';
@@ -68,6 +69,26 @@ export function createPush<T extends Collector.Instance>(
               { event, options },
               { max },
             );
+            if (held.dropped > 0) {
+              // Counted under its own step id, NOT `stepId('collector')`: that
+              // one's `queue` counter is the post-run replay buffer, and
+              // pre-run loss is a different problem with a different fix, so
+              // the two stay separately diagnosable.
+              const droppedCount = bumpDropped(
+                collector.status,
+                'collector.preRun',
+                'queue',
+                held.dropped,
+              );
+              warnOverflowOnce(
+                collector.preRunQueue,
+                collector.logger,
+                'collector.preRunQueue overflow; oldest events dropped',
+                { buffer: 'queue', cap: max, droppedCount },
+              );
+            } else if (collector.preRunQueue.length < max) {
+              resetOverflowFlag(collector.preRunQueue);
+            }
             collector.logger.debug('event held until run', {
               name: event.name,
               dropped: held.dropped,

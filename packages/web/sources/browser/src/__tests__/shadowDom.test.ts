@@ -61,6 +61,7 @@ describe('Shadow DOM', () => {
   // observer can reach across a test boundary.
   const makeContext = (prefix = 'data-elb'): Context => ({
     elb: mockElb,
+    push: mockElb,
     settings: createTestSettings(prefix),
     registry,
   });

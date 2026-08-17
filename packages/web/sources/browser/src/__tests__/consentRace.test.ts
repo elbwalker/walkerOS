@@ -1,7 +1,7 @@
 import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '../index';
 import { destroyBrowserSource } from './test-utils';
-import type { Collector, Source } from '@walkeros/core';
+import type { Collector, Source, WalkerOS } from '@walkeros/core';
 import type { Types } from '../types';
 
 /**
@@ -47,6 +47,25 @@ const browserSource: Source.Init<Types> = async (sourceContext) => {
   booted.push({ source, collector: sourceContext.collector });
   return source;
 };
+
+/**
+ * Capture DELIVERED event names into `collected`.
+ *
+ * Deliberately a destination rather than a `collector.push` spy: source events
+ * travel the source pipeline, whose terminus is captured by value when the
+ * source is constructed (`collector/src/source.ts`), so replacing
+ * `collector.push` after `startFlow` returns is invisible to it. A destination
+ * observes delivery, which is what these tests actually assert.
+ */
+const captureDestination = (collected: string[]) => ({
+  code: {
+    type: 'capture',
+    config: {},
+    push: (event: WalkerOS.Event) => {
+      collected.push(event.name);
+    },
+  },
+});
 
 describe('elbLayer queue replay vs. fresh walker consent', () => {
   beforeEach(() => {
@@ -118,15 +137,10 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
           },
         },
       },
+      // Capture is live from the start; the source is parked on consent, so
+      // nothing is delivered until it activates below.
+      destinations: { cap: captureDestination(collected) },
     });
-
-    // Capture every event the collector pushes after activation.
-    const realPush = collector.push;
-    collector.push = (async (event: unknown, options?: unknown) => {
-      const e = event as { name?: string };
-      if (e?.name) collected.push(e.name);
-      return realPush(event as never, options as never);
-    }) as Collector.Instance['push'];
 
     // Browser source is registered with require: ['consent'] still pending.
     expect(collector.sources.browser).toBeDefined();
@@ -254,10 +268,10 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
       },
     });
 
-    // Defer `walker run` until after the push spy is wired. Otherwise the
-    // pageview fires inside startFlow (CMP grants consent during pass 2, so
-    // browser require empties before init runs, browser starts, run fires
-    // synchronously) and the spy misses it.
+    // Defer `walker run` so the pageview is attributable to the explicit
+    // `command('run')` below rather than to startFlow's own run (the CMP grants
+    // consent during pass 2, so browser require empties before init runs and
+    // the source would start and fire inside startFlow).
     const { collector } = await startFlow({
       run: false,
       sources: {
@@ -274,15 +288,8 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
           },
         },
       },
+      destinations: { cap: captureDestination(collected) },
     });
-
-    // Capture events emitted by the browser source after activation.
-    const realPush = collector.push;
-    collector.push = (async (event: unknown, options?: unknown) => {
-      const e = event as { name?: string };
-      if (e?.name) collected.push(e.name);
-      return realPush(event as never, options as never);
-    }) as Collector.Instance['push'];
 
     // Browser source should have activated via CMP's consent grant: init ran
     // (config.init === true) and require has been emptied.

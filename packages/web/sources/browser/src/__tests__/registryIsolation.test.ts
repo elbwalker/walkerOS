@@ -41,6 +41,7 @@ const built: Context[] = [];
 const makeContext = (scope: InitScope, elb: Elb.Fn): Context => {
   const context: Context = {
     elb,
+    push: elb,
     settings: {
       prefix: 'data-elb',
       scope,
