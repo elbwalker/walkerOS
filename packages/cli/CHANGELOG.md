@@ -1,5 +1,21 @@
 # @walkeros/cli
 
+## 4.4.0
+
+### Patch Changes
+
+- Updated dependencies [393b942]
+- Updated dependencies [6c89afb]
+- Updated dependencies [393b942]
+- Updated dependencies [35756dd]
+- Updated dependencies [034b1de]
+- Updated dependencies [d00e2bd]
+  - @walkeros/collector@4.4.0
+  - @walkeros/core@4.4.0
+  - @walkeros/server-core@4.4.0
+  - @walkeros/server-destination-api@4.4.0
+  - @walkeros/transformer-validate@4.4.0
+
 ## 4.3.2
 
 ### Patch Changes

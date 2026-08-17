@@ -1,5 +1,38 @@
 # @walkeros/core
 
+## 4.4.0
+
+### Minor Changes
+
+- 393b942: Journeys now assemble per event: one journey per event, identified by
+  that event's id, with the run trace carried as a handle so every event of one
+  page load or container run still groups together. A `$flow` crossing that
+  decodes into several events yields one journey per event, linked by
+  `parentEventId`, instead of folding them into a single row. A new optional
+  `unattributed` summary reports records the assembly could not attribute to any
+  event instead of dropping them silently.
+- 034b1de: Events pushed before the collector runs are now held and replayed at
+  run instead of being dropped, bounded by `queueMax`. `walker init <element>`
+  re-fires load triggers for already-tracked elements, restoring the SPA re-init
+  pattern. Queue sources start consuming at run and no longer acknowledge
+  messages the pipeline did not accept.
+- d00e2bd: A source's `env` is now unambiguously the author's dependency bag:
+  the collector-provided `push`, `elb`, `command`, `logger` and `sources` always
+  win, so setting them in `env` has no effect. Sources that need the pipeline to
+  end elsewhere declare the new `terminus`, which receives the raw event and
+  skips the pipeline entirely; previously an `env.push` silently replaced the
+  pipeline's end and disabled some, but not all, of its stages, and flows that
+  set it should move to `terminus`. Stored flows now also reject unknown keys on
+  a source entry at validation instead of silently ignoring them.
+
+### Patch Changes
+
+- 6c89afb: Fixed journey assembly dropping records when several runtime
+  instances (page reloads, container restarts) reported overlapping sequence
+  numbers. Every instance's records now survive into journeys and gap detection
+  stays truthful. Each journey hop also carries the `release` of the runtime
+  that produced it.
+
 ## 4.3.2
 
 ## 4.3.1

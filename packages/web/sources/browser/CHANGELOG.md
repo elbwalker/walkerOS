@@ -1,5 +1,44 @@
 # @walkeros/web-source-browser
 
+## 4.4.0
+
+### Minor Changes
+
+- e896a7f: Multiple browser sources now run in parallel on one page with
+  isolated trigger, element and visibility state, sharing only the DOM. The
+  `elb` and `elbLayer` names belong to their first claimant, and conflicts are
+  logged instead of silently disabling the source. `elb: false` installs no
+  global. A page that includes the bundle twice now collects every event twice,
+  once per source. `SourceBrowser.Context` now requires `registry`.
+- 034b1de: Events pushed before the collector runs are now held and replayed at
+  run instead of being dropped, bounded by `queueMax`. `walker init <element>`
+  re-fires load triggers for already-tracked elements, restoring the SPA re-init
+  pattern. Queue sources start consuming at run and no longer acknowledge
+  messages the pipeline did not accept.
+- 87937a8: Web sources now send events through the collector's source pipeline,
+  so `next`/`before` chains, source mapping, `cache`, `state` and per-source
+  status work on web like they do on server. Walker commands are unaffected and
+  still go straight to the collector. Flows that already configured these fields
+  on a web source will see them take effect for the first time.
+
+### Patch Changes
+
+- 35756dd: Globals tagged with `data-elbglobals` are page level again:
+  `walker init` on an element no longer hides globals defined outside it.
+  Collector globals are merged into the event during enrichment, so destinations
+  and post-collector transformers see the same finished values. An event keeps
+  the globals it was captured with, so a later `walker globals` never reaches an
+  event awaiting consent.
+- Updated dependencies [393b942]
+- Updated dependencies [6c89afb]
+- Updated dependencies [393b942]
+- Updated dependencies [35756dd]
+- Updated dependencies [034b1de]
+- Updated dependencies [d00e2bd]
+  - @walkeros/collector@4.4.0
+  - @walkeros/core@4.4.0
+  - @walkeros/web-core@4.4.0
+
 ## 4.3.2
 
 ### Patch Changes

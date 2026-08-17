@@ -1,5 +1,32 @@
 # @walkeros/walker.js
 
+## 4.4.0
+
+### Minor Changes
+
+- becf9a9: The top-level `run` flag now reaches the collector. Setting
+  `run: false`, in `window.elbConfig` or inline via
+  `data-elbconfig="run:false"`, previously had no effect and the collector
+  started anyway. It now holds the collector until you send `walker run`
+  yourself.
+
+### Patch Changes
+
+- Updated dependencies [393b942]
+- Updated dependencies [6c89afb]
+- Updated dependencies [393b942]
+- Updated dependencies [35756dd]
+- Updated dependencies [e896a7f]
+- Updated dependencies [034b1de]
+- Updated dependencies [d00e2bd]
+- Updated dependencies [87937a8]
+  - @walkeros/collector@4.4.0
+  - @walkeros/core@4.4.0
+  - @walkeros/web-source-browser@4.4.0
+  - @walkeros/web-source-datalayer@4.4.0
+  - @walkeros/web-source-session@4.4.0
+  - @walkeros/web-core@4.4.0
+
 ## 4.3.2
 
 ### Patch Changes
