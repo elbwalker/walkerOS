@@ -397,8 +397,9 @@ export const ga4WithIncludeAll: Flow.StepExample = {
         context_dev: 'test',
         // globals_* params from event.globals
         globals_pagegroup: 'docs',
-        // user_* params from event.user
-        user_id: 'us3r',
+        // user_* params from event.user. `user_id` is absent on purpose: GA4
+        // reserves the name for identity set via gtag config and ignores it as
+        // an event parameter, so the destination drops it.
         user_device: 'c00k13',
         user_session: 's3ss10n',
         // source_* params from event.source
