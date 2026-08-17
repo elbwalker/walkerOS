@@ -103,6 +103,142 @@ elb('product view', { id: 'P123' }); // Also tracks events`}
 
 See [Commands](/docs/sources/web/browser/commands) for complete API documentation.
 
+## Multiple sources on one page
+
+Any number of browser sources can run on one page. Each keeps its own triggers,
+its own element registry, and its own visibility state, so nothing one source
+wires, times, or tears down reaches another.
+
+Two page-level resources are the exception, because each is a single slot:
+
+| Resource | Setting | Rule |
+|----------|---------|------|
+| The writer installed at `window[elb]` | `elb` | The first source to install the name keeps it. |
+| The command queue at `window[elbLayer]` | `elbLayer` | The first source to adopt the array keeps it. |
+
+A source that asks for a name another source already holds is refused that one
+resource and logs an error. Everything else keeps working: its scope is still
+scanned, its triggers still fire, and its own `push` still resolves. A page's
+own bootstrap, the `elb` stub function and pre-filled `elbLayer` array defined
+before the source loads, belongs to no source and is adopted as usual.
+
+The DOM is not owned. Any number of sources may scan the same node, `document`
+included. That is how two flows run on one page: give each its own `elb` name
+and its own `elbLayer` name (or `false`), and let them share the markup.
+
+### A vendor flow beside the page's own
+
+Distinct names on both single-slot resources mean nothing is refused on either
+side. `pageview: false` leaves the `page view` event to the walker the page
+already runs, and the scope narrows the vendor's delegation to the subtree it
+cares about.
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+const { collector, elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          elb: 'vendorElb',
+          elbLayer: 'vendorLayer',
+          scope: document.body,
+          pageview: false,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### An embedded overlay with no window footprint
+
+`elb: false` installs no window property at all and `elbLayer: false` creates no
+queue, so the source adds nothing to the page window and reaches its collector
+through the `elb` that `startFlow` returns. Pair it with an explicit scope and
+the overlay captures only its own markup.
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+const host = document.createElement('div');
+document.body.appendChild(host);
+const overlay = host.attachShadow({ mode: 'closed' });
+
+const { collector, elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          elb: false,
+          elbLayer: false,
+          scope: overlay,
+          pageview: false,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### One elbLayer belongs to one walker
+
+A queue is drained once. The source that adopts a named layer reads every entry,
+and a command like `walker run` has exactly one addressee, so a second source on
+the same array would starve the first rather than join it. Parallel flows use
+separate layer names or `elbLayer: false`, and share instrumentation through the
+`data-elb` attributes rather than through a queue.
+
+### Overlapping scopes fire once per source
+
+Two sources scanning the same tagged element wire it twice. `click`, `hover`,
+`pulse`, `scroll`, `wait`, `impression`, and `visible` each fire once per
+source, into that source's own pipeline, and an observed element carries one
+dwell timer per source.
+
+The `prefix` setting decides whether that is what you want:
+
+* **Same prefix** is deliberate dual collect. One set of attributes feeds both
+  pipelines, and each collector sees the interaction once.
+* **Different prefix** isolates the two. Each source only sees elements tagged
+  for it, so overlapping scopes cost nothing.
+
+:::note
+
+Give overlapping sources the same scope root. A source discovers
+[`data-elbobserve`](/docs/sources/web/browser/tagging/html-attributes#auto-init-with-data-elbobserve)
+containers inside its own scope only. When two sources share a prefix and the
+container sits outside one of their scopes, only the source that discovered it
+reaps elements the container removes. For the other one that element's teardown
+never runs: its `pulse` intervals keep firing, its `wait` timeouts stay armed,
+and its hover and visibility registrations stay in place against a node that has
+left the document, which also keeps that node referenced until the source is
+torn down. A shared scope root means both sources see the same containers.
+
+:::
+
+### Known limits
+
+* **Version skew.** A page running an older release of the package leaves no
+  ownership mark, so a source injected later reads that layer as free and adopts
+  it. This only matters when both use the same layer name, which is what the
+  contract above tells parallel flows not to do.
+* **Integrations that assign `window[elb]` themselves.** The `walker.js` bundle
+  assigns the name after the source has installed its writer, which leaves a
+  value in the slot that belongs to no source, so a second source reads the name
+  as free and installs over it.
+* **The same script included twice.** Each copy scans the same markup into its
+  own pipeline, so every event is collected twice. That is a page
+  misconfiguration rather than something the source can resolve, and it is
+  diagnosable: both refusals log at initialization.
+
 ## Next steps
 
 * [Session source](/docs/sources/web/session) - session and device tracking

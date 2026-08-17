@@ -30,6 +30,8 @@ import { createCommand } from '../command';
 
 type MockedPushToDestinations = jest.MockedFunction<typeof pushToDestinations>;
 
+const SPAN_HEX = /^[0-9a-f]{16}$/;
+
 function createTestCollector(): Collector.Instance {
   const mockLogger = createMockLogger();
 
@@ -99,10 +101,13 @@ describe('push boundary', () => {
     const errorMock = (collector.logger as ReturnType<typeof createMockLogger>)
       .error as jest.Mock;
     expect(errorMock).toHaveBeenCalledTimes(1);
+    // The wrap mints the span id and hands the pipeline an id-stamped copy,
+    // so the failure log carries the event as the pipeline saw it: the
+    // caller's fields plus the minted id.
     expect(errorMock).toHaveBeenCalledWith(
       'push failed',
       expect.objectContaining({
-        event,
+        event: { ...event, id: expect.stringMatching(SPAN_HEX) },
         ingest,
         error: expect.any(Error),
       }),

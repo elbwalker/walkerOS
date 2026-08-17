@@ -8,24 +8,35 @@ export function initGA4(
   loadScript: boolean | undefined,
   env: Env | undefined,
   logger: Logger.Instance,
+  // True when gtag was already initialised by something else, e.g. a tag
+  // manager. Observed once before walkerOS touches the window.
+  gtagExternal = false,
 ): void {
   const { window, document } = getEnv<Env>(env);
-  const { measurementId, transport_url, server_container_url, pageview } =
-    settings;
+  const {
+    measurementId,
+    transport_url,
+    server_container_url,
+    scriptSrc,
+    pageview,
+    init,
+  } = settings;
 
   if (!measurementId) logger.throw('Config settings ga4.measurementId missing');
 
-  // Load the gtag script. With a GA4 server container configured, load gtag.js
-  // first-party from that container instead of googletagmanager.com.
-  if (loadScript) {
-    const src = server_container_url
-      ? `${server_container_url.replace(/\/$/, '')}/gtag/js?id=`
-      : undefined;
-    addScript(measurementId, src, document);
-  }
-
-  // Initialize gtag infrastructure
+  // Ensure the gtag stub exists either way, so events can queue.
   initializeGtag(window);
+
+  // `init: false` hands the gtag bootstrap to an external tag manager, which
+  // configures this measurement ID itself. walkerOS then only sends events,
+  // routed by `send_to`. Loading the script or issuing a second, later
+  // `config` would override the identity the container already established.
+  if (init === false) return;
+
+  // Load the gtag script. `server_container_url` routes measurement data and
+  // says nothing about script delivery, so first-party serving needs its own
+  // `scriptSrc` pointing at the container's configured tag serving path.
+  if (loadScript) addScript(measurementId, scriptSrc, document);
 
   const gtagSettings: WalkerOS.AnyObject = {};
 
@@ -40,7 +51,10 @@ export function initGA4(
   if (pageview === false) gtagSettings.send_page_view = false;
 
   const gtag = window.gtag!;
-  gtag('js', new Date());
+
+  // `js` announces that gtag initialised here. If an external tag manager
+  // already bootstrapped it, a second one carries a false, later timestamp.
+  if (!gtagExternal) gtag('js', new Date());
 
   // gtag init call
   gtag('config', measurementId, gtagSettings);

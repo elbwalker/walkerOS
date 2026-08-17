@@ -9,18 +9,37 @@ export function resetLoadedScripts(): void {
   loadedScripts.clear();
 }
 
+export const gtagScriptSrc = 'https://www.googletagmanager.com/gtag/js?id=';
+
+/**
+ * Injects the gtag.js script.
+ *
+ * `src` loads first-party from a tagging server and is used verbatim: the
+ * serving path maps to the id inside the container, so the id is not appended.
+ * If it fails to load, the script falls back to googletagmanager.com so a
+ * misconfigured container degrades to working measurement instead of none.
+ */
 export function addScript(
   id: string,
-  src = 'https://www.googletagmanager.com/gtag/js?id=',
+  src?: string,
   document: Document = globalThis.document,
 ): void {
   // Prevent loading the same script multiple times
   if (loadedScripts.has(id)) return;
-
-  const script = document.createElement('script');
-  script.src = src + id;
-  document.head.appendChild(script);
   loadedScripts.add(id);
+
+  const inject = (url: string, onError?: () => void) => {
+    const script = document.createElement('script');
+    script.src = url;
+    if (onError) script.onerror = onError;
+    document.head.appendChild(script);
+  };
+
+  if (src) {
+    inject(src, () => inject(gtagScriptSrc + id));
+  } else {
+    inject(gtagScriptSrc + id);
+  }
 }
 
 export function initializeGtag(

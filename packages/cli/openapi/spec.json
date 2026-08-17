@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "4.1.0",
+    "version": "4.3.0",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -2199,6 +2199,9 @@
           "activationUrl": {
             "type": ["string", "null"]
           },
+          "tagMode": {
+            "type": "boolean"
+          },
           "createdBy": {
             "type": "string"
           },
@@ -2214,6 +2217,7 @@
           "projectId",
           "bundleUrl",
           "activationUrl",
+          "tagMode",
           "createdBy",
           "createdAt"
         ]
@@ -2282,6 +2286,10 @@
                 "required": ["kind", "deploymentVersionId"]
               }
             ]
+          },
+          "tagMode": {
+            "type": "boolean",
+            "default": true
           }
         },
         "required": ["flowSettingsId"]
@@ -2498,6 +2506,13 @@
               "type": "object",
               "additionalProperties": {}
             }
+          },
+          "unattributed": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
           }
         },
         "required": ["sessionId", "flowId", "assembledAt", "journeys", "gaps"]
@@ -2526,6 +2541,9 @@
               "example": "https://shop.example.com"
             },
             "maxItems": 20
+          },
+          "tagMode": {
+            "type": "boolean"
           }
         },
         "required": ["settingsName"]
@@ -5098,6 +5116,13 @@
             }
           },
           "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "unattributed": {
             "type": "array",
             "items": {
               "type": "object",

@@ -48,6 +48,54 @@ await startFlow({
   language="typescript"
 />
 
+## Let a tag manager own the configuration
+
+If a container (for example GTM) already configures your measurement ID, set
+`init: false`. walkerOS then skips the gtag bootstrap entirely, no `js`, no
+`config`, no script load, and only sends events, routed by `send_to`.
+
+<CodeSnippet
+  code={`settings: {
+  ga4: {
+    measurementId: 'G-XXXXXXXX',
+    init: false,
+  },
+}`}
+  language="typescript"
+/>
+
+This matters for attribution. A `config` command affects user and session
+identity for the rest of the page, so a second one arriving later than the
+container's own can disturb the session GA4 already established. When the
+container configures the tag, let it stay authoritative and put
+`server_container_url` and related settings on the container's tag rather than
+here.
+
+## Serve gtag.js first-party
+
+By default gtag.js loads from `googletagmanager.com`. To serve it from your own
+tagging server instead, set `scriptSrc` to the
+[tag serving path](https://developers.google.com/tag-platform/tag-manager/server-side/dependency-serving)
+configured in your server container. The path maps to the measurement ID inside
+the container, so the ID is not part of the URL.
+
+<CodeSnippet
+  code={`settings: {
+  ga4: {
+    measurementId: 'G-XXXXXXXXXX',
+    scriptSrc: 'https://example.com/metrics/tag_serving_path/',
+    server_container_url: 'https://example.com/metrics',
+  },
+}`}
+  language="typescript"
+/>
+
+`server_container_url` routes measurement data and must **not** include the tag
+serving path. Setting it alone does not change where the script loads from,
+because serving gtag.js is a separate capability your container may not have. If
+`scriptSrc` fails to load, walkerOS falls back to `googletagmanager.com` so a
+misconfigured container degrades to working measurement rather than none.
+
 ## A page view needs no mapping
 
 The gtag destination snake-cases an `entity action` event name into a GA4 event

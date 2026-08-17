@@ -33,13 +33,28 @@ describe('GA4 Implementation', () => {
       );
     });
 
-    it('should initialize GA4 with basic settings', () => {
+    // `js` announces that gtag was initialised here. When gtag already exists
+    // an external tag manager bootstrapped it, usually much earlier, so a
+    // second `js` carrying a later timestamp is a false initialisation signal.
+    it('does NOT send js when gtag already exists, but still configures', () => {
       const settings: GA4Settings = { measurementId: 'G-XXXXXXXXXX' };
 
-      initGA4(settings, true, mockEnv, createMockLogger());
+      initGA4(settings, true, mockEnv, createMockLogger(), true);
 
-      expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
+      expect(mockGtag).not.toHaveBeenCalledWith('js', expect.anything());
       expect(mockGtag).toHaveBeenCalledWith('config', 'G-XXXXXXXXXX', {});
+    });
+
+    it('sends js when walkerOS bootstraps gtag itself', () => {
+      const env = clone(examples.env.init!); // gtag absent
+      const dl: unknown[] = [];
+      env.window.dataLayer = dl;
+
+      initGA4({ measurementId: 'G-BOOTSTRAP' }, false, env, createMockLogger());
+
+      const commands = dl.map((a) => (a as IArguments)[0]);
+      expect(commands).toContain('js');
+      expect(commands).toContain('config');
     });
 
     it('should initialize GA4 with transport_url', () => {
@@ -81,58 +96,72 @@ describe('GA4 Implementation', () => {
       });
     });
 
-    describe('first-party gtag.js loading', () => {
+    describe('gtag.js loading', () => {
       // Build an env whose document.createElement captures the injected script
       // so the resolved `script.src` can be asserted.
       const setupCapture = () => {
         resetLoadedScripts();
-        let createdScript:
-          | {
-              src: string;
-              setAttribute: (name: string, value: string) => void;
-              removeAttribute: (name: string) => void;
-            }
-          | undefined;
+        type FakeScript = {
+          src: string;
+          onerror?: () => void;
+          setAttribute: (name: string, value: string) => void;
+          removeAttribute: (name: string) => void;
+        };
+        const created: FakeScript[] = [];
         const env = clone(examples.env.push);
         env.window.gtag = mockGtag;
         env.document.createElement = () => {
-          createdScript = {
+          const script: FakeScript = {
             src: '',
             setAttribute: () => {},
             removeAttribute: () => {},
           };
-          return createdScript;
+          created.push(script);
+          return script;
         };
-        return { env, getSrc: () => createdScript?.src };
+        return {
+          env,
+          getSrc: () => created[created.length - 1]?.src,
+          countCreated: () => created.length,
+          // Simulate the browser failing the most recently injected script.
+          failScript: () => created[created.length - 1]?.onerror?.(),
+        };
       };
 
-      it('loads gtag.js from the server container when server_container_url is set', () => {
+      // First-party serving uses a tag serving path configured in the server
+      // container, which maps to the measurement ID. It cannot be derived from
+      // server_container_url, and per Google's docs the serving path must NOT
+      // be part of server_container_url. So a server container alone never
+      // changes where the script comes from.
+      it('loads gtag.js from googletagmanager.com even when server_container_url is set', () => {
         const { env, getSrc } = setupCapture();
         const settings: GA4Settings = {
-          measurementId: 'G-FIRSTPARTY',
+          measurementId: 'G-SERVERSIDE',
           server_container_url: 'https://sgtm.example.com',
         };
 
         initGA4(settings, true, env, createMockLogger());
 
         expect(getSrc()).toBe(
-          'https://sgtm.example.com/gtag/js?id=G-FIRSTPARTY',
+          'https://www.googletagmanager.com/gtag/js?id=G-SERVERSIDE',
         );
       });
 
-      it('trims a trailing slash on server_container_url', () => {
-        const { env, getSrc } = setupCapture();
+      it('still routes measurement data to the server container', () => {
+        const { env } = setupCapture();
         const settings: GA4Settings = {
-          measurementId: 'G-TRAILING',
-          server_container_url: 'https://sgtm.example.com/',
+          measurementId: 'G-SERVERSIDE',
+          server_container_url: 'https://sgtm.example.com',
         };
 
         initGA4(settings, true, env, createMockLogger());
 
-        expect(getSrc()).toBe('https://sgtm.example.com/gtag/js?id=G-TRAILING');
+        expect(mockGtag).toHaveBeenCalledWith('config', 'G-SERVERSIDE', {
+          server_container_url: 'https://sgtm.example.com',
+        });
       });
 
-      it('falls back to googletagmanager.com when server_container_url is absent', () => {
+      it('loads gtag.js from googletagmanager.com when server_container_url is absent', () => {
         const { env, getSrc } = setupCapture();
         const settings: GA4Settings = { measurementId: 'G-DEFAULT' };
 
@@ -141,6 +170,84 @@ describe('GA4 Implementation', () => {
         expect(getSrc()).toBe(
           'https://www.googletagmanager.com/gtag/js?id=G-DEFAULT',
         );
+      });
+
+      // With `init: false` an external tag manager owns the gtag bootstrap.
+      // walkerOS must not push `js` or `config`, and must not load the script,
+      // so the container's own (earlier) config stays authoritative.
+      it('skips the gtag bootstrap entirely when init is false', () => {
+        const { env, getSrc } = setupCapture();
+        const settings: GA4Settings = {
+          measurementId: 'G-EXTERNAL',
+          server_container_url: 'https://sgtm.example.com',
+          init: false,
+        };
+
+        initGA4(settings, true, env, createMockLogger());
+
+        expect(mockGtag).not.toHaveBeenCalledWith('js', expect.anything());
+        expect(mockGtag).not.toHaveBeenCalledWith(
+          'config',
+          expect.anything(),
+          expect.anything(),
+        );
+        expect(getSrc()).toBeUndefined();
+      });
+
+      it('still bootstraps when init is omitted (default true)', () => {
+        const { env } = setupCapture();
+        const settings: GA4Settings = { measurementId: 'G-DEFAULTINIT' };
+
+        initGA4(settings, false, env, createMockLogger());
+
+        expect(mockGtag).toHaveBeenCalledWith('config', 'G-DEFAULTINIT', {});
+      });
+
+      // https://developers.google.com/tag-platform/tag-manager/server-side/dependency-serving
+      // The serving path maps to the measurement ID inside the container, so
+      // the ID is NOT appended to the script URL. scriptSrc is used verbatim.
+      it('uses scriptSrc verbatim, without appending the measurement ID', () => {
+        const { env, getSrc } = setupCapture();
+        const settings: GA4Settings = {
+          measurementId: 'G-FIRSTPARTY',
+          server_container_url: 'https://example.com/metrics',
+          scriptSrc: 'https://example.com/metrics/tag_serving_path/',
+        };
+
+        initGA4(settings, true, env, createMockLogger());
+
+        expect(getSrc()).toBe('https://example.com/metrics/tag_serving_path/');
+      });
+
+      it('falls back to googletagmanager.com when scriptSrc fails to load', () => {
+        const { env, getSrc, failScript } = setupCapture();
+        const settings: GA4Settings = {
+          measurementId: 'G-FIRSTPARTY',
+          scriptSrc: 'https://example.com/metrics/wrong_path/',
+        };
+
+        initGA4(settings, true, env, createMockLogger());
+        expect(getSrc()).toBe('https://example.com/metrics/wrong_path/');
+
+        failScript();
+
+        expect(getSrc()).toBe(
+          'https://www.googletagmanager.com/gtag/js?id=G-FIRSTPARTY',
+        );
+      });
+
+      it('does not fall back twice when the fallback itself fails', () => {
+        const { env, failScript, countCreated } = setupCapture();
+        const settings: GA4Settings = {
+          measurementId: 'G-FIRSTPARTY',
+          scriptSrc: 'https://example.com/metrics/wrong_path/',
+        };
+
+        initGA4(settings, true, env, createMockLogger());
+        failScript(); // first-party fails -> fallback injected
+        failScript(); // fallback fails -> must not loop
+
+        expect(countCreated()).toBe(2);
       });
     });
   });

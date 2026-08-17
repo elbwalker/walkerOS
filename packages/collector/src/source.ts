@@ -11,6 +11,7 @@ import {
   createIngest,
   FatalError,
   getMappingValue,
+  getSpanId,
   parseTraceparent,
   tryCatchAsync,
   getNextSteps,
@@ -222,6 +223,20 @@ export async function initSource(
   ): Promise<Elb.PushResult> => {
     let pendingRespond: Promise<void> | undefined;
 
+    // Mint the event's span id HERE when absent, so the source.before chain's
+    // records carry the same id as the collector.push and destination records
+    // of the same event; minting only at the collector wrap would leave every
+    // before-chain record anonymous. The wrap then finds `id` set and keeps
+    // it, as does `createEvent` (handle.ts): one span per event, end to end.
+    // A user terminal push replaces the collector entirely and receives the
+    // raw event by contract (the same guard governs `stateEntries` below), so
+    // leave that event untouched.
+    const identified =
+      hasUserTerminalPush ||
+      (typeof rawEvent.id === 'string' && rawEvent.id !== '')
+        ? rawEvent
+        : { ...rawEvent, id: getSpanId() };
+
     // Resolve before chain (static or conditional).
     // Single-id results walk static `.next` links; multi-id results are
     // explicit chains (fan-out from `many` is handled by the engine).
@@ -244,7 +259,7 @@ export async function initSource(
     // preserved end-to-end. Cache logic is request-scoped (keyed by the
     // scope's ingest), so it lives outside the loop. The actual pipeline
     // (preChain + collector.push) runs inside the loop, once per event.
-    let events: WalkerOS.DeepPartialEvent[] = [rawEvent];
+    let events: WalkerOS.DeepPartialEvent[] = [identified];
 
     // Run source.before chain (consent-exempt, pre-source preprocessing)
     if (
@@ -256,7 +271,7 @@ export async function initSource(
         collector,
         collector.transformers,
         beforeChain,
-        rawEvent,
+        identified,
         scope.ingest,
         scope.respond,
         `source.${sourceId}.before`,
@@ -272,9 +287,39 @@ export async function initSource(
         return { ok: true } as Elb.PushResult;
       }
       if (beforeResult.respond) scope.respond = beforeResult.respond;
-      events = Array.isArray(beforeResult.event)
-        ? beforeResult.event
-        : [beforeResult.event];
+
+      // The id the before chain ran under, and therefore the id its records
+      // carry. A fork that spreads its input copies this id onto every child;
+      // a rebuilt single result drops it. Both are corrected here. The
+      // invariant this establishes is narrow and deliberate: no child keeps
+      // the CHAIN INPUT's id. It is NOT "no two children share an id".
+      // Children spreading an id a transformer assigned mid-chain still
+      // collapse, because that id was chosen rather than inherited and is
+      // indistinguishable from a legitimate one here.
+      const chainEventId =
+        typeof identified.id === 'string' ? identified.id : '';
+
+      if (Array.isArray(beforeResult.event)) {
+        // A child that inherited the chain input's id is a distinct event and
+        // gets its own span. A child carrying an id the transformer chose
+        // keeps it; one with no id is minted downstream by `createEvent`.
+        events = beforeResult.event.map((child) =>
+          chainEventId !== '' && child.id === chainEventId
+            ? { ...child, id: getSpanId() }
+            : child,
+        );
+      } else {
+        // One result is the same logical event the chain received, so it keeps
+        // that id even when the transformer rebuilt the event from scratch.
+        // Without this the before-chain records and everything downstream of
+        // them land in two different journeys.
+        const single = beforeResult.event;
+        events =
+          chainEventId !== '' &&
+          !(typeof single.id === 'string' && single.id !== '')
+            ? [{ ...single, id: chainEventId }]
+            : [single];
+      }
     }
 
     // Source cache check (full=true by default for sources)

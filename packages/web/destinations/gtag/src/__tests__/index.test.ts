@@ -103,6 +103,7 @@ describe('Unified Gtag Destination', () => {
         true,
         mockEnv,
         mockLogger,
+        true,
       );
       expect(initAds).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
@@ -128,6 +129,7 @@ describe('Unified Gtag Destination', () => {
         true,
         mockEnv,
         mockLogger,
+        true,
       );
       expect(initGA4).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
@@ -180,12 +182,14 @@ describe('Unified Gtag Destination', () => {
         true,
         mockEnv,
         mockLogger,
+        true,
       );
       expect(initAds).toHaveBeenCalledWith(
         settings.ads,
         true,
         mockEnv,
         mockLogger,
+        true,
       );
       expect(initGTM).toHaveBeenCalledWith(
         settings.gtm,
@@ -214,6 +218,7 @@ describe('Unified Gtag Destination', () => {
         false,
         mockEnv,
         mockLogger,
+        true,
       );
     });
   });

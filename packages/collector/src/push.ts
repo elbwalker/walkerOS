@@ -4,6 +4,7 @@ import {
   emitStep,
   FatalError,
   getGrantedConsent,
+  getSpanId,
   processEventMapping,
   tryCatchAsync,
   useHooks,
@@ -142,12 +143,31 @@ export function createPush<T extends Collector.Instance>(
             // Update respond if the chain produced a wrapped one
             if (chainResult.respond) respond = chainResult.respond;
 
+            // The id the chain ran under, and therefore the id the records
+            // emitted before it carry. A fork that spreads its input copies
+            // this id onto every child; a rebuilt single result drops it.
+            // Both are corrected below. The invariant this establishes is
+            // narrow and deliberate: no child keeps the CHAIN INPUT's id. It
+            // is NOT "no two children share an id". Children spreading an id
+            // a transformer assigned mid-chain still collapse, because that id
+            // was chosen rather than inherited and is indistinguishable here.
+            const chainEventId =
+              typeof partialEvent.id === 'string' ? partialEvent.id : '';
+
             // Handle fan-out: array means multiple events from a single input
             if (Array.isArray(chainResult.event)) {
               // Process each forked event through the rest of the pipeline
               const forkResults = await Promise.all(
                 chainResult.event.map(async (forkEvent) => {
-                  const enriched = prepareEvent(forkEvent);
+                  // A child that inherited the chain input's id is a distinct
+                  // event and gets its own span. A child carrying an id the
+                  // transformer chose keeps it; one with no id is minted by
+                  // `createEvent` below.
+                  const forked =
+                    chainEventId !== '' && forkEvent.id === chainEventId
+                      ? { ...forkEvent, id: getSpanId() }
+                      : forkEvent;
+                  const enriched = prepareEvent(forked);
                   const full = createEvent(collector, enriched, pipelineIngest);
                   return pushToDestinations(
                     collector,
@@ -179,7 +199,18 @@ export function createPush<T extends Collector.Instance>(
               return forkResults[0] ?? createPushResult({ ok: true });
             }
 
-            partialEvent = chainResult.event;
+            // One result is the same logical event the chain received, so it
+            // keeps that id even when the transformer rebuilt the event from
+            // scratch. Without this the wrap's in/out pair and everything the
+            // rebuilt event goes on to emit land in two different journeys.
+            partialEvent =
+              chainEventId !== '' &&
+              !(
+                typeof chainResult.event.id === 'string' &&
+                chainResult.event.id !== ''
+              )
+                ? { ...chainResult.event, id: chainEventId }
+                : chainResult.event;
           }
 
           // Enrich into a full event (timing, source info, defaults)
@@ -235,14 +266,22 @@ export function createPush<T extends Collector.Instance>(
   );
 
   const wrapped: Collector.PushFn = async (event, options) => {
-    const eventId = typeof event.id === 'string' ? event.id : '';
+    // Mint the event's span id HERE when absent, so every record of this
+    // event carries it, the wrap's own in record included. This is the id the
+    // identified event carries into `createEvent`, which preserves a supplied
+    // id (handle.ts). The copy never mutates the caller's object.
+    const identified =
+      typeof event.id === 'string' && event.id !== ''
+        ? event
+        : { ...event, id: getSpanId() };
+    const eventId = typeof identified.id === 'string' ? identified.id : '';
     // Journey correlation from what is in scope at the wrap boundary: the
     // incoming event's trace, then the header-derived ingest trace, then the
     // run trace, plus the source context threaded through `options.ingest`.
     // The processed full event is not visible here, so out/error reuse the
     // same incoming-event trace (identical value in the common case).
     const { traceId, sourceId, parentEventId } = journeyFields(
-      event,
+      identified,
       options?.ingest,
       collector,
     );
@@ -257,16 +296,20 @@ export function createPush<T extends Collector.Instance>(
       sourceId,
       parentEventId,
     });
-    inState.inEvent = event;
+    inState.inEvent = identified;
     emitStep(collector, inState);
 
     try {
-      const result = await innerPush(event, options);
+      const result = await innerPush(identified, options);
       const finished = Date.now();
       const outState = buildBaseState(collector, {
         stepId: 'collector.push',
         stepType: 'collector',
         phase: 'out',
+        // The same id as the in record. Reading it off the result instead
+        // would split the wrap's own pair across two journeys whenever the
+        // result reports a different event: a fan-out reporting its first
+        // child, or a `prePush` hook that swapped the event.
         eventId,
         now: finished,
         traceId,

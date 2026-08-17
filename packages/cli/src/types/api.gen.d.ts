@@ -8992,6 +8992,7 @@ export interface components {
       /** Format: uri */
       bundleUrl: string;
       activationUrl: string | null;
+      tagMode: boolean;
       createdBy: string;
       /** Format: date-time */
       createdAt: string;
@@ -9015,6 +9016,8 @@ export interface components {
             kind: 'deployment-version';
             deploymentVersionId: string;
           };
+      /** @default true */
+      tagMode: boolean;
     };
     MintGrantRequest: {
       origins: string[];
@@ -9087,6 +9090,9 @@ export interface components {
       gaps: {
         [key: string]: unknown;
       }[];
+      unattributed?: {
+        [key: string]: unknown;
+      }[];
     };
     CreateObserveSessionRequest: {
       settingsName: string;
@@ -9094,6 +9100,7 @@ export interface components {
       replace?: boolean;
       level?: components['schemas']['ObserveLevel'];
       origins?: string[];
+      tagMode?: boolean;
     };
     /** @enum {string} */
     ObserveLevel: 'off' | 'standard' | 'trace';
@@ -10022,6 +10029,9 @@ export interface components {
         [key: string]: unknown;
       }[];
       gaps: {
+        [key: string]: unknown;
+      }[];
+      unattributed?: {
         [key: string]: unknown;
       }[];
     };

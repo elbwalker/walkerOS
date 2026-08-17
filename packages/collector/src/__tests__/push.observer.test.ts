@@ -78,7 +78,11 @@ describe('collector.push self-emission', () => {
         s.phase === 'in',
     );
     expect(inFrame).toBeDefined();
-    expect(inFrame?.inEvent).toEqual(inbound);
+    // inEvent is the id-stamped copy the wrap forwards: the inbound fields
+    // plus the minted span. Expecting the frame's own eventId inside it pins
+    // that the record and the event it describes share one identity.
+    expect(inFrame?.eventId).toBeTruthy();
+    expect(inFrame?.inEvent).toEqual({ ...inbound, id: inFrame?.eventId });
   });
 
   test('standard observer strips inEvent from the collector.push in frame', async () => {

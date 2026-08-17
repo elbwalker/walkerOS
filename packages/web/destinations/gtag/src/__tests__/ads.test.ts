@@ -41,6 +41,17 @@ describe('Google Ads Implementation', () => {
       expect(mockGtag).toHaveBeenCalledWith('config', 'AW-XXXXXXXXX');
     });
 
+    // Mirrors the GA4 case: a second `js` after an external tag manager has
+    // bootstrapped gtag asserts a false, later initialisation time.
+    it('does NOT send js when gtag was initialised elsewhere', () => {
+      const settings: AdsSettings = { conversionId: 'AW-XXXXXXXXX' };
+
+      initAds(settings, true, mockEnv, createMockLogger(), true);
+
+      expect(mockGtag).not.toHaveBeenCalledWith('js', expect.anything());
+      expect(mockGtag).toHaveBeenCalledWith('config', 'AW-XXXXXXXXX');
+    });
+
     it('should set default currency to EUR', () => {
       const settings: AdsSettings = { conversionId: 'AW-XXXXXXXXX' };
 

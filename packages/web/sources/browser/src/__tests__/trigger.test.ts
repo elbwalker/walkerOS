@@ -1,17 +1,21 @@
 import type { Elb } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
-import type { Settings } from '../types';
+import type { Context, Registry, Settings } from '../types';
 import {
+  createRegistry,
   initGlobalTrigger,
   initScopeTrigger,
-  initTriggers,
   ready,
   Triggers,
   handleTrigger,
-  resetScrollListener,
   destroyTriggers,
 } from '../trigger';
 import { destroyVisibilityTracking } from '../triggerVisible';
+
+// Narrows a listener's options argument to the abort-signal shape, so a test
+// can tell an armed registration from a cancelled one without a cast.
+const isSignalOption = (value: unknown): value is { signal: AbortSignal } =>
+  isObject(value) && value.signal instanceof AbortSignal;
 
 // Helper function to create test settings
 const createTestSettings = (prefix = 'data-elb'): Settings => ({
@@ -19,7 +23,7 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
   scope: document,
   pageview: false,
   capture: true,
-  elb: '',
+  elb: false,
   elbLayer: false,
 });
 
@@ -46,13 +50,19 @@ describe('Trigger System', () => {
   let mockElb: jest.MockedFunction<Elb.Fn>;
   let mockAddEventListener: jest.Mock;
   let events: Record<string, EventListenerOrEventListenerObject> = {};
+  let registry: Registry;
+  let context: Context;
+
+  // File-local context builder. One registry per test, so a test starts with
+  // no listeners, timers or observers from any earlier one.
+  const makeContext = (prefix = 'data-elb'): Context => ({
+    elb: mockElb,
+    settings: createTestSettings(prefix),
+    registry,
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Reset trigger module state (scroll state + global AbortController)
-    resetScrollListener();
-    destroyTriggers(createTestSettings());
 
     // Mock elb function
     mockElb = jest.fn().mockResolvedValue({
@@ -71,136 +81,65 @@ describe('Trigger System', () => {
       value: 'complete',
       writable: true,
     });
+
+    registry = createRegistry();
+    context = makeContext();
   });
 
   afterEach(() => {
+    // Releases this test's listeners, timers and observers. Idempotent when a
+    // test already tore its context down.
+    destroyTriggers(context);
     document.body.innerHTML = '';
-  });
-
-  test('Triggers constants are defined correctly', () => {
-    expect(Triggers.Click).toBe('click');
-    expect(Triggers.Load).toBe('load');
-    expect(Triggers.Hover).toBe('hover');
-    expect(Triggers.Submit).toBe('submit');
-    expect(Triggers.Impression).toBe('impression');
-    expect(Triggers.Visible).toBe('visible');
-    expect(Triggers.Scroll).toBe('scroll');
-    expect(Triggers.Pulse).toBe('pulse');
-    expect(Triggers.Wait).toBe('wait');
-  });
-
-  test('initGlobalTrigger sets up click and submit listeners', () => {
-    expect(mockAddEventListener).toHaveBeenCalledTimes(0);
-
-    const context = { elb: mockElb, settings: createTestSettings('data-elb') };
-    initGlobalTrigger(context, createTestSettings('data-elb'));
-
-    expect(mockAddEventListener).toHaveBeenCalledWith(
-      'click',
-      expect.any(Function),
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
-    expect(mockAddEventListener).toHaveBeenCalledWith(
-      'submit',
-      expect.any(Function),
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
-    expect(mockAddEventListener).toHaveBeenCalledTimes(2);
-  });
-
-  test('initGlobalTrigger always adds event listeners', () => {
-    const context = { elb: mockElb, settings: createTestSettings('data-elb') };
-    initGlobalTrigger(context, createTestSettings('data-elb'));
-
-    // Should always add both click and submit listeners
-    expect(mockAddEventListener).toHaveBeenCalledTimes(2);
-  });
-
-  test('initTriggers initializes DOM triggers without pageview', () => {
-    document.body.innerHTML =
-      '<div data-elb="page" data-elb-page="title:Home"></div>';
-
-    const context = { elb: mockElb, settings: createTestSettings('data-elb') };
-    initTriggers(context, {
-      prefix: 'data-elb',
-      scope: document,
-      pageview: true,
-      capture: true,
-      elb: 'elb',
-      elbLayer: 'elbLayer',
-    });
-
-    // Should NOT trigger page view (pageview now only fires on walker run)
-    expect(mockElb).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'page view',
-      }),
-    );
-
-    // Should initialize DOM triggers (we can verify by checking event listeners were added)
-    // The actual DOM trigger testing is done in other tests
-    expect(mockElb).not.toHaveBeenCalled(); // No immediate events
-  });
-
-  test('initScopeTrigger processes action elements', () => {
-    document.body.innerHTML = `
-      <div data-elb="test" data-elbaction="load:action;hover:over">Test</div>
-      <div data-elb="visible" data-elbaction="visible:seen">Visible</div>
-    `;
-
-    // Call initScopeTrigger - it should not throw
-    expect(() => {
-      const context = {
-        push: jest.fn(),
-        command: jest.fn(),
-        elb: mockElb,
-        settings: createTestSettings('data-elb'),
-      };
-      initScopeTrigger(context, createTestSettings('data-elb'));
-    }).not.toThrow();
   });
 
   test('ready function executes immediately when document is ready', async () => {
     const mockFn = jest.fn();
     const settings = createTestSettings();
-    const context = { elb: mockElb, settings };
 
     await ready(mockFn, context, settings);
 
     expect(mockFn).toHaveBeenCalledWith(context, settings);
   });
 
-  test('ready function waits for DOMContentLoaded when document is loading', () => {
+  test('ready defers to DOMContentLoaded and a destroy before it cancels the deferred init', async () => {
     Object.defineProperty(document, 'readyState', {
       value: 'loading',
       writable: true,
     });
 
-    const mockFn = jest.fn().mockReturnValue('result');
+    const parked: EventListener[] = [];
+    let parkedSignal: AbortSignal | undefined;
+    document.addEventListener = jest
+      .fn()
+      .mockImplementation(
+        (
+          event: string,
+          handler: EventListener,
+          options?: AddEventListenerOptions,
+        ) => {
+          if (event !== 'DOMContentLoaded') return;
+          parked.push(handler);
+          parkedSignal = options?.signal;
+        },
+      );
 
-    document.addEventListener = jest.fn().mockImplementation(() => {
-      // Mock implementation for DOMContentLoaded listener
-    });
-
-    const settings = createTestSettings();
-    const context = { elb: mockElb, settings };
-    ready(mockFn, context, settings);
-
-    // Should add event listener for DOMContentLoaded
-    expect(document.addEventListener).toHaveBeenCalledWith(
-      'DOMContentLoaded',
-      expect.any(Function),
-    );
-  });
-
-  test('ready function calls function with collector and settings', async () => {
     const mockFn = jest.fn();
     const settings = createTestSettings();
-    const context = { elb: mockElb, settings };
-
     await ready(mockFn, context, settings);
 
-    expect(mockFn).toHaveBeenCalledWith(context, settings);
+    // Parked, and parked on a signal, so teardown removes it.
+    expect(parked).toHaveLength(1);
+    expect(parkedSignal).toBeDefined();
+    expect(mockFn).not.toHaveBeenCalled();
+
+    // A source torn down before the DOM is ready binds nothing afterwards,
+    // even if the hook still runs.
+    destroyTriggers(context);
+    expect(parkedSignal?.aborted).toBe(true);
+    parked[0]!(new Event('DOMContentLoaded'));
+
+    expect(mockFn).not.toHaveBeenCalled();
   });
 
   test('handleTrigger processes events correctly', async () => {
@@ -213,12 +152,12 @@ describe('Trigger System', () => {
       prefix: 'data-elb',
       scope: document,
       pageview: false,
-      elb: '',
+      elb: false,
       elbLayer: false,
     } as Settings;
 
     await handleTrigger(
-      { elb: mockElb, settings: testSettings },
+      { elb: mockElb, settings: testSettings, registry },
       element,
       Triggers.Click,
     );
@@ -233,33 +172,6 @@ describe('Trigger System', () => {
     );
   });
 
-  test('scroll trigger processes scroll depth correctly', () => {
-    document.body.innerHTML = `
-      <div style="height: 1000px;">
-        <div id="scroll-elem" data-elb="content" data-elbaction="scroll:50">Content</div>
-      </div>
-    `;
-
-    // Set up window dimensions
-    Object.defineProperty(window, 'innerHeight', {
-      value: 500,
-      writable: true,
-    });
-    Object.defineProperty(window, 'scrollY', { value: 0, writable: true });
-
-    const element = document.getElementById('scroll-elem')!;
-    Object.defineProperty(element, 'offsetTop', { value: 200 });
-    Object.defineProperty(element, 'clientHeight', { value: 300 });
-
-    initScopeTrigger(
-      { elb: mockElb, settings: createTestSettings('data-elb') },
-      createTestSettings('data-elb'),
-    );
-
-    // Verify scroll listener was added
-    expect(events.scroll).toBeDefined();
-  });
-
   test('scroll listener for a ShadowRoot scope attaches to the document, not the shadow root', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -270,13 +182,10 @@ describe('Trigger System', () => {
     // never fire. The fix must route it to the owner document instead.
     const rootAddEventListener = jest.spyOn(root, 'addEventListener');
 
-    initScopeTrigger(
-      {
-        elb: mockElb,
-        settings: { ...createTestSettings('data-elb'), scope: root },
-      },
-      createTestSettings('data-elb'),
-    );
+    initScopeTrigger({
+      ...context,
+      settings: { ...context.settings, scope: root },
+    });
 
     // The document (mocked addEventListener) received the scroll listener...
     expect(events.scroll).toBeDefined();
@@ -299,57 +208,33 @@ describe('Trigger System', () => {
       jest.useRealTimers();
     });
 
-    test('pulse trigger uses default interval (15000ms)', () => {
-      document.body.innerHTML = `
-        <div id="pulse-elem" data-elb="content" data-elbaction="pulse:action">Content</div>
-      `;
+    // One parameter matrix: both timer triggers parse their param the same way
+    // and fall back to the same 15000ms default when it does not parse.
+    it.each([
+      ['pulse', 'pulse:action', 'setInterval', 15000],
+      ['pulse', 'pulse(5000):action', 'setInterval', 5000],
+      ['pulse', 'pulse(invalid):action', 'setInterval', 15000],
+      ['wait', 'wait:action', 'setTimeout', 15000],
+      ['wait', 'wait(3000):action', 'setTimeout', 3000],
+      ['wait', 'wait(invalid):action', 'setTimeout', 15000],
+    ] as const)(
+      '%s %s schedules at %s %dms',
+      (_trigger, action, timer, expected) => {
+        document.body.innerHTML = `<div data-elb="content" data-elbaction="${action}">Content</div>`;
 
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
+        initScopeTrigger(context);
 
-      // Should set interval with default 15000ms
-      expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 15000);
-    });
-
-    test('pulse trigger uses custom interval', () => {
-      document.body.innerHTML = `
-        <div id="pulse-elem" data-elb="content" data-elbaction="pulse(5000):action">Content</div>
-      `;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      // Should set interval with custom 5000ms
-      expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 5000);
-    });
-
-    test('pulse trigger handles invalid interval parameter', () => {
-      document.body.innerHTML = `
-        <div id="pulse-elem" data-elb="content" data-elbaction="pulse(invalid):action">Content</div>
-      `;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      // Should fall back to default 15000ms
-      expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 15000);
-    });
+        const scheduler = timer === 'setInterval' ? setInterval : setTimeout;
+        expect(scheduler).toHaveBeenCalledWith(expect.any(Function), expected);
+      },
+    );
 
     test('pulse trigger only fires when document is visible', () => {
       document.body.innerHTML = `
         <div id="pulse-elem" data-elb="content" data-elbaction="pulse(1000):action">Content</div>
       `;
 
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
+      initScopeTrigger(context);
 
       // Get the interval callback
       const intervalCallback = (setInterval as jest.Mock).mock.calls[0][0];
@@ -373,57 +258,12 @@ describe('Trigger System', () => {
       expect(mockElb).toHaveBeenCalled();
     });
 
-    test('wait trigger uses default delay (15000ms)', () => {
-      document.body.innerHTML = `
-        <div id="wait-elem" data-elb="content" data-elbaction="wait:action">Content</div>
-      `;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      // Should set timeout with default 15000ms
-      expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 15000);
-    });
-
-    test('wait trigger uses custom delay', () => {
-      document.body.innerHTML = `
-        <div id="wait-elem" data-elb="content" data-elbaction="wait(3000):action">Content</div>
-      `;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      // Should set timeout with custom 3000ms
-      expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 3000);
-    });
-
-    test('wait trigger handles invalid delay parameter', () => {
-      document.body.innerHTML = `
-        <div id="wait-elem" data-elb="content" data-elbaction="wait(invalid):action">Content</div>
-      `;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      // Should fall back to default 15000ms
-      expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 15000);
-    });
-
     test('wait trigger executes callback after delay', () => {
       document.body.innerHTML = `
         <div id="wait-elem" data-elb="content" data-elbaction="wait(1000):action">Content</div>
       `;
 
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
+      initScopeTrigger(context);
 
       // Should not have triggered yet
       expect(mockElb).not.toHaveBeenCalled();
@@ -435,136 +275,34 @@ describe('Trigger System', () => {
       expect(mockElb).toHaveBeenCalled();
     });
 
-    test('scroll trigger uses default depth (50%)', () => {
-      document.body.innerHTML = `
-        <div id="scroll-elem" data-elb="content" data-elbaction="scroll:action">Content</div>
-      `;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      // The scroll elements array should contain the element with default 50% depth
-      // This is tested indirectly through the scroll function behavior
-      expect(events.scroll).toBeDefined();
-    });
-
-    test('scroll trigger uses custom depth', () => {
-      document.body.innerHTML = `
-        <div id="scroll-elem" data-elb="content" data-elbaction="scroll(25):action">Content</div>
-      `;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      // The scroll elements array should contain the element with custom 25% depth
-      expect(events.scroll).toBeDefined();
-    });
-
-    test('scroll trigger ignores invalid depth parameters', () => {
-      document.body.innerHTML = `
-        <div id="scroll-elem1" data-elb="content" data-elbaction="scroll(-10):action">Content</div>
-        <div id="scroll-elem2" data-elb="content" data-elbaction="scroll(150):action">Content</div>
-        <div id="scroll-elem3" data-elb="content" data-elbaction="scroll(invalid):action">Content</div>
-      `;
-
-      // Should not throw for invalid parameters
-      expect(() => {
-        initScopeTrigger(
-          { elb: mockElb, settings: createTestSettings('data-elb') },
-          createTestSettings('data-elb'),
-        );
-      }).not.toThrow();
-    });
-
-    test('hover trigger sets up mouseenter listener with an abort signal', () => {
-      document.body.innerHTML = `
-        <div id="hover-elem" data-elb="content" data-elbaction="hover:action">Content</div>
-      `;
-
-      const element = document.getElementById('hover-elem')!;
-      const mockAddEventListener = jest.fn();
-      element.addEventListener = mockAddEventListener;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      expect(mockAddEventListener).toHaveBeenCalledWith(
-        'mouseenter',
-        expect.any(Function),
-        expect.objectContaining({ signal: expect.any(AbortSignal) }),
-      );
-    });
-
     test('load trigger executes immediately', () => {
       document.body.innerHTML = `
         <div id="load-elem" data-elb="content" data-elbaction="load:action">Content</div>
       `;
 
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
+      initScopeTrigger(context);
 
       // Load trigger should execute immediately
       expect(mockElb).toHaveBeenCalled();
     });
 
-    describe('Pulse cleanup', () => {
-      test('pulse interval is cleared on destroyTriggers', () => {
-        document.body.innerHTML = `
-          <div id="pulse-elem" data-elb="content" data-elbaction="pulse(1000):action">Content</div>
-        `;
-
-        const settings = createTestSettings('data-elb');
-        const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
-
-        initScopeTrigger({ elb: mockElb, settings }, settings);
-
-        expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 1000);
-
-        destroyTriggers(settings);
-
-        expect(clearIntervalSpy).toHaveBeenCalled();
-      });
-
+    // A cleared timer that still fires is the only failure that matters, so
+    // each cleanup test asserts the timer was scheduled (positive control) and
+    // then that nothing fires after teardown.
+    describe('Timer cleanup', () => {
       test('pulse does not fire after destroyTriggers', () => {
         document.body.innerHTML = `
           <div id="pulse-elem" data-elb="content" data-elbaction="pulse(1000):action">Content</div>
         `;
 
-        const settings = createTestSettings('data-elb');
+        initScopeTrigger(context);
+        expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 1000);
+        mockElb.mockClear();
 
-        initScopeTrigger({ elb: mockElb, settings }, settings);
-        destroyTriggers(settings);
-
+        destroyTriggers(context);
         jest.advanceTimersByTime(5000);
 
         expect(mockElb).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('Wait cleanup', () => {
-      test('wait timeout is cleared on destroyTriggers', () => {
-        document.body.innerHTML = `
-          <div id="wait-elem" data-elb="content" data-elbaction="wait(2000):action">Content</div>
-        `;
-
-        const settings = createTestSettings('data-elb');
-        const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
-
-        initScopeTrigger({ elb: mockElb, settings }, settings);
-
-        expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 2000);
-
-        destroyTriggers(settings);
-
-        expect(clearTimeoutSpy).toHaveBeenCalled();
       });
 
       test('wait does not fire after destroyTriggers', () => {
@@ -572,15 +310,60 @@ describe('Trigger System', () => {
           <div id="wait-elem" data-elb="content" data-elbaction="wait(1000):action">Content</div>
         `;
 
-        const settings = createTestSettings('data-elb');
-
-        initScopeTrigger({ elb: mockElb, settings }, settings);
+        initScopeTrigger(context);
+        expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 1000);
         mockElb.mockClear();
-        destroyTriggers(settings);
 
+        destroyTriggers(context);
         jest.advanceTimersByTime(5000);
 
         expect(mockElb).not.toHaveBeenCalled();
+      });
+
+      test('the scroll listener is detached by destroyTriggers', () => {
+        document.body.innerHTML = `
+          <div id="scroll-elem" data-elb="content" data-elbaction="scroll(50):action">Content</div>
+        `;
+
+        initScopeTrigger(context);
+
+        const registration = mockAddEventListener.mock.calls.find(
+          (call) => call[0] === 'scroll',
+        );
+        const options: unknown = registration?.[2];
+        if (!isSignalOption(options))
+          throw new Error('scroll listener unarmed');
+        // Positive control: armed while the scope is live.
+        expect(options.signal.aborted).toBe(false);
+
+        destroyTriggers(context);
+
+        // A listener that survives teardown keeps a dead scope's bucket alive
+        // and accrues one more on every start/stop cycle.
+        expect(options.signal.aborted).toBe(true);
+      });
+
+      test('a re-init leaves exactly one live scroll listener', () => {
+        document.body.innerHTML = `
+          <div id="scroll-elem" data-elb="content" data-elbaction="scroll(50):action">Content</div>
+        `;
+
+        initScopeTrigger(context);
+        initScopeTrigger(context);
+
+        // Each init registers a listener; the re-init aborts the signal the
+        // previous one was given, so only the newest is still armed. Without
+        // that signal every `walker run` would accrue a dead listener.
+        const registrations = mockAddEventListener.mock.calls.filter(
+          (call) => call[0] === 'scroll',
+        );
+        const live = registrations.filter((call) => {
+          const options: unknown = call[2];
+          return isSignalOption(options) && !options.signal.aborted;
+        });
+
+        expect(registrations).toHaveLength(2);
+        expect(live).toHaveLength(1);
       });
     });
   });
@@ -593,10 +376,7 @@ describe('Trigger System', () => {
       `;
 
       // Initialize scope triggers with custom prefix
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-custom') },
-        createTestSettings('data-custom'),
-      );
+      initScopeTrigger(makeContext('data-custom'));
 
       // Should have called push with entity load event
       expect(mockElb).toHaveBeenCalledWith(
@@ -609,43 +389,16 @@ describe('Trigger System', () => {
   });
 
   describe('Trigger cleanup', () => {
-    test('destroyTriggers removes click and submit listeners from scope', () => {
-      // A fresh element uses the real addEventListener so the
-      // AbortController signal applies (only document.addEventListener is mocked).
-      const scope = document.createElement('div');
-
-      const settings: Settings = {
-        prefix: 'data-elb',
-        scope,
-        pageview: false,
-        capture: true,
-        elb: '',
-        elbLayer: false,
-      };
-      const context = { elb: mockElb, settings };
-
-      initGlobalTrigger(context, settings);
-      destroyTriggers(settings);
-
-      scope.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      scope.dispatchEvent(new Event('submit', { bubbles: true }));
-
-      expect(mockElb).not.toHaveBeenCalled();
-    });
-
     test('destroyTriggers removes hover listeners added to individual elements', () => {
       document.body.innerHTML = `
         <div id="hover-elem" data-elb="content" data-elbaction="hover:action">Content</div>
       `;
       const element = document.getElementById('hover-elem')!;
 
-      const settings = createTestSettings('data-elb');
-      const context = { elb: mockElb, settings };
-
-      // Establish the global AbortController so hover listeners carry its signal
-      initGlobalTrigger(context, settings);
-      initScopeTrigger(context, settings);
-      destroyTriggers(settings);
+      // Hover listeners are per element, carried by the element's own
+      // registration signal, so the scan alone arms them.
+      initScopeTrigger(context);
+      destroyTriggers(context);
 
       element.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
 
@@ -655,57 +408,7 @@ describe('Trigger System', () => {
     });
 
     test('calling destroyTriggers before initTriggers does not throw', () => {
-      const settings = createTestSettings('data-elb');
-      expect(() => destroyTriggers(settings)).not.toThrow();
-    });
-  });
-
-  describe('Abort signal coverage on every listener registration', () => {
-    test('hover registers with a signal even when no globalAbortController exists yet', () => {
-      // Simulate the bug scenario: a session was torn down (or never started),
-      // so globalAbortController is undefined when triggerHover registers.
-      destroyTriggers(createTestSettings('data-elb'));
-
-      document.body.innerHTML = `
-        <div id="hover-elem" data-elb="content" data-elbaction="hover:action">Content</div>
-      `;
-      const element = document.getElementById('hover-elem')!;
-      const spy = jest.fn();
-      element.addEventListener = spy;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      expect(spy).toHaveBeenCalledWith(
-        'mouseenter',
-        expect.any(Function),
-        expect.objectContaining({ signal: expect.any(AbortSignal) }),
-      );
-    });
-
-    test('scroll registers with a signal even when no globalAbortController exists yet', () => {
-      destroyTriggers(createTestSettings('data-elb'));
-      resetScrollListener();
-
-      document.body.innerHTML = `
-        <div style="height: 1000px;">
-          <div id="scroll-elem" data-elb="content" data-elbaction="scroll(50):action">Content</div>
-        </div>
-      `;
-
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
-
-      // The shared mockAddEventListener (document.addEventListener) captured the scroll registration.
-      expect(mockAddEventListener).toHaveBeenCalledWith(
-        'scroll',
-        expect.any(Function),
-        expect.objectContaining({ signal: expect.any(AbortSignal) }),
-      );
+      expect(() => destroyTriggers(context)).not.toThrow();
     });
   });
 
@@ -736,14 +439,13 @@ describe('Trigger System', () => {
       });
 
       const settings = createTestSettings('data-elb');
-      const context = { elb: mockElb, settings };
 
-      initScopeTrigger(context, settings);
-      initScopeTrigger(context, settings);
+      initScopeTrigger(context);
+      initScopeTrigger(context);
 
       jest.advanceTimersByTime(1000);
 
-      // RED today: two intervals stack → two events per tick.
+      // A second init must not stack a second interval on the element.
       expect(countTrigger('pulse')).toBe(1);
     });
 
@@ -753,14 +455,13 @@ describe('Trigger System', () => {
       `;
 
       const settings = createTestSettings('data-elb');
-      const context = { elb: mockElb, settings };
 
-      initScopeTrigger(context, settings);
-      initScopeTrigger(context, settings);
+      initScopeTrigger(context);
+      initScopeTrigger(context);
 
       jest.advanceTimersByTime(1000);
 
-      // RED today: two timeouts stack → fires twice.
+      // A second init must not stack a second timeout on the element.
       expect(countTrigger('wait')).toBe(1);
     });
 
@@ -771,14 +472,13 @@ describe('Trigger System', () => {
       const element = document.getElementById('hover-elem')!;
 
       const settings = createTestSettings('data-elb');
-      const context = { elb: mockElb, settings };
 
-      initScopeTrigger(context, settings);
-      initScopeTrigger(context, settings);
+      initScopeTrigger(context);
+      initScopeTrigger(context);
 
       element.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
 
-      // RED today: two listeners stack → fires twice on one dispatch.
+      // A second init must not stack a second listener on the element.
       expect(countTrigger('hover')).toBe(1);
     });
 
@@ -788,12 +488,11 @@ describe('Trigger System', () => {
       `;
 
       const settings = createTestSettings('data-elb');
-      const context = { elb: mockElb, settings };
 
-      initScopeTrigger(context, settings);
-      initScopeTrigger(context, settings);
+      initScopeTrigger(context);
+      initScopeTrigger(context);
 
-      // GREEN today and after: load is immediate and re-fires per init.
+      // load is immediate and re-fires per init, by design.
       expect(countTrigger('load')).toBe(2);
     });
 
@@ -809,8 +508,12 @@ describe('Trigger System', () => {
         ...createTestSettings('data-elb'),
         scope: rootScope,
       };
-      const rootContext = { elb: mockElb, settings: rootSettings };
-      initGlobalTrigger(rootContext, rootSettings);
+      const rootContext: Context = {
+        elb: mockElb,
+        settings: rootSettings,
+        registry,
+      };
+      initGlobalTrigger(rootContext);
 
       const container = document.createElement('div');
       document.body.appendChild(container);
@@ -818,14 +521,18 @@ describe('Trigger System', () => {
         ...createTestSettings('data-elb'),
         scope: container,
       };
-      const containerContext = { elb: mockElb, settings: containerSettings };
-      initScopeTrigger(containerContext, containerSettings);
+      const containerContext: Context = {
+        elb: mockElb,
+        settings: containerSettings,
+        registry,
+      };
+      initScopeTrigger(containerContext);
 
       rootScope
         .querySelector('button')!
         .dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      // GREEN today and after: the root click listener survives the sub init.
+      // The root click listener survives a sub-scope init.
       expect(countTrigger('click')).toBe(1);
     });
   });
@@ -833,10 +540,10 @@ describe('Trigger System', () => {
   describe('Scoped re-init (walker init <element>)', () => {
     // Scope is a single carrier: it lives in context.settings.scope. The
     // translation layer builds a scope-aligned context for `walker init <el>`,
-    // so every observer create/lookup reads the same scope. C-core then
-    // normalizes that scope to its owner document, giving one shared observer
-    // per document. Each created observer is captured so we can assert WHICH
-    // one an element lands on (and whether it is still live).
+    // so every observer create/lookup reads the same scope, which the
+    // visibility layer normalizes to its owner document. One source therefore
+    // holds one observer per document. Each created observer is captured so we
+    // can assert WHICH one an element lands on (and whether it is still live).
     let observers: MockIntersectionObserver[];
     let originalIntersectionObserver: typeof IntersectionObserver;
 
@@ -881,33 +588,32 @@ describe('Trigger System', () => {
       global.IntersectionObserver = originalIntersectionObserver;
     });
 
-    test('a sub-scoped init registers the scope’s visible elements on the shared observer', () => {
+    test('a sub-scoped init registers visible elements in the scope on the observer of this source', () => {
       document.body.innerHTML = `
         <section id="injected">
           <div id="promo" data-elb="promo" data-elbaction="visible:view(promo)"></div>
         </section>
       `;
       const settings = createTestSettings('data-elb'); // source context: scope = document
-      const context = { elb: mockElb, settings };
       const container = document.getElementById('injected')!;
       const promo = document.getElementById('promo')!;
 
       // `walker init <container>`: the translation layer builds a scope-aligned
       // context whose settings.scope is the container. The sub-scope init scans
-      // the container, finds its visible element, and observes it on the shared
-      // per-document observer (C-core normalizes the container to its document).
+      // the container, finds its visible element, and observes it on this
+      // source's observer for the container's owner document.
       initScopeTrigger({
         ...context,
         settings: { ...context.settings, scope: container },
       });
 
-      // One shared per-document observer is created, and the container's own
+      // This source's per-document observer is created, and the container's own
       // visible element is registered on it exactly once.
       expect(observers.length).toBeGreaterThan(0);
       expect(observedOn(promo)).toBe(1);
 
-      destroyVisibilityTracking(document);
-      destroyVisibilityTracking(container);
+      destroyVisibilityTracking(registry, document);
+      destroyVisibilityTracking(registry, container);
     });
 
     test('2b a document-scope run observes its visible elements', () => {
@@ -915,15 +621,14 @@ describe('Trigger System', () => {
         <div id="promo" data-elb="promo" data-elbaction="visible:view(promo)"></div>
       `;
       const settings = createTestSettings('data-elb'); // scope = document
-      const context = { elb: mockElb, settings };
       const promo = document.getElementById('promo')!;
 
-      initScopeTrigger(context, settings);
+      initScopeTrigger(context);
 
       // `walker run` aligns scope on both sides, so the element is observed.
       expect(observedOn(promo)).toBe(1);
 
-      destroyVisibilityTracking(document);
+      destroyVisibilityTracking(registry, document);
     });
 
     test('2c double scoped re-init keeps the element on a single live observer', () => {
@@ -939,17 +644,17 @@ describe('Trigger System', () => {
         scope: container,
       };
       // Scope-aligned context, as the translation layer builds for walker init.
-      const context = { elb: mockElb, settings };
+      const context: Context = { elb: mockElb, settings, registry };
 
-      initScopeTrigger(context, settings);
-      initScopeTrigger(context, settings);
+      initScopeTrigger(context);
+      initScopeTrigger(context);
 
       // No stacking: the prior registration is torn down, the element ends up
       // on exactly one live observer.
       expect(liveObservedOn(promo)).toBe(1);
 
-      destroyVisibilityTracking(container);
-      destroyVisibilityTracking(document);
+      destroyVisibilityTracking(registry, container);
+      destroyVisibilityTracking(registry, document);
     });
   });
 
@@ -983,8 +688,75 @@ describe('Trigger System', () => {
       listener(new Event('scroll'));
     };
 
+    // Depth semantics, driven through the real scroll listener. Viewport is
+    // 500px and every element is 200px tall, so
+    //   depth = (1 - ((rect.top + 200) - 500) / 200) * 100
+    // puts rect.top 440 at depth 30 and rect.top 380 at depth 60.
+    const placeScrollElement = (action: string, rectTop: number): void => {
+      Object.defineProperty(window, 'innerHeight', {
+        value: 500,
+        writable: true,
+      });
+      document.body.innerHTML = `<div id="target" data-elb="box" data-elbaction="${action}">Box</div>`;
+      const el = document.getElementById('target')!;
+      Object.defineProperty(el, 'clientHeight', { value: 200 });
+      el.getBoundingClientRect = () => makeRect(rectTop, 200);
+    };
+
+    it.each([
+      ['no parameter defaults to 50', 'scroll:seen', 440, false],
+      ['no parameter defaults to 50', 'scroll:seen', 380, true],
+      [
+        'an explicit 25 fires earlier than the default',
+        'scroll(25):seen',
+        440,
+        true,
+      ],
+      [
+        'an explicit 75 fires later than the default',
+        'scroll(75):seen',
+        380,
+        false,
+      ],
+      [
+        'an unparseable parameter falls back to 50',
+        'scroll(invalid):seen',
+        440,
+        false,
+      ],
+      [
+        'an unparseable parameter falls back to 50',
+        'scroll(invalid):seen',
+        380,
+        true,
+      ],
+    ] as const)(
+      '%s: %s at rect top %d fires %s',
+      (_label, action, rectTop, expected) => {
+        placeScrollElement(action, rectTop);
+
+        initScopeTrigger(context);
+        runScrollListener();
+
+        expect(firedScroll('box')).toBe(expected);
+      },
+    );
+
+    it.each(['scroll(-10):seen', 'scroll(150):seen'])(
+      'an out-of-range depth registers no scroll trigger: %s',
+      (action) => {
+        // Out of range is rejected outright, not clamped: the element is the
+        // page's only scroll action, so no scroll listener is registered at all.
+        placeScrollElement(action, 380);
+
+        initScopeTrigger(context);
+
+        expect(events.scroll).toBeUndefined();
+      },
+    );
+
     test('light-DOM and open-shadow elements at the same visual position fire identically', () => {
-      // Same visual position: rect.top 380 in a 500px viewport, height 300 →
+      // Same visual position: rect.top 380 in a 500px viewport, height 300 ->
       // computed depth 40%. With a 50% threshold neither element should fire.
       // The shadow element's offsetTop is offsetParent-relative (30, wrong); its
       // viewport rect is the true position (380). Sourcing geometry from the rect
@@ -1019,10 +791,7 @@ describe('Trigger System', () => {
       // Viewport-relative rect matches the light twin exactly.
       shadowEl.getBoundingClientRect = () => makeRect(380, 300);
 
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
+      initScopeTrigger(context);
       runScrollListener();
 
       // Baseline: the light-DOM element is below the 50% threshold (40%).
@@ -1034,7 +803,7 @@ describe('Trigger System', () => {
 
     test('scroll depth uses the 1 - hidden/elemHeight metric (viewport coordinates)', () => {
       // Element taller than the viewport, top scrolled above the fold:
-      // rect.top -100, height 1000, viewport 500 →
+      // rect.top -100, height 1000, viewport 500 ->
       //   hidden = (rect.top + height) - innerHeight = 400
       //   depth  = (1 - hidden/height) * 100 = 60
       // A "percent visible in viewport" metric would instead read 50 (500/1000),
@@ -1058,13 +827,10 @@ describe('Trigger System', () => {
         el.getBoundingClientRect = () => makeRect(-100, 1000);
       }
 
-      initScopeTrigger(
-        { elb: mockElb, settings: createTestSettings('data-elb') },
-        createTestSettings('data-elb'),
-      );
+      initScopeTrigger(context);
       runScrollListener();
 
-      // depth 60 ≥ 60 threshold → fires; 60 < 61 threshold → does not.
+      // depth 60 >= 60 threshold -> fires; 60 < 61 threshold -> does not.
       expect(firedScroll('pinlow')).toBe(true);
       expect(firedScroll('pinhigh')).toBe(false);
     });

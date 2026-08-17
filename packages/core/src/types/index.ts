@@ -67,6 +67,7 @@ export type {
   JourneyBranch,
   JourneyHop,
   JourneyGap,
+  JourneyUnattributed,
   Journey,
   JourneyAssembly,
 } from './journey';

@@ -9,6 +9,6 @@ export * from './primitives';
 export { SettingsSchema, type Settings } from './settings';
 export { TaggerSchema, type TaggerConfig } from './tagger';
 
-// JSON Schema exports (for website PropertyTable and explorer RJSF)
+// JSON Schema exports (for the website PropertyTable)
 export const settings = zodToSchema(SettingsSchema);
 export const tagger = zodToSchema(TaggerSchema);

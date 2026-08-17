@@ -251,7 +251,7 @@ Correlation crosses the wire via the W3C `traceparent` header:
 
 ### Journey status
 
-Records sharing a `traceId` assemble into a single journey, and each journey carries a status derived from the hops observed so far:
+The records of one event assemble into a single journey, identified by that event's id. A `traceId` is run-scoped rather than per event, so it is carried as a shared handle that links every journey of one page load or container run. Each journey carries a status derived from the hops observed so far:
 
 | Status | Meaning |
 |--------|---------|

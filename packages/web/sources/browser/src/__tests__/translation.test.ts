@@ -2,7 +2,8 @@ import { startFlow } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 import { translateToCoreCollector } from '../translation';
 import type { WalkerOS, Collector } from '@walkeros/core';
-import type { Settings } from '../types';
+import type { Context, Settings } from '../types';
+import { createRegistry } from '../trigger';
 
 // Helper function to create test settings
 const createTestSettings = (prefix = 'data-elb'): Settings => ({
@@ -10,7 +11,7 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
   scope: document,
   pageview: false,
   capture: true,
-  elb: '',
+  elb: false,
   elbLayer: false,
 });
 
@@ -51,11 +52,19 @@ describe('Translation Layer', () => {
     collector.push = mockPush;
   });
 
+  // File-local context builder. The translation layer reads settings and elb;
+  // the registry rides along because every Context carries one.
+  const makeContext = (prefix = 'data-elb'): Context => ({
+    elb: mockElb,
+    settings: createTestSettings(prefix),
+    registry: createRegistry(),
+  });
+
   describe('Source Information', () => {
     test('adds source information to string events', async () => {
       // Test direct translation call
       await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
+        makeContext(),
         'test event',
         { id: 123 },
         undefined,
@@ -80,7 +89,7 @@ describe('Translation Layer', () => {
     test('adds source information to flexible format events', async () => {
       // Test with number as event (falls through to flexible format)
       await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
+        makeContext(),
         123,
         { value: 'test' },
         undefined,
@@ -105,7 +114,7 @@ describe('Translation Layer', () => {
     test('normalizes non-object data to empty object (legacy behavior)', async () => {
       // Test with primitive data - should become empty object
       await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
+        makeContext(),
         'test event',
         'primitive string data',
         undefined,
@@ -134,7 +143,11 @@ describe('Translation Layer', () => {
       });
 
       await translateToCoreCollector(
-        { elb: isolatedMockElb, settings: createTestSettings() },
+        {
+          elb: isolatedMockElb,
+          settings: createTestSettings(),
+          registry: createRegistry(),
+        },
         'walker run',
         { consent: { marketing: true } },
       );
@@ -151,13 +164,9 @@ describe('Translation Layer', () => {
 
     test('does not add source information to walker commands', async () => {
       // Test walker command
-      await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
-        'walker config',
-        {
-          prefix: 'data-elb',
-        },
-      );
+      await translateToCoreCollector(makeContext(), 'walker config', {
+        prefix: 'data-elb',
+      });
 
       // Walker commands should pass through without source info
       expect(mockPush).toHaveBeenCalledWith('walker config', {
@@ -178,10 +187,7 @@ describe('Translation Layer', () => {
         },
       };
 
-      await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
-        eventObject,
-      );
+      await translateToCoreCollector(makeContext(), eventObject);
 
       // Object events should pass through unchanged
       expect(mockPush).toHaveBeenCalledWith(eventObject);
@@ -194,11 +200,7 @@ describe('Translation Layer', () => {
         writable: true,
       });
 
-      await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
-        'test event',
-        { id: 123 },
-      );
+      await translateToCoreCollector(makeContext(), 'test event', { id: 123 });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -216,13 +218,9 @@ describe('Translation Layer', () => {
       // Test with different URL path including query and hash
       window.history.replaceState({}, '', '/path?query=value#section');
 
-      await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
-        'navigation event',
-        {
-          page: 'test',
-        },
-      );
+      await translateToCoreCollector(makeContext(), 'navigation event', {
+        page: 'test',
+      });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -316,77 +314,33 @@ describe('Translation Layer', () => {
   });
 
   describe('Context Normalization', () => {
-    test('handles undefined context', async () => {
+    const element = () => {
+      const el = document.createElement('div');
+      el.id = 'test-element';
+      el.className = 'test-class';
+      return el;
+    };
+    const ordered: WalkerOS.OrderedProperties = {
+      page: ['home', 0],
+      section: ['hero', 1],
+    };
+
+    it.each([
+      ['undefined', () => undefined, {}],
+      ['an element', element, {}],
+      ['an empty object', () => ({}), {}],
+      ['valid ordered properties', () => ordered, ordered],
+    ])('normalizes %s context', async (_label, build, expected) => {
       await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
+        makeContext(),
         'test event',
         { id: 123 },
         undefined,
-        undefined, // undefined context
+        build(),
       );
 
       expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          context: {},
-        }),
-      );
-    });
-
-    test('handles element context', async () => {
-      // Create a test element
-      const element = document.createElement('div');
-      element.id = 'test-element';
-      element.className = 'test-class';
-
-      await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
-        'test event',
-        { id: 123 },
-        undefined,
-        element, // element context
-      );
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          context: {}, // Elements return empty object
-        }),
-      );
-    });
-
-    test('handles empty object context', async () => {
-      await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
-        'test event',
-        { id: 123 },
-        undefined,
-        {}, // empty object context
-      );
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          context: {}, // Empty objects return empty object
-        }),
-      );
-    });
-
-    test('handles valid ordered properties context', async () => {
-      const validContext: WalkerOS.OrderedProperties = {
-        page: ['home', 0],
-        section: ['hero', 1],
-      };
-
-      await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
-        'test event',
-        { id: 123 },
-        undefined,
-        validContext,
-      );
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          context: validContext, // Valid objects pass through
-        }),
+        expect.objectContaining({ context: expected }),
       );
     });
   });
@@ -399,11 +353,7 @@ describe('Translation Layer', () => {
         writable: true,
       });
 
-      await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
-        'test event',
-        { id: 123 },
-      );
+      await translateToCoreCollector(makeContext(), 'test event', { id: 123 });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -419,11 +369,7 @@ describe('Translation Layer', () => {
 
     test('handles malformed events with source', async () => {
       // Test with empty string event
-      await translateToCoreCollector(
-        { elb: mockElb, settings: createTestSettings() },
-        '',
-        { test: true },
-      );
+      await translateToCoreCollector(makeContext(), '', { test: true });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({

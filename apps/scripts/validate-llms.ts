@@ -20,24 +20,58 @@ interface Issue {
 const ROOT = process.cwd();
 const BUILD_DIR = join(ROOT, 'website', 'build');
 const LLMS_INDEX = join(BUILD_DIR, 'llms.txt');
+const LLMS_FULL = join(BUILD_DIR, 'llms-full.txt');
+
+// How many issues of one kind to print before summarising the rest.
+const MAX_REPORTED_PER_CHECK = 15;
 
 const issues: Issue[] = [];
+
+interface LinkRef {
+  target: string;
+  line: number;
+}
 
 // Extract the link targets from `[text](target)` pairs, keeping only the
 // root-relative Markdown pages the plugin emits (e.g. `/docs/...md`,
 // `/docs.md`). External URLs, anchors, and non-.md targets are not part of the
 // export contract this guard protects.
-function extractMarkdownLinks(content: string): string[] {
-  const links: string[] = [];
+function extractMarkdownLinks(content: string): LinkRef[] {
+  const links: LinkRef[] = [];
   const regex = /\[[^\]]*\]\(([^)]+)\)/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(content)) !== null) {
-    const target = match[1].split('#')[0];
-    if (target.startsWith('/') && target.endsWith('.md')) {
-      links.push(target);
+  const lines = content.split('\n');
+  lines.forEach((line, index) => {
+    let match: RegExpExecArray | null;
+    regex.lastIndex = 0;
+    while ((match = regex.exec(line)) !== null) {
+      const target = match[1].split('#')[0].split('?')[0];
+      if (target.startsWith('/') && target.endsWith('.md')) {
+        links.push({ target, line: index + 1 });
+      }
     }
-  }
+  });
   return links;
+}
+
+// Every emitted Markdown page, relative to website/build.
+function collectMarkdownPages(dir: string, acc: string[] = []): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) collectMarkdownPages(full, acc);
+    else if (entry.name.endsWith('.md')) acc.push(full);
+  }
+  return acc;
+}
+
+function pushCapped(kind: string, found: Issue[]): void {
+  for (const issue of found.slice(0, MAX_REPORTED_PER_CHECK))
+    issues.push(issue);
+  if (found.length > MAX_REPORTED_PER_CHECK) {
+    issues.push({
+      file: 'website/build',
+      message: `${kind}: ${found.length} total, ${found.length - MAX_REPORTED_PER_CHECK} further occurrences not listed`,
+    });
+  }
 }
 
 function checkIndexLinks(): void {
@@ -55,13 +89,136 @@ function checkIndexLinks(): void {
 
   for (const link of links) {
     // Root-relative link → file under website/build (strip the leading slash).
-    const abs = join(BUILD_DIR, link.slice(1));
+    const abs = join(BUILD_DIR, link.target.slice(1));
     if (!existsSync(abs)) {
       issues.push({
-        file: 'website/build/llms.txt',
-        message: `referenced page not emitted: ${link} (expected ${relative(ROOT, abs)})`,
+        file: `website/build/llms.txt:${link.line}`,
+        message: `referenced page not emitted: ${link.target} (expected ${relative(ROOT, abs)})`,
       });
     }
+  }
+}
+
+// Every internal Markdown link in every emitted page body must resolve to a
+// file that was actually emitted. A link the export mangles (most commonly a
+// trailing-slash route turned into `/docs/mapping/.md`) 404s for every reader
+// that follows it, and nothing else in the pipeline notices.
+function checkBodyLinks(pages: string[]): void {
+  const found: Issue[] = [];
+  const targets = [...pages];
+  if (existsSync(LLMS_FULL)) targets.push(LLMS_FULL);
+
+  for (const page of targets) {
+    const rel = relative(ROOT, page);
+    const content = readFileSync(page, 'utf-8');
+    for (const link of extractMarkdownLinks(content)) {
+      const abs = join(BUILD_DIR, link.target.slice(1));
+      if (existsSync(abs)) continue;
+      const malformed = /\/\.md$/.test(link.target);
+      found.push({
+        file: `${rel}:${link.line}`,
+        message: malformed
+          ? `malformed link target ${link.target} (route ends in a slash; the emitted page is ${link.target.replace(/\/\.md$/, '.md')})`
+          : `link target not emitted: ${link.target} (expected ${relative(ROOT, abs)})`,
+      });
+    }
+  }
+  pushCapped('malformed or dangling links', found);
+}
+
+// Components that only render in the browser leave their loading fallback in
+// the export, so the page ships a placeholder where its content should be.
+// Pages listed here are known to embed the Monaco-backed live editor, which
+// server-renders as `Loading...`; fixing that belongs in the editor component,
+// not in this guard. Any OTHER page acquiring a placeholder is a regression.
+const KNOWN_CLIENT_ONLY_PAGES = new Set([
+  'docs/mapping.md',
+  'docs/mapping/rule.md',
+  'docs/mapping/value.md',
+  'docs/comparisons/dataLayer.md',
+]);
+
+function hasPlaceholder(content: string): boolean {
+  return content.split('\n').some((line) => line.trim() === 'Loading...');
+}
+
+function checkPlaceholders(pages: string[]): void {
+  const found: Issue[] = [];
+  for (const page of pages) {
+    const relToBuild = relative(BUILD_DIR, page);
+    if (KNOWN_CLIENT_ONLY_PAGES.has(relToBuild)) continue;
+    const rel = relative(ROOT, page);
+    readFileSync(page, 'utf-8')
+      .split('\n')
+      .forEach((line, index) => {
+        if (line.trim() === 'Loading...') {
+          found.push({
+            file: `${rel}:${index + 1}`,
+            message:
+              'bare "Loading..." placeholder in the export (a client-only component rendered no server content)',
+          });
+        }
+      });
+  }
+  pushCapped('placeholder content', found);
+
+  // An exemption that outlives its reason is an exemption nobody notices. Once
+  // a listed page stops shipping a placeholder, or stops existing, the entry
+  // silently suppresses the check for whatever takes its place.
+  for (const entry of KNOWN_CLIENT_ONLY_PAGES) {
+    const abs = join(BUILD_DIR, entry);
+    const reason = !existsSync(abs)
+      ? 'the page is no longer emitted'
+      : !hasPlaceholder(readFileSync(abs, 'utf-8'))
+        ? 'the page no longer contains one'
+        : undefined;
+    if (!reason) continue;
+    issues.push({
+      file: 'apps/scripts/validate-llms.ts',
+      message: `obsolete KNOWN_CLIENT_ONLY_PAGES entry "${entry}": ${reason}, so delete the entry`,
+    });
+  }
+}
+
+// Indentation inside code blocks survives MDX parsing, rendering and the
+// Markdown export. The browser source page carries a nested `startFlow` call
+// whose two inner levels must keep their leading spaces; when indentation is
+// stripped upstream, every nested snippet on the site flattens with it.
+function checkCodeIndentation(): void {
+  const rel = 'website/build/docs/sources/web/browser.md';
+  const abs = join(ROOT, rel);
+  if (!existsSync(abs)) {
+    issues.push({
+      file: rel,
+      message: 'browser source page not emitted to the Markdown export',
+    });
+    return;
+  }
+
+  const lines = readFileSync(abs, 'utf-8').split('\n');
+  const expectations: { pattern: RegExp; description: string }[] = [
+    { pattern: /^ {2}sources: \{$/, description: '  sources: {' },
+    {
+      pattern: /^ {4}browser: sourceBrowser,$/,
+      description: '    browser: sourceBrowser,',
+    },
+    { pattern: /^ {2}"browser": \{$/, description: '  "browser": {' },
+  ];
+
+  for (const { pattern, description } of expectations) {
+    if (lines.some((line) => pattern.test(line))) continue;
+    const flattened = lines.findIndex((line) =>
+      new RegExp(
+        `^\\s*${description.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+      ).test(line),
+    );
+    issues.push({
+      file: flattened === -1 ? rel : `${rel}:${flattened + 1}`,
+      message:
+        flattened === -1
+          ? `missing indented code line \`${description}\` (nested snippet not exported)`
+          : `code line \`${description.trim()}\` lost its indentation (exported as \`${lines[flattened]}\`)`,
+    });
   }
 }
 
@@ -194,7 +351,13 @@ function main(): void {
 
   console.log('🤖 Validating LLM Markdown export...\n');
 
+  const pages = collectMarkdownPages(BUILD_DIR);
+  console.log(`   ${pages.length} exported pages\n`);
+
   checkIndexLinks();
+  checkBodyLinks(pages);
+  checkPlaceholders(pages);
+  checkCodeIndentation();
   checkAmplitudeExport();
   checkSkillsExport();
 

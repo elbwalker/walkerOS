@@ -1,6 +1,8 @@
 import { startFlow } from '@walkeros/collector';
-import { sourceBrowser, __resetInstanceCountForTests } from '../index';
-import type { Collector } from '@walkeros/core';
+import { sourceBrowser } from '../index';
+import { destroyBrowserSource } from './test-utils';
+import type { Collector, Source } from '@walkeros/core';
+import type { Types } from '../types';
 
 /**
  * Race condition between user-issued `walker consent` and the browser
@@ -32,13 +34,29 @@ const clearQueue = (): void => {
   (window as unknown as Record<string, unknown>)[elbLayerKey] = undefined;
 };
 
+// Every source a flow in this file boots, with the collector it belongs to. A
+// source holds the layer and window.elb, and keeps its timers and observers
+// running, until it is destroyed, so each test tears its own down.
+const booted: Array<{
+  source: Source.Instance<Types>;
+  collector: Collector.Instance;
+}> = [];
+
+const browserSource: Source.Init<Types> = async (sourceContext) => {
+  const source = await sourceBrowser(sourceContext);
+  booted.push({ source, collector: sourceContext.collector });
+  return source;
+};
+
 describe('elbLayer queue replay vs. fresh walker consent', () => {
   beforeEach(() => {
     clearQueue();
-    __resetInstanceCountForTests();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    const sources = booted.splice(0, booted.length);
+    for (const entry of sources)
+      await destroyBrowserSource(entry.source, entry.collector);
     clearQueue();
   });
 
@@ -50,7 +68,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
       logger: { level: 'DEBUG' },
       sources: {
         browser: {
-          code: sourceBrowser,
+          code: browserSource,
           config: {
             require: ['consent'],
             settings: {
@@ -70,12 +88,12 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
     // collector.consent.marketing after the user's fresh grant.
     expect(collector.sources.browser).toBeDefined();
 
-    // User clicks accept → fresh grant.
+    // User clicks accept, a fresh grant.
     await elb('walker consent', { marketing: true });
 
     // What we want: the freshest call wins.
     // What actually happens: the queued stale {marketing:false} is replayed
-    // AFTER the fresh grant on activation → consent.marketing === false.
+    // AFTER the fresh grant on activation, so consent.marketing === false.
     expect(collector.consent.marketing).toBe(true);
   });
 
@@ -89,7 +107,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
     const { collector, elb } = await startFlow({
       sources: {
         browser: {
-          code: sourceBrowser,
+          code: browserSource,
           config: {
             require: ['consent'],
             settings: {
@@ -126,14 +144,14 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
   });
 
   test('without queued walker consent, fresh grant is preserved (control)', async () => {
-    // Only a non-consent command in the queue — proves the race is caused by
+    // Only a non-consent command in the queue, which proves the race is caused by
     // the consent entry specifically, not by activation itself.
     setQueue([['walker config', { tagging: 1 }]]);
 
     const { collector, elb } = await startFlow({
       sources: {
         browser: {
-          code: sourceBrowser,
+          code: browserSource,
           config: {
             require: ['consent'],
             settings: {
@@ -164,7 +182,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
     const { collector, elb } = await startFlow({
       sources: {
         browser: {
-          code: sourceBrowser,
+          code: browserSource,
           config: {
             require: ['consent'],
             settings: {
@@ -180,7 +198,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
     await elb('walker user', { id: 'fresh-id' });
     await elb('walker consent', { marketing: true });
 
-    // Fresh id should win — but stale queued id replays during activation.
+    // Fresh id should win, but the stale queued id replays during activation.
     expect(collector.user.id).toBe('fresh-id');
   });
 
@@ -192,7 +210,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
       consent: { marketing: true }, // skip the require gate for this test
       sources: {
         browser: {
-          code: sourceBrowser,
+          code: browserSource,
           config: {
             settings: {
               pageview: false,
@@ -214,7 +232,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
     layer.push(['product view', { id: 'C' }]);
 
     // Sanity: source ran the elb pipeline for these.
-    // Bug: the array kept all of them — never cleared.
+    // Bug: the array kept all of them, never cleared.
     expect(layer.length).toBe(3);
   });
 
@@ -237,15 +255,15 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
     });
 
     // Defer `walker run` until after the push spy is wired. Otherwise the
-    // pageview fires inside startFlow (CMP grants consent during pass 2 →
-    // browser require empties before init runs → browser starts → run fires
+    // pageview fires inside startFlow (CMP grants consent during pass 2, so
+    // browser require empties before init runs, browser starts, run fires
     // synchronously) and the spy misses it.
     const { collector } = await startFlow({
       run: false,
       sources: {
         cmp: { code: cmpSource as never },
         browser: {
-          code: sourceBrowser,
+          code: browserSource,
           config: {
             require: ['consent'],
             settings: {
@@ -273,7 +291,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
     expect(collector.sources.browser.config.require?.length || 0).toBe(0);
 
     // Trigger the run via the collector's command interface (the startFlow
-    // primary `elb` here is cmp's push — a jest.fn() — so we can't rely on
+    // primary `elb` here is cmp's push, a jest.fn(), so we can't rely on
     // it for plumbing). Pageview should now fire and be captured by the spy.
     await collector.command('run');
 

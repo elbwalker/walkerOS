@@ -1,14 +1,19 @@
 import type { Elb } from '@walkeros/core';
-import type { Context } from '../types';
+import type { Context, Registry } from '../types';
 import {
   initVisibilityTracking,
   triggerVisible,
   destroyVisibilityTracking,
   unobserveElement,
 } from '../triggerVisible';
+import { createRegistry } from '../trigger';
 import { resetSim, setBox, scrollTo, resizeElement } from './ioSimulator';
 
 // Test utilities for scope-based visibility tracking
+
+// One source's registry, rebuilt per test so no observer or dwell timer
+// crosses a test boundary.
+let registry: Registry;
 
 // Helper function to create test context
 const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
@@ -18,9 +23,10 @@ const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
     scope: document,
     pageview: false,
     capture: true,
-    elb: '',
+    elb: false,
     elbLayer: false,
   },
+  registry,
 });
 
 // A single `await Promise.resolve()` advances the microtask queue by exactly one
@@ -114,30 +120,18 @@ describe('triggerVisible', () => {
       ok: true,
     });
 
+    registry = createRegistry();
     testScope = document;
   });
 
   afterEach(() => {
-    destroyVisibilityTracking(testScope);
+    destroyVisibilityTracking(registry, testScope);
     jest.useRealTimers();
     jest.clearAllMocks();
   });
 
-  test('initVisibilityTracking creates an IntersectionObserver with the dense threshold grid', () => {
-    const spy = spyOnIntersectionObserver();
-
-    initVisibilityTracking(testScope, 2000);
-
-    expect(spy.constructorCalls).toEqual([
-      {
-        rootMargin: '0px',
-        threshold: Array.from({ length: 101 }, (_, index) => index / 100),
-      },
-    ]);
-  });
-
   test('initVisibilityTracking does not reinitialize if already initialized', async () => {
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
 
     const element = document.createElement('div');
     document.body.appendChild(element);
@@ -149,7 +143,7 @@ describe('triggerVisible', () => {
     // replace the state backing the element already registered above. If it
     // did, the armed timer's `fire()` would look up a fresh, empty state and
     // silently find no config for this element.
-    initVisibilityTracking(testScope, 2000);
+    initVisibilityTracking(registry, testScope, 2000);
 
     jest.advanceTimersByTime(1000);
     await Promise.resolve();
@@ -157,31 +151,41 @@ describe('triggerVisible', () => {
     expect(handleTrigger).toHaveBeenCalledTimes(1);
   });
 
-  test('triggerVisible observes the element via the shared per-document observer', () => {
-    const spy = spyOnIntersectionObserver();
-    initVisibilityTracking(testScope);
-
-    const element = document.createElement('div');
-    triggerVisible(createTestContext(mockElb), element, { multiple: true });
-
-    expect(spy.observedTargets).toEqual([element]);
-  });
-
-  test('triggerVisible handles element without observer gracefully', () => {
-    // Don't initialize visibility tracking
+  test('no observer is a no-op, never a throw: tracking never initialized, and no IntersectionObserver at all', () => {
     const spy = spyOnIntersectionObserver();
     const element = document.createElement('div');
 
-    expect(() => {
-      const context = createTestContext(mockElb);
-      triggerVisible(context, element);
-    }).not.toThrow();
-
+    // Tracking was never initialized for this scope.
+    expect(() =>
+      triggerVisible(createTestContext(mockElb), element),
+    ).not.toThrow();
     expect(spy.observedTargets).toHaveLength(0);
+
+    // The environment has no IntersectionObserver. Object.defineProperty's own
+    // PropertyDescriptor.value is typed `any` in lib.es5, so no cast is
+    // introduced here.
+    const original = window.IntersectionObserver;
+    Object.defineProperty(window, 'IntersectionObserver', {
+      value: undefined,
+      configurable: true,
+    });
+
+    try {
+      expect(() => initVisibilityTracking(registry, testScope)).not.toThrow();
+      expect(() =>
+        triggerVisible(createTestContext(mockElb), element),
+      ).not.toThrow();
+      expect(spy.observedTargets).toHaveLength(0);
+    } finally {
+      Object.defineProperty(window, 'IntersectionObserver', {
+        value: original,
+        configurable: true,
+      });
+    }
   });
 
   test('a fully visible element fires impression after the dwell duration', async () => {
-    initVisibilityTracking(testScope, 500);
+    initVisibilityTracking(registry, testScope, 500);
 
     const element = document.createElement('div');
     document.body.appendChild(element);
@@ -199,7 +203,7 @@ describe('triggerVisible', () => {
           prefix: 'data-elb',
           scope: expect.any(Object),
           pageview: false,
-          elb: '',
+          elb: false,
           elbLayer: false,
         }),
       }),
@@ -209,7 +213,7 @@ describe('triggerVisible', () => {
   });
 
   test('leaving the eligible band before the dwell expires cancels the trigger', async () => {
-    initVisibilityTracking(testScope, 500);
+    initVisibilityTracking(registry, testScope, 500);
 
     const element = document.createElement('div');
     document.body.appendChild(element);
@@ -227,7 +231,7 @@ describe('triggerVisible', () => {
   });
 
   test('multiple triggers: blocks re-triggering while still in the eligible band', async () => {
-    initVisibilityTracking(testScope, 100);
+    initVisibilityTracking(registry, testScope, 100);
 
     const element = document.createElement('div');
     document.body.appendChild(element);
@@ -252,7 +256,7 @@ describe('triggerVisible', () => {
   });
 
   test('multiple triggers: allows re-triggering after leaving and re-entering the eligible band', async () => {
-    initVisibilityTracking(testScope, 100);
+    initVisibilityTracking(registry, testScope, 100);
 
     const element = document.createElement('div');
     document.body.appendChild(element);
@@ -275,7 +279,7 @@ describe('triggerVisible', () => {
 
   test('unobserveElement unobserves the element and clears its armed timer', () => {
     const spy = spyOnIntersectionObserver();
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
 
     const element = document.createElement('div');
     document.body.appendChild(element);
@@ -285,7 +289,7 @@ describe('triggerVisible', () => {
 
     const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
 
-    unobserveElement(testScope, element);
+    unobserveElement(registry, testScope, element);
 
     expect(spy.unobservedTargets).toContain(element);
     expect(clearTimeoutSpy).toHaveBeenCalled();
@@ -293,31 +297,11 @@ describe('triggerVisible', () => {
 
   test('destroyVisibilityTracking disconnects the observer', () => {
     const spy = spyOnIntersectionObserver();
-    initVisibilityTracking(testScope);
+    initVisibilityTracking(registry, testScope);
 
-    destroyVisibilityTracking(testScope);
+    destroyVisibilityTracking(registry, testScope);
 
     expect(spy.disconnectCount).toBe(1);
-  });
-
-  test('handles missing IntersectionObserver gracefully', () => {
-    // Remove the global without a cast: Object.defineProperty's own
-    // PropertyDescriptor.value is typed `any` in lib.es5, so no cast is
-    // introduced here.
-    const original = window.IntersectionObserver;
-    Object.defineProperty(window, 'IntersectionObserver', {
-      value: undefined,
-      configurable: true,
-    });
-
-    expect(() => {
-      initVisibilityTracking(testScope);
-    }).not.toThrow();
-
-    Object.defineProperty(window, 'IntersectionObserver', {
-      value: original,
-      configurable: true,
-    });
   });
 
   describe('Scope-aligned re-init', () => {
@@ -328,9 +312,10 @@ describe('triggerVisible', () => {
         scope,
         pageview: false,
         capture: true,
-        elb: '',
+        elb: false,
         elbLayer: false,
       },
+      registry,
     });
 
     test('3a observes and fires a sub-scope element via the shared per-document observer', async () => {
@@ -341,7 +326,7 @@ describe('triggerVisible', () => {
       setBox(promo, { top: 0, left: 0, width: 300, height: 200 }); // fully visible
 
       // Visibility initialized for the sub-scope (as `walker init <container>`).
-      initVisibilityTracking(container, 500);
+      initVisibilityTracking(registry, container, 500);
 
       // The element is registered through the scope carried by context. Today
       // initVisibilityTracking keys the observer by the container while
@@ -359,51 +344,8 @@ describe('triggerVisible', () => {
         'visible',
       );
 
-      destroyVisibilityTracking(container);
-      destroyVisibilityTracking(document);
-    });
-
-    // Renamed from "re-registering the same element fires once on a single
-    // intersection". Under the new array-based config (one element can carry
-    // both `impression` and `visible`, per triggerVisible's design comment),
-    // registering the SAME element twice deliberately accumulates configs so
-    // both fire; that is what lets one element declare both trigger types.
-    // What must still hold is the single-observe guard (`if (configs.length >
-    // 1) return`), so this test now verifies that invariant directly, and
-    // exercises it via the real dual-trigger scenario the guard exists for.
-    test('3b one element carrying both impression and visible triggers observes once and fires both', async () => {
-      const container = document.createElement('div');
-      document.body.appendChild(container);
-      const promo = document.createElement('div');
-      container.appendChild(promo);
-      setBox(promo, { top: 0, left: 0, width: 300, height: 200 });
-
-      const spy = spyOnIntersectionObserver();
-      initVisibilityTracking(container, 500);
-
-      const context = buildContext(container);
-      triggerVisible(context, promo); // impression (single-shot)
-      triggerVisible(context, promo, { multiple: true }); // visible (repeatable)
-
-      expect(spy.observedTargets).toEqual([promo]); // observed exactly once
-
-      jest.advanceTimersByTime(500);
-      await Promise.resolve();
-
-      expect(handleTrigger).toHaveBeenCalledTimes(2);
-      expect(handleTrigger).toHaveBeenCalledWith(
-        expect.objectContaining({ elb: mockElb }),
-        promo,
-        'impression',
-      );
-      expect(handleTrigger).toHaveBeenCalledWith(
-        expect.objectContaining({ elb: mockElb }),
-        promo,
-        'visible',
-      );
-
-      destroyVisibilityTracking(container);
-      destroyVisibilityTracking(document);
+      destroyVisibilityTracking(registry, container);
+      destroyVisibilityTracking(registry, document);
     });
   });
 
@@ -417,7 +359,7 @@ describe('triggerVisible', () => {
     // precisely the escape a real user does not take.
     //
     // Viewport is 1000x450, element is 300x200 at document top 1000.
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
     const element = document.createElement('div');
     document.body.appendChild(element);
     setBox(element, { top: 1000, left: 0, width: 300, height: 200 });
@@ -445,7 +387,7 @@ describe('triggerVisible', () => {
   });
 
   test('does not fire in a background tab', async () => {
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
     const element = document.createElement('div');
     document.body.appendChild(element);
     setBox(element, { top: 100, left: 0, width: 300, height: 200 });
@@ -480,7 +422,7 @@ describe('triggerVisible', () => {
     // fresh IntersectionObserver entry and mask the bug. The impression must
     // still fire once the tab is foregrounded, driven purely by the re-armed
     // timer.
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
     const element = document.createElement('div');
     document.body.appendChild(element);
     setBox(element, { top: 0, left: 0, width: 300, height: 200 }); // eligible from the start
@@ -505,7 +447,7 @@ describe('triggerVisible', () => {
         configurable: true,
       });
 
-      // The retry that was armed while hidden expires now — but its dwell was
+      // The retry that was armed while hidden expires now, but its dwell was
       // spent hidden, so it must NOT count: firing here could credit an
       // impression after ~0ms of actually visible time.
       jest.advanceTimersByTime(1000);
@@ -528,9 +470,9 @@ describe('triggerVisible', () => {
   test('an occluded dwell re-arms and fires once the occlusion clears in place', async () => {
     // Occlusion can clear without ANY geometry or intersection change: a cookie
     // banner is dismissed, a carousel swaps slides in place. No scroll happens
-    // anywhere in this test, deliberately — the observer queues no entry, so
+    // anywhere in this test, deliberately, the observer queues no entry, so
     // only a re-armed retry can rescue the impression.
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
     const element = document.createElement('div');
     document.body.appendChild(element);
     setBox(element, { top: 0, left: 0, width: 300, height: 200 }); // eligible from the start
@@ -556,7 +498,7 @@ describe('triggerVisible', () => {
     // Overlapping scans hit this: a document run registers the element, then a
     // `walker init` on a container that already contained it registers it
     // again. Appending would make one dwell fire duplicate events.
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
     const element = document.createElement('div');
     document.body.appendChild(element);
     setBox(element, { top: 0, left: 0, width: 300, height: 200 });
@@ -574,7 +516,7 @@ describe('triggerVisible', () => {
     // Defect: `blocked = true` used to be written AFTER `await handleTrigger()`.
     // If the user scrolls away mid-flight (which resets blocked = false), the late
     // write flips it back to true and the element's NEXT entry is silently dropped.
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
     const element = document.createElement('div');
     document.body.appendChild(element);
     setBox(element, { top: 1000, left: 0, width: 300, height: 200 });
@@ -604,7 +546,7 @@ describe('triggerVisible', () => {
   });
 
   test('an element injected at 0x0 fires once it renders', async () => {
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
 
     const element = document.createElement('div');
     document.body.appendChild(element);
@@ -632,7 +574,7 @@ describe('triggerVisible', () => {
     // the destination is in flight the element is still observed and its config is
     // still present, so a second dwell can arm and fire the "single-shot"
     // impression a second time.
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
     const element = document.createElement('div');
     document.body.appendChild(element);
     setBox(element, { top: 1000, left: 0, width: 300, height: 200 });
@@ -663,8 +605,9 @@ describe('triggerVisible', () => {
     expect(handleTrigger).toHaveBeenCalledTimes(1);
   });
 
-  test('impression and visible on the same element both fire', async () => {
-    initVisibilityTracking(testScope, 1000);
+  test('impression and visible on the same element observe once and both fire', async () => {
+    const spy = spyOnIntersectionObserver();
+    initVisibilityTracking(registry, testScope, 1000);
     const element = document.createElement('div');
     document.body.appendChild(element);
     setBox(element, { top: 100, left: 0, width: 300, height: 200 });
@@ -672,6 +615,10 @@ describe('triggerVisible', () => {
     const context = createTestContext(mockElb);
     triggerVisible(context, element); // impression, single-shot
     triggerVisible(context, element, { multiple: true }); // visible, repeating
+
+    // The single-observe guard: one element carrying both trigger types is
+    // observed exactly once, or one dwell would fire duplicate events.
+    expect(spy.observedTargets).toEqual([element]);
 
     jest.advanceTimersByTime(1000);
     await drainMicrotasks();
@@ -690,7 +637,7 @@ describe('triggerVisible', () => {
   });
 
   test('after both fire, only visible re-fires on re-entry', async () => {
-    initVisibilityTracking(testScope, 1000);
+    initVisibilityTracking(registry, testScope, 1000);
     const element = document.createElement('div');
     document.body.appendChild(element);
     setBox(element, { top: 100, left: 0, width: 300, height: 200 });

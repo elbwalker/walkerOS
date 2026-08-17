@@ -311,7 +311,7 @@ export async function pushToDestinations(
   } = {},
   destinations?: Collector.Destinations,
 ): Promise<Elb.PushResult> {
-  const { allowed, consent, globals, user } = collector;
+  const { allowed, consent, user } = collector;
 
   // Check if collector is allowed to push
   if (!allowed) return createPushResult({ ok: false });
@@ -412,7 +412,7 @@ export async function pushToDestinations(
       };
 
       // Queued events: refresh consent (full replace — stale consent must not persist).
-      // User/globals merge happens for all events below in allowedEvents.map.
+      // User merge happens for all events below in allowedEvents.map.
       let currentQueue = (destination.queuePush || []).map((event) => ({
         ...event,
         consent,
@@ -634,8 +634,7 @@ export async function pushToDestinations(
       let batchedCount = 0;
       await Promise.all(
         allowedEvents.map(async (event) => {
-          // Merge collector state into event (collector as base, event overrides)
-          event.globals = assign(globals, event.globals);
+          // Merge collector user into event (collector as base, event overrides)
           event.user = assign(user, event.user);
 
           // Full cache check: before the before chain (skips everything on HIT)
@@ -1191,15 +1190,6 @@ export async function destinationPush<Destination extends Destination.Instance>(
         currentBatched.data = [];
 
         const rep = snapshot.entries[0];
-        // Representative journey correlation for the batch record. A forwarded
-        // batch may aggregate events from distinct upstream traces, so
-        // first-entry stamping on the flush/error records is best-effort; the
-        // per-event in/out records carry each event's exact trace.
-        const {
-          traceId: batchTraceId,
-          sourceId: batchSourceId,
-          parentEventId: batchParentEventId,
-        } = journeyFields(rep.event, rep.ingest, collector);
         const batchContext: Destination.PushBatchContext = {
           collector,
           logger: destLogger,
@@ -1249,18 +1239,13 @@ export async function destinationPush<Destination extends Destination.Instance>(
         };
 
         const flushStarted = Date.now();
-        const flushState = buildBaseState(collector, {
-          stepId: stepId('destination', destId),
-          stepType: 'destination',
-          phase: 'flush',
-          eventId: '',
-          now: flushStarted,
-          traceId: batchTraceId,
-          sourceId: batchSourceId,
-          parentEventId: batchParentEventId,
-        });
-        flushState.batch = { size: snapshot.entries.length, index: 0 };
-        emitStep(collector, flushState);
+
+        // Rows the destination named as failed, index -> that row's error. A
+        // whole-batch throw fails every row instead, tracked separately so a
+        // thrown `undefined` still counts as a failure.
+        const failedRows = new Map<number, unknown>();
+        let batchThrew = false;
+        let batchError: unknown;
 
         // Routes a set of [event, error] pairs to this destination's DLQ,
         // applying the bound and emitting the overflow warning once. Shared by
@@ -1327,27 +1312,8 @@ export async function destinationPush<Destination extends Destination.Instance>(
             ),
           (err) => {
             succeededCount = 0;
-            const errFinished = Date.now();
-            const batchErrState = buildBaseState(collector, {
-              stepId: stepId('destination', destId),
-              stepType: 'destination',
-              phase: 'error',
-              eventId: '',
-              now: errFinished,
-              traceId: batchTraceId,
-              sourceId: batchSourceId,
-              parentEventId: batchParentEventId,
-            });
-            batchErrState.durationMs = errFinished - flushStarted;
-            batchErrState.error =
-              err instanceof Error
-                ? { name: err.name, message: err.message }
-                : { message: String(err) };
-            batchErrState.batch = {
-              size: snapshot.entries.length,
-              index: 0,
-            };
-            emitStep(collector, batchErrState);
+            batchThrew = true;
+            batchError = err;
             // Route the entire batch to DLQ on a thrown/whole-batch failure.
             routeToDlq(snapshot.entries.map((entry) => [entry.event, err]));
             // Whole-batch throw is a transport failure for the breaker.
@@ -1365,18 +1331,16 @@ export async function destinationPush<Destination extends Destination.Instance>(
         // are delivered. Out-of-range indices are ignored defensively.
         if (isBatchOutcome(outcome) && outcome.failed.length > 0) {
           const failedPairs: Array<[WalkerOS.Event, unknown]> = [];
-          const seen = new Set<number>();
           for (const failure of outcome.failed) {
             const entry = snapshot.entries[failure.index];
-            if (!entry || seen.has(failure.index)) continue;
-            seen.add(failure.index);
-            failedPairs.push([
-              entry.event,
+            if (!entry || failedRows.has(failure.index)) continue;
+            const rowError =
               failure.error ??
-                new Error(
-                  `Push batch entry ${failure.index} failed (no per-row error provided)`,
-                ),
-            ]);
+              new Error(
+                `Push batch entry ${failure.index} failed (no per-row error provided)`,
+              );
+            failedRows.set(failure.index, rowError);
+            failedPairs.push([entry.event, rowError]);
           }
           if (failedPairs.length > 0) {
             routeToDlq(failedPairs);
@@ -1391,6 +1355,46 @@ export async function destinationPush<Destination extends Destination.Instance>(
             });
           }
         }
+
+        // Batch outcomes fan out one frame per entry, emitted once the flush
+        // has settled so each frame states that entry's real outcome. A single
+        // batch-level frame covered N events and identified none, so a failure
+        // marked no event errored and every entry kept reading as delivered.
+        // Each entry gets exactly one frame: a flush frame only if the
+        // destination delivered that row, an error frame if it failed it (a
+        // throw fails every row, a BatchOutcome fails the rows it names). A
+        // failed row therefore can never also carry a delivery confirmation,
+        // and the partition matches the one the DLQ and counters used above.
+        // An error frame here means the row was not delivered and will not be
+        // retried: nothing drains `destination.dlq`, which is a bounded
+        // in-memory buffer kept for inspection and evicted oldest-first.
+        const settledAt = Date.now();
+        snapshot.entries.forEach((entry, index) => {
+          const failed = batchThrew || failedRows.has(index);
+          const journey = journeyFields(entry.event, entry.ingest, collector);
+          const state = buildBaseState(collector, {
+            stepId: stepId('destination', destId),
+            stepType: 'destination',
+            phase: failed ? 'error' : 'flush',
+            eventId: typeof entry.event.id === 'string' ? entry.event.id : '',
+            now: settledAt,
+            traceId: journey.traceId,
+            sourceId: journey.sourceId,
+            parentEventId: journey.parentEventId,
+          });
+          state.batch = { size: snapshot.entries.length, index };
+          // Every frame carries the transport latency, so a batched delivery
+          // is as measurable as the non-batched `out` path.
+          state.durationMs = settledAt - flushStarted;
+          if (failed) {
+            const err = batchThrew ? batchError : failedRows.get(index);
+            state.error =
+              err instanceof Error
+                ? { name: err.name, message: err.message }
+                : { message: String(err) };
+          }
+          emitStep(collector, state);
+        });
 
         destLogger.debug('push batch done');
 

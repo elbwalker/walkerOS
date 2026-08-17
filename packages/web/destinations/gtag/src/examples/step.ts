@@ -21,16 +21,13 @@ const INIT_DATE = new Date(INIT_DATE_MS);
 export const ga4Init: Flow.StepExample = {
   title: 'GA4 init',
   description:
-    'The destination bootstraps gtag and configures a GA4 property via its measurementId.',
+    'Configures a GA4 property via its measurementId. gtag already exists here, so no `js` is sent: that would be a second, false initialisation signal.',
   in: {
     settings: {
       ga4: { measurementId: 'G-XXXXXX-1' },
     },
   },
-  out: [
-    ['gtag', 'js', INIT_DATE],
-    ['gtag', 'config', 'G-XXXXXX-1', {}],
-  ],
+  out: [['gtag', 'config', 'G-XXXXXX-1', {}]],
 };
 
 /**
@@ -40,16 +37,13 @@ export const ga4Init: Flow.StepExample = {
 export const adsInit: Flow.StepExample = {
   title: 'Google Ads init',
   description:
-    'The destination bootstraps gtag and configures a Google Ads account via its conversionId.',
+    'Configures a Google Ads account via its conversionId. gtag already exists here, so no `js` is sent.',
   in: {
     settings: {
       ads: { conversionId: 'AW-123456789', currency: 'EUR' },
     },
   },
-  out: [
-    ['gtag', 'js', INIT_DATE],
-    ['gtag', 'config', 'AW-123456789'],
-  ],
+  out: [['gtag', 'config', 'AW-123456789']],
 };
 
 /**

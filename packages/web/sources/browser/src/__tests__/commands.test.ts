@@ -1,10 +1,10 @@
 import { startFlow } from '@walkeros/collector';
 import {
   createBrowserSource,
+  destroyAllTestSources,
   destroyBrowserSource,
   flushChain,
 } from './test-utils';
-import { __readInstanceGuardForTests } from '../index';
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { BrowserPush } from '../types';
 
@@ -38,7 +38,10 @@ describe('walker init command', () => {
     collector.push = pushImpl;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Each source holds the layer and window.elb until it is destroyed, so the
+    // next test starts on free resources.
+    await destroyAllTestSources();
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'elbLayer');
   });
@@ -183,7 +186,10 @@ describe('walker destination command', () => {
     collector.push = pushImpl;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Each source holds the layer and window.elb until it is destroyed, so the
+    // next test starts on free resources.
+    await destroyAllTestSources();
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'elbLayer');
   });
@@ -227,7 +233,10 @@ describe('walker hook command', () => {
     collector.push = pushImpl;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Each source holds the layer and window.elb until it is destroyed, so the
+    // next test starts on free resources.
+    await destroyAllTestSources();
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'elbLayer');
   });
@@ -261,7 +270,10 @@ describe('window.elb installed by the source', () => {
     collector.push = pushImpl;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Each source holds the layer and window.elb until it is destroyed, so the
+    // next test starts on free resources.
+    await destroyAllTestSources();
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'elbLayer');
     Reflect.deleteProperty(window, 'elb');
@@ -292,7 +304,7 @@ describe('window.elb installed by the source', () => {
     );
   });
 
-  test('elbLayer:false — window.elb routes directly and run fires the pageview', async () => {
+  test('elbLayer:false: window.elb routes directly and run fires the pageview', async () => {
     // No controller is built. window.elb falls back to the source push (direct
     // route) and run fires the pageview via the no-controller branch.
     const source = await createBrowserSource(collector, {
@@ -343,22 +355,23 @@ describe('browser source destroy contract', () => {
     collector.push = pushImpl;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Each source holds the layer and window.elb until it is destroyed, so the
+    // next test starts on free resources.
+    await destroyAllTestSources();
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'elbLayer');
     Reflect.deleteProperty(window, 'elb');
   });
 
-  test('destroy removes window.elb, silences layer routing, and clears the guard', async () => {
+  test('destroy removes window.elb, silences layer routing, and frees every resource', async () => {
     const source = await createBrowserSource(collector, { pageview: false });
     expect(isBrowserPush(Reflect.get(window, 'elb'))).toBe(true);
 
     await destroyBrowserSource(source, collector);
 
-    // The function we installed is gone, and the single-instance sentinel is
-    // cleared so a fresh boot on this window is not treated as inert.
+    // The function we installed is gone.
     expect(Reflect.get(window, 'elb')).toBeUndefined();
-    expect(__readInstanceGuardForTests()).toBeUndefined();
 
     // Native push restored: pushes append silently, nothing routes.
     mockPush.mockClear();
@@ -371,9 +384,26 @@ describe('browser source destroy contract', () => {
     expect(layer.length).toBe(before + 1);
     expect(mockPush).not.toHaveBeenCalled();
 
-    // A second boot succeeds and reinstalls a working window.elb.
-    const second = await createBrowserSource(collector, { pageview: false });
-    expect(second).toBeDefined();
+    // Both resources were handed back, so a fresh boot takes them: it installs
+    // window.elb and routes the layer, and it scans the document as always.
+    document.body.innerHTML =
+      '<div data-elb="product" data-elbaction="load:view" data-elb-product="id:Y"></div>';
+    mockPush.mockClear();
+    const second = await createBrowserSource(
+      collector,
+      { pageview: false },
+      { runOnInit: true },
+    );
     expect(isBrowserPush(Reflect.get(window, 'elb'))).toBe(true);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'product view', trigger: 'load' }),
+    );
+
+    mockPush.mockClear();
+    await readWindowElb()('product view', { id: 'Z' });
+    await flushChain();
+    expect(mockPush).toHaveBeenCalled();
+
+    await destroyBrowserSource(second, collector);
   });
 });

@@ -1,11 +1,12 @@
 import type { Elb } from '@walkeros/core';
-import type { Context } from '../types';
+import type { Context, Registry } from '../types';
 import {
   isEligible,
   initVisibilityTracking,
   triggerVisible,
   destroyVisibilityTracking,
 } from '../triggerVisible';
+import { createRegistry } from '../trigger';
 import { resetSim, setBox, scrollTo } from './ioSimulator';
 
 interface Rect {
@@ -160,6 +161,10 @@ describe('isEligible', () => {
   });
 });
 
+// One source's registry for this suite, rebuilt per test so no observer or
+// dwell timer crosses a test boundary.
+let registry: Registry;
+
 // Helper function to create test context (mirrors triggerVisible.test.ts).
 const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
   elb,
@@ -168,9 +173,10 @@ const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
     scope: document,
     pageview: false,
     capture: true,
-    elb: '',
+    elb: false,
     elbLayer: false,
   },
+  registry,
 });
 
 // A single `await Promise.resolve()` advances the microtask queue by exactly
@@ -209,17 +215,18 @@ describe('real-world geometries (regression)', () => {
     mockElb = jest.fn().mockResolvedValue({
       ok: true,
     });
+    registry = createRegistry();
   });
 
   afterEach(() => {
-    destroyVisibilityTracking(document);
+    destroyVisibilityTracking(registry, document);
     jest.useRealTimers();
     jest.clearAllMocks();
   });
 
   test("customer's 716px card fires while scrolling a 450px viewport", async () => {
     resetSim({ width: 1440, height: 450 });
-    initVisibilityTracking(document, 1000);
+    initVisibilityTracking(registry, document, 1000);
 
     const card = document.createElement('div');
     document.body.appendChild(card);
@@ -251,7 +258,7 @@ describe('real-world geometries (regression)', () => {
 
   test('8000px section (10x viewport) fires at all', async () => {
     resetSim({ width: 1000, height: 800 });
-    initVisibilityTracking(document, 1000);
+    initVisibilityTracking(registry, document, 1000);
 
     const section = document.createElement('div');
     document.body.appendChild(section);
@@ -283,7 +290,7 @@ describe('real-world geometries (regression)', () => {
     // Max ratio is exactly 0.5, which real engines report as 0.4999... and
     // isIntersecting false at the boundary. The clamped predicate never asks.
     resetSim({ width: 1000, height: 450 });
-    initVisibilityTracking(document, 1000);
+    initVisibilityTracking(registry, document, 1000);
 
     const element = document.createElement('div');
     document.body.appendChild(element);
@@ -299,7 +306,7 @@ describe('real-world geometries (regression)', () => {
 
   test('wide 3000x80 row in a horizontal scroller fires', async () => {
     resetSim({ width: 1440, height: 900 });
-    initVisibilityTracking(document, 1000);
+    initVisibilityTracking(registry, document, 1000);
 
     const row = document.createElement('div');
     document.body.appendChild(row);
@@ -315,7 +322,7 @@ describe('real-world geometries (regression)', () => {
 
   test('the observer callback performs no DOM reads', () => {
     resetSim({ width: 1000, height: 450 });
-    initVisibilityTracking(document, 1000);
+    initVisibilityTracking(registry, document, 1000);
 
     const element = document.createElement('div');
     document.body.appendChild(element);

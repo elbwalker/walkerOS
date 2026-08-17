@@ -2,9 +2,7 @@ import type { WalkerOS, Collector, Source } from '@walkeros/core';
 import { isObject, createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import type { Types } from '../types';
-import { createBrowserSource } from './test-utils';
-import { destroyTriggers } from '../trigger';
-import { destroyVisibilityTracking } from '../triggerVisible';
+import { createBrowserSource, destroyAllTestSources } from './test-utils';
 
 const clearElbLayer = () => {
   Reflect.deleteProperty(window, 'elbLayer');
@@ -118,10 +116,10 @@ describe('Scoped visible (end-to-end)', () => {
     collector.push = mockPush;
   });
 
-  afterEach(() => {
-    // Module-level trigger/visibility state is shared within the file; tear it
-    // down so observers and scope buckets do not leak into the next test.
-    destroyTriggers();
+  afterEach(async () => {
+    // Drive each source's own destroy so its observers, scope buckets and
+    // timers are released through the production teardown path.
+    await destroyAllTestSources();
     global.IntersectionObserver = originalIO;
     jest.useRealTimers();
     document.body.innerHTML = '';
@@ -129,13 +127,10 @@ describe('Scoped visible (end-to-end)', () => {
   });
 
   test('4a walker init <element> fires visible without a usable document observer', async () => {
-    // Faithful Bug-A repro: a document run builds an observer, then the SPA
-    // tears the view down (no usable document observer remains). A lingering
-    // document observer would mask the bug by letting the element fall back
-    // onto it.
+    // The source never ran, so it holds no document observer at all: a
+    // `walker init <el>` must build and key its own visibility state rather
+    // than falling back onto one a document run happened to leave behind.
     const source = await createBrowserSource(collector, { pageview: false });
-    await source.on?.('run', collector); // build the document observer
-    destroyVisibilityTracking(document); // SPA clears the previous view
     mockPush.mockClear();
 
     document.body.innerHTML = `
@@ -283,7 +278,7 @@ describe('Scoped visible (end-to-end)', () => {
     await source.elb('walker init', container);
     mockPush.mockClear();
 
-    // The prior pulse interval was cleared on re-init — no beats leak.
+    // The prior pulse interval was cleared on re-init, no beats leak.
     jest.advanceTimersByTime(5000);
     await Promise.resolve();
     expect(pushed('pulse')).toHaveLength(0);

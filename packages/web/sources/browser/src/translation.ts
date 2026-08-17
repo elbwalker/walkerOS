@@ -23,6 +23,10 @@ export function translateToCoreCollector(
   custom?: WalkerOS.Properties,
 ): Promise<Elb.PushResult> {
   const { elb, settings } = context;
+  // Globals resolve against the scope this source was constructed with, so a
+  // source scoped to an element reads that subtree only. The scope a
+  // `walker init <el>` runs under narrows discovery, never globals.
+  const globalsScope = context.root ?? settings.scope;
 
   // Handle walker commands. `walker init` is browser-only (re-scans a DOM
   // scope for `data-elb*` tags and fires load triggers) and is dispatched
@@ -55,9 +59,9 @@ export function translateToCoreCollector(
     }
 
     // Add globals if not already present
-    if (!event.globals && settings.scope) {
-      event.globals = isGlobalsScope(settings.scope)
-        ? getGlobals(settings.prefix, settings.scope)
+    if (!event.globals && globalsScope) {
+      event.globals = isGlobalsScope(globalsScope)
+        ? getGlobals(settings.prefix, globalsScope)
         : {};
     }
 
@@ -113,10 +117,10 @@ export function translateToCoreCollector(
     eventData.id = eventData.id || scopeWin.location.pathname;
   }
 
-  // Collect globals from the DOM scope
+  // Collect globals from the source root scope
   const eventGlobals =
-    settings.scope && isGlobalsScope(settings.scope)
-      ? getGlobals(settings.prefix, settings.scope)
+    globalsScope && isGlobalsScope(globalsScope)
+      ? getGlobals(settings.prefix, globalsScope)
       : {};
 
   // Build unified event from various elb usage patterns

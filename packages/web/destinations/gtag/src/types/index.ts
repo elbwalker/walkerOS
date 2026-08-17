@@ -82,7 +82,23 @@ export type InitSettings = Partial<Settings>;
 export interface GA4Settings extends BaseSettings {
   measurementId: string;
   debug?: boolean;
+  /**
+   * Set to `false` when an external tag manager already configures this
+   * measurement ID. walkerOS then skips the gtag bootstrap (`js`, `config`
+   * and the script load) and only sends events, routed via `send_to`.
+   * Use this to keep the container's earlier config authoritative.
+   * @default true
+   */
+  init?: boolean;
   pageview?: boolean;
+  /**
+   * Full URL to load gtag.js first-party from a tagging server, used verbatim
+   * (e.g. `https://example.com/metrics/tag_serving_path/`). Requires a
+   * configured tag serving path in the server container. Falls back to
+   * googletagmanager.com if the script fails to load.
+   * @see https://developers.google.com/tag-platform/tag-manager/server-side/dependency-serving
+   */
+  scriptSrc?: string;
   server_container_url?: string;
   snakeCase?: boolean;
   transport_url?: string;

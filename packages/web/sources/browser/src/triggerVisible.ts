@@ -1,4 +1,10 @@
-import type { Context, InitScope } from './types';
+import type {
+  Context,
+  ElementConfig,
+  InitScope,
+  Registry,
+  VisibilityState,
+} from './types';
 import { tryCatch } from '@walkeros/core';
 import { isVisible } from '@walkeros/web-core';
 import { handleTrigger, Triggers } from './trigger';
@@ -70,45 +76,21 @@ export function isEligible(
 // however many thresholds there are.
 const THRESHOLDS = Array.from({ length: 101 }, (_, index) => index / 100);
 
-interface ElementConfig {
-  multiple: boolean;
-  blocked: boolean;
-  context: Context;
-  trigger: string;
-}
-
-interface VisibilityState {
-  observer?: IntersectionObserver;
-  resizeObserver?: ResizeObserver;
-  timers: WeakMap<HTMLElement, number>;
-  duration: number;
-  configs: WeakMap<HTMLElement, ElementConfig[]>;
-  // Elements last seen without a layout box. A 0x0 target reports ratio 1, so
-  // growing one into view never changes the threshold index and the observer
-  // stays silent; the ResizeObserver re-observes to force a fresh entry.
-  zeroArea: WeakSet<HTMLElement>;
-}
-
-// Module-level visibility state keyed by the owner document. Both an element
-// sub-scope and its document normalize to the same key (see getScopeKey), so
-// there is exactly one IntersectionObserver per document: create-key and
-// lookup-key can never diverge, and iframes still get their own observer.
-const visibilityStates = new WeakMap<Document | Element, VisibilityState>();
-
 /**
- * Normalize any scope (document or element) to its owner document. The
- * IntersectionObserver root is always the viewport, so per-sub-scope observers
- * would be meaningless; keying by ownerDocument gives one shared observer per
- * document and keeps the create/lookup keys aligned.
+ * Normalize any scope (document, element or shadow root) to its owner
+ * document. The IntersectionObserver root is always the viewport, so
+ * per-sub-scope observers would be meaningless; keying by ownerDocument gives
+ * one observer per document per source and keeps the create/lookup keys
+ * aligned. A Document's ownerDocument is null, so a Document returns itself.
  */
-export function getScopeKey(scope: InitScope): Document | Element {
+export function getScopeKey(scope: InitScope): Document {
   return (scope as Element).ownerDocument || (scope as Document);
 }
 
 function createObserver(
-  scope: Document | Element,
+  registry: Registry,
+  doc: Document,
 ): IntersectionObserver | undefined {
-  const doc = (scope as Element).ownerDocument || (scope as Document);
   const win = doc.defaultView;
   if (!win || !win.IntersectionObserver) return undefined;
 
@@ -116,7 +98,7 @@ function createObserver(
     () =>
       new win.IntersectionObserver(
         (entries) => {
-          entries.forEach((entry) => handleIntersection(scope, entry));
+          entries.forEach((entry) => handleIntersection(registry, doc, entry));
         },
         { rootMargin: '0px', threshold: THRESHOLDS },
       ),
@@ -125,11 +107,12 @@ function createObserver(
 }
 
 function handleIntersection(
-  scope: Document | Element,
+  registry: Registry,
+  doc: Document,
   entry: IntersectionObserverEntry,
 ): void {
   const target = entry.target as HTMLElement;
-  const state = visibilityStates.get(getScopeKey(scope));
+  const state = registry.visibility.get(doc);
   if (!state) return;
 
   const win = target.ownerDocument.defaultView;
@@ -137,7 +120,7 @@ function handleIntersection(
 
   const configs = state.configs.get(target);
   // An entry can be queued before an unobserve lands. Never arm a dwell for an
-  // element the module has already released.
+  // element this source has already released.
   if (!configs || !configs.length) return;
 
   const existingTimer = state.timers.get(target);
@@ -148,7 +131,7 @@ function handleIntersection(
 
     if (!existingTimer) {
       const timer = win.setTimeout(() => {
-        fire(getScopeKey(scope), target);
+        fire(registry, doc, target);
       }, state.duration);
       state.timers.set(target, timer);
     }
@@ -166,11 +149,12 @@ function handleIntersection(
 }
 
 async function fire(
-  scope: Document | Element,
+  registry: Registry,
+  doc: Document,
   target: HTMLElement,
   fromHidden = false,
 ): Promise<void> {
-  const state = visibilityStates.get(scope);
+  const state = registry.visibility.get(doc);
   if (!state) return;
 
   // Release the timer on EVERY path, before anything can bail. Leaving a fired
@@ -178,7 +162,6 @@ async function fire(
   // prevents the element from arming again: it is dead for the page session.
   state.timers.delete(target);
 
-  const doc = target.ownerDocument;
   const win = doc.defaultView;
   if (!win) return;
 
@@ -193,7 +176,7 @@ async function fire(
     state.timers.set(
       target,
       win.setTimeout(() => {
-        fire(scope, target, true);
+        fire(registry, doc, target, true);
       }, state.duration),
     );
     return;
@@ -207,7 +190,7 @@ async function fire(
     state.timers.set(
       target,
       win.setTimeout(() => {
-        fire(scope, target);
+        fire(registry, doc, target);
       }, state.duration),
     );
     return;
@@ -224,7 +207,7 @@ async function fire(
     state.timers.set(
       target,
       win.setTimeout(() => {
-        fire(scope, target);
+        fire(registry, doc, target);
       }, state.duration),
     );
     return;
@@ -249,7 +232,7 @@ async function fire(
   } else {
     // Single-shot impressions are done. Unobserve before the await so a second
     // dwell cannot arm and double-fire while the destination is in flight.
-    unobserveElement(scope, target);
+    unobserveElement(registry, doc, target);
   }
 
   await Promise.all(
@@ -259,8 +242,12 @@ async function fire(
   );
 }
 
-export function unobserveElement(scope: InitScope, element: HTMLElement): void {
-  const state = visibilityStates.get(getScopeKey(scope));
+export function unobserveElement(
+  registry: Registry,
+  scope: InitScope,
+  element: HTMLElement,
+): void {
+  const state = registry.visibility.get(getScopeKey(scope));
   if (!state) return;
 
   state.observer?.unobserve(element);
@@ -289,16 +276,16 @@ export function unobserveElement(scope: InitScope, element: HTMLElement): void {
  * this into a per-frame re-observe storm.
  */
 function createResizeObserver(
-  scope: Document | Element,
+  registry: Registry,
+  doc: Document,
 ): ResizeObserver | undefined {
-  const doc = (scope as Element).ownerDocument || (scope as Document);
   const win = doc.defaultView;
   if (!win || !win.ResizeObserver) return undefined;
 
   return tryCatch(
     () =>
       new win.ResizeObserver((entries) => {
-        const state = visibilityStates.get(scope);
+        const state = registry.visibility.get(doc);
         if (!state?.observer) return;
 
         entries.forEach((entry) => {
@@ -322,21 +309,27 @@ function createResizeObserver(
   )();
 }
 
+// Ensure this source has visibility tracking for the scope's owner document.
+// Idempotent per source: a second call for a document this source already
+// tracks keeps the existing observer and its `duration`. Another source's
+// state for the same document is a separate entry with its own duration.
 export function initVisibilityTracking(
+  registry: Registry,
   scope: InitScope,
   duration = 1000,
 ): void {
   const key = getScopeKey(scope);
-  if (visibilityStates.has(key)) return;
+  if (registry.visibility.has(key)) return;
 
-  visibilityStates.set(key, {
-    observer: createObserver(key),
-    resizeObserver: createResizeObserver(key),
+  const state: VisibilityState = {
+    observer: createObserver(registry, key),
+    resizeObserver: createResizeObserver(registry, key),
     timers: new WeakMap(),
     duration,
     configs: new WeakMap(),
     zeroArea: new WeakSet(),
-  });
+  };
+  registry.visibility.set(key, state);
 }
 
 export function triggerVisible(
@@ -346,18 +339,19 @@ export function triggerVisible(
 ): void {
   const scope = context.settings.scope;
   if (!scope) return;
-  const state = visibilityStates.get(getScopeKey(scope));
+  const state = context.registry.visibility.get(getScopeKey(scope));
   if (!state?.observer || !element) return;
 
   const multiple = config.multiple ?? false;
   const configs = state.configs.get(element) ?? [];
   const hadConfigs = configs.length > 0;
   const trigger = multiple ? Triggers.Visible : Triggers.Impression;
-  // Overlapping scans re-register the same element (a document run, then
-  // `walker init` on a container that was already inside it). Replace the
-  // same-trigger registration instead of appending, or every re-scan would
-  // add another config and one dwell would fire duplicate events. An element
-  // carries at most one `impression` plus one `visible` config.
+  // Overlapping scans of the same source re-register the same element (a
+  // document run, then `walker init` on a container that was already inside
+  // it). Replace the same-trigger registration instead of appending, or every
+  // re-scan would add another config and one dwell would fire duplicate
+  // events. An element carries at most one `impression` plus one `visible`
+  // config per source.
   const entry: ElementConfig = { multiple, blocked: false, context, trigger };
   const existing = configs.findIndex(
     (existingConfig) => existingConfig.trigger === trigger,
@@ -376,13 +370,19 @@ export function triggerVisible(
   state.resizeObserver?.observe(element);
 }
 
-export function destroyVisibilityTracking(scope?: InitScope): void {
+// Drop THIS source's visibility tracking for the scope's owner document.
+// Another source watching the same document keeps its observer and its armed
+// dwell timers.
+export function destroyVisibilityTracking(
+  registry: Registry,
+  scope?: InitScope,
+): void {
   if (!scope) return;
   const key = getScopeKey(scope);
-  const state = visibilityStates.get(key);
+  const state = registry.visibility.get(key);
   if (!state) return;
 
   state.observer?.disconnect();
   state.resizeObserver?.disconnect();
-  visibilityStates.delete(key);
+  registry.visibility.delete(key);
 }

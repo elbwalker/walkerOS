@@ -1,9 +1,9 @@
 import type { Source, On } from '@walkeros/core';
-import type { Scope, Types, Env } from './types';
+import type { Context, Scope, Types, Env } from './types';
 import type { BrowserPush, BrowserArguments } from './types/elb';
 import { isString } from '@walkeros/core';
-import { createPushResult } from '@walkeros/collector';
 import {
+  createRegistry,
   initTriggers,
   initScopeTrigger,
   processLoadTriggers,
@@ -15,66 +15,22 @@ import { createElbLayer } from './elbLayer';
 import { translateToCoreCollector } from './translation';
 import { getPageViewData, getUser } from './walker';
 import { getConfig } from './config';
+import { mark, owner, release } from './ownership';
 
 export * as SourceBrowser from './types';
 
 /**
- * Window-scoped single-instance sentinel. The browser source must be
- * single-instance per window: one elbLayer adoption, one set of DOM
- * listeners, one `window.elb`. A second/synchronous load of the tag on the
- * same page is a SEPARATE module instance, so a module-scoped counter cannot
- * see it (each load starts at 0). The marker therefore lives on the window
- * itself. A Symbol key avoids collision with page globals and is
- * non-enumerable by nature.
+ * @deprecated Does nothing. A source claims its own resources and releases them
+ * on destroy, so there is nothing to reset. Removed in the next major.
  */
-const SINGLE_INSTANCE_KEY = Symbol.for('@walkeros/web-source-browser:instance');
-
-type EnvWindow = Window & typeof globalThis;
-
-function resolveGuardWindow(
-  envWindow: EnvWindow | undefined,
-): EnvWindow | undefined {
-  return (
-    envWindow ||
-    (typeof globalThis.window !== 'undefined' ? globalThis.window : undefined)
-  );
-}
-
-/** For tests only. Clears the window-scoped single-instance sentinel. */
-export function __resetInstanceCountForTests(): void {
-  const win = resolveGuardWindow(undefined);
-  if (win) Reflect.deleteProperty(win, SINGLE_INSTANCE_KEY);
-}
-
-/** For tests only. Reads the window-scoped single-instance sentinel so tests
- * assert against the real key, not a copied string. */
-export function __readInstanceGuardForTests(): unknown {
-  const win = resolveGuardWindow(undefined);
-  return win ? Reflect.get(win, SINGLE_INSTANCE_KEY) : undefined;
-}
+export function __resetInstanceCountForTests(): void {}
 
 /**
- * Inert source instance returned on a second load within the same window.
- * It satisfies the `Source.Instance` contract but performs no side effects:
- * `init` does not adopt elbLayer or bind DOM triggers, `push` resolves to a
- * successful no-op result, and `on`/`destroy` do nothing. This keeps a double
- * load from re-adopting `window.elbLayer` (the production crash vector)
- * without surfacing an error to the host page.
+ * @deprecated Does nothing, always undefined. Ownership lives on the resources
+ * a source claims. Removed in the next major.
  */
-function createInertInstance(): Source.Instance<Types> {
-  const fullConfig: Source.Config<Types> = {
-    settings: getConfig({}, undefined),
-  };
-  const push: BrowserPush = ((..._args: Parameters<BrowserArguments>) =>
-    Promise.resolve(createPushResult({ ok: true }))) satisfies BrowserPush;
-  return {
-    type: 'browser',
-    config: fullConfig,
-    push,
-    on: async () => {},
-    init: async () => {},
-    destroy: async () => {},
-  };
+export function __readInstanceGuardForTests(): unknown {
+  return undefined;
 }
 
 // Export walker utility functions
@@ -115,23 +71,6 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
       ? globalThis.document
       : undefined);
 
-  // Single-instance per window. A second load on the same page is a separate
-  // module instance, so the marker lives on the window, not in module scope.
-  // Window-less environments (SSR/node/test without a window) are not guarded.
-  const guardWindow = resolveGuardWindow(actualWindow);
-  if (guardWindow) {
-    if (Reflect.get(guardWindow, SINGLE_INSTANCE_KEY))
-      return createInertInstance();
-    // Set before init() runs so a synchronous second load is caught before
-    // this first instance performs its own factory/init side effects.
-    Object.defineProperty(guardWindow, SINGLE_INSTANCE_KEY, {
-      value: true,
-      enumerable: false,
-      configurable: true,
-      writable: false,
-    });
-  }
-
   const settings: Source.Settings<Types> = getConfig(
     userSettings,
     actualDocument as Document | undefined,
@@ -141,9 +80,18 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     settings,
   };
 
-  const translationContext = {
+  // One registry per source instance. Every scope-aligned context the
+  // translation layer spreads off this one carries the same registry by
+  // reference, so `walker run` and `walker init <el>` of this source share
+  // element dedup while a second source on the page shares nothing. It is also
+  // this source's ownership identity: every mark it sets names this object.
+  const registry = createRegistry();
+  const translationContext: Context = {
     elb,
     settings,
+    root: settings.scope,
+    registry,
+    logger,
     initScope: initScopeTrigger,
   };
 
@@ -152,6 +100,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   // tear down exactly what this instance set up.
   let controller: ElbLayerController | undefined;
   let installedWindowElb: BrowserPush | undefined;
+  let initialized = false;
 
   // Helper to send pageview event if enabled. Returns the dispatch promise so
   // the enqueued run-chain link resolves when the pageview actually completes.
@@ -180,50 +129,85 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     return translateToCoreCollector(translationContext, 'walker user', user);
   };
 
-  // Lifecycle method — eager. The collector calls this AFTER all source
+  // Lifecycle method, eager. The collector calls this AFTER all source
   // factories have registered. Side effects allowed: adopts window.elbLayer
   // via the controller, sets up DOM listeners, installs window.elb.
   const init = async () => {
     if (!actualWindow || !actualDocument) return;
+    // The collector calls init once; a second call would re-adopt resources
+    // this source already holds.
+    if (initialized) return;
+    initialized = true;
 
     // Build the append-only layer controller. It routes through the real
     // translationContext, so `walker init` reaches initScope and events flow
     // through the same funnel as direct window.elb calls.
+    const layerName = isString(settings.elbLayer)
+      ? settings.elbLayer
+      : 'elbLayer';
     const activeController =
       settings.elbLayer !== false
         ? createElbLayer(translationContext, {
-            name: isString(settings.elbLayer) ? settings.elbLayer : 'elbLayer',
+            name: layerName,
             window: actualWindow,
             logger,
           })
         : undefined;
-    controller = activeController;
+
+    // A layer another source adopted hands back an inert controller: it has no
+    // shared FIFO tail, so keeping it would drop `walker user` out of order
+    // ahead of the pageview. Dropping it routes the run through the awaited
+    // path instead, and sends window.elb straight to this source's push.
+    const adoptedLayer: unknown = Reflect.get(actualWindow, layerName);
+    const adoptedController =
+      activeController && owner(adoptedLayer) === registry
+        ? activeController
+        : undefined;
+    controller = adoptedController;
 
     // Setup global triggers (click, submit) when DOM is ready
     await ready(initTriggers, translationContext, settings);
 
-    // Single writer for window.elb. With a controller, calls append to the
-    // layer and route through the shared chain; without one (elbLayer:false)
-    // they route directly via the source's push. `activeController` is a const
-    // so its truthy narrowing survives into the arrow closure — the `let
-    // controller` field would widen back to `| undefined` and force a cast.
+    // Single writer for window.elb, and only when no other source installed
+    // one: overwriting it would cut the page's calls off from the source that
+    // owns the rest of the page. An unmarked function is the page's own
+    // pre-load stub and is replaced, as it always has been. `elb: false` takes
+    // no name at all, which is how an embedded source runs with no page-window
+    // footprint.
+    // Settings reach here unparsed, so the name is probed rather than trusted:
+    // any value outside `string | false` installs nothing instead of claiming a
+    // window property named after it.
+    // `adoptedController` is a const so its truthy narrowing survives into the
+    // arrow closure, the `let controller` field would widen back to
+    // `| undefined` and force a cast.
     if (isString(settings.elb) && settings.elb) {
-      const windowElb: BrowserPush = activeController
-        ? (((...args: Parameters<BrowserArguments>) =>
-            activeController.intake(args)) satisfies BrowserPush)
-        : push;
-      installedWindowElb = windowElb;
-      Reflect.set(actualWindow, settings.elb, windowElb);
+      const existingElb: unknown = Reflect.get(actualWindow, settings.elb);
+      const elbOwner = owner(existingElb);
+      if (elbOwner && elbOwner !== registry) {
+        logger?.error(
+          `elb "${settings.elb}" is already installed by another source`,
+        );
+      } else {
+        const windowElb: BrowserPush = adoptedController
+          ? (((...args: Parameters<BrowserArguments>) =>
+              adoptedController.intake(args)) satisfies BrowserPush)
+          : push;
+        installedWindowElb = mark(windowElb, registry);
+        Reflect.set(actualWindow, settings.elb, windowElb);
+      }
     }
   };
 
-  // Lifecycle handler — fired by the collector only when this source is
+  // Lifecycle handler, fired by the collector only when this source is
   // started (config.init=true AND config.require empty). Pre-start events
   // are buffered in instance.queueOn by the collector and replayed on start.
   const handleEvent = async (event: On.Types) => {
     switch (event) {
       case 'run':
-        if (actualDocument && actualWindow) {
+        // A torn-down source scans nothing and emits nothing. The collector
+        // keeps it reachable after destroy, and a page that fires `walker run`
+        // per route change keeps calling it.
+        if (actualDocument && actualWindow && !registry.destroyed) {
           processLoadTriggers(translationContext, settings);
           if (controller) {
             // Replay the recorded backlog, then set the user, then the pageview, on
@@ -269,25 +253,23 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     on: handleEvent,
     init,
     destroy: async () => {
-      // Iterates the scope registry: aborts root + per-scope listeners, clears
-      // every scope's intervals/timeouts, and disconnects the shared
+      // Iterates this source's registry: aborts its root + per-scope listeners,
+      // clears every scope's intervals/timeouts, and disconnects its
       // per-document observer(s). Reaches sub-scopes from `walker init <el>`,
       // not just the source's own document scope.
-      destroyTriggers(settings);
+      destroyTriggers(translationContext);
 
       // Restore the layer's native push and forget controller state.
       controller?.destroy();
 
-      // Remove window.elb only if it is still the function we installed — never
-      // clobber a foreign global.
+      // Remove window.elb only if it is still the function we installed, never
+      // clobber a foreign global. The writer hands its mark back either way, so
+      // a page that kept a reference to it does not keep the name held.
       if (actualWindow && isString(settings.elb) && settings.elb) {
         if (Reflect.get(actualWindow, settings.elb) === installedWindowElb)
           Reflect.deleteProperty(actualWindow, settings.elb);
       }
-
-      // Clear the single-instance sentinel so a destroyed source can be
-      // recreated on the same window.
-      if (guardWindow) Reflect.deleteProperty(guardWindow, SINGLE_INSTANCE_KEY);
+      if (installedWindowElb) release(installedWindowElb);
 
       // Drop references so a stray post-destroy run finds nothing to drive.
       controller = undefined;

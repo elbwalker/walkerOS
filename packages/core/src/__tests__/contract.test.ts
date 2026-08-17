@@ -306,7 +306,7 @@ describe('resolveContracts', () => {
       },
     };
 
-    // Default path still strips annotations (AJV-clean).
+    // Default path still strips annotations.
     const stripped = resolveContracts(contract);
     expect(stripped.web.events?.product.view).not.toHaveProperty('description');
 
@@ -320,6 +320,378 @@ describe('resolveContracts', () => {
         },
       },
     });
+  });
+
+  it('keeps a data key named like an annotation, with its constraints', () => {
+    // `data-elb-product="title:Tee"` is ordinary markup, so `title` is one of
+    // the most common data keys there is. Its schema is a constraint, not an
+    // annotation, and must survive resolution intact.
+    const contract: Flow.Contract = {
+      web: {
+        events: {
+          product: {
+            view: {
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['title'],
+                  properties: {
+                    title: { type: 'string', enum: ['Tee', 'Ruck'] },
+                    description: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const resolved = resolveContracts(contract);
+    const data = (
+      (resolved.web.events?.product.view as Record<string, unknown>)
+        .properties as Record<string, unknown>
+    ).data as Record<string, unknown>;
+    expect(data.required).toEqual(['title']);
+    expect(data.properties).toEqual({
+      title: { type: 'string', enum: ['Tee', 'Ruck'] },
+      description: { type: 'string' },
+    });
+  });
+
+  it('should strip a description that annotates a property schema', () => {
+    const contract: Flow.Contract = {
+      web: {
+        events: {
+          product: {
+            view: {
+              properties: {
+                data: {
+                  type: 'object',
+                  properties: {
+                    id: {
+                      type: 'string',
+                      description: 'The SKU',
+                      $comment: 'internal',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const resolved = resolveContracts(contract);
+    const data = (
+      (resolved.web.events?.product.view as Record<string, unknown>)
+        .properties as Record<string, unknown>
+    ).data as Record<string, unknown>;
+    expect(data.properties).toEqual({ id: { type: 'string' } });
+  });
+
+  it('applies both rules at any nesting depth', () => {
+    const contract: Flow.Contract = {
+      web: {
+        events: {
+          order: {
+            complete: {
+              properties: {
+                data: {
+                  type: 'object',
+                  properties: {
+                    items: {
+                      type: 'array',
+                      description: 'Line items',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          title: {
+                            type: 'string',
+                            description: 'Product name',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const resolved = resolveContracts(contract);
+    const data = (
+      (resolved.web.events?.order.complete as Record<string, unknown>)
+        .properties as Record<string, unknown>
+    ).data as Record<string, unknown>;
+    // The deep `title` data key survives; both `description` keywords go.
+    expect(data.properties).toEqual({
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: { title: { type: 'string' } },
+        },
+      },
+    });
+  });
+
+  it.each([
+    [
+      '$defs',
+      { $defs: { title: { type: 'string', enum: ['Tee'] } } },
+      { $defs: { title: { type: 'string', enum: ['Tee'] } } },
+    ],
+    [
+      'patternProperties',
+      { patternProperties: { title: { type: 'string' } } },
+      { patternProperties: { title: { type: 'string' } } },
+    ],
+    [
+      'dependentRequired',
+      { dependentRequired: { title: ['sku'] } },
+      { dependentRequired: { title: ['sku'] } },
+    ],
+    [
+      'dependencies',
+      { dependencies: { title: ['sku'], description: { required: ['sku'] } } },
+      { dependencies: { title: ['sku'], description: { required: ['sku'] } } },
+    ],
+    [
+      'dependentSchemas',
+      { dependentSchemas: { title: { required: ['sku'] } } },
+      { dependentSchemas: { title: { required: ['sku'] } } },
+    ],
+    [
+      'const carrying instance data',
+      { const: { title: 'Tee', description: 'A shirt' } },
+      { const: { title: 'Tee', description: 'A shirt' } },
+    ],
+    [
+      'default carrying instance data',
+      { default: { title: 'Tee' } },
+      { default: { title: 'Tee' } },
+    ],
+    [
+      'enum carrying instance data',
+      { enum: [{ title: 'Tee' }] },
+      { enum: [{ title: 'Tee' }] },
+    ],
+  ])(
+    'keeps author-owned names and values under %s',
+    (_keyword, authored, expected) => {
+      const contract: Flow.Contract = {
+        web: { events: { product: { view: authored } } },
+      };
+      const resolved = resolveContracts(contract);
+      expect(resolved.web.events?.product.view).toEqual(expected);
+    },
+  );
+
+  it('never touches the contents of an unknown or vendor keyword', () => {
+    // Anything outside the spec-defined schema positions belongs to the
+    // author or a vendor extension. Its contents are opaque: a `title` in
+    // there is not an annotation of any schema.
+    const contract: Flow.Contract = {
+      web: {
+        events: {
+          product: {
+            view: {
+              'x-tagging': {
+                title: 'Click trigger',
+                description: 'Vendor config, not a schema',
+              },
+              properties: {
+                data: {
+                  type: 'object',
+                  metaHints: { title: 'kept', nested: { $comment: 'kept' } },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const resolved = resolveContracts(contract);
+    expect(resolved.web.events?.product.view).toEqual({
+      'x-tagging': {
+        title: 'Click trigger',
+        description: 'Vendor config, not a schema',
+      },
+      properties: {
+        data: {
+          type: 'object',
+          metaHints: { title: 'kept', nested: { $comment: 'kept' } },
+        },
+      },
+    });
+  });
+
+  it.each([
+    [
+      'allOf',
+      { allOf: [{ title: 'Base', required: ['id'] }] },
+      { allOf: [{ required: ['id'] }] },
+    ],
+    [
+      'anyOf',
+      { anyOf: [{ description: 'Branch', minProperties: 1 }] },
+      { anyOf: [{ minProperties: 1 }] },
+    ],
+    [
+      'oneOf',
+      { oneOf: [{ $comment: 'Variant', type: 'string' }] },
+      { oneOf: [{ type: 'string' }] },
+    ],
+    [
+      'prefixItems',
+      { prefixItems: [{ title: 'First', type: 'string' }] },
+      { prefixItems: [{ type: 'string' }] },
+    ],
+    [
+      'items tuple form',
+      { items: [{ title: 'First', type: 'string' }, { type: 'number' }] },
+      { items: [{ type: 'string' }, { type: 'number' }] },
+    ],
+  ])(
+    'strips annotations from each schema element under %s',
+    (_keyword, authored, expected) => {
+      const contract: Flow.Contract = {
+        web: { events: { product: { view: authored } } },
+      };
+      const resolved = resolveContracts(contract);
+      expect(resolved.web.events?.product.view).toEqual(expected);
+    },
+  );
+
+  it('keeps data keys while stripping annotations inside combinator branches', () => {
+    const contract: Flow.Contract = {
+      web: {
+        events: {
+          product: {
+            view: {
+              properties: {
+                data: {
+                  allOf: [
+                    {
+                      title: 'Base shape',
+                      required: ['title'],
+                      properties: {
+                        title: { type: 'string', description: 'Product name' },
+                      },
+                    },
+                    { anyOf: [{ $comment: 'branch', minProperties: 1 }] },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const resolved = resolveContracts(contract);
+    const data = (
+      (resolved.web.events?.product.view as Record<string, unknown>)
+        .properties as Record<string, unknown>
+    ).data as Record<string, unknown>;
+    expect(data).toEqual({
+      allOf: [
+        {
+          required: ['title'],
+          properties: { title: { type: 'string' } },
+        },
+        { anyOf: [{ minProperties: 1 }] },
+      ],
+    });
+  });
+
+  it.each([
+    [
+      'items single-schema form',
+      { items: { title: 'Element', type: 'string' } },
+      { items: { type: 'string' } },
+    ],
+    [
+      'additionalProperties',
+      { additionalProperties: { title: 'Extra', type: 'string' } },
+      { additionalProperties: { type: 'string' } },
+    ],
+    [
+      'propertyNames',
+      { propertyNames: { description: 'Key format', pattern: '^[a-z]+$' } },
+      { propertyNames: { pattern: '^[a-z]+$' } },
+    ],
+    [
+      'contains',
+      { contains: { title: 'Member', type: 'number' } },
+      { contains: { type: 'number' } },
+    ],
+    [
+      'not',
+      { not: { $comment: 'Negation', type: 'null' } },
+      { not: { type: 'null' } },
+    ],
+    [
+      'if/then/else',
+      {
+        if: { title: 'Cond', required: ['id'] },
+        then: { description: 'Hit', required: ['name'] },
+        else: { $comment: 'Miss', required: ['sku'] },
+      },
+      {
+        if: { required: ['id'] },
+        then: { required: ['name'] },
+        else: { required: ['sku'] },
+      },
+    ],
+    [
+      'boolean-valued schema keyword',
+      { additionalProperties: false },
+      { additionalProperties: false },
+    ],
+  ])(
+    'strips annotations at the %s schema position',
+    (_keyword, authored, expected) => {
+      const contract: Flow.Contract = {
+        web: { events: { product: { view: authored } } },
+      };
+      const resolved = resolveContracts(contract);
+      expect(resolved.web.events?.product.view).toEqual(expected);
+    },
+  );
+
+  it('resolves idempotently', () => {
+    const contract: Flow.Contract = {
+      default: {
+        events: {
+          product: {
+            '*': { properties: { data: { required: ['id'] } } },
+          },
+        },
+      },
+      web: {
+        extend: 'default',
+        events: {
+          product: {
+            view: {
+              description: 'Product viewed',
+              properties: {
+                data: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string', description: 'Product name' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const once = resolveContracts(contract);
+    const twice = resolveContracts(once);
+    expect(twice).toEqual(once);
   });
 
   it('should handle contract with only schema, no events', () => {

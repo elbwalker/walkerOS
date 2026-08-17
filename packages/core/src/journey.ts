@@ -4,7 +4,6 @@ import type {
   Journey,
   JourneyAssembly,
   JourneyBranch,
-  JourneyCorrelation,
   JourneyEntry,
   JourneyGap,
   JourneyHop,
@@ -13,6 +12,7 @@ import type {
   JourneyStatus,
   JourneyTopology,
   JourneyTopologyNode,
+  JourneyUnattributed,
 } from './types/journey';
 
 /** Default settle window: a journey may still change until its last record is this old. */
@@ -68,8 +68,13 @@ function compareRecords(a: FlowState, b: FlowState): number {
 }
 
 /**
- * Drop replayed duplicates. Prefer the poster's `(platform, seq)` identity when
- * `seq` is present; otherwise fall back to the structural tuple. First
+ * Drop replayed duplicates. `seq` is a PER-POSTER-INSTANCE counter (it
+ * restarts at 1 on every page load and container restart), so it is only an
+ * identity within one event run: the key scopes it with `traceId`, which a
+ * genuine replay repeats and a new poster never does. A seq-stamped record
+ * without a traceId falls back to its structural tuple extended with
+ * `timestamp` (a replay repeats the timestamp exactly; distinct posters
+ * differ). Seq-less records keep the plain structural tuple. First
  * occurrence wins.
  */
 function dedupe(records: FlowState[]): FlowState[] {
@@ -77,11 +82,15 @@ function dedupe(records: FlowState[]): FlowState[] {
   const out: FlowState[] = [];
   for (const r of records) {
     const key =
-      r.seq !== undefined
-        ? `seq${SEP}${r.platform ?? ''}${SEP}${r.seq}`
-        : `tuple${SEP}${r.platform ?? ''}${SEP}${r.stepId}${SEP}${r.phase}${SEP}${
-            r.eventId
-          }${SEP}${r.branchId ?? ''}${SEP}${r.elapsedMs}`;
+      r.seq !== undefined && r.traceId
+        ? `seq${SEP}${r.platform ?? ''}${SEP}${r.traceId}${SEP}${r.seq}`
+        : r.seq !== undefined
+          ? `seqt${SEP}${r.platform ?? ''}${SEP}${r.stepId}${SEP}${r.phase}${SEP}${
+              r.eventId
+            }${SEP}${r.branchId ?? ''}${SEP}${r.elapsedMs}${SEP}${r.timestamp}${SEP}${r.seq}`
+          : `tuple${SEP}${r.platform ?? ''}${SEP}${r.stepId}${SEP}${r.phase}${SEP}${
+              r.eventId
+            }${SEP}${r.branchId ?? ''}${SEP}${r.elapsedMs}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -100,6 +109,149 @@ function readEventName(inEvent: unknown): string | undefined {
     return inEvent.name;
   }
   return undefined;
+}
+
+/**
+ * Read `outEvent.event.id` off a push result without loosening the type. Only
+ * the push-result shape is walked; a bare outbound event (what a transformer
+ * records) is deliberately not read, because a source-replacing transformer's
+ * out event is a different event from the one the record describes.
+ */
+function outEventId(outEvent: unknown): string | undefined {
+  if (typeof outEvent !== 'object' || outEvent === null) return undefined;
+  if (!('event' in outEvent)) return undefined;
+  const event = outEvent.event;
+  if (typeof event !== 'object' || event === null) return undefined;
+  if (!('id' in event)) return undefined;
+  const id = event.id;
+  return typeof id === 'string' && id !== '' ? id : undefined;
+}
+
+/**
+ * The event a record belongs to, or undefined when it names none.
+ *
+ * A stamped `eventId` always wins. Only an anonymous record falls back to the
+ * push result it carries: that is the compat path for runtimes predating the
+ * early span-id mint, whose whole `collector.push` hop is anonymous. The
+ * fallback fills an absent id and never overrides a present one, because a
+ * fan-out's result reports its first child while the record itself belongs to
+ * the wrap; overriding would move the record into another event's journey.
+ */
+function resolveEventId(record: FlowState): string | undefined {
+  if (record.eventId !== '') return record.eventId;
+  return outEventId(record.outEvent);
+}
+
+/**
+ * Union-find over event ids: the smallest id in a set is its representative, so
+ * the resulting partition is independent of merge order and a `parentEventId`
+ * cycle cannot make the walk diverge.
+ */
+function findSet(parents: Map<string, string>, id: string): string {
+  let root = id;
+  for (;;) {
+    const next = parents.get(root);
+    if (next === undefined || next === root) break;
+    root = next;
+  }
+  let cur = id;
+  while (cur !== root) {
+    const next = parents.get(cur);
+    parents.set(cur, root);
+    if (next === undefined) break;
+    cur = next;
+  }
+  return root;
+}
+
+/** Merge two event ids into one set. */
+function uniteSets(parents: Map<string, string>, a: string, b: string): void {
+  const rootA = findSet(parents, a);
+  const rootB = findSet(parents, b);
+  if (rootA === rootB) return;
+  if (rootA < rootB) parents.set(rootB, rootA);
+  else parents.set(rootA, rootB);
+}
+
+/**
+ * The originating event of a merged set: the member whose parent lies outside
+ * the set (or that has none). Every member is backed by records, so the result
+ * always names an event the journey contains. A `parentEventId` cycle leaves no
+ * such member; the smallest id then breaks the tie, keeping the choice total.
+ */
+function pickOrigin(
+  eventIds: Set<string>,
+  parentsOf: Map<string, Set<string>>,
+): string {
+  const members = [...eventIds].sort();
+  for (const member of members) {
+    const parents = parentsOf.get(member);
+    if (parents === undefined) return member;
+    let linked = false;
+    for (const parent of parents) {
+      if (eventIds.has(parent)) {
+        linked = true;
+        break;
+      }
+    }
+    if (!linked) return member;
+  }
+  return members[0];
+}
+
+/** First truthy `traceId` in record order, when any record carries one. */
+function firstTraceId(records: FlowState[]): string | undefined {
+  for (const record of records) if (record.traceId) return record.traceId;
+  return undefined;
+}
+
+/**
+ * Summarize the records that named no event, per platform. Only records
+ * carrying a `traceId` count: they belonged to a real event run and should have
+ * been attributable. Destination `init` and store lifecycle frames stamp no
+ * traceId, so they fall out without enumerating phases, and the figure stays a
+ * signal rather than a permanent nonzero background.
+ */
+function summarizeUnattributed(records: FlowState[]): JourneyUnattributed[] {
+  interface Bucket {
+    platform?: JourneyPlatform;
+    count: number;
+    fromMs: number;
+    toMs: number;
+    stepIds: Set<string>;
+  }
+  const byPlatform = new Map<string, Bucket>();
+
+  for (const record of records) {
+    if (!record.traceId) continue;
+    const key = record.platform ?? NO_PLATFORM;
+    const ms = toEpoch(record.timestamp);
+    let bucket = byPlatform.get(key);
+    if (bucket === undefined) {
+      bucket = {
+        ...(record.platform !== undefined ? { platform: record.platform } : {}),
+        count: 0,
+        fromMs: ms,
+        toMs: ms,
+        stepIds: new Set<string>(),
+      };
+      byPlatform.set(key, bucket);
+    }
+    bucket.count += 1;
+    if (ms < bucket.fromMs) bucket.fromMs = ms;
+    if (ms > bucket.toMs) bucket.toMs = ms;
+    bucket.stepIds.add(record.stepId);
+  }
+
+  return [...byPlatform.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([, bucket]) => ({
+      ...(bucket.platform !== undefined ? { platform: bucket.platform } : {}),
+      count: bucket.count,
+      fromMs: bucket.fromMs,
+      toMs: bucket.toMs,
+      stepIds: [...bucket.stepIds].sort(),
+    }));
 }
 
 /** Map a hop's terminal phase to its collapsed status. */
@@ -428,8 +580,10 @@ function collapseBranch(branchId: string, records: FlowState[]): JourneyBranch {
 /**
  * Collapse all records for one `(platform, stepId)` pair into a single hop.
  * `flush` frames are excluded from identity, terminal selection, and field
- * harvest (their empty eventId must not become the hop's), but still fold in as
- * batch confirmation and still count toward `startedAtMs` (port parity).
+ * harvest because a flush confirms a batch rather than doing this hop's work:
+ * it must not become the hop's terminal phase, and its `batch` describes the
+ * flush rather than this hop's enqueue. They still fold in as batch
+ * confirmation and still count toward `startedAtMs` (port parity).
  * `branchId` records fan out into `branches` rather than colouring the parent.
  */
 function collapseHop(group: FlowState[]): JourneyHop {
@@ -476,6 +630,7 @@ function collapseHop(group: FlowState[]): JourneyHop {
   let consentApplied: Record<string, boolean> | undefined;
   let meta: Record<string, unknown> | undefined;
   let parentEventId: string | undefined;
+  let release: string | undefined;
 
   for (const r of source) {
     if (r.elapsedMs < identity.elapsedMs) identity = r;
@@ -491,6 +646,7 @@ function collapseHop(group: FlowState[]): JourneyHop {
     if (r.meta !== undefined) meta = r.meta;
     if (r.parentEventId !== undefined && parentEventId === undefined)
       parentEventId = r.parentEventId;
+    if (r.release !== undefined) release = r.release;
   }
 
   const terminalPhase = terminal.phase;
@@ -538,6 +694,7 @@ function collapseHop(group: FlowState[]): JourneyHop {
     ...(branches !== undefined ? { branches } : {}),
     ...(batched !== undefined ? { batched } : {}),
     ...(flushConfirmed !== undefined ? { flushConfirmed } : {}),
+    ...(release !== undefined ? { release } : {}),
     ...(meta !== undefined ? { meta } : {}),
   };
 }
@@ -672,12 +829,16 @@ interface AssembleContext {
   gaps: JourneyGap[];
 }
 
-/** Assemble one correlation group (already sorted) into a Journey. */
+/**
+ * Assemble one event group (already sorted) into a Journey. `entryPool` scopes
+ * `pickEntry` to the originating arm: with two arms on two machines, clock skew
+ * could otherwise pick the far arm's collector-in as the entry.
+ */
 function assembleJourney(
   id: string,
-  correlation: JourneyCorrelation,
   traceId: string | undefined,
   records: FlowState[],
+  entryPool: FlowState[],
   ctx: AssembleContext,
 ): Journey {
   const { topo } = ctx;
@@ -742,9 +903,9 @@ function assembleJourney(
 
   return {
     id,
-    correlation,
+    correlation: 'event',
     ...(traceId !== undefined ? { traceId } : {}),
-    entry: pickEntry(records),
+    entry: pickEntry(entryPool),
     hops: orderedHops,
     platforms,
     status,
@@ -756,8 +917,13 @@ function assembleJourney(
 }
 
 /**
- * Pure assembly of raw `FlowState` records into cross-runtime journeys. The
- * function is idempotent (duplicate records are deduped first) and
+ * Pure assembly of raw `FlowState` records into cross-runtime journeys, one per
+ * EVENT. Records group by their `eventId`; a `traceId` is run-scoped and covers
+ * every event of a page load or container run, so it is carried as the run
+ * handle rather than used to group. Records naming no event are excluded from
+ * grouping and reported in `unattributed` when they carried a run trace.
+ *
+ * The function is idempotent (duplicate records are deduped first) and
  * deterministic (output does not depend on input order; `options.now` supplies
  * the settle reference so tests never depend on the wall clock). It resolves
  * completeness (`pending`/`complete`/`partial`) against the settle window and,
@@ -782,41 +948,102 @@ export function assembleJourneys(
   };
 
   const deduped = dedupe(records);
-  const sorted = [...deduped].sort(compareRecords);
 
   // Gaps are detected over all records (flush frames carry `seq` too, so keep
   // them here to preserve the poster's monotonic run) before any grouping.
   ctx.gaps = detectGaps(deduped);
 
-  // Drop unusable traceless flush frames (empty eventId AND no traceId) so they
-  // never spawn a junk `event:` journey. A flush frame WITH a traceId still
-  // folds into its trace-matched journey; a traceless one carries nothing.
-  const groupable = sorted.filter((r) => !(r.eventId === '' && !r.traceId));
-
-  // Group into correlation groups: by traceId, else by eventId (legacy).
-  interface Group {
-    id: string;
-    correlation: JourneyCorrelation;
-    traceId?: string;
-    records: FlowState[];
+  // Resolve every record to its event. A record that names none joins no
+  // journey: attaching it would take an ordering or adjacency heuristic, and a
+  // record in the wrong journey is worse than one reported as unattributed. An
+  // adopted record continues as a copy carrying the resolved id, so every
+  // downstream reduction sees one coherent identity and none of them need to
+  // know adoption happened. The copy never mutates the caller's record.
+  interface Attributed {
+    record: FlowState;
+    eventId: string;
   }
-  const groups = new Map<string, Group>();
-  for (const r of groupable) {
-    const trace = r.traceId ? r.traceId : undefined;
-    const key = trace ? `trace${SEP}${trace}` : `event${SEP}${r.eventId}`;
+  const attributed: Attributed[] = [];
+  const unresolved: FlowState[] = [];
+  for (const record of deduped) {
+    const eventId = resolveEventId(record);
+    if (eventId === undefined) {
+      unresolved.push(record);
+      continue;
+    }
+    attributed.push({
+      record: eventId === record.eventId ? record : { ...record, eventId },
+      eventId,
+    });
+  }
+  attributed.sort((a, b) => compareRecords(a.record, b.record));
+  const known = new Set(attributed.map((a) => a.eventId));
+
+  // Join $flow crossing continuations. INVARIANT: `parentEventId` records ONE
+  // relation, the traceparent parent-span of the request an event arrived in
+  // (collector `source.ts` stamps it from `ingest._meta` alone), so merging on
+  // it merges a single logical event across a runtime boundary. It must never
+  // carry a sibling relation: collector fan-outs never stamp it, and when one
+  // inbound request decodes into several events they share one parent, which is
+  // a fan-out and not a continuation. Merging those would put several events'
+  // records under one `(platform, stepId)` hop and last-wins their payloads,
+  // which is the folding the event grain exists to remove. So a parent merges
+  // only with a single child; N children stay N journeys, still linked by the
+  // `parentEventId` their hops carry. Merging is therefore non-local: a second
+  // child arriving later splits a previously merged pair on the next assembly.
+  // Each output is correct for the records seen, and the parent keeps its id
+  // across the split.
+  const parentsOf = new Map<string, Set<string>>();
+  const childrenOf = new Map<string, Set<string>>();
+  for (const { record, eventId } of attributed) {
+    const parent = record.parentEventId;
+    // A parent naming no observed event has nothing to merge with; a
+    // self-reference is not a relation.
+    if (parent === undefined || parent === eventId || !known.has(parent))
+      continue;
+    const parents = parentsOf.get(eventId);
+    if (parents) parents.add(parent);
+    else parentsOf.set(eventId, new Set([parent]));
+    const children = childrenOf.get(parent);
+    if (children) children.add(eventId);
+    else childrenOf.set(parent, new Set([eventId]));
+  }
+
+  const merged = new Map<string, string>();
+  for (const [parent, children] of childrenOf) {
+    if (children.size !== 1) continue;
+    for (const child of children) uniteSets(merged, child, parent);
+  }
+
+  // One journey per set; a set of one is the ordinary single-event journey.
+  interface EventGroup {
+    entries: Attributed[];
+    eventIds: Set<string>;
+  }
+  const groups = new Map<string, EventGroup>();
+  for (const entry of attributed) {
+    const key = findSet(merged, entry.eventId);
     let group = groups.get(key);
     if (!group) {
-      group = trace
-        ? { id: trace, correlation: 'trace', traceId: trace, records: [] }
-        : { id: `event:${r.eventId}`, correlation: 'legacy', records: [] };
+      group = { entries: [], eventIds: new Set<string>() };
       groups.set(key, group);
     }
-    group.records.push(r);
+    group.entries.push(entry);
+    group.eventIds.add(entry.eventId);
   }
 
-  const journeys = [...groups.values()].map((g) =>
-    assembleJourney(g.id, g.correlation, g.traceId, g.records, ctx),
-  );
+  const journeys = [...groups.values()].map((group) => {
+    const origin = pickOrigin(group.eventIds, parentsOf);
+    const groupRecords = group.entries.map((e) => e.record);
+    const originRecords = group.entries
+      .filter((e) => e.eventId === origin)
+      .map((e) => e.record);
+    // The run handle is the originating arm's trace; a crossing's far arm runs
+    // its own. An old emitter can leave the origin arm trace-less, so the
+    // group's first trace stands in rather than dropping the handle entirely.
+    const traceId = firstTraceId(originRecords) ?? firstTraceId(groupRecords);
+    return assembleJourney(origin, traceId, groupRecords, originRecords, ctx);
+  });
 
   journeys.sort((a, b) => {
     if (a.firstTimestamp !== b.firstTimestamp)
@@ -824,5 +1051,11 @@ export function assembleJourneys(
     return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   });
 
-  return { journeys, gaps: ctx.gaps };
+  const unattributed = summarizeUnattributed(unresolved);
+
+  return {
+    journeys,
+    gaps: ctx.gaps,
+    ...(unattributed.length > 0 ? { unattributed } : {}),
+  };
 }

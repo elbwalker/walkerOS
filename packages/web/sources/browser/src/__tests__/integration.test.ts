@@ -1,5 +1,9 @@
 import { startFlow, Const } from '@walkeros/collector';
-import { createBrowserSource, flushChain } from './test-utils';
+import {
+  createBrowserSource,
+  destroyAllTestSources,
+  flushChain,
+} from './test-utils';
 import type { WalkerOS, Collector } from '@walkeros/core';
 
 describe('Browser Source Integration Tests', () => {
@@ -29,7 +33,10 @@ describe('Browser Source Integration Tests', () => {
     collector.push = mockPush;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // A source holds the layer and window.elb, and keeps its timers and
+    // observers running, until it is destroyed.
+    await destroyAllTestSources();
     document.body.innerHTML = '';
     window.elbLayer = undefined;
   });
@@ -70,10 +77,10 @@ describe('Browser Source Integration Tests', () => {
       // Initialize source with pageview enabled
       const source = await createBrowserSource(collector, { pageview: true });
 
-      // No pageview during init — waits for on('run')
+      // No pageview during init, it waits for on('run')
       expect(mockPush).not.toHaveBeenCalled();
 
-      // Trigger run — this is when pageview fires (same as startFlow → command('run'))
+      // Trigger run: this is when pageview fires (as startFlow does via command('run'))
       if (source.on) {
         await source.on('run', collector);
       }
@@ -273,7 +280,10 @@ describe('data-elbuser', () => {
     document.body.innerHTML = '';
     window.elbLayer = undefined;
   });
-  afterEach(() => {
+  afterEach(async () => {
+    // A source holds the layer and window.elb, and keeps its timers and
+    // observers running, until it is destroyed.
+    await destroyAllTestSources();
     document.body.innerHTML = '';
     window.elbLayer = undefined;
   });

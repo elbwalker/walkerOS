@@ -165,6 +165,20 @@ The browser source captures events from DOM using data attributes.
 See [packages/web/sources/browser/](../../packages/web/sources/browser/) for
 implementation.
 
+### Parallel sources
+
+Several browser sources can run on one page. Trigger, element, and visibility
+state is per source, and the DOM is shared: any number of sources may scan the
+same node, each emitting into its own pipeline. Only two resources are single
+slots, `window[elb]` and the named `elbLayer` array, and each belongs to the
+first source that takes it. A source refused one of them logs an error and keeps
+capturing without it. Give each parallel flow its own `elb` and `elbLayer` name,
+or `elb: false` and `elbLayer: false` for an embedded source with no page-window
+footprint.
+
+Full contract, recipes, and known limits:
+[Multiple sources on one page](../../website/docs/sources/web/browser/index.mdx).
+
 ## DataLayer Source
 
 Captures events from a GTM-style dataLayer array.

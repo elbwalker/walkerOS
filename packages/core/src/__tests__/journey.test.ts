@@ -86,8 +86,9 @@ describe('assembleJourneys — grouping and hops', () => {
     expect(journeys).toHaveLength(1);
 
     const journey = journeys[0];
-    expect(journey.id).toBe('T1');
-    expect(journey.correlation).toBe('trace');
+    // The journey is the event; the run trace rides along as the run handle.
+    expect(journey.id).toBe('E1');
+    expect(journey.correlation).toBe('event');
     expect(journey.traceId).toBe('T1');
     // Settled, no topology, every hop terminal (all 'out') -> complete.
     expect(journey.status).toBe('complete');
@@ -242,7 +243,7 @@ describe('assembleJourneys — grouping and hops', () => {
     expect(hops.map((h) => h.platform).sort()).toEqual(['server', 'web']);
   });
 
-  test("(d) legacy records without traceId: correlation 'legacy', id 'event:<id>'", () => {
+  test('(d) records without a traceId still assemble, keyed on their event id', () => {
     const legacy: FlowState[] = [
       rec({
         traceId: undefined,
@@ -275,8 +276,8 @@ describe('assembleJourneys — grouping and hops', () => {
     expect(journeys).toHaveLength(1);
 
     const journey = journeys[0];
-    expect(journey.correlation).toBe('legacy');
-    expect(journey.id).toBe('event:L1');
+    expect(journey.correlation).toBe('event');
+    expect(journey.id).toBe('L1');
     expect(journey.traceId).toBeUndefined();
     expect(journey.entry.eventId).toBe('L1');
     expect(journey.entry.name).toBe('order complete');
@@ -366,7 +367,7 @@ describe('assembleJourneys — grouping and hops', () => {
     ]);
   });
 
-  test('(g) two independent traceIds: two journeys, oldest first by firstTimestamp', () => {
+  test('(g) two independent events: two journeys, oldest first by firstTimestamp', () => {
     const older: FlowState[] = [
       rec({
         traceId: 'T_old',
@@ -410,7 +411,7 @@ describe('assembleJourneys — grouping and hops', () => {
 
     // Feed newest-first to prove the output is sorted, not input-ordered.
     const { journeys } = assembleJourneys([...newer, ...older]);
-    expect(journeys.map((j) => j.id)).toEqual(['T_old', 'T_new']);
+    expect(journeys.map((j) => j.id)).toEqual(['A1', 'B1']);
     expect(journeys[0].firstTimestamp).toBeLessThan(journeys[1].firstTimestamp);
   });
 
@@ -1142,8 +1143,8 @@ describe('assembleJourneys — topology frontier walk', () => {
       ...SETTLED,
       topology,
     });
-    const web = journeys.find((j) => j.id === 'T1');
-    const server = journeys.find((j) => j.id === 'TS3');
+    const web = journeys.find((j) => j.id === 'E1');
+    const server = journeys.find((j) => j.id === 'S3');
     // Web binds only the web root (server root not seeded) and vice versa.
     expect(web?.status).toBe('complete');
     expect(server?.status).toBe('complete');
@@ -1166,14 +1167,13 @@ describe('assembleJourneys — flush handling and batched terminal', () => {
         phase: 'out',
         elapsedMs: 2,
       }),
-      // Pre-wire batched destination: only a flush frame (empty eventId), no
-      // per-event in/out records yet. Trace matches, so it groups in.
+      // Pre-wire batched destination: only a flush frame, no per-event in/out
+      // records yet. The frame names its entry's event, so it groups in.
       rec({
         stepId: 'destination.gtag',
         stepType: 'destination',
         phase: 'flush',
         elapsedMs: 5,
-        eventId: '',
         batch: { size: 3, index: 0 },
       }),
     ];
@@ -1201,6 +1201,43 @@ describe('assembleJourneys — flush handling and batched terminal', () => {
     expect(withTopo.journeys[0].status).toBe('partial');
   });
 
+  test('an anonymous flush frame confirms nothing and is reported instead', () => {
+    // A deployed bundle emits one flush frame per flush, covering N entries and
+    // naming none. It cannot be attributed to an event, so it neither confirms
+    // the batch nor spawns a journey; the loss is surfaced, not swallowed.
+    const records: FlowState[] = [
+      rec({
+        stepId: 'destination.gtag',
+        stepType: 'destination',
+        phase: 'out',
+        elapsedMs: 3,
+        batch: { size: 2, index: 0 },
+      }),
+      rec({
+        stepId: 'destination.gtag',
+        stepType: 'destination',
+        phase: 'flush',
+        elapsedMs: 10,
+        eventId: '',
+        batch: { size: 2, index: 0 },
+      }),
+    ];
+
+    const { journeys, unattributed } = assembleJourneys(records, SETTLED);
+    const hop = journeys[0].hops[0];
+    expect(hop.batched).toBe(true);
+    expect(hop.flushConfirmed).toBeUndefined();
+    expect(unattributed).toEqual([
+      {
+        platform: 'web',
+        count: 1,
+        fromMs: BASE + 10,
+        toMs: BASE + 10,
+        stepIds: ['destination.gtag'],
+      },
+    ]);
+  });
+
   test('a batched out with a matching flush frame folds in as confirmation', () => {
     const records: FlowState[] = [
       rec({
@@ -1216,13 +1253,12 @@ describe('assembleJourneys — flush handling and batched terminal', () => {
         elapsedMs: 3,
         batch: { size: 2, index: 0 },
       }),
-      // Flush frame for the same step, empty eventId, matching trace.
+      // Flush frame for the same step and the same entry's event.
       rec({
         stepId: 'destination.gtag',
         stepType: 'destination',
         phase: 'flush',
         elapsedMs: 10,
-        eventId: '',
         batch: { size: 2, index: 0 },
       }),
     ];
@@ -1232,8 +1268,9 @@ describe('assembleJourneys — flush handling and batched terminal', () => {
     expect(hop.batched).toBe(true);
     expect(hop.flushConfirmed).toBe(true);
     expect(hop.status).toBe('done');
-    // The flush frame's empty eventId did not become the hop identity.
     expect(hop.eventId).toBe('E1');
+    // The flush frame is excluded from field harvest but still anchors
+    // startedAtMs, so the hop starts at its in record.
     expect(hop.startedAtMs).toBe(1);
   });
 
@@ -1276,7 +1313,7 @@ describe('assembleJourneys — flush handling and batched terminal', () => {
     expect(inHop.batched).toBeUndefined();
   });
 
-  test('a traceless flush frame with empty eventId is dropped, spawning no journey', () => {
+  test('a traceless flush frame with empty eventId is dropped and never counted', () => {
     const records: FlowState[] = [
       rec({
         stepId: 'collector.push',
@@ -1301,10 +1338,12 @@ describe('assembleJourneys — flush handling and batched terminal', () => {
       }),
     ];
 
-    const { journeys } = assembleJourneys(records, SETTLED);
+    const { journeys, unattributed } = assembleJourneys(records, SETTLED);
     expect(journeys).toHaveLength(1);
-    expect(journeys[0].id).toBe('T1');
-    expect(journeys.some((j) => j.id === 'event:')).toBe(false);
+    expect(journeys[0].id).toBe('E1');
+    // No traceId means the record belonged to no event run, so it is excluded
+    // by design rather than reported as lost information.
+    expect(unattributed).toBeUndefined();
   });
 });
 
@@ -1511,8 +1550,8 @@ describe('assembleJourneys — gap detection and lossy', () => {
     expect(gaps).toHaveLength(1);
     expect(gaps[0].platform).toBe('server');
 
-    const web = journeys.find((j) => j.id === 'TW');
-    const server = journeys.find((j) => j.id === 'TS');
+    const web = journeys.find((j) => j.id === 'W1');
+    const server = journeys.find((j) => j.id === 'S1');
     expect(server?.lossy).toBe(true);
     expect(web?.lossy).toBe(false); // web does not touch the server gap
   });
@@ -1639,5 +1678,29 @@ describe('assembleJourneys — entry and structural edge cases', () => {
     const { journeys } = assembleJourneys(records, SETTLED);
     expect(journeys).toHaveLength(1);
     expect([...journeys[0].platforms].sort()).toEqual(['server', 'web']);
+  });
+});
+
+describe('assembleJourneys - release provenance', () => {
+  test('a hop carries the release its records were stamped with', () => {
+    const records = [
+      rec({
+        phase: 'in',
+        elapsedMs: 0,
+        release: '14',
+        inEvent: { name: 'page view' },
+      }),
+      rec({ phase: 'out', elapsedMs: 5, release: '14' }),
+    ];
+
+    const { journeys } = assembleJourneys(records, SETTLED);
+
+    expect(journeys[0].hops[0].release).toBe('14');
+  });
+
+  test('a hop whose records carry no release has no release field', () => {
+    const { journeys } = assembleJourneys([rec({ phase: 'in' })], SETTLED);
+
+    expect(journeys[0].hops[0].release).toBeUndefined();
   });
 });

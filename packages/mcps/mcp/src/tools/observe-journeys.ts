@@ -149,13 +149,19 @@ async function observeJourneysHandlerBody(client: ToolClient, input: unknown) {
     // calls/meta + entry.name) in <user_data> for third-party LLM context, while
     // keeping every correlation handle (traceId/stepId/eventId/mappingKey) and
     // enum/number literal so the agent can feed them straight back as filter
-    // input. gaps are numeric + platform enum only, so they pass through.
+    // input. gaps are numeric + platform enum only, so they pass through, and
+    // so does unattributed: platform enum, numbers, and stepIds from the user's
+    // own config, with no captured event payload to wrap. Absent stays absent,
+    // since "no loss to report" reads differently from an empty array.
     const safe = {
       sessionId: result.sessionId,
       flowId: result.flowId,
       assembledAt: result.assembledAt,
       journeys: redactJourneyPayloads(result.journeys),
       gaps: result.gaps,
+      ...(result.unattributed !== undefined && {
+        unattributed: result.unattributed,
+      }),
     };
     return mcpResult(safe, {
       next:

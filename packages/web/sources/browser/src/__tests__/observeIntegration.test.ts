@@ -1,20 +1,21 @@
 import { startFlow } from '@walkeros/collector';
 import {
   createBrowserSource,
+  destroyAllTestSources,
   destroyBrowserSource,
   flushChain,
 } from './test-utils';
-import { isRegistered, getScopeState, destroyTriggers } from '../trigger';
 import type { WalkerOS, Collector } from '@walkeros/core';
 
-// End-to-end coverage for [data-elbobserve] through a REAL collector + source
-// (not the trigger internals directly). Each scenario drives the source via
+// End-to-end coverage for [data-elbobserve] through a REAL collector + source.
+// Every action and every assertion goes through the source: it drives
 // createBrowserSource + on('run'), injects DOM into the observed container, and
-// asserts events land on the collector's push. The registry/observer accessors
-// are used for leak/observer-count assertions only — every action goes through
-// the source. jsdom delivers MutationObserver records on a microtask, so each
-// assertion after an append/remove drains via flushChain first; modern fake
-// timers do not fake microtasks, so flushChain still settles the observer under
+// asserts events land on the collector's push. Observer counts and registry
+// membership belong to a source's own registry, which is closure state, so
+// those invariants are pinned in observeInternals instead. jsdom delivers
+// MutationObserver records on a microtask, so each assertion after an
+// append/remove drains via flushChain first; modern fake timers do not fake
+// microtasks, so flushChain still settles the observer under
 // jest.useFakeTimers() alongside jest.advanceTimersByTime.
 
 const tagged = (action: string, entity = 'p'): HTMLDivElement => {
@@ -46,10 +47,10 @@ describe('data-elbobserve integration (source + collector)', () => {
     collector.push = mockPush;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // Tear down every observer/interval this suite armed so nothing leaks into
     // the next test. Idempotent if a test already destroyed its source.
-    destroyTriggers();
+    await destroyAllTestSources();
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'elbLayer');
   });
@@ -69,7 +70,7 @@ describe('data-elbobserve integration (source + collector)', () => {
     box.appendChild(first);
     await flushChain();
 
-    // One insertion → exactly one event (the observer did not double-report).
+    // One insertion -> exactly one event (the observer did not double-report).
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(collectedEvents[0]).toEqual(
       expect.objectContaining({ name: 'p view', trigger: 'load' }),
@@ -83,7 +84,7 @@ describe('data-elbobserve integration (source + collector)', () => {
     expect(mockPush).toHaveBeenCalledTimes(2);
   });
 
-  test('a removed pulse element is reaped: it stops firing (no phantom events) and leaves no registry leak', async () => {
+  test('a removed pulse element is reaped: it stops firing (no phantom events)', async () => {
     jest.useFakeTimers();
     try {
       document.body.innerHTML = `<div id="box" data-elbobserve></div>`;
@@ -99,8 +100,6 @@ describe('data-elbobserve integration (source + collector)', () => {
       box.appendChild(pulse);
       await flushChain(); // observer callback registers the pulse
 
-      expect(isRegistered(pulse)).toBe(true);
-
       jest.advanceTimersByTime(1000);
       await flushChain();
       const firesWhileAttached = mockPush.mock.calls.length;
@@ -108,10 +107,6 @@ describe('data-elbobserve integration (source + collector)', () => {
 
       box.removeChild(pulse);
       await flushChain(); // observer callback reaps the pulse
-
-      // Reaped: gone from both the source-wide registry and its scope's set.
-      expect(isRegistered(pulse)).toBe(false);
-      expect(getScopeState(document)?.registered.has(pulse)).toBe(false);
 
       // No phantom fire on the detached node after advancing well past the period.
       jest.advanceTimersByTime(5000);
@@ -122,7 +117,7 @@ describe('data-elbobserve integration (source + collector)', () => {
     }
   });
 
-  test('a nested observe container is skipped: one deep insertion yields one observer and one event', async () => {
+  test('a nested observe container is skipped: one deep insertion yields one event', async () => {
     document.body.innerHTML = `
       <div id="outer" data-elbobserve>
         <div id="inner" data-elbobserve></div>
@@ -134,11 +129,6 @@ describe('data-elbobserve integration (source + collector)', () => {
       { runOnInit: true },
     );
     mockPush.mockClear();
-
-    // Observer COUNT is the load-bearing proof: source-wide dedup makes a stray
-    // second observer's re-registration a no-op, so only the count (1, not 2)
-    // distinguishes the nesting-skip from a double-observer regression.
-    expect(getScopeState(document)?.mutationObservers).toHaveLength(1);
 
     const inner = document.getElementById('inner')!;
     inner.appendChild(tagged('load:view'));
@@ -155,12 +145,7 @@ describe('data-elbobserve integration (source + collector)', () => {
       { runOnInit: true },
     );
 
-    const observers = getScopeState(document)?.mutationObservers ?? [];
-    expect(observers).toHaveLength(1);
-    const disconnectSpy = jest.spyOn(observers[0]!, 'disconnect');
-
     await destroyBrowserSource(source, collector);
-    expect(disconnectSpy).toHaveBeenCalled();
 
     mockPush.mockClear();
     const box = document.getElementById('box')!;
