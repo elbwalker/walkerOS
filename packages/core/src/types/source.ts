@@ -15,8 +15,12 @@ import type { Route } from './transformer';
 /**
  * Base Env interface for dependency injection into sources.
  *
- * Sources receive all their dependencies through this environment object,
- * making them platform-agnostic and easily testable.
+ * `env` is the author's dependency bag: platform and vendor dependencies are
+ * injected here, making sources platform-agnostic. The five capabilities the
+ * collector provides (`push`, `command`, `sources`, `elb`, `logger`) are
+ * runtime-owned and applied last, so author values for them are ignored. To
+ * mock the collector boundary in a test, call the factory directly with a
+ * hand-built `Context`, or declare `InitSource.terminus`.
  */
 export interface BaseEnv {
   [key: string]: unknown;
@@ -260,6 +264,21 @@ export type InitSource<T extends TypesGeneric = Types> = {
   primary?: boolean;
   next?: Route;
   before?: Route;
+  /**
+   * Replace the collector at the END of this source's pipeline.
+   *
+   * A terminus receives the event exactly as the source emitted it and the
+   * entire pipeline is skipped: no `before`/`next` chains, no source `cache`,
+   * no `state`, no `mapping`, no minted span id, no per-source ingest, no
+   * `respond`, no `status.sources` counting and no observability records.
+   *
+   * This is a TOTAL bypass, deliberately, so there is one thing to know rather
+   * than a list of exceptions. It exists for deterministic capture at the
+   * source→collector boundary (step examples, dev tooling). Production flows
+   * leave it unset. Runtime-only: stored-flow validation rejects unknown
+   * source keys, so a persisted flow cannot carry it.
+   */
+  terminus?: Collector.PushFn;
   cache?: import('./cache').Cache;
   state?: import('./state').State | import('./state').State[];
 };

@@ -10,7 +10,7 @@ import {
 import { sourcePubSubPull } from '../index';
 import * as examples from '../examples';
 import { createIngest, createMockContext } from '@walkeros/core';
-import type { Elb, Ingest, Source } from '@walkeros/core';
+import type { Collector, Elb, Ingest, Source } from '@walkeros/core';
 import type { Settings, SyntheticMessage, Types } from '../types';
 import { push as pushEnv } from '../examples/env';
 import { createTrigger } from '../examples/trigger';
@@ -24,6 +24,8 @@ interface StepShape {
   };
   out: Array<[string, ...unknown[]]>;
 }
+
+const terminusOk: Collector.PushFn = async () => ({ ok: true });
 
 function isStepShape(value: unknown): value is StepShape {
   if (typeof value !== 'object' || value === null) return false;
@@ -270,11 +272,16 @@ describe('Pub/Sub pull source', () => {
       };
 
       const { trigger } = await createTrigger({
+        // The malformed-payload examples log a decode failure through the
+        // collector logger; swallow it, the artifacts assert via ack/nack.
+        logger: { level: 'ERROR', handler: () => undefined },
         sources: {
           pubsub: {
             code: sourcePubSubPull,
             config: { settings },
-            env: pushEnv,
+            // Boundary capture: ack/nack is decided by what the source hands
+            // the collector, so the pipeline must not run.
+            terminus: terminusOk,
           },
         },
       });

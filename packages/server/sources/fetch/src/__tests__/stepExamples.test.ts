@@ -1,4 +1,4 @@
-import type { Collector, Elb, Logger } from '@walkeros/core';
+import type { Collector } from '@walkeros/core';
 import { sourceFetch } from '../index';
 import { examples } from '../dev';
 import type { Content } from '../examples/trigger';
@@ -11,30 +11,11 @@ describe('Step Examples', () => {
     instance = undefined;
   });
 
-  const noopFn = () => {};
-  const noopLogger: Logger.Instance = {
-    error: noopFn,
-    warn: noopFn,
-    info: noopFn,
-    debug: noopFn,
-    throw: (message: string | Error) => {
-      throw typeof message === 'string' ? new Error(message) : message;
-    },
-    json: noopFn,
-    scope: () => noopLogger,
-  };
-
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
     const content = example.in as Content;
 
     const mockPush: jest.Mock = jest.fn(
       async () => ({ ok: true }) as Awaited<ReturnType<Collector.PushFn>>,
-    );
-    const mockCommand: jest.Mock = jest.fn(
-      async () => ({ ok: true }) as Awaited<ReturnType<Elb.Fn>>,
-    );
-    const mockElb: jest.Mock = jest.fn(
-      async () => ({ ok: true }) as Awaited<ReturnType<Elb.Fn>>,
     );
 
     instance = await examples.createTrigger({
@@ -43,12 +24,9 @@ describe('Step Examples', () => {
         fetch: {
           code: sourceFetch,
           config: { settings: {} },
-          env: {
-            push: mockPush as unknown as Collector.PushFn,
-            command: mockCommand as unknown as Collector.CommandFn,
-            elb: mockElb as unknown as Elb.Fn,
-            logger: noopLogger,
-          },
+          // Boundary capture: the recorded artifact is the raw event this
+          // source hands the collector, so the pipeline must not run.
+          terminus: mockPush as unknown as Collector.PushFn,
         },
       },
     });

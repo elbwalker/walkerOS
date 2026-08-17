@@ -273,7 +273,7 @@ describe('event span identity', () => {
     );
   });
 
-  test('a user env.push override receives the raw event: no id mint', async () => {
+  test('a terminus receives the raw event: no id mint', async () => {
     const pushed: WalkerOS.DeepPartialEvent[] = [];
     const spyPush: Collector.PushFn = async (event) => {
       pushed.push(event);
@@ -289,14 +289,14 @@ describe('event span identity', () => {
             config: context.config as Source.Config<TestSourceTypes>,
             push: context.env.push,
           }),
-          env: { push: spyPush },
+          terminus: spyPush,
         },
       },
     });
 
     await collector.sources.web.push({ name: 'promotion start', data: {} });
 
-    // The override replaces the collector and owns its own pipeline, so it
+    // A terminus replaces the collector and owns its own pipeline, so it
     // receives the event exactly as the caller wrote it. Step-example
     // artifacts depend on this: a minted id would make them non-deterministic.
     expect(pushed).toEqual([{ name: 'promotion start', data: {} }]);

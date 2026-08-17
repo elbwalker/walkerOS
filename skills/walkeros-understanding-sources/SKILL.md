@@ -310,6 +310,14 @@ fields become silently dead: accepted, never executed.
 Commands must keep using `env.elb`. `env.push` takes `WalkerOS.DeepPartialEvent`
 only, so a command string has no meaning there.
 
+Both exits, plus `env.command`, `env.logger` and `env.sources`, are
+runtime-owned: the collector writes these five capabilities into the env LAST,
+so an author value for any of them is ignored, uniformly. `env` stays the
+author's bag for platform and vendor dependencies only. To end the pipeline
+somewhere else, declare `terminus` on the source registration (a sibling of
+`code`); it is explicit and TOTAL, and stored flow configs cannot carry it
+(validation rejects unknown source keys).
+
 ```typescript
 // Event → pipeline
 await env.push({ name: 'page view', data: { title } });
@@ -324,10 +332,14 @@ sources threading a per-request scope via `context.withScope`.
 
 Two consequences worth knowing when testing a source:
 
-- The pipeline captures its terminus (`collector.push`) **when the source is
-  constructed**. Replacing `collector.push` after `startFlow` resolves is
-  invisible to pipeline pushes, so assert on a spy **destination** instead of a
-  `collector.push` mock.
+- The pipeline's end is captured **when the source is constructed**. Replacing
+  `collector.push` after `startFlow` resolves is invisible to pipeline pushes,
+  so assert on a spy **destination** instead of a `collector.push` mock. For a
+  deterministic raw capture at the source→collector boundary, declare `terminus`
+  on the registration: it receives the event exactly as the source emitted it,
+  and the ENTIRE pipeline is skipped (no `before`/`next` chains, no `cache`, no
+  `state`, no `mapping`, no minted span id, no ingest, no `respond`, no
+  `status.sources` counting, no Observe records).
 - A `next`/`before` chain adds `await` hops between the emit and delivery. For a
   fire-and-forget emit, settle microtasks before asserting.
 

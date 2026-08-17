@@ -161,6 +161,7 @@ export async function initSource(
     next,
     before,
     cache,
+    terminus,
   } = sourceDefinition;
 
   // Compile declarative state entries once. For a source, all state entries
@@ -196,15 +197,10 @@ export async function initSource(
     ? walkChain(before, extractTransformerNextMap(collector.transformers))
     : undefined;
 
-  // Terminal push: where the source pipeline ends. Defaults to
-  // `collector.push`. Tests (and rare advanced consumers) may override by
-  // passing `push` in the source's `env`; in that case the override
-  // replaces the collector and receives the raw event with no pipeline
-  // options. Per-scope ingest/respond is invisible to overriders by
-  // design: overriders are responsible for their own pipeline shape.
-  const userTerminalPush = (env as { push?: Collector.PushFn }).push;
-  const terminalPush: Collector.PushFn = userTerminalPush ?? collector.push;
-  const hasUserTerminalPush = Boolean(userTerminalPush);
+  // The pipeline's end. `terminus` replaces the collector entirely; see the
+  // field's doc on Source.InitSource for the full (total) semantics.
+  const terminalPush: Collector.PushFn = terminus ?? collector.push;
+  const hasTerminus = Boolean(terminus);
 
   /**
    * Execute the source pipeline for a single push call. Operates ONLY on
@@ -221,6 +217,11 @@ export async function initSource(
     options: Collector.PushOptions,
     scope: { ingest: Ingest; respond: RespondFn | undefined },
   ): Promise<Elb.PushResult> => {
+    // Total bypass: the terminus owns the pipeline and receives the raw event.
+    // One early return instead of a per-stage conditional, so "bypass" cannot
+    // drift into "bypass some stages".
+    if (hasTerminus) return terminalPush(rawEvent);
+
     let pendingRespond: Promise<void> | undefined;
 
     // Mint the event's span id HERE when absent, so the source.before chain's
@@ -228,12 +229,8 @@ export async function initSource(
     // of the same event; minting only at the collector wrap would leave every
     // before-chain record anonymous. The wrap then finds `id` set and keeps
     // it, as does `createEvent` (handle.ts): one span per event, end to end.
-    // A user terminal push replaces the collector entirely and receives the
-    // raw event by contract (the same guard governs `stateEntries` below), so
-    // leave that event untouched.
     const identified =
-      hasUserTerminalPush ||
-      (typeof rawEvent.id === 'string' && rawEvent.id !== '')
+      typeof rawEvent.id === 'string' && rawEvent.id !== ''
         ? rawEvent
         : { ...rawEvent, id: getSpanId() };
 
@@ -455,9 +452,7 @@ export async function initSource(
 
     // Apply declarative state per event before handing off to the collector.
     // Entries run sequentially in array order at this single pipeline point.
-    // A user `env.push` override receives the raw event with no pipeline
-    // (see the terminal-push contract above), so state is skipped for it.
-    if (!hasUserTerminalPush && stateEntries && stateEntries.length > 0) {
+    if (stateEntries && stateEntries.length > 0) {
       events = await Promise.all(
         events.map((event) =>
           applyState(
@@ -484,16 +479,14 @@ export async function initSource(
           dispatch.branches.map((branchChain, idx) =>
             tryCatchAsync(
               async () =>
-                hasUserTerminalPush
-                  ? terminalPush(event)
-                  : terminalPush(event, {
-                      ...options,
-                      id: sourceId,
-                      ingest: cloneIngest(scope.ingest, `${sourceId}.${idx}`),
-                      respond: undefined,
-                      mapping: config,
-                      preChain: branchChain,
-                    }),
+                terminalPush(event, {
+                  ...options,
+                  id: sourceId,
+                  ingest: cloneIngest(scope.ingest, `${sourceId}.${idx}`),
+                  respond: undefined,
+                  mapping: config,
+                  preChain: branchChain,
+                }),
               (err) => {
                 collector.logger
                   .scope('source:many')
@@ -505,10 +498,6 @@ export async function initSource(
         );
         // `many` is fan-out, not enrichment — surface a generic OK.
         pushResult = { ok: true } as Elb.PushResult;
-      } else if (hasUserTerminalPush) {
-        // User override: bypass the pipeline, deliver raw events. This
-        // preserves the `env.push: mockPush` test spy pattern.
-        pushResult = await terminalPush(event);
       } else {
         pushResult = await terminalPush(event, {
           ...options,
@@ -577,17 +566,18 @@ export async function initSource(
   // Create initial logger scoped to sourceId (type will be added after init)
   const initialLogger = collector.logger.scope('source').scope(sourceId);
 
-  // Build cleanEnv. User-supplied env can override every field; we
-  // immediately overwrite `push` with the source-pipeline `wrappedPush`.
-  // Any user-supplied `env.push` was captured above as `terminalPush`
-  // (the pipeline's terminus, not the source's outward-facing push).
+  // `env` is the source's dependency bag: the author owns it. The five
+  // capabilities the collector provides are applied LAST so they always win,
+  // uniformly. Writing one of them in `env` is therefore inert rather than
+  // partially effective; to end the pipeline somewhere else, use
+  // `InitSource.terminus`, which says so explicitly.
   const cleanEnv: Source.Env = {
+    ...env,
+    push: wrappedPush,
     command: collector.command,
     sources: collector.sources,
     elb: collector.elb,
     logger: initialLogger,
-    ...env,
-    push: wrappedPush,
   };
 
   /**
