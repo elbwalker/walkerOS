@@ -162,9 +162,10 @@ produces the GA4 `add_to_cart` event:
 
 A parameter name carrying a character GA4 does not accept, a hyphen most
 commonly, is discarded on ingestion without an error. The destination therefore
-rewrites those characters to underscores before sending, so a tagged
-`creative-type` arrives as `data_creative_type` rather than going missing. Case
-is left alone, since GA4 treats parameter names case-sensitively.
+rewrites those characters to underscores before sending. Tagging `creative-type`
+under `include: ['data']` produces the parameter `data_creative-type`, which is
+sent as `data_creative_type` rather than going missing. Case is left alone, since
+GA4 treats parameter names case-sensitively.
 
 Event names are never rewritten this way. `snakeCase` lowercases the event name
 and replaces its spaces with underscores; set it to `false` and the name is sent

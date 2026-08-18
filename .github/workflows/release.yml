@@ -66,6 +66,12 @@ jobs:
         with:
           node-version: '24.15.0'
           registry-url: 'https://registry.npmjs.org'
+          # `package-manager-cache` defaults to true and activates on this repo,
+          # since the root package.json declares `packageManager: npm`. This job
+          # holds npm publish rights, so restoring a dependency cache that a
+          # lower-privileged workflow can write is a supply-chain path into the
+          # release. Install cold instead; correctness beats the cache here.
+          package-manager-cache: false
 
       - name: Install dependencies
         run: npm ci
