@@ -85,6 +85,12 @@ Identity is resolved automatically from each event: `email` defaults to `user.em
 
 Map a mapping rule's `settings.value` to a numeric value. The destination sets it as the Klaviyo event's `value` attribute -- the field revenue reporting reads -- and when `settings.currency` is also set, adds `valueCurrency` alongside it.
 
+## Deduplication
+
+Map a mapping rule's `settings.uniqueId` to a stable identifier and Klaviyo keeps only the first event carrying that value for a given profile and metric. Use it whenever the same event can reach Klaviyo more than once -- browser tracking alongside this destination, a CSV or backfill import, or a retried delivery.
+
+Without it Klaviyo falls back to the event time truncated to the second, which admits only one event per profile per metric per second. Numeric ids are coerced to strings, so an order id like `data.id` works whether it is `'ORD-123'` or `90210`.
+
 ## Ecommerce metric naming
 
 Klaviyo's built-in flows and reports key off specific metric names. Use `mapping.name` to rename walkerOS events to Klaviyo's expected values:

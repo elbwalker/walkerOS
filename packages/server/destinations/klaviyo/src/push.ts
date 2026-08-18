@@ -5,7 +5,13 @@ import type {
   KlaviyoEventsApiMock,
   KlaviyoProfilesApiMock,
 } from './types';
-import { getMappingValue, isObject, isString, isArray } from '@walkeros/core';
+import {
+  getMappingValue,
+  isObject,
+  isString,
+  isArray,
+  isNumber,
+} from '@walkeros/core';
 
 export const push: PushFn = async function (
   event,
@@ -110,6 +116,17 @@ export const push: PushFn = async function (
       }
     }
 
+    // Klaviyo's dedup key. Repeats of the same uniqueId for one profile and
+    // metric keep only the first event, which is what lets the same order
+    // arrive from several producers (browser, import, a second server)
+    // without being counted twice.
+    let uniqueId: string | undefined;
+    if (mappingSettings.uniqueId !== undefined) {
+      uniqueId = resolveId(
+        await getMappingValue(event, mappingSettings.uniqueId, { collector }),
+      );
+    }
+
     const eventBody: Record<string, unknown> = {
       data: {
         type: 'event',
@@ -130,6 +147,7 @@ export const push: PushFn = async function (
           time: timestamp.toISOString(),
           ...(value !== undefined ? { value } : {}),
           ...(valueCurrency ? { valueCurrency } : {}),
+          ...(uniqueId ? { uniqueId } : {}),
         },
       },
     };
@@ -143,6 +161,17 @@ export const push: PushFn = async function (
 function resolveString(value: unknown): string | undefined {
   if (isString(value) && value.length > 0) return value;
   return undefined;
+}
+
+/**
+ * Resolve an identifier that Klaviyo types as a string. Order ids are commonly
+ * numeric, and dropping one would silently return Klaviyo to its
+ * time-to-the-second dedup fallback, so coerce finite numbers rather than
+ * rejecting them.
+ */
+function resolveId(value: unknown): string | undefined {
+  if (isNumber(value) && Number.isFinite(value)) return String(value);
+  return resolveString(value);
 }
 
 function toNumber(value: unknown): number | undefined {
