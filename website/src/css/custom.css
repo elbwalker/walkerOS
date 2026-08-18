@@ -6,6 +6,8 @@
 
 @import 'tailwindcss';
 @import '@walkeros/explorer/styles.css';
+/* Open Air site tokens (--oa-*). Ground, ink and accent for the whole site. */
+@import '@walkeros/explorer/tokens.css';
 
 /* DaisyUI plugin configuration */
 @plugin "daisyui" {
@@ -32,32 +34,39 @@
   --color-elbwalker-800: #00283a;
   --color-elbwalker-900: #000203;
 
-  /* Gray scale */
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
+  /* Neutral ramp, warm, per the Open Air design language.
+     Warm greys against the cool cyan is the tension the language rests on; a
+     cool ramp turns the site into a generic light SaaS page. Anchored to the
+     Open Air tokens: 100 = --oa-ground, 600 = --oa-ink-2, 900 = --oa-ink. */
+  --color-gray-50: #fbfaf9;
+  --color-gray-100: #f6f4f1;
+  --color-gray-200: #eae7e2;
+  --color-gray-300: #d8d4ce;
+  --color-gray-400: #a9a49d;
+  --color-gray-500: #7c7770;
+  --color-gray-600: #5f5c58;
+  --color-gray-700: #46433f;
+  --color-gray-800: #2e2c29;
+  --color-gray-900: #22252a;
 
-  /* DaisyUI semantic colors */
-  --color-primary: var(--color-elbwalker);
-  --color-primary-content: var(--color-gray-50);
-  --color-secondary: var(--color-gray-600);
-  --color-secondary-content: var(--color-gray-50);
-  --color-base-100: var(--color-gray-100);
-  --color-base-200: var(--color-gray-200);
-  --color-base-300: var(--color-gray-300);
-  --color-base-content: var(--color-gray-900);
+  /* DaisyUI semantic colors, derived from the Open Air tokens so both themes
+     flip from one source instead of being maintained twice. */
+  --color-primary: var(--oa-signal);
+  /* Text on the brand blue. White is 2.4:1 and fails; --oa-on-signal is 6.8:1. */
+  --color-primary-content: var(--oa-on-signal);
+  --color-secondary: var(--oa-ink-2);
+  --color-secondary-content: var(--oa-surface);
+  --color-base-100: var(--oa-ground);
+  --color-base-200: var(--oa-surface-2);
+  --color-base-300: var(--oa-rule);
+  --color-base-content: var(--oa-ink);
 
   /* Infima integration */
-  --ifm-background-color: var(--color-base-100);
-  --ifm-background-surface-color: var(--color-base-100);
-  --ifm-color-primary: var(--color-primary);
+  --ifm-background-color: var(--oa-ground);
+  --ifm-background-surface-color: var(--oa-surface);
+  --ifm-font-family-base: var(--oa-sans);
+  /* Link and heading colour is the blue-as-text token, never --oa-signal. */
+  --ifm-color-primary: var(--oa-signal-ink);
   --ifm-color-primary-dark: var(--color-elbwalker-700);
   --ifm-color-primary-darker: var(--color-elbwalker-800);
   --ifm-color-primary-darkest: var(--color-elbwalker-900);
@@ -66,72 +75,34 @@
   --ifm-color-primary-lightest: var(--color-elbwalker-100);
   --ifm-h1-font-size: 3rem;
   --ifm-h2-font-size: 2rem;
-  --ifm-link-color: var(--color-elbwalker);
+  --ifm-link-color: var(--oa-signal-ink);
   --ifm-link-hover-decoration: none;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 
   /* Code editor theme (light mode) */
-  --code-editor-bg: #ffffff;
-  --code-editor-header-bg: rgba(243, 244, 246, 0.4);
-  --code-editor-tab-active-bg: rgba(243, 244, 246, 0.5);
+  --code-editor-bg: var(--oa-surface);
+  --code-editor-header-bg: rgba(234, 231, 226, 0.4);
+  --code-editor-tab-active-bg: rgba(234, 231, 226, 0.5);
   --code-editor-text: var(--color-gray-700);
   --code-editor-text-muted: var(--color-gray-400);
 }
 
 html[data-theme='dark'] {
-  --color-primary: var(--color-elbwalker);
-  --color-primary-content: var(--color-gray-50);
-  --color-secondary: var(--color-gray-700);
-  --color-secondary-content: var(--color-gray-50);
-  --color-base-100: var(--color-gray-900);
-  --color-base-200: var(--color-gray-800);
-  --color-base-300: var(--color-gray-700);
-  --color-base-content: var(--color-gray-50);
-  --ifm-background-color: var(--color-base-100);
-  --search-local-modal-background: var(--color-gray-900);
-  --search-local-hit-background: var(--color-gray-800);
-  --search-local-hit-color: var(--color-gray-50);
+  /* The semantic colours above are derived from --oa-* tokens, which flip
+     under this same attribute, so they are not redefined here. Only values
+     that are genuinely dark-specific belong in this block. */
+  --search-local-modal-background: var(--oa-ground);
+  --search-local-hit-background: var(--oa-surface);
+  --search-local-hit-color: var(--oa-ink);
   --ifm-navbar-search-input-icon: url('data:image/svg+xml;utf8,<svg fill="%2301b5e2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" height="16px" width="16px"><path d="M6.02945,10.20327a4.17382,4.17382,0,1,1,4.17382-4.17382A4.15609,4.15609,0,0,1,6.02945,10.20327Zm9.69195,4.2199L10.8989,9.59979A5.88021,5.88021,0,0,0,12.058,6.02856,6.00467,6.00467,0,1,0,9.59979,10.8989l4.82338,4.82338a.89729.89729,0,0,0,1.29912,0,.89749.89749,0,0,0-.00087-1.29909Z" /></svg>');
-  --ifm-background-surface-color: var(--color-base-100);
 
   /* Code editor theme (dark mode) */
-  --code-editor-bg: #111827;
-  --code-editor-header-bg: rgba(55, 65, 81, 0.4);
+  --code-editor-bg: var(--oa-surface);
+  --code-editor-header-bg: rgba(255, 255, 255, 0.04);
   --code-editor-tab-active-bg: rgba(255, 255, 255, 0.05);
-  --code-editor-text: #d1d5db;
-  --code-editor-text-muted: #9ca3af;
-}
-
-/* Explorer Component Theme Integration */
-:root {
-  /* Light theme explorer variables */
-  --explorer-bg-primary: transparent;
-  --explorer-bg-primary-opaque: #ffffff;
-  --explorer-bg-secondary: rgba(248, 250, 252, 0.9);
-  --explorer-bg-tertiary: rgba(241, 245, 249, 0.95);
-  --explorer-text-primary: var(--color-base-content, #1f2937);
-  --explorer-text-secondary: #6b7280;
-  --explorer-text-muted: #9ca3af;
-  --explorer-border-primary: #e5e7eb;
-  --explorer-border-secondary: #d1d5db;
-  --explorer-interactive-primary: var(--color-primary, #3b82f6);
-  --explorer-interactive-hover: rgba(59, 130, 246, 0.1);
-}
-
-html[data-theme='dark'] {
-  /* Dark theme explorer variables */
-  --explorer-bg-primary: transparent;
-  --explorer-bg-primary-opaque: #1f2937;
-  --explorer-bg-secondary: rgba(55, 65, 81, 0.9);
-  --explorer-bg-tertiary: rgba(75, 85, 99, 0.95);
-  --explorer-text-primary: var(--color-base-content, #f3f4f6);
-  --explorer-text-secondary: #d1d5db;
-  --explorer-text-muted: #9ca3af;
-  --explorer-border-primary: #374151;
-  --explorer-border-secondary: #4b5563;
-  --explorer-interactive-primary: var(--color-primary, #3b82f6);
-  --explorer-interactive-hover: rgba(59, 130, 246, 0.2);
+  --code-editor-text: var(--oa-ink-2);
+  --code-editor-text-muted: var(--oa-ink-3);
 }
 
 @theme {
@@ -140,7 +111,9 @@ html[data-theme='dark'] {
 
 /* Base styles */
 a {
-  color: var(--color-primary);
+  /* --oa-signal-ink, not --oa-signal: the raw brand blue is 2.4:1 on the
+     light ground and fails. The blue is a surface, not an ink. */
+  color: var(--oa-signal-ink);
 }
 
 svg {
@@ -153,7 +126,7 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--color-primary);
+  color: var(--oa-signal-ink);
 }
 
 .scroll .code-editor pre,

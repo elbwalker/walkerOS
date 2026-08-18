@@ -1,0 +1,40 @@
+// SplitSection - asymmetric prose column beside a panel.
+//
+// The min-width: 0 on children is load-bearing, not cosmetic: a grid item
+// containing a <pre> keeps its min-content width and pushes the column past
+// the viewport, producing horizontal body scroll on mobile.
+
+.elb-oa-split {
+  display: grid;
+  grid-template-columns: 1fr 1.08fr;
+  gap: 48px;
+  align-items: start;
+  padding: 66px 0;
+  border-top: 1px solid var(--oa-rule);
+
+  > * {
+    min-width: 0;
+  }
+
+  // The headline steps down inside a narrower column.
+  .elb-oa-section-head__headline {
+    font-size: clamp(26px, 3vw, 34px);
+  }
+}
+
+@media (max-width: 940px) {
+  .elb-oa-split {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 46px 0;
+  }
+}
+
+.elb-oa-panel {
+  background: var(--oa-surface);
+  border: 1px solid var(--oa-rule);
+  border-radius: var(--oa-r);
+  box-shadow: var(--oa-shadow-sm);
+  padding: 26px;
+  min-width: 0;
+}

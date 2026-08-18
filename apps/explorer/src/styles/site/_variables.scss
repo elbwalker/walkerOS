@@ -1,0 +1,93 @@
+// Open Air site tokens
+//
+// Site scale, for marketing and communication pages. Distinct from the tool
+// scale in ../theme/, which is scoped under .elb-explorer and stays untouched.
+//
+// Two rules that are load-bearing:
+//   1. Every token is prefixed --oa-. These land on the consumer's :root, and
+//      unprefixed names collide with framework theme variables (Tailwind v4
+//      defines --shadow-sm and --shadow-lg in @theme default).
+//   2. Text on --oa-signal is ALWAYS --oa-on-signal. White on the brand blue
+//      is 2.4:1 and fails; --oa-on-signal is 6.8:1. On light grounds the blue
+//      appears as text only via --oa-signal-ink.
+
+// Values that do not change between themes. Declared once, on bare :root.
+@mixin constants {
+  --oa-signal: #01b5e2;
+  --oa-on-signal: #04222b;
+
+  --oa-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --oa-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  --oa-r: 12px;
+  --oa-r-lg: 16px;
+  --oa-r-xl: 20px;
+  --oa-r-pill: 999px;
+
+  --oa-container: 1140px;
+  --oa-gutter: 28px;
+}
+
+@mixin light {
+  --oa-ground: #f6f4f1;
+  --oa-surface: #ffffff;
+  --oa-surface-2: #efece7;
+
+  --oa-ink: #22252a;
+  --oa-ink-2: #5f5c58;
+  --oa-ink-3: #918d86;
+
+  --oa-rule: #e4e0d9;
+
+  --oa-signal-ink: #0a7899;
+  --oa-signal-soft: rgb(1 181 226 / 12%);
+  --oa-glow: rgb(1 181 226 / 26%);
+
+  --oa-flag: #a4651c;
+
+  --oa-shadow-sm: 0 1px 2px rgb(34 37 42 / 6%), 0 4px 14px rgb(34 37 42 / 5%);
+  --oa-shadow-lg: 0 2px 6px rgb(34 37 42 / 7%), 0 22px 48px rgb(34 37 42 / 11%);
+}
+
+@mixin dark {
+  --oa-ground: #191a1c;
+  --oa-surface: #212326;
+  --oa-surface-2: #282a2e;
+
+  --oa-ink: #f2efeb;
+  --oa-ink-2: #b3aea7;
+  --oa-ink-3: #8b867f;
+
+  --oa-rule: #303235;
+
+  --oa-signal-ink: #4fcdec;
+  --oa-signal-soft: rgb(1 181 226 / 15%);
+  --oa-glow: rgb(1 181 226 / 30%);
+
+  --oa-flag: #d9a14e;
+
+  --oa-shadow-sm: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 14px rgb(0 0 0 / 28%);
+  --oa-shadow-lg: 0 2px 6px rgb(0 0 0 / 45%), 0 22px 48px rgb(0 0 0 / 40%);
+}
+
+// Three theme states, in this order. The un-stamped "system" state is the
+// common case for consumers that do not stamp data-theme, so the bare :root
+// block must carry a complete palette on its own.
+:root {
+  @include constants;
+  @include light;
+}
+
+// System preference, unless the consumer explicitly asked for light.
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark;
+  }
+}
+
+// Explicit choice wins in both directions.
+:root[data-theme='dark'] {
+  @include dark;
+}

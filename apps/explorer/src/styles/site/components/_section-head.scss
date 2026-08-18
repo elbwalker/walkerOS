@@ -1,0 +1,34 @@
+// SectionHead - the kicker / headline / sub trio that opens every section.
+
+.elb-oa-section-head {
+  max-width: 46ch;
+
+  &__kicker {
+    font-family: var(--oa-sans);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--oa-signal-ink);
+    margin: 0 0 20px;
+  }
+
+  &__headline {
+    font-family: var(--oa-sans);
+    font-size: clamp(28px, 3.8vw, 42px);
+    font-weight: 600;
+    line-height: 1.14;
+    letter-spacing: -0.028em;
+    color: var(--oa-ink);
+    text-wrap: balance;
+    margin: 0 0 14px;
+  }
+
+  &__sub {
+    font-family: var(--oa-sans);
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--oa-ink-2);
+    margin: 0;
+  }
+}

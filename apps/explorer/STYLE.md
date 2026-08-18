@@ -1059,6 +1059,83 @@ setMonacoTheme(themeName);
 
 ---
 
+## Open Air (site scale)
+
+Two scales live in this package and they cannot collide, because they use
+different selectors and different names.
+
+|           | Tool scale                                                | Site scale (Open Air)                                               |
+| --------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
+| Selector  | `.elb-explorer` (and `[data-theme='dark'] .elb-explorer`) | `:root`                                                             |
+| Names     | unprefixed: `--color-text`, `--bg-box`                    | prefixed: `--oa-ink`, `--oa-ground`                                 |
+| Type      | 11-16px                                                   | 18px body, `clamp()` display                                        |
+| Radii     | 3-6px                                                     | 12-20px, plus a pill                                                |
+| Built for | code boxes, dropdowns, panels                             | marketing and communication pages                                   |
+| Import    | `@walkeros/explorer/styles.css`                           | `@walkeros/explorer/site.css` (or `/tokens.css` for variables only) |
+
+Everything above this section describes the tool scale. Nothing in it changes.
+
+### Why the prefix
+
+`--oa-*` tokens are written to the **consumer's** `:root`. Tailwind v4 defines
+`--shadow-sm` and `--shadow-lg` in `@theme default`, so an unprefixed
+`--shadow-sm` on `:root` outranks it and silently corrupts every `shadow-sm`
+utility in the consuming site. `--surface`, `--rule` and `--ground` are one npm
+install away from the same accident.
+
+### Tokens
+
+| Token                              | Light                  | Dark        | Usage                                    |
+| ---------------------------------- | ---------------------- | ----------- | ---------------------------------------- |
+| `--oa-ground`                      | `#f6f4f1`              | `#191a1c`   | page ground, warm                        |
+| `--oa-surface`                     | `#ffffff`              | `#212326`   | cards, panels                            |
+| `--oa-surface-2`                   | `#efece7`              | `#282a2e`   | code blocks, insets                      |
+| `--oa-ink`                         | `#22252a`              | `#f2efeb`   | body text                                |
+| `--oa-ink-2`                       | `#5f5c58`              | `#b3aea7`   | secondary text                           |
+| `--oa-ink-3`                       | `#918d86`              | `#8b867f`   | labels, captions                         |
+| `--oa-rule`                        | `#e4e0d9`              | `#303235`   | borders                                  |
+| `--oa-signal`                      | `#01b5e2`              | same        | brand blue, fixed                        |
+| `--oa-signal-ink`                  | `#0a7899`              | `#4fcdec`   | brand blue as text                       |
+| `--oa-signal-soft`                 | `rgb(1 181 226 / 12%)` | `/ 15%`     | tinted fills, focus rings                |
+| `--oa-glow`                        | `rgb(1 181 226 / 26%)` | `/ 30%`     | the light source                         |
+| `--oa-on-signal`                   | `#04222b`              | same        | text ON the brand blue                   |
+| `--oa-flag`                        | `#a4651c`              | `#d9a14e`   | limits blocks and specimen warnings only |
+| `--oa-shadow-sm` / `-lg`           | ink-based              | black-based | elevation                                |
+| `--oa-sans` / `--oa-mono`          | system stacks          | same        | mono only inside `code`/`pre`            |
+| `--oa-r` / `-lg` / `-xl` / `-pill` | 12 / 16 / 20 / 999px   | same        | radii                                    |
+
+### Rules that are not style preferences
+
+1. **Text on `--oa-signal` is always `--oa-on-signal`.** White on the brand blue
+   is 2.4:1 and fails; `--oa-on-signal` is 6.8:1. On light grounds the blue
+   appears as text only via `--oa-signal-ink`. The blue is a surface and a light
+   source, never an ink.
+2. **Warm neutrals are load-bearing.** Warm greys against a cool cyan is the
+   tension the language rests on. A neutral or cool ramp turns it into a generic
+   light SaaS page.
+3. **Three theme states, defined token-level.** Bare `:root` carries the
+   complete light palette; `@media (prefers-color-scheme: dark)` guarded by
+   `:root:not([data-theme='light'])`; then `:root[data-theme='dark']`. Never
+   define a colour only inside a media or `[data-theme]` block: the un-stamped
+   "system" state is the common case for consumers that do not stamp a theme.
+4. **A grid item containing a `<pre>` needs `min-width: 0`.** Without it the
+   item keeps its min-content width and pushes the column past the viewport.
+   This is a bug that was caught in review, not a hypothetical.
+5. **No raw colour in a site component.** Enforced by
+   `src/__tests__/site-style-guard.test.ts`, which runs in the normal test task.
+
+### Components
+
+`@walkeros/explorer/site` exports `Badge`, `SiteButton`, `ButtonRow`,
+`SectionHead`, `SplitSection`, `Panel`, `CodePanel`, `ProofGrid` and
+`LimitsBlock`. Stories live beside them under `Site/*` in Storybook.
+
+`CodePanel` is deliberately not syntax highlighted: importing the Monaco or
+shiki atoms would pull the tool module graph into the `./site` entry, which is
+what that separate entry exists to prevent.
+
+---
+
 ## Change Log
 
 ### November 2025
