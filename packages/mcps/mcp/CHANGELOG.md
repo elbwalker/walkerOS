@@ -1,5 +1,24 @@
 # @walkeros/mcp
 
+## 4.4.0
+
+### Minor Changes
+
+- 393b942: `observe_journeys` now passes the `unattributed` integrity summary
+  through alongside `journeys` and `gaps`, so an agent sees the records that
+  could not be attributed to any event rather than a silently short list. A
+  non-empty array means telemetry was lost; an absent one means there was
+  nothing to report.
+
+### Patch Changes
+
+- Updated dependencies [6c89afb]
+- Updated dependencies [393b942]
+- Updated dependencies [034b1de]
+- Updated dependencies [d00e2bd]
+  - @walkeros/core@4.4.0
+  - @walkeros/cli@4.4.0
+
 ## 4.3.2
 
 ### Patch Changes

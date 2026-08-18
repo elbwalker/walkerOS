@@ -158,6 +158,34 @@ produces the GA4 `add_to_cart` event:
   language="typescript"
 />
 
+## Parameter names
+
+A parameter name carrying a character GA4 does not accept, a hyphen most
+commonly, is discarded on ingestion without an error. The destination therefore
+rewrites those characters to underscores before sending. Tagging `creative-type`
+under `include: ['data']` produces the parameter `data_creative-type`, which is
+sent as `data_creative_type` rather than going missing. Case is left alone, since
+GA4 treats parameter names case-sensitively.
+
+Event names are never rewritten this way. `snakeCase` lowercases the event name
+and replaces its spaces with underscores; set it to `false` and the name is sent
+exactly as configured.
+
+Two parameters are dropped rather than renamed:
+
+| Parameter         | Why                                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `source_platform` | Produced by `include` from `event.source.platform`. GA4 reads it as a manual campaign carrying no source or medium, which reports traffic as **Unassigned**                     |
+| `user_id`         | Produced by `include` from `event.user.id`. GA4 takes identity through its own configuration and ignores the name as an event parameter                                          |
+
+Required ecommerce parameters such as `currency`, `value` and `transaction_id`
+are unaffected. To keep the platform value, map it to a name of your own:
+
+<CodeSnippet
+  code={`data: { map: { platform: 'source.platform' } }`}
+  language="typescript"
+/>
+
 ## Verify in GA4
 
 Copy your Measurement ID from GA4 > Admin > Data Streams and open your web

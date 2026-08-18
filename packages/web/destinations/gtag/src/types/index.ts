@@ -100,6 +100,12 @@ export interface GA4Settings extends BaseSettings {
    */
   scriptSrc?: string;
   server_container_url?: string;
+  /**
+   * Lowercase the event name and replace its spaces with underscores. Applies
+   * to the event name only, never to parameter names. Set `false` to send the
+   * name exactly as configured.
+   * @default true
+   */
   snakeCase?: boolean;
   transport_url?: string;
 }

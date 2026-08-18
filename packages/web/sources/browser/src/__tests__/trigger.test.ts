@@ -57,6 +57,7 @@ describe('Trigger System', () => {
   // no listeners, timers or observers from any earlier one.
   const makeContext = (prefix = 'data-elb'): Context => ({
     elb: mockElb,
+    push: mockElb,
     settings: createTestSettings(prefix),
     registry,
   });
@@ -157,7 +158,7 @@ describe('Trigger System', () => {
     } as Settings;
 
     await handleTrigger(
-      { elb: mockElb, settings: testSettings, registry },
+      { elb: mockElb, push: mockElb, settings: testSettings, registry },
       element,
       Triggers.Click,
     );
@@ -510,6 +511,7 @@ describe('Trigger System', () => {
       };
       const rootContext: Context = {
         elb: mockElb,
+        push: mockElb,
         settings: rootSettings,
         registry,
       };
@@ -523,6 +525,7 @@ describe('Trigger System', () => {
       };
       const containerContext: Context = {
         elb: mockElb,
+        push: mockElb,
         settings: containerSettings,
         registry,
       };
@@ -644,7 +647,12 @@ describe('Trigger System', () => {
         scope: container,
       };
       // Scope-aligned context, as the translation layer builds for walker init.
-      const context: Context = { elb: mockElb, settings, registry };
+      const context: Context = {
+        elb: mockElb,
+        push: mockElb,
+        settings,
+        registry,
+      };
 
       initScopeTrigger(context);
       initScopeTrigger(context);

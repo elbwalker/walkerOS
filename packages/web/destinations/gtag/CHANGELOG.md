@@ -1,5 +1,38 @@
 # @walkeros/web-destination-gtag
 
+## 4.4.0
+
+### Minor Changes
+
+- f76906a: The `js` command is no longer sent when gtag already exists. It
+  announces that gtag initialised, so sending a second one after a tag manager
+  has already bootstrapped gtag asserts a false, later initialisation time.
+  walkerOS now sends it only when it bootstraps gtag itself.
+
+  Added `ga4.init` for the stronger case: set it to `false` when your container
+  already configures the measurement ID, and walkerOS skips `js`, `config` and
+  the script load entirely, sending only events.
+
+- 3de22db: GA4 parameter names carrying characters GA4 rejects are now
+  rewritten, so a tagged `creative-type` arrives as `data_creative_type` instead
+  of going missing. `source_platform` and `user_id` are no longer sent: GA4
+  reads the first as a manual campaign and reports that traffic as Unassigned.
+  Event names are unchanged.
+
+### Patch Changes
+
+- e896a7f: Fixed gtag.js failing to load when `server_container_url` was set,
+  which requested the script from the server container and was rejected.
+  First-party loading now uses the new `ga4.scriptSrc` setting, pointing at the
+  tag serving path configured in your server container, and falls back to
+  googletagmanager.com if that script fails to load.
+- Updated dependencies [6c89afb]
+- Updated dependencies [393b942]
+- Updated dependencies [034b1de]
+- Updated dependencies [d00e2bd]
+  - @walkeros/core@4.4.0
+  - @walkeros/web-core@4.4.0
+
 ## 4.3.2
 
 ### Patch Changes

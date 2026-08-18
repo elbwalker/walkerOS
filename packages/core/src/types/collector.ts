@@ -367,6 +367,15 @@ export interface Instance {
   logger: Logger.Instance;
   on: On.OnConfig;
   queue: WalkerOS.Events;
+  /**
+   * Events pushed while `allowed === false`, held raw (pre-pipeline) and
+   * replayed FIFO by the run command. Bounded by `config.queueMax`
+   * (drop-oldest). RECORD-immediate/DELIVER-gated, extended to events.
+   */
+  preRunQueue: Array<{
+    event: WalkerOS.DeepPartialEvent;
+    options: PushOptions;
+  }>;
   round: number;
   /** Run-scoped W3C trace id, minted on each run and stamped onto events. */
   trace?: string;

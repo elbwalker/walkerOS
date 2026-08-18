@@ -96,7 +96,11 @@ The `context` parameter contains everything your source needs:
   language="typescript"
 />
 
-The collector provides `env.push` (formerly `env.elb`). You provide other dependencies (like `window`, `document`, custom APIs) when configuring the source.
+`env` is the author's dependency bag: you provide platform and vendor dependencies (like `window`, `document`, custom APIs) when configuring the source. The collector provides five capabilities into that bag, and they always win: `push`, `elb`, `command`, `logger` and `sources` are runtime-owned, so setting one of them in `env` has no effect.
+
+### Ending the pipeline elsewhere: `terminus`
+
+A source registration that needs the pipeline to end somewhere other than the collector declares `terminus` next to `code`. A terminus receives the event exactly as the source emitted it, and the entire pipeline is skipped: no `before`/`next` chains, no source `cache`, no `state`, no `mapping` (including `ignore` and `consent`), no minted span id, no per-source ingest, no `respond`, no `status.sources` counting and no observability records. This is a total bypass by design, so there is one rule to know rather than a list of exceptions. It exists for deterministic capture at the source→collector boundary (step examples, dev tooling); production flows leave it unset, and stored flow configs cannot carry it (validation rejects unknown source keys).
 
 ## Per-scope context (server sources)
 

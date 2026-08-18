@@ -1,5 +1,20 @@
 # @walkeros/server-source-aws
 
+## 4.4.0
+
+### Patch Changes
+
+- 034b1de: Events pushed before the collector runs are now held and replayed at
+  run instead of being dropped, bounded by `queueMax`. `walker init <element>`
+  re-fires load triggers for already-tracked elements, restoring the SPA re-init
+  pattern. Queue sources start consuming at run and no longer acknowledge
+  messages the pipeline did not accept.
+- Updated dependencies [6c89afb]
+- Updated dependencies [393b942]
+- Updated dependencies [034b1de]
+- Updated dependencies [d00e2bd]
+  - @walkeros/core@4.4.0
+
 ## 4.3.2
 
 ### Patch Changes

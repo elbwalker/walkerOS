@@ -49,6 +49,7 @@ export async function collector(
     logger,
     on: {},
     queue: [],
+    preRunQueue: [],
     round: 0,
     count: 0,
     stateVersion: 0,

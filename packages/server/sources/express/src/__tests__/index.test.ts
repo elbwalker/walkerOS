@@ -291,6 +291,36 @@ describe('sourceExpress', () => {
       expect(mockPush).toHaveBeenCalledWith({});
     });
 
+    // Sync mode requires TOP-LEVEL `async: false` (a Source.Config field), not
+    // a settings entry: the default is respond-first, where a 2xx deliberately
+    // means "accepted" and the push outcome is not awaited.
+    it('sync POST responds 500 when push resolves ok:false', async () => {
+      const failingPush = jest.fn().mockResolvedValue({ ok: false });
+      const source = await sourceExpress(
+        createSourceContext(
+          { async: false },
+          {
+            push: failingPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+      const req = createMockRequest({
+        method: 'POST',
+        body: { name: 'page view' },
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(res.statusCode).toBe(500);
+      expect(res.responseBody).toEqual(
+        expect.objectContaining({ success: false }),
+      );
+    });
+
     describe('raw body support', () => {
       it('parses JSON from text/plain POST (sendBeacon) via middleware', async () => {
         // Integration test: exercises the actual express middleware chain by

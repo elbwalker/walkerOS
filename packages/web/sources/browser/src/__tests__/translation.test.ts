@@ -40,10 +40,10 @@ describe('Translation Layer', () => {
       });
     }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 
-    // Create simple mock elb that just passes through to mockPush
-    mockElb = jest.fn((arg1, arg2) =>
-      arg2 !== undefined ? mockPush(arg1, arg2) : mockPush(arg1),
-    );
+    // Separate recorders per exit. The translation layer's job IS the routing
+    // split (events -> push, `walker *` -> elb), so elb must not forward into
+    // mockPush: that would make both exits indistinguishable here.
+    mockElb = jest.fn().mockResolvedValue({ ok: true });
 
     // Initialize collector
     ({ collector } = await startFlow());
@@ -52,10 +52,11 @@ describe('Translation Layer', () => {
     collector.push = mockPush;
   });
 
-  // File-local context builder. The translation layer reads settings and elb;
-  // the registry rides along because every Context carries one.
+  // File-local context builder. The translation layer reads settings plus both
+  // exits; the registry rides along because every Context carries one.
   const makeContext = (prefix = 'data-elb'): Context => ({
     elb: mockElb,
+    push: mockPush,
     settings: createTestSettings(prefix),
     registry: createRegistry(),
   });
@@ -141,10 +142,12 @@ describe('Translation Layer', () => {
       const isolatedMockElb = jest.fn().mockResolvedValue({
         ok: true,
       });
+      const isolatedMockPush = jest.fn().mockResolvedValue({ ok: true });
 
       await translateToCoreCollector(
         {
           elb: isolatedMockElb,
+          push: isolatedMockPush,
           settings: createTestSettings(),
           registry: createRegistry(),
         },
@@ -156,6 +159,9 @@ describe('Translation Layer', () => {
       expect(isolatedMockElb).toHaveBeenCalledWith('walker run', {
         consent: { marketing: true },
       });
+      // A command must never enter the source pipeline: `push` takes event
+      // objects only.
+      expect(isolatedMockPush).not.toHaveBeenCalled();
 
       // Verify it's a walker command (starts with 'walker ')
       const [command] = isolatedMockElb.mock.calls[0];
@@ -168,10 +174,11 @@ describe('Translation Layer', () => {
         prefix: 'data-elb',
       });
 
-      // Walker commands should pass through without source info
-      expect(mockPush).toHaveBeenCalledWith('walker config', {
+      // Walker commands leave via elb, unchanged and without source info.
+      expect(mockElb).toHaveBeenCalledWith('walker config', {
         prefix: 'data-elb',
       });
+      expect(mockPush).not.toHaveBeenCalled();
     });
 
     test('does not add source information to object events', async () => {

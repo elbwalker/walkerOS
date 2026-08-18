@@ -40,12 +40,15 @@ import { LoggerConfigSchema } from './logger';
  * - sources: Other registered sources
  * - elb: Public API function (alias for collector.push)
  *
- * Platform-specific sources extend this with their requirements
- * (e.g., window, document, fetch, req, res)
+ * The capability keys above (plus logger) are runtime-owned: the collector
+ * applies them last, so author values for them are ignored. Platform-specific
+ * sources extend the env with their own requirements (e.g., window, document,
+ * fetch, req, res), and those author dependencies pass through untouched.
  *
  * This makes sources:
  * - Platform-agnostic (no direct dependencies)
- * - Testable (mock env for tests)
+ * - Testable (mock author dependencies via env; mock the collector boundary
+ *   via a hand-built Context or InitSource.terminus)
  * - Composable (share env between sources)
  */
 export const BaseEnvSchema = z

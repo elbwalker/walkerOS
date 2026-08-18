@@ -1,5 +1,16 @@
 # @walkeros/web-destination-mixpanel
 
+## 4.4.0
+
+### Patch Changes
+
+- Updated dependencies [6c89afb]
+- Updated dependencies [393b942]
+- Updated dependencies [034b1de]
+- Updated dependencies [d00e2bd]
+  - @walkeros/core@4.4.0
+  - @walkeros/web-core@4.4.0
+
 ## 4.3.2
 
 ### Patch Changes

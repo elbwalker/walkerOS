@@ -61,7 +61,12 @@ async function handleMessage(args: {
       await message.ack();
       return;
     }
-    await pushFn(toDeepPartialEvent(decoded));
+    const result = await pushFn(toDeepPartialEvent(decoded));
+    if (result?.ok === false) {
+      // Never delete a message that was not delivered. Route through the
+      // existing error disposition (nack by default, ack if configured).
+      throw new Error('push rejected the message (ok:false)');
+    }
     await message.ack();
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -126,11 +131,13 @@ function isFetchedMessage(value: unknown): value is FetchedMessage {
 /**
  * AWS SQS source.
  *
- * Long-running poll-and-forward subscriber. init() validates the queue exists,
- * captures the canonical queueUrl, and starts the long-poll loop as a
- * background task. push() accepts an optional synthetic message (used by
- * tests / triggers) and dispatches it through the same handler the loop uses;
- * called without arguments (production) it is a no-op since SQS is event-driven.
+ * Long-running poll-and-forward subscriber. The factory validates the queue
+ * exists and captures the canonical queueUrl/queueArn; the long-poll loop
+ * starts as a background task on the collector's run lifecycle (`on('run')`),
+ * so no message is received into a dormant collector. push() accepts an
+ * optional synthetic message (used by tests / triggers) and dispatches it
+ * through the same handler the loop uses, bypassing the run gate; called
+ * without arguments (production) it is a no-op since SQS is event-driven.
  *
  * destroy() stops the loop, drains in-flight handlers, and force-closes after
  * shutdownTimeoutMs (default 30000).
@@ -256,15 +263,24 @@ export const sourceSqs: Source.Init<Types> = async (context) => {
     }
   };
 
-  // Launch the loop without awaiting so init returns immediately. Track the
-  // promise so destroy() can await it before resolving (prevents leaked
-  // timers in test runs).
-  const loopPromise = loop();
+  // Run-gated start (see pubsub-pull): never poll a broker into a dormant
+  // collector. The loop is launched without awaiting so `on('run')` returns
+  // immediately; the promise is tracked so destroy() can await it (prevents
+  // leaked timers in test runs), and destroy() awaits it only if it ever
+  // started.
+  let loopPromise: Promise<void> | undefined;
+  const startConsuming = () => {
+    if (loopPromise) return;
+    loopPromise = loop();
+  };
 
   return {
     type: 'sqs',
     config,
     setup,
+    on: (type) => {
+      if (type === 'run') startConsuming();
+    },
     push: async (
       content?: SyntheticMessage,
     ): Promise<SyntheticPushResult | void> => {

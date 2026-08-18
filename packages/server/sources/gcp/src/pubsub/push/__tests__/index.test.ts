@@ -1,7 +1,7 @@
 import { sourcePubSubPush } from '../index';
 import * as examples from '../examples';
 import { createIngest, createMockContext } from '@walkeros/core';
-import type { Ingest, Source } from '@walkeros/core';
+import type { Collector, Ingest, Source } from '@walkeros/core';
 import type { Env, Request, Response, Types } from '../types';
 import { createTrigger } from '../examples/trigger';
 import { push as pushEnv } from '../examples/env';
@@ -10,6 +10,8 @@ interface ResponseRecord {
   statusCode?: number;
   body?: unknown;
 }
+
+const terminusOk: Collector.PushFn = async () => ({ ok: true });
 
 function buildContext(
   partialSettings: Partial<Types['settings']> = {},
@@ -209,7 +211,9 @@ describe('Pub/Sub push source', () => {
           pubsub: {
             code: sourcePubSubPush,
             config: { settings: {} },
-            env: pushEnv,
+            // Boundary capture: the response is decided by what the source
+            // hands the collector, so the pipeline must not run.
+            terminus: terminusOk,
           },
         },
       });

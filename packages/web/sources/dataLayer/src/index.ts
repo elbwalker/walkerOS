@@ -13,7 +13,10 @@ export * as SourceDataLayer from './types';
  */
 export const sourceDataLayer: Source.Init<Types> = async (context) => {
   const { config, env } = context;
-  const { elb, window: envWindow } = env;
+  // Events exit via `push` (the collector's source pipeline, so this source's
+  // `next`/`before`/mapping/cache/state and status apply); `elb` stays the
+  // outward-facing slot on the instance below. This source emits no commands.
+  const { elb, push, window: envWindow } = env;
 
   const settings: Source.Settings<Types> = {
     name: 'dataLayer',
@@ -37,7 +40,7 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
     pendingReplayCount = Array.isArray(dl) ? dl.length : 0;
 
     const win = envWindow as unknown as Record<string, unknown>;
-    interceptDataLayer(elb, fullConfig, win);
+    interceptDataLayer(push, fullConfig, win);
   };
 
   // Replay pre-existing entries when the run signal lands. The collector
@@ -48,7 +51,7 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
   const handleEvent = async (event: On.Types) => {
     if (event === 'run' && envWindow && pendingReplayCount > 0) {
       const win = envWindow as unknown as Record<string, unknown>;
-      processExistingEvents(elb, fullConfig, pendingReplayCount, win);
+      processExistingEvents(push, fullConfig, pendingReplayCount, win);
       pendingReplayCount = 0;
     }
   };
@@ -56,6 +59,10 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
   return {
     type: 'dataLayer',
     config: fullConfig,
+    // Deliberately `elb`, not the pipeline `push`. This slot is the source's
+    // outward-facing entry (and what `startFlow` exports as its `elb` when this
+    // source is primary), not the capture path: real dataLayer entries arrive
+    // through the intercepted `dataLayer.push`, which routes via the pipeline.
     push: elb,
     on: handleEvent,
     init,

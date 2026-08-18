@@ -31,7 +31,9 @@ export const GA4SettingsSchema = z.object({
     .optional(),
   snakeCase: z
     .boolean()
-    .describe('Convert parameter names to snake_case (like true)')
+    .describe(
+      'Lowercase the event name and replace its spaces with underscores (like true). Applies to the event name only, never to parameter names',
+    )
     .optional(),
   transport_url: z
     .string()

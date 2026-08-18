@@ -108,10 +108,18 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
         return;
       }
 
-      // handleTrigger reads the settings and the elb only, so this registry
-      // stays empty: it never wires a listener, a timer or an observer.
+      // handleTrigger reads the settings and the two exits only, so this
+      // registry stays empty: it never wires a listener, a timer or an
+      // observer.
+      //
+      // `push` goes straight to `collector.push`, deliberately short-circuiting
+      // the source pipeline: step-example recording captures what the
+      // translation layer produces, not what a flow's `next`/`before` chain
+      // would then do to it. This is also the terminus events already reached
+      // here, so recorded output is unchanged.
       const context: Context = {
         elb: flow.elb,
+        push: flow.collector.push,
         settings: source.config.settings as Context['settings'],
         registry: createRegistry(),
       };

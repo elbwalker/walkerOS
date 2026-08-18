@@ -6,9 +6,10 @@ import { startFlow } from '..';
  *
  * These confirm that the building blocks from the state-delivery and
  * run-barrier work compose into four end-to-end guarantees: re-run does not
- * double-deliver, pre-run events are not leaked through the dormant gate,
- * the outcome is independent of source registration order, and repeated
- * pre-run consent grants collapse into a single re-delivery at the barrier.
+ * double-deliver, pre-run events are held at the dormant gate and replayed
+ * exactly once at run, the outcome is independent of source registration
+ * order, and repeated pre-run consent grants collapse into a single
+ * re-delivery at the barrier.
  *
  * Most assertions are regression locks: the mark mechanism already makes them
  * hold. A real inline `code` source plus an array-capture destination (no
@@ -105,7 +106,7 @@ describe('state re-delivery composite guarantees', () => {
     expect(gatedCount(captured)).toBe(1);
   });
 
-  test('I9: a pre-run direct event is dropped at the dormant gate and never leaks', async () => {
+  test('I9: a pre-run direct event is held at the dormant gate and replayed at run', async () => {
     const captured: WalkerOS.Event[] = [];
 
     const { collector, elb } = await startFlow({
@@ -113,25 +114,20 @@ describe('state re-delivery composite guarantees', () => {
       destinations: { cap: makeCaptureDestination(captured) },
     });
 
-    // Direct event push before run. pushToDestinations returns early at the
-    // `!allowed` gate before the event is ever appended to collector.queue, so
-    // a pre-run event is dropped outright. There is no pre-run event buffer:
-    // collector.queue is the post-run replay buffer for late-registered
-    // destinations only. The RECORD-immediate/DELIVER-gated rule that applies
-    // to state (consent/user/globals/custom) does NOT apply to events, so a
-    // pre-run event cannot leak through the barrier.
+    // Direct event push before run. collector.push holds the raw event in
+    // collector.preRunQueue (bounded, FIFO): the RECORD-immediate/
+    // DELIVER-gated rule that applies to state now applies to events too.
+    // The pipeline does NOT run at hold time — it runs once, at replay.
     await elb({ name: 'page view', data: {} });
     expect(captured).toHaveLength(0);
 
-    // Run opens the barrier. The dropped pre-run event is not resurrected: it
-    // was never queued, so nothing flushes for it.
+    // Run opens the barrier and replays the held event exactly once.
     await collector.command('run');
-    expect(captured.filter((e) => e.name === 'page view')).toHaveLength(0);
-
-    // A direct event pushed AFTER run delivers normally, proving the gate is
-    // about pre-run dormancy, not a broken destination.
-    await elb({ name: 'page view', data: {} });
     expect(captured.filter((e) => e.name === 'page view')).toHaveLength(1);
+
+    // A direct event pushed AFTER run delivers normally.
+    await elb({ name: 'page view', data: {} });
+    expect(captured.filter((e) => e.name === 'page view')).toHaveLength(2);
   });
 
   test('I6: outcome is independent of source registration order (provider before dependent)', async () => {

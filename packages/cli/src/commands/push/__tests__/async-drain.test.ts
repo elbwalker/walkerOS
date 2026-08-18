@@ -2,11 +2,28 @@ import { installTimerInterception } from '../async-drain';
 
 describe('async-drain', () => {
   let control: ReturnType<typeof installTimerInterception>;
+  let realTimerHops: jest.SpyInstance | undefined;
 
   afterEach(() => {
-    // Always restore even if test fails
+    // Always restore even if test fails. Order matters: restore() writes the
+    // saved reference back onto globalThis, and when a test wrapped the global
+    // first that saved reference is the spy, so the spy has to be unwound after.
     control?.restore();
+    realTimerHops?.mockRestore();
+    realTimerHops = undefined;
   });
+
+  /**
+   * Count the real-timer hops `flush()` performs.
+   *
+   * `installTimerInterception` captures `globalThis.setTimeout` at install time
+   * and uses it for its microtask drains, so the spy has to be in place BEFORE
+   * the interception is installed to sit on that path.
+   */
+  const countRealTimerHops = (): jest.SpyInstance => {
+    realTimerHops = jest.spyOn(globalThis, 'setTimeout');
+    return realTimerHops;
+  };
 
   it('intercepts setTimeout and holds callback', () => {
     control = installTimerInterception();
@@ -122,7 +139,9 @@ describe('async-drain', () => {
     const results: string[] = [];
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-    setTimeout(() => { throw new Error('boom'); }, 10);
+    setTimeout(() => {
+      throw new Error('boom');
+    }, 10);
     setTimeout(() => results.push('ok'), 20);
 
     await control.flush();
@@ -132,12 +151,20 @@ describe('async-drain', () => {
     warnSpy.mockRestore();
   });
 
-  it('returns immediately when no pending work', async () => {
+  it('returns after a single drain when no pending work', async () => {
+    // "Returns immediately" means one microtask drain and no timer loop, which
+    // is a hop count, not a duration: the wall-clock cost of one setTimeout(0)
+    // belongs to the machine, and on a loaded CI box it comfortably exceeds the
+    // 100ms this used to assert. Counting hops states the invariant directly
+    // and is immune to load.
+    const hops = countRealTimerHops();
     control = installTimerInterception();
-    const start = Date.now();
+    hops.mockClear();
+
     await control.flush();
-    // Should take < 100ms (just one microtask drain)
-    expect(Date.now() - start).toBeLessThan(100);
+
+    expect(hops).toHaveBeenCalledTimes(1);
+    expect(control.countPending()).toBe(0);
   });
 
   it('restore brings back real timers', async () => {

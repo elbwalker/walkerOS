@@ -1,5 +1,24 @@
 # @walkeros/web-source-session
 
+## 4.4.0
+
+### Minor Changes
+
+- 87937a8: Web sources now send events through the collector's source pipeline,
+  so `next`/`before` chains, source mapping, `cache`, `state` and per-source
+  status work on web like they do on server. Walker commands are unaffected and
+  still go straight to the collector. Flows that already configured these fields
+  on a web source will see them take effect for the first time.
+
+### Patch Changes
+
+- Updated dependencies [6c89afb]
+- Updated dependencies [393b942]
+- Updated dependencies [034b1de]
+- Updated dependencies [d00e2bd]
+  - @walkeros/core@4.4.0
+  - @walkeros/web-core@4.4.0
+
 ## 4.3.2
 
 ### Patch Changes

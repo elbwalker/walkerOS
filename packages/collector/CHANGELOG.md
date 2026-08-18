@@ -1,5 +1,42 @@
 # @walkeros/collector
 
+## 4.4.0
+
+### Minor Changes
+
+- 393b942: Every event now gets its span id at entry, so all of its records
+  carry the same id and its journey is whole from the first hop. Batched
+  deliveries report per entry: each event in a batch gets its own flush or error
+  frame, so an event in a failed batch is never reported as delivered. Those
+  frames emit when the batch settles rather than when the flush starts.
+- 034b1de: Events pushed before the collector runs are now held and replayed at
+  run instead of being dropped, bounded by `queueMax`. `walker init <element>`
+  re-fires load triggers for already-tracked elements, restoring the SPA re-init
+  pattern. Queue sources start consuming at run and no longer acknowledge
+  messages the pipeline did not accept.
+- d00e2bd: A source's `env` is now unambiguously the author's dependency bag:
+  the collector-provided `push`, `elb`, `command`, `logger` and `sources` always
+  win, so setting them in `env` has no effect. Sources that need the pipeline to
+  end elsewhere declare the new `terminus`, which receives the raw event and
+  skips the pipeline entirely; previously an `env.push` silently replaced the
+  pipeline's end and disabled some, but not all, of its stages, and flows that
+  set it should move to `terminus`. Stored flows now also reject unknown keys on
+  a source entry at validation instead of silently ignoring them.
+
+### Patch Changes
+
+- 35756dd: Globals tagged with `data-elbglobals` are page level again:
+  `walker init` on an element no longer hides globals defined outside it.
+  Collector globals are merged into the event during enrichment, so destinations
+  and post-collector transformers see the same finished values. An event keeps
+  the globals it was captured with, so a later `walker globals` never reaches an
+  event awaiting consent.
+- Updated dependencies [6c89afb]
+- Updated dependencies [393b942]
+- Updated dependencies [034b1de]
+- Updated dependencies [d00e2bd]
+  - @walkeros/core@4.4.0
+
 ## 4.3.2
 
 ### Patch Changes

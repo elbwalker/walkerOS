@@ -10,7 +10,7 @@ import {
 import { sourcePubSubPull } from '../index';
 import * as examples from '../examples';
 import { createIngest, createMockContext } from '@walkeros/core';
-import type { Ingest, Source } from '@walkeros/core';
+import type { Collector, Elb, Ingest, Source } from '@walkeros/core';
 import type { Settings, SyntheticMessage, Types } from '../types';
 import { push as pushEnv } from '../examples/env';
 import { createTrigger } from '../examples/trigger';
@@ -24,6 +24,8 @@ interface StepShape {
   };
   out: Array<[string, ...unknown[]]>;
 }
+
+const terminusOk: Collector.PushFn = async () => ({ ok: true });
 
 function isStepShape(value: unknown): value is StepShape {
   if (typeof value !== 'object' || value === null) return false;
@@ -190,6 +192,62 @@ describe('Pub/Sub pull source', () => {
     expect(result).toBeUndefined();
   });
 
+  it('does not attach the message handler before on("run"), and attaches it exactly once', async () => {
+    const ctx = buildContext({});
+    const instance = await sourcePubSubPull(ctx);
+
+    // Filtered to the 'message' listener specifically: the 'error' listener is
+    // attached unconditionally in the factory, so an unfiltered
+    // `subscription.on` assertion would always be non-empty.
+    const messageAttach = () =>
+      __getMockCalls().filter(
+        (c) => c.method === 'subscription.on' && c.args[0] === 'message',
+      );
+
+    expect(messageAttach()).toHaveLength(0);
+    await instance.on?.('run');
+    expect(messageAttach()).toHaveLength(1);
+    await instance.on?.('run'); // idempotent
+    expect(messageAttach()).toHaveLength(1);
+  });
+
+  it('a push resolving ok:false is nacked, not acked', async () => {
+    // Never delete a message the pipeline did not accept. Existing failure
+    // coverage only makes push THROW; a resolved ok:false is the quiet case.
+    const failingPush: Elb.Fn = () => Promise.resolve({ ok: false });
+    const base = createMockContext<Types>({
+      config: {
+        settings: { projectId: 'test-project', subscription: 'test-sub' },
+      },
+      env: { ...pushEnv, push: failingPush },
+    });
+    const ctx: Source.Context<Types> = {
+      ...base,
+      id: 'pubsub',
+      withScope: async (_r, respond, body) =>
+        body({
+          ...pushEnv,
+          push: failingPush,
+          ingest: createIngest('pubsub') as Ingest,
+          respond,
+        } as never),
+    };
+    const instance = await sourcePubSubPull(ctx);
+
+    const synthetic: SyntheticMessage = {
+      id: 'reject-msg',
+      data: Buffer.from(JSON.stringify({ name: 'page view' }), 'utf8'),
+    };
+    const result = await instance.push(synthetic);
+
+    expect(result).toBeDefined();
+    if (!result || typeof result !== 'object') {
+      throw new Error('expected SyntheticPushResult');
+    }
+    expect(result.nacked).toBe(true);
+    expect(result.acked).toBe(false);
+  });
+
   describe('step examples via createTrigger', () => {
     it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
       if (!isStepShape(rawExample)) {
@@ -214,11 +272,16 @@ describe('Pub/Sub pull source', () => {
       };
 
       const { trigger } = await createTrigger({
+        // The malformed-payload examples log a decode failure through the
+        // collector logger; swallow it, the artifacts assert via ack/nack.
+        logger: { level: 'ERROR', handler: () => undefined },
         sources: {
           pubsub: {
             code: sourcePubSubPull,
             config: { settings },
-            env: pushEnv,
+            // Boundary capture: ack/nack is decided by what the source hands
+            // the collector, so the pipeline must not run.
+            terminus: terminusOk,
           },
         },
       });

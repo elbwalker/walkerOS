@@ -74,7 +74,7 @@ describe('Source state integration', () => {
     expect(readerEvent?.data?.fetched).toBe('TOK1');
   });
 
-  it('skips source state when a user env.push override is present', async () => {
+  it('skips source state when a terminus is present', async () => {
     const spyEvents: WalkerOS.DeepPartialEvent[] = [];
     const spyPush: Collector.PushFn = async (event) => {
       spyEvents.push(event as WalkerOS.DeepPartialEvent);
@@ -90,8 +90,8 @@ describe('Source state integration', () => {
             config: context.config as Source.Config<TestSourceTypes>,
             push: context.env.push,
           }),
-          env: { push: spyPush },
-          // would enrich data.fetched if state ran; with env.push it must not
+          terminus: spyPush,
+          // would enrich data.fetched if state ran; with a terminus it must not
           config: {
             state: [
               { mode: 'set', key: 'user.id', value: 'data.token' },

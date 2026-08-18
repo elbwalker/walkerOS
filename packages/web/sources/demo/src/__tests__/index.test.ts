@@ -1,5 +1,5 @@
 import { startFlow } from '@walkeros/collector';
-import type { WalkerOS } from '@walkeros/core';
+import type { Transformer, WalkerOS } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { sourceDemo } from '../index';
 
@@ -162,5 +162,50 @@ describe('Demo Source', () => {
     await Promise.resolve();
 
     expect(mockPush).not.toHaveBeenCalled();
+  });
+  test('a next chain on the demo source runs for its events', async () => {
+    const seen: string[] = [];
+    const captured: WalkerOS.Event[] = [];
+
+    await startFlow({
+      sources: {
+        demo: {
+          code: sourceDemo,
+          config: { settings: { events: [{ name: 'page view', data: {} }] } },
+          next: 'tap',
+        },
+      },
+      transformers: {
+        tap: {
+          code: async (context): Promise<Transformer.Instance> => ({
+            type: 'tap',
+            config: context.config,
+            push: async (event) => {
+              seen.push(event.name ?? '');
+              return { event };
+            },
+          }),
+        },
+      },
+      destinations: {
+        cap: {
+          code: {
+            type: 'capture',
+            config: {},
+            push: (event: WalkerOS.Event) => {
+              captured.push(event);
+            },
+          },
+        },
+      },
+    });
+
+    // The demo source schedules its events with setTimeout in the factory body.
+    jest.runAllTimers();
+    // The pipeline adds await hops between the timer callback and delivery.
+    for (let i = 0; i < 50; i++) await Promise.resolve();
+
+    expect(seen).toContain('page view');
+    expect(captured.map((e) => e.name)).toContain('page view');
   });
 });

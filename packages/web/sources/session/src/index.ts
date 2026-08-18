@@ -22,7 +22,7 @@ export type {
  */
 export const sourceSession: Source.Init<Types> = async (context) => {
   const { config, env } = context;
-  const { elb, command } = env;
+  const { elb, push, command } = env;
 
   const settings: Settings = {
     ...config?.settings,
@@ -32,9 +32,12 @@ export const sourceSession: Source.Init<Types> = async (context) => {
     settings,
   };
 
-  // Create minimal collector interface for sessionStart
+  // Minimal collector interface for sessionStart. `push` is the collector's
+  // source pipeline (so this source's next/before/mapping and status apply to
+  // `session start`); `command` carries the identity updates, which are
+  // commands and must stay off the pipeline.
   const collectorInterface: Partial<Collector.Instance> = {
-    push: elb,
+    push,
     command,
   };
 
@@ -54,10 +57,11 @@ export const sourceSession: Source.Init<Types> = async (context) => {
   // rule with the collector, which replays it at the run barrier and guarantees
   // exactly-once delivery, so the source does not react to consent itself.
   //
-  // Ungated: the emit must wait for the run lifecycle. Calling sessionStart in
-  // init() would push `session start` while the collector is not yet `allowed`,
-  // dropping it at the dormant destination gate. Registering an on('run') rule
-  // defers the emit into the now-allowed pipeline.
+  // Ungated: the emit waits for the run lifecycle for ORDERING, not for loss
+  // protection. Pushing `session start` from init() would not lose it (the
+  // collector holds pre-run events and replays them at run), but the replay
+  // lands ahead of everything the run lifecycle itself emits. Registering an
+  // on('run') rule emits directly into the now-allowed pipeline instead.
   const init = async (): Promise<void> => {
     if (settings.consent) {
       runSessionStart();
@@ -69,6 +73,9 @@ export const sourceSession: Source.Init<Types> = async (context) => {
   return {
     type: 'session',
     config: fullConfig,
+    // The outward-facing slot, deliberately `elb` and not the pipeline `push`:
+    // this source captures nothing from callers, it emits `session start`
+    // itself (via collectorInterface above, which does use the pipeline).
     push: elb,
     init,
   };

@@ -89,7 +89,12 @@ async function handleMessage(args: {
       message.ack();
       return;
     }
-    await pushFn(toDeepPartialEvent(decoded));
+    const result = await pushFn(toDeepPartialEvent(decoded));
+    if (result?.ok === false) {
+      // Never delete a message that was not delivered. Route through the
+      // existing error disposition (nack by default, ack if configured).
+      throw new Error('push rejected the message (ok:false)');
+    }
     message.ack();
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -106,11 +111,13 @@ async function handleMessage(args: {
 /**
  * Google Cloud Pub/Sub pull source.
  *
- * Long-running streaming subscriber. `init()` opens the subscription stream
- * and forwards each message to the collector via `env.push`. The source's
+ * Long-running streaming subscriber. Consumption starts on the collector's
+ * run lifecycle (`on('run')`), which opens the subscription stream and
+ * forwards each message to the collector via `env.push`. The source's
  * `push` accepts an optional synthetic message (used by tests / triggers)
- * and dispatches it through the same pipeline; called without arguments
- * (production) it is a no-op since Pub/Sub is event-driven.
+ * and dispatches it through the same pipeline, bypassing the run gate;
+ * called without arguments (production) it is a no-op since Pub/Sub is
+ * event-driven.
  *
  * `destroy()` closes the subscriber gracefully, honoring `shutdownTimeoutMs`.
  */
@@ -138,19 +145,28 @@ export const sourcePubSubPull: Source.Init<Types> = async (context) => {
   // Wire message handler. Decoded events are forwarded to the collector
   // via env.push; ack on success, nack (or ack-and-drop) on error per
   // settings.onPushError.
-  subscription.on('message', async (message: Message) => {
-    await handleMessage({
-      message: {
-        id: message.id,
-        data: message.data,
-        ack: () => message.ack(),
-        nack: () => message.nack(),
-      },
-      settings,
-      pushFn: env.push,
-      logger,
+  //
+  // Consumption starts at run, not at construction: a message pushed into a
+  // dormant collector is only held, while its ack already deletes it from the
+  // broker. Run-gated start closes that window.
+  let consuming = false;
+  const startConsuming = () => {
+    if (consuming) return;
+    consuming = true;
+    subscription.on('message', async (message: Message) => {
+      await handleMessage({
+        message: {
+          id: message.id,
+          data: message.data,
+          ack: () => message.ack(),
+          nack: () => message.nack(),
+        },
+        settings,
+        pushFn: env.push,
+        logger,
+      });
     });
-  });
+  };
 
   // Wire stream-error handler (NOT per-message). The SDK reconnects with
   // backoff on transient errors; we surface fatal ones with an actionable
@@ -172,6 +188,9 @@ export const sourcePubSubPull: Source.Init<Types> = async (context) => {
     type: 'pubsub-pull',
     config,
     setup,
+    on: (type) => {
+      if (type === 'run') startConsuming();
+    },
     push: async (
       content?: SyntheticMessage,
     ): Promise<SyntheticPushResult | void> => {

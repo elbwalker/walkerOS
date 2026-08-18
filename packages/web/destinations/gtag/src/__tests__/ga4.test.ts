@@ -345,4 +345,115 @@ describe('GA4 Implementation', () => {
       );
     });
   });
+
+  describe('GA4 parameter names', () => {
+    const settings: GA4Settings = { measurementId: 'G-TEST123' };
+    const mockEvent = getEvent('page view');
+    const paramsOf = () => mockGtag.mock.calls[0][2];
+
+    it('should normalize an illegal character in a param name', () => {
+      pushGA4Event(
+        mockEvent,
+        settings,
+        { 'data_creative-type': 'Sale' },
+        mockEnv,
+        createMockLogger(),
+      );
+
+      expect(paramsOf()).toMatchObject({ data_creative_type: 'Sale' });
+      expect(paramsOf()).not.toHaveProperty('data_creative-type');
+    });
+
+    // source.platform is set on every walkerOS event and feeds GA4's
+    // collected_traffic_source.manual_source_platform, declaring a manual
+    // campaign with no source or medium. That reports as Unassigned.
+    it('should drop source_platform', () => {
+      pushGA4Event(
+        mockEvent,
+        settings,
+        { source_platform: 'web', data_id: 'x' },
+        mockEnv,
+        createMockLogger(),
+      );
+
+      expect(paramsOf()).not.toHaveProperty('source_platform');
+      expect(paramsOf()).toMatchObject({ data_id: 'x' });
+    });
+
+    // GA4 owns identity through gtag('config'|'set'). As an event parameter
+    // the name is reserved and ignored, so it only burns a param slot.
+    it('should drop user_id', () => {
+      pushGA4Event(
+        mockEvent,
+        settings,
+        { user_id: 'us3r' },
+        mockEnv,
+        createMockLogger(),
+      );
+
+      expect(paramsOf()).not.toHaveProperty('user_id');
+    });
+
+    it('should drop a reserved name that only appears after normalization', () => {
+      pushGA4Event(
+        mockEvent,
+        settings,
+        { 'source-platform': 'web' },
+        mockEnv,
+        createMockLogger(),
+      );
+
+      expect(paramsOf()).not.toHaveProperty('source_platform');
+    });
+
+    // currency, value and transaction_id sit on Google's reserved list, but
+    // that list governs custom-dimension registration, not sending. They are
+    // required on ecommerce events, so stripping them would delete revenue.
+    it('should keep required ecommerce params', () => {
+      pushGA4Event(
+        mockEvent,
+        settings,
+        { currency: 'EUR', value: 12.5, transaction_id: 'T1' },
+        mockEnv,
+        createMockLogger(),
+      );
+
+      expect(paramsOf()).toMatchObject({
+        currency: 'EUR',
+        value: 12.5,
+        transaction_id: 'T1',
+      });
+    });
+
+    it('should drop an empty param name, and warn', () => {
+      const logger = createMockLogger();
+
+      pushGA4Event(mockEvent, settings, { '': 'x' }, mockEnv, logger);
+
+      expect(paramsOf()).not.toHaveProperty('');
+      expect(logger.warn).toHaveBeenCalled();
+    });
+
+    it('should warn when two param names normalize to one', () => {
+      const logger = createMockLogger();
+
+      pushGA4Event(
+        mockEvent,
+        settings,
+        { 'a-b': 1, 'a.b': 2 },
+        mockEnv,
+        logger,
+      );
+
+      expect(logger.warn).toHaveBeenCalled();
+    });
+
+    it('should not warn when every param name is already valid', () => {
+      const logger = createMockLogger();
+
+      pushGA4Event(mockEvent, settings, { currency: 'EUR' }, mockEnv, logger);
+
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+  });
 });

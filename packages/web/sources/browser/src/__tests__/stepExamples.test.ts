@@ -64,6 +64,7 @@ describe('Step Examples', () => {
     const settings = getConfig({ scope: document }, document);
     const context: Context = {
       elb: mockElb,
+      push: mockElb,
       settings,
       registry: createRegistry(),
     };

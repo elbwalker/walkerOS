@@ -1,4 +1,4 @@
-import type { Source, Elb, Logger } from '@walkeros/core';
+import type { Collector, Source, Elb, Logger } from '@walkeros/core';
 import type { Walker } from '@walkeros/web-core';
 import type { SettingsSchema } from '../schemas';
 import type { z } from '@walkeros/core/dev';
@@ -58,6 +58,13 @@ export type Config = Source.Config<Types>;
 
 export interface Context {
   elb: Elb.Fn;
+  /**
+   * Source-pipeline exit for EVENTS (the collector's `wrappedPush`), which is
+   * what makes source-level `next`/`before` chains, mapping, cache, `state`,
+   * ingest and `collector.status.sources` apply to browser events. Commands
+   * stay on `elb`: `push` accepts event objects only.
+   */
+  push: Collector.PushFn;
   settings: Settings;
   // The scope this source was constructed with. Carried separately from
   // settings.scope so a scope-aligned context (walker init <el>) narrows

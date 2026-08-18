@@ -194,7 +194,23 @@ export async function commonHandleCommand(
     // Single notification + flush point for all state-mutation commands
     if (shouldNotify) {
       await onApply(collector, action as On.Types, undefined, onData);
-      result = await pushToDestinations(collector);
+      const flushed = await pushToDestinations(collector);
+      // `run` is the only command that sets `result` before this point (from
+      // runCollector). Overwriting it outright would discard that outcome, so a
+      // pre-run event that failed on replay would be invisible: its original
+      // caller already got `ok: true` at hold time and there is no other place
+      // it can surface. Every other command leaves `result` undefined here, so
+      // this merge is a no-op for them.
+      if (result && result.ok === false) {
+        const failed = { ...(flushed.failed ?? {}), ...(result.failed ?? {}) };
+        result = {
+          ...flushed,
+          ok: false,
+          ...(Object.keys(failed).length > 0 ? { failed } : {}),
+        };
+      } else {
+        result = flushed;
+      }
     }
 
     return result || createPushResult({ ok: true });
@@ -397,8 +413,39 @@ export async function runCollector(
   // collide with these state re-deliveries.
   await redeliverStateAtRun(collector);
 
+  // Replay events held while the collector was dormant (FIFO, wall-clock
+  // order). Splice first so replayed pushes (now allowed) can never
+  // re-enter the buffer, and a second run finds it empty.
+  //
+  // A replayed event's original caller already got `ok: true` (accepted-and-
+  // held), so a later failure has no caller left to report to. The run result
+  // is the only place it can surface, and it must: this run already reports
+  // failures from the OTHER buffer it flushes below, so staying silent here
+  // would make the same command inconsistent across its two buffers.
+  let replayOk = true;
+  const replayFailed: NonNullable<Elb.PushResult['failed']> = {};
+  if (collector.preRunQueue.length) {
+    const held = collector.preRunQueue.splice(0);
+    collector.logger.debug('replaying pre-run events', { count: held.length });
+    for (const { event, options } of held) {
+      const replayResult = await collector.push(event, options);
+      if (replayResult.ok === false) replayOk = false;
+      // Carry per-destination detail when there is any. A push that threw
+      // reports `ok: false` with no `failed` map (see push.ts's catch), so the
+      // boolean is tracked separately rather than derived from the map.
+      if (replayResult.failed) Object.assign(replayFailed, replayResult.failed);
+    }
+  }
+
   // Process any queued events now that the collector is allowed
   const result = await pushToDestinations(collector);
 
-  return result;
+  if (replayOk) return result;
+
+  const failed = { ...(result.failed ?? {}), ...replayFailed };
+  return {
+    ...result,
+    ok: false,
+    ...(Object.keys(failed).length > 0 ? { failed } : {}),
+  };
 }

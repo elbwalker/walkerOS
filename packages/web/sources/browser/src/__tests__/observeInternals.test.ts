@@ -100,7 +100,12 @@ describe('observe internals', () => {
     lastObserver = undefined;
     mockElb = jest.fn().mockResolvedValue({ ok: true });
     registry = createRegistry();
-    context = { elb: mockElb, settings: createTestSettings(), registry };
+    context = {
+      elb: mockElb,
+      push: mockElb,
+      settings: createTestSettings(),
+      registry,
+    };
   });
 
   afterEach(() => {

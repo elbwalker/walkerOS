@@ -289,10 +289,10 @@ export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
 
   const sources = Object.values(instance.sources);
 
-  // First, check for explicitly marked primary source
-  const markedPrimary = sources.find(
-    (source) => (source.config as { primary?: boolean }).primary,
-  );
+  // First, check for explicitly marked primary source. `initSources` mirrors a
+  // top-level `InitSource.primary` onto the instance config, so both spellings
+  // are visible here.
+  const markedPrimary = sources.find((source) => source.config.primary);
 
   if (markedPrimary) {
     primaryElb = markedPrimary.push as Elb.Fn;

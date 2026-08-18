@@ -361,6 +361,9 @@ export const SourceSchema = z
       'Cache configuration for this source (match → key → ttl rules)',
     ),
   })
+  // Reject unknown keys so runtime-only fields (e.g. `terminus`) and typos
+  // fail validation loudly instead of being silently stripped.
+  .strict()
   .meta({
     id: 'FlowSource',
     title: 'Flow.Source',
