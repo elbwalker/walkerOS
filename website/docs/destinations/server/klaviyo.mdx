@@ -83,7 +83,7 @@ Identity is resolved automatically from each event: `email` defaults to `user.em
 
 ## Revenue tracking
 
-Map a mapping rule's `settings.value` to a numeric event property. When `settings.currency` is also set, the destination adds `valueCurrency` on the Klaviyo event for revenue reporting.
+Map a mapping rule's `settings.value` to a numeric value. The destination sets it as the Klaviyo event's `value` attribute -- the field revenue reporting reads -- and when `settings.currency` is also set, adds `valueCurrency` alongside it.
 
 ## Ecommerce metric naming
 
