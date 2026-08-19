@@ -40,7 +40,7 @@ export type InitSettings = Partial<Settings>;
 export interface Mapping {
   /** Per-event identify mapping. Resolves to profile attributes for upsert. */
   identify?: WalkerOSMapping.Value;
-  /** Revenue value mapping. Resolves to numeric value for Klaviyo's $value. */
+  /** Revenue value mapping. Resolves to the event's numeric `value` attribute. */
   value?: WalkerOSMapping.Value;
 }
 

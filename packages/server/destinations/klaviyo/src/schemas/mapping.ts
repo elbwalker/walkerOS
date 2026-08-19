@@ -10,7 +10,7 @@ export const MappingSchema = z.object({
   value: z
     .unknown()
     .describe(
-      'Revenue value mapping. Resolves to a numeric value for Klaviyo revenue tracking. Sets the value property and valueCurrency on the event.',
+      'Revenue value mapping. Resolves to a numeric value for Klaviyo revenue tracking. Sets the event value attribute (value on the wire), plus valueCurrency when settings.currency is set.',
     )
     .optional(),
 });

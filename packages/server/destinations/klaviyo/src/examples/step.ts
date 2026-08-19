@@ -154,7 +154,6 @@ export const revenueEvent: KlaviyoStepExample = {
     data: {
       map: {
         OrderId: 'data.id',
-        value: 'data.total',
         ItemNames: 'data.itemNames',
       },
     },
@@ -186,10 +185,10 @@ export const revenueEvent: KlaviyoStepExample = {
             },
             properties: {
               OrderId: 'ORD-123',
-              value: 99.99,
               ItemNames: ['Widget A', 'Widget B'],
             },
             time: new Date(1700000102).toISOString(),
+            value: 99.99,
             valueCurrency: 'EUR',
           },
         },

@@ -84,7 +84,14 @@ export const push: PushFn = async function (
       ? { ...(data as Record<string, unknown>) }
       : {};
 
-    // Handle revenue value
+    // Handle revenue value.
+    //
+    // Klaviyo reads revenue from the event's `value` / `valueCurrency`
+    // attributes (serialized by klaviyo-api as `value` / `value_currency`),
+    // NOT from `properties`. A number nested in `properties` is stored as a
+    // segmentable custom property and is ignored by revenue reporting, so
+    // emitting `valueCurrency` without a sibling `value` denominates nothing.
+    let value: number | undefined;
     let valueCurrency: string | undefined;
     if (mappingSettings.value !== undefined) {
       const resolvedValue = await getMappingValue(
@@ -96,7 +103,7 @@ export const push: PushFn = async function (
       );
       const numericValue = toNumber(resolvedValue);
       if (numericValue !== undefined) {
-        properties.value = numericValue;
+        value = numericValue;
         if (settings.currency) {
           valueCurrency = settings.currency;
         }
@@ -121,6 +128,7 @@ export const push: PushFn = async function (
           },
           properties,
           time: timestamp.toISOString(),
+          ...(value !== undefined ? { value } : {}),
           ...(valueCurrency ? { valueCurrency } : {}),
         },
       },
