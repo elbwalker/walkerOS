@@ -17,6 +17,11 @@ export interface Settings {
   identify?: WalkerOSMapping.Value;
   /** Default currency for revenue events (ISO 4217, e.g. 'USD', 'EUR'). */
   currency?: string;
+  /**
+   * Destination-level dedup key mapping, defaults to the walkerOS event id.
+   * Rule-level `mapping.uniqueId` overrides it per event.
+   */
+  uniqueId?: WalkerOSMapping.Value;
   /** Runtime state -- not user-facing. Mutated by init/push. */
   _eventsApi?: KlaviyoEventsApiMock;
   _profilesApi?: KlaviyoProfilesApiMock;

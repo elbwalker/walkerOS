@@ -119,11 +119,13 @@ export const push: PushFn = async function (
     // Klaviyo's dedup key. Repeats of the same uniqueId for one profile and
     // metric keep only the first event, which is what lets the same order
     // arrive from several producers (browser, import, a second server)
-    // without being counted twice.
+    // without being counted twice. Defaults to the walkerOS event id, so
+    // omitting it never falls back to Klaviyo's time-to-the-second window.
     let uniqueId: string | undefined;
-    if (mappingSettings.uniqueId !== undefined) {
+    const uniqueIdMapping = mappingSettings.uniqueId ?? settings.uniqueId;
+    if (uniqueIdMapping !== undefined) {
       uniqueId = resolveId(
-        await getMappingValue(event, mappingSettings.uniqueId, { collector }),
+        await getMappingValue(event, uniqueIdMapping, { collector }),
       );
     }
 

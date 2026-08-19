@@ -50,7 +50,7 @@
     "verify:touched": "bash scripts/verify-touched.sh",
     "verify:affected": "turbo run typecheck lint test --filter='[origin/main]' --summarize",
     "verify:force": "turbo run test --filter='[origin/main]' --force --summarize",
-    "// scripts": "verify:touched <pkg> for L1, verify:affected for L2, test:smoke for L3, test+lint+typecheck for L4, verify:force = rarely needed escape hatch for a fully uncached test run; the turbo test task depends on ^build, so an upstream change busts downstream test caches automatically. The cli test task runs UNIT tests only: its esbuild-heavy __tests__/integration/ suites run via test:integration (part of test:smoke, PR CI, and release), __tests__/e2e/ via test:e2e (push CI and release). See /workspaces/developer/AGENT.md rule 11.",
+    "// scripts": "verify:touched <pkg> for L1, verify:affected for L2, test:smoke for L3, test+lint+typecheck for L4, verify:force = rarely needed escape hatch for a fully uncached test run; the turbo test task depends on ^build, so an upstream change busts downstream test caches automatically. The cli test task runs UNIT tests only: its esbuild-heavy __tests__/integration/ suites run via test:integration (part of test:smoke, PR CI, and release), __tests__/e2e/ via test:e2e (push CI and release).",
     "prepare": "husky || true",
     "generate:skills-index": "npx tsx apps/scripts/generate-skills-index.ts",
     "validate:links": "npx tsx apps/scripts/validate-links.ts",

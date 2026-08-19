@@ -38,6 +38,12 @@ export const SettingsSchema = z.object({
       'Default ISO 4217 currency code for revenue events (like USD, EUR). Sets valueCurrency on Klaviyo events.',
     )
     .optional(),
+  uniqueId: z
+    .unknown()
+    .describe(
+      'Destination-level dedup key mapping. Resolves to the event uniqueId (unique_id on the wire) and defaults to the walkerOS event id. Rule-level mapping.uniqueId overrides it per event.',
+    )
+    .optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;
