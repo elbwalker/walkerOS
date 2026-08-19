@@ -42,6 +42,13 @@ export interface Mapping {
   identify?: WalkerOSMapping.Value;
   /** Revenue value mapping. Resolves to the event's numeric `value` attribute. */
   value?: WalkerOSMapping.Value;
+  /**
+   * Dedup key mapping. Resolves to Klaviyo's `uniqueId` (`unique_id` on the
+   * wire): repeats of the same value for one profile and metric keep only the
+   * first event. Omit it and Klaviyo falls back to the event time truncated to
+   * the second.
+   */
+  uniqueId?: WalkerOSMapping.Value;
 }
 
 /**

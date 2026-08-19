@@ -374,3 +374,103 @@ export const wildcardIgnored: KlaviyoStepExample = {
   mapping: { ignore: true },
   out: [],
 };
+
+/**
+ * Deduplicated order -- `settings.uniqueId` resolves Klaviyo's `unique_id`,
+ * the key Klaviyo deduplicates on. Without it Klaviyo falls back to the
+ * event time truncated to the second, which admits only one event per
+ * profile per metric per second and silently drops or duplicates the rest.
+ */
+export const dedupedOrder: KlaviyoStepExample = {
+  title: 'Deduplicated order',
+  description:
+    'An order carries a stable unique id so Klaviyo keeps only the first copy when the same order arrives from another producer.',
+  in: getEvent('order complete', {
+    timestamp: 1700000107,
+    user: { id: 'us3r', email: 'user@example.com' },
+    data: { id: 'ORD-123', total: 49.5 },
+  }),
+  mapping: {
+    name: 'Placed Order',
+    data: { map: { OrderId: 'data.id' } },
+    settings: { uniqueId: 'data.id' },
+  },
+  out: [
+    [
+      'eventsApi.createEvent',
+      {
+        data: {
+          type: 'event',
+          attributes: {
+            profile: {
+              data: {
+                type: 'profile',
+                attributes: {
+                  email: 'user@example.com',
+                  externalId: 'us3r',
+                },
+              },
+            },
+            metric: {
+              data: {
+                type: 'metric',
+                attributes: { name: 'Placed Order' },
+              },
+            },
+            properties: { OrderId: 'ORD-123' },
+            time: new Date(1700000107).toISOString(),
+            uniqueId: 'ORD-123',
+          },
+        },
+      },
+    ],
+  ],
+};
+
+/**
+ * Numeric dedup key -- order ids are commonly numbers. Coercing them keeps
+ * the dedup key instead of dropping it, which would silently return Klaviyo
+ * to its time-to-the-second fallback and re-admit duplicates.
+ */
+export const numericUniqueId: KlaviyoStepExample = {
+  public: false,
+  in: getEvent('order complete', {
+    timestamp: 1700000108,
+    user: { id: 'us3r', email: 'user@example.com' },
+    data: { id: 90210 },
+  }),
+  mapping: {
+    name: 'Placed Order',
+    settings: { uniqueId: 'data.id' },
+  },
+  out: [
+    [
+      'eventsApi.createEvent',
+      {
+        data: {
+          type: 'event',
+          attributes: {
+            profile: {
+              data: {
+                type: 'profile',
+                attributes: {
+                  email: 'user@example.com',
+                  externalId: 'us3r',
+                },
+              },
+            },
+            metric: {
+              data: {
+                type: 'metric',
+                attributes: { name: 'Placed Order' },
+              },
+            },
+            properties: {},
+            time: new Date(1700000108).toISOString(),
+            uniqueId: '90210',
+          },
+        },
+      },
+    ],
+  ],
+};
