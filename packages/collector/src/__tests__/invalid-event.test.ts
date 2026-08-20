@@ -85,4 +85,37 @@ describe('invalid inbound events', () => {
     expect(result.invalid).toBe(true);
     expect(collector.status.sources).toEqual({});
   });
+
+  // A wrong-typed name is client input, not a walkerOS fault. Without the type
+  // guard it reaches split() and throws a TypeError, which the push boundary
+  // classifies as a pipeline failure: a 500 with a stack instead of a 400.
+  it.each([
+    ['a number', 1],
+    ['an object', {}],
+    ['a boolean', true],
+  ])('rejects %s name as invalid input', async (_label, name) => {
+    const collector = await createTestCollector(records);
+
+    const result = await collector.push({ name } as never, { id: 'web' });
+
+    expect(result.ok).toBe(false);
+    expect(result.invalid).toBe(true);
+    expect(result.error).toBe('Event name is invalid');
+    expect(collector.status.failed).toBe(0);
+    expect(collector.status.sources.web?.rejected).toBe(1);
+  });
+
+  // Destructuring defaults only fill `undefined`, so an explicit null source
+  // reached the dereference below it and threw.
+  it('treats a null source as absent rather than crashing', async () => {
+    const collector = await createTestCollector(records);
+
+    const result = await collector.push(
+      { name: 'page view', source: null } as never,
+      { id: 'web' },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(collector.status.failed).toBe(0);
+  });
 });
