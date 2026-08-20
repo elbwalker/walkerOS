@@ -58,6 +58,26 @@ Integrates with existing analytics implementations:
 
 [Learn more →](./web/dataLayer/)
 
+#### Session
+
+Session lifecycle detection, emitting session start and session end:
+
+* Storage-backed session identity across page loads
+* Configurable timeout and lifetime
+* Feeds session context to every downstream event
+
+[Learn more →](./web/session/)
+
+#### Consent management
+
+Consent state from a CMP, forwarded to the collector:
+
+* CookieFirst, Usercentrics and CookiePro adapters
+* Consent changes propagate to destinations at runtime
+* Events queue until consent resolves
+
+[Learn more →](./web/cmps/)
+
 ### Server
 
 Server sources accept HTTP requests containing walkerOS events and forward them to the collector.
@@ -101,6 +121,26 @@ Google Cloud Functions HTTP handler for event collection:
 * Configurable CORS
 
 [Learn more →](./server/gcp)
+
+#### AWS SQS
+
+Queue consumer for events delivered through Amazon SQS:
+
+* Decouples ingestion from processing
+* Batch record handling
+* Retries and dead-letter handling stay with the queue
+
+[Learn more →](./server/sqs)
+
+#### Google Pub/Sub
+
+Pull subscriber and push webhook for Google Pub/Sub:
+
+* Pull for long-running workers, push for HTTP endpoints
+* Configurable decoders for the message payload
+* Redelivery governed by the subscription
+
+[Learn more →](./server/pubsub)
 
 ## Basic setup
 
