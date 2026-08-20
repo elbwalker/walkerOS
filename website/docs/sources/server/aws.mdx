@@ -99,6 +99,24 @@ Server sources require platform-specific handlers. For containerized deployments
 
 <Configuration type="source" data={data} />
 
+## Request format
+
+The event name field is `name`. `event` is accepted as a legacy alias and is
+removed at the next major; `name` wins when both are sent. Every other field of
+the body is forwarded to the collector as-is, so `source` (carrying `release`
+and `trace` provenance) rides through instead of being dropped.
+
+<CodeSnippet
+  code={`{
+  "name": "page view",
+  "data": {
+    "title": "Home Page",
+    "path": "/"
+  }
+}`}
+  language="json"
+/>
+
 ## Responses
 
 | Status | Meaning |

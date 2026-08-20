@@ -74,12 +74,9 @@ export function parseBody(body: unknown, isBase64Encoded: boolean): unknown {
 }
 
 export function isEventRequest(body: unknown): body is EventRequest {
-  return (
-    typeof body === 'object' &&
-    body !== null &&
-    'event' in body &&
-    typeof (body as EventRequest).event === 'string'
-  );
+  if (typeof body !== 'object' || body === null) return false;
+  if ('name' in body && typeof body.name === 'string') return true;
+  return 'event' in body && typeof body.event === 'string';
 }
 
 export function getCorsHeaders(

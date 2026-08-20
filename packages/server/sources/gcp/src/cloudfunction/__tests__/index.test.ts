@@ -348,6 +348,105 @@ describe('sourceCloudFunction', () => {
     });
   });
 
+  describe('provenance forwarding', () => {
+    it('forwards every body field, including source', async () => {
+      const source = await sourceCloudFunction(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const req = createMockRequest('POST', {
+        event: 'page view',
+        data: { title: 'Test Page' },
+        source: { release: { web: 'r1' }, trace: 't1' },
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'page view',
+          data: { title: 'Test Page' },
+          source: { release: { web: 'r1' }, trace: 't1' },
+        }),
+      );
+      // The wire-level `event` key must not leak into the pushed event.
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.objectContaining({ event: expect.anything() }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('accepts the name field and forwards it unchanged', async () => {
+      const source = await sourceCloudFunction(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const req = createMockRequest('POST', {
+        name: 'page view',
+        data: { title: 'Test Page' },
+        source: { release: { web: 'r1' } },
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'page view',
+          data: { title: 'Test Page' },
+          source: { release: { web: 'r1' } },
+        }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('prefers name over the legacy event alias', async () => {
+      const source = await sourceCloudFunction(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const req = createMockRequest('POST', {
+        name: 'page view',
+        event: 'legacy name',
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'page view' }),
+      );
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.objectContaining({ event: expect.anything() }),
+      );
+    });
+  });
+
   describe('CORS handling', () => {
     it('should set default CORS headers when enabled', async () => {
       const source = await sourceCloudFunction(

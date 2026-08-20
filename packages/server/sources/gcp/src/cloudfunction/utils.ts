@@ -1,6 +1,8 @@
-import type { RequestBody, EventRequest, CorsOptions, Response } from './types';
+import type { EventRequest, CorsOptions, Response } from './types';
 
-export function isEventRequest(body: RequestBody): body is EventRequest {
+export function isEventRequest(body: unknown): body is EventRequest {
+  if (typeof body !== 'object' || body === null) return false;
+  if ('name' in body && typeof body.name === 'string') return true;
   return 'event' in body && typeof body.event === 'string';
 }
 

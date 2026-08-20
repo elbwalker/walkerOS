@@ -47,3 +47,29 @@ export const orderEvent: Flow.StepExample = {
     ],
   ],
 };
+
+export const cloudFunctionPostForwardsSource: Flow.StepExample = {
+  title: 'POST with provenance',
+  description:
+    'A POST body carrying a source map is forwarded in full, so release and trace provenance survive the crossing.',
+  trigger: { type: 'POST' },
+  in: {
+    method: 'POST',
+    body: {
+      event: 'page view',
+      data: { title: 'Home' },
+      source: { release: { web: 'r1' } },
+    },
+    headers: { 'content-type': 'application/json' },
+  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: { title: 'Home' },
+        source: { release: { web: 'r1' } },
+      },
+    ],
+  ],
+};

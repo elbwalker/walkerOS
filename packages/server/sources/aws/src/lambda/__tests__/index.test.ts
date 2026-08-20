@@ -407,6 +407,111 @@ describe('sourceLambda', () => {
     });
   });
 
+  describe('provenance forwarding', () => {
+    it('forwards every body field, including source', async () => {
+      const source = await sourceLambda(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const event = createMockEventV1(
+        'POST',
+        JSON.stringify({
+          event: 'page view',
+          data: { title: 'Home' },
+          source: { release: { web: 'r1' }, trace: 't1' },
+        }),
+      );
+      const context = createMockContext();
+
+      const result = await source.push(event, context);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'page view',
+          data: { title: 'Home' },
+          source: { release: { web: 'r1' }, trace: 't1' },
+        }),
+      );
+      // The wire-level `event` key must not leak into the pushed event.
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.objectContaining({ event: expect.anything() }),
+      );
+      expect(result.statusCode).toBe(200);
+    });
+
+    it('accepts the name field and forwards it unchanged', async () => {
+      const source = await sourceLambda(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const event = createMockEventV1(
+        'POST',
+        JSON.stringify({
+          name: 'page view',
+          data: { title: 'Home' },
+          source: { release: { web: 'r1' } },
+        }),
+      );
+      const context = createMockContext();
+
+      const result = await source.push(event, context);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'page view',
+          data: { title: 'Home' },
+          source: { release: { web: 'r1' } },
+        }),
+      );
+      expect(result.statusCode).toBe(200);
+    });
+
+    it('prefers name over the legacy event alias', async () => {
+      const source = await sourceLambda(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const event = createMockEventV1(
+        'POST',
+        JSON.stringify({ name: 'page view', event: 'legacy name' }),
+      );
+      const context = createMockContext();
+
+      await source.push(event, context);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'page view' }),
+      );
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.objectContaining({ event: expect.anything() }),
+      );
+    });
+  });
+
   describe('error handling', () => {
     it('should require request body for POST', async () => {
       const source = await sourceLambda(

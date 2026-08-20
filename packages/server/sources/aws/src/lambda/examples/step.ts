@@ -82,3 +82,33 @@ export const lambdaGet: Flow.StepExample = {
     ],
   ],
 };
+
+export const lambdaPostForwardsSource: Flow.StepExample = {
+  title: 'Lambda POST with provenance',
+  description:
+    'A POST body carrying a source map is forwarded in full, so release and trace provenance survive the crossing.',
+  trigger: { type: 'POST' },
+  in: {
+    version: '2.0',
+    requestContext: {
+      http: { method: 'POST', path: '/collect' },
+      requestId: 'req-321',
+    },
+    body: JSON.stringify({
+      event: 'page view',
+      data: { title: 'Home' },
+      source: { release: { web: 'r1' } },
+    }),
+    isBase64Encoded: false,
+  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: { title: 'Home' },
+        source: { release: { web: 'r1' } },
+      },
+    ],
+  ],
+};

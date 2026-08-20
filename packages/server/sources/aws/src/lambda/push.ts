@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS, Logger } from '@walkeros/core';
+import type { Collector, Logger } from '@walkeros/core';
 import type { EventRequest } from './types';
 
 export async function processEvent(
@@ -8,14 +8,8 @@ export async function processEvent(
   requestId?: string,
 ): Promise<{ id?: string; error?: string; status?: number }> {
   try {
-    const result = await push({
-      name: eventReq.event,
-      data: (eventReq.data || {}) as WalkerOS.Properties,
-      context: eventReq.context as WalkerOS.OrderedProperties | undefined,
-      user: eventReq.user as WalkerOS.User | undefined,
-      globals: eventReq.globals as WalkerOS.Properties | undefined,
-      consent: eventReq.consent as WalkerOS.Consent | undefined,
-    });
+    const { event, ...rest } = eventReq;
+    const result = await push({ ...rest, name: rest.name ?? event });
 
     if (result?.ok === false) {
       if (result.invalid === true) {
@@ -32,7 +26,7 @@ export async function processEvent(
     // Log with structured context - per using-logger skill
     logger?.error('Event processing failed', {
       error,
-      eventName: eventReq.event,
+      eventName: eventReq.name ?? eventReq.event,
       requestId,
     });
     // A rejected push promise is a server fault: the collector resolves

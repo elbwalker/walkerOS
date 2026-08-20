@@ -232,6 +232,12 @@ When using the vendor SDK:
 - Use SDK request/response types for handler signatures
 - Let the SDK handle platform-specific parsing (body parsing, header extraction)
 
+For an HTTP handler, forward the full `DeepPartialEvent` the body carries,
+renaming only the wire-level event-name key. Never project the body through a
+field allowlist: that strips `source` provenance (`release`, `trace`) and other
+legitimate fields. `express` and `fetch` are the reference pass-through
+implementations.
+
 ### Gate: Classification Complete
 
 - [ ] Source category identified (transformation / transport / interception)

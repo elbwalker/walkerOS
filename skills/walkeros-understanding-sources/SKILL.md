@@ -261,6 +261,12 @@ export const handler = source.push;
 See [packages/server/sources/gcp/](../../packages/server/sources/gcp/) for
 implementation.
 
+**Forward the whole body.** A server source hands the collector the full
+`DeepPartialEvent` it received, renaming only its wire-level event-name key. It
+must not project the body through a field allowlist, or it strips `source`
+provenance (`release`, `trace`) and other legitimate fields. `express` and
+`fetch` are the reference pass-through implementations.
+
 ## Env Pattern (Dependency Injection)
 
 Platform dependencies go through `env` with fallback to globals or direct

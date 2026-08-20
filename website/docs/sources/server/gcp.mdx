@@ -89,11 +89,16 @@ Server sources require platform-specific handlers. For containerized deployments
 
 ## Request format
 
+The event name field is `name`. `event` is accepted as a legacy alias and is
+removed at the next major; `name` wins when both are sent. Every other field of
+the body is forwarded to the collector as-is, so `source` (carrying `release`
+and `trace` provenance) rides through instead of being dropped.
+
 ### Single event
 
 <CodeSnippet
   code={`{
-  "event": "page view",
+  "name": "page view",
   "data": {
     "title": "Home Page",
     "path": "/"
@@ -107,8 +112,8 @@ Server sources require platform-specific handlers. For containerized deployments
 <CodeSnippet
   code={`{
   "events": [
-    { "event": "page view", "data": { "title": "Page 1" } },
-    { "event": "button click", "data": { "id": "btn1" } }
+    { "name": "page view", "data": { "title": "Page 1" } },
+    { "name": "button click", "data": { "id": "btn1" } }
   ]
 }`}
   language="json"

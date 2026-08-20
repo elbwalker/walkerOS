@@ -1,4 +1,4 @@
-import type { LambdaSource, EventRequest, Types } from './types';
+import type { LambdaSource, Types } from './types';
 import type { Source } from '@walkeros/core';
 import { requestToData } from '@walkeros/core';
 import {
@@ -126,7 +126,7 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
 
           if (isEventRequest(body)) {
             const result = await processEvent(
-              body as EventRequest,
+              body,
               envPush,
               env.logger,
               requestId,

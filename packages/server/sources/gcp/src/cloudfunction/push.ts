@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
+import type { Collector } from '@walkeros/core';
 import type { EventRequest } from './types';
 
 export async function processEvent(
@@ -6,14 +6,8 @@ export async function processEvent(
   push: Collector.PushFn,
 ): Promise<{ id?: string; error?: string; status?: number }> {
   try {
-    const result = await push({
-      name: eventReq.event,
-      data: (eventReq.data || {}) as WalkerOS.Properties,
-      context: eventReq.context as WalkerOS.OrderedProperties | undefined,
-      user: eventReq.user as WalkerOS.User | undefined,
-      globals: eventReq.globals as WalkerOS.Properties | undefined,
-      consent: eventReq.consent as WalkerOS.Consent | undefined,
-    });
+    const { event, ...rest } = eventReq;
+    const result = await push({ ...rest, name: rest.name ?? event });
 
     if (result?.ok === false) {
       if (result.invalid === true) {

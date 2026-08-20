@@ -2,7 +2,6 @@ import type {
   CloudFunctionSource,
   Settings,
   EventResponse,
-  RequestBody,
   Request,
   Response,
   Types,
@@ -67,12 +66,8 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
           }
         }
 
-        if (
-          body &&
-          typeof body === 'object' &&
-          isEventRequest(body as RequestBody)
-        ) {
-          const result = await processEvent(body as RequestBody, envPush);
+        if (isEventRequest(body)) {
+          const result = await processEvent(body, envPush);
 
           if (result.error) {
             res.status(result.status ?? 500).json({
