@@ -1,10 +1,10 @@
 ---
-'@walkeros/core': minor
-'@walkeros/collector': minor
-'@walkeros/server-source-express': minor
-'@walkeros/server-source-fetch': minor
-'@walkeros/server-source-gcp': minor
-'@walkeros/server-source-aws': minor
+'@walkeros/core': patch
+'@walkeros/collector': patch
+'@walkeros/server-source-express': patch
+'@walkeros/server-source-fetch': patch
+'@walkeros/server-source-gcp': patch
+'@walkeros/server-source-aws': patch
 ---
 
 Server sources answer rejected client input with 4xx JSON instead of unhandled
