@@ -99,6 +99,18 @@ Server sources require platform-specific handlers. For containerized deployments
 
 <Configuration type="source" data={data} />
 
+## Responses
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Event processed |
+| 400 | Rejected client input: the pipeline declared the event invalid. The body echoes the validation message, for example `Event name is required` |
+| 500 | The pipeline failed to process a valid event, or an unexpected server fault |
+
+Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
+inflating `status.failed`, and is logged at warn with the reason instead of as an
+error with a stack trace.
+
 ## Ingest metadata
 
 Extract request metadata from Lambda events and forward it through the pipeline.

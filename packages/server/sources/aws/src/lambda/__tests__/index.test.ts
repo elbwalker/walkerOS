@@ -512,7 +512,9 @@ describe('sourceLambda', () => {
 
       const result = await source.push(event, context);
 
-      expect(result.statusCode).toBe(400);
+      // A rejected push is a server fault, not client input: the collector
+      // resolves pipeline failures, so a rejection is exceptional.
+      expect(result.statusCode).toBe(500);
       expect(JSON.parse(result.body)).toMatchObject({
         success: false,
         error: 'Processing failed',

@@ -130,6 +130,18 @@ In addition to the shared base (`projectId`, `apiEndpoint`, `decoder` in `settin
 | `verifyOidc`  | `boolean` | `false` | When `true`, verifies the bearer token Pub/Sub attaches to push requests.  |
 | `audience`    | `string`  | -       | Required when `verifyOidc` is true. Must match your endpoint URL exactly.  |
 
+## Push webhook responses
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Message acknowledged |
+| 400 | The message is permanently invalid, either it failed to decode or the pipeline declared the event invalid. A retry can never fix it, so the answer is a nack |
+| 500 | The pipeline failed on an otherwise valid message, so Pub/Sub redelivers |
+
+Because a permanently-invalid message is nacked rather than acknowledged, set a
+dead-letter policy on the subscription. That policy, not the source, is the
+poison-message guard.
+
 ## Authentication
 
 Three modes for the pull subscriber, evaluated in order:

@@ -100,7 +100,22 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
 
           // If body is not a valid object, push {} to let source.before transformers handle raw input via ingest
           if (!body || typeof body !== 'object') {
-            await envPush({});
+            const result = await envPush({});
+            if (result?.ok === false) {
+              const invalid = result.invalid === true;
+              return createResponse(
+                invalid ? 400 : 500,
+                {
+                  success: false,
+                  error:
+                    result.error ??
+                    (invalid ? 'Invalid event' : 'Event was not processed'),
+                  requestId,
+                },
+                corsHeaders,
+                requestId,
+              );
+            }
             return createResponse(
               200,
               { success: true, requestId },
@@ -119,7 +134,7 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
 
             if (result.error) {
               return createResponse(
-                400,
+                result.status ?? 500,
                 { success: false, error: result.error, requestId },
                 corsHeaders,
                 requestId,

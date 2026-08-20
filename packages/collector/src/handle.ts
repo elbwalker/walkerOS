@@ -17,6 +17,7 @@ import {
   assign,
   getSpanId,
   getTraceId,
+  InvalidEventError,
   isFunction,
   isString,
 } from '@walkeros/core';
@@ -249,10 +250,11 @@ export function createEvent(
   partialEvent: WalkerOS.PartialEvent,
   ingest?: Ingest,
 ): WalkerOS.Event {
-  if (!partialEvent.name) throw new Error('Event name is required');
+  if (!partialEvent.name) throw new InvalidEventError('Event name is required');
 
   const [entityValue, actionValue] = partialEvent.name.split(' ');
-  if (!entityValue || !actionValue) throw new Error('Event name is invalid');
+  if (!entityValue || !actionValue)
+    throw new InvalidEventError('Event name is invalid');
 
   const {
     timestamp = Date.now(),

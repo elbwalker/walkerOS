@@ -1,5 +1,5 @@
 import { requestToData, isObject, isDefined } from '@walkeros/core';
-import type { WalkerOS, Collector, Source } from '@walkeros/core';
+import type { WalkerOS, Collector, Logger, Source } from '@walkeros/core';
 import type { FetchSource, Types } from './types';
 import {
   createCorsHeaders,
@@ -21,6 +21,19 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
       (userSettings.path ? [userSettings.path] : ['/collect']),
   };
   const { logger } = env;
+
+  // Rejection volume belongs in collector.status, not in per-request logs.
+  // Lazy entry creation mirrors the collector's own sources bookkeeping.
+  // Guarded: unit harnesses may run the handler with a bare collector stub.
+  const countRejected = (): void => {
+    const sources = context.collector.status?.sources;
+    if (!sources) return;
+    if (!sources[context.id]) {
+      sources[context.id] = { count: 0, duration: 0 };
+    }
+    const sourceStatus = sources[context.id];
+    sourceStatus.rejected = (sourceStatus.rejected ?? 0) + 1;
+  };
 
   const push = async (request: Request): Promise<Response> => {
     const startTime = Date.now();
@@ -90,7 +103,8 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
           if (contentLength) {
             const size = parseInt(contentLength, 10);
             if (size > settings.maxRequestSize) {
-              logger.error('Request too large', {
+              countRejected();
+              logger.debug('Request too large', {
                 size,
                 limit: settings.maxRequestSize,
               });
@@ -114,7 +128,8 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
 
             // Check actual body size
             if (bodyText.length > settings.maxRequestSize) {
-              logger.error('Request body too large', {
+              countRejected();
+              logger.debug('Request body too large', {
                 size: bodyText.length,
                 limit: settings.maxRequestSize,
               });
@@ -146,12 +161,15 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
             const result = await processEvent(
               eventData as WalkerOS.DeepPartialEvent,
               envPush,
+              logger,
             );
             if (result.error) {
-              logger.error('Event processing failed', { error: result.error });
+              // A thrown push is already error-logged inside processEvent;
+              // this covers settled declines only.
+              logger.warn('Event processing failed', { error: result.error });
               return createJsonResponse(
                 { success: false, error: result.error },
-                400,
+                result.status ?? 500,
                 corsHeaders,
               );
             }
@@ -172,7 +190,8 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
             const batch = validData.batch as unknown[];
 
             if (batch.length > settings.maxBatchSize) {
-              logger.error('Batch too large', {
+              countRejected();
+              logger.debug('Batch too large', {
                 size: batch.length,
                 limit: settings.maxBatchSize,
               });
@@ -216,12 +235,15 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
           const result = await processEvent(
             eventData as WalkerOS.DeepPartialEvent,
             envPush,
+            logger,
           );
           if (result.error) {
-            logger.error('Event processing failed', { error: result.error });
+            // A thrown push is already error-logged inside processEvent;
+            // this covers settled declines only.
+            logger.warn('Event processing failed', { error: result.error });
             return createJsonResponse(
               { success: false, error: result.error },
-              400,
+              result.status ?? 500,
               corsHeaders,
             );
           }
@@ -260,12 +282,29 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
 async function processEvent(
   event: WalkerOS.DeepPartialEvent,
   push: Collector.PushFn,
-): Promise<{ id?: string; error?: string }> {
+  logger: Logger.Instance,
+): Promise<{ id?: string; error?: string; status?: number }> {
   try {
     const result = await push(event);
+    if (result?.ok === false) {
+      if (result.invalid === true) {
+        return { error: result.error ?? 'Invalid event', status: 400 };
+      }
+      return {
+        error: result.error ?? 'Event was not processed',
+        status: 500,
+      };
+    }
     return { id: result?.event?.id };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Unknown error' };
+    // A rejected push promise is a server fault: the collector resolves
+    // pipeline failures, so a rejection is exceptional by construction.
+    // Logged here at error because the call site cannot distinguish a
+    // settled ok:false from a rejection, and a rejected push has to stay
+    // in the error channel.
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Event processing failed', { error: message });
+    return { error: message, status: 500 };
   }
 }
 
@@ -291,6 +330,15 @@ async function processBatch(
 
     try {
       const result = await push(event as WalkerOS.DeepPartialEvent);
+      if (result?.ok === false) {
+        results.failed++;
+        results.errors.push({
+          index: i,
+          error: result.error ?? 'Event was not processed',
+        });
+        logger.warn(`Batch event ${i} not processed`);
+        continue;
+      }
       if (result?.event?.id) {
         results.ids.push(result.event.id);
       }
@@ -301,7 +349,7 @@ async function processBatch(
         index: i,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      logger.error(`Batch event ${i} processing failed`, error);
+      logger.warn(`Batch event ${i} processing failed`, error);
     }
   }
 

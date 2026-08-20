@@ -28,6 +28,9 @@ Before starting, read these skills:
   env pattern and dev examples
 - [using-step-examples](../walkeros-using-step-examples/SKILL.md) -
   Authoritative `Flow.StepExample` pattern, `createTrigger`, Three Type Zones
+- [using-logger](../walkeros-using-logger/SKILL.md) - For an HTTP source, see
+  "Choosing a level on public endpoints": rejected client input is debug or warn
+  plus a `rejected` counter and a 4xx, never an error-level log
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
   Documentation standards (for Phase 9)
 

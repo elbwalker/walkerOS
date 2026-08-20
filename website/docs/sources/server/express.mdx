@@ -140,6 +140,29 @@ Server sources require platform-specific handlers. For containerized deployments
 Health check endpoints (`/health` and `/ready`) are provided by the [runner](/docs/apps/runner), not by individual sources. This means health checks work regardless of which source type you use.
 :::
 
+### Responses
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Accepted (default respond-first mode: accepted for processing, not proof of delivery) or, with `async: false`, processed |
+| 400 | Rejected client input: unparseable JSON (body echoes the parser message) or, with `async: false`, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
+| 404 | Path not configured in `paths` |
+| 405 | Method not allowed on the path |
+| 413 | Body exceeds the 1mb limit |
+| 415 | Unsupported charset |
+| 500 | With `async: false`: the pipeline failed to process a valid event. Otherwise: unexpected server fault |
+
+GET pixel requests always answer the GIF with 200 in every mode, because an image
+endpoint cannot carry a useful 400. Rejected pixel input is visible through the
+`rejected` counter instead.
+
+Rejected input, unparseable bodies and invalid events alike, is counted on
+`collector.status.sources.<id>.rejected` and logged at debug or warn with the
+reason. Ambient scanner traffic never reaches the error log level.
+
+Responses carry `X-Content-Type-Options: nosniff`, and the source does not send
+`X-Powered-By`.
+
 ## Ingest metadata
 
 Extract request metadata (IP, user agent, headers) and forward it through the pipeline to transformers and destinations.
@@ -218,6 +241,6 @@ Use walkerOS mapping features for complex extraction:
 <CodeSnippet
   code={`curl -X POST http://localhost:8080/collect \\
   -H "Content-Type: application/json" \\
-  -d '{"event":"page view","data":{"title":"Home"}}'`}
+  -d '{"name":"page view","data":{"title":"Home"}}'`}
   language="bash"
 />

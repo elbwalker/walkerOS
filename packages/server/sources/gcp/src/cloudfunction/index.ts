@@ -75,7 +75,7 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
           const result = await processEvent(body as RequestBody, envPush);
 
           if (result.error) {
-            res.status(400).json({
+            res.status(result.status ?? 500).json({
               success: false,
               error: result.error,
             } as EventResponse);
@@ -88,6 +88,17 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
         } else {
           // Push empty event for non-event bodies (enables source.before transformers to process raw input)
           const result = await envPush({});
+
+          if (result?.ok === false) {
+            const invalid = result.invalid === true;
+            res.status(invalid ? 400 : 500).json({
+              success: false,
+              error:
+                result.error ??
+                (invalid ? 'Invalid event' : 'Event was not processed'),
+            } as EventResponse);
+            return;
+          }
 
           res.status(200).json({
             success: true,

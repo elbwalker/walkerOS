@@ -338,7 +338,9 @@ describe('sourceCloudFunction', () => {
 
       await source.push(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
+      // A rejected push is a server fault, not client input: the collector
+      // resolves pipeline failures, so a rejection is exceptional.
+      expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Processing failed',

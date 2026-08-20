@@ -34,6 +34,7 @@ export * from './throwError';
 export * from './trim';
 export * from './tryCatch';
 export * from './fatalError';
+export * from './invalidEventError';
 export * from './useHooks';
 export * from './telemetry';
 export * from './telemetryResolver';
