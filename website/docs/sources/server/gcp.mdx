@@ -14,7 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # GCP Cloud Functions
 
-Google Cloud Functions source for walkerOS. Lightweight runtime adapter with plug-and-play assignment to a Cloud Functions handler, batch processing for multiple events per request, and configurable CORS. The `@walkeros/server-source-gcp` package also ships [`sourcePubSubPull` and `sourcePubSubPush`](/docs/sources/server/pubsub) for ingesting from Pub/Sub topics; this page covers the Cloud Functions handler only.
+Google Cloud Functions source for walkerOS. Lightweight runtime adapter with plug-and-play assignment to a Cloud Functions handler, support for the shared [event envelope](/docs/sources/envelope) including batches, a GET tracking pixel, and configurable CORS. The `@walkeros/server-source-gcp` package also ships [`sourcePubSubPull` and `sourcePubSubPush`](/docs/sources/server/pubsub) for ingesting from Pub/Sub topics; this page covers the Cloud Functions handler only.
 
 <WhereThisFits
   pre={<>The GCP Cloud Functions source is a <strong>server source</strong> in the walkerOS flow:</>}
@@ -44,7 +44,7 @@ const { sources } = await startFlow({
     gcp: {
       code: sourceCloudFunction,
       config: {
-        settings: { cors: true, batch: true },
+        settings: { cors: true },
       },
     },
   },
@@ -70,7 +70,6 @@ Add to your `flow.json` sources:
     "config": {
       "settings": {
         "cors": true,
-        "batch": true
       }
     }
   }
@@ -109,9 +108,13 @@ and `trace` provenance) rides through instead of being dropped.
 
 ### Batch events
 
+Send several events in one request with the shared envelope. See
+[Event Envelope](/docs/sources/envelope) for the accepted forms, the
+`maxBatchSize` cap and the 207 partial-failure response.
+
 <CodeSnippet
   code={`{
-  "events": [
+  "batch": [
     { "name": "page view", "data": { "title": "Page 1" } },
     { "name": "button click", "data": { "id": "btn1" } }
   ]

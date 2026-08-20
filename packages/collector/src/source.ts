@@ -13,6 +13,7 @@ import {
   getMappingValue,
   getSpanId,
   parseTraceparent,
+  isScope,
   tryCatchAsync,
   getNextSteps,
   compileCache,
@@ -109,39 +110,6 @@ export async function flushSourceQueueOn(
  */
 export function isSourceStarted(source: Source.Instance): boolean {
   return Boolean(source.config.init) && !source.config.require?.length;
-}
-
-// Intentionally looser than core's isObject, which rejects non-plain objects
-// like Fetch Headers instances ('[object Headers]') that must pass here.
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function hasHeaderGetter(
-  headers: Record<string, unknown>,
-): headers is { get: (name: string) => unknown } {
-  return 'get' in headers && typeof headers.get === 'function';
-}
-
-/**
- * Read a `traceparent` header value from a raw source scope input, if any.
- * Supports a Fetch `Headers` instance (via its `.get` accessor) and a plain
- * object header bag (direct `traceparent` key first, then a case-insensitive
- * fallback since raw Node/GCP requests may not lowercase header keys). Any
- * other shape yields undefined. Never throws on exotic inputs.
- */
-function readTraceparentHeader(rawScope: unknown): unknown {
-  if (!isRecord(rawScope)) return undefined;
-  const headers = rawScope.headers;
-  if (!isRecord(headers)) return undefined;
-
-  if (hasHeaderGetter(headers)) return headers.get('traceparent') ?? undefined;
-
-  if ('traceparent' in headers) return headers.traceparent;
-  for (const key of Object.keys(headers)) {
-    if (key.toLowerCase() === 'traceparent') return headers[key];
-  }
-  return undefined;
 }
 
 /**
@@ -525,13 +493,19 @@ export async function initSource(
    * with valid `_meta`. Pure: returns a new object, never reads or
    * writes source-factory state.
    */
-  const extractIngest = async (rawScope: unknown): Promise<Ingest> => {
+  const extractIngest = async (
+    rawScope: Source.Scope | undefined,
+  ): Promise<Ingest> => {
     const fresh = createIngest(sourceId);
-    // Adopt an inbound W3C traceparent from the raw scope's header bag so
-    // every server source gains trace continuity + parent-span linkage. The
-    // final return reuses `fresh._meta` by reference, so stamping here holds
-    // for both the mapped and unmapped paths.
-    const traceparent = parseTraceparent(readTraceparentHeader(rawScope));
+    // Adopt an inbound W3C traceparent from the scope's header bag so every
+    // server source gains trace continuity + parent-span linkage. The final
+    // return reuses `fresh._meta` by reference, so stamping here holds for
+    // both the mapped and unmapped paths. Sources can be user authored, so the
+    // declared type is not assumed to hold at runtime; a miss resolves
+    // nothing, which is the honest outcome.
+    const traceparent = parseTraceparent(
+      isScope(rawScope) ? rawScope?.headers?.traceparent : undefined,
+    );
     if (traceparent) {
       fresh._meta.trace = traceparent.trace;
       fresh._meta.parentEventId = traceparent.parentSpan;

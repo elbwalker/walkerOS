@@ -632,6 +632,9 @@ export async function pushToDestinations(
       // below uses this to skip the synchronous `count++` for batched events
       // (counters move to the flush callback per PROD-004 plan Q9).
       let batchedCount = 0;
+      // Events the destination actually received. A before-chain fan-out makes
+      // this exceed allowedEvents.length, which counts what entered.
+      let pushedCount = 0;
       await Promise.all(
         allowedEvents.map(async (event) => {
           // Merge collector user into event (collector as base, event overrides)
@@ -655,7 +658,7 @@ export async function pushToDestinations(
           }
 
           // Run post-collector transformer chain if configured for this destination
-          let processedEvent: WalkerOS.Event | null = event;
+          let children: WalkerOS.Event[] = [event];
           let destRespond = meta.respond;
           if (
             postChain.length > 0 &&
@@ -680,169 +683,190 @@ export async function pushToDestinations(
             // Update respond if the chain produced a wrapped one
             if (chainResult.respond) destRespond = chainResult.respond;
 
-            // Use the processed event (cast back to full Event type)
-            // Before chains use first result if fan-out occurred
-            processedEvent = (
+            // A before chain may fan one event into several. Every child is
+            // delivered: the chain's return type promises an array may come
+            // back, and the source-position chain honors that too.
+            children = (
               Array.isArray(chainResult.event)
-                ? chainResult.event[0]
-                : chainResult.event
-            ) as WalkerOS.Event;
+                ? chainResult.event
+                : [chainResult.event]
+            ) as WalkerOS.Event[];
           }
 
-          // Step-level cache check: after before chain, skip only push on HIT
-          if (compiledDCache && !compiledDCache.stop && dCacheStore) {
-            const cacheContext = buildCacheContext(destIngest, processedEvent);
-            const cacheResult = await checkCache(
-              compiledDCache,
-              dCacheStore,
-              cacheContext,
-            );
-            if (cacheResult?.status === 'HIT') {
-              return event; // Skip push — deduplicated
-            }
-            if (cacheResult?.status === 'MISS') {
-              cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
-            }
-          }
-
-          // state[get]: enrich the event before the mapping-to-payload push.
-          if (dStateGet && dStateGet.length > 0 && processedEvent) {
-            processedEvent = await applyState(
-              dStateGet,
-              (storeId) => getStateStore(storeId, collector),
-              processedEvent,
-              collector,
-            );
-          }
-
-          const pushStart = Date.now();
-          let pushFailed = false;
-          const result = await tryCatchAsync(destinationPush, (err) => {
-            // Log the error with destination scope
-            const destType = destination.type || 'unknown';
-            collector.logger.scope(destType).error('Push failed', {
-              error: err,
-              event: processedEvent!.name,
-            });
-            error = err; // oh no
-            pushFailed = true;
-
-            // Add failed event to destinations DLQ (bounded; FIFO drop-oldest)
-            const dlq = destination.dlq!;
-            const destId = destination.config.id || id;
-            const dlqBound = {
-              max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX,
-            };
-            const dlqResult = pushBounded(
-              dlq,
-              [processedEvent!, err],
-              dlqBound,
-            );
-            if (dlqResult.dropped > 0) {
-              ensureDestStatus(collector, destId);
-              const droppedCount = bumpDropped(
-                collector.status,
-                stepId('destination', destId),
-                'dlq',
-                dlqResult.dropped,
-              );
-              warnOverflowOnce(
-                dlq,
-                collector.logger.scope(destination.type || 'unknown'),
-                'destination.dlq overflow; oldest entries dropped',
-                {
-                  buffer: 'dlq',
-                  destination: destId,
-                  cap: dlqBound.max,
-                  droppedCount,
-                },
-              );
-            } else if (dlq.length < dlqBound.max) {
-              resetOverflowFlag(dlq);
-            }
-
-            return undefined;
-          })(
-            collector,
-            destination,
-            id,
-            processedEvent!,
-            destIngest,
-            destRespond,
-          );
-          totalDuration += Date.now() - pushStart;
-
-          // Destination cache MISS: store the push result after attempt
-          if (
-            cacheMiss &&
-            dCacheStore &&
-            destination.config.mock === undefined
-          ) {
-            storeCache(
-              dCacheStore,
-              cacheMiss.key,
-              result ?? true,
-              cacheMiss.ttl,
-            );
-          }
-
-          // state[set]: stash from the event after a successful send. A
-          // batched-enqueue is not a real send (the sentinel is returned
-          // before delivery), so set is deferred until flush. The flush-path
-          // write is a documented follow-up, not handled here yet.
-          if (
-            !pushFailed &&
-            !isBatchedResult(result) &&
-            dStateSet &&
-            dStateSet.length > 0 &&
-            processedEvent
-          ) {
-            processedEvent = await applyState(
-              dStateSet,
-              (storeId) => getStateStore(storeId, collector),
-              processedEvent,
-              collector,
-            );
-          }
-
-          // Capture the last response (for single event pushes).
-          // Batched-enqueue sentinel is NOT a real response; don't surface it.
-          if (result !== undefined && !isBatchedResult(result)) {
-            response = result;
-          }
-          if (isBatchedResult(result)) batchedCount++;
-
-          // Run destination.next chain after successful push
-          if (!pushFailed && nextConfig) {
-            // Write push response to ingest for destination.next transformers
-            if (result !== undefined) {
-              destIngest._response = result;
-            }
-
-            const nextChain = resolveDestinationChain(
-              nextConfig,
-              transformerNextMap,
-              destIngest,
-            );
-
-            if (
-              nextChain.length > 0 &&
-              collector.transformers &&
-              Object.keys(collector.transformers).length > 0
-            ) {
-              const nextResult = await runTransformerChain(
-                collector,
-                collector.transformers,
-                nextChain,
-                processedEvent!,
+          // One child of the before chain, from the step-level cache check
+          // through the destination.next chain. Extracted so a fan-out runs it
+          // once per child instead of keeping only the first.
+          const deliverOne = async (
+            processedEvent: WalkerOS.Event | null,
+            cacheMiss: { key: string; ttl: number } | undefined,
+          ): Promise<void> => {
+            // Step-level cache check: after before chain, skip only push on HIT
+            if (compiledDCache && !compiledDCache.stop && dCacheStore) {
+              const cacheContext = buildCacheContext(
                 destIngest,
-                destRespond,
-                `destination.${id}.next`,
+                processedEvent,
               );
-              if (nextResult.respond) destRespond = nextResult.respond;
+              const cacheResult = await checkCache(
+                compiledDCache,
+                dCacheStore,
+                cacheContext,
+              );
+              if (cacheResult?.status === 'HIT') {
+                return; // Skip push — deduplicated
+              }
+              if (cacheResult?.status === 'MISS') {
+                cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
+              }
             }
+
+            // state[get]: enrich the event before the mapping-to-payload push.
+            if (dStateGet && dStateGet.length > 0 && processedEvent) {
+              processedEvent = await applyState(
+                dStateGet,
+                (storeId) => getStateStore(storeId, collector),
+                processedEvent,
+                collector,
+              );
+            }
+
+            const pushStart = Date.now();
+            let pushFailed = false;
+            const result = await tryCatchAsync(destinationPush, (err) => {
+              // Log the error with destination scope
+              const destType = destination.type || 'unknown';
+              collector.logger.scope(destType).error('Push failed', {
+                error: err,
+                event: processedEvent!.name,
+              });
+              error = err; // oh no
+              pushFailed = true;
+
+              // Add failed event to destinations DLQ (bounded; FIFO drop-oldest)
+              const dlq = destination.dlq!;
+              const destId = destination.config.id || id;
+              const dlqBound = {
+                max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX,
+              };
+              const dlqResult = pushBounded(
+                dlq,
+                [processedEvent!, err],
+                dlqBound,
+              );
+              if (dlqResult.dropped > 0) {
+                ensureDestStatus(collector, destId);
+                const droppedCount = bumpDropped(
+                  collector.status,
+                  stepId('destination', destId),
+                  'dlq',
+                  dlqResult.dropped,
+                );
+                warnOverflowOnce(
+                  dlq,
+                  collector.logger.scope(destination.type || 'unknown'),
+                  'destination.dlq overflow; oldest entries dropped',
+                  {
+                    buffer: 'dlq',
+                    destination: destId,
+                    cap: dlqBound.max,
+                    droppedCount,
+                  },
+                );
+              } else if (dlq.length < dlqBound.max) {
+                resetOverflowFlag(dlq);
+              }
+
+              return undefined;
+            })(
+              collector,
+              destination,
+              id,
+              processedEvent!,
+              destIngest,
+              destRespond,
+            );
+            totalDuration += Date.now() - pushStart;
+
+            // Destination cache MISS: store the push result after attempt
+            if (
+              cacheMiss &&
+              dCacheStore &&
+              destination.config.mock === undefined
+            ) {
+              storeCache(
+                dCacheStore,
+                cacheMiss.key,
+                result ?? true,
+                cacheMiss.ttl,
+              );
+            }
+
+            // state[set]: stash from the event after a successful send. A
+            // batched-enqueue is not a real send (the sentinel is returned
+            // before delivery), so set is deferred until flush. The flush-path
+            // write is a documented follow-up, not handled here yet.
+            if (
+              !pushFailed &&
+              !isBatchedResult(result) &&
+              dStateSet &&
+              dStateSet.length > 0 &&
+              processedEvent
+            ) {
+              processedEvent = await applyState(
+                dStateSet,
+                (storeId) => getStateStore(storeId, collector),
+                processedEvent,
+                collector,
+              );
+            }
+
+            // Capture the last response (for single event pushes).
+            // Batched-enqueue sentinel is NOT a real response; don't surface it.
+            if (result !== undefined && !isBatchedResult(result)) {
+              response = result;
+            }
+            if (isBatchedResult(result)) batchedCount++;
+
+            // Run destination.next chain after successful push
+            if (!pushFailed && nextConfig) {
+              // Write push response to ingest for destination.next transformers
+              if (result !== undefined) {
+                destIngest._response = result;
+              }
+
+              const nextChain = resolveDestinationChain(
+                nextConfig,
+                transformerNextMap,
+                destIngest,
+              );
+
+              if (
+                nextChain.length > 0 &&
+                collector.transformers &&
+                Object.keys(collector.transformers).length > 0
+              ) {
+                const nextResult = await runTransformerChain(
+                  collector,
+                  collector.transformers,
+                  nextChain,
+                  processedEvent!,
+                  destIngest,
+                  destRespond,
+                  `destination.${id}.next`,
+                );
+                if (nextResult.respond) destRespond = nextResult.respond;
+              }
+            }
+          };
+
+          for (const child of children) {
+            // Each child gets its own step-level cache decision; the full-check
+            // miss recorded before the chain is shared, since it was computed
+            // from the one event that entered.
+            await deliverOne(child, cacheMiss);
+            pushedCount++;
           }
 
+          return event;
           return event;
         }),
       );
@@ -855,6 +879,7 @@ export async function pushToDestinations(
         totalDuration,
         batchedCount,
         allowedCount: allowedEvents.length,
+        pushedCount,
         canonicalId,
         breakerConfig,
       };
@@ -922,8 +947,11 @@ export async function pushToDestinations(
       // synchronously-delivered ones.
       const batchedCount = result.batchedCount ?? 0;
       const allowedCount = result.allowedCount ?? 0;
-      const syncDelivered = Math.max(0, allowedCount - batchedCount);
-      if (syncDelivered > 0 || allowedCount === 0) {
+      // What the destination actually received. A before-chain fan-out makes
+      // this exceed allowedCount, which counts what entered.
+      const deliveredCount = result.pushedCount ?? allowedCount;
+      const syncDelivered = Math.max(0, deliveredCount - batchedCount);
+      if (syncDelivered > 0 || deliveredCount === 0) {
         done[result.id] = ref;
         // For non-batched destinations preserve the historical semantics
         // (one bump per pushToDestinations call, regardless of allowed

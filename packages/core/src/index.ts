@@ -51,6 +51,8 @@ export * from './observeEnv';
 export * from './observeConnect';
 export * from './mcpHelpers';
 export * from './respond';
+export * from './scope';
+export * from './envelope';
 export * from './matcher';
 // Route helpers. `getNextSteps` is the runtime resolver. `isRouteArray` and
 // `isRouteConfigEntry` are the canonical shape probes for `Transformer.Route`.

@@ -27,6 +27,13 @@ export const SettingsSchema = z.object({
     )
     .default(true),
 
+  maxBatchSize: z
+    .number()
+    .int()
+    .min(1)
+    .describe('Maximum number of events accepted in a single batch request')
+    .default(100),
+
   healthPath: z
     .string()
     .describe('Health check endpoint path (e.g., /health)')

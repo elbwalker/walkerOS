@@ -4,10 +4,16 @@ import express, {
   type Response,
 } from 'express';
 import cors from 'cors';
-import { requestToData, createRespond } from '@walkeros/core';
+import {
+  requestToData,
+  createRespond,
+  toEventList,
+  isBatchBody,
+} from '@walkeros/core';
 import type { Elb, Logger, Source } from '@walkeros/core';
 import type { ExpressSource, Types, EventRequest } from './types';
 import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
+import { buildScope } from './scope';
 
 /**
  * Normalize an unknown rejection reason into an Error for the logger.
@@ -116,11 +122,13 @@ export const sourceExpress = async (
     paths:
       userSettings.paths ??
       (userSettings.path ? [userSettings.path] : ['/collect']),
+    maxBatchSize: userSettings.maxBatchSize ?? 100,
   };
 
   // Respond-first by default: a 2xx means "accepted", not "delivered".
   // Standardized on the source config (Source.Config.async), not settings.
   const respondFirst = config.async ?? true;
+  const maxBatchSize = settings.maxBatchSize;
 
   // Rejection volume belongs in collector.status, not in per-request logs.
   // Lazy entry creation mirrors the collector's own sources bookkeeping.
@@ -204,7 +212,9 @@ export const sourceExpress = async (
         }
       });
 
-      await context.withScope(req, respond, async (env) => {
+      const scope = buildScope(req);
+
+      await context.withScope(scope, respond, async (env) => {
         // Handle GET requests (pixel tracking)
         if (req.method === 'GET') {
           // Parse query parameters to event data using requestToData
@@ -245,36 +255,88 @@ export const sourceExpress = async (
 
         // Handle POST requests (standard event ingestion)
         if (req.method === 'POST') {
-          const eventData =
-            req.body && typeof req.body === 'object' ? req.body : {};
+          const events = toEventList(scope.body);
+          const batched = isBatchBody(scope.body);
+
+          if (batched && events.length > maxBatchSize) {
+            respond({
+              status: 400,
+              body: {
+                success: false,
+                error: `Batch too large. Maximum size: ${maxBatchSize} events`,
+                timestamp: Date.now(),
+              },
+            });
+            return;
+          }
 
           if (respondFirst) {
             // Respond-first ("accepted"), then deliver asynchronously. A
             // rejected push and a settled non-invalid decline are logged, not
             // surfaced to the client and not left unhandled (destination
-            // errors are DLQ'd inside the collector).
+            // errors are DLQ'd inside the collector). In this mode a batch is
+            // acknowledged as accepted; per-index outcomes are not knowable
+            // yet, so they surface through collector.status and logs.
             respond({ body: { success: true, timestamp: Date.now() } });
-            settleAfterAck(env.push(eventData), env.logger);
-          } else {
-            // Synchronous ack: wait for delivery to settle before responding,
-            // and reflect the outcome. Invalid input is the client's fault
-            // (400 with the reason); anything else that failed is ours (500).
-            const result = await env.push(eventData);
-            if (result?.ok === false) {
-              const invalid = result.invalid === true;
+            events.forEach((event) =>
+              settleAfterAck(env.push(event), env.logger),
+            );
+            return;
+          }
+
+          // Synchronous ack: wait for delivery to settle before responding,
+          // and reflect the outcome. Invalid input is the client's fault
+          // (400 with the reason); anything else that failed is ours (500).
+          const results = [];
+          for (const event of events) {
+            results.push(await env.push(event));
+          }
+
+          if (batched) {
+            const errors = results.flatMap((result, index) =>
+              result?.ok === false
+                ? [{ index, error: result.error ?? 'Event was not processed' }]
+                : [],
+            );
+
+            if (errors.length) {
               respond({
-                status: invalid ? 400 : 500,
+                status: 207,
                 body: {
                   success: false,
-                  error:
-                    result.error ??
-                    (invalid ? 'Invalid event' : 'Event was not processed'),
-                  timestamp: Date.now(),
+                  processed: results.length - errors.length,
+                  failed: errors.length,
+                  errors,
                 },
               });
-            } else {
-              respond({ body: { success: true, timestamp: Date.now() } });
+              return;
             }
+
+            respond({
+              body: {
+                success: true,
+                processed: results.length,
+                ids: results.map((result) => result?.event?.id),
+              },
+            });
+            return;
+          }
+
+          const result = results[0];
+          if (result?.ok === false) {
+            const invalid = result.invalid === true;
+            respond({
+              status: invalid ? 400 : 500,
+              body: {
+                success: false,
+                error:
+                  result.error ??
+                  (invalid ? 'Invalid event' : 'Event was not processed'),
+                timestamp: Date.now(),
+              },
+            });
+          } else {
+            respond({ body: { success: true, timestamp: Date.now() } });
           }
           return;
         }

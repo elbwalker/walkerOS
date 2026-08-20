@@ -7,14 +7,18 @@ import type {
   Types,
 } from './types';
 import type { Source } from '@walkeros/core';
-import { isEventRequest, setCorsHeaders } from './utils';
+import { isBatchBody, requestToData, toEventList } from '@walkeros/core';
+import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
 import { processEvent } from './push';
+import { buildScope } from './scope';
 
 export * as SourceCloudFunction from './types';
 
 const DEFAULT_SETTINGS: Settings = {
   cors: true,
   timeout: 30000,
+  maxBatchSize: 100,
+  enablePixelTracking: true,
 };
 
 export const sourceCloudFunction: Source.Init<Types> = async (context) => {
@@ -42,8 +46,34 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
       // Per-invocation scope: each request gets its own ingest. Cloud
       // Function returns the response directly via res, not via async
       // respond, so no respond fn is wired here.
-      await context.withScope(req, undefined, async (scopeEnv) => {
+      const scope = buildScope(req);
+
+      await context.withScope(scope, undefined, async (scopeEnv) => {
         const envPush = scopeEnv.push;
+
+        // GET serves the tracking pixel: query parameters carry exactly one
+        // event, which is the no-JS path.
+        if (req.method === 'GET') {
+          if (!settings.enablePixelTracking) {
+            res.status(405).json({
+              success: false,
+              error: 'Method not allowed. Use POST.',
+            });
+            return;
+          }
+
+          const parsedData = requestToData(scope.url || req.originalUrl || '');
+          if (parsedData && typeof parsedData === 'object') {
+            await envPush(parsedData);
+          }
+
+          res
+            .status(200)
+            .set('Content-Type', 'image/gif')
+            .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+            .send(TRANSPARENT_GIF);
+          return;
+        }
 
         if (req.method !== 'POST') {
           res.status(405).json({
@@ -53,53 +83,60 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
           return;
         }
 
-        // navigator.sendBeacon forces Content-Type: text/plain;charset=UTF-8 even
-        // for JSON payloads. Functions Framework parses text/plain bodies as
-        // strings, so attempt JSON.parse before falling through to the empty-event
-        // branch. Mirrors the AWS Lambda parseBody() pattern.
-        let body: unknown = req.body;
-        if (typeof body === 'string') {
-          try {
-            body = JSON.parse(body);
-          } catch {
-            // Leave as string; falls through to empty-event branch below.
-          }
+        // The body was parsed once when the scope was built, so ingest.body and
+        // the event the pipeline receives are the same value.
+        const events = toEventList(scope.body);
+        const batched = isBatchBody(scope.body);
+
+        if (batched && events.length > (settings.maxBatchSize ?? 100)) {
+          res.status(400).json({
+            success: false,
+            error: `Batch too large. Maximum size: ${settings.maxBatchSize} events`,
+          } as EventResponse);
+          return;
         }
 
-        if (isEventRequest(body)) {
-          const result = await processEvent(body, envPush);
+        const results = [];
+        for (const event of events) {
+          results.push(await processEvent(event, envPush));
+        }
 
-          if (result.error) {
-            res.status(result.status ?? 500).json({
-              success: false,
-              error: result.error,
-            } as EventResponse);
-          } else {
-            res.status(200).json({
-              success: true,
-              id: result.id,
-            } as EventResponse);
-          }
-        } else {
-          // Push empty event for non-event bodies (enables source.before transformers to process raw input)
-          const result = await envPush({});
+        if (batched) {
+          const errors = results.flatMap((result, index) =>
+            result.error ? [{ index, error: result.error }] : [],
+          );
 
-          if (result?.ok === false) {
-            const invalid = result.invalid === true;
-            res.status(invalid ? 400 : 500).json({
+          if (errors.length) {
+            res.status(207).json({
               success: false,
-              error:
-                result.error ??
-                (invalid ? 'Invalid event' : 'Event was not processed'),
-            } as EventResponse);
+              processed: results.length - errors.length,
+              failed: errors.length,
+              errors,
+            });
             return;
           }
 
           res.status(200).json({
             success: true,
-            id: result?.event?.id,
-          } as EventResponse);
+            processed: results.length,
+            ids: results.map((result) => result.id),
+          });
+          return;
         }
+
+        const result = results[0];
+        if (result.error) {
+          res.status(result.status ?? 500).json({
+            success: false,
+            error: result.error,
+          } as EventResponse);
+          return;
+        }
+
+        res.status(200).json({
+          success: true,
+          id: result.id,
+        } as EventResponse);
       });
     } catch (error) {
       res.status(500).json({

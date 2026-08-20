@@ -1,4 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResult } from 'aws-lambda';
+import { normalizeBody } from '@walkeros/core';
 import type {
   LambdaEvent,
   ParsedRequest,
@@ -35,14 +36,32 @@ export function parseEvent(event: LambdaEvent): ParsedRequest {
         if (value) headers[key.toLowerCase()] = value;
       });
     }
+    // v1 carries repeated headers in a second bag. Without it every value but
+    // the last is lost, so the multi-value bag wins where a name is in both.
+    if (event.multiValueHeaders) {
+      Object.entries(event.multiValueHeaders).forEach(([key, values]) => {
+        if (values && values.length)
+          headers[key.toLowerCase()] = values.join(', ');
+      });
+    }
     let queryString: string | null = null;
+    const params = new URLSearchParams();
     if (event.queryStringParameters) {
-      const params = new URLSearchParams();
       Object.entries(event.queryStringParameters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
-      queryString = params.toString() || null;
     }
+    // Same for repeated query keys: the single-value bag keeps only the last.
+    if (event.multiValueQueryStringParameters) {
+      Object.entries(event.multiValueQueryStringParameters).forEach(
+        ([key, values]) => {
+          if (!values || !values.length) return;
+          params.delete(key);
+          values.forEach((value) => params.append(key, value));
+        },
+      );
+    }
+    queryString = params.toString() || null;
     return {
       method: event.httpMethod,
       body: event.body,
@@ -62,15 +81,7 @@ export function getPath(event: LambdaEvent): string {
 }
 
 export function parseBody(body: unknown, isBase64Encoded: boolean): unknown {
-  if (!body || typeof body !== 'string') return body;
-  try {
-    const decoded = isBase64Encoded
-      ? Buffer.from(body, 'base64').toString('utf8')
-      : body;
-    return JSON.parse(decoded);
-  } catch {
-    return body;
-  }
+  return normalizeBody(body, isBase64Encoded);
 }
 
 export function isEventRequest(body: unknown): body is EventRequest {

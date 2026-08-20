@@ -116,6 +116,8 @@ describe('sourceCloudFunction', () => {
       expect(source.config.settings).toEqual({
         cors: true,
         timeout: 30000,
+        maxBatchSize: 100,
+        enablePixelTracking: true,
       });
       expect(typeof source.push).toBe('function');
     });
@@ -139,6 +141,8 @@ describe('sourceCloudFunction', () => {
       expect(source.config.settings).toEqual({
         cors: false,
         timeout: 30000,
+        maxBatchSize: 100,
+        enablePixelTracking: true,
       });
     });
   });
@@ -166,10 +170,31 @@ describe('sourceCloudFunction', () => {
       expect(mockPush).not.toHaveBeenCalled();
     });
 
-    it('should reject non-POST methods', async () => {
+    it('serves the tracking pixel for GET', async () => {
       const source = await sourceCloudFunction(
         createSourceContext(
           {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+      const req = createMockRequest('GET');
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/gif');
+    });
+
+    it('rejects GET with 405 when pixel tracking is disabled', async () => {
+      const source = await sourceCloudFunction(
+        createSourceContext(
+          { settings: { enablePixelTracking: false } },
           {
             push: mockPush as never,
             command: mockCommand as never,
@@ -547,7 +572,7 @@ describe('sourceCloudFunction', () => {
   });
 
   describe('error handling', () => {
-    it('should push empty event for invalid request format', async () => {
+    it('forwards a non-event object body verbatim so a before chain can rewrite it', async () => {
       const source = await sourceCloudFunction(
         createSourceContext(
           {},
@@ -564,7 +589,9 @@ describe('sourceCloudFunction', () => {
 
       await source.push(req, res);
 
-      expect(mockPush).toHaveBeenCalledWith({});
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({ invalid: 'format' }),
+      );
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });

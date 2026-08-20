@@ -26,6 +26,13 @@ export const SettingsSchema = z.object({
     )
     .optional(),
 
+  maxBatchSize: z
+    .number()
+    .int()
+    .min(1)
+    .describe('Maximum number of events accepted in a single batch request')
+    .default(100),
+
   cors: z
     .union([z.boolean(), CorsOptionsSchema])
     .describe(

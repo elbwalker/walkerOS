@@ -1,4 +1,10 @@
-import { requestToData, isObject, isDefined } from '@walkeros/core';
+import {
+  normalizeBody,
+  requestToData,
+  isObject,
+  toEventList,
+  isBatchBody,
+} from '@walkeros/core';
 import type { WalkerOS, Collector, Logger, Source } from '@walkeros/core';
 import type { FetchSource, Types } from './types';
 import {
@@ -7,6 +13,7 @@ import {
   createJsonResponse,
   matchPath,
 } from './utils';
+import { buildScope } from './scope';
 
 export const sourceFetch: Source.Init<Types> = async (context) => {
   const { config = {}, env } = context;
@@ -84,7 +91,58 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
 
       // Per-request scope: each fetch invocation gets its own ingest.
       // Fetch sources return a Response directly, not via async respond.
-      return await context.withScope(request, undefined, async (scopeEnv) => {
+      // Size guards run before the scope is built, and in this order: the
+      // declared length is checked first so an oversized request is rejected
+      // without ever reading its body.
+      const tooLarge = () => {
+        countRejected();
+        return createJsonResponse(
+          {
+            success: false,
+            error: `Request too large. Maximum size: ${settings.maxRequestSize} bytes`,
+          },
+          413,
+          corsHeaders,
+        );
+      };
+
+      let parsedBody: unknown;
+
+      if (method === 'POST') {
+        const contentLength = request.headers.get('Content-Length');
+        if (contentLength) {
+          const size = parseInt(contentLength, 10);
+          if (size > settings.maxRequestSize) {
+            logger.debug('Request too large', {
+              size,
+              limit: settings.maxRequestSize,
+            });
+            return tooLarge();
+          }
+        }
+
+        const bodyText = await request.text();
+
+        if (bodyText.length > settings.maxRequestSize) {
+          logger.debug('Request body too large', {
+            size: bodyText.length,
+            limit: settings.maxRequestSize,
+          });
+          return tooLarge();
+        }
+
+        // A body that does not parse to an object is raw input: toEventList
+        // yields a single empty event and ingest.body carries the value for a
+        // source.before chain to decode.
+        parsedBody = normalizeBody(bodyText);
+      }
+
+      const scope = buildScope(
+        request,
+        method === 'POST' ? parsedBody : undefined,
+      );
+
+      return await context.withScope(scope, undefined, async (scopeEnv) => {
         const envPush = scopeEnv.push;
 
         // GET (pixel tracking - no logging, routine)
@@ -98,96 +156,13 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
 
         // POST
         if (method === 'POST') {
-          // Check request size
-          const contentLength = request.headers.get('Content-Length');
-          if (contentLength) {
-            const size = parseInt(contentLength, 10);
-            if (size > settings.maxRequestSize) {
-              countRejected();
-              logger.debug('Request too large', {
-                size,
-                limit: settings.maxRequestSize,
-              });
-              return createJsonResponse(
-                {
-                  success: false,
-                  error: `Request too large. Maximum size: ${settings.maxRequestSize} bytes`,
-                },
-                413,
-                corsHeaders,
-              );
-            }
-          }
+          const events = toEventList(parsedBody);
+          // Dispatch on the envelope FORM, not the event count: a one element
+          // batch is still a batch and keeps the batch response shape.
+          const batched = isBatchBody(parsedBody);
 
-          let eventData: unknown;
-          let bodyText: string;
-          let rawBody = false;
-
-          try {
-            bodyText = await request.text();
-
-            // Check actual body size
-            if (bodyText.length > settings.maxRequestSize) {
-              countRejected();
-              logger.debug('Request body too large', {
-                size: bodyText.length,
-                limit: settings.maxRequestSize,
-              });
-              return createJsonResponse(
-                {
-                  success: false,
-                  error: `Request too large. Maximum size: ${settings.maxRequestSize} bytes`,
-                },
-                413,
-                corsHeaders,
-              );
-            }
-
-            eventData = JSON.parse(bodyText);
-          } catch {
-            // Non-JSON body: push empty event for source.before transformers
-            eventData = {};
-            rawBody = true;
-          }
-
-          if (!isDefined(eventData) || !isObject(eventData)) {
-            // Non-object body: push empty event for source.before transformers
-            eventData = {};
-            rawBody = true;
-          }
-
-          // Raw body: push empty event directly, skip validation
-          if (rawBody) {
-            const result = await processEvent(
-              eventData as WalkerOS.DeepPartialEvent,
-              envPush,
-              logger,
-            );
-            if (result.error) {
-              // A thrown push is already error-logged inside processEvent;
-              // this covers settled declines only.
-              logger.warn('Event processing failed', { error: result.error });
-              return createJsonResponse(
-                { success: false, error: result.error },
-                result.status ?? 500,
-                corsHeaders,
-              );
-            }
-
-            return createJsonResponse(
-              { success: true, id: result.id, timestamp: Date.now() },
-              200,
-              corsHeaders,
-            );
-          }
-
-          // Check for batch (eventData is a validated object at this point)
-          const validData = eventData as Record<string, unknown>;
-          const isBatch =
-            'batch' in validData && Array.isArray(validData.batch);
-
-          if (isBatch) {
-            const batch = validData.batch as unknown[];
+          if (batched) {
+            const batch = events;
 
             if (batch.length > settings.maxBatchSize) {
               countRejected();
@@ -232,11 +207,7 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
           }
 
           // Forward event directly — validation is not the source's responsibility.
-          const result = await processEvent(
-            eventData as WalkerOS.DeepPartialEvent,
-            envPush,
-            logger,
-          );
+          const result = await processEvent(events[0] ?? {}, envPush, logger);
           if (result.error) {
             // A thrown push is already error-logged inside processEvent;
             // this covers settled declines only.

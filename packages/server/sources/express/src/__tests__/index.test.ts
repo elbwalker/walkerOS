@@ -121,6 +121,7 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/collect'],
         cors: true,
+        maxBatchSize: 100,
       });
       expect(typeof source.push).toBe('function');
       expect(source.app).toBeDefined();
@@ -148,6 +149,7 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/events'],
         cors: false,
+        maxBatchSize: 100,
       });
     });
 

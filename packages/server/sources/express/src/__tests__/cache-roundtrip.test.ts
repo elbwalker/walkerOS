@@ -66,7 +66,7 @@ describe('Express source cache round-trip', () => {
             ingest: {
               map: {
                 method: { key: 'method' },
-                path: { key: 'url' },
+                path: { key: 'path' },
               },
             },
           },
@@ -100,7 +100,7 @@ describe('Express source cache round-trip', () => {
 
     // `name=page view` gives the pushed event a valid name so it reaches the
     // destination (the GET handler parses the query string into the event via
-    // requestToData). The full url is the cache key and is identical across
+    // requestToData). The scope path is the cache key and is identical across
     // both requests, so the second is a HIT.
     const mockRequest = (): Request =>
       ({
@@ -205,7 +205,7 @@ describe('Express source cache round-trip', () => {
             ingest: {
               map: {
                 method: { key: 'method' },
-                path: { key: 'url' },
+                path: { key: 'path' },
               },
             },
           },
@@ -333,7 +333,7 @@ describe('Express source cache round-trip', () => {
             settings: { paths: ['/asset'] },
             async: false,
             ingest: {
-              map: { method: { key: 'method' }, path: { key: 'url' } },
+              map: { method: { key: 'method' }, path: { key: 'path' } },
             },
           },
         },

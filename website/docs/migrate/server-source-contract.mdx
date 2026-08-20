@@ -1,0 +1,93 @@
+---
+title: Migrating server source ingest and body handling
+description: config.ingest resolves against a normalized scope, and all four server sources accept the same POST body forms
+sidebar_position: 2
+---
+
+# Migrating server source ingest and body handling
+
+Server sources now normalize their platform's request into one shared
+[request scope](/docs/sources/scope) before mapping, and accept one shared
+[event envelope](/docs/sources/envelope). A `config.ingest` mapping written once
+resolves the same on Express, Cloud Functions, Lambda and Fetch, and the same
+POST body works everywhere.
+
+Most changes are additive. The breaking ones are listed below with exact
+replacements.
+
+## `config.ingest` paths
+
+### Express
+
+| Before | After |
+|---|---|
+| `ip`, `method`, `path`, `body`, `headers.*` | unchanged |
+| `url` | now an absolute URL, or `''` without a `host` header. For the old path+query value use `raw.url`, or map `path` |
+| `protocol` | use `headers.x-forwarded-proto` or `raw.protocol` |
+| `hostname` | use `headers.host` or `raw.hostname` |
+| `query.*` | flat strings; repeated keys join with `,`. Nested and array query parsing stays on `raw.query` |
+
+### AWS Lambda
+
+Header lookups are now case-insensitive and repeated headers are joined rather
+than dropped, on both API Gateway versions. The two gateway versions produce an
+identical scope.
+
+| Before | After |
+|---|---|
+| `requestContext.*` | `raw.requestContext.*`, or use the contract field: `ip` covers both versions' source IP |
+| `httpMethod`, `rawPath`, `rawQueryString` | `method`, `path`, `query.*` |
+| `isBase64Encoded` | no longer needed: `body` arrives decoded and parsed |
+
+### Fetch
+
+`{ key: ... }` mappings never resolved on this source, because a WHATWG
+`Request` and its `Headers` are class instances that mapping paths cannot
+descend. They now work.
+
+| Before | After |
+|---|---|
+| `{ fn: (req) => req.headers.get('x') }` | `{ key: 'headers.x' }` |
+| any `{ fn }` receiving the `Request` | the function now receives the scope; use `scope.raw` for the `Request` |
+
+### Cloud Functions
+
+`method`, `headers.*` and `ip` are unchanged. `body` now arrives parsed.
+
+## Request bodies arrive parsed
+
+On Lambda and Cloud Functions the body is parsed once, when the scope is built.
+A `sendBeacon` payload sent as `text/plain` and a base64 encoded API Gateway
+body both resolve before mapping, so `ingest.body` and the event your pipeline
+receives are the same value. They previously disagreed.
+
+## A non-event object body is forwarded, not replaced
+
+On Lambda and Cloud Functions, a POST body that was an object but not a valid
+event used to push an empty event. It is now forwarded verbatim, so a
+`source.before` transformer receives the whole payload and can rewrite it into
+an event. `ingest.body` is unchanged, so a flow that decoded the raw body from
+there keeps working; the event the before chain sees is simply richer.
+
+## New: batches on every source
+
+`{ "batch": [ ... ] }` and a bare top-level array are now accepted by all four
+sources, capped by `settings.maxBatchSize` (default 100). This is additive:
+these bodies previously answered 400.
+
+Note the current limit documented on the
+[envelope page](/docs/sources/envelope): `ingest` is request scoped, so with
+`@walkeros/transformer-bot` or `@walkeros/transformer-validate` in the chain,
+per event annotations collapse to the last event of a batch.
+
+## New: Cloud Functions serves a GET pixel
+
+`sourceCloudFunction` previously answered 405 to GET. It now serves the tracking
+pixel like the other three sources. Set `settings.enablePixelTracking: false`
+to restore the 405.
+
+## Removed: the `{ "events": [ ... ] }` body
+
+The Cloud Functions page documented a `{ "events": [ ... ] }` batch body and a
+`settings.batch` flag. **Neither was ever implemented**, so no working
+deployment can depend on them. Use `{ "batch": [ ... ] }`.

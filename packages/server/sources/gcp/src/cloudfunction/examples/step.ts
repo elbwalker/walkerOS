@@ -8,7 +8,7 @@ export const postEvent: Flow.StepExample = {
   in: {
     method: 'POST',
     body: {
-      event: 'page view',
+      name: 'page view',
       data: { title: 'Home', url: 'https://example.com/' },
     },
     headers: { 'content-type': 'application/json' },
@@ -32,7 +32,7 @@ export const orderEvent: Flow.StepExample = {
   in: {
     method: 'POST',
     body: {
-      event: 'order complete',
+      name: 'order complete',
       data: { id: 'ORD-700', total: 99.99, currency: 'EUR' },
     },
     headers: { 'content-type': 'application/json' },
@@ -56,7 +56,7 @@ export const cloudFunctionPostForwardsSource: Flow.StepExample = {
   in: {
     method: 'POST',
     body: {
-      event: 'page view',
+      name: 'page view',
       data: { title: 'Home' },
       source: { release: { web: 'r1' } },
     },

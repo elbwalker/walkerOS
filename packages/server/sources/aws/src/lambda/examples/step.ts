@@ -12,7 +12,7 @@ export const lambdaPost: Flow.StepExample = {
       requestId: 'req-123',
     },
     body: JSON.stringify({
-      event: 'page view',
+      name: 'page view',
       data: { title: 'Home' },
     }),
     isBase64Encoded: false,
@@ -42,7 +42,7 @@ export const apiGatewayV1Post: Flow.StepExample = {
     },
     queryStringParameters: null,
     body: JSON.stringify({
-      event: 'page view',
+      name: 'page view',
       data: { title: 'Home' },
     }),
     isBase64Encoded: false,
@@ -95,7 +95,7 @@ export const lambdaPostForwardsSource: Flow.StepExample = {
       requestId: 'req-321',
     },
     body: JSON.stringify({
-      event: 'page view',
+      name: 'page view',
       data: { title: 'Home' },
       source: { release: { web: 'r1' } },
     }),

@@ -1,16 +1,15 @@
 import type { LambdaSource, Types } from './types';
 import type { Source } from '@walkeros/core';
-import { requestToData } from '@walkeros/core';
+import { isBatchBody, requestToData, toEventList } from '@walkeros/core';
 import {
   parseEvent,
-  parseBody,
-  isEventRequest,
   getCorsHeaders,
   createResponse,
   createPixelResponse,
   getPath,
 } from './utils';
 import { processEvent } from './push';
+import { buildScope } from './scope';
 
 export * as SourceLambda from './types';
 
@@ -24,6 +23,7 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
     timeout: userSettings.timeout ?? 30000,
     enablePixelTracking: userSettings.enablePixelTracking ?? true,
     healthPath: userSettings.healthPath ?? '/health',
+    maxBatchSize: userSettings.maxBatchSize ?? 100,
   };
 
   const fullConfig: Source.Config<Types> = {
@@ -63,7 +63,9 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
       // Per-invocation scope: each Lambda invocation gets its own ingest.
       // No respond fn — Lambda returns the response directly from this
       // handler, not via async respond.
-      return await context.withScope(event, undefined, async (scopeEnv) => {
+      const scope = buildScope(event);
+
+      return await context.withScope(scope, undefined, async (scopeEnv) => {
         const envPush = scopeEnv.push;
 
         // Handle GET for pixel tracking
@@ -96,62 +98,78 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
             );
           }
 
-          const body = parseBody(parsed!.body, parsed!.isBase64Encoded);
+          // Parsed once when the scope was built, so ingest.body and the event
+          // the pipeline receives are the same value.
+          const events = toEventList(scope.body);
+          const batched = isBatchBody(scope.body);
+          const maxBatchSize = settings.maxBatchSize ?? 100;
 
-          // If body is not a valid object, push {} to let source.before transformers handle raw input via ingest
-          if (!body || typeof body !== 'object') {
-            const result = await envPush({});
-            if (result?.ok === false) {
-              const invalid = result.invalid === true;
+          if (batched && events.length > maxBatchSize) {
+            return createResponse(
+              400,
+              {
+                success: false,
+                error: `Batch too large. Maximum size: ${maxBatchSize} events`,
+                requestId,
+              },
+              corsHeaders,
+              requestId,
+            );
+          }
+
+          const results = [];
+          for (const event of events) {
+            results.push(
+              await processEvent(event, envPush, env.logger, requestId),
+            );
+          }
+
+          if (batched) {
+            const errors = results.flatMap((result, index) =>
+              result.error ? [{ index, error: result.error }] : [],
+            );
+
+            if (errors.length) {
               return createResponse(
-                invalid ? 400 : 500,
+                207,
                 {
                   success: false,
-                  error:
-                    result.error ??
-                    (invalid ? 'Invalid event' : 'Event was not processed'),
+                  processed: results.length - errors.length,
+                  failed: errors.length,
+                  errors,
                   requestId,
                 },
                 corsHeaders,
                 requestId,
               );
             }
+
             return createResponse(
               200,
-              { success: true, requestId },
+              {
+                success: true,
+                processed: results.length,
+                ids: results.map((result) => result.id),
+                requestId,
+              },
               corsHeaders,
               requestId,
             );
           }
 
-          if (isEventRequest(body)) {
-            const result = await processEvent(
-              body,
-              envPush,
-              env.logger,
-              requestId,
-            );
-
-            if (result.error) {
-              return createResponse(
-                result.status ?? 500,
-                { success: false, error: result.error, requestId },
-                corsHeaders,
-                requestId,
-              );
-            }
-
+          const result = results[0];
+          if (result.error) {
             return createResponse(
-              200,
-              { success: true, id: result.id, requestId },
+              result.status ?? 500,
+              { success: false, error: result.error, requestId },
               corsHeaders,
               requestId,
             );
           }
 
           return createResponse(
-            400,
-            { success: false, error: 'Invalid request format', requestId },
+            200,
+            { success: true, id: result.id, requestId },
             corsHeaders,
             requestId,
           );

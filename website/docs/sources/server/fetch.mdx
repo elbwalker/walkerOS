@@ -124,9 +124,9 @@ Extract request metadata and forward it through the pipeline.
         settings: { cors: true },
         ingest: {
           map: {
-            ua: { fn: (req) => req.headers.get('user-agent') },
-            origin: { fn: (req) => req.headers.get('origin') },
-            url: { key: 'url' },
+            ua: { key: 'headers.user-agent' },
+            origin: { key: 'headers.origin' },
+            path: { key: 'path' },
           },
         },
       },
@@ -138,13 +138,23 @@ Extract request metadata and forward it through the pipeline.
 
 ### Available ingest paths
 
+This source builds the shared [request scope](/docs/sources/scope), so every
+contract field resolves by key.
+
 | Path | Description |
 |------|-------------|
-| `url` | Full request URL |
-| `headers.get('name')` | Via function: `{ fn: (req) => req.headers.get('name') }` |
+| `method` | Uppercase HTTP method |
+| `url` | Absolute request URL |
+| `path` | Pathname, no query string |
+| `query.<name>` | Query parameter |
+| `headers.<name>` | Header, lowercased name |
+| `body` | Parsed request body |
+| `raw` | The WHATWG `Request` itself |
 
 :::note
-The Fetch API uses `Request` objects where headers are accessed via `.get()` method. Use mapping functions for header extraction.
+`ip` is absent on this source: a Fetch `Request` reports no client IP and
+walkerOS does not guess one. Read `headers.x-forwarded-for` if your proxy sets
+it.
 :::
 
 ## Usage

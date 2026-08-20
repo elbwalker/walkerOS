@@ -38,3 +38,12 @@ export function setCorsHeaders(
     }
   }
 }
+
+/**
+ * 1x1 transparent GIF for pixel tracking.
+ * Base64-encoded GIF (43 bytes).
+ */
+export const TRANSPARENT_GIF = Buffer.from(
+  'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+  'base64',
+);
