@@ -478,9 +478,11 @@ describe('sourceExpress', () => {
       await source.push(req, res);
 
       expect(res.statusCode).toBe(500);
+      // A thrown push carries an arbitrary internal message, so the caller gets
+      // the generic text and the reason goes to the log instead.
       expect(res.responseBody).toMatchObject({
         success: false,
-        error: 'Collector error',
+        error: 'Internal server error',
       });
     });
   });
@@ -1206,6 +1208,11 @@ describe('sourceExpress', () => {
         new Error('scope exploded'),
       );
       expect(res.statusCode).toBe(500);
+      // The reason reaches the log, never the caller.
+      expect(res.responseBody).toEqual({
+        success: false,
+        error: 'Internal server error',
+      });
     });
   });
 });

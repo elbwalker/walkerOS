@@ -286,12 +286,15 @@ export const sourceExpress = async (
         });
       });
     } catch (error) {
+      // The reason is logged, not returned: an unexpected fault's message can
+      // carry paths, dependency names or config details, and the caller can do
+      // nothing with it. Matches the error-boundary middleware's answer for the
+      // same class of fault.
       env.logger.error(toError(error));
       if (!res.headersSent) {
         res.status(500).json({
           success: false,
-          error:
-            error instanceof Error ? error.message : 'Internal server error',
+          error: 'Internal server error',
         });
       }
     }

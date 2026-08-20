@@ -57,7 +57,8 @@
     "validate:docs": "npx tsx apps/scripts/validate-docs.ts",
     "validate:skills": "npx tsx apps/scripts/validate-skills-index.ts",
     "validate:llms": "npx tsx apps/scripts/validate-llms.ts",
-    "validate": "npm run validate:links && npm run validate:docs && npm run validate:skills && npm run validate:llms"
+    "validate:coverage": "npx tsx apps/scripts/validate-docs-coverage.ts",
+    "validate": "npm run validate:links && npm run validate:docs && npm run validate:skills && npm run validate:coverage && npm run validate:llms"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",

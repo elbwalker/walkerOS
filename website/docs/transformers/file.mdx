@@ -16,7 +16,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
   npm="@walkeros/server-transformer-file"
 />
 
-Serves static files from a [store](/docs/getting-started/stores) backend. Reads the file by `ingest.path`, derives the Content-Type from the file extension, and responds directly. Returns `false` to stop the transformer chain so no further transformers or destinations run for the request.
+Serves static files from a [store](/docs/stores) backend. Reads the file by `ingest.path`, derives the Content-Type from the file extension, and responds directly. Returns `false` to stop the transformer chain so no further transformers or destinations run for the request.
 
 ## Installation
 
@@ -152,5 +152,5 @@ Use native cache on the file transformer to serve cached files from memory, avoi
 ## Next steps
 
 - **[Cache](../collector/cache)** - Add response caching before file serving (integrated collector mode)
-- **[Stores](/docs/getting-started/stores)** - Configure store backends
+- **[Stores](/docs/stores)** - Configure store backends
 - **[Docker: including files](/docs/apps/docker#including-files)** - Bake files into Docker images

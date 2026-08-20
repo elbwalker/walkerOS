@@ -256,14 +256,24 @@ const sidebars: SidebarsConfig = {
                   className: 'sidebar-badge-web',
                 },
                 {
-                  type: 'doc',
-                  id: 'destinations/web/gtag/ga4',
-                  className: 'sidebar-badge-web',
-                },
-                {
-                  type: 'doc',
-                  id: 'destinations/web/gtag/gtm',
-                  className: 'sidebar-badge-web',
+                  type: 'category',
+                  label: 'Google Gtag',
+                  link: {
+                    type: 'doc',
+                    id: 'destinations/web/gtag/index',
+                  },
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/gtag/ga4',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/gtag/gtm',
+                      className: 'sidebar-badge-web',
+                    },
+                  ],
                 },
                 {
                   type: 'doc',
