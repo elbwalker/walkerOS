@@ -31,6 +31,11 @@ jobs:
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      # Job-scoped so the build and the validator agree on the baseUrl. Empty
+      # on push/dispatch, where docusaurus.config.ts falls back to '/'.
+      DOCUSAURUS_BASEURL:
+        ${{ github.event_name == 'pull_request' && format('/preview/pr-{0}/',
+        github.event.pull_request.number) || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,15 +47,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
 
-      - name: Build website (production)
-        if: github.event_name != 'pull_request'
+      - name: Build website
         run: npm run build:website
-
-      - name: Build website (PR preview)
-        if: github.event_name == 'pull_request'
-        run: npm run build:website
-        env:
-          DOCUSAURUS_BASEURL: /preview/pr-${{ github.event.pull_request.number }}/
 
       - name: Validate docs and LLM export
         run: npm run validate
