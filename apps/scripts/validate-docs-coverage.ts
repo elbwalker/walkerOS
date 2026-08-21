@@ -38,6 +38,40 @@ const OVERVIEW_EXEMPT: Record<string, string> = {
   'destinations/create-your-own': 'authoring guide, not a destination',
   'destinations/web/gtag/index': 'family overview, its members are listed',
   'sources/create-your-own': 'authoring guide, not a source',
+  'transformers/create-your-own': 'authoring guide, not a transformer',
+};
+
+/** Areas whose index page is the catalogue a reader browses. */
+const AREAS = ['sources', 'destinations', 'transformers'] as const;
+type Area = (typeof AREAS)[number];
+
+/**
+ * Segment count of a package page's doc id, area segment included. Sources and
+ * destinations split by platform (destinations/server/klaviyo); transformers
+ * do not (transformers/bot).
+ */
+const PACKAGE_DEPTH: Record<Area, number> = {
+  sources: 3,
+  destinations: 3,
+  transformers: 2,
+};
+
+/**
+ * Directories that ship one package per child, rather than documenting a single
+ * package across sub-pages. Depth alone cannot tell those apart:
+ * sources/web/browser/commands is a sub-page of the browser source, while
+ * destinations/web/gtag/ads is a destination in its own right. Without this
+ * map, a new gtag or CMP member could ship linked from nowhere.
+ *
+ * Each entry names the page that must link the family's members. gtag members
+ * are listed individually in the destinations catalogue, so they are enforced
+ * against it. The CMP family is linked from the sources catalogue as a whole,
+ * so its members are enforced against the family index instead, which is the
+ * page a reader actually lands on to choose one.
+ */
+const FAMILY_DIRS: Record<string, string> = {
+  'destinations/web/gtag': 'destinations/index',
+  'sources/web/cmps': 'sources/web/cmps/index',
 };
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -85,46 +119,70 @@ function checkSidebarCoverage(pages: string[]): void {
   }
 }
 
-function checkOverviewCoverage(
-  pages: string[],
-  area: 'sources' | 'destinations',
-): void {
+/**
+ * Doc id of the page that must link this doc, or undefined when the doc is not
+ * a package page: an area or family index, a sub-page of a package already
+ * listed, or a stated exemption.
+ */
+function overviewOwner(id: string, area: Area): string | undefined {
+  if (id === `${area}/index`) return undefined;
+  if (id in OVERVIEW_EXEMPT) return undefined;
+
+  const withoutIndex = id.replace(/\/index$/, '');
+  const segments = withoutIndex.split('/');
+  const family = FAMILY_DIRS[segments.slice(0, -1).join('/')];
+  if (family) return family;
+
+  return segments.length === PACKAGE_DEPTH[area] ? `${area}/index` : undefined;
+}
+
+function checkOverviewCoverage(pages: string[], area: Area): void {
   const overview = join(DOCS, area, 'index.mdx');
   if (!existsSync(overview)) {
     issues.push({ message: `website/docs/${area}/index.mdx is missing` });
     return;
   }
-  const content = readFileSync(overview, 'utf-8');
+  const contents = new Map<string, string>();
 
   for (const page of pages) {
     const id = docId(page);
     if (!id.startsWith(`${area}/`)) continue;
-    if (id === `${area}/index`) continue;
-    if (id in OVERVIEW_EXEMPT) continue;
 
-    // Overview pages list packages, not their detail pages. A package is
-    // <area>/<platform>/<name>, written either as <name>.mdx or <name>/index.mdx.
-    // Anything deeper (browser/commands, browser/tagging/javascript) documents a
-    // package that is already listed, so it does not belong in the table.
-    const depth = id.replace(/\/index$/, '').split('/').length;
-    if (depth !== 3) continue;
+    const owner = overviewOwner(id, area);
+    if (!owner) continue;
+
+    const ownerRel = `website/docs/${owner}.mdx`;
+    const ownerAbs = join(DOCS, `${owner}.mdx`);
+    if (!existsSync(ownerAbs)) {
+      issues.push({
+        message: `${ownerRel} is missing, but ${relative(ROOT, page)} has to be listed there`,
+      });
+      continue;
+    }
+    let content = contents.get(ownerAbs);
+    if (content === undefined) {
+      content = readFileSync(ownerAbs, 'utf-8');
+      contents.set(ownerAbs, content);
+    }
 
     // Overview pages link either absolutely (/docs/destinations/server/x) or
-    // relatively (./server/x, ./web/browser/). Accept both, and accept an
-    // index page referenced by its directory.
-    const tail = id.slice(area.length + 1);
-    const withoutIndex = tail.replace(/\/index$/, '');
+    // relatively to their own directory (./server/x, ./cookiefirst/). Accept
+    // both, and accept an index page referenced by its directory.
+    const ownerDir = owner.replace(/\/[^/]+$/, '');
+    const withoutIndex = id.replace(/\/index$/, '');
+    const tail = id.slice(ownerDir.length + 1);
+    const tailWithoutIndex = withoutIndex.slice(ownerDir.length + 1);
     const candidates = [
       `/docs/${id}`,
-      `/docs/${area}/${withoutIndex}`,
+      `/docs/${withoutIndex}`,
       `./${tail}`,
-      `./${withoutIndex}`,
-      `./${withoutIndex}/`,
+      `./${tailWithoutIndex}`,
+      `./${tailWithoutIndex}/`,
     ];
     if (candidates.some((c) => content.includes(c))) continue;
 
     issues.push({
-      message: `${relative(ROOT, page)}\n    in the sidebar but missing from website/docs/${area}/index.mdx, so it is invisible to anyone browsing the overview. Add a row, or add it to OVERVIEW_EXEMPT with a reason.`,
+      message: `${relative(ROOT, page)}\n    in the sidebar but missing from ${ownerRel}, so it is invisible to anyone browsing the overview. Add a row, or add it to OVERVIEW_EXEMPT with a reason.`,
     });
   }
 }
@@ -134,8 +192,7 @@ function main(): void {
 
   const pages = walk(DOCS);
   checkSidebarCoverage(pages);
-  checkOverviewCoverage(pages, 'sources');
-  checkOverviewCoverage(pages, 'destinations');
+  for (const area of AREAS) checkOverviewCoverage(pages, area);
 
   if (issues.length === 0) {
     console.log(`✅ All ${pages.length} docs pages are reachable!\n`);
