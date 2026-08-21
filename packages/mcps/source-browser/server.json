@@ -1,0 +1,24 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.walkeros/source-browser",
+  "title": "walkerOS Source Browser",
+  "description": "Generate, parse, and validate walkerOS data-elb HTML tagging attributes",
+  "version": "4.4.0",
+  "websiteUrl": "https://www.walkeros.io/docs/apps/mcp",
+  "repository": {
+    "url": "https://github.com/elbwalker/walkerOS",
+    "source": "github",
+    "subfolder": "packages/mcps/source-browser"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@walkeros/mcp-source-browser",
+      "version": "4.4.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

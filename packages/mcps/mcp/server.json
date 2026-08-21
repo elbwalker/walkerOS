@@ -1,0 +1,44 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.walkeros/flow",
+  "title": "walkerOS Flow",
+  "description": "Build, validate, simulate, and deploy walkerOS event pipelines",
+  "version": "4.4.0",
+  "websiteUrl": "https://www.walkeros.io/docs/apps/mcp",
+  "repository": {
+    "url": "https://github.com/elbwalker/walkerOS",
+    "source": "github",
+    "subfolder": "packages/mcps/mcp"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@walkeros/mcp",
+      "version": "4.4.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "WALKEROS_TOKEN",
+          "description": "walkerOS API token. Optional, the local tools work without it and the auth tool can log in instead.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "WALKEROS_PROJECT_ID",
+          "description": "Default walkerOS project id (proj_...) used by the cloud tools.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "WALKEROS_APP_URL",
+          "description": "Base URL override for the walkerOS app. Defaults to https://app.walkeros.io.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

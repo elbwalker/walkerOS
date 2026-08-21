@@ -48,12 +48,18 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "mcpName": "io.walkeros/source-browser",
   "keywords": [
     "walkerOS",
     "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "ai-agents",
+    "llm",
     "tagging",
     "data-elb",
     "analytics",
+    "event-tracking",
     "html-attributes"
   ],
   "publishConfig": {

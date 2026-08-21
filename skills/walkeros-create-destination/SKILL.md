@@ -1,8 +1,8 @@
 ---
 name: walkeros-create-destination
-description:
-  Use when creating a new walkerOS destination to send events to a vendor or
-  API (GA4/gtag, Meta/Facebook Pixel, Mixpanel, Amplitude, a custom HTTP API,
+description: >-
+  Use when creating a new walkerOS destination to send events to a vendor or API
+  (GA4/gtag, Meta/Facebook Pixel, Mixpanel, Amplitude, a custom HTTP API,
   Measurement Protocol), web or server-side. Example-driven workflow: research
   the vendor SDK and define step examples before implementing the destination
   interface, env pattern, and mappings.

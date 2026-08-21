@@ -57,11 +57,19 @@
   "engines": {
     "node": ">=20.0.0"
   },
+  "mcpName": "io.walkeros/flow",
   "keywords": [
     "walkerOS",
     "mcp",
     "model-context-protocol",
+    "mcp-server",
+    "ai-agents",
+    "llm",
     "analytics",
+    "event-tracking",
+    "data-collection",
+    "tag-management",
+    "privacy-first",
     "cli"
   ],
   "publishConfig": {

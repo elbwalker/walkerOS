@@ -18,7 +18,7 @@ assistant integration.
 ## Claude Code plugin
 
 The recommended way to get started in Claude Code. One plugin installs both MCP
-servers **and** 18 skills that teach Claude how to build sources, destinations,
+servers **and** 22 skills that teach Claude how to build sources, destinations,
 transformers, and flows.
 
 **Step 1: add the marketplace:**
@@ -30,7 +30,7 @@ transformers, and flows.
 **Step 2: install the plugin:**
 
 ```
-/plugin install walkeros@elbwalker-walkerOS
+/plugin install walkeros@elbwalker
 ```
 
 That's it. Claude Code will reload with the MCP tools and skills active.
@@ -62,7 +62,7 @@ Each server starts on STDIO and registers its tools automatically.
 
 Everything in this loop runs locally, no account:
 
-1. Install the plugin: `/plugin install walkeros@elbwalker-walkerOS`
+1. Install the plugin: `/plugin install walkeros@elbwalker`
 2. Ask: "Create a web flow with a GA4 destination, validate it, and simulate a
    page view."
 3. The assistant runs `flow_load` → `flow_validate` → `flow_simulate` and shows

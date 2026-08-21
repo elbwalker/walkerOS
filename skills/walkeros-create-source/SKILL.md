@@ -1,6 +1,6 @@
 ---
 name: walkeros-create-source
-description:
+description: >-
   Use when creating a new walkerOS source to capture events (browser source,
   dataLayer interception, server/HTTP source, webhook receiver, event capture),
   web or server-side. Example-driven workflow: research the input format and
