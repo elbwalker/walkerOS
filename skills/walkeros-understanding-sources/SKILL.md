@@ -36,14 +36,14 @@ export const sourceMySource: Source.Init<Types> = async (context) => {
 
 **Context contains:**
 
-| Property    | Type                                 | Purpose                                                  |
-| ----------- | ------------------------------------ | -------------------------------------------------------- |
-| `config`    | `Source.Config<T>`                   | Settings, mapping, options                               |
-| `env`       | `Types['env']`                       | Environment (push, logger)                               |
-| `logger`    | `Logger`                             | Logging functions                                        |
-| `id`        | `string`                             | Source identifier                                        |
-| `collector` | `Collector.Instance`                 | Reference to collector                                   |
-| `withScope` | `(raw, respond, body) => Promise<R>` | Bind ingest + respond to a single scope (server sources) |
+| Property    | Type                                   | Purpose                                                                                     |
+| ----------- | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `config`    | `Source.Config<T>`                     | Settings, mapping, options                                                                  |
+| `env`       | `Types['env']`                         | Environment (push, logger)                                                                  |
+| `logger`    | `Logger`                               | Logging functions                                                                           |
+| `id`        | `string`                               | Source identifier                                                                           |
+| `collector` | `Collector.Instance`                   | Reference to collector                                                                      |
+| `withScope` | `(scope, respond, body) => Promise<R>` | Bind ingest + respond to a single scope (server sources). Takes a normalized `Source.Scope` |
 
 ### Push Method
 
@@ -261,6 +261,12 @@ export const handler = source.push;
 See [packages/server/sources/gcp/](../../packages/server/sources/gcp/) for
 implementation.
 
+**Forward the whole body.** A server source hands the collector the full
+`DeepPartialEvent` it received, renaming only its wire-level event-name key. It
+must not project the body through a field allowlist, or it strips `source`
+provenance (`release`, `trace`) and other legitimate fields. `express` and
+`fetch` are the reference pass-through implementations.
+
 ## Env Pattern (Dependency Injection)
 
 Platform dependencies go through `env` with fallback to globals or direct
@@ -368,21 +374,39 @@ consumers loop over messages. Each logical unit of work is a **scope**. Server
 sources MUST wrap each invocation with
 `context.withScope(rawScope, respond, body)`:
 
+A server source's job is to adapt its platform's request into the shared
+`Source.Scope` shape, so everything downstream is source-independent. Build the
+scope first, then pass it:
+
 ```typescript
 const push = async (req, res) => {
   const respond = createRespond((options) => {
     /* wire options into res */
   });
 
-  await context.withScope(req, respond, async (env) => {
-    await env.push(parsedData);
+  const scope = buildScope(req); // normalize: method, url, path, query,
+  // headers, body, ip, raw
+
+  await context.withScope(scope, respond, async (env) => {
+    for (const event of toEventList(scope.body)) {
+      await env.push(event);
+    }
   });
 };
 ```
 
-Inside `body`, `env.push` carries that scope's `ingest` (extracted from
-`rawScope` via `config.ingest` mapping) and `respond` end to end through the
+`normalizeHeaders`, `normalizeQuery` and `normalizeBody` from `@walkeros/core`
+do the per-field work; `toEventList` and `isBatchBody` decide how many events
+the body carries. Never pass the platform object straight to `withScope`: the
+parameter is typed `Source.Scope | undefined`, and a `Headers` instance or a
+WHATWG `Request` cannot be descended by a mapping path at all.
+
+Inside `body`, `env.push` carries that scope's `ingest` (extracted from the
+scope via `config.ingest` mapping) and `respond` end to end through the
 pipeline. Concurrent scopes never share ingest or respond.
+
+**`ingest` is request scoped, not event scoped.** With N events in one scope, a
+transformer writing per-event annotations into `ingest` records only the last.
 
 **Browser sources skip `withScope`.** A browser tab is a single logical scope
 for its lifetime; calling `env.push` directly is correct.

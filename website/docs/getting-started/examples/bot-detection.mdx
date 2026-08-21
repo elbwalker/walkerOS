@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Bot detection
 
-This server flow scores every incoming event for bot and AI-agent traffic before it reaches your destinations. The Express source forwards the request user agent, the bot transformer reads it, and a demo destination logs the annotated events. Nothing is dropped: scoring is annotation, and you filter downstream.
+This server flow scores every incoming event for bot and AI-agent traffic before it reaches your destinations. The Express source forwards the request headers, the bot transformer reads them, and a demo destination logs the annotated events. Nothing is dropped: scoring is annotation, and you filter downstream.
 
 <CodeSnippet
   code={`{
@@ -31,7 +31,17 @@ This server flow scores every incoming event for bot and AI-agent traffic before
             "settings": { "port": 8080 },
             "ingest": {
               "map": {
-                "userAgent": { "key": "headers.user-agent" }
+                "userAgent": { "key": "headers.user-agent" },
+                "acceptLanguage": { "key": "headers.accept-language" },
+                "acceptEncoding": { "key": "headers.accept-encoding" },
+                "secFetchSite": { "key": "headers.sec-fetch-site" },
+                "secFetchMode": { "key": "headers.sec-fetch-mode" },
+                "secFetchDest": { "key": "headers.sec-fetch-dest" },
+                "secChUa": { "key": "headers.sec-ch-ua" },
+                "secChUaMobile": { "key": "headers.sec-ch-ua-mobile" },
+                "secChUaPlatform": { "key": "headers.sec-ch-ua-platform" },
+                "accept": { "key": "headers.accept" },
+                "method": { "key": "method" }
               }
             }
           }
@@ -39,7 +49,20 @@ This server flow scores every incoming event for bot and AI-agent traffic before
       },
       "transformers": {
         "bot": {
-          "package": "@walkeros/server-transformer-bot"
+          "package": "@walkeros/server-transformer-bot",
+          "config": {
+            "settings": {
+              "context": "fetch",
+              "input": {
+                "acceptLanguage": "ingest.acceptLanguage",
+                "acceptEncoding": "ingest.acceptEncoding",
+                "secFetchSite": "ingest.secFetchSite",
+                "secFetchMode": "ingest.secFetchMode",
+                "secFetchDest": "ingest.secFetchDest",
+                "secChUa": "ingest.secChUa"
+              }
+            }
+          }
         }
       },
       "destinations": {
@@ -76,23 +99,24 @@ You should see:
 
 ## What you get
 
-Every event now carries `user.botScore` and `user.agentScore` (0-99, higher means more bot). In production the demo destination logs each annotated event; a request from GPTBot looks like this (from the transformer's examples):
+Every event now carries `user.botScore` (0-99, higher means more automated), `user.botCategory` (what kind of client it is) and `user.botProduct` when a named detector matched. The reason codes land on `ingest.bot.reasons`, off the analytics event. In production the demo destination logs each annotated event; a request from GPTBot looks like this (from the transformer's examples):
 
 <CodeSnippet
   code={`[demo] {
   "name": "page view",
   "user": {
-    "botScore": 95,
-    "agentScore": 95
+    "botScore": 90,
+    "botCategory": "ai-crawler",
+    "botProduct": "GPTBot"
   },
   ...
 }`}
   language="bash"
 />
 
-Offline runs have no user agent, so simulated events score the missing-UA baseline of 70. To act on the scores, add a mapping condition on your real destinations that drops or segments events where `botScore` exceeds 50. See [Bot detection](/docs/transformers/bot) for the full filtering recipes.
+Offline runs have no request behind them, so simulated events resolve no signals at all and score `null` with category `unknown`, which means not measured rather than human. `ingest.bot.reasons` then names which mappings are missing. To act on the scores, add a mapping condition on your real destinations that drops or segments events where `botScore` exceeds 50. See [Bot detection](/docs/transformers/bot) for the full filtering recipes.
 
 ## Next steps
 
-- [**Bot detection transformer**](/docs/transformers/bot): Scores, AI-agent map, and filtering recipes
+- [**Bot detection transformer**](/docs/transformers/bot): Score ladder, categories, and filtering recipes
 - [**Bundled mode**](/docs/getting-started/modes/bundled): Build and run the flow with the CLI

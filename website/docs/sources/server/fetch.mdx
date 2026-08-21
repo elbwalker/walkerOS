@@ -96,6 +96,19 @@ Server sources require platform-specific handlers. For containerized deployments
 
 <Configuration type="source" data={data} />
 
+## Responses
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Event processed |
+| 400 | Rejected client input: the pipeline declared the event invalid. The body echoes the validation message, for example `Event name is required` |
+| 500 | The pipeline failed to process a valid event, or an unexpected server fault |
+| 207 | Batch request where some events succeeded and others failed. The body carries per-index errors |
+
+Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
+inflating `status.failed`, and is logged at warn with the reason instead of as an
+error with a stack trace.
+
 ## Ingest metadata
 
 Extract request metadata and forward it through the pipeline.
@@ -111,9 +124,9 @@ Extract request metadata and forward it through the pipeline.
         settings: { cors: true },
         ingest: {
           map: {
-            ua: { fn: (req) => req.headers.get('user-agent') },
-            origin: { fn: (req) => req.headers.get('origin') },
-            url: { key: 'url' },
+            ua: { key: 'headers.user-agent' },
+            origin: { key: 'headers.origin' },
+            path: { key: 'path' },
           },
         },
       },
@@ -125,13 +138,23 @@ Extract request metadata and forward it through the pipeline.
 
 ### Available ingest paths
 
+This source builds the shared [request scope](/docs/sources/scope), so every
+contract field resolves by key.
+
 | Path | Description |
 |------|-------------|
-| `url` | Full request URL |
-| `headers.get('name')` | Via function: `{ fn: (req) => req.headers.get('name') }` |
+| `method` | Uppercase HTTP method |
+| `url` | Absolute request URL |
+| `path` | Pathname, no query string |
+| `query.<name>` | Query parameter |
+| `headers.<name>` | Header, lowercased name |
+| `body` | Parsed request body |
+| `raw` | The WHATWG `Request` itself |
 
 :::note
-The Fetch API uses `Request` objects where headers are accessed via `.get()` method. Use mapping functions for header extraction.
+`ip` is absent on this source: a Fetch `Request` reports no client IP and
+walkerOS does not guess one. Read `headers.x-forwarded-for` if your proxy sets
+it.
 :::
 
 ## Usage

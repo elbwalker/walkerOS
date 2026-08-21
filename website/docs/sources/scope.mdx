@@ -1,0 +1,76 @@
+---
+title: Request Scope
+sidebar_position: 2
+---
+
+# Request Scope
+
+Every server source adapts its platform's request into one normalized shape, the
+**scope**, before handing it to the collector. A `config.ingest` mapping resolves
+against that shape, so a mapping written once resolves the same on Express, on
+Cloud Functions, on Lambda and on any Fetch runtime.
+
+Paths have no prefix. `headers.user-agent`, not `req.headers.user-agent`.
+
+## Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `method` | `string` | Uppercase HTTP method. |
+| `url` | `string` | Absolute request URL when the platform knows it, otherwise `''`. Never a partial URL. |
+| `path` | `string` | Pathname only, no query string, leading slash. |
+| `query` | `Record<string, string>` | Query parameters. Repeated keys joined with `,`. |
+| `headers` | `Record<string, string>` | Header bag. Keys lowercased. Repeated values joined with `, `. |
+| `body` | `unknown` | The parsed body when it parses as JSON, the raw string when it does not, `undefined` when there is none. |
+| `ip` | `string \| undefined` | Client IP as the platform reports it. Absent when the platform reports none. |
+| `raw` | `unknown` | The untouched platform object. |
+
+## A value a platform does not supply is never guessed
+
+The required fields are always present: when a platform cannot form one, it
+carries the documented empty value rather than a guess (`url` is `''` without a
+host header). `ip` is the one optional field, and it is simply absent where the
+platform reports none. A bare Fetch `Request` carries no client IP, so
+`scope.ip` is `undefined` there rather than being derived from
+`x-forwarded-for`. That header is still in `headers` for anyone who wants it,
+which keeps the guess in your configuration where you can see it.
+
+The body is parsed once, at the boundary. A `navigator.sendBeacon` payload
+arrives as `text/plain` on several platforms and an API Gateway body can be
+base64 encoded; both are resolved before the scope exists, so `config.ingest`
+mappings and the event pipeline read the same normalized value rather than one
+seeing the raw string and the other the parsed object.
+
+A body that does not parse to an object is kept as-is and yields one empty
+event, so a `source.before` transformer can decode it from `ingest.body`. That
+case is the one where the two deliberately differ; see the
+[event envelope](/docs/sources/envelope).
+
+## Escape hatch: `raw`
+
+`raw` holds the platform object itself: the Express `Request`, the Lambda event,
+the WHATWG `Request`. Use it for anything the contract deliberately does not
+cover.
+
+```js
+ingest: {
+  map: {
+    // Contract fields, identical on every source
+    ua: { key: 'headers.user-agent' },
+    path: { key: 'path' },
+
+    // Platform specific, only where you know the platform
+    stage: { key: 'raw.requestContext.stage' },
+  },
+}
+```
+
+A mapping that reads `raw` is a mapping that stops being portable. That is a
+fair trade when you need it, and it is visible in the config rather than hidden
+in the runtime.
+
+## Web and queue sources have no scope
+
+Browser and dataLayer sources have no inbound request to adapt, so
+`config.ingest` does not apply to them. Queue sources (Pub/Sub, SQS) push per
+message rather than per request and likewise carry no scope.

@@ -1,11 +1,12 @@
 import type { Mapping } from '@walkeros/core';
+import type { BotContext } from './detect/context';
 
 /**
  * Input signal sources. Each is a Mapping.Value resolved via getMappingValue
  * against { event, ingest }.
  *
- * v1 only reads `userAgent`. The remaining fields are reserved for v1.1
- * (header consistency heuristics) so the public schema stays stable.
+ * `ja4` and `headerNames` are reserved: they are resolved and passed through,
+ * but no heuristic consumes them.
  */
 export interface BotInput {
   userAgent?: Mapping.Value;
@@ -19,20 +20,35 @@ export interface BotInput {
   secChUa?: Mapping.Value;
   secChUaMobile?: Mapping.Value;
   secChUaPlatform?: Mapping.Value;
+  accept?: Mapping.Value;
+  contentType?: Mapping.Value;
+  referer?: Mapping.Value;
+  signatureAgent?: Mapping.Value;
+  method?: Mapping.Value;
+  ja4?: Mapping.Value;
+  headerNames?: Mapping.Value;
 }
 
 /**
- * Output paths. Empty string or omitted = skip writing that field.
+ * Output paths. `false` disables a field, any dot path renames and reroutes it.
  * Paths starting with `ingest.` route to context.ingest (pipeline scratch);
  * everything else routes to the event.
  */
 export interface BotOutput {
-  botScore?: string;
-  agentScore?: string;
-  agentProduct?: string;
+  botScore?: string | false;
+  botCategory?: string | false;
+  botProduct?: string | false;
+  botReasons?: string | false;
 }
 
 export interface BotSettings {
   input?: BotInput;
   output?: BotOutput;
+  /**
+   * How the request reached the collector. Pinning it is what enables the
+   * context-dependent checks; `auto` runs the context-independent ones only.
+   */
+  context?: BotContext;
+  /** Graded-layer cut between `human` and `suspicious`. */
+  suspiciousAt?: number;
 }

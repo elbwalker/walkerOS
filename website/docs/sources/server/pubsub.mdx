@@ -117,9 +117,17 @@ app.listen(8080);`}
 Pub/Sub posts each message envelope to the configured endpoint as a JSON body matching the [Pub/Sub push spec](https://cloud.google.com/pubsub/docs/push). The handler decodes the envelope, base64-decodes the `data` field, runs the configured decoder, and forwards to the collector. Status codes:
 
 - `200`: forwarded successfully.
-- `400`: malformed envelope (missing `message.data`, invalid base64).
+- `400`: the message is permanently invalid, either a malformed envelope
+  (missing `message.data`, invalid base64) or an event the pipeline rejected.
+  A retry cannot fix either, so the answer is a nack.
 - `401`: OIDC verification failed (when enabled).
-- `500`: collector push failed; Pub/Sub will retry per the subscription's retry policy.
+- `500`: collector push failed on an otherwise valid message; Pub/Sub will retry
+  per the subscription's retry policy.
+
+Because a permanently invalid message is nacked rather than acknowledged, Pub/Sub
+keeps redelivering it. Set a
+[dead-letter policy](https://cloud.google.com/pubsub/docs/handling-failures) on
+the subscription: that policy, not the source, is the poison-message guard.
 
 ### Push settings
 

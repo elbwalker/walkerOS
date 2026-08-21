@@ -1,7 +1,8 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Destination as CoreDestination, WalkerOS } from '@walkeros/core';
 import type { DestinationAPI } from '.';
 import {
   createEvent,
+  getEvent,
   clone,
   createMockContext,
   createMockLogger,
@@ -211,5 +212,169 @@ describe('Destination API', () => {
       'API destination response',
       expect.objectContaining({ ok: undefined }),
     );
+  });
+
+  describe('pushBatch', () => {
+    const batchOf = (
+      entries: Array<CoreDestination.BatchEntry<DestinationAPI.Mapping>>,
+    ): CoreDestination.Batch<DestinationAPI.Mapping> => ({
+      key: '* *',
+      entries,
+      events: entries.map((entry) => entry.event),
+      data: entries.flatMap((entry) => (entry.data ? [entry.data] : [])),
+    });
+
+    test('is exposed so the collector engages config.batch', () => {
+      expect(typeof destination.pushBatch).toBe('function');
+    });
+
+    test('sends one request per batch carrying every event', async () => {
+      const events = [getEvent('product view'), getEvent('order complete')];
+
+      await destination.pushBatch!(
+        batchOf(events.map((e) => ({ event: e }))),
+        createMockContext({
+          config: { settings: { url } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      expect(mockSendServer).toHaveBeenCalledTimes(1);
+      const [calledUrl, calledData] = mockSendServer.mock.calls[0];
+      expect(calledUrl).toBe(url);
+      expect(JSON.parse(calledData)).toEqual(events);
+    });
+
+    test('sends entry data when present, raw event otherwise', async () => {
+      const first = getEvent('product view');
+      const second = getEvent('order complete');
+      const mapped = { custom: 'data' };
+
+      await destination.pushBatch!(
+        batchOf([{ event: first, data: mapped }, { event: second }]),
+        createMockContext({
+          config: { settings: { url } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      expect(mockSendServer).toHaveBeenCalledTimes(1);
+      const [, calledData] = mockSendServer.mock.calls[0];
+      expect(JSON.parse(calledData)).toEqual([mapped, second]);
+    });
+
+    test('applies transform to each batch item', async () => {
+      const events = [getEvent('product view'), getEvent('order complete')];
+      const transformFn = jest.fn(
+        (data?: unknown) => `wrapped:${JSON.stringify(data)}`,
+      );
+      const transform: DestinationAPI.Transform = transformFn;
+
+      await destination.pushBatch!(
+        batchOf(events.map((e) => ({ event: e }))),
+        createMockContext({
+          config: { settings: { url, transform } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      expect(transformFn).toHaveBeenCalledTimes(2);
+      expect(mockSendServer).toHaveBeenCalledTimes(1);
+      const [, calledData] = mockSendServer.mock.calls[0];
+      expect(JSON.parse(calledData)).toEqual(
+        events.map((e) => `wrapped:${JSON.stringify(e)}`),
+      );
+    });
+
+    test('sends nothing without a url', async () => {
+      await destination.pushBatch!(
+        batchOf([{ event: getEvent('product view') }]),
+        createMockContext({
+          config: {},
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      expect(mockSendServer).not.toHaveBeenCalled();
+    });
+
+    test('forwards headers, method and timeout', async () => {
+      await destination.pushBatch!(
+        batchOf([{ event: getEvent('product view') }]),
+        createMockContext({
+          config: {
+            settings: {
+              url,
+              headers: { foo: 'bar' },
+              method: 'PUT',
+              timeout: 10000,
+            },
+          },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      expect(mockSendServer).toHaveBeenCalledWith(
+        url,
+        expect.any(String),
+        expect.objectContaining({
+          headers: { foo: 'bar' },
+          method: 'PUT',
+          timeout: 10000,
+        }),
+      );
+    });
+
+    test('environment customization', async () => {
+      const customSendServer = jest.fn();
+
+      await destination.pushBatch!(
+        batchOf([{ event: getEvent('product view') }]),
+        createMockContext({
+          config: { settings: { url } },
+          env: { sendServer: customSendServer },
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      expect(customSendServer).toHaveBeenCalledTimes(1);
+      expect(mockSendServer).not.toHaveBeenCalled();
+    });
+
+    test('logging', async () => {
+      const testLogger = createMockLogger();
+      const events = [getEvent('product view'), getEvent('order complete')];
+
+      await destination.pushBatch!(
+        batchOf(events.map((e) => ({ event: e }))),
+        createMockContext({
+          config: { settings: { url, method: 'PUT' } },
+          env: testEnv,
+          logger: testLogger,
+          id: 'test-api',
+        }),
+      );
+
+      expect(testLogger.debug).toHaveBeenCalledWith(
+        'API destination sending batch',
+        expect.objectContaining({ url, method: 'PUT', events: 2 }),
+      );
+
+      expect(testLogger.debug).toHaveBeenCalledWith(
+        'API destination response',
+        expect.objectContaining({ ok: undefined }),
+      );
+    });
   });
 });

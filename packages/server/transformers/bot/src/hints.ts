@@ -1,8 +1,26 @@
 import type { Hint } from '@walkeros/core';
 
+const INGEST_MAP = {
+  userAgent: { key: 'headers.user-agent' },
+  acceptLanguage: { key: 'headers.accept-language' },
+  acceptEncoding: { key: 'headers.accept-encoding' },
+  secFetchSite: { key: 'headers.sec-fetch-site' },
+  secFetchMode: { key: 'headers.sec-fetch-mode' },
+  secFetchDest: { key: 'headers.sec-fetch-dest' },
+  secFetchUser: { key: 'headers.sec-fetch-user' },
+  secChUa: { key: 'headers.sec-ch-ua' },
+  secChUaMobile: { key: 'headers.sec-ch-ua-mobile' },
+  secChUaPlatform: { key: 'headers.sec-ch-ua-platform' },
+  accept: { key: 'headers.accept' },
+  contentType: { key: 'headers.content-type' },
+  referer: { key: 'headers.referer' },
+  signatureAgent: { key: 'headers.signature-agent' },
+  method: { key: 'method' },
+};
+
 export const hints: Hint.Hints = {
   'ingest-prerequisite': {
-    text: 'The bot transformer reads userAgent from ctx.ingest (path "ingest.userAgent" by default). The upstream server source must populate it via config.ingest, which MUST use the map operator with direct request field paths (no req. prefix); a bare object like { userAgent: "req.headers.user-agent" } is silently inert and leaves ingest empty. Without populated ingest the UA is empty and every event scores 70 (baseline for missing UA).',
+    text: 'The bot transformer reads its signals from ctx.ingest (path "ingest.<name>" by default). The upstream server source must populate them via config.ingest, which MUST use the map operator with direct request field paths (no req. prefix); a bare object like { userAgent: "req.headers.user-agent" } is silently inert and leaves ingest empty. With nothing in ingest the score is null and the category is "unknown".',
     code: [
       {
         lang: 'json',
@@ -11,18 +29,42 @@ export const hints: Hint.Hints = {
             sources: {
               express: {
                 package: '@walkeros/server-source-express',
-                config: {
-                  ingest: {
-                    map: {
-                      userAgent: { key: 'headers.user-agent' },
-                    },
-                  },
-                },
+                config: { ingest: { map: INGEST_MAP } },
               },
             },
             transformers: {
+              bot: { package: '@walkeros/server-transformer-bot' },
+            },
+          },
+          null,
+          2,
+        ),
+      },
+    ],
+  },
+  'declared-signals': {
+    text: 'Absence is ambiguous: "the client sent no Sec-CH-UA" and "the operator never mapped Sec-CH-UA" both arrive as undefined. So an absence-based check runs only when its input name appears explicitly in settings.input, which is you asserting the signal is wired. Reading still falls back to the defaults, so listing a name with its default path costs nothing and unlocks the check. Until then ingest.bot.reasons reports ch_not_declared, fetchmeta_not_declared or accept_not_declared, naming exactly which mapping to add.',
+    code: [
+      {
+        lang: 'json',
+        code: JSON.stringify(
+          {
+            transformers: {
               bot: {
                 package: '@walkeros/server-transformer-bot',
+                config: {
+                  settings: {
+                    context: 'beacon',
+                    input: {
+                      acceptLanguage: 'ingest.acceptLanguage',
+                      acceptEncoding: 'ingest.acceptEncoding',
+                      secFetchSite: 'ingest.secFetchSite',
+                      secFetchMode: 'ingest.secFetchMode',
+                      secFetchDest: 'ingest.secFetchDest',
+                      secChUa: 'ingest.secChUa',
+                    },
+                  },
+                },
               },
             },
           },
@@ -33,7 +75,7 @@ export const hints: Hint.Hints = {
     ],
   },
   'output-routing': {
-    text: 'Outputs default to event.user.botScore and event.user.agentScore. Redirect to ingest.* to keep the analytics event clean while still routing on the score downstream. Empty string (or omit) skips writing that field entirely. agentProduct is off by default — set it to enable writing the matched UA substring.',
+    text: 'Outputs default to event.user.botScore, event.user.botCategory, event.user.botProduct and ingest.bot.reasons. Any value can be a dot path to rename and reroute the field, or false to disable it. An "ingest." prefix keeps a field off the analytics event while still routing on it downstream. Note that ingest is shared by every event in a scope and the write is an assignment, so if a before-chain step fans one input into several events, point botReasons at an event path to keep per-event attribution.',
     code: [
       {
         lang: 'json',
@@ -46,8 +88,9 @@ export const hints: Hint.Hints = {
                   settings: {
                     output: {
                       botScore: 'ingest.bot.score',
-                      agentScore: 'ingest.bot.agent',
-                      agentProduct: 'user.agentProduct',
+                      botCategory: 'ingest.bot.category',
+                      botProduct: false,
+                      botReasons: 'ingest.bot.reasons',
                     },
                   },
                 },
@@ -61,9 +104,9 @@ export const hints: Hint.Hints = {
     ],
   },
   'destination-filtering': {
-    text: 'Recommended destination-mapping recipes. Drop all bots: botScore > 50. Drop crawlers but keep user-action AI traffic: botScore > 50 AND agentProduct NOT LIKE "%-User". AI traffic report: group by agentProduct WHERE agentScore > 50. The transformer never drops events — filtering is always a destination decision.',
+    text: 'Recommended destination-mapping recipes. Drop everything automated: botScore > 50. Drop crawlers but keep AI traffic a person triggered: botScore > 50 AND botCategory != "ai-agent". Keep link unfurls, which mean somebody just shared the URL: botCategory != "link-preview". AI visibility report: group by botProduct WHERE botCategory IN ("ai-agent", "ai-crawler"). Note that botScore is null for category "unknown", which means not measured rather than human, and evaluates false under a > 50 filter. The transformer never drops events; filtering is always a destination decision.',
   },
   'detection-scope': {
-    text: 'v1 is UA-only: wraps isbot (curl, wget, headless Chrome defaults, well-known crawlers) plus a curated AI-agent UA map (OpenAI, Anthropic, Perplexity, Mistral, Meta, Google, Apple, Amazon, DuckDuckGo, ByteDance, Common Crawl). It will NOT catch: residential-proxy + stealth Chrome + realistic behavior; reverse-DNS-verified search engines; client-side runtime tells. v1.1 adds header consistency heuristics (Sec-Fetch, Sec-CH-UA, Accept-Language) with proper GREASE handling. For commercial-grade detection use Cloudflare Bot Management, DataDome, or HUMAN.',
+    text: 'Detection runs in two layers. Deterministic, first match wins: missing UA (70), AI agent or crawler UA map (90, with the category and product), non-AI crawler map for search engines, SEO tools, monitors and link unfurlers (90), isbot (80), and values impossible for the pinned context (75). Graded, capped at 60, when no deterministic rung fires: client-hint version mismatch, client hints missing on a Chromium UA, wildcard Accept on a typed context, Fetch Metadata missing or off-profile, and missing Accept-Language or Accept-Encoding. It will NOT catch: residential-proxy plus stealth Chrome with realistic behavior; in-browser agents such as Claude for Chrome, which drive a real session and are header-identical to it; UA-spoofing privacy tools. For commercial-grade detection use Cloudflare Bot Management, DataDome, or HUMAN.',
   },
 };

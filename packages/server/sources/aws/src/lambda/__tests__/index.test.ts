@@ -4,6 +4,7 @@ import type { APIGatewayProxyEvent, APIGatewayProxyEventV2 } from 'aws-lambda';
 import type { Ingest, Source, Collector } from '@walkeros/core';
 import { createIngest, createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
+import { createMockEventV1, createMockEventV2 } from './fixtures';
 
 // Helper to create source context
 function createSourceContext(
@@ -30,93 +31,6 @@ function createSourceContext(
 }
 
 // Mock API Gateway v1 event
-function createMockEventV1(
-  method = 'POST',
-  body?: string,
-  queryStringParameters?: Record<string, string>,
-  headers?: Record<string, string>,
-): APIGatewayProxyEvent {
-  return {
-    httpMethod: method,
-    body: body ?? null,
-    queryStringParameters: queryStringParameters ?? null,
-    headers: headers ?? {},
-    isBase64Encoded: false,
-    path: '/collect',
-    resource: '/collect',
-    pathParameters: null,
-    stageVariables: null,
-    requestContext: {
-      accountId: '123456789012',
-      apiId: 'api-id',
-      protocol: 'HTTP/1.1',
-      httpMethod: method,
-      path: '/collect',
-      stage: 'prod',
-      requestId: 'request-id',
-      requestTimeEpoch: Date.now(),
-      resourceId: 'resource-id',
-      resourcePath: '/collect',
-      identity: {
-        sourceIp: '127.0.0.1',
-        userAgent: 'test',
-        accessKey: null,
-        accountId: null,
-        apiKey: null,
-        apiKeyId: null,
-        caller: null,
-        clientCert: null,
-        cognitoAuthenticationProvider: null,
-        cognitoAuthenticationType: null,
-        cognitoIdentityId: null,
-        cognitoIdentityPoolId: null,
-        principalOrgId: null,
-        user: null,
-        userArn: null,
-      },
-      authorizer: null,
-    },
-    multiValueHeaders: {},
-    multiValueQueryStringParameters: null,
-  };
-}
-
-// Mock API Gateway v2 event
-function createMockEventV2(
-  method = 'POST',
-  body?: string,
-  rawQueryString?: string,
-  headers?: Record<string, string>,
-): APIGatewayProxyEventV2 {
-  return {
-    version: '2.0',
-    routeKey: '$default',
-    rawPath: '/collect',
-    rawQueryString: rawQueryString ?? '',
-    headers: headers ?? {},
-    body: body ?? undefined,
-    isBase64Encoded: false,
-    requestContext: {
-      accountId: '123456789012',
-      apiId: 'api-id',
-      domainName: 'api.example.com',
-      domainPrefix: 'api',
-      http: {
-        method,
-        path: '/collect',
-        protocol: 'HTTP/1.1',
-        sourceIp: '127.0.0.1',
-        userAgent: 'test',
-      },
-      requestId: 'request-id',
-      routeKey: '$default',
-      stage: 'prod',
-      time: new Date().toISOString(),
-      timeEpoch: Date.now(),
-    },
-  };
-}
-
 // Mock Lambda context
 function createMockContext(): LambdaContext {
   return {
@@ -171,6 +85,7 @@ describe('sourceLambda', () => {
         timeout: 30000,
         enablePixelTracking: true,
         healthPath: '/health',
+        maxBatchSize: 100,
       });
       expect(typeof source.push).toBe('function');
     });
@@ -197,6 +112,7 @@ describe('sourceLambda', () => {
         timeout: 30000,
         enablePixelTracking: false,
         healthPath: '/health',
+        maxBatchSize: 100,
       });
     });
   });
@@ -407,6 +323,111 @@ describe('sourceLambda', () => {
     });
   });
 
+  describe('provenance forwarding', () => {
+    it('forwards every body field, including source', async () => {
+      const source = await sourceLambda(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const event = createMockEventV1(
+        'POST',
+        JSON.stringify({
+          event: 'page view',
+          data: { title: 'Home' },
+          source: { release: { web: 'r1' }, trace: 't1' },
+        }),
+      );
+      const context = createMockContext();
+
+      const result = await source.push(event, context);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'page view',
+          data: { title: 'Home' },
+          source: { release: { web: 'r1' }, trace: 't1' },
+        }),
+      );
+      // The wire-level `event` key must not leak into the pushed event.
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.objectContaining({ event: expect.anything() }),
+      );
+      expect(result.statusCode).toBe(200);
+    });
+
+    it('accepts the name field and forwards it unchanged', async () => {
+      const source = await sourceLambda(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const event = createMockEventV1(
+        'POST',
+        JSON.stringify({
+          name: 'page view',
+          data: { title: 'Home' },
+          source: { release: { web: 'r1' } },
+        }),
+      );
+      const context = createMockContext();
+
+      const result = await source.push(event, context);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'page view',
+          data: { title: 'Home' },
+          source: { release: { web: 'r1' } },
+        }),
+      );
+      expect(result.statusCode).toBe(200);
+    });
+
+    it('prefers name over the legacy event alias', async () => {
+      const source = await sourceLambda(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const event = createMockEventV1(
+        'POST',
+        JSON.stringify({ name: 'page view', event: 'legacy name' }),
+      );
+      const context = createMockContext();
+
+      await source.push(event, context);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'page view' }),
+      );
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.objectContaining({ event: expect.anything() }),
+      );
+    });
+  });
+
   describe('error handling', () => {
     it('should require request body for POST', async () => {
       const source = await sourceLambda(
@@ -457,7 +478,11 @@ describe('sourceLambda', () => {
       expect(result.statusCode).toBe(200);
     });
 
-    it('should reject invalid event body', async () => {
+    // The source does not decide what a valid event is. It forwards the body
+    // verbatim so a source.before chain can rewrite it, and the collector's
+    // event gate answers 400 for a body that never becomes one. With a mocked
+    // push that always succeeds, the source answers 200.
+    it('forwards a non-event object body verbatim', async () => {
       const source = await sourceLambda(
         createSourceContext(
           {},
@@ -478,12 +503,10 @@ describe('sourceLambda', () => {
 
       const result = await source.push(event, context);
 
-      expect(result.statusCode).toBe(400);
-      expect(JSON.parse(result.body)).toMatchObject({
-        success: false,
-        error: 'Invalid request format',
-        requestId: expect.any(String),
-      });
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({ invalid: 'format' }),
+      );
+      expect(result.statusCode).toBe(200);
     });
 
     it('should handle event processing errors', async () => {
@@ -512,7 +535,9 @@ describe('sourceLambda', () => {
 
       const result = await source.push(event, context);
 
-      expect(result.statusCode).toBe(400);
+      // A rejected push is a server fault, not client input: the collector
+      // resolves pipeline failures, so a rejection is exceptional.
+      expect(result.statusCode).toBe(500);
       expect(JSON.parse(result.body)).toMatchObject({
         success: false,
         error: 'Processing failed',
@@ -1099,6 +1124,7 @@ describe('sourceLambda', () => {
         timeout: 30000,
         enablePixelTracking: true,
         healthPath: '/health',
+        maxBatchSize: 100,
       });
     });
 
@@ -1124,6 +1150,7 @@ describe('sourceLambda', () => {
         timeout: 30000,
         enablePixelTracking: true,
         healthPath: '/health',
+        maxBatchSize: 100,
       });
     });
   });

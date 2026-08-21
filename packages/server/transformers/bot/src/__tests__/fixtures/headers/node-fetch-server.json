@@ -1,0 +1,14 @@
+{
+  "name": "node-fetch-server",
+  "class": "bot",
+  "context": "server",
+  "provenance": "Captured 2026-08-21 via header-echo.mjs from node-fetch, server context, same-origin http://localhost:3999",
+  "signals": {
+    "userAgent": "node",
+    "acceptLanguage": "*",
+    "acceptEncoding": "gzip, deflate",
+    "secFetchMode": "cors",
+    "accept": "*/*",
+    "method": "GET"
+  }
+}

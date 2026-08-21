@@ -16,7 +16,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
   npm="@walkeros/server-transformer-bot"
 />
 
-Annotates events with `user.botScore` (0-99, higher = more bot) and `user.agentScore` (0-99, higher = more AI agent). Optionally writes `user.agentProduct` (matched UA substring). Never drops events — destinations filter via mapping.
+Annotates events with `user.botScore` (0-99, higher = more automated), `user.botCategory` (what kind of client), `user.botProduct` (the identified product, when a named detector matched) and `ingest.bot.reasons` (stable reason codes). Never drops events, destinations filter via mapping.
 
 ## Installation
 
@@ -33,11 +33,11 @@ Annotates events with `user.botScore` (0-99, higher = more bot) and `user.agentS
 import { transformerBot } from '@walkeros/server-transformer-bot';
 
 await startFlow({
-  transformers: {
-    bot: { code: transformerBot },
-  },
+transformers: {
+bot: { code: transformerBot },
+},
 });`}
-  language="typescript"
+language="typescript"
 />
 
   </TabItem>
@@ -59,7 +59,7 @@ await startFlow({
 
 ## Source prerequisite
 
-The transformer reads `userAgent` from `ctx.ingest` (default path `ingest.userAgent`). The upstream server source must populate it via `config.ingest`. Without it, every event scores 70 (missing-UA baseline).
+The transformer reads its signals from `ctx.ingest` (default path `ingest.<name>`). The upstream server source must populate them via `config.ingest`. With nothing in ingest the score is `null` and the category is `unknown`.
 
 <CodeSnippet
   code={`{
@@ -69,7 +69,21 @@ The transformer reads `userAgent` from `ctx.ingest` (default path `ingest.userAg
       "config": {
         "ingest": {
           "map": {
-            "userAgent": { "key": "headers.user-agent" }
+            "userAgent": { "key": "headers.user-agent" },
+            "acceptLanguage": { "key": "headers.accept-language" },
+            "acceptEncoding": { "key": "headers.accept-encoding" },
+            "secFetchSite": { "key": "headers.sec-fetch-site" },
+            "secFetchMode": { "key": "headers.sec-fetch-mode" },
+            "secFetchDest": { "key": "headers.sec-fetch-dest" },
+            "secFetchUser": { "key": "headers.sec-fetch-user" },
+            "secChUa": { "key": "headers.sec-ch-ua" },
+            "secChUaMobile": { "key": "headers.sec-ch-ua-mobile" },
+            "secChUaPlatform": { "key": "headers.sec-ch-ua-platform" },
+            "accept": { "key": "headers.accept" },
+            "contentType": { "key": "headers.content-type" },
+            "referer": { "key": "headers.referer" },
+            "signatureAgent": { "key": "headers.signature-agent" },
+            "method": { "key": "method" }
           }
         }
       }
@@ -79,23 +93,93 @@ The transformer reads `userAgent` from `ctx.ingest` (default path `ingest.userAg
   language="json"
 />
 
-## Detection layers (v1)
+Header-driven scoring works on the express and GCP Cloud Function sources. On AWS Lambda it depends on the API Gateway version's header casing, and on the `fetch` source it is unavailable: that source's raw scope is a WHATWG `Request`, whose `headers` is a `Headers` instance rather than a plain object, so dot paths resolve to `undefined`.
 
-- **isbot** — catches curl, wget, python-requests, headless Chrome defaults, well-known crawlers.
-- **Curated AI agent map** — vendor self-declared UAs across OpenAI (GPTBot, ChatGPT-User, ChatGPT-Agent, OAI-SearchBot), Anthropic (ClaudeBot, Claude-User, Claude-SearchBot, Claude-Code, legacy anthropic-ai), Perplexity, Mistral, Meta (Meta-ExternalAgent, Meta-ExternalFetcher), Google (Google-CloudVertexBot, Google-Extended), Apple (Applebot-Extended), Amazon (Amazonbot), DuckDuckGo (DuckAssistBot), ByteDance (Bytespider), Common Crawl (CCBot).
+## Declared signals
+
+An absence-based check runs only when its input name appears explicitly in `settings.input`. The package cannot tell "the client sent no `Sec-CH-UA`" from "the operator never mapped it", so listing a name is you asserting the signal is wired. Reading still falls back to the defaults, so listing a name with its own default path costs nothing and unlocks the check.
+
+Until then `ingest.bot.reasons` reports `ch_not_declared`, `fetchmeta_not_declared` or `accept_not_declared`, naming exactly which mapping to add.
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "bot": {
+      "package": "@walkeros/server-transformer-bot",
+      "config": {
+        "settings": {
+          "context": "beacon",
+          "input": {
+            "acceptLanguage": "ingest.acceptLanguage",
+            "acceptEncoding": "ingest.acceptEncoding",
+            "secFetchSite": "ingest.secFetchSite",
+            "secFetchMode": "ingest.secFetchMode",
+            "secFetchDest": "ingest.secFetchDest",
+            "secChUa": "ingest.secChUa"
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Request context
+
+The same header value means opposite things in different contexts: a wildcard `Accept` is what every browser sends on a beacon and a strong bot signal on an image pixel. `settings.context` takes `auto`, `navigation`, `pixel`, `beacon`, `fetch` or `server`, and defaults to `auto`.
+
+Pinning unlocks the `Accept` shape check, the Fetch Metadata profile comparison and the beacon `Content-Type` check. `auto` never enables them: absence of `Sec-Fetch-*` is both a signal worth scoring and the reason auto-derivation fails, so `auto` runs the context-independent checks only and reports `context_undetermined`. The client-hint coherence family, the most discriminating header signal available, is context-independent and works everywhere.
+
+## Detection layers
+
+Deterministic, most specific first, first match wins. The graded layer does not run when one of these fires.
+
+| Score | Category     | Trigger                                   |
+| ----- | ------------ | ----------------------------------------- |
+| 70    | `automation` | missing User-Agent                        |
+| 90    | named        | AI agent or AI crawler UA map             |
+| 90    | named        | non-AI crawler UA map                     |
+| 80    | `automation` | `isbot`                                   |
+| 75    | `automation` | a value impossible for the pinned context |
+
+Graded, capped at 60, so the layers never overlap: `ch_version_mismatch` (30), `ch_missing_on_chromium` (25), `accept_generic_on_typed_context` (25), `fetchmeta_missing_on_modern_ua` (15), `fetchmeta_profile_mismatch` (15), `accept_language_missing` (10), `accept_encoding_missing` (5). The weights and the `suspiciousAt` default of 25 are provisional starting values, not calibrated against a labelled corpus.
+
+## Categories
+
+| Value            | Meaning                                                          | Score  |
+| ---------------- | ---------------------------------------------------------------- | ------ |
+| `human`          | no evidence, or graded sum below the cut                         | 0-24   |
+| `suspicious`     | graded evidence, nothing decisive                                | 25-60  |
+| `automation`     | isbot, missing UA, or impossible-for-context values              | 70-80  |
+| `search-crawler` | search engine index; correlates with organic discoverability     | 90     |
+| `seo-tool`       | third-party commercial crawler                                   | 90     |
+| `monitor`        | uptime and synthetic monitoring, usually your own infrastructure | 90     |
+| `link-preview`   | link unfurler, meaning a person just shared this URL             | 90     |
+| `ai-agent`       | AI agent acting for a person                                     | 90     |
+| `ai-crawler`     | AI training or search-index crawler                              | 90     |
+| `unknown`        | nothing resolvable at all                                        | `null` |
+
+Which categories can appear depends on how events reach the pipeline. Link unfurlers do not run JavaScript, so `link-preview` is structurally invisible to a JS tag and real only for server-side collection. Googlebot renders, so `search-crawler` does fire in a JS tag. The README carries the full reachability table.
 
 ## Destination filtering recipes
 
-Drop all bots: `event.user.botScore > 50`
+Drop everything automated: `event.user.botScore > 50`
 
-Drop crawlers, keep user-action AI: `event.user.botScore > 50 AND event.user.agentProduct NOT LIKE '%-User'`
+Drop crawlers, keep the AI traffic a person triggered: `event.user.botScore > 50 AND event.user.botCategory != 'ai-agent'`
 
-AI traffic report: `event.user.agentScore > 50`, grouped by `event.user.agentProduct`
+Keep link unfurls, which mean somebody just shared the URL: `event.user.botCategory != 'link-preview'`
 
-## Not in v1
+AI visibility report: `event.user.botCategory IN ('ai-agent', 'ai-crawler')`, grouped by `event.user.botProduct`
 
-Header consistency heuristics (Sec-Fetch / Sec-CH-UA / Accept-Language), ASN / datacenter-IP, reverse DNS verification, web-side runtime checks, behavioral signals, TLS / JA4. See the README's "Not in v1" section for the full roadmap.
+`botScore` is `null` for category `unknown`, which means not measured rather than human, and evaluates false under a `> 50` filter. Cloudflare's `bot_score` runs the opposite way (1 = bot) because it is a trust score; ours matches its field name.
+
+## Not yet implemented
+
+Identity verification (`settings.verify`, a CIDR matcher and a `botVerified` output), Web Bot Auth signature verification, reverse DNS, ASN / datacenter-IP, web-side runtime checks, behavioral signals, and TLS / JA4. The input names `ja4` and `headerNames` are reserved and resolved but unconsumed. See the README for why each one is out.
 
 ## Limits
 
 Will not catch residential-proxy + stealth Chrome, CAPTCHA-solver farms, or real-browser-as-a-service. For that threat model use a commercial vendor (Cloudflare Bot Management, DataDome, HUMAN).
+
+In-browser agents such as Claude for Chrome are undetectable here by construction: they drive a real browser session and produce headers identical to it. A UA-map match is a claim, not proof: Screaming Frog ships Googlebot and Bingbot presets, and any client can send any UA.

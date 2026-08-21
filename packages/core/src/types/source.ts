@@ -132,14 +132,15 @@ export interface Config<
   setup?: boolean | SetupOptions<T>;
   /**
    * Ingest metadata extraction mapping.
-   * Extracts values from raw request objects (Express req, Lambda event, etc.)
-   * using walkerOS mapping syntax. Extracted data flows to transformers/destinations.
+   * Extracts values from the normalized `Scope` the source built, using
+   * walkerOS mapping syntax. Extracted data flows to transformers and
+   * destinations. Paths resolve against the scope's fields, with no prefix.
    *
    * @example
    * ingest: {
-   *   ip: 'req.ip',
-   *   ua: 'req.headers.user-agent',
-   *   origin: 'req.headers.origin'
+   *   ip: 'ip',
+   *   ua: 'headers.user-agent',
+   *   origin: 'headers.origin'
    * }
    */
   ingest?: WalkerOSMapping.Data;
@@ -214,6 +215,37 @@ export type ScopeEnv<T extends TypesGeneric = Types> = Env<T> & {
 };
 
 /**
+ * The normalized shape every source builds from its platform's request before
+ * calling withScope. Downstream config.ingest mappings, transformers and
+ * destinations read this shape and nothing else, so a mapping written once
+ * resolves the same on every source.
+ *
+ * A value a platform does not supply is never guessed. `ip` is the one optional
+ * field and is simply absent there; the required fields carry a documented
+ * empty value instead (`url` is `''` when the platform cannot form one). `raw`
+ * carries the untouched platform object for the cases normalization
+ * deliberately does not cover.
+ */
+export interface Scope {
+  /** Uppercase HTTP method. */
+  method: string;
+  /** Absolute request URL when the platform knows it, else ''. */
+  url: string;
+  /** Pathname only, no query string, leading slash. */
+  path: string;
+  /** Query parameters. Repeated keys joined with ','. */
+  query: Record<string, string>;
+  /** Header bag. Keys lowercased. Repeated values joined with ', '. */
+  headers: Record<string, string>;
+  /** Parsed body when it parses as JSON, the raw string when it does not, undefined when there is none. */
+  body: unknown;
+  /** Client IP as the platform reports it. Absent when the platform does not report one. */
+  ip?: string;
+  /** The untouched platform object. Escape hatch, never read by walkerOS itself. */
+  raw: unknown;
+}
+
+/**
  * Context provided to source init function.
  * Extends base context with source-specific properties.
  */
@@ -224,30 +256,33 @@ export interface Context<
   /**
    * Bind ingest and respond to a single scope of work (e.g. one inbound
    * HTTP request, one queue message). Builds a fresh `Ingest` from the
-   * raw input via `config.ingest` mapping, wires the per-scope `respond`,
-   * and invokes `body(scopeEnv)` with a push function that captures both.
+   * normalized scope via `config.ingest` mapping, wires the per-scope
+   * `respond`, and invokes `body(scopeEnv)` with a push function that
+   * captures both.
    *
-   * Server sources call this once per inbound request:
+   * Server sources normalize their platform's request into a `Scope` first,
+   * then call this once per inbound request:
    *
    * ```ts
-   * await context.withScope(req, createRespond(sender), async (env) => {
-   *   await env.push(parsedData);
+   * const scope = buildScope(req);
+   *
+   * await context.withScope(scope, createRespond(sender), async (env) => {
+   *   for (const event of toEventList(scope.body)) await env.push(event);
    * });
    * ```
    *
    * Browser sources with a single tab-lifetime scope may skip `withScope`
    * and use `env.push` directly.
    *
-   * @param rawScope - Raw input for `config.ingest` mapping (Express req,
-   *   Lambda event, fetch Request, etc.). Pass `undefined` if no ingest
-   *   mapping applies.
+   * @param rawScope - The normalized scope the source built from its
+   *   platform's request. Pass `undefined` if no ingest mapping applies.
    * @param respond - Per-scope respond function, or `undefined` if the
    *   scope produces no response.
    * @param body - Async callback receiving the per-scope env.
    * @returns The body's return value.
    */
   withScope: <R>(
-    rawScope: unknown,
+    rawScope: Scope | undefined,
     respond: RespondFn | undefined,
     body: (env: ScopeEnv<T>) => Promise<R>,
   ) => Promise<R>;

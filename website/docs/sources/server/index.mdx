@@ -16,6 +16,8 @@ Server sources accept HTTP requests containing walkerOS events and forward them 
 | [Fetch](./fetch) | Edge/Serverless | Cloudflare Workers, Vercel Edge, Deno, Bun |
 | [AWS Lambda](./aws) | AWS | API Gateway, Lambda Function URLs |
 | [GCP Cloud Functions](./gcp) | Google Cloud | Cloud Functions HTTP triggers |
+| [AWS SQS](./sqs) | AWS | Queue consumer, decoupled ingestion |
+| [Google Pub/Sub](./pubsub) | Google Cloud | Pull subscriber or push webhook |
 
 ## Choosing a source
 
@@ -29,9 +31,19 @@ Server sources accept HTTP requests containing walkerOS events and forward them 
 
 ## Common features
 
-All server sources provide:
+Server sources come in two shapes, and the shared features differ by shape.
 
-- **JSON event ingestion** (POST)
+**HTTP sources** (Express, Fetch, AWS Lambda, GCP Cloud Functions) receive
+inbound requests and all provide:
+
+- **JSON event ingestion** (POST), with one shared [event envelope](/docs/sources/envelope)
 - **Pixel tracking** (GET with 1x1 GIF response)
 - **CORS support** (configurable)
 - **Health checks** (liveness/readiness endpoints)
+- One shared [request scope](/docs/sources/scope), so a `config.ingest` mapping
+  resolves the same on each of them
+
+**Queue consumers** (AWS SQS, Google Pub/Sub pull) read from a queue instead of
+serving requests. They have no HTTP surface, so none of the request-shaped
+features above apply, and `config.ingest` does not either: there is no request
+to adapt. Retries and dead-lettering stay with the queue.

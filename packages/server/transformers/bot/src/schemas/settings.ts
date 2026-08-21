@@ -18,6 +18,12 @@ const MappingValueSchema = z.union([
     .describe('Array of fallback values, tried in order'),
 ]);
 
+const OutputPathSchema = (description: string) =>
+  z
+    .union([z.string(), z.literal(false)])
+    .optional()
+    .describe(description);
+
 export const SettingsSchema = z
   .object({
     input: z
@@ -33,37 +39,50 @@ export const SettingsSchema = z
         secChUa: MappingValueSchema.optional(),
         secChUaMobile: MappingValueSchema.optional(),
         secChUaPlatform: MappingValueSchema.optional(),
+        accept: MappingValueSchema.optional(),
+        contentType: MappingValueSchema.optional(),
+        referer: MappingValueSchema.optional(),
+        signatureAgent: MappingValueSchema.optional(),
+        method: MappingValueSchema.optional(),
+        ja4: MappingValueSchema.optional(),
+        headerNames: MappingValueSchema.optional(),
       })
       .optional()
       .describe(
-        'Input signal sources, resolved via getMappingValue against { event, ingest }. v1 only reads userAgent; other fields reserved for v1.1 header heuristics.',
+        'Input signal sources, resolved via getMappingValue against { event, ingest }. Each defaults to "ingest.<name>". Listing a name here also declares that the signal is wired in your pipeline, which is what enables the absence-based checks for its family (client hints, Fetch Metadata, Accept-Language/Encoding). "ja4" and "headerNames" are reserved and unconsumed.',
       ),
     output: z
       .object({
-        botScore: z
-          .string()
-          .optional()
-          .describe(
-            'Path for bot score (0-99, higher = more bot). Default: "user.botScore". Use "ingest.*" to route to pipeline scratch instead of the event. Empty string or omit = skip.',
-          ),
-        agentScore: z
-          .string()
-          .optional()
-          .describe(
-            'Path for AI agent score (0-99). v1 emits 0 (no match) or 95 (UA-map match). Default: "user.agentScore".',
-          ),
-        agentProduct: z
-          .string()
-          .optional()
-          .describe(
-            'Path for matched UA substring (e.g. "ChatGPT-User"). Off by default — set to enable.',
-          ),
+        botScore: OutputPathSchema(
+          'Path for the automation likelihood (0-99, higher = more automated, null when not measured). Default: "user.botScore". Use "ingest.*" to route to pipeline scratch instead of the event, or false to disable.',
+        ),
+        botCategory: OutputPathSchema(
+          'Path for the client category: human, suspicious, automation, search-crawler, seo-tool, monitor, link-preview, ai-agent, ai-crawler, unknown. Default: "user.botCategory".',
+        ),
+        botProduct: OutputPathSchema(
+          'Path for the identified product (e.g. "ChatGPT-User", "Googlebot"), written only when a named detector matched. Default: "user.botProduct".',
+        ),
+        botReasons: OutputPathSchema(
+          'Path for the reason-code array. Default: "ingest.bot.reasons", so the codes stay available to the pipeline without weighting the analytics payload. Codes ending in _not_declared report which signal families are unwired.',
+        ),
       })
       .optional()
-      .describe('Output paths for bot/agent annotations.'),
+      .describe('Output paths for the bot annotations.'),
+    context: z
+      .enum(['auto', 'navigation', 'pixel', 'beacon', 'fetch', 'server'])
+      .optional()
+      .describe(
+        'How the request reaches the collector. Pinning it enables the context-dependent checks (Accept shape, Fetch Metadata profile, beacon Content-Type), because the same header value means opposite things in different contexts. Default: "auto", which runs the context-independent checks only and reports "context_undetermined".',
+      ),
+    suspiciousAt: z
+      .number()
+      .optional()
+      .describe(
+        'Graded-layer cut between category "human" and "suspicious". Default: 25. Does not affect the deterministic scores (70 and above).',
+      ),
   })
   .describe(
-    'Bot detection transformer: annotates events with bot and AI-agent scores.',
+    'Bot detection transformer: annotates events with an automation likelihood, a client category, the identified product and reason codes.',
   );
 
 export type Settings = z.infer<typeof SettingsSchema>;

@@ -1,0 +1,84 @@
+---
+title: Event Envelope
+sidebar_position: 3
+---
+
+# Event Envelope
+
+Every server source answers one question the same way: given a POST body, how
+many events did the caller send, and which ones. The same request body produces
+the same event count on Express, Cloud Functions, Lambda and Fetch.
+
+## Accepted body forms
+
+| Body | Meaning |
+|---|---|
+| `{ "name": "page view", ... }` | One event. |
+| `{ "batch": [ ... ] }` | N events. The canonical envelope. |
+| `[ ... ]` | N events. Accepted alias. |
+| A string, number, `null`, or unparseable body | Raw input: one empty event, with the value available as `ingest.body` for a `source.before` transformer to decode. |
+
+An object that is not a valid event is forwarded as one event rather than being
+replaced by an empty one, so a `source.before` chain can rewrite a vendor
+payload into a walkerOS event. Validity is decided once, by the collector, which
+answers 400 with a reason when an event never becomes one.
+
+An explicit `{ "batch": [] }` is a well formed request carrying zero events. It
+answers 200, with `processed: 0` in the body wherever the response reflects the
+delivery outcome (see the synchronous-mode note below).
+
+## Batch size
+
+`settings.maxBatchSize` caps how many events one request may carry. The default
+is 100 on every source. A batch over the cap answers **400** and nothing is
+pushed.
+
+## Responses
+
+A batch answers with the batch shape whether it carries one event or fifty:
+
+| Outcome | Status | Body |
+|---|---|---|
+| All events delivered | 200 | `{ success: true, processed, ids }` |
+| Some events failed | 207 | `{ success: false, processed, failed, errors: [{ index, error }] }` |
+| Over the cap | 400 | `{ success: false, error }` |
+
+Single event requests keep their existing per source response bodies.
+
+### 207 requires synchronous mode
+
+The Express source acknowledges before delivery by default (`config.async` is
+`true`), so it cannot report per index outcomes: an accepted batch answers 200
+meaning "accepted", not "delivered", and failures surface through
+`collector.status` and the logs. Set `config.async: false` to have the response
+reflect the delivery outcome.
+
+## GET is one event, deliberately
+
+All four sources serve a tracking pixel on GET. Query parameters carry exactly
+one event, parsed with the same rules everywhere, and the response is a
+transparent GIF. There is no batch form on GET: URLs have length limits, and the
+pixel exists for the no-JS path where one event is the whole point.
+
+On the AWS Lambda and Cloud Functions sources, `settings.enablePixelTracking:
+false` answers 405 instead. The Express and Fetch sources control this through
+their route configuration rather than a setting.
+
+## Current limit: per-request ingest with batches
+
+`ingest` is **request scoped**, not event scoped. Every event in one batch
+shares one `Ingest`.
+
+Transformers that write per event annotations into `ingest` therefore record
+only the last event's values for a batch. This affects `@walkeros/transformer-bot`
+(which writes `ingest.bot.*`) and `@walkeros/transformer-validate`.
+
+**While either transformer is in the chain, prefer single event requests.** Batch
+delivery is correct for the events themselves; only the `ingest` annotations
+collapse. A per event annotation channel is planned.
+
+This applies to every batch producer, not just browser clients. A walkerOS
+runtime forwarding to another walkerOS runtime is one too: with `config.batch`
+set, `@walkeros/server-destination-api` sends one request carrying many events,
+so a receiving flow that runs either transformer collapses its annotations the
+same way.

@@ -1,8 +1,4 @@
-import type { RequestBody, EventRequest, CorsOptions, Response } from './types';
-
-export function isEventRequest(body: RequestBody): body is EventRequest {
-  return 'event' in body && typeof body.event === 'string';
-}
+import type { CorsOptions, Response } from './types';
 
 export function setCorsHeaders(
   res: Response,
@@ -36,3 +32,12 @@ export function setCorsHeaders(
     }
   }
 }
+
+/**
+ * 1x1 transparent GIF for pixel tracking.
+ * Base64-encoded GIF (43 bytes).
+ */
+export const TRANSPARENT_GIF = Buffer.from(
+  'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+  'base64',
+);

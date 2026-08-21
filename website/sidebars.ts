@@ -55,6 +55,7 @@ const sidebars: SidebarsConfig = {
             'getting-started/modes/bundled',
           ],
         },
+        'getting-started/observe',
         'getting-started/deploy',
         {
           type: 'category',
@@ -121,12 +122,24 @@ const sidebars: SidebarsConfig = {
                 'sources/web/cmps/usercentrics/index',
               ],
             },
-            'sources/server/express',
-            'sources/server/fetch',
-            'sources/server/aws',
-            'sources/server/sqs',
-            'sources/server/gcp',
-            'sources/server/pubsub',
+            {
+              type: 'category',
+              label: 'Server',
+              link: {
+                type: 'doc',
+                id: 'sources/server/index',
+              },
+              items: [
+                'sources/scope',
+                'sources/envelope',
+                'sources/server/express',
+                'sources/server/fetch',
+                'sources/server/aws',
+                'sources/server/sqs',
+                'sources/server/gcp',
+                'sources/server/pubsub',
+              ],
+            },
             'sources/create-your-own',
           ],
         },
@@ -245,14 +258,24 @@ const sidebars: SidebarsConfig = {
                   className: 'sidebar-badge-web',
                 },
                 {
-                  type: 'doc',
-                  id: 'destinations/web/gtag/ga4',
-                  className: 'sidebar-badge-web',
-                },
-                {
-                  type: 'doc',
-                  id: 'destinations/web/gtag/gtm',
-                  className: 'sidebar-badge-web',
+                  type: 'category',
+                  label: 'Google Gtag',
+                  link: {
+                    type: 'doc',
+                    id: 'destinations/web/gtag/index',
+                  },
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/gtag/ga4',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/gtag/gtm',
+                      className: 'sidebar-badge-web',
+                    },
+                  ],
                 },
                 {
                   type: 'doc',
@@ -535,8 +558,15 @@ const sidebars: SidebarsConfig = {
             'apps/cli',
             'apps/docker',
             'apps/runner',
-            'core/web',
-            'core/server',
+            {
+              type: 'category',
+              label: 'Core',
+              link: {
+                type: 'doc',
+                id: 'core/index',
+              },
+              items: ['core/web', 'core/server'],
+            },
             'apps/telemetry',
             'apps/storybook',
           ],
@@ -569,7 +599,11 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Migrating',
       collapsed: true,
-      items: ['migrating/v3-to-v4', 'migrate/cli-4x'],
+      items: [
+        'migrating/v3-to-v4',
+        'migrate/cli-4x',
+        'migrate/server-source-contract',
+      ],
     },
 
     // ── vs. Alternatives ─────────────────────────────────────────

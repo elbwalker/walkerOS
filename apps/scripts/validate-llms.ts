@@ -19,6 +19,21 @@ interface Issue {
 
 const ROOT = process.cwd();
 const BUILD_DIR = join(ROOT, 'website', 'build');
+
+// Docusaurus stamps every internal link with the configured baseUrl, while the
+// build still emits files relative to website/build. PR previews build with
+// DOCUSAURUS_BASEURL=/preview/pr-<n>/, so a link reads /preview/pr-<n>/docs/x.md
+// while the file is at website/build/docs/x.md. Strip the prefix so preview and
+// production builds resolve identically.
+const BASE_URL = (process.env.DOCUSAURUS_BASEURL || '/').replace(/\/*$/, '/');
+
+function emittedPath(target: string): string {
+  const relativeTarget =
+    BASE_URL !== '/' && target.startsWith(BASE_URL)
+      ? target.slice(BASE_URL.length)
+      : target.replace(/^\//, '');
+  return join(BUILD_DIR, relativeTarget);
+}
 const LLMS_INDEX = join(BUILD_DIR, 'llms.txt');
 const LLMS_FULL = join(BUILD_DIR, 'llms-full.txt');
 
@@ -88,8 +103,8 @@ function checkIndexLinks(): void {
   }
 
   for (const link of links) {
-    // Root-relative link → file under website/build (strip the leading slash).
-    const abs = join(BUILD_DIR, link.target.slice(1));
+    // Root-relative link → file under website/build.
+    const abs = emittedPath(link.target);
     if (!existsSync(abs)) {
       issues.push({
         file: `website/build/llms.txt:${link.line}`,
@@ -112,7 +127,7 @@ function checkBodyLinks(pages: string[]): void {
     const rel = relative(ROOT, page);
     const content = readFileSync(page, 'utf-8');
     for (const link of extractMarkdownLinks(content)) {
-      const abs = join(BUILD_DIR, link.target.slice(1));
+      const abs = emittedPath(link.target);
       if (existsSync(abs)) continue;
       const malformed = /\/\.md$/.test(link.target);
       found.push({

@@ -8,12 +8,18 @@ declare module '@walkeros/core' {
   }
 }
 
-// Minimal request/response interfaces
+// The Functions Framework hands the handler an Express request. These are the
+// fields the source reads; the framework provides more.
 export interface Request {
   method: string;
   body?: unknown;
   headers: Record<string, string | string[]>;
   get(name: string): string | undefined;
+  path?: string;
+  originalUrl?: string;
+  url?: string;
+  protocol?: string;
+  ip?: string;
 }
 
 export interface Response {
@@ -64,14 +70,11 @@ export type PartialConfig = CoreSource.PartialConfig<Types>;
 
 // Cloud function source doesn't follow standard Source.Init pattern due to HTTP handler interface
 
-export interface EventRequest {
-  event: string;
-  data?: WalkerOS.AnyObject;
-  context?: WalkerOS.AnyObject;
-  user?: WalkerOS.AnyObject;
-  globals?: WalkerOS.AnyObject;
-  consent?: WalkerOS.AnyObject;
-}
+// `event` is a temporary alias for `name`, kept for the migration window and
+// removed at the next major. `name` takes precedence when both are present.
+export type EventRequest = WalkerOS.DeepPartialEvent & {
+  event?: string;
+};
 
 export interface EventResponse {
   success: boolean;

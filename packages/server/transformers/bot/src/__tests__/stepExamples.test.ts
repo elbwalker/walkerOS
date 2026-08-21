@@ -15,8 +15,17 @@ const headersByExample: Record<string, Record<string, string>> = {
   chatgptUserAgent: {
     userAgent: 'Mozilla/5.0 AppleWebKit/537.36; compatible; ChatGPT-User/1.0',
   },
+  searchCrawler: {
+    userAgent:
+      'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/124.0.0.0 Safari/537.36',
+  },
+  headerMismatch: {
+    userAgent: realChromeUA,
+    secChUa: '"Chromium";v="98", "Not-A.Brand";v="99"',
+  },
   curlClient: { userAgent: 'curl/8.4.0' },
-  missingUA: {}, // intentional: no UA
+  missingUA: { ip: '203.0.113.7' }, // intentional: no UA, other signals present
+  unwiredPipeline: {}, // intentional: nothing resolves
 };
 
 describe('bot transformer step examples', () => {

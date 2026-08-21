@@ -122,6 +122,13 @@ Set `config.batch` on a destination (with `pushBatch` implemented) to batch
 is needed. The configuration shape is `batch?: number | { wait?, size?, age? }`
 at both the destination-config layer and the mapping-rule layer.
 
+**`pushBatch` is the gate, and a missing one fails silently.** The collector
+engages batching only when `destination.pushBatch` exists. Set `config.batch` on
+a destination that lacks it and every event is sent one at a time, with no
+warning and no error: the config is accepted and inert. When adding batching to
+a destination, implementing `pushBatch` is the change; `config.batch` alone buys
+nothing.
+
 - `wait` (ms): debounce window. The timer resets on every push. Legacy form
   `batch: 1000` is shorthand for `{ wait: 1000 }`.
 - `size`: hard count cap. Default `1000`. Flushes immediately when reached.
@@ -144,11 +151,23 @@ compatibility.
 
 ### Failure handling
 
-If `pushBatch` throws (or returns a rejected Promise), the entire batch is
-routed to the destination's `dlq` and `status.destinations[id].failed` is
-incremented by the batch size. Per-item retry is the destination SDK's
-responsibility (BigQuery, Kafka, HubSpot each have their own backoff semantics).
-Counters (`count`, `out`) are bumped only after a successful flush.
+`pushBatch` has three return outcomes:
+
+- **Resolves `void`** - the whole batch succeeded; every entry counts as
+  delivered.
+- **Throws or rejects** - the whole batch failed. Every entry is routed to the
+  destination's `dlq` and `status.destinations[id].failed` is incremented by the
+  batch size.
+- **Resolves a `BatchOutcome`** - partial failure.
+  `{ failed: [{ index, error? }] }` names the entries that did not make it, by
+  index into `batch.entries`. Only those are DLQ'd; the rest count as delivered.
+  Use this whenever the vendor reports per-row results (BigQuery's `rowErrors`
+  is the reference case), so a later DLQ retry does not rewrite rows that
+  already landed.
+
+Per-item retry is the destination SDK's responsibility (BigQuery, Kafka, HubSpot
+each have their own backoff semantics). Counters (`count`, `out`) are bumped
+only after a successful flush.
 
 Operators also see `status.destinations[id].inFlightBatch`: the number of events
 buffered but not yet delivered.

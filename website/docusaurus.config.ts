@@ -264,6 +264,10 @@ const config: Config = {
             from: '/docs/guides/consent/examples/usercentrics',
             to: '/docs/sources/web/cmps/usercentrics',
           },
+          {
+            from: '/docs/getting-started/stores',
+            to: '/docs/stores',
+          },
         ],
       },
     ],

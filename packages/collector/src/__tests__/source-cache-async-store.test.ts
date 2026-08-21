@@ -7,6 +7,7 @@ import type {
   Store,
   WalkerOS,
 } from '@walkeros/core';
+import { testScope } from './testScope';
 
 /**
  * A `cache.store` wired to an async backing store on a source must read
@@ -76,9 +77,13 @@ describe('source cache with async backing store', () => {
                 const respond = (options?: RespondOptions) => {
                   if (options) allResponses.push(options);
                 };
-                await context.withScope(rawData, respond, async (env) => {
-                  await env.push({ name: 'page view', data: {} });
-                });
+                await context.withScope(
+                  testScope(rawData),
+                  respond,
+                  async (env) => {
+                    await env.push({ name: 'page view', data: {} });
+                  },
+                );
               },
             };
           },
@@ -145,9 +150,13 @@ describe('source cache with async backing store', () => {
                 const respond = (options?: RespondOptions) => {
                   if (options) allResponses.push(options);
                 };
-                await context.withScope(rawData, respond, async (env) => {
-                  await env.push({ name: 'page view', data: {} });
-                });
+                await context.withScope(
+                  testScope(rawData),
+                  respond,
+                  async (env) => {
+                    await env.push({ name: 'page view', data: {} });
+                  },
+                );
               },
             };
           },

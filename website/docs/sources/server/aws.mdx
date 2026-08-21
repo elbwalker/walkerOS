@@ -99,11 +99,46 @@ Server sources require platform-specific handlers. For containerized deployments
 
 <Configuration type="source" data={data} />
 
+## Request format
+
+The event name field is `name`. Every other field of the body is forwarded to
+the collector as-is, so `source` (carrying `release` and `trace` provenance)
+rides through instead of being dropped.
+
+<CodeSnippet
+  code={`{
+  "name": "page view",
+  "data": {
+    "title": "Home Page",
+    "path": "/"
+  }
+}`}
+  language="json"
+/>
+
+## Responses
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Event processed |
+| 400 | Rejected client input: the pipeline declared the event invalid. The body echoes the validation message, for example `Event name is required` |
+| 500 | The pipeline failed to process a valid event, or an unexpected server fault |
+
+Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
+inflating `status.failed`, and is logged at warn with the reason instead of as an
+error with a stack trace.
+
 ## Ingest metadata
 
 Extract request metadata from Lambda events and forward it through the pipeline.
 
-`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the Lambda event (no prefix). A bare object like `{ ip: 'requestContext.identity.sourceIp' }` is silently inert: without the `map` operator the source passes the whole event through and no field is extracted.
+`config.ingest` must use the `map` operator. Keys are output field names; values
+are paths on the shared [request scope](/docs/sources/scope), with no prefix. A
+bare object like `{ ip: 'ip' }` is silently inert: without the `map` operator the
+source passes the whole scope through and no field is extracted.
+
+**API Gateway v1 and v2 produce an identical scope.** The version specific
+envelopes are normalized away, so one mapping serves both.
 
 <CodeSnippet
   code={`const { sources } = await startFlow({
@@ -114,11 +149,9 @@ Extract request metadata from Lambda events and forward it through the pipeline.
         settings: { cors: true },
         ingest: {
           map: {
-            ip: { key: 'requestContext.identity.sourceIp' },  // v1
-            ua: { key: 'requestContext.identity.userAgent' }, // v1
-            // Or for API Gateway v2:
-            // ip: { key: 'requestContext.http.sourceIp' },
-            // ua: { key: 'requestContext.http.userAgent' },
+            ip: { key: 'ip' },
+            ua: { key: 'headers.user-agent' },
+            path: { key: 'path' },
           },
         },
       },
@@ -130,23 +163,19 @@ Extract request metadata from Lambda events and forward it through the pipeline.
 
 ### Available ingest paths
 
-**API Gateway v1 (REST API):**
-
 | Path | Description |
 |------|-------------|
-| `requestContext.identity.sourceIp` | Client IP address |
-| `requestContext.identity.userAgent` | User agent string |
-| `headers.*` | HTTP headers |
-| `httpMethod` | HTTP method |
+| `method` | Uppercase HTTP method, both gateway versions |
+| `url` | Absolute request URL, when a `host` header is present |
+| `path` | Pathname, no query string |
+| `query.<name>` | Query parameter, repeated keys joined with `,` |
+| `headers.<name>` | Header, lowercased name, repeated values joined with `, ` |
+| `body` | Parsed body, base64 decoded when the event says so |
+| `ip` | Client IP, from either gateway version's request context |
+| `raw` | The Lambda event itself |
 
-**API Gateway v2 (HTTP API) / Function URLs:**
-
-| Path | Description |
-|------|-------------|
-| `requestContext.http.sourceIp` | Client IP address |
-| `requestContext.http.userAgent` | User agent string |
-| `requestContext.http.method` | HTTP method |
-| `headers.*` | HTTP headers |
+Anything genuinely version specific stays reachable through `raw`, for example
+`raw.requestContext.stage`.
 
 ## Supported platforms
 

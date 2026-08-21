@@ -17,6 +17,7 @@ import {
   assign,
   getSpanId,
   getTraceId,
+  InvalidEventError,
   isFunction,
   isString,
 } from '@walkeros/core';
@@ -249,10 +250,22 @@ export function createEvent(
   partialEvent: WalkerOS.PartialEvent,
   ingest?: Ingest,
 ): WalkerOS.Event {
-  if (!partialEvent.name) throw new Error('Event name is required');
+  // The name arrives from client-controlled input, so its declared type is a
+  // claim rather than a guarantee. A wrong-typed value must be rejected here:
+  // reaching split() below throws a TypeError, which the push boundary reads as
+  // a pipeline fault and answers with a 500 instead of a 400.
+  const rawName = partialEvent.name;
+  if (typeof rawName !== 'string')
+    throw new InvalidEventError(
+      rawName === undefined
+        ? 'Event name is required'
+        : 'Event name is invalid',
+    );
+  if (!rawName) throw new InvalidEventError('Event name is required');
 
-  const [entityValue, actionValue] = partialEvent.name.split(' ');
-  if (!entityValue || !actionValue) throw new Error('Event name is invalid');
+  const [entityValue, actionValue] = rawName.split(' ');
+  if (!entityValue || !actionValue)
+    throw new InvalidEventError('Event name is invalid');
 
   const {
     timestamp = Date.now(),
@@ -278,18 +291,27 @@ export function createEvent(
   // events (web -> api -> server) keep their origin identity. Trace precedence:
   // a payload trace wins; a header-derived ingest trace fills the gap; the
   // run-scoped collector trace is the final fallback.
-  const count = source.count ?? (collector.count += 1);
+  // A destructuring default fills `undefined` only, so an explicit null source
+  // arrives as null and must be normalized before it is dereferenced.
+  const sourceValue: WalkerOS.Source = source ?? {
+    type: 'collector',
+    schema: '4',
+  };
+  const count = sourceValue.count ?? (collector.count += 1);
   // Must match journeyFields' trace precedence (observerEmit.ts).
-  const trace = source.trace ?? ingest?._meta.trace ?? collector.trace;
-  const stampedSource: WalkerOS.Source = { ...source, count };
+  const trace = sourceValue.trace ?? ingest?._meta.trace ?? collector.trace;
+  const stampedSource: WalkerOS.Source = { ...sourceValue, count };
   if (trace !== undefined) stampedSource.trace = trace;
 
   // Spread the incoming map so entries from upstream flows survive the crossing
   // and the local flow's release is appended; release thus accumulates across a
   // full-event walkerOS→walkerOS crossing.
-  const releaseKey = collector.name ?? source.platform ?? 'default';
+  const releaseKey = collector.name ?? sourceValue.platform ?? 'default';
   const releaseValue = collector.release ?? __VERSION__;
-  stampedSource.release = { ...source.release, [releaseKey]: releaseValue };
+  stampedSource.release = {
+    ...sourceValue.release,
+    [releaseKey]: releaseValue,
+  };
 
   // The collector's globals (config statics plus `walker globals`) are the
   // floor for every event; values the event carries win per key.

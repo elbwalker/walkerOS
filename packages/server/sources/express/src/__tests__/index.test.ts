@@ -121,6 +121,7 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/collect'],
         cors: true,
+        maxBatchSize: 100,
       });
       expect(typeof source.push).toBe('function');
       expect(source.app).toBeDefined();
@@ -148,6 +149,7 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/events'],
         cors: false,
+        maxBatchSize: 100,
       });
     });
 
@@ -178,6 +180,7 @@ describe('sourceExpress', () => {
         post: jest.fn(),
         get: jest.fn(),
         options: jest.fn(),
+        disable: jest.fn(),
       };
 
       const mockTextMiddleware = jest.fn();
@@ -208,7 +211,13 @@ describe('sourceExpress', () => {
         limit: '1mb',
         type: ['application/json', 'text/plain'],
       });
-      expect(mockApp.use).toHaveBeenCalledWith(mockJsonMiddleware);
+      // The JSON parser is mounted per POST route, so unmatched paths never
+      // reach it.
+      expect(mockApp.post).toHaveBeenCalledWith(
+        '/collect',
+        mockJsonMiddleware,
+        expect.any(Function),
+      );
 
       // Verify env.cors was used for CORS middleware
       expect(mockCors).toHaveBeenCalled();
@@ -318,6 +327,36 @@ describe('sourceExpress', () => {
       expect(res.statusCode).toBe(500);
       expect(res.responseBody).toEqual(
         expect.objectContaining({ success: false }),
+      );
+    });
+
+    it('sync POST responds 400 with the reason when push resolves an invalid-input rejection', async () => {
+      const invalidPush = jest.fn().mockResolvedValue({
+        ok: false,
+        invalid: true,
+        error: 'Event name is required',
+      });
+      const source = await sourceExpress(
+        createSourceContext(
+          { async: false },
+          {
+            push: invalidPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const res = createMockResponse();
+      await source.push(createMockRequest({ method: 'POST', body: {} }), res);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.responseBody).toEqual(
+        expect.objectContaining({
+          success: false,
+          error: 'Event name is required',
+        }),
       );
     });
 
@@ -441,9 +480,11 @@ describe('sourceExpress', () => {
       await source.push(req, res);
 
       expect(res.statusCode).toBe(500);
+      // A thrown push carries an arbitrary internal message, so the caller gets
+      // the generic text and the reason goes to the log instead.
       expect(res.responseBody).toMatchObject({
         success: false,
-        error: 'Collector error',
+        error: 'Internal server error',
       });
     });
   });
@@ -1026,6 +1067,154 @@ describe('sourceExpress', () => {
       } finally {
         process.off('unhandledRejection', onUnhandled);
       }
+    });
+
+    it('POST async stays silent when the settled result is an invalid-input rejection', async () => {
+      const mockLogger = createMockLogger();
+      const invalidPush = jest.fn().mockResolvedValue({
+        ok: false,
+        invalid: true,
+        error: 'Event name is required',
+      });
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: invalidPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const res = createMockResponse();
+      await source.push(createMockRequest({ method: 'POST', body: {} }), res);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(res.statusCode).toBe(200);
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it('POST async warns when the push settles ok:false after the ack', async () => {
+      const mockLogger = createMockLogger();
+      const okFalsePush = jest.fn().mockResolvedValue({ ok: false });
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: okFalsePush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const res = createMockResponse();
+      await source.push(
+        createMockRequest({ method: 'POST', body: { name: 'page view' } }),
+        res,
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(res.statusCode).toBe(200);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Event not processed after ack',
+        { failed: [] },
+      );
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it('GET async warns when the push settles ok:false after the GIF', async () => {
+      const mockLogger = createMockLogger();
+      const okFalsePush = jest.fn().mockResolvedValue({ ok: false });
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: okFalsePush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      await source.push(
+        createMockRequest({ method: 'GET', url: '/collect?entity=page' }),
+        createMockResponse(),
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Event not processed after ack',
+        { failed: [] },
+      );
+    });
+
+    it('POST async stays silent when the push settles ok:true', async () => {
+      const mockLogger = createMockLogger();
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      await source.push(
+        createMockRequest({ method: 'POST', body: { name: 'page view' } }),
+        createMockResponse(),
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handler fault logging', () => {
+    it('logs an unexpected handler throw at error and answers 500', async () => {
+      const mockLogger = createMockLogger();
+      const baseEnv = {
+        push: mockPush as never,
+        command: mockCommand as never,
+        elb: jest.fn() as never,
+        logger: mockLogger,
+      } as Types['env'];
+      const context: Source.Context<Types> = {
+        config: {},
+        env: baseEnv,
+        logger: mockLogger,
+        id: 'test-express',
+        collector: {} as Collector.Instance,
+        withScope: async () => {
+          throw new Error('scope exploded');
+        },
+      };
+      const source = await sourceExpress(context);
+
+      const res = createMockResponse();
+      await source.push(
+        createMockRequest({ method: 'POST', body: { name: 'page view' } }),
+        res,
+      );
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        new Error('scope exploded'),
+      );
+      expect(res.statusCode).toBe(500);
+      // The reason reaches the log, never the caller.
+      expect(res.responseBody).toEqual({
+        success: false,
+        error: 'Internal server error',
+      });
     });
   });
 });
