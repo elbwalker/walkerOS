@@ -25,9 +25,12 @@ Paths have no prefix. `headers.user-agent`, not `req.headers.user-agent`.
 | `ip` | `string \| undefined` | Client IP as the platform reports it. Absent when the platform reports none. |
 | `raw` | `unknown` | The untouched platform object. |
 
-## A field a platform cannot supply is absent
+## A value a platform does not supply is never guessed
 
-Values are never guessed. A bare Fetch `Request` carries no client IP, so
+The required fields are always present: when a platform cannot form one, it
+carries the documented empty value rather than a guess (`url` is `''` without a
+host header). `ip` is the one optional field, and it is simply absent where the
+platform reports none. A bare Fetch `Request` carries no client IP, so
 `scope.ip` is `undefined` there rather than being derived from
 `x-forwarded-for`. That header is still in `headers` for anyone who wants it,
 which keeps the guess in your configuration where you can see it.

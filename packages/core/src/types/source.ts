@@ -256,14 +256,18 @@ export interface Context<
   /**
    * Bind ingest and respond to a single scope of work (e.g. one inbound
    * HTTP request, one queue message). Builds a fresh `Ingest` from the
-   * raw input via `config.ingest` mapping, wires the per-scope `respond`,
-   * and invokes `body(scopeEnv)` with a push function that captures both.
+   * normalized scope via `config.ingest` mapping, wires the per-scope
+   * `respond`, and invokes `body(scopeEnv)` with a push function that
+   * captures both.
    *
-   * Server sources call this once per inbound request:
+   * Server sources normalize their platform's request into a `Scope` first,
+   * then call this once per inbound request:
    *
    * ```ts
-   * await context.withScope(req, createRespond(sender), async (env) => {
-   *   await env.push(parsedData);
+   * const scope = buildScope(req);
+   *
+   * await context.withScope(scope, createRespond(sender), async (env) => {
+   *   for (const event of toEventList(scope.body)) await env.push(event);
    * });
    * ```
    *
