@@ -142,7 +142,7 @@ export function applyStepPackages(
   // Bundle-pinned version per bare name, captured the first time each name is
   // encountered — i.e. before this function's own fill-ins can be mistaken
   // for a real `config.bundle.packages` pin on a later iteration.
-  const originalVersions = new Map<string, string | undefined>();
+  const originalPins = new Map<string, boolean>();
   // Inline version already seen per bare name (with no real bundle pin),
   // used to detect a second, different inline version for the same name.
   const inlineSeen = new Map<string, string>();
@@ -186,10 +186,16 @@ export function applyStepPackages(
 
     const { name, version } = parsePackageSpec(pkg);
 
-    if (!originalVersions.has(name)) {
-      originalVersions.set(name, packages[name]?.version);
+    if (!originalPins.has(name)) {
+      const entry = packages[name];
+      // A `path` entry is a pin too: local paths win at resolution, so the
+      // inline versions the steps declare can never be used.
+      originalPins.set(
+        name,
+        entry?.version !== undefined || entry?.path !== undefined,
+      );
     }
-    const bundlePinnedVersion = originalVersions.get(name);
+    const hasBundlePin = originalPins.get(name) === true;
 
     if (name !== pkg) {
       // Rewrite every step that declared the versioned spec to the bare
@@ -197,7 +203,7 @@ export function applyStepPackages(
       rewriteSteps(pkg, name);
     }
 
-    if (version && !bundlePinnedVersion) {
+    if (version && !hasBundlePin) {
       const seen = inlineSeen.get(name);
       if (seen !== undefined && seen !== version) {
         throw new Error(
@@ -211,7 +217,9 @@ export function applyStepPackages(
     const existing = packages[name];
     if (!existing) {
       packages[name] = version ? { version } : {};
-    } else if (version) {
+    } else if (version && !existing.path) {
+      // A path entry decides on its own; stamping a version onto it would
+      // record a version that resolution never consults.
       if (!existing.version) {
         existing.version = version; // fill an unversioned bundle entry
       } else if (existing.version !== version) {
