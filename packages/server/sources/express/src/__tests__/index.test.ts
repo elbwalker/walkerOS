@@ -514,6 +514,39 @@ describe('sourceExpress', () => {
       expect(res.responseHeaders?.['Content-Type']).toBe('image/gif');
       expect(Buffer.isBuffer(res.responseBody)).toBe(true);
     });
+
+    it('GET sync (default) answers 500 when the push rejects', async () => {
+      const logger = createMockLogger();
+      const error = new Error('delivery failed');
+      const rejectingPush = jest.fn().mockRejectedValue(error);
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: rejectingPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger,
+          },
+        ),
+      );
+
+      const req = createMockRequest({
+        method: 'GET',
+        url: '/collect.gif?event=page%20view',
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      // A rejected push is a server fault: it surfaces as 500, not the GIF.
+      expect(logger.error).toHaveBeenCalledWith(error);
+      expect(res.statusCode).toBe(500);
+      expect(res.responseBody).toEqual({
+        success: false,
+        error: 'Internal server error',
+      });
+    });
   });
 
   describe('OPTIONS request handling (CORS)', () => {
@@ -804,11 +837,11 @@ describe('sourceExpress', () => {
       return { push, resolve, reject };
     }
 
-    it('GET returns the GIF even if push never resolves', async () => {
+    it('GET async {GET:true} returns the GIF even if push never resolves', async () => {
       const { push } = createDeferredPush();
       const source = await sourceExpress(
         createSourceContext(
-          {},
+          { async: { GET: true } },
           {
             push: push as never,
             command: mockCommand as never,
@@ -833,12 +866,12 @@ describe('sourceExpress', () => {
       // Push is still pending — we did not block on it.
     });
 
-    it('GET logs a rejected push and does not throw out of the handler', async () => {
+    it('GET async {GET:true} logs a rejected push and does not throw out of the handler', async () => {
       const { push, reject } = createDeferredPush();
       const logger = createMockLogger();
       const source = await sourceExpress(
         createSourceContext(
-          {},
+          { async: { GET: true } },
           {
             push: push as never,
             command: mockCommand as never,
@@ -1127,12 +1160,12 @@ describe('sourceExpress', () => {
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
-    it('GET async warns when the push settles ok:false after the GIF', async () => {
+    it('GET async {GET:true} warns when the push settles ok:false after the GIF', async () => {
       const mockLogger = createMockLogger();
       const okFalsePush = jest.fn().mockResolvedValue({ ok: false });
       const source = await sourceExpress(
         createSourceContext(
-          {},
+          { async: { GET: true } },
           {
             push: okFalsePush as never,
             command: mockCommand as never,
