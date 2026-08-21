@@ -148,20 +148,23 @@ describe('resolveStepPackage', () => {
 });
 
 describe('resolvePackageEntry', () => {
-  let dir: string;
+  let treeDir: string;
+  let pkgDir: string;
 
   beforeEach(async () => {
-    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'step-loader-entry-'));
+    treeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'step-loader-entry-'));
+    pkgDir = path.join(treeDir, 'node_modules', 'x');
+    await fs.ensureDir(pkgDir);
   });
 
   afterEach(async () => {
-    await fs.remove(dir);
+    await fs.remove(treeDir);
   });
 
   async function writePkg(pkgJson: Record<string, unknown>, files: string[]) {
-    await fs.writeJson(path.join(dir, 'package.json'), pkgJson);
+    await fs.writeJson(path.join(pkgDir, 'package.json'), pkgJson);
     for (const f of files) {
-      await fs.ensureFile(path.join(dir, f));
+      await fs.ensureFile(path.join(pkgDir, f));
     }
   }
 
@@ -187,30 +190,89 @@ describe('resolvePackageEntry', () => {
       'dist/index.mjs',
     ],
     [
-      'module field',
-      { module: './dist/index.mjs', main: './dist/index.js' },
-      'dist/index.mjs',
+      'node condition declared before default',
+      {
+        exports: { '.': { node: './dist/node.js', default: './dist/def.js' } },
+      },
+      'dist/node.js',
+    ],
+    [
+      'default condition declared before node',
+      {
+        exports: { '.': { default: './dist/def.js', node: './dist/node.js' } },
+      },
+      'dist/def.js',
+    ],
+    [
+      'export array, skipping invalid targets',
+      { exports: { '.': ['invalid-target', './dist/ok.js'] } },
+      'dist/ok.js',
     ],
     ['main field', { main: './dist/index.js' }, 'dist/index.js'],
+    [
+      'main over module (Node never reads module)',
+      { module: './dist/index.mjs', main: './dist/index.js' },
+      'dist/index.js',
+    ],
   ])('resolves %s', async (_label, pkgJson, expected) => {
     await writePkg({ name: 'x', ...pkgJson }, [expected]);
-    await expect(resolvePackageEntry(dir)).resolves.toBe(
-      path.join(dir, expected),
+    await expect(resolvePackageEntry(pkgDir, 'x')).resolves.toBe(
+      path.join(pkgDir, expected),
     );
   });
 
+  it('rejects a blocked root export instead of falling back to main', async () => {
+    await writePkg(
+      {
+        name: 'x',
+        exports: { '.': null },
+        module: './m.js',
+        main: './main.js',
+      },
+      ['m.js', 'main.js'],
+    );
+    await expect(resolvePackageEntry(pkgDir, 'x')).rejects.toThrow(/exports/);
+  });
+
+  it('rejects a require-only exports root, matching Node import()', async () => {
+    await writePkg({ name: 'x', exports: { '.': { require: './index.js' } } }, [
+      'index.js',
+    ]);
+    await expect(resolvePackageEntry(pkgDir, 'x')).rejects.toThrow(/exports/);
+  });
+
   it('rejects a missing package.json with a clear error', async () => {
-    await expect(resolvePackageEntry(dir)).rejects.toThrow(/package\.json/);
+    await expect(resolvePackageEntry(pkgDir, 'x')).rejects.toThrow(
+      /package\.json/,
+    );
   });
 
   it('rejects a TypeScript entry (setup imports with Node, not esbuild)', async () => {
     await writePkg({ name: 'x', main: './index.ts' }, ['index.ts']);
-    await expect(resolvePackageEntry(dir)).rejects.toThrow(/built package/);
+    await expect(resolvePackageEntry(pkgDir, 'x')).rejects.toThrow(
+      /built package/,
+    );
   });
 
-  it('rejects when the resolved entry file does not exist', async () => {
+  it('rejects when an exports-declared entry file does not exist', async () => {
+    await writePkg({ name: 'x', exports: './dist/index.mjs' }, []);
+    await expect(resolvePackageEntry(pkgDir, 'x')).rejects.toThrow(
+      /dist\/index\.mjs/,
+    );
+  });
+
+  it('rejects when the main entry file does not exist', async () => {
     await writePkg({ name: 'x', main: './dist/index.js' }, []);
-    await expect(resolvePackageEntry(dir)).rejects.toThrow(/dist\/index\.js/);
+    await expect(resolvePackageEntry(pkgDir, 'x')).rejects.toThrow(
+      /dist\/index\.js/,
+    );
+  });
+
+  it('removes its probe file after resolving', async () => {
+    await writePkg({ name: 'x', main: './index.js' }, ['index.js']);
+    await resolvePackageEntry(pkgDir, 'x');
+    const entries = await fs.readdir(pkgDir);
+    expect(entries.sort()).toEqual(['index.js', 'package.json']);
   });
 });
 
@@ -222,7 +284,9 @@ describe('loadStepPackage', () => {
     mockedNpmConfig.mockResolvedValue({
       registry: 'https://registry.npmjs.org/',
     });
-    // Real fixture package: acquisition is mocked, the import is real.
+    // Real fixture package: acquisition is mocked but installs a real tree
+    // in the production layout (installDir/node_modules/<name>), and the
+    // entry resolution and import are real.
     fixtureDir = await fs.mkdtemp(path.join(os.tmpdir(), 'step-loader-pkg-'));
     await fs.writeJson(path.join(fixtureDir, 'package.json'), {
       name: '@walkeros/fixture-dest',
@@ -233,9 +297,17 @@ describe('loadStepPackage', () => {
       path.join(fixtureDir, 'index.mjs'),
       'export default { type: "fixture", push: () => {}, setup: async () => ({ ok: true }) };\n',
     );
-    mockedDownload.mockResolvedValue({
-      packagePaths: new Map([['@walkeros/fixture-dest', fixtureDir]]),
-      resolution: { topLevel: new Map(), nested: [] },
+    mockedDownload.mockImplementation(async (_packages, targetDir) => {
+      const packageDir = path.join(
+        targetDir,
+        'node_modules',
+        '@walkeros/fixture-dest',
+      );
+      await fs.copy(fixtureDir, packageDir);
+      return {
+        packagePaths: new Map([['@walkeros/fixture-dest', packageDir]]),
+        resolution: { topLevel: new Map(), nested: [] },
+      };
     });
   });
 
@@ -255,15 +327,21 @@ describe('loadStepPackage', () => {
   };
 
   it('passes the flow-pinned version to the shared acquisition pipeline', async () => {
-    await loadStepPackage(pinnedFlow, 'destination', 'd', { logger });
-    expect(mockedDownload).toHaveBeenCalledTimes(1);
-    const [packages, , , useCache, , , overrides] =
-      mockedDownload.mock.calls[0];
-    expect(packages).toEqual([
-      { name: '@walkeros/fixture-dest', version: '4.4.0' },
-    ]);
-    expect(useCache).toBe(true);
-    expect(overrides).toEqual({ arrify: '2.0.1' });
+    const loaded = await loadStepPackage(pinnedFlow, 'destination', 'd', {
+      logger,
+    });
+    try {
+      expect(mockedDownload).toHaveBeenCalledTimes(1);
+      const [packages, , , useCache, , , overrides] =
+        mockedDownload.mock.calls[0];
+      expect(packages).toEqual([
+        { name: '@walkeros/fixture-dest', version: '4.4.0' },
+      ]);
+      expect(useCache).toBe(true);
+      expect(overrides).toEqual({ arrify: '2.0.1' });
+    } finally {
+      await fs.remove(loaded.installDir);
+    }
   });
 
   it('defaults an unpinned package to latest, exactly like bundle', async () => {
@@ -271,21 +349,31 @@ describe('loadStepPackage', () => {
       config: { platform: 'server' },
       destinations: { d: { package: '@walkeros/fixture-dest', config: {} } },
     };
-    await loadStepPackage(flow, 'destination', 'd', { logger });
-    const [packages] = mockedDownload.mock.calls[0];
-    expect(packages).toEqual([
-      { name: '@walkeros/fixture-dest', version: 'latest' },
-    ]);
+    const loaded = await loadStepPackage(flow, 'destination', 'd', { logger });
+    try {
+      const [packages] = mockedDownload.mock.calls[0];
+      expect(packages).toEqual([
+        { name: '@walkeros/fixture-dest', version: 'latest' },
+      ]);
+    } finally {
+      await fs.remove(loaded.installDir);
+    }
   });
 
   it('imports the extracted entry and returns the module namespace', async () => {
     const loaded = await loadStepPackage(pinnedFlow, 'destination', 'd', {
       logger,
     });
-    expect(loaded.packageName).toBe('@walkeros/fixture-dest');
-    expect(loaded.packageDir).toBe(fixtureDir);
-    const def = loaded.module.default;
-    expect(def).toMatchObject({ type: 'fixture' });
+    try {
+      expect(loaded.packageName).toBe('@walkeros/fixture-dest');
+      expect(loaded.packageDir).toBe(
+        path.join(loaded.installDir, 'node_modules', '@walkeros/fixture-dest'),
+      );
+      const def = loaded.module.default;
+      expect(def).toMatchObject({ type: 'fixture' });
+    } finally {
+      await fs.remove(loaded.installDir);
+    }
   });
 
   it('wraps acquisition failures with an offline/path hint', async () => {

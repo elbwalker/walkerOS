@@ -10,10 +10,11 @@
  * can never act on a different package version than the bundle ships.
  */
 import path from 'path';
-import { pathToFileURL } from 'url';
+import { pathToFileURL, fileURLToPath } from 'url';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import fs from 'fs-extra';
 import type { Flow, Logger } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
 import { getTmpPath } from './tmp.js';
 import { applyStepPackages, getFlowSection } from './step-packages.js';
 import {
@@ -81,53 +82,75 @@ export function resolveStepPackage(
   };
 }
 
-/** Condition keys probed, in order, when exports['.'] is an object. */
-const ENTRY_CONDITIONS = ['import', 'default', 'node', 'require'] as const;
-
-function pickEntryTarget(value: unknown): string | undefined {
-  if (typeof value === 'string') return value;
-  if (!isObject(value)) return undefined;
-  for (const condition of ENTRY_CONDITIONS) {
-    const target = pickEntryTarget(value[condition]);
-    if (target !== undefined) return target;
-  }
-  return undefined;
-}
+const execFileAsync = promisify(execFile);
 
 /**
- * Resolve the entry file of an extracted package for a real Node import:
- * exports (string or "." subpath, import/default/node/require conditions),
- * then module, then main, then index.js. TypeScript entries are rejected
- * with a targeted message: the bundler can compile them, Node cannot.
+ * Probe module for entry resolution. Written into the extracted package
+ * and run in a child Node process, so `import.meta.resolve` applies the
+ * runtime's own resolution rules (conditional exports in declaration
+ * order, export arrays, blocked roots, legacy main) exactly as the later
+ * `import()` of the entry will. A child process rather than an in-process
+ * import keeps the probe out of the test runner's module pipeline.
  */
-export async function resolvePackageEntry(packageDir: string): Promise<string> {
+const ENTRY_PROBE_FILENAME = '.walkeros-entry-probe.mjs';
+const ENTRY_PROBE_SOURCE = [
+  'try {',
+  '  process.stdout.write(import.meta.resolve(process.argv[2]));',
+  '} catch (error) {',
+  '  process.stderr.write(error instanceof Error ? error.message : String(error));',
+  '  process.exit(1);',
+  '}',
+  '',
+].join('\n');
+
+/**
+ * Resolve the entry file of an extracted package for a real Node import,
+ * by asking Node itself (see ENTRY_PROBE_SOURCE). The package must sit in
+ * a node_modules tree, as extracted install trees always do. TypeScript
+ * entries are rejected with a targeted message: the bundler can compile
+ * them, Node cannot.
+ */
+export async function resolvePackageEntry(
+  packageDir: string,
+  packageName: string,
+): Promise<string> {
   const pkgJsonPath = path.join(packageDir, 'package.json');
-  let pkgJson: Record<string, unknown>;
-  try {
-    pkgJson = await fs.readJson(pkgJsonPath);
-  } catch {
+  if (!(await fs.pathExists(pkgJsonPath))) {
     throw new Error(
       `No readable package.json in ${packageDir}. ` +
         `A "path" package used with setup must be a real package directory.`,
     );
   }
 
-  const exportsField: unknown = pkgJson.exports;
-  const fromExports =
-    exportsField !== undefined
-      ? pickEntryTarget(
-          isObject(exportsField) && '.' in exportsField
-            ? exportsField['.']
-            : exportsField,
-        )
-      : undefined;
-  const entryRel =
-    fromExports ??
-    (typeof pkgJson.module === 'string' ? pkgJson.module : undefined) ??
-    (typeof pkgJson.main === 'string' ? pkgJson.main : undefined) ??
-    'index.js';
+  const probePath = path.join(packageDir, ENTRY_PROBE_FILENAME);
+  await fs.writeFile(probePath, ENTRY_PROBE_SOURCE);
+  let entryUrl: string;
+  try {
+    const { stdout } = await execFileAsync(process.execPath, [
+      probePath,
+      packageName,
+    ]);
+    entryUrl = stdout.trim();
+  } catch (error) {
+    // The probe forwards Node's own resolution error (e.g. "No "exports"
+    // main defined in .../package.json") on stderr.
+    let message = error instanceof Error ? error.message : String(error);
+    if (
+      error instanceof Error &&
+      'stderr' in error &&
+      typeof error.stderr === 'string' &&
+      error.stderr.trim() !== ''
+    ) {
+      message = error.stderr.trim();
+    }
+    throw new Error(message);
+  } finally {
+    await fs.remove(probePath).catch(() => undefined);
+  }
 
-  if (entryRel.endsWith('.ts') || entryRel.endsWith('.tsx')) {
+  const entryAbs = fileURLToPath(entryUrl);
+  const entryRel = path.relative(packageDir, entryAbs);
+  if (entryAbs.endsWith('.ts') || entryAbs.endsWith('.tsx')) {
     throw new Error(
       `Entry ${entryRel} of ${packageDir} is TypeScript. Setup imports ` +
         `packages with Node at runtime; point config.bundle.packages ` +
@@ -135,7 +158,8 @@ export async function resolvePackageEntry(packageDir: string): Promise<string> {
     );
   }
 
-  const entryAbs = path.join(packageDir, entryRel);
+  // import.meta.resolve does not stat exports targets; catch dead
+  // declarations here with a message that names the package.json.
   if (!(await fs.pathExists(entryAbs))) {
     throw new Error(
       `Entry file ${entryRel} declared by ${pkgJsonPath} does not exist.`,
@@ -217,7 +241,7 @@ export async function loadStepPackage(
       );
     }
 
-    const entry = await resolvePackageEntry(packageDir);
+    const entry = await resolvePackageEntry(packageDir, packageName);
     const module: Record<string, unknown> = await import(
       pathToFileURL(entry).href
     );
