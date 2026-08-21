@@ -642,6 +642,7 @@ export async function pushToDestinations(
 
           // Full cache check: before the before chain (skips everything on HIT)
           let cacheMiss: { key: string; ttl: number } | undefined;
+          let cacheValue: unknown;
           if (compiledDCache?.stop && dCacheStore) {
             const cacheContext = buildCacheContext(destIngest, event);
             const cacheResult = await checkCache(
@@ -699,8 +700,15 @@ export async function pushToDestinations(
           // child was actually delivered.
           const deliverOne = async (
             processedEvent: WalkerOS.Event | null,
-            cacheMiss: { key: string; ttl: number } | undefined,
+            sharedMiss: { key: string; ttl: number } | undefined,
           ): Promise<boolean> => {
+            // The pre-chain key is derived from the one event that entered, so
+            // a fan-out shares it and one write covers every child. A
+            // step-level key is derived from THIS child, so it is the child's
+            // own and must be written here.
+            let cacheMiss = sharedMiss;
+            let ownKey = false;
+
             // Step-level cache check: after before chain, skip only push on HIT
             if (compiledDCache && !compiledDCache.stop && dCacheStore) {
               const cacheContext = buildCacheContext(
@@ -717,6 +725,7 @@ export async function pushToDestinations(
               }
               if (cacheResult?.status === 'MISS') {
                 cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
+                ownKey = true;
               }
             }
 
@@ -787,18 +796,25 @@ export async function pushToDestinations(
             );
             totalDuration += Date.now() - pushStart;
 
-            // Destination cache MISS: store the push result after attempt
+            // Destination cache MISS. A per-child key is written now; the
+            // shared pre-chain key is recorded and written once after every
+            // child settles. The stored value is a dedup marker, since neither
+            // cache check reads it back.
             if (
               cacheMiss &&
               dCacheStore &&
               destination.config.mock === undefined
             ) {
-              storeCache(
-                dCacheStore,
-                cacheMiss.key,
-                result ?? true,
-                cacheMiss.ttl,
-              );
+              if (ownKey) {
+                storeCache(
+                  dCacheStore,
+                  cacheMiss.key,
+                  result ?? true,
+                  cacheMiss.ttl,
+                );
+              } else if (cacheValue === undefined) {
+                cacheValue = result ?? true;
+              }
             }
 
             // state[set]: stash from the event after a successful send. A
@@ -867,6 +883,16 @@ export async function pushToDestinations(
             // from the one event that entered. Only a child that actually
             // reached the destination counts as delivered.
             if (await deliverOne(child, cacheMiss)) pushedCount++;
+          }
+
+          // One write per request, after every child settled.
+          if (
+            cacheMiss &&
+            dCacheStore &&
+            cacheValue !== undefined &&
+            destination.config.mock === undefined
+          ) {
+            storeCache(dCacheStore, cacheMiss.key, cacheValue, cacheMiss.ttl);
           }
 
           return event;

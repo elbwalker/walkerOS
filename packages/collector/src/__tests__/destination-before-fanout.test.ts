@@ -8,6 +8,7 @@
 
 import { startFlow } from '..';
 import { createRespond } from '@walkeros/core';
+import type { Store } from '@walkeros/core';
 import type { Transformer, WalkerOS } from '@walkeros/core';
 
 const forkInto = (count: number): Transformer.InitTransformers[string] => ({
@@ -160,5 +161,44 @@ describe('destination before-chain fan-out', () => {
 
     // Only the first child reaches the destination; the second is deduplicated.
     expect(received).toHaveLength(1);
+  });
+
+  // The pre-chain cache key is derived from the one event that entered, so a
+  // fan-out shares it. Writing it per child is N times the store traffic for
+  // an identical result, since neither cache check reads the value back.
+  it('writes the shared cache key once, not once per child', async () => {
+    const writes: string[] = [];
+    const data = new Map<string, unknown>();
+    const store = {
+      get: async (key: string) => data.get(key),
+      set: async (key: string, value: unknown) => {
+        writes.push(key);
+        data.set(key, value);
+      },
+      del: async (key: string) => {
+        data.delete(key);
+      },
+    } as unknown as Store.Instance;
+
+    const { collector, elb } = await startFlow({
+      stores: { counting: { code: () => store } as never },
+      transformers: { fork: forkInto(3) },
+      destinations: {
+        capture: {
+          code: { type: 'test', config: {}, push: async () => {} },
+          before: ['fork'],
+          cache: {
+            store: 'counting',
+            stop: true,
+            rules: [{ key: ['event.name'], ttl: 60 }],
+          },
+        },
+      },
+    });
+
+    await elb('page view', {});
+    await collector.command('shutdown');
+
+    expect(writes).toEqual(['page view']);
   });
 });
