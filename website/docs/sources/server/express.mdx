@@ -140,17 +140,50 @@ Server sources require platform-specific handlers. For containerized deployments
 Health check endpoints (`/health` and `/ready`) are provided by the [runner](/docs/apps/runner), not by individual sources. This means health checks work regardless of which source type you use.
 :::
 
+### Response modes (`async`)
+
+`config.async` controls whether a request is acknowledged before or after its
+event settles in the pipeline, resolved per HTTP method:
+
+<CodeSnippet
+  code={`"async": false                       // everything synchronous
+"async": true                        // everything respond-first
+"async": { "GET": false, "POST": true } // explicit per-method form (the default)
+"async": { "GET": true }             // GET respond-first, POST keeps its default`}
+  language="json"
+/>
+
+| Value | GET | POST |
+|---|---|---|
+| unset (default) | synchronous | respond-first |
+| `true` | respond-first | respond-first |
+| `false` | synchronous | synchronous |
+| `{ "GET": true }` | respond-first | respond-first (its default) |
+| `{ "POST": false }` | synchronous (its default) | synchronous |
+
+**Synchronous** awaits delivery before answering. On GET, a step (the file
+transformer, a cache destination) can respond with real content before the
+pixel GIF fallback applies, so asset serving works out of the box. On POST,
+the response reflects the outcome: 400 for invalid input, 500 for a processing
+failure, and batch envelopes answer per-index outcomes.
+
+**Respond-first** answers immediately: a 2xx means "accepted", not
+"delivered". Delivery continues in the background and failures surface through
+`collector.status` and the logs. This is the POST default (fast ingestion) and
+opt-in for GET, for hot pixel endpoints that must not wait for the in-process
+push.
+
 ### Responses
 
 | Status | Meaning |
 |--------|---------|
-| 200 | Accepted (default respond-first mode: accepted for processing, not proof of delivery) or, with `async: false`, processed |
-| 400 | Rejected client input: unparseable JSON (body echoes the parser message) or, with `async: false`, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
+| 200 | Accepted (respond-first mode: accepted for processing, not proof of delivery) or, in synchronous mode, processed |
+| 400 | Rejected client input: unparseable JSON (body echoes the parser message) or, on synchronous POST, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
 | 404 | Path not configured in `paths` |
 | 405 | Method not allowed on the path |
 | 413 | Body exceeds the 1mb limit |
 | 415 | Unsupported charset |
-| 500 | With `async: false`: the pipeline failed to process a valid event. Otherwise: unexpected server fault |
+| 500 | On synchronous POST: the pipeline failed to process a valid event. Otherwise: unexpected server fault |
 
 GET pixel requests always answer the GIF with 200 in every mode, because an image
 endpoint cannot carry a useful 400. Rejected pixel input is visible through the

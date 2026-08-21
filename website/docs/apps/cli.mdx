@@ -704,6 +704,37 @@ The target uses the same `<kind>.<name>` syntax as `walkeros push --simulate`. V
 | `source.events-in` | The source named `events-in` |
 | `store.session` | The store named `session` |
 
+### Package resolution
+
+Setup resolves the component's package exactly like `walkeros bundle`: the version pinned in `config.bundle.packages` (or inline on the step as `"@scope/pkg@x.y.z"`, with the bundle pin winning on disagreement) is downloaded from the npm registry into a temporary tree and imported from there.
+
+<CodeSnippet
+  code={`{
+  "config": {
+    "platform": "server",
+    "bundle": {
+      "packages": {
+        "@walkeros/server-destination-gcp": { "version": "4.4.0" }
+      }
+    }
+  },
+  "destinations": {
+    "bigquery": {
+      "package": "@walkeros/server-destination-gcp",
+      "config": { "setup": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+What this means in practice:
+
+- **Works from any install.** npx, devDependency, or global: no local `npm install` of the component package is needed or consulted.
+- **Shared cache with bundle.** Exact version pins keep working offline once cached; `latest` and ranges re-resolve against the registry.
+- **Local packages via `path`.** A `path` entry in `config.bundle.packages` is supported for local development; the target must be a built package directory (package.json plus dist output), since setup imports with Node at runtime.
+- **No version drift with exact pins.** Setup and bundle resolve through the same pipeline and cache, so an exact version pin guarantees both act on the same package release and provisioning (for example a BigQuery schema) cannot drift from what the bundle writes. Mutable specifications (`latest`, ranges, `path` targets) can resolve differently between separate runs, so pin exact versions when drift matters.
+
 ### Options
 
 <CodeSnippet

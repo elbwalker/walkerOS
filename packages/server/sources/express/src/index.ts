@@ -16,6 +16,7 @@ import type { Elb, Logger, Source } from '@walkeros/core';
 import type { ExpressSource, Types, EventRequest } from './types';
 import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
 import { buildScope } from './scope';
+import { resolveRespondFirst } from './respond-mode';
 
 /**
  * Normalize an unknown rejection reason into an Error for the logger.
@@ -127,9 +128,6 @@ export const sourceExpress = async (
     maxBatchSize: userSettings.maxBatchSize ?? 100,
   };
 
-  // Respond-first by default: a 2xx means "accepted", not "delivered".
-  // Standardized on the source config (Source.Config.async), not settings.
-  const respondFirst = config.async ?? true;
   const maxBatchSize = settings.maxBatchSize;
 
   // Rejection volume belongs in collector.status, not in per-request logs.
@@ -234,7 +232,7 @@ export const sourceExpress = async (
             });
 
           if (parsedData && typeof parsedData === 'object') {
-            if (respondFirst) {
+            if (resolveRespondFirst(config.async, 'GET')) {
               // Respond-first: the tracking pixel must return instantly and
               // never block on backend delivery. Fire the push without
               // awaiting; a rejected push and a settled non-invalid decline
@@ -272,7 +270,7 @@ export const sourceExpress = async (
             return;
           }
 
-          if (respondFirst) {
+          if (resolveRespondFirst(config.async, 'POST')) {
             // Respond-first ("accepted"), then deliver asynchronously. A
             // rejected push and a settled non-invalid decline are logged, not
             // surfaced to the client and not left unhandled (destination
@@ -452,6 +450,7 @@ export type {
   Settings,
   RouteConfig,
   RouteMethod,
+  AsyncByMethod,
 } from './types';
 
 // Export utils

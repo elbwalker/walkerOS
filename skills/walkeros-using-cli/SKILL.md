@@ -36,16 +36,17 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 
 ## Commands Overview
 
-| Command    | Purpose                                                  | Safe? |
-| ---------- | -------------------------------------------------------- | ----- |
-| `bundle`   | Generate JS bundle from config                           | ✅    |
-| `push`     | Execute with real API calls (or `--simulate` for mocked) | ⚠️    |
-| `run`      | Local HTTP event collection                              | ✅    |
-| `deploy`   | Deploy flows to cloud                                    | ⚠️    |
-| `previews` | Manage preview bundles for testing on live sites         | ⚠️    |
-| `observe`  | Start a live observation session for a flow (app login)  | ⚠️    |
-| `validate` | Validate configs/events                                  | ✅    |
-| `cache`    | Manage caching                                           | ✅    |
+| Command    | Purpose                                                     | Safe? |
+| ---------- | ----------------------------------------------------------- | ----- |
+| `bundle`   | Generate JS bundle from config                              | ✅    |
+| `push`     | Execute with real API calls (or `--simulate` for mocked)    | ⚠️    |
+| `run`      | Local HTTP event collection                                 | ✅    |
+| `setup`    | Run a component's `setup()` to provision external resources | ⚠️    |
+| `deploy`   | Deploy flows to cloud                                       | ⚠️    |
+| `previews` | Manage preview bundles for testing on live sites            | ⚠️    |
+| `observe`  | Start a live observation session for a flow (app login)     | ⚠️    |
+| `validate` | Validate configs/events                                     | ✅    |
+| `cache`    | Manage caching                                              | ✅    |
 
 For detailed command reference, see
 [commands-reference.md](commands-reference.md).
@@ -357,6 +358,22 @@ walkeros run flow.tar.gz --port 8080
 # Run a packed server bundle from a URL
 walkeros run https://example.com/flow.tar.gz
 ```
+
+### Setup Command
+
+```bash
+# Provision external resources for one component (explicit only, never
+# triggered by push, simulate, deploy, or the runtime)
+walkeros setup <kind>.<name> [-c ./flow.json] [-f <flow>] [--json] [--verbose] [--silent]
+```
+
+The target uses the same `<kind>.<name>` syntax as `walkeros push --simulate`
+(`source`, `destination`, or `store`). Package resolution follows the flow's
+pins exactly like `bundle`: the version from `config.bundle.packages` (or inline
+`@scope/pkg@x.y.z`, bundle pin wins) is downloaded through the shared pacote
+pipeline and cache, then imported from the extracted tree. Setup works via npx
+without a local install; `path:` entries in `config.bundle.packages` support
+local development with a built package directory.
 
 ---
 

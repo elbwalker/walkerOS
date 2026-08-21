@@ -36,7 +36,9 @@ function parseFrontmatter(input: string): Record<string, string> {
     if (top && !indented) {
       flush();
       key = top[1];
-      parts.push(top[2]);
+      // A block-scalar indicator (">-", "|", ...) is syntax, not value; the
+      // value is the indented continuation lines that follow.
+      if (!/^[>|][+-]?$/.test(top[2].trim())) parts.push(top[2]);
     } else if (key !== null) {
       parts.push(raw.trim());
     }

@@ -22,14 +22,17 @@ export function initGTM(
   const dataLayerArray: unknown[] = isArray(existing) ? existing : [];
   window[dataLayerName] = dataLayerArray;
 
-  dataLayerArray.push({
-    'gtm.start': new Date().getTime(),
-    event: 'gtm.js',
-  });
+  // Load the gtm script and container. The `gtm.js` bootstrap object is part of
+  // that snippet and belongs to whoever loads the container: a container loaded
+  // elsewhere pushes its own, and a second one re-fires its Page View triggers.
+  if (loadScript && containerId) {
+    dataLayerArray.push({
+      'gtm.start': new Date().getTime(),
+      event: 'gtm.js',
+    });
 
-  // Load the gtm script and container
-  if (loadScript && containerId)
     addScript(containerId, domain || defaultDomain, dataLayerName, document);
+  }
 }
 
 function addScript(

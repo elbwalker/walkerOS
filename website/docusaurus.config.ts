@@ -243,30 +243,417 @@ const config: Config = {
     [
       '@docusaurus/plugin-client-redirects',
       {
+        // Inbound links from the walker.js era still arrive under the old
+        // `clients/`, `collectors/`, `stacks/`, `utils/` and `consent_management/`
+        // trees, forwarded here by www.elbwalker.com and docs.elbwalker.com.
+        // The plugin fails the build when a `to` is not a real route, so these
+        // stay honest as the docs move.
         redirects: [
           {
             from: '/docs/sources/web/session/detection',
             to: '/docs/sources/web/session',
           },
           {
-            from: '/docs/sources/walkerjs/installation/package',
+            from: [
+              '/docs/sources/walkerjs/installation/package',
+              '/docs/clients/walkerjs/installation/npm',
+              '/docs/collectors/web/installation/package',
+            ],
             to: '/docs/sources/web/browser/commands#run',
           },
           {
-            from: '/docs/guides/consent/examples/cookiefirst',
+            from: [
+              '/docs/guides/consent/examples/cookiefirst',
+              '/docs/consent_management/cookiefirst',
+              '/docs/guides/consent_management/cookiefirst',
+            ],
             to: '/docs/sources/web/cmps/cookiefirst',
           },
           {
-            from: '/docs/guides/consent/examples/cookiepro',
+            from: [
+              '/docs/guides/consent/examples/cookiepro',
+              '/docs/consent_management/cookiepro',
+              '/docs/guides/consent_management/cookiepro',
+            ],
             to: '/docs/sources/web/cmps/cookiepro',
           },
           {
-            from: '/docs/guides/consent/examples/usercentrics',
+            from: [
+              '/docs/guides/consent/examples/usercentrics',
+              '/docs/consent_management/usercentrics',
+              '/docs/guides/consent_management/usercentrics',
+            ],
             to: '/docs/sources/web/cmps/usercentrics',
           },
           {
-            from: '/docs/getting-started/stores',
+            from: [
+              '/docs/getting-started/stores',
+              '/docs/stores/memory',
+              '/docs/utils/storage',
+            ],
             to: '/docs/stores',
+          },
+          {
+            from: [
+              '/docs/clients/walkerjs',
+              '/docs/clients/walkerjs/installation',
+              '/docs/clients/walkerjs/installation/cdn',
+              '/docs/clients/walkerjs/installation/gtm',
+              '/docs/clients/walkerjs/installation/script',
+              '/docs/clients/walkerjs/versions',
+              '/docs/clients/walkerjs/versions/2.1.3',
+              '/docs/clients/walkerjs/versions/2.1.3/installation',
+              '/docs/clients/walkerjs/versions/2.1.3/installation/gtm',
+              '/docs/clients/walkerjs/versions/2.1.3/installation/npm',
+              '/docs/clients/walkerjs/versions/2.1.3/installation/script',
+              '/docs/sources/walkerjs',
+              '/docs/sources/walkerjs/configuration',
+              '/docs/sources/walkerjs/installation',
+              '/docs/sources/walkerjs/installation/gtm',
+              '/docs/sources/walkerjs/installation/script',
+              '/docs/sources/walkerjs/versions',
+              '/docs/sources/web/browser/configuration',
+              '/docs/sources/web/browser/installation',
+            ],
+            to: '/docs/sources/web/browser',
+          },
+          {
+            from: [
+              '/docs/clients/walkerjs/commands',
+              '/docs/clients/walkerjs/versions/2.1.3/commands',
+              '/docs/sources/walkerjs/commands',
+              '/docs/web/walkerjs/api',
+            ],
+            to: '/docs/sources/web/browser/commands',
+          },
+          {
+            from: [
+              '/docs/clients/walkerjs/tagging',
+              '/docs/clients/walkerjs/trigger',
+              '/docs/clients/walkerjs/versions/2.1.3/tagging',
+              '/docs/sources/walkerjs/tagging',
+              '/docs/sources/html-tagging',
+              '/docs/sources/web/browser/tagging',
+            ],
+            to: '/docs/sources/web/browser/tagging/html-attributes',
+          },
+          {
+            from: [
+              '/docs/clients/walkerjs/using-javascript',
+              '/docs/clients/walkerjs/versions/2.1.3/using-javascript',
+              '/docs/sources/walkerjs/using-javascript',
+              '/docs/sources/javascript-elb',
+            ],
+            to: '/docs/sources/web/browser/tagging/javascript',
+          },
+          {
+            from: '/docs/utils/tagger',
+            to: '/docs/sources/web/browser/tagger',
+          },
+          {
+            from: [
+              '/docs/sources/dataLayer',
+              '/docs/sources/dataLayer/configration',
+              '/docs/sources/dataLayer/configuration',
+              '/docs/sources/dataLayer/consent_mode',
+              '/docs/sources/dataLayer/installation',
+              '/docs/sources/dataLayer/testing',
+              '/docs/sources/datalayer',
+            ],
+            to: '/docs/sources/web/dataLayer',
+          },
+          {
+            from: [
+              '/docs/clients',
+              '/docs/sources/overview',
+              '/docs/sources/sources',
+              '/docs/getting_started/sources',
+            ],
+            to: '/docs/sources',
+          },
+          {
+            from: [
+              '/docs/clients/node',
+              '/docs/clients/node/commands',
+              '/docs/clients/node/installation',
+              '/docs/sources/node',
+              '/docs/sources/node/commands',
+              '/docs/sources/node/configuration',
+              '/docs/sources/node/installation',
+              '/docs/sources/node/versions',
+              '/docs/stacks',
+              '/docs/stacks/custom',
+              '/docs/stacks/gtm',
+              '/docs/stacks/gtm/tag_template',
+            ],
+            to: '/docs/sources/server',
+          },
+          {
+            from: '/docs/stacks/firebase',
+            to: '/docs/sources/server/gcp',
+          },
+          {
+            from: [
+              '/docs/collector/configuration',
+              '/docs/collectors',
+              '/docs/collectors/node-collector',
+              '/docs/collectors/server',
+              '/docs/collectors/server-collector',
+              '/docs/collectors/server-collector/configuration',
+              '/docs/collectors/server-collector/installation',
+              '/docs/collectors/server/configuration',
+              '/docs/collectors/server/installation',
+              '/docs/collectors/web',
+              '/docs/collectors/web-collector',
+              '/docs/collectors/web-collector/configuration',
+              '/docs/collectors/web-collector/installation/gtm',
+              '/docs/collectors/web/configuration',
+              '/docs/collectors/web/installation',
+              '/docs/collectors/web/installation/gtm',
+              '/docs/collectors/web/installation/script',
+            ],
+            to: '/docs/collector',
+          },
+          {
+            from: [
+              '/docs/collectors/server/commands',
+              '/docs/collectors/web/commands',
+              '/docs/consent_management/commands',
+              '/docs/clients/walkerjs/hooks',
+              '/docs/utils/hooks',
+            ],
+            to: '/docs/collector/commands',
+          },
+          {
+            from: [
+              '/docs/clients/walkerjs/debugging',
+              '/docs/clients/walkerjs/testing',
+              '/docs/collector/testing',
+              '/docs/collectors/web/testing',
+              '/docs/sources/node/testing',
+              '/docs/sources/walkerjs/testing',
+            ],
+            to: '/docs/guides/debugging',
+          },
+          {
+            from: [
+              '/docs/clients/walkerjs/user-identification',
+              '/docs/guides/user_stitching',
+              '/docs/user_stitching',
+            ],
+            to: '/docs/guides/user-stitching',
+          },
+          {
+            from: '/docs/utils/session',
+            to: '/docs/guides/session',
+          },
+          {
+            from: [
+              '/docs/consent_management',
+              '/docs/consent_management/configuration',
+              '/docs/consent_management/overview',
+              '/docs/guides/consent_management',
+              '/docs/getting-started/quickstart/consent-management',
+            ],
+            to: '/docs/guides/consent',
+          },
+          {
+            from: [
+              '/docs/destinations/configuration',
+              '/docs/destinations/overview',
+              '/docs/destinations/node',
+              '/docs/destinations/web',
+              '/docs/getting_started/destinations',
+            ],
+            to: '/docs/destinations',
+          },
+          {
+            from: [
+              '/docs/destinations/custom',
+              '/docs/destinations/web/custom',
+              '/docs/getting-started/quickstart/custom-destination',
+            ],
+            to: '/docs/destinations/create-your-own',
+          },
+          {
+            from: '/docs/destinations/web/api',
+            to: '/docs/destinations/api/web',
+          },
+          {
+            from: '/docs/destinations/node/api',
+            to: '/docs/destinations/api/server',
+          },
+          {
+            from: '/docs/web/google',
+            to: '/docs/destinations/web/gtag',
+          },
+          {
+            from: [
+              '/docs/destinations/google-ga4',
+              '/docs/destinations/web/ga4',
+              '/docs/destinations/web/google-ga4',
+              '/docs/web/google/ga4',
+            ],
+            to: '/docs/destinations/web/gtag/ga4',
+          },
+          {
+            from: [
+              '/docs/destinations/google-ads',
+              '/docs/destinations/web/gads',
+              '/docs/destinations/web/google-ads',
+              '/docs/destinations/web/google_ads',
+              '/docs/web/google/ads',
+            ],
+            to: '/docs/destinations/web/gtag/ads',
+          },
+          {
+            from: [
+              '/docs/destinations/google-gtm',
+              '/docs/destinations/web/google-gtm',
+              '/docs/destinations/web/gtm',
+              '/docs/web/google/gtm',
+            ],
+            to: '/docs/destinations/web/gtag/gtm',
+          },
+          {
+            from: [
+              '/docs/destinations/meta',
+              '/docs/destinations/meta-pixel',
+              '/docs/destinations/web/meta',
+              '/docs/web/meta',
+            ],
+            to: '/docs/destinations/web/meta-pixel',
+          },
+          {
+            from: [
+              '/docs/destinations/piwikpro',
+              '/docs/destinations/web/piwik',
+              '/docs/web/piwikpro',
+            ],
+            to: '/docs/destinations/web/piwikpro',
+          },
+          {
+            from: ['/docs/destinations/plausible', '/docs/web/plausible'],
+            to: '/docs/destinations/web/plausible',
+          },
+          {
+            from: ['/docs/destinations/aws', '/docs/destinations/node/aws'],
+            to: '/docs/destinations/server/aws',
+          },
+          {
+            from: [
+              '/docs/destinations/bigquery',
+              '/docs/destinations/node/bigquery',
+              '/docs/destinations/server/gcp/bigquery',
+              '/docs/node/google',
+            ],
+            to: '/docs/destinations/server/gcp',
+          },
+          {
+            from: [
+              '/docs/destinations/node/meta',
+              '/docs/destinations/server/meta',
+              '/docs/node/meta',
+            ],
+            to: '/docs/destinations/server/meta-capi',
+          },
+          {
+            from: [
+              '/docs/destinations/event-mapping',
+              '/docs/destinations/event_mapping',
+              '/docs/destinations/mapping',
+              '/docs/guides/event-mapping',
+              '/docs/utils/mapping',
+              '/docs/getting-started/quickstart/custom-mapping-functions',
+            ],
+            to: '/docs/mapping',
+          },
+          {
+            from: '/docs/transformers/cache',
+            to: '/docs/stores/cache',
+          },
+          {
+            from: '/docs/transformers/router',
+            to: '/docs/transformers',
+          },
+          {
+            from: [
+              '/docs/transformers/validator',
+              '/docs/utils/validate',
+              '/docs/utils/validation',
+            ],
+            to: '/docs/transformers/validate',
+          },
+          {
+            from: [
+              '/docs/utils',
+              '/docs/utils/helper',
+              '/docs/utils/installation',
+              '/docs/utils/versions',
+            ],
+            to: '/docs/core',
+          },
+          {
+            from: [
+              '/docs/getting-started/quick-start',
+              '/docs/getting-started/quickstart/cdn',
+              '/docs/getting-started/quickstart/walker-with-sources',
+              '/docs/getting_started/quick_start',
+            ],
+            to: '/docs/getting-started/quickstart',
+          },
+          {
+            from: [
+              '/docs/getting_started/event-model',
+              '/docs/walkeros/event-model',
+            ],
+            to: '/docs/getting-started/event-model',
+          },
+          {
+            from: [
+              '/docs/getting-started/step-examples',
+              '/docs/guides/interactive-examples',
+            ],
+            to: '/docs/getting-started/flow/step-examples',
+          },
+          {
+            from: '/docs/contract',
+            to: '/docs/getting-started/flow/contract',
+          },
+          {
+            from: ['/docs/guides/migrations', '/docs/migrations'],
+            to: '/docs/guides/migration',
+          },
+          {
+            from: '/docs/migrations/elbwalker_to_walkeros',
+            to: '/docs/migrating/v3-to-v4',
+          },
+          {
+            from: '/docs/comparisons/comparisons',
+            to: '/docs/comparisons',
+          },
+          {
+            from: '/docs/comparisons/dataLayerGTM',
+            to: '/docs/comparisons/dataLayer',
+          },
+          {
+            from: '/docs/guides/gtm',
+            to: '/docs/comparisons/gtm',
+          },
+          {
+            from: '/docs/apps',
+            to: '/docs/apps/walkerjs',
+          },
+          {
+            from: [
+              '/docs/intro',
+              '/docs/walkeros',
+              '/docs/walkeros/getting-started',
+              '/docs/walkeros/privacy',
+              '/docs/getting-started/what_is_walkeros',
+              '/docs/getting_started/what_is_walkeros',
+            ],
+            to: '/docs/',
           },
         ],
       },
@@ -296,6 +683,14 @@ const config: Config = {
         content: {
           enableMarkdownFiles: true,
           enableLlmsFullTxt: true,
+          // llms.txt is read detached from the site: pasted into an agent's
+          // context, chunked, or fetched on its own. A root-relative target has
+          // nothing to resolve against there, so the production export is fully
+          // qualified with the site url. Preview builds stay relative on
+          // purpose: the plugin appends the baseUrl to the site url while
+          // route paths already carry it, which doubles the prefix on any
+          // non-root baseUrl.
+          relativePaths: Boolean(process.env.DOCUSAURUS_BASEURL),
           excludeRoutes: ['/search', '/404', '/tags/**'],
           // The export appends `.md` to the route path, so a trailing-slash
           // route yields `/docs/mapping/.md` while the page is written to

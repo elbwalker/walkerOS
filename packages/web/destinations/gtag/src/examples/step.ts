@@ -48,13 +48,14 @@ export const adsInit: Flow.StepExample = {
 
 /**
  * GTM destination bootstrap.
- * Initializes the dataLayer and pushes the gtm.js start event.
+ * Loads the container and pushes the gtm.js start event.
  */
 export const gtmInit: Flow.StepExample = {
   title: 'GTM init',
   description:
-    'The destination initializes the dataLayer and pushes the gtm.js start event for a GTM container.',
+    'With script loading enabled the destination initializes the dataLayer, pushes the gtm.js start event, and loads the GTM container.',
   in: {
+    loadScript: true,
     settings: {
       gtm: { containerId: 'GTM-XXXXXXX' },
     },

@@ -1,9 +1,11 @@
+import fs from 'fs-extra';
 import type { Logger } from '@walkeros/core';
 import { ENV_MARKER_PREFIX } from '@walkeros/core';
 import { loadFlowConfig } from '../../config/loader.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { createSuccessOutput, writeResult } from '../../core/output.js';
 import { resolveExportName } from '../../core/resolve-export-name.js';
+import { loadStepPackage } from '../../core/step-loader.js';
 import { resolveComponent } from './resolve.js';
 
 export interface SetupCommandOptions {
@@ -171,169 +173,189 @@ export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
       json: opts.json,
     });
 
-  const { flowSettings } = await loadFlowConfig(opts.config ?? './flow.json', {
-    flowName: opts.flow,
-  });
+  const { flowSettings, buildOptions } = await loadFlowConfig(
+    opts.config ?? './flow.json',
+    { flowName: opts.flow },
+  );
 
   const component = resolveComponent(flowSettings, opts.target);
   const scoped = baseLogger.scope(component.kind).scope(component.id);
 
   scoped.info(`setup: starting ${component.kind}.${component.id}`);
 
-  // Mirror bundle's resolution so multi-export packages (e.g. gcp exporting
-  // both destinationBigQuery and destinationPubSub) route to the right
-  // export instead of always grabbing the package default.
-  const { exportName, source: resolveSource } = resolveExportName(
+  // Acquire the package exactly like `walkeros bundle` does: the flow's
+  // version pin (or path) through the shared pacote pipeline, imported from
+  // the extracted tree. Never resolved against the CLI's own install.
+  const loaded = await loadStepPackage(
     flowSettings,
     component.kind,
     component.id,
+    { configDir: buildOptions.configDir, logger: scoped },
   );
 
-  const mod: Record<string, unknown> = await import(component.packageName);
-  const pickedExport: unknown =
-    exportName !== undefined ? mod[exportName] : mod.default;
+  try {
+    // Mirror bundle's resolution so multi-export packages (e.g. gcp exporting
+    // both destinationBigQuery and destinationPubSub) route to the right
+    // export instead of always grabbing the package default. Resolve against
+    // the normalized flow so bundle.packages[pkg].imports matches even when
+    // the step declares an inline version.
+    const { exportName, source: resolveSource } = resolveExportName(
+      loaded.normalizedFlow,
+      component.kind,
+      component.id,
+    );
 
-  if (!isComponentDefault(pickedExport)) {
-    if (exportName !== undefined) {
-      const origin =
-        resolveSource === 'import'
-          ? `${component.kind}.${component.id}.import`
-          : `bundle.packages["${component.packageName}"].imports[0]`;
+    const mod = loaded.module;
+    const pickedExport: unknown =
+      exportName !== undefined ? mod[exportName] : mod.default;
+
+    if (!isComponentDefault(pickedExport)) {
+      if (exportName !== undefined) {
+        const origin =
+          resolveSource === 'import'
+            ? `${component.kind}.${component.id}.import`
+            : `bundle.packages["${loaded.packageName}"].imports[0]`;
+        throw new Error(
+          `Package ${loaded.packageName} has no export "${exportName}" ` +
+            `(referenced by ${origin}).`,
+        );
+      }
       throw new Error(
-        `Package ${component.packageName} has no export "${exportName}" ` +
-          `(referenced by ${origin}).`,
+        `Package ${loaded.packageName} has no default export. ` +
+          `walkerOS components are expected to use 'export default'.`,
       );
     }
-    throw new Error(
-      `Package ${component.packageName} has no default export. ` +
-        `walkerOS components are expected to use 'export default'.`,
-    );
-  }
 
-  const initFn = pickedExport.init;
-  const setupFn = pickedExport.setup;
-  const destroyFn = pickedExport.destroy;
+    const initFn = pickedExport.init;
+    const setupFn = pickedExport.setup;
+    const destroyFn = pickedExport.destroy;
 
-  const emitSkipEnvelope = async (reason: string): Promise<void> => {
-    if (!opts.json) return;
-    const envelope = createSuccessOutput(
-      {
-        kind: component.kind,
-        id: component.id,
-        status: 'skipped',
-        reason,
-      },
-      Date.now() - startTime,
-    );
-    await writeResult(JSON.stringify(envelope, null, 2) + '\n', {});
-  };
-
-  if (!isLifecycleFn(setupFn)) {
-    // No setup defined on the package, narrate explicitly, exit ok.
-    scoped.info(
-      `setup: skipped ${component.kind}.${component.id} (no setup function)`,
-    );
-    await emitSkipEnvelope('no setup function');
-    return;
-  }
-
-  // Honor config.setup explicitly. If user wrote `setup: false`, narrate and skip.
-  // (Omitted setup is also falsy and gets the same skip message.)
-  const setupConfig = readSetupField(component.config);
-  if (setupConfig === false || setupConfig === undefined) {
-    const reason = setupConfig === false ? 'false' : 'unset';
-    scoped.info(
-      `setup: skipped ${component.kind}.${component.id} (config.setup is ${reason})`,
-    );
-    await emitSkipEnvelope(`config.setup is ${reason}`);
-    return;
-  }
-
-  // Server flows are loaded in deferred mode so the bundler can rewrite
-  // `$env.NAME` markers into `process.env[NAME]` expressions. The setup
-  // command imports the package and runs its lifecycle directly in this
-  // Node process, so markers must be replaced with their actual values
-  // here. Web flows are already eagerly resolved by `loadBundleConfig`,
-  // so this is a no-op for them.
-  const resolvedInputConfig = resolveEnvMarkers(component.config);
-  const resolvedEnv = resolveEnvMarkers(component.env);
-
-  // Run the package's lifecycle in proper order: init → setup → destroy.
-  //
-  // Many destinations rely on `init` to: parse `$env`-injected JSON
-  // strings (e.g. service-account credentials), construct an SDK client,
-  // and validate required settings. Calling `setup` directly skips that
-  // preparation and forces setup to re-implement client construction
-  // from raw, unparsed config — which is what previously caused
-  // `walkeros setup destination.pubsub` to fail with "Could not load the
-  // default credentials". Mirroring the collector's behavior (see
-  // collector/src/destination.ts:526-540) keeps both invocation paths
-  // honest about what the package promises.
-  //
-  // The init result is classified the same way the collector does:
-  //   - object → use as resolved config for setup + destroy
-  //   - void   → init mutated the input config in place; reuse it
-  //   - false  → init explicitly aborted; do NOT run setup
-  let resolvedConfig: unknown = resolvedInputConfig;
-  if (isLifecycleFn(initFn)) {
-    const initResult = await initFn({
-      id: component.id,
-      config: resolvedInputConfig,
-      env: resolvedEnv,
-      logger: scoped,
-    });
-    const outcome = classifyInitResult(initResult);
-    if (outcome.kind === 'aborted') {
-      scoped.info(
-        `setup: skipped ${component.kind}.${component.id} (init returned false)`,
+    const emitSkipEnvelope = async (reason: string): Promise<void> => {
+      if (!opts.json) return;
+      const envelope = createSuccessOutput(
+        {
+          kind: component.kind,
+          id: component.id,
+          status: 'skipped',
+          reason,
+        },
+        Date.now() - startTime,
       );
-      await emitSkipEnvelope('init returned false');
+      await writeResult(JSON.stringify(envelope, null, 2) + '\n', {});
+    };
+
+    if (!isLifecycleFn(setupFn)) {
+      // No setup defined on the package, narrate explicitly, exit ok.
+      scoped.info(
+        `setup: skipped ${component.kind}.${component.id} (no setup function)`,
+      );
+      await emitSkipEnvelope('no setup function');
       return;
     }
-    if (outcome.kind === 'config') {
-      resolvedConfig = outcome.config;
+
+    // Honor config.setup explicitly. If user wrote `setup: false`, narrate and skip.
+    // (Omitted setup is also falsy and gets the same skip message.)
+    const setupConfig = readSetupField(component.config);
+    if (setupConfig === false || setupConfig === undefined) {
+      const reason = setupConfig === false ? 'false' : 'unset';
+      scoped.info(
+        `setup: skipped ${component.kind}.${component.id} (config.setup is ${reason})`,
+      );
+      await emitSkipEnvelope(`config.setup is ${reason}`);
+      return;
     }
-  }
 
-  const result = await setupFn({
-    id: component.id,
-    config: resolvedConfig,
-    env: resolvedEnv,
-    logger: scoped,
-  });
+    // Server flows are loaded in deferred mode so the bundler can rewrite
+    // `$env.NAME` markers into `process.env[NAME]` expressions. The setup
+    // command imports the package and runs its lifecycle directly in this
+    // Node process, so markers must be replaced with their actual values
+    // here. Web flows are already eagerly resolved by `loadBundleConfig`,
+    // so this is a no-op for them.
+    const resolvedInputConfig = resolveEnvMarkers(component.config);
+    const resolvedEnv = resolveEnvMarkers(component.env);
 
-  // Always run `destroy` after setup if the package provides one, so that
-  // SDK clients constructed in `init` (e.g. PubSub `client.close()`,
-  // BigQuery `writeClient.close()`) release sockets and timers cleanly
-  // before the CLI exits. We log destroy failures but never let them
-  // mask a successful setup result.
-  if (isLifecycleFn(destroyFn)) {
-    try {
-      await destroyFn({
+    // Run the package's lifecycle in proper order: init → setup → destroy.
+    //
+    // Many destinations rely on `init` to: parse `$env`-injected JSON
+    // strings (e.g. service-account credentials), construct an SDK client,
+    // and validate required settings. Calling `setup` directly skips that
+    // preparation and forces setup to re-implement client construction
+    // from raw, unparsed config — which is what previously caused
+    // `walkeros setup destination.pubsub` to fail with "Could not load the
+    // default credentials". Mirroring the collector's behavior (see
+    // collector/src/destination.ts:526-540) keeps both invocation paths
+    // honest about what the package promises.
+    //
+    // The init result is classified the same way the collector does:
+    //   - object → use as resolved config for setup + destroy
+    //   - void   → init mutated the input config in place; reuse it
+    //   - false  → init explicitly aborted; do NOT run setup
+    let resolvedConfig: unknown = resolvedInputConfig;
+    if (isLifecycleFn(initFn)) {
+      const initResult = await initFn({
         id: component.id,
-        config: resolvedConfig,
+        config: resolvedInputConfig,
         env: resolvedEnv,
         logger: scoped,
       });
-    } catch (err) {
-      scoped.warn(`setup: destroy failed`, {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      const outcome = classifyInitResult(initResult);
+      if (outcome.kind === 'aborted') {
+        scoped.info(
+          `setup: skipped ${component.kind}.${component.id} (init returned false)`,
+        );
+        await emitSkipEnvelope('init returned false');
+        return;
+      }
+      if (outcome.kind === 'config') {
+        resolvedConfig = outcome.config;
+      }
     }
-  }
 
-  // In --json mode, emit the standard envelope so this command matches the
-  // rest of the CLI (createSuccessOutput → writeResult). In human mode we
-  // skip the raw JSON dump entirely; sibling commands narrate, they don't
-  // splice JSON between lines.
-  if (opts.json) {
-    const envelope = createSuccessOutput(
-      { result: result ?? null },
-      Date.now() - startTime,
-    );
-    await writeResult(JSON.stringify(envelope, null, 2) + '\n', {});
-    return;
-  }
+    const result = await setupFn({
+      id: component.id,
+      config: resolvedConfig,
+      env: resolvedEnv,
+      logger: scoped,
+    });
 
-  scoped.info(`setup: ok ${component.kind}.${component.id}`);
+    // Always run `destroy` after setup if the package provides one, so that
+    // SDK clients constructed in `init` (e.g. PubSub `client.close()`,
+    // BigQuery `writeClient.close()`) release sockets and timers cleanly
+    // before the CLI exits. We log destroy failures but never let them
+    // mask a successful setup result.
+    if (isLifecycleFn(destroyFn)) {
+      try {
+        await destroyFn({
+          id: component.id,
+          config: resolvedConfig,
+          env: resolvedEnv,
+          logger: scoped,
+        });
+      } catch (err) {
+        scoped.warn(`setup: destroy failed`, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    // In --json mode, emit the standard envelope so this command matches the
+    // rest of the CLI (createSuccessOutput → writeResult). In human mode we
+    // skip the raw JSON dump entirely; sibling commands narrate, they don't
+    // splice JSON between lines.
+    if (opts.json) {
+      const envelope = createSuccessOutput(
+        { result: result ?? null },
+        Date.now() - startTime,
+      );
+      await writeResult(JSON.stringify(envelope, null, 2) + '\n', {});
+      return;
+    }
+
+    scoped.info(`setup: ok ${component.kind}.${component.id}`);
+  } finally {
+    // The lifecycle may lazy-load files from the install tree (grpc protos,
+    // schema assets), so the tree is removed only after init/setup/destroy
+    // are done. Best effort: a leftover tmp dir must never mask a result.
+    await fs.remove(loaded.installDir).catch(() => undefined);
+  }
 }

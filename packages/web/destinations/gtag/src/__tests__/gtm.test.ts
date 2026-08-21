@@ -47,16 +47,72 @@ describe('GTM Implementation', () => {
       });
     });
 
-    it('should still push init event when loadScript is false', () => {
+    const falsyLoadScript: Array<[string, boolean | undefined]> = [
+      ['false', false],
+      ['undefined', undefined],
+    ];
+
+    it.each(falsyLoadScript)(
+      'should not push the init event when loadScript is %s',
+      (_label, loadScript) => {
+        const settings: GTMSettings = { containerId: 'GTM-XXXXXXX' };
+
+        initGTM(settings, loadScript, mockEnv);
+
+        expect(mockDataLayer).toHaveLength(0);
+      },
+    );
+
+    it('should leave an existing dataLayer untouched when loadScript is off', () => {
       const settings: GTMSettings = { containerId: 'GTM-XXXXXXX' };
+      mockDataLayer.push({ event: 'existing' });
 
       initGTM(settings, false, mockEnv);
 
-      expect(mockDataLayer).toHaveLength(1);
-      expect(mockDataLayer[0]).toEqual({
-        'gtm.start': expect.any(Number),
-        event: 'gtm.js',
-      });
+      expect(mockEnv.window.dataLayer).toBe(mockDataLayer);
+      expect(mockDataLayer).toEqual([{ event: 'existing' }]);
+    });
+
+    it('should adopt the dataLayer without pushing when loadScript is off', () => {
+      const customEnv = clone(examples.env.push);
+      const settings: GTMSettings = {
+        containerId: 'GTM-XXXXXXX',
+        dataLayer: 'customDataLayer',
+      };
+
+      initGTM(settings, false, customEnv);
+
+      expect(customEnv.window).toHaveProperty('customDataLayer', []);
+    });
+
+    it('should push the init event and load the container when loadScript is true', () => {
+      const script = {
+        src: '',
+        setAttribute: () => {},
+        removeAttribute: () => {},
+      };
+      const appended: unknown[] = [];
+      const env: Env = {
+        window: { dataLayer: mockDataLayer },
+        document: {
+          createElement: () => script,
+          head: {
+            appendChild: (node) => {
+              appended.push(node);
+            },
+          },
+        },
+      };
+
+      initGTM({ containerId: 'GTM-XXXXXXX' }, true, env);
+
+      expect(mockDataLayer).toEqual([
+        { 'gtm.start': expect.any(Number), event: 'gtm.js' },
+      ]);
+      expect(appended).toHaveLength(1);
+      expect(script.src).toBe(
+        'https://www.googletagmanager.com/gtm.js?id=GTM-XXXXXXX',
+      );
     });
   });
 

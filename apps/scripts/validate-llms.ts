@@ -27,15 +27,42 @@ const BUILD_DIR = join(ROOT, 'website', 'build');
 // production builds resolve identically.
 const BASE_URL = (process.env.DOCUSAURUS_BASEURL || '/').replace(/\/*$/, '/');
 
+// The export stamps the site url on every link (`content.relativePaths: false`)
+// so llms.txt survives being pasted into a model's context or chunked away from
+// the site. Read that url from the Docusaurus config rather than repeating it,
+// so the guard and the build cannot disagree on what "absolute" means.
+function readSiteUrl(): string {
+  const config = readFileSync(
+    join(ROOT, 'website', 'docusaurus.config.ts'),
+    'utf-8',
+  );
+  // Top-level config key, two-space indented, so a nested plugin option named
+  // `url` can never be picked up instead.
+  const match = /^ {2}url: '([^']+)'/m.exec(config);
+  if (!match) {
+    console.log(
+      '❌ LLM export validation failed: no site `url` in website/docusaurus.config.ts.\n',
+    );
+    process.exit(1);
+  }
+  return match[1].replace(/\/+$/, '');
+}
+
+const SITE_URL = readSiteUrl();
+
 function emittedPath(target: string): string {
+  const pathname = target.startsWith(SITE_URL)
+    ? target.slice(SITE_URL.length)
+    : target;
   const relativeTarget =
-    BASE_URL !== '/' && target.startsWith(BASE_URL)
-      ? target.slice(BASE_URL.length)
-      : target.replace(/^\//, '');
+    BASE_URL !== '/' && pathname.startsWith(BASE_URL)
+      ? pathname.slice(BASE_URL.length)
+      : pathname.replace(/^\//, '');
   return join(BUILD_DIR, relativeTarget);
 }
 const LLMS_INDEX = join(BUILD_DIR, 'llms.txt');
 const LLMS_FULL = join(BUILD_DIR, 'llms-full.txt');
+const SITEMAP = join(BUILD_DIR, 'sitemap.xml');
 
 // How many issues of one kind to print before summarising the rest.
 const MAX_REPORTED_PER_CHECK = 15;
@@ -47,25 +74,35 @@ interface LinkRef {
   line: number;
 }
 
-// Extract the link targets from `[text](target)` pairs, keeping only the
-// root-relative Markdown pages the plugin emits (e.g. `/docs/...md`,
-// `/docs.md`). External URLs, anchors, and non-.md targets are not part of the
-// export contract this guard protects.
-function extractMarkdownLinks(content: string): LinkRef[] {
+// Every `[text](target)` pair in the document, targets kept verbatim.
+function extractLinks(content: string): LinkRef[] {
   const links: LinkRef[] = [];
   const regex = /\[[^\]]*\]\(([^)]+)\)/g;
-  const lines = content.split('\n');
-  lines.forEach((line, index) => {
+  content.split('\n').forEach((line, index) => {
     let match: RegExpExecArray | null;
     regex.lastIndex = 0;
     while ((match = regex.exec(line)) !== null) {
-      const target = match[1].split('#')[0].split('?')[0];
-      if (target.startsWith('/') && target.endsWith('.md')) {
-        links.push({ target, line: index + 1 });
-      }
+      links.push({ target: match[1], line: index + 1 });
     }
   });
   return links;
+}
+
+// The links pointing at the Markdown pages the plugin emits. Targets carry the
+// site url (`https://site/docs/...md`); a root-relative one still counts here so
+// a stale link gets reported rather than skipped. Off-site URLs, anchors, and
+// non-.md targets are not part of the export contract this guard protects.
+function extractMarkdownLinks(content: string): LinkRef[] {
+  return extractLinks(content)
+    .map(({ target, line }) => ({
+      target: target.split('#')[0].split('?')[0],
+      line,
+    }))
+    .filter(
+      ({ target }) =>
+        (target.startsWith('/') || target.startsWith(`${SITE_URL}/`)) &&
+        target.endsWith('.md'),
+    );
 }
 
 // Every emitted Markdown page, relative to website/build.
@@ -112,6 +149,91 @@ function checkIndexLinks(): void {
       });
     }
   }
+}
+
+// llms.txt is read detached from the site: pasted into a model's context, split
+// into chunks by a retriever, fetched on its own. A root-relative target has no
+// document to resolve against there, so every link the index hands out has to
+// carry the origin or it is dead on arrival.
+function checkIndexLinksAbsolute(): void {
+  // Absolute links are a production-only guarantee. Preview builds emit
+  // relative links on purpose: the llms-txt plugin appends the baseUrl to the
+  // site url while route paths already carry it, doubling any non-root prefix
+  // (see the plugin block in website/docusaurus.config.ts).
+  if (BASE_URL !== '/') return;
+  const content = readFileSync(LLMS_INDEX, 'utf-8');
+  const found = extractLinks(content)
+    .filter(({ target }) => !target.startsWith('https://'))
+    .map(({ target, line }) => ({
+      file: `website/build/llms.txt:${line}`,
+      message: `relative link target ${target} (llms.txt links must be fully qualified, e.g. ${SITE_URL}${target.startsWith('/') ? target : `/${target}`})`,
+    }));
+  pushCapped('relative links in llms.txt', found);
+}
+
+// Internal planning documents live under website/docs/plans/. One left there is
+// published: it gets a public page, a sitemap entry, and its own section in
+// llms.txt, which is the copy every agent reads. Deleting the source file fixes
+// one leak; asserting on the published artifacts prevents the next one.
+const INTERNAL_ROUTE = /[^\s<>"'()[\]]*\/docs\/plans(?![\w-])[^\s<>"'()[\]]*/g;
+
+function findInternalRoutes(content: string): LinkRef[] {
+  const found: LinkRef[] = [];
+  let match: RegExpExecArray | null;
+  INTERNAL_ROUTE.lastIndex = 0;
+  while ((match = INTERNAL_ROUTE.exec(content)) !== null) {
+    found.push({
+      target: match[0],
+      line: content.slice(0, match.index).split('\n').length,
+    });
+  }
+  return found;
+}
+
+function checkNoInternalPlans(): void {
+  const found: Issue[] = [];
+
+  // The index renders one heading per route category, so a "plans" section
+  // means the whole directory shipped, not a single stray page.
+  readFileSync(LLMS_INDEX, 'utf-8')
+    .split('\n')
+    .forEach((line, index) => {
+      if (!/^#{1,6}\s+plans\s*$/i.test(line.trim())) return;
+      found.push({
+        file: `website/build/llms.txt:${index + 1}`,
+        message: `internal "${line.trim()}" section published in the LLM export (delete the page from website/docs/plans/)`,
+      });
+    });
+
+  const artifacts = [
+    { rel: 'website/build/llms.txt', abs: LLMS_INDEX, optional: false },
+    { rel: 'website/build/llms-full.txt', abs: LLMS_FULL, optional: true },
+    { rel: 'website/build/sitemap.xml', abs: SITEMAP, optional: false },
+  ];
+
+  for (const { rel, abs, optional } of artifacts) {
+    if (!existsSync(abs)) {
+      // A guard whose input is missing is a guard that is switched off.
+      if (!optional) {
+        issues.push({
+          file: rel,
+          message:
+            'not emitted, so the internal-plans check could not run against it',
+        });
+      }
+      continue;
+    }
+    for (const { target, line } of findInternalRoutes(
+      readFileSync(abs, 'utf-8'),
+    )) {
+      found.push({
+        file: `${rel}:${line}`,
+        message: `internal plans route published: ${target} (delete the page from website/docs/plans/)`,
+      });
+    }
+  }
+
+  pushCapped('published internal plans', found);
 }
 
 // Every internal Markdown link in every emitted page body must resolve to a
@@ -370,6 +492,8 @@ function main(): void {
   console.log(`   ${pages.length} exported pages\n`);
 
   checkIndexLinks();
+  checkIndexLinksAbsolute();
+  checkNoInternalPlans();
   checkBodyLinks(pages);
   checkPlaceholders(pages);
   checkCodeIndentation();

@@ -95,5 +95,21 @@
     "directory": "packages/cli"
   },
   "author": "elbwalker <hello@elbwalker.com>",
-  "homepage": "https://github.com/elbwalker/walkerOS#readme"
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "keywords": [
+    "walkerOS",
+    "cli",
+    "flow",
+    "analytics",
+    "event-tracking",
+    "event-data",
+    "data-collection",
+    "tag-management",
+    "first-party-data",
+    "privacy",
+    "privacy-first",
+    "consent",
+    "bundler",
+    "mcp"
+  ]
 }
