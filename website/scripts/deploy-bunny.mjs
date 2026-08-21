@@ -126,7 +126,9 @@ async function pruneRemote(localRelPaths) {
     return;
   }
   const cap = Math.max(200, Math.ceil(remote.length * 0.25));
-  if (stale.length > cap && !PRUNE_FORCE) {
+  // A dry run deletes nothing, so the cap never blocks it: it is exactly how
+  // a beyond-cap situation gets inspected before anyone reaches for force.
+  if (stale.length > cap && !PRUNE_FORCE && !PRUNE_DRY_RUN) {
     console.warn(
       `::warning::Prune skipped: ${stale.length} stale of ${remote.length} remote files exceeds the safety cap (${cap}). Inspect with PRUNE_DRY_RUN=1, then set PRUNE_FORCE=1 to prune.`,
     );
