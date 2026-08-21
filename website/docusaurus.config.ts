@@ -685,9 +685,12 @@ const config: Config = {
           enableLlmsFullTxt: true,
           // llms.txt is read detached from the site: pasted into an agent's
           // context, chunked, or fetched on its own. A root-relative target has
-          // nothing to resolve against there, so every link is fully qualified
-          // with the site url.
-          relativePaths: false,
+          // nothing to resolve against there, so the production export is fully
+          // qualified with the site url. Preview builds stay relative on
+          // purpose: the plugin appends the baseUrl to the site url while
+          // route paths already carry it, which doubles the prefix on any
+          // non-root baseUrl.
+          relativePaths: Boolean(process.env.DOCUSAURUS_BASEURL),
           excludeRoutes: ['/search', '/404', '/tags/**'],
           // The export appends `.md` to the route path, so a trailing-slash
           // route yields `/docs/mapping/.md` while the page is written to

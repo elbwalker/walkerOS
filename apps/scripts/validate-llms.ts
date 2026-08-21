@@ -156,6 +156,11 @@ function checkIndexLinks(): void {
 // document to resolve against there, so every link the index hands out has to
 // carry the origin or it is dead on arrival.
 function checkIndexLinksAbsolute(): void {
+  // Absolute links are a production-only guarantee. Preview builds emit
+  // relative links on purpose: the llms-txt plugin appends the baseUrl to the
+  // site url while route paths already carry it, doubling any non-root prefix
+  // (see the plugin block in website/docusaurus.config.ts).
+  if (BASE_URL !== '/') return;
   const content = readFileSync(LLMS_INDEX, 'utf-8');
   const found = extractLinks(content)
     .filter(({ target }) => !target.startsWith('https://'))
