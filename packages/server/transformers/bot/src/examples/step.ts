@@ -11,10 +11,10 @@ const baseEvent = {
   source: { type: 'express', platform: 'server' as const },
 };
 
-/** Real Chrome — botScore 0, agentScore 0. */
+/** Real Chrome, nothing to report. */
 export const humanChrome: Flow.StepExample = {
   title: 'Human visitor (Chrome)',
-  description: 'Modern Chrome UA. No bot or agent signals.',
+  description: 'Modern Chrome UA. No bot signals.',
   in: { ...baseEvent },
   out: [
     [
@@ -22,18 +22,18 @@ export const humanChrome: Flow.StepExample = {
       {
         event: {
           ...baseEvent,
-          user: { botScore: 0, agentScore: 0 },
+          user: { botScore: 0, botCategory: 'human' },
         },
       },
     ],
   ],
 };
 
-/** GPTBot — training crawler. */
+/** GPTBot, an AI training crawler. */
 export const gptBotCrawler: Flow.StepExample = {
   title: 'GPTBot training crawler',
   description:
-    'OpenAI training crawler. Both botScore and agentScore are high.',
+    'OpenAI training crawler. The category says what it is, the product says which one.',
   in: { ...baseEvent, id: 'ev-1700000601' },
   out: [
     [
@@ -42,18 +42,22 @@ export const gptBotCrawler: Flow.StepExample = {
         event: {
           ...baseEvent,
           id: 'ev-1700000601',
-          user: { botScore: 95, agentScore: 95 },
+          user: {
+            botScore: 90,
+            botCategory: 'ai-crawler',
+            botProduct: 'GPTBot',
+          },
         },
       },
     ],
   ],
 };
 
-/** ChatGPT-User — user-action AI agent. */
+/** ChatGPT-User, an AI agent acting for a person. */
 export const chatgptUserAgent: Flow.StepExample = {
-  title: 'ChatGPT-User (user-action AI)',
+  title: 'ChatGPT-User (AI agent)',
   description:
-    'A real human routed an AI to fetch this page. botScore high but lower than crawlers — agentProduct lets destinations keep this traffic.',
+    'A person routed an AI to fetch this page. Same score as a crawler because it is still software; the category is what lets a destination keep this traffic.',
   in: { ...baseEvent, id: 'ev-1700000602' },
   out: [
     [
@@ -62,17 +66,66 @@ export const chatgptUserAgent: Flow.StepExample = {
         event: {
           ...baseEvent,
           id: 'ev-1700000602',
-          user: { botScore: 90, agentScore: 95 },
+          user: {
+            botScore: 90,
+            botCategory: 'ai-agent',
+            botProduct: 'ChatGPT-User',
+          },
         },
       },
     ],
   ],
 };
 
-/** curl — caught by isbot. */
+/** Googlebot, a search crawler: the one named bot that renders JavaScript. */
+export const searchCrawler: Flow.StepExample = {
+  title: 'Googlebot (search crawler)',
+  description:
+    'Correlates with organic discoverability, so it is worth separating from both AI crawlers and unnamed automation.',
+  in: { ...baseEvent, id: 'ev-1700000605' },
+  out: [
+    [
+      'return',
+      {
+        event: {
+          ...baseEvent,
+          id: 'ev-1700000605',
+          user: {
+            botScore: 90,
+            botCategory: 'search-crawler',
+            botProduct: 'Googlebot',
+          },
+        },
+      },
+    ],
+  ],
+};
+
+/** A Chromium UA whose client hints disagree with it. */
+export const headerMismatch: Flow.StepExample = {
+  title: 'Client hints contradict the UA',
+  description:
+    'The UA claims Chrome 124, Sec-CH-UA says Chromium 98. Graded evidence, not proof: frozen WebView UAs and enterprise UA-reduction policies produce the same mismatch, so the outcome is "suspicious" and never "automation".',
+  in: { ...baseEvent, id: 'ev-1700000606' },
+  out: [
+    [
+      'return',
+      {
+        event: {
+          ...baseEvent,
+          id: 'ev-1700000606',
+          user: { botScore: 30, botCategory: 'suspicious' },
+        },
+      },
+    ],
+  ],
+};
+
+/** curl, caught by isbot but not named. */
 export const curlClient: Flow.StepExample = {
   public: false,
-  description: 'curl client — caught by isbot. agentScore zero.',
+  description:
+    'curl. isbot recognises it as automated without naming a product, so it sits a rung below the UA maps.',
   in: { ...baseEvent, id: 'ev-1700000603' },
   out: [
     [
@@ -81,18 +134,18 @@ export const curlClient: Flow.StepExample = {
         event: {
           ...baseEvent,
           id: 'ev-1700000603',
-          user: { botScore: 80, agentScore: 0 },
+          user: { botScore: 80, botCategory: 'automation' },
         },
       },
     ],
   ],
 };
 
-/** Empty / missing UA — score 70 (suspicious; real browsers rarely strip UA). */
+/** No User-Agent on an otherwise wired request. */
 export const missingUA: Flow.StepExample = {
   public: false,
   description:
-    'No User-Agent — baseline 70 (UA stripping is overwhelmingly bots or hardened privacy tools).',
+    'No User-Agent, but the pipeline is delivering other signals. UA stripping is overwhelmingly bots or hardened privacy tools.',
   in: { ...baseEvent, id: 'ev-1700000604' },
   out: [
     [
@@ -101,7 +154,27 @@ export const missingUA: Flow.StepExample = {
         event: {
           ...baseEvent,
           id: 'ev-1700000604',
-          user: { botScore: 70, agentScore: 0 },
+          user: { botScore: 70, botCategory: 'automation' },
+        },
+      },
+    ],
+  ],
+};
+
+/** Nothing in ingest at all: not measured, which is not the same as human. */
+export const unwiredPipeline: Flow.StepExample = {
+  public: false,
+  description:
+    'No signal resolved, so the score is null rather than 0. Writing null overwrites any client-supplied value and still evaluates false under a "botScore > 50" filter. ingest.bot.reasons names the missing mappings.',
+  in: { ...baseEvent, id: 'ev-1700000607' },
+  out: [
+    [
+      'return',
+      {
+        event: {
+          ...baseEvent,
+          id: 'ev-1700000607',
+          user: { botScore: null, botCategory: 'unknown' },
         },
       },
     ],

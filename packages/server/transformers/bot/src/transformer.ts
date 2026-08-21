@@ -1,6 +1,6 @@
-import type { Transformer } from '@walkeros/core';
+import type { Mapping, Transformer } from '@walkeros/core';
 import { getMappingValue, setByPath } from '@walkeros/core';
-import { computeScore } from './detect/score';
+import { computeScore, type SignalName, type Signals } from './detect/score';
 import type { BotInput, BotOutput, BotSettings } from './types';
 
 const DEFAULT_INPUT: Required<BotInput> = {
@@ -15,12 +15,21 @@ const DEFAULT_INPUT: Required<BotInput> = {
   secChUa: 'ingest.secChUa',
   secChUaMobile: 'ingest.secChUaMobile',
   secChUaPlatform: 'ingest.secChUaPlatform',
+  accept: 'ingest.accept',
+  contentType: 'ingest.contentType',
+  referer: 'ingest.referer',
+  signatureAgent: 'ingest.signatureAgent',
+  method: 'ingest.method',
+  ja4: 'ingest.ja4',
+  headerNames: 'ingest.headerNames',
 };
 
 const DEFAULT_OUTPUT: Required<BotOutput> = {
   botScore: 'user.botScore',
-  agentScore: 'user.agentScore',
-  agentProduct: '', // off by default
+  botCategory: 'user.botCategory',
+  botProduct: 'user.botProduct',
+  // Reasons are a pipeline diagnostic, so they stay off the analytics event.
+  botReasons: 'ingest.bot.reasons',
 };
 
 /**
@@ -59,6 +68,10 @@ export const transformerBot: Transformer.Init<
     ...DEFAULT_OUTPUT,
     ...(settings.output ?? {}),
   };
+  // Declaring a name in settings.input is the operator asserting the signal is
+  // wired. Resolution still falls back to DEFAULT_INPUT; declaration is a
+  // separate fact, and the only reliable one for an absence-based check.
+  const declared = Object.keys(settings.input ?? {}) as SignalName[];
 
   return {
     // Init's input config type is Partial<Settings>; the instance config type
@@ -70,18 +83,48 @@ export const transformerBot: Transformer.Init<
       const { ingest, collector } = ctx;
       const source = { event, ingest };
 
-      // v1 only reads userAgent. Other input fields are reserved for v1.1
-      // (header heuristics); resolved-but-unused here would be wasteful, so
-      // they are intentionally not read yet.
-      const uaValue = await getMappingValue(source, input.userAgent, {
-        collector,
+      const resolve = async (
+        value: Mapping.Value,
+      ): Promise<string | undefined> => {
+        const resolved = await getMappingValue(source, value, { collector });
+        return typeof resolved === 'string' && resolved !== ''
+          ? resolved
+          : undefined;
+      };
+
+      const signals: Signals = {
+        userAgent: await resolve(input.userAgent),
+        ip: await resolve(input.ip),
+        acceptLanguage: await resolve(input.acceptLanguage),
+        acceptEncoding: await resolve(input.acceptEncoding),
+        secFetchSite: await resolve(input.secFetchSite),
+        secFetchMode: await resolve(input.secFetchMode),
+        secFetchDest: await resolve(input.secFetchDest),
+        secFetchUser: await resolve(input.secFetchUser),
+        secChUa: await resolve(input.secChUa),
+        secChUaMobile: await resolve(input.secChUaMobile),
+        secChUaPlatform: await resolve(input.secChUaPlatform),
+        accept: await resolve(input.accept),
+        contentType: await resolve(input.contentType),
+        referer: await resolve(input.referer),
+        signatureAgent: await resolve(input.signatureAgent),
+        method: await resolve(input.method),
+        ja4: await resolve(input.ja4),
+        headerNames: await resolve(input.headerNames),
+      };
+
+      const score = computeScore(signals, {
+        context: settings.context,
+        suspiciousAt: settings.suspiciousAt,
+        declared,
       });
-      const ua = typeof uaValue === 'string' ? uaValue : '';
-      const score = computeScore(ua);
 
       let nextEvent = event;
 
-      const writeOutput = (path: string, value: unknown) => {
+      const writeOutput = (
+        path: string | false | undefined,
+        value: unknown,
+      ) => {
         if (!path || value === undefined) return;
         if (path.startsWith('ingest.')) {
           const subPath = path.slice('ingest.'.length);
@@ -92,9 +135,10 @@ export const transformerBot: Transformer.Init<
         }
       };
 
-      writeOutput(output.botScore ?? '', score.botScore);
-      writeOutput(output.agentScore ?? '', score.agentScore);
-      writeOutput(output.agentProduct ?? '', score.agentProduct);
+      writeOutput(output.botScore, score.botScore);
+      writeOutput(output.botCategory, score.botCategory);
+      writeOutput(output.botProduct, score.botProduct);
+      writeOutput(output.botReasons, score.botReasons);
 
       return { event: nextEvent };
     },

@@ -42,3 +42,72 @@ describe('SettingsSchema MappingValueSchema', () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe('SettingsSchema output paths', () => {
+  it.each(['botScore', 'botCategory', 'botProduct', 'botReasons'])(
+    'accepts a dot path for %s',
+    (field) => {
+      const result = SettingsSchema.safeParse({
+        output: { [field]: 'ingest.bot.value' },
+      });
+      expect(result.success).toBe(true);
+    },
+  );
+
+  it.each(['botScore', 'botCategory', 'botProduct', 'botReasons'])(
+    'accepts false to disable %s',
+    (field) => {
+      const result = SettingsSchema.safeParse({ output: { [field]: false } });
+      expect(result.success).toBe(true);
+    },
+  );
+
+  it('rejects true, which would name no path', () => {
+    const result = SettingsSchema.safeParse({ output: { botScore: true } });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('SettingsSchema context', () => {
+  it.each(['auto', 'navigation', 'pixel', 'beacon', 'fetch', 'server'])(
+    'accepts context %s',
+    (context) => {
+      expect(SettingsSchema.safeParse({ context }).success).toBe(true);
+    },
+  );
+
+  it('rejects a context outside the vocabulary', () => {
+    expect(SettingsSchema.safeParse({ context: 'websocket' }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe('SettingsSchema suspiciousAt', () => {
+  it('accepts a number', () => {
+    expect(SettingsSchema.safeParse({ suspiciousAt: 40 }).success).toBe(true);
+  });
+
+  it('rejects a non-number', () => {
+    expect(SettingsSchema.safeParse({ suspiciousAt: '40' }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe('SettingsSchema input names', () => {
+  it.each([
+    'accept',
+    'contentType',
+    'referer',
+    'signatureAgent',
+    'method',
+    'ja4',
+    'headerNames',
+  ])('accepts input name %s', (name) => {
+    const result = SettingsSchema.safeParse({
+      input: { [name]: 'ingest.value' },
+    });
+    expect(result.success).toBe(true);
+  });
+});
