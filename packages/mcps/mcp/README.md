@@ -58,7 +58,7 @@ any credentials. `auth` reports `{ "authenticated": false }` and the local tools
 work regardless. Only the walkerOS cloud tools need a login, either through the
 `auth` tool's device code flow or a `WALKEROS_TOKEN` environment variable.
 
-## The core loop
+## Quick start
 
 Five tools cover building a flow from nothing to a tested configuration, and all
 five run locally:

@@ -35,8 +35,9 @@ function readPluginSkillNames(): string[] {
     skills?: string[];
   };
   const skills = plugin.skills ?? [];
-  // Entries look like "skills/walkeros-using-cli"; reduce to the basename.
-  return skills.map((entry) => entry.replace(/^skills\//, ''));
+  // Entries look like "./skills/walkeros-using-cli" (the plugin schema
+  // requires the "./" prefix); reduce to the basename.
+  return skills.map((entry) => entry.replace(/^(\.\/)?skills\//, ''));
 }
 
 // 1. Regenerate-and-compare: a hand edit to INDEX.json that was not produced by

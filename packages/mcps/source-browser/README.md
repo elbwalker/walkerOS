@@ -44,6 +44,12 @@ To install the binary directly:
 npm install @walkeros/mcp-source-browser
 ```
 
+## Quick start
+
+Ask your assistant to tag a page, for example: "Generate walkerOS tagging for a
+product card with name and price". It calls `generate_tagging` and returns
+ready-to-paste `data-elb` attributes.
+
 ## Tools
 
 | Tool               | Description                                                                                        |
