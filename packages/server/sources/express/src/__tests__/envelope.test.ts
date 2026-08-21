@@ -3,8 +3,8 @@ import { examples } from '../dev';
 import type { Content, Result } from '../examples/trigger';
 import { sourceExpress } from '../index';
 
-// One request body, N events. These six behaviors are the shared envelope
-// contract; the other three sources carry an identical list.
+// One request body, N events. The shared envelope contract, carried as an
+// identical behavior list by all four server sources.
 
 describe('Express envelope', () => {
   let instance: Trigger.Instance<Content, Result>;
@@ -118,6 +118,37 @@ describe('Express envelope', () => {
       failed: 1,
       errors: [{ index: 1 }],
     });
+  });
+
+  // The pin that stops a count-based dispatch rule from silently switching a
+  // one-element batch to the single-event response body. Every source carries
+  // this; express is the one every deployed client flow uses.
+  it('keeps the batch response shape for a single-element batch', async () => {
+    const trigger = await boot(false);
+
+    const result = await trigger({
+      method: 'POST',
+      path: '/collect',
+      body: { batch: [{ name: 'page view' }] },
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.body).toHaveProperty('processed', 1);
+    expect(result.body).not.toHaveProperty('timestamp');
+  });
+
+  it('answers 200 with processed 0 for an explicit empty batch', async () => {
+    const trigger = await boot(false);
+
+    const result = await trigger({
+      method: 'POST',
+      path: '/collect',
+      body: { batch: [] },
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.body).toMatchObject({ processed: 0 });
+    expect(captured).toHaveLength(0);
   });
 
   // The varying-value carve-out: respond-first cannot know per-index outcomes,

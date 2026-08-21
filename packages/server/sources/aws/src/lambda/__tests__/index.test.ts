@@ -478,10 +478,10 @@ describe('sourceLambda', () => {
       expect(result.statusCode).toBe(200);
     });
 
-    // The source no longer decides what a valid event is: it forwards the
-    // body verbatim so a source.before chain can rewrite it, and the
-    // collector's event gate answers 400 for a body that never becomes one.
-    // With a mocked push that always succeeds, the source answers 200.
+    // The source does not decide what a valid event is. It forwards the body
+    // verbatim so a source.before chain can rewrite it, and the collector's
+    // event gate answers 400 for a body that never becomes one. With a mocked
+    // push that always succeeds, the source answers 200.
     it('forwards a non-event object body verbatim', async () => {
       const source = await sourceLambda(
         createSourceContext(

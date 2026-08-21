@@ -220,9 +220,11 @@ export type ScopeEnv<T extends TypesGeneric = Types> = Env<T> & {
  * destinations read this shape and nothing else, so a mapping written once
  * resolves the same on every source.
  *
- * A field a platform cannot supply is absent rather than guessed. `raw` carries
- * the untouched platform object for the cases normalization deliberately does
- * not cover.
+ * A value a platform does not supply is never guessed. `ip` is the one optional
+ * field and is simply absent there; the required fields carry a documented
+ * empty value instead (`url` is `''` when the platform cannot form one). `raw`
+ * carries the untouched platform object for the cases normalization
+ * deliberately does not cover.
  */
 export interface Scope {
   /** Uppercase HTTP method. */

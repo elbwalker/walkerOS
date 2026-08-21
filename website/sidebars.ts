@@ -130,6 +130,8 @@ const sidebars: SidebarsConfig = {
                 id: 'sources/server/index',
               },
               items: [
+                'sources/scope',
+                'sources/envelope',
                 'sources/server/express',
                 'sources/server/fetch',
                 'sources/server/aws',
@@ -597,7 +599,11 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Migrating',
       collapsed: true,
-      items: ['migrating/v3-to-v4', 'migrate/cli-4x'],
+      items: [
+        'migrating/v3-to-v4',
+        'migrate/cli-4x',
+        'migrate/server-source-contract',
+      ],
     },
 
     // ── vs. Alternatives ─────────────────────────────────────────

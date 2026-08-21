@@ -1,4 +1,5 @@
 import type { Collector } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 import type { EventRequest } from './types';
 
 export async function processEvent(
@@ -6,7 +7,10 @@ export async function processEvent(
   push: Collector.PushFn,
 ): Promise<{ id?: string; error?: string; status?: number }> {
   try {
-    const { event, ...rest } = eventReq;
+    // A batch element that is not an object carries no event fields. Treat it
+    // as an empty event so the collector's gate classifies it as invalid
+    // input, rather than throwing here and reporting a server fault.
+    const { event, ...rest } = isObject(eventReq) ? eventReq : {};
     const result = await push({ ...rest, name: rest.name ?? event });
 
     if (result?.ok === false) {

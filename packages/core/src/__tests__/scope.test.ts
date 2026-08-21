@@ -37,6 +37,14 @@ describe('normalizeHeaders', () => {
   it('yields {} for a non-empty array', () => {
     expect(normalizeHeaders(['a', 'b'])).toEqual({});
   });
+
+  it('keeps a header named __proto__ as an own key', () => {
+    // A real header bag arrives parsed, which does create an own key here,
+    // unlike an object literal where __proto__ sets the prototype.
+    const bag: unknown = JSON.parse('{"__proto__":"x","a":"b"}');
+    const headers = normalizeHeaders(bag);
+    expect(Object.keys(headers).sort()).toEqual(['__proto__', 'a']);
+  });
 });
 
 describe('normalizeQuery', () => {
@@ -46,6 +54,10 @@ describe('normalizeQuery', () => {
     ['a=1&a=2', { a: '1,2' }],
     ['', {}],
     ['?', {}],
+    // An inherited Object.prototype name must not look like a repeated key.
+    ['toString=a', { toString: 'a' }],
+    ['constructor=a', { constructor: 'a' }],
+    ['a=1&a=2&a=3', { a: '1,2,3' }],
   ])('%s -> %p', (input, expected) => {
     expect(normalizeQuery(input)).toEqual(expected);
   });
@@ -65,6 +77,25 @@ describe('normalizeBody', () => {
   it('decodes base64 before parsing', () => {
     const encoded = Buffer.from('{"name":"page view"}').toString('base64');
     expect(normalizeBody(encoded, true)).toEqual({ name: 'page view' });
+  });
+
+  it('decodes multi-byte UTF-8 through base64', () => {
+    const encoded = Buffer.from(
+      JSON.stringify({ name: 'page view', data: { t: 'Grüße 🎉 東京' } }),
+    ).toString('base64');
+    expect(normalizeBody(encoded, true)).toEqual({
+      name: 'page view',
+      data: { t: 'Grüße 🎉 東京' },
+    });
+  });
+
+  it('returns the input unchanged for malformed base64', () => {
+    expect(normalizeBody('!!!not-base64!!!', true)).toBe('!!!not-base64!!!');
+  });
+
+  it('returns the decoded text when base64 decodes to non-JSON', () => {
+    const encoded = Buffer.from('plain text payload').toString('base64');
+    expect(normalizeBody(encoded, true)).toBe('plain text payload');
   });
 
   it('passes a non-string through untouched', () => {

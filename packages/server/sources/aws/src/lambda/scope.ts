@@ -35,7 +35,7 @@ export function buildScope(event: LambdaEvent): Source.Scope {
   };
 
   const ip = isAPIGatewayV2(event)
-    ? event.requestContext.http.sourceIp
+    ? event.requestContext?.http?.sourceIp
     : event.requestContext?.identity?.sourceIp;
   if (ip) scope.ip = ip;
 

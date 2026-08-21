@@ -1,4 +1,5 @@
 import { isArray, isObject } from './is';
+import type { Source } from './types';
 
 /**
  * Normalizes a platform header collection into a plain bag with lowercased
@@ -13,7 +14,9 @@ import { isArray, isObject } from './is';
  * @returns Header names lowercased, values as strings.
  */
 export function normalizeHeaders(input: unknown): Record<string, string> {
-  const headers: Record<string, string> = {};
+  // Null prototype: a header literally named `__proto__` must become an own
+  // key rather than hitting the prototype setter and vanishing.
+  const headers: Record<string, string> = Object.create(null);
 
   if (!input || typeof input !== 'object' || isArray(input)) return headers;
 
@@ -48,7 +51,9 @@ export function normalizeHeaders(input: unknown): Record<string, string> {
  * @returns Query parameters as strings.
  */
 export function normalizeQuery(queryString: string): Record<string, string> {
-  const query: Record<string, string> = {};
+  // Null prototype: `in` below must report only keys this bag actually holds,
+  // and a parameter named `__proto__` must become an own key.
+  const query: Record<string, string> = Object.create(null);
   if (!queryString) return query;
 
   const params = new URLSearchParams(
@@ -115,7 +120,7 @@ export function normalizeBody(body: unknown, base64?: boolean): unknown {
  * @param value The value to check.
  * @returns True when the value carries the required scope fields.
  */
-export function isScope(value: unknown): boolean {
+export function isScope(value: unknown): value is Source.Scope {
   return (
     isObject(value) &&
     typeof value.method === 'string' &&

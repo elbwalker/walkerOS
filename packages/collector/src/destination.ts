@@ -693,13 +693,14 @@ export async function pushToDestinations(
             ) as WalkerOS.Event[];
           }
 
-          // One child of the before chain, from the step-level cache check
-          // through the destination.next chain. Extracted so a fan-out runs it
-          // once per child instead of keeping only the first.
+          // Delivers one child of the before chain, from the step-level cache
+          // check through the destination.next chain. Runs once per child, so
+          // a fan-out reaches the destination in full. Returns whether the
+          // child was actually delivered.
           const deliverOne = async (
             processedEvent: WalkerOS.Event | null,
             cacheMiss: { key: string; ttl: number } | undefined,
-          ): Promise<void> => {
+          ): Promise<boolean> => {
             // Step-level cache check: after before chain, skip only push on HIT
             if (compiledDCache && !compiledDCache.stop && dCacheStore) {
               const cacheContext = buildCacheContext(
@@ -712,7 +713,7 @@ export async function pushToDestinations(
                 cacheContext,
               );
               if (cacheResult?.status === 'HIT') {
-                return; // Skip push — deduplicated
+                return false; // Skip push, deduplicated
               }
               if (cacheResult?.status === 'MISS') {
                 cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
@@ -856,17 +857,18 @@ export async function pushToDestinations(
                 if (nextResult.respond) destRespond = nextResult.respond;
               }
             }
+
+            return true;
           };
 
           for (const child of children) {
             // Each child gets its own step-level cache decision; the full-check
             // miss recorded before the chain is shared, since it was computed
-            // from the one event that entered.
-            await deliverOne(child, cacheMiss);
-            pushedCount++;
+            // from the one event that entered. Only a child that actually
+            // reached the destination counts as delivered.
+            if (await deliverOne(child, cacheMiss)) pushedCount++;
           }
 
-          return event;
           return event;
         }),
       );
@@ -951,7 +953,7 @@ export async function pushToDestinations(
       // this exceed allowedCount, which counts what entered.
       const deliveredCount = result.pushedCount ?? allowedCount;
       const syncDelivered = Math.max(0, deliveredCount - batchedCount);
-      if (syncDelivered > 0 || deliveredCount === 0) {
+      if (syncDelivered > 0 || allowedCount === 0) {
         done[result.id] = ref;
         // For non-batched destinations preserve the historical semantics
         // (one bump per pushToDestinations call, regardless of allowed

@@ -1,11 +1,9 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResult } from 'aws-lambda';
-import { normalizeBody } from '@walkeros/core';
 import type {
   LambdaEvent,
   ParsedRequest,
   CorsOptions,
   RequestBody,
-  EventRequest,
 } from './types';
 
 export function isAPIGatewayV2(
@@ -78,16 +76,6 @@ export function getPath(event: LambdaEvent): string {
   } else {
     return event.path;
   }
-}
-
-export function parseBody(body: unknown, isBase64Encoded: boolean): unknown {
-  return normalizeBody(body, isBase64Encoded);
-}
-
-export function isEventRequest(body: unknown): body is EventRequest {
-  if (typeof body !== 'object' || body === null) return false;
-  if ('name' in body && typeof body.name === 'string') return true;
-  return 'event' in body && typeof body.event === 'string';
 }
 
 export function getCorsHeaders(

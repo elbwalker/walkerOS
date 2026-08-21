@@ -122,4 +122,43 @@ describe('destination before-chain fan-out', () => {
 
     expect(sender).toHaveBeenCalledTimes(1);
   });
+
+  // Fan-out and the step-level destination cache interact: each child gets its
+  // own cache decision, so two children sharing a key deliver once. Nothing
+  // else covers that pair.
+  it('gives each child its own step-level cache decision', async () => {
+    const received: WalkerOS.Event[] = [];
+    const { collector, elb } = await startFlow({
+      // Fan one event into two children that share a cache key, so the second
+      // child is deduplicated by the step-level check.
+      transformers: {
+        forkSame: {
+          code: async (context): Promise<Transformer.Instance> => ({
+            type: 'fork',
+            config: context.config,
+            push: async (event) => [{ event }, { event }],
+          }),
+        },
+      },
+      destinations: {
+        capture: {
+          code: {
+            type: 'test',
+            config: {},
+            push: async (event) => {
+              received.push(event);
+            },
+          },
+          before: ['forkSame'],
+          cache: { stop: false, rules: [{ key: ['event.name'], ttl: 60 }] },
+        },
+      },
+    });
+
+    await elb('page view', {});
+    await collector.command('shutdown');
+
+    // Only the first child reaches the destination; the second is deduplicated.
+    expect(received).toHaveLength(1);
+  });
 });

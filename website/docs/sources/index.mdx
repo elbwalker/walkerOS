@@ -40,9 +40,9 @@ Every server source normalizes its platform's request into one shared shape
 before mapping, and accepts one shared set of POST body forms. Two pages define
 them:
 
-* **[Request scope](/docs/sources/scope)** — the eight fields `config.ingest`
+* **[Request scope](/docs/sources/scope)**: the eight fields `config.ingest`
   resolves against, identical on every server source.
-* **[Event envelope](/docs/sources/envelope)** — how many events a request body
+* **[Event envelope](/docs/sources/envelope)**: how many events a request body
   carries, the batch cap, and the response contract.
 
 Web and queue sources have no inbound request to adapt, so neither applies to
