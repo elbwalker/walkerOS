@@ -76,3 +76,9 @@ only the last event's values for a batch. This affects `@walkeros/transformer-bo
 **While either transformer is in the chain, prefer single event requests.** Batch
 delivery is correct for the events themselves; only the `ingest` annotations
 collapse. A per event annotation channel is planned.
+
+This applies to every batch producer, not just browser clients. A walkerOS
+runtime forwarding to another walkerOS runtime is one too: with `config.batch`
+set, `@walkeros/server-destination-api` sends one request carrying many events,
+so a receiving flow that runs either transformer collapses its annotations the
+same way.
