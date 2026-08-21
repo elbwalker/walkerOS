@@ -85,7 +85,9 @@ describe('gcp envelope', () => {
     const res = createMockResponse();
 
     await source.push(
-      createMockRequest({ batch: [{ name: 'a' }, { name: 'b' }] }),
+      createMockRequest({
+        batch: [{ name: 'page view' }, { name: 'order complete' }],
+      }),
       res,
     );
 
@@ -97,7 +99,10 @@ describe('gcp envelope', () => {
     const source = await boot();
     const res = createMockResponse();
 
-    await source.push(createMockRequest([{ name: 'a' }, { name: 'b' }]), res);
+    await source.push(
+      createMockRequest([{ name: 'page view' }, { name: 'order complete' }]),
+      res,
+    );
 
     expect(res.statusCode).toBe(200);
     expect(mockPush).toHaveBeenCalledTimes(2);
@@ -119,7 +124,11 @@ describe('gcp envelope', () => {
 
     await source.push(
       createMockRequest({
-        batch: [{ name: 'a' }, { name: 'b' }, { name: 'c' }],
+        batch: [
+          { name: 'page view' },
+          { name: 'order complete' },
+          { name: 'product view' },
+        ],
       }),
       res,
     );
@@ -141,7 +150,9 @@ describe('gcp envelope', () => {
     const res = createMockResponse();
 
     await source.push(
-      createMockRequest({ batch: [{ name: 'a' }, { name: 'b' }] }),
+      createMockRequest({
+        batch: [{ name: 'page view' }, { name: 'order complete' }],
+      }),
       res,
     );
 
@@ -158,7 +169,10 @@ describe('gcp envelope', () => {
     const source = await boot();
     const res = createMockResponse();
 
-    await source.push(createMockRequest({ batch: [{ name: 'a' }] }), res);
+    await source.push(
+      createMockRequest({ batch: [{ name: 'page view' }] }),
+      res,
+    );
 
     expect(res.payload).toHaveProperty('processed', 1);
     expect(res.payload).not.toHaveProperty('id');

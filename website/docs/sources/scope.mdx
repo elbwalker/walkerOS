@@ -37,8 +37,14 @@ which keeps the guess in your configuration where you can see it.
 
 The body is parsed once, at the boundary. A `navigator.sendBeacon` payload
 arrives as `text/plain` on several platforms and an API Gateway body can be
-base64 encoded; both are resolved before the scope exists, so `ingest.body` and
-the event your pipeline receives are always the same value.
+base64 encoded; both are resolved before the scope exists, so `config.ingest`
+mappings and the event pipeline read the same normalized value rather than one
+seeing the raw string and the other the parsed object.
+
+A body that does not parse to an object is kept as-is and yields one empty
+event, so a `source.before` transformer can decode it from `ingest.body`. That
+case is the one where the two deliberately differ; see the
+[event envelope](/docs/sources/envelope).
 
 ## Escape hatch: `raw`
 

@@ -58,8 +58,13 @@ descend. They now work.
 
 On Lambda and Cloud Functions the body is parsed once, when the scope is built.
 A `sendBeacon` payload sent as `text/plain` and a base64 encoded API Gateway
-body both resolve before mapping, so `ingest.body` and the event your pipeline
-receives are the same value. They previously disagreed.
+body both resolve before mapping, so mapping and the event pipeline now read
+the same normalized input. They previously disagreed, because the parse ran
+after the scope was built.
+
+A body that does not parse to an object stays raw in `ingest.body` and produces
+one empty event, which is what lets a `source.before` transformer decode it.
+There, `ingest.body` and the event deliberately differ.
 
 ## A non-event object body is forwarded, not replaced
 

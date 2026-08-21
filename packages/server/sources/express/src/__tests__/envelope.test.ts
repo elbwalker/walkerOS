@@ -95,7 +95,13 @@ describe('Express envelope', () => {
     const result = await trigger({
       method: 'POST',
       path: '/collect',
-      body: { batch: [{ name: 'a' }, { name: 'b' }, { name: 'c' }] },
+      body: {
+        batch: [
+          { name: 'page view' },
+          { name: 'order complete' },
+          { name: 'product view' },
+        ],
+      },
     });
 
     expect(result.status).toBe(400);

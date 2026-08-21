@@ -130,10 +130,13 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
         }
 
         const bodyText = await request.text();
+        // The limit is in bytes, and String.length counts UTF-16 code units,
+        // so a non-ASCII body would otherwise pass a limit it exceeds.
+        const bodySize = new TextEncoder().encode(bodyText).byteLength;
 
-        if (bodyText.length > settings.maxRequestSize) {
+        if (bodySize > settings.maxRequestSize) {
           logger.debug('Request body too large', {
-            size: bodyText.length,
+            size: bodySize,
             limit: settings.maxRequestSize,
           });
           return tooLarge();

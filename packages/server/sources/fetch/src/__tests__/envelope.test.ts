@@ -82,9 +82,27 @@ describe('fetch envelope contract', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
+  // The limit is in bytes. A multi-byte body that is under the limit in
+  // UTF-16 code units but over it in bytes must still be rejected.
+  it('measures the body limit in UTF-8 bytes, not code units', async () => {
+    const source = await boot(mockPush);
+    // 60000 two-byte characters: 60000 code units, 120000 bytes, limit 102400.
+    const request = post({
+      name: 'page view',
+      data: { pad: 'é'.repeat(60000) },
+    });
+
+    const response = await source.push(request);
+
+    expect(response.status).toBe(413);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
   it('rejects an over-cap batch with 400 and pushes nothing', async () => {
     const source = await boot(mockPush);
-    const batch = Array.from({ length: 101 }, (_, i) => ({ name: `e${i}` }));
+    const batch = Array.from({ length: 101 }, (_, i) => ({
+      name: `page view ${i}`,
+    }));
 
     const response = await source.push(post({ batch }));
 
@@ -100,7 +118,7 @@ describe('fetch envelope contract', () => {
     const source = await boot(mockPush);
 
     const response = await source.push(
-      post({ batch: [{ name: 'a' }, { name: 'b' }] }),
+      post({ batch: [{ name: 'page view' }, { name: 'order complete' }] }),
     );
 
     expect(response.status).toBe(207);
@@ -116,7 +134,7 @@ describe('fetch envelope contract', () => {
     const source = await boot(mockPush);
 
     const response = await source.push(
-      post({ batch: [{ name: 'a' }, { name: 'b' }] }),
+      post({ batch: [{ name: 'page view' }, { name: 'order complete' }] }),
     );
 
     expect(response.status).toBe(200);
@@ -132,7 +150,9 @@ describe('fetch envelope contract', () => {
   it('keeps the batch response shape for a single-element batch', async () => {
     const source = await boot(mockPush);
 
-    const response = await source.push(post({ batch: [{ name: 'a' }] }));
+    const response = await source.push(
+      post({ batch: [{ name: 'page view' }] }),
+    );
     const payload = await response.json();
 
     expect(response.status).toBe(200);
@@ -152,7 +172,13 @@ describe('fetch envelope contract', () => {
     const source = await boot(mockPush);
 
     const response = await source.push(
-      post({ batch: [{ name: 'a' }, { name: 'b' }, { name: 'c' }] }),
+      post({
+        batch: [
+          { name: 'page view' },
+          { name: 'order complete' },
+          { name: 'product view' },
+        ],
+      }),
     );
 
     expect(await response.json()).toMatchObject({ ids: ['a', null, 'c'] });
@@ -161,7 +187,9 @@ describe('fetch envelope contract', () => {
   it('accepts a bare array as N events', async () => {
     const source = await boot(mockPush);
 
-    const response = await source.push(post([{ name: 'a' }, { name: 'b' }]));
+    const response = await source.push(
+      post([{ name: 'page view' }, { name: 'order complete' }]),
+    );
 
     expect(response.status).toBe(200);
     expect(mockPush).toHaveBeenCalledTimes(2);

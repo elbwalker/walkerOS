@@ -10,13 +10,13 @@ describe('toEventList', () => {
     ['one event object', { name: 'page view' }, [{ name: 'page view' }]],
     [
       'a batch envelope',
-      { batch: [{ name: 'a' }, { name: 'b' }] },
-      [{ name: 'a' }, { name: 'b' }],
+      { batch: [{ name: 'page view' }, { name: 'order complete' }] },
+      [{ name: 'page view' }, { name: 'order complete' }],
     ],
     [
       'a bare array',
-      [{ name: 'a' }, { name: 'b' }],
-      [{ name: 'a' }, { name: 'b' }],
+      [{ name: 'page view' }, { name: 'order complete' }],
+      [{ name: 'page view' }, { name: 'order complete' }],
     ],
     ['an unparseable string body', 'not json', [{}]],
     ['no body', undefined, [{}]],
@@ -42,11 +42,19 @@ describe('toEventList', () => {
 
 describe('isBatchBody', () => {
   it.each([
-    ['a batch envelope', { batch: [{ name: 'a' }, { name: 'b' }] }, true],
-    ['a single-element batch envelope', { batch: [{ name: 'a' }] }, true],
+    [
+      'a batch envelope',
+      { batch: [{ name: 'page view' }, { name: 'order complete' }] },
+      true,
+    ],
+    [
+      'a single-element batch envelope',
+      { batch: [{ name: 'page view' }] },
+      true,
+    ],
     ['an empty batch envelope', { batch: [] }, true],
-    ['a bare array', [{ name: 'a' }, { name: 'b' }], true],
-    ['a bare single-element array', [{ name: 'a' }], true],
+    ['a bare array', [{ name: 'page view' }, { name: 'order complete' }], true],
+    ['a bare single-element array', [{ name: 'page view' }], true],
     ['one event object', { name: 'page view' }, false],
     ['a non-array batch key', { name: 'page view', batch: 'x' }, false],
     ['an unparseable string body', 'not json', false],

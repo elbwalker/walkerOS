@@ -61,19 +61,18 @@ describe('aws envelope', () => {
       .mockResolvedValue({ event: { id: 'test-id' }, ok: true });
   });
 
-  it.each(bodies({ batch: [{ name: 'a' }, { name: 'b' }] }))(
-    '%s accepts a batch envelope as N events',
-    async (_, event) => {
-      const source = await boot();
+  it.each(
+    bodies({ batch: [{ name: 'page view' }, { name: 'order complete' }] }),
+  )('%s accepts a batch envelope as N events', async (_, event) => {
+    const source = await boot();
 
-      const result = await source.push(event, createMockContext());
+    const result = await source.push(event, createMockContext());
 
-      expect(result.statusCode).toBe(200);
-      expect(mockPush).toHaveBeenCalledTimes(2);
-    },
-  );
+    expect(result.statusCode).toBe(200);
+    expect(mockPush).toHaveBeenCalledTimes(2);
+  });
 
-  it.each(bodies([{ name: 'a' }, { name: 'b' }]))(
+  it.each(bodies([{ name: 'page view' }, { name: 'order complete' }]))(
     '%s accepts a bare array as N events',
     async (_, event) => {
       const source = await boot();
@@ -101,7 +100,13 @@ describe('aws envelope', () => {
     const source = await boot({ settings: { maxBatchSize: 2 } });
     const event = createMockEventV1(
       'POST',
-      JSON.stringify({ batch: [{ name: 'a' }, { name: 'b' }, { name: 'c' }] }),
+      JSON.stringify({
+        batch: [
+          { name: 'page view' },
+          { name: 'order complete' },
+          { name: 'product view' },
+        ],
+      }),
     );
 
     const result = await source.push(event, createMockContext());
@@ -122,7 +127,9 @@ describe('aws envelope', () => {
     const source = await boot();
     const event = createMockEventV1(
       'POST',
-      JSON.stringify({ batch: [{ name: 'a' }, { name: 'b' }] }),
+      JSON.stringify({
+        batch: [{ name: 'page view' }, { name: 'order complete' }],
+      }),
     );
 
     const result = await source.push(event, createMockContext());
@@ -140,7 +147,7 @@ describe('aws envelope', () => {
     const source = await boot();
     const event = createMockEventV1(
       'POST',
-      JSON.stringify({ batch: [{ name: 'a' }] }),
+      JSON.stringify({ batch: [{ name: 'page view' }] }),
     );
 
     const result = await source.push(event, createMockContext());
