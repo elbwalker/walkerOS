@@ -364,7 +364,7 @@ walkeros run https://example.com/flow.tar.gz
 ```bash
 # Provision external resources for one component (explicit only, never
 # triggered by push, simulate, deploy, or the runtime)
-walkeros setup <kind>.<name> [-c ./flow.json] [-f <flow>] [--json]
+walkeros setup <kind>.<name> [-c ./flow.json] [-f <flow>] [--json] [--verbose] [--silent]
 ```
 
 The target uses the same `<kind>.<name>` syntax as `walkeros push --simulate`

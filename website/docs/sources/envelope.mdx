@@ -48,7 +48,7 @@ Single event requests keep their existing per source response bodies.
 ### 207 requires synchronous mode
 
 The Express source acknowledges POST requests before delivery by default
-(`async` resolves to `true` for POST), so it cannot report per index outcomes:
+(`async` resolves to `true` for POST), so it cannot report per-index outcomes:
 an accepted batch answers 200 meaning "accepted", not "delivered", and
 failures surface through `collector.status` and the logs. Set
 `config.async: false` or `config.async: { "POST": false }` to have the

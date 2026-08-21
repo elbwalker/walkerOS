@@ -229,6 +229,7 @@ export async function loadStepPackage(
         `sharing the bundle cache. If you are offline, run once online to ` +
         `warm the cache (exact version pins stay cached), or point ` +
         `config.bundle.packages["${packageName}"].path at a local built package.`,
+      { cause: error },
     );
   }
 }

@@ -178,12 +178,12 @@ push.
 | Status | Meaning |
 |--------|---------|
 | 200 | Accepted (respond-first mode: accepted for processing, not proof of delivery) or, in synchronous mode, processed |
-| 400 | Rejected client input: unparseable JSON (body echoes the parser message) or, in synchronous mode, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
+| 400 | Rejected client input: unparseable JSON (body echoes the parser message) or, on synchronous POST, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
 | 404 | Path not configured in `paths` |
 | 405 | Method not allowed on the path |
 | 413 | Body exceeds the 1mb limit |
 | 415 | Unsupported charset |
-| 500 | In synchronous mode: the pipeline failed to process a valid event. Otherwise: unexpected server fault |
+| 500 | On synchronous POST: the pipeline failed to process a valid event. Otherwise: unexpected server fault |
 
 GET pixel requests always answer the GIF with 200 in every mode, because an image
 endpoint cannot carry a useful 400. Rejected pixel input is visible through the
