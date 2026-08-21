@@ -297,6 +297,19 @@ describe('loadStepPackage', () => {
     ).rejects.toThrow(/registry.*offline|offline.*registry/i);
   });
 
+  it('allocates a distinct install dir per concurrent load', async () => {
+    const [a, b] = await Promise.all([
+      loadStepPackage(pinnedFlow, 'destination', 'd', { logger }),
+      loadStepPackage(pinnedFlow, 'destination', 'd', { logger }),
+    ]);
+    try {
+      expect(a.installDir).not.toBe(b.installDir);
+    } finally {
+      await fs.remove(a.installDir);
+      await fs.remove(b.installDir);
+    }
+  });
+
   it('errors when the resolved tree misses the requested package', async () => {
     mockedDownload.mockResolvedValue({
       packagePaths: new Map(),

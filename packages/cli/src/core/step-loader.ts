@@ -185,9 +185,11 @@ export async function loadStepPackage(
   );
 
   const npmConfig = await loadNpmConfigForPacote(opts.configDir);
-  const installDir = getTmpPath(
-    opts.tmpDir,
-    `walkeros-setup-${process.pid}-${Date.now()}`,
+  // mkdtemp guarantees a unique tree per load: concurrent loads must never
+  // share an installDir, since each caller removes its tree when done.
+  await fs.ensureDir(getTmpPath(opts.tmpDir));
+  const installDir = await fs.mkdtemp(
+    getTmpPath(opts.tmpDir, 'walkeros-setup-'),
   );
 
   try {
