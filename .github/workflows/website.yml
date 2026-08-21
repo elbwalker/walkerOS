@@ -12,6 +12,18 @@ on:
       - 'website/**'
       - '.github/workflows/website.yml'
   workflow_dispatch:
+    inputs:
+      prune_mode:
+        description:
+          'Remote prune: guarded (default), dry-run (list stale files only), or
+          force (override the safety cap, e.g. for the first cleanup of
+          accumulated stale files)'
+        type: choice
+        options:
+          - guarded
+          - dry-run
+          - force
+        default: guarded
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -54,7 +66,9 @@ jobs:
         run: npm run validate
 
       - name: Deploy to production
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if:
+          github.ref == 'refs/heads/main' && (github.event_name == 'push' ||
+          github.event_name == 'workflow_dispatch')
         working-directory: website
         run: node scripts/deploy-bunny.mjs
         env:
@@ -62,6 +76,10 @@ jobs:
           BUNNY_STORAGE_PASSWORD: ${{ secrets.BUNNY_WEBSITE_STORAGE_PASSWORD }}
           BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
           BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}
+          PRUNE_DRY_RUN:
+            ${{ github.event.inputs.prune_mode == 'dry-run' && '1' || '' }}
+          PRUNE_FORCE:
+            ${{ github.event.inputs.prune_mode == 'force' && '1' || '' }}
 
       - name: Deploy PR preview
         if: github.event_name == 'pull_request'

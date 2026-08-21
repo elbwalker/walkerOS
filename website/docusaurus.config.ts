@@ -682,7 +682,10 @@ const config: Config = {
         ],
         content: {
           enableMarkdownFiles: true,
-          enableLlmsFullTxt: true,
+          // No llms-full.txt: a multi-megabyte concatenation exceeds any
+          // practical context budget, and compact context beats full docs.
+          // Agents follow llms.txt links to the per-page .md exports instead.
+          enableLlmsFullTxt: false,
           // llms.txt is read detached from the site: pasted into an agent's
           // context, chunked, or fetched on its own. A root-relative target has
           // nothing to resolve against there, so the production export is fully
