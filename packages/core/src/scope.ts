@@ -127,3 +127,71 @@ export function isScope(value: unknown): value is Source.Scope {
     isObject(value.headers)
   );
 }
+
+/**
+ * The fields a Node style request exposes that scope construction reads.
+ *
+ * Structural, so core stays free of any framework dependency. Express and the
+ * GCP Functions Framework both satisfy it; the Functions Framework hands the
+ * handler an Express request.
+ */
+export interface NodeLikeRequest {
+  method?: string;
+  headers?: unknown;
+  originalUrl?: string;
+  url?: string;
+  path?: string;
+  protocol?: string;
+  ip?: string;
+  get?: (name: string) => string | undefined;
+}
+
+/**
+ * Builds the normalized scope from a Node style request.
+ *
+ * Every read tolerates a partial request: sub-app mounting changes which of
+ * `originalUrl` and `url` carries the full path, and a scope that throws on a
+ * missing optional would turn scope construction into a 500 for the whole
+ * request. A missing field yields the contract's empty value.
+ *
+ * The body is supplied by the caller rather than read here, because each
+ * platform decides whether it arrives already parsed.
+ *
+ * @param req The request.
+ * @param options `body` is the resolved request body. `defaultProtocol` is used
+ *   when the request and its headers name none.
+ * @returns The normalized scope.
+ */
+export function buildScopeFromNodeRequest(
+  req: NodeLikeRequest,
+  options: { body: unknown; defaultProtocol: string },
+): Source.Scope {
+  const headers = normalizeHeaders(req.headers);
+  const originalUrl = req.originalUrl || req.url || '';
+  const separator = originalUrl.indexOf('?');
+  const queryString = separator === -1 ? '' : originalUrl.slice(separator);
+  const path =
+    req.path ||
+    (separator === -1 ? originalUrl : originalUrl.slice(0, separator));
+
+  const host =
+    (typeof req.get === 'function' ? req.get('host') : undefined) ||
+    headers.host;
+  const protocol =
+    req.protocol || headers['x-forwarded-proto'] || options.defaultProtocol;
+
+  const scope: Source.Scope = {
+    method: (req.method || '').toUpperCase(),
+    // An absolute URL or nothing: a partial URL would be a third shape.
+    url: host ? `${protocol}://${host}${originalUrl}` : '',
+    path,
+    query: normalizeQuery(queryString),
+    headers,
+    body: options.body,
+    raw: req,
+  };
+
+  if (req.ip) scope.ip = req.ip;
+
+  return scope;
+}

@@ -9,6 +9,8 @@ import {
   createRespond,
   toEventList,
   isBatchBody,
+  batchResponse,
+  pushResultToOutcome,
 } from '@walkeros/core';
 import type { Elb, Logger, Source } from '@walkeros/core';
 import type { ExpressSource, Types, EventRequest } from './types';
@@ -278,9 +280,21 @@ export const sourceExpress = async (
             // acknowledged as accepted; per-index outcomes are not knowable
             // yet, so they surface through collector.status and logs.
             respond({ body: { success: true, timestamp: Date.now() } });
-            events.forEach((event) =>
-              settleAfterAck(env.push(event), env.logger),
-            );
+            // Ack first, then deliver in submission order. The first push
+            // starts immediately, so a single event is delivered exactly as
+            // before; the rest are chained so a batch keeps the order every
+            // other batch path guarantees, without the client waiting.
+            let chain: Promise<unknown> = Promise.resolve();
+            events.forEach((event, index) => {
+              const deliver = () => {
+                const pushed = env.push(event);
+                settleAfterAck(pushed, env.logger);
+                // The chain only sequences; failures are already logged and
+                // must not stop the siblings behind them.
+                return pushed.catch(() => undefined);
+              };
+              chain = index === 0 ? deliver() : chain.then(deliver);
+            });
             return;
           }
 
@@ -293,32 +307,10 @@ export const sourceExpress = async (
           }
 
           if (batched) {
-            const errors = results.flatMap((result, index) =>
-              result?.ok === false
-                ? [{ index, error: result.error ?? 'Event was not processed' }]
-                : [],
+            const { status, body } = batchResponse(
+              results.map(pushResultToOutcome),
             );
-
-            if (errors.length) {
-              respond({
-                status: 207,
-                body: {
-                  success: false,
-                  processed: results.length - errors.length,
-                  failed: errors.length,
-                  errors,
-                },
-              });
-              return;
-            }
-
-            respond({
-              body: {
-                success: true,
-                processed: results.length,
-                ids: results.map((result) => result?.event?.id),
-              },
-            });
+            respond(status === 200 ? { body } : { status, body });
             return;
           }
 

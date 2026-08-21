@@ -1,6 +1,11 @@
 import type { LambdaSource, Types } from './types';
 import type { Source } from '@walkeros/core';
-import { isBatchBody, requestToData, toEventList } from '@walkeros/core';
+import {
+  batchResponse,
+  isBatchBody,
+  requestToData,
+  toEventList,
+} from '@walkeros/core';
 import {
   parseEvent,
   getCorsHeaders,
@@ -125,33 +130,10 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
           }
 
           if (batched) {
-            const errors = results.flatMap((result, index) =>
-              result.error ? [{ index, error: result.error }] : [],
-            );
-
-            if (errors.length) {
-              return createResponse(
-                207,
-                {
-                  success: false,
-                  processed: results.length - errors.length,
-                  failed: errors.length,
-                  errors,
-                  requestId,
-                },
-                corsHeaders,
-                requestId,
-              );
-            }
-
+            const { status, body } = batchResponse(results);
             return createResponse(
-              200,
-              {
-                success: true,
-                processed: results.length,
-                ids: results.map((result) => result.id),
-                requestId,
-              },
+              status,
+              { ...body, requestId },
               corsHeaders,
               requestId,
             );

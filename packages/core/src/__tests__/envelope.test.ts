@@ -1,4 +1,9 @@
-import { toEventList, isBatchBody } from '../envelope';
+import {
+  toEventList,
+  isBatchBody,
+  batchResponse,
+  pushResultToOutcome,
+} from '../envelope';
 
 describe('toEventList', () => {
   it.each([
@@ -48,5 +53,62 @@ describe('isBatchBody', () => {
     ['no body', undefined, false],
   ])('%s -> %p', (_, body, expected) => {
     expect(isBatchBody(body)).toBe(expected);
+  });
+});
+
+describe('batchResponse', () => {
+  it('answers 200 with index aligned ids when every event succeeds', () => {
+    expect(batchResponse([{ id: 'a' }, { id: 'b' }])).toEqual({
+      status: 200,
+      body: { success: true, processed: 2, ids: ['a', 'b'] },
+    });
+  });
+
+  // Index alignment is the point: ids[i] must describe the caller's i-th event,
+  // so an accepted event without an id is null rather than omitted.
+  it('keeps ids aligned when an accepted event has no id', () => {
+    expect(batchResponse([{ id: 'a' }, {}, { id: 'c' }]).body.ids).toEqual([
+      'a',
+      null,
+      'c',
+    ]);
+  });
+
+  it('answers 207 with per index errors on partial failure', () => {
+    expect(batchResponse([{ id: 'a' }, { error: 'nope' }])).toEqual({
+      status: 207,
+      body: {
+        success: false,
+        processed: 1,
+        failed: 1,
+        errors: [{ index: 1, error: 'nope' }],
+      },
+    });
+  });
+
+  it('answers 200 with processed 0 for an empty batch', () => {
+    expect(batchResponse([])).toEqual({
+      status: 200,
+      body: { success: true, processed: 0, ids: [] },
+    });
+  });
+});
+
+describe('pushResultToOutcome', () => {
+  it.each([
+    ['an accepted push', { ok: true, event: { id: 'a' } }, { id: 'a' }],
+    ['a declined push', { ok: false, error: 'nope' }, { error: 'nope' }],
+    [
+      'an invalid push with no reason',
+      { ok: false, invalid: true },
+      { error: 'Invalid event' },
+    ],
+    [
+      'a failed push with no reason',
+      { ok: false },
+      { error: 'Event was not processed' },
+    ],
+  ])('%s', (_, result, expected) => {
+    expect(pushResultToOutcome(result)).toEqual(expected);
   });
 });

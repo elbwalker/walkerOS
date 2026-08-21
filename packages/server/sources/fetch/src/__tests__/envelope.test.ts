@@ -141,6 +141,23 @@ describe('fetch envelope contract', () => {
     expect(payload).not.toHaveProperty('id');
   });
 
+  // This source previously compacted ids, so ids[i] stopped describing the
+  // caller's i-th event as soon as one event minted none.
+  it('keeps ids index aligned with the submitted batch', async () => {
+    mockPush = jest
+      .fn()
+      .mockResolvedValueOnce({ event: { id: 'a' }, ok: true })
+      .mockResolvedValueOnce({ event: {}, ok: true })
+      .mockResolvedValueOnce({ event: { id: 'c' }, ok: true });
+    const source = await boot(mockPush);
+
+    const response = await source.push(
+      post({ batch: [{ name: 'a' }, { name: 'b' }, { name: 'c' }] }),
+    );
+
+    expect(await response.json()).toMatchObject({ ids: ['a', null, 'c'] });
+  });
+
   it('accepts a bare array as N events', async () => {
     const source = await boot(mockPush);
 

@@ -7,7 +7,12 @@ import type {
   Types,
 } from './types';
 import type { Source } from '@walkeros/core';
-import { isBatchBody, requestToData, toEventList } from '@walkeros/core';
+import {
+  batchResponse,
+  isBatchBody,
+  requestToData,
+  toEventList,
+} from '@walkeros/core';
 import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
 import { processEvent } from './push';
 import { buildScope } from './scope';
@@ -102,25 +107,8 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
         }
 
         if (batched) {
-          const errors = results.flatMap((result, index) =>
-            result.error ? [{ index, error: result.error }] : [],
-          );
-
-          if (errors.length) {
-            res.status(207).json({
-              success: false,
-              processed: results.length - errors.length,
-              failed: errors.length,
-              errors,
-            });
-            return;
-          }
-
-          res.status(200).json({
-            success: true,
-            processed: results.length,
-            ids: results.map((result) => result.id),
-          });
+          const { status, body } = batchResponse(results);
+          res.status(status).json(body);
           return;
         }
 

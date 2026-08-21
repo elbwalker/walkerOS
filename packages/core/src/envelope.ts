@@ -46,3 +46,86 @@ export function isBatchBody(body: unknown): boolean {
   if (isArray(body)) return true;
   return isObject(body) && isArray(body.batch);
 }
+
+/**
+ * The outcome of delivering one event of a batch.
+ *
+ * `id` is present when the event was accepted and minted one. `error` is
+ * present when it was not accepted.
+ */
+export interface EventOutcome {
+  id?: string;
+  error?: string;
+}
+
+/** A batch response: the status to answer with, and the body to send. */
+export interface BatchResponse {
+  status: 200 | 207;
+  body: {
+    success: boolean;
+    processed: number;
+    failed?: number;
+    ids?: (string | null)[];
+    errors?: Array<{ index: number; error: string }>;
+  };
+}
+
+/**
+ * Builds the shared batch response from per event outcomes.
+ *
+ * One assembly for every source, so the status, the field names and the index
+ * alignment cannot drift apart. `ids` is index aligned with the submitted
+ * batch: an accepted event with no id is `null` rather than omitted, so
+ * `ids[i]` always describes the caller's `i`th event.
+ *
+ * @param outcomes One entry per event, in submission order.
+ * @returns The status and body to answer with.
+ */
+export function batchResponse(outcomes: EventOutcome[]): BatchResponse {
+  const errors = outcomes.flatMap((outcome, index) =>
+    outcome.error ? [{ index, error: outcome.error }] : [],
+  );
+
+  if (errors.length) {
+    return {
+      status: 207,
+      body: {
+        success: false,
+        processed: outcomes.length - errors.length,
+        failed: errors.length,
+        errors,
+      },
+    };
+  }
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      processed: outcomes.length,
+      ids: outcomes.map((outcome) => outcome.id ?? null),
+    },
+  };
+}
+
+/**
+ * Maps a collector push result onto a batch event outcome.
+ *
+ * @param result The push result, or undefined when the push returned none.
+ * @returns The outcome for this event.
+ */
+export function pushResultToOutcome(result: {
+  ok?: boolean;
+  invalid?: boolean;
+  error?: string;
+  event?: { id?: string };
+}): EventOutcome {
+  if (result?.ok === false) {
+    return {
+      error:
+        result.error ??
+        (result.invalid === true ? 'Invalid event' : 'Event was not processed'),
+    };
+  }
+  return { id: result?.event?.id };
+}

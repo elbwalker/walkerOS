@@ -4,8 +4,16 @@ import {
   isObject,
   toEventList,
   isBatchBody,
+  batchResponse,
+  pushResultToOutcome,
 } from '@walkeros/core';
-import type { WalkerOS, Collector, Logger, Source } from '@walkeros/core';
+import type {
+  WalkerOS,
+  Collector,
+  Logger,
+  Source,
+  EventOutcome,
+} from '@walkeros/core';
 import type { FetchSource, Types } from './types';
 import {
   createCorsHeaders,
@@ -180,30 +188,10 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
               );
             }
 
-            const results = await processBatch(batch, envPush, logger);
+            const outcomes = await processBatch(batch, envPush, logger);
+            const { status, body } = batchResponse(outcomes);
 
-            if (results.failed > 0) {
-              return createJsonResponse(
-                {
-                  success: false,
-                  processed: results.successful,
-                  failed: results.failed,
-                  errors: results.errors,
-                },
-                207,
-                corsHeaders,
-              );
-            }
-
-            return createJsonResponse(
-              {
-                success: true,
-                processed: results.successful,
-                ids: results.ids,
-              },
-              200,
-              corsHeaders,
-            );
+            return createJsonResponse(body, status, corsHeaders);
           }
 
           // Forward event directly — validation is not the source's responsibility.
@@ -283,48 +271,26 @@ async function processBatch(
   events: unknown[],
   push: Collector.PushFn,
   logger: Types['env']['logger'],
-): Promise<{
-  successful: number;
-  failed: number;
-  ids: string[];
-  errors: Array<{ index: number; error: string }>;
-}> {
-  const results = {
-    successful: 0,
-    failed: 0,
-    ids: [] as string[],
-    errors: [] as Array<{ index: number; error: string }>,
-  };
+): Promise<EventOutcome[]> {
+  const outcomes: EventOutcome[] = [];
 
   for (let i = 0; i < events.length; i++) {
     const event = events[i];
 
     try {
       const result = await push(event as WalkerOS.DeepPartialEvent);
-      if (result?.ok === false) {
-        results.failed++;
-        results.errors.push({
-          index: i,
-          error: result.error ?? 'Event was not processed',
-        });
-        logger.warn(`Batch event ${i} not processed`);
-        continue;
-      }
-      if (result?.event?.id) {
-        results.ids.push(result.event.id);
-      }
-      results.successful++;
+      const outcome = pushResultToOutcome(result ?? {});
+      if (outcome.error) logger.warn(`Batch event ${i} not processed`);
+      outcomes.push(outcome);
     } catch (error) {
-      results.failed++;
-      results.errors.push({
-        index: i,
+      outcomes.push({
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       logger.warn(`Batch event ${i} processing failed`, error);
     }
   }
 
-  return results;
+  return outcomes;
 }
 
 export type * from './types';
