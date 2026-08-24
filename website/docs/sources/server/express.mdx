@@ -231,7 +231,7 @@ const { collector } = await startFlow({
 
 | Path | Description |
 |------|-------------|
-| `ip` | The socket peer address. Behind a proxy that is the proxy, not the visitor, see [Client IP behind a proxy](#client-ip-behind-a-proxy) |
+| `ip` | Express's `req.ip`. The source never enables Express's `trust proxy`, so this is always the socket peer address; behind a proxy that is the proxy, not the visitor, see [Client IP behind a proxy](#client-ip-behind-a-proxy) |
 | `headers.*` | HTTP headers, lowercased names (user-agent, origin, referer, etc.) |
 | `method` | Uppercase HTTP method |
 | `path` | Pathname, no query string |
@@ -246,8 +246,9 @@ These are the shared [request scope](/docs/sources/scope) fields. `protocol` and
 
 ## Client IP behind a proxy
 
-`ip` is Express's `req.ip`, the socket peer address. Behind a load balancer, a
-CDN or a serverless platform that is the last proxy in the chain, never the
+`ip` is Express's `req.ip`. This source never enables Express's `trust proxy`
+setting, so `req.ip` is always the socket peer address. Behind a load balancer,
+a CDN or a serverless platform that is the last proxy in the chain, never the
 visitor. The `X-Forwarded-For` header carries the real address, but it is a
 comma-separated chain whose left side is written by the client, so parsing it
 means deciding how many trailing hops you trust, a per-deployment security
@@ -261,7 +262,7 @@ header it controls, and map that header with the ingest map you already have.
 |---|---|---|
 | Google external HTTPS LB | `X-Client-IP` | Custom request header `X-Client-IP:{client_ip_address}` on the backend service |
 | Cloudflare | `CF-Connecting-IP` | Set automatically |
-| Fastly | `Fastly-Client-IP` | Set automatically |
+| Fastly | `Fastly-Client-IP` | Must be forced in VCL: `set req.http.Fastly-Client-IP = client.ip;` (Fastly preserves a client-supplied value otherwise) |
 | Akamai | `True-Client-IP` | Enable in the property |
 | nginx | `X-Real-IP` | `proxy_set_header X-Real-IP $remote_addr;` |
 
@@ -287,9 +288,14 @@ leftmost entries are forgeable.
 :::
 
 On a platform that only provides raw `X-Forwarded-For` and no configurable
-header, either accept an absent IP (the pipeline treats a missing signal as
-"measured less", never as a wrong value) or extract the correct hop explicitly
-in the mapping, keeping the trust decision visible in your config:
+header, prefer accepting an absent IP: the pipeline treats a missing signal as
+"measured less", never as a wrong value. Extract a hop from the chain only when
+your proxy's documentation guarantees the position you select. The example
+below is written for the Google-style contract where the proxy appends
+`<client-ip>, <proxy-ip>` to whatever the client sent, so the second entry from
+the right is proxy-verified. Under a proxy that appends only its own address,
+the same position is attacker-controlled, so verify the contract, never infer
+it from observed traffic:
 
 <CodeSnippet
   code={`"ip": {
@@ -299,9 +305,10 @@ in the mapping, keeping the trust decision visible in your config:
   language="json"
 />
 
-The example trusts exactly one proxy (takes the entry one hop in from the
-right). Adjust the offset to your topology and verify it with a request from a
-known address.
+The example takes the entry one hop in from the right, which is the
+proxy-verified client entry under the contract above. Adjust the offset to your
+own proxy's documented behavior and confirm it with a request from a known
+address before trusting it.
 
 ## Advanced mapping
 
