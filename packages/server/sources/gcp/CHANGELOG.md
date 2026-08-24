@@ -1,5 +1,41 @@
 # @walkeros/server-source-gcp
 
+## 4.5.0
+
+### Patch Changes
+
+- 9fef968: The AWS Lambda and GCP Cloud Functions sources now forward every
+  field of the incoming request body to the collector, not just `event`, `data`,
+  `context`, `user`, `globals`, and `consent`. Fields such as `source` (release
+  and trace provenance) ride through and accumulate across crossings, matching
+  the Express and Fetch sources; as with those sources, a client can also supply
+  `id`, `timestamp`, `consent`, `user`, and `source`, which the collector treats
+  as values rather than overriding. Both sources now accept `name` as the
+  event-name field, the walkerOS standard; `{"event": "..."}` keeps working as a
+  legacy alias and is removed at the next major.
+- 79cdcb0: Server sources answer rejected client input with 4xx JSON instead of
+  unhandled errors or 500s: unparseable bodies return 400 at the HTTP boundary,
+  and invalid events return 400 with the reason wherever the response is still
+  open (synchronous handling; in the express default respond-first mode the 200
+  ack has already been sent, so the rejection surfaces as a warn and a counter
+  instead) (`push` resolves `{ok: false, invalid: true, error}`). Genuine
+  pipeline failures return 500 instead of `success: true`. Invalid input now
+  counts on `collector.status.sources.<id>.rejected` instead of inflating
+  `status.failed`. The express source no longer sends `X-Powered-By` and now
+  sets `X-Content-Type-Options: nosniff` on every response.
+- 756b571: Server sources now share one request scope and one event envelope, so
+  `config.ingest` paths and POST body forms behave identically on Express,
+  Fetch, Lambda and Cloud Functions. Batches and bare arrays are accepted
+  everywhere, and a destination before-chain fan-out no longer drops all but the
+  first event. Breaking: AWS `requestContext.*` moves under `raw.*`, Express
+  drops `protocol` and `hostname`, and Fetch `{ fn }` header mappings become
+  `{ key: 'headers.*' }`. See the migration guide.
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+  - @walkeros/collector@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

@@ -6648,6 +6648,756 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/projects/{projectId}/flows/{flowId}/releases/annotations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List release rationale
+     * @description Read the rationale attached to the given releases of a flow. `versionIds` is a comma-separated list of spine version ids (at most 100), all of which must belong to this flow. Releases without rationale are absent from the response. Requires member role.
+     */
+    get: {
+      parameters: {
+        query: {
+          versionIds: string;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Rationale for the requested releases */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListVersionAnnotationsResponse'];
+          };
+        };
+        /** @description Invalid version ids */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Write release rationale
+     * @description Create or update the human rationale for one release of this flow. A null `humanText` clears it. The generated summary is machine-written and cannot be set through this route. The target must be a numbered release version of this flow, not an autosave revision. Requires member role.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @example ver_a1b2c3d4 */
+            versionId: string;
+            humanText: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description The stored rationale */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['UpsertVersionAnnotationResponse'];
+          };
+        };
+        /** @description Invalid body, or the target is not a release */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/threads': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List discussion threads on a flow
+     * @description Threads anchored to things in this flow, most recently active first. `anchorType` and `anchorKey` narrow to one anchor and are only meaningful together. `includeMessages=true` attaches the messages; otherwise each thread carries `messageCount` alone. Attaching them holds the page to a smaller ceiling than the lean index and caps each thread at its newest 50 messages, with `hasMoreMessages` set when a thread holds more. Because that ceiling is below the `limit` a caller may pass, the response carries `hasMoreThreads`: a full page is not proof of a complete list. A resolved thread carries the release that settled it, and `resolvedByVersionId` is null once that release is gone, which is what `anchorLabel` is kept for. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          anchorType?:
+            | 'step'
+            | 'entity_action'
+            | 'release'
+            | 'contract'
+            | 'tag';
+          anchorKey?: string;
+          status?: 'open' | 'resolved';
+          includeMessages?: 'true' | 'false';
+          limit?: number;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Threads on this flow */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListHubThreadsResponse'];
+          };
+        };
+        /** @description Invalid query */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Open a discussion thread
+     * @description Open a thread on one anchor, with its first message. A thread never exists empty, so `text` is required and may not be blank. A `release` anchor must name a numbered release of this flow: the server verifies it and derives the label, so `anchorLabel` is ignored for that type. For any other anchor type `anchorLabel` is a display snapshot of the anchor as it reads now, stored so a later rename leaves the thread readable instead of unlabeled, and defaults to the anchor key. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @example release
+             * @enum {string}
+             */
+            anchorType:
+              | 'step'
+              | 'entity_action'
+              | 'release'
+              | 'contract'
+              | 'tag';
+            anchorKey: string;
+            anchorLabel?: string;
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The opened thread, with its first message */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HubThreadResponse'];
+          };
+        };
+        /** @description Invalid body, or the anchor is not a release */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Flow not found, or the anchor names no release of it */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/threads/{threadId}/messages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reply to a thread
+     * @description Append a message to a thread. `text` may not be blank: a message cannot be cleared, so empty is invalid rather than a way to erase one. Replying does not reopen a resolved thread: the resolve link is a statement about a release and is never retracted implicitly. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Thread ID (thr_...) */
+          threadId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The thread, with the new message */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HubThreadResponse'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/threads/{threadId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Resolve or reopen a thread
+     * @description Resolving records the release that settled the thread: pass `resolvedByVersionId`, or omit it to record the flow’s newest release. The target must be a numbered release of this flow, never an autosave revision. Reopening drops the link. Requires member role.
+     */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Thread ID (thr_...) */
+          threadId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @example open
+             * @enum {string}
+             */
+            status: 'open' | 'resolved';
+            /** @example ver_a1b2c3d4 */
+            resolvedByVersionId?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The updated thread */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['HubThreadResponse'];
+          };
+        };
+        /** @description Invalid body, or the target is not a release */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/releases/step-history': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List the releases that touched one step
+     * @description The releases of this flow that added, changed, or removed one step, newest first, each carrying the rationale stored for it. `step` is a `type.name` key over source, transformer, destination, store, and contract. `flow` narrows the scan to one named flow inside the config and is ignored for a contract key. `limit` bounds the releases scanned, not the entries returned. When nothing matched, `knownSteps` lists the addressable keys of the newest scanned release. Requires member role.
+     */
+    get: {
+      parameters: {
+        query: {
+          step: string;
+          flow?: string;
+          limit?: number | null;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The releases that touched the step */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StepHistoryResponse'];
+          };
+        };
+        /** @description Invalid step key or query */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/releases/summarize': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Summarize or check a release
+     * @description Describe what one release of this flow changed against an earlier release, or check a written note against that same change. In `draft` mode the generated text is stored as the release's generated summary; in `check` mode nothing is stored and the response says whether the note matches. The diff is always recomputed from the two stored snapshots, with secret literals masked, and is never taken from the request. Both versions must be numbered releases of this flow, and `prevVersionId` must be the earlier of the two. Requires member role and the `hub` feature.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @example ver_a1b2c3d4 */
+            versionId: string;
+            /** @example ver_a1b2c3d4 */
+            prevVersionId: string;
+            /** @enum {string} */
+            mode: 'draft' | 'check';
+            currentText?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The generated summary or the check verdict */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['SummarizeReleaseResponse'];
+          };
+        };
+        /** @description Invalid body, a target is not a release, the pair is out of order, or no LLM provider is configured */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The model call failed or returned no usable text */
+        502: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/projects/{projectId}/deployments/{deploymentId}/versions/current/content': {
     parameters: {
       query?: never;
@@ -8952,6 +9702,8 @@ export interface components {
        */
       deploymentType: 'web' | 'server' | null;
       versionNumber: number;
+      /** @example ver_a1b2c3d4 */
+      flowVersionId: string | null;
       flowVersionNumber: number | null;
       status: string;
       source: string;
@@ -8959,6 +9711,173 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
       createdBy: string | null;
+    };
+    ListVersionAnnotationsResponse: {
+      annotations: components['schemas']['VersionAnnotation'][];
+    };
+    VersionAnnotation: {
+      /** @example ver_a1b2c3d4 */
+      versionId: string;
+      humanText: string | null;
+      generatedSummary: string | null;
+      /** @example user_a1b2c3d4 */
+      author: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
+    UpsertVersionAnnotationResponse: {
+      /** @example ver_a1b2c3d4 */
+      versionId: string;
+      humanText: string | null;
+      generatedSummary: string | null;
+      /** @example user_a1b2c3d4 */
+      author: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
+    ListHubThreadsResponse: {
+      threads: components['schemas']['HubThread'][];
+      hasMoreThreads: boolean;
+    };
+    HubThread: {
+      /** @example thr_a1b2c3d4 */
+      id: string;
+      /**
+       * @example release
+       * @enum {string}
+       */
+      anchorType: 'step' | 'entity_action' | 'release' | 'contract' | 'tag';
+      anchorKey: string;
+      anchorLabel: string;
+      /**
+       * @example open
+       * @enum {string}
+       */
+      status: 'open' | 'resolved';
+      resolvedByVersionId: string | null;
+      resolvedByVersionNumber: number | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      resolvedAt: string | null;
+      resolvedBy: string | null;
+      createdBy: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      messageCount: number;
+      messages?: components['schemas']['HubMessage'][];
+      hasMoreMessages?: boolean;
+    };
+    HubMessage: {
+      id: string;
+      /** @example user_a1b2c3d4 */
+      author: string;
+      text: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+    };
+    HubThreadResponse: {
+      /** @example thr_a1b2c3d4 */
+      id: string;
+      /**
+       * @example release
+       * @enum {string}
+       */
+      anchorType: 'step' | 'entity_action' | 'release' | 'contract' | 'tag';
+      anchorKey: string;
+      anchorLabel: string;
+      /**
+       * @example open
+       * @enum {string}
+       */
+      status: 'open' | 'resolved';
+      resolvedByVersionId: string | null;
+      resolvedByVersionNumber: number | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      resolvedAt: string | null;
+      resolvedBy: string | null;
+      createdBy: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      messageCount: number;
+      messages?: components['schemas']['HubMessage'][];
+      hasMoreMessages?: boolean;
+    };
+    SummarizeReleaseResponse: {
+      /** @enum {string} */
+      mode: 'draft' | 'check';
+      text: string;
+      cached: boolean;
+      /** @example mistral/platform/mistral-large-2512 */
+      modelId: string;
+      versionNumber: number;
+      prevVersionNumber: number;
+    };
+    StepHistoryResponse: {
+      step: string;
+      flow: string | null;
+      entries: components['schemas']['StepHistoryEntry'][];
+      scanned: number;
+      truncated: boolean;
+      entriesTruncated: boolean;
+      knownSteps?: string[];
+    };
+    StepHistoryEntry: {
+      /** @example ver_a1b2c3d4 */
+      versionId: string;
+      versionNumber: number;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      flow: string | null;
+      /**
+       * @example changed
+       * @enum {string}
+       */
+      change: 'added' | 'removed' | 'changed';
+      humanText: string | null;
+      generatedSummary: string | null;
     };
     HeartbeatResponse: {
       /** @enum {boolean} */

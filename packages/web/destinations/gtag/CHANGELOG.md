@@ -1,5 +1,22 @@
 # @walkeros/web-destination-gtag
 
+## 4.5.0
+
+### Minor Changes
+
+- b05060a: The GTM destination no longer pushes the `gtm.js` start event into
+  the dataLayer unless it loads the container itself. Set `loadScript: true` to
+  have walkerOS install GTM, start event included. Without it, walkerOS only
+  pushes your mapped events, so an existing container's triggers are left alone.
+
+### Patch Changes
+
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+  - @walkeros/web-core@4.5.0
+
 ## 4.4.0
 
 ### Minor Changes

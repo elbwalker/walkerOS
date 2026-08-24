@@ -72,7 +72,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git fetch origin main --depth=1
-          npx turbo run typecheck lint test test:integration --filter='[origin/main]'
+          npx turbo run typecheck lint test test:integration --affected
       - name: Verify (push to main or manual, full)
         if: github.event_name != 'pull_request'
         run: npx turbo run typecheck lint test test:integration

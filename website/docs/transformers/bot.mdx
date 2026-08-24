@@ -83,7 +83,8 @@ The transformer reads its signals from `ctx.ingest` (default path `ingest.<name>
             "contentType": { "key": "headers.content-type" },
             "referer": { "key": "headers.referer" },
             "signatureAgent": { "key": "headers.signature-agent" },
-            "method": { "key": "method" }
+            "method": { "key": "method" },
+            "transport": { "key": "query.transport" }
           }
         }
       }
@@ -92,6 +93,8 @@ The transformer reads its signals from `ctx.ingest` (default path `ingest.<name>
 }`}
   language="json"
 />
+
+`transport` is not a signal, it is how the request context enters the pipeline. See [Request context](#request-context).
 
 Header-driven scoring works on the express and GCP Cloud Function sources. On AWS Lambda it depends on the API Gateway version's header casing, and on the `fetch` source it is unavailable: that source's raw scope is a WHATWG `Request`, whose `headers` is a `Headers` instance rather than a plain object, so dot paths resolve to `undefined`.
 
@@ -127,9 +130,66 @@ Until then `ingest.bot.reasons` reports `ch_not_declared`, `fetchmeta_not_declar
 
 ## Request context
 
-The same header value means opposite things in different contexts: a wildcard `Accept` is what every browser sends on a beacon and a strong bot signal on an image pixel. `settings.context` takes `auto`, `navigation`, `pixel`, `beacon`, `fetch` or `server`, and defaults to `auto`.
+The same header value means opposite things in different contexts: a wildcard `Accept` is what every browser sends on a beacon and a strong bot signal on an image pixel. `settings.context` tells the context-dependent checks how the request was made. It takes three forms.
 
-Pinning unlocks the `Accept` shape check, the Fetch Metadata profile comparison and the beacon `Content-Type` check. `auto` never enables them: absence of `Sec-Fetch-*` is both a signal worth scoring and the reason auto-derivation fails, so `auto` runs the context-independent checks only and reports `context_undetermined`. The client-hint coherence family, the most discriminating header signal available, is context-independent and works everywhere.
+**An enum literal pins one context for every request.** One of `auto`, `navigation`, `pixel`, `beacon`, `fetch` or `server`. Use it when an instance only ever sees one kind of traffic. Unset behaves like `auto`.
+
+**A per-request lookup resolves the context from the request.** Any other `Mapping.Value` is resolved per request against `{ event, ingest }`: a dot-path string such as `"ingest.transport"`, or a `{ "key": … }` / `{ "value": … }` / `{ "fn": … }` object.
+
+**A fallback array tries its entries in order.** `[{ "key": "ingest.transport" }, { "value": "beacon" }]` uses the sender's annotation when there is one and pins `beacon` otherwise.
+
+A bare string is always read as a lookup path, so a string context that is not one of the six literals must contain a dot. A typo like `"beacn"` fails validation instead of silently becoming a lookup that resolves to nothing. The guard applies inside the array too: a literal there is written `{ "value": "beacon" }`, and the bare `["beacon"]` is rejected.
+
+### Wiring the transport
+
+The sender declares the transport, the source lifts it into `ingest`, the transformer resolves it per request. Neither package knows the other exists, and one instance then serves a deployment that receives beacons, pixels and fetches on the same endpoint.
+
+1. Add `?transport=beacon` to the collect URL your web destination posts to, and `?transport=pixel` to the pixel embed URL.
+2. Map it in the source's ingest block with `"transport": { "key": "query.transport" }`. The normalized request scope already exposes the parsed query, so nothing else is needed.
+3. Point the bot config at `ingest.transport`, with a static entry behind it for senders that carry no annotation.
+
+<CodeSnippet
+  code={`<img src="https://collect.example.com/px.gif?transport=pixel" width="1" height="1" alt="">`}
+  language="html"
+/>
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "express": {
+      "package": "@walkeros/server-source-express",
+      "config": {
+        "ingest": {
+          "map": {
+            "userAgent": { "key": "headers.user-agent" },
+            "accept": { "key": "headers.accept" },
+            "transport": { "key": "query.transport" }
+          }
+        }
+      }
+    }
+  },
+  "transformers": {
+    "bot": {
+      "package": "@walkeros/server-transformer-bot",
+      "config": {
+        "settings": {
+          "context": [{ "key": "ingest.transport" }, { "value": "beacon" }]
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+A query parameter is a claim by whoever controls the sender. That is exactly right for telling your own transports apart, and worthless against a client that wants to be scored as a beacon. For server truth instead, give pixels their own route and derive the context from `ingest.path` with a `fn`.
+
+### When resolution fails
+
+Anything that resolves outside the vocabulary, and an unannotated request whose chain has no static entry, both land on `auto`. `auto` never determines a context: absence of `Sec-Fetch-*` is both a signal worth scoring and the reason auto-derivation fails, and the request method does not rescue it. So `auto` runs the context-independent checks only and reports `context_undetermined` in `ingest.bot.reasons`. The failure mode is "we scored less", never "we scored wrong".
+
+Pinning, however it is reached, unlocks the `Accept` shape check, the Fetch Metadata profile comparison and the beacon `Content-Type` check. `server` means server-to-server ingestion and disables every browser-shaped check. The client-hint coherence family, the most discriminating header signal available, is context-independent and works everywhere.
 
 ## Detection layers
 

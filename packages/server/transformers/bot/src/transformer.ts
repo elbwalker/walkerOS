@@ -1,5 +1,6 @@
 import type { Mapping, Transformer } from '@walkeros/core';
 import { getMappingValue, setByPath } from '@walkeros/core';
+import { isBotContext, type BotContext } from './detect/context';
 import { computeScore, type SignalName, type Signals } from './detect/score';
 import type { BotInput, BotOutput, BotSettings } from './types';
 
@@ -113,8 +114,20 @@ export const transformerBot: Transformer.Init<
         headerNames: await resolve(input.headerNames),
       };
 
+      let context: BotContext | undefined;
+      if (settings.context !== undefined) {
+        if (isBotContext(settings.context)) {
+          context = settings.context;
+        } else {
+          const resolved = await getMappingValue(source, settings.context, {
+            collector,
+          });
+          context = isBotContext(resolved) ? resolved : 'auto';
+        }
+      }
+
       const score = computeScore(signals, {
-        context: settings.context,
+        context,
         suspiciousAt: settings.suspiciousAt,
         declared,
       });

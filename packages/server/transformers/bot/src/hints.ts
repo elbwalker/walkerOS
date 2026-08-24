@@ -16,11 +16,17 @@ const INGEST_MAP = {
   referer: { key: 'headers.referer' },
   signatureAgent: { key: 'headers.signature-agent' },
   method: { key: 'method' },
+  transport: { key: 'query.transport' },
 };
+
+const CONTEXT_FROM_TRANSPORT = [
+  { key: 'ingest.transport' },
+  { value: 'beacon' },
+];
 
 export const hints: Hint.Hints = {
   'ingest-prerequisite': {
-    text: 'The bot transformer reads its signals from ctx.ingest (path "ingest.<name>" by default). The upstream server source must populate them via config.ingest, which MUST use the map operator with direct request field paths (no req. prefix); a bare object like { userAgent: "req.headers.user-agent" } is silently inert and leaves ingest empty. With nothing in ingest the score is null and the category is "unknown".',
+    text: 'The bot transformer reads its signals from ctx.ingest (path "ingest.<name>" by default). The upstream server source must populate them via config.ingest, which MUST use the map operator with direct request field paths (no req. prefix); a bare object like { userAgent: "req.headers.user-agent" } is silently inert and leaves ingest empty. With nothing in ingest the score is null and the category is "unknown". The map is also where the request context enters: lift the sender annotation with transport: { key: "query.transport" } and one instance then serves every transport, see the transport-wiring hint.',
     code: [
       {
         lang: 'json',
@@ -33,7 +39,47 @@ export const hints: Hint.Hints = {
               },
             },
             transformers: {
-              bot: { package: '@walkeros/server-transformer-bot' },
+              bot: {
+                package: '@walkeros/server-transformer-bot',
+                config: { settings: { context: CONTEXT_FROM_TRANSPORT } },
+              },
+            },
+          },
+          null,
+          2,
+        ),
+      },
+    ],
+  },
+  'transport-wiring': {
+    text: 'settings.context accepts a Mapping.Value, so one instance covers a deployment that receives beacons, pixels and fetches at the same endpoint. The sender declares the transport, the source lifts it, the transformer resolves it per request: add ?transport=beacon to the collect URL and ?transport=pixel to the pixel embed URL, then map transport: { key: "query.transport" } in the source (the normalized express scope exposes the parsed query, so no extra plumbing is needed). Give the bot config a fallback array so unannotated senders still land on a sane profile: [{ "key": "ingest.transport" }, { "value": "beacon" }]. Mind the shape: a bare string is read as a lookup path and must contain a dot, so a literal inside the array is written { "value": "beacon" } and never "beacon". Anything that resolves outside the vocabulary falls back to "auto", which scores less rather than scoring wrong. A query parameter is a claim by whoever controls the sender, which is fine for separating your own transports and worthless against a client that wants to be scored as a beacon; when you need server truth instead, give pixels their own route and derive the context from the request path.',
+    code: [
+      {
+        lang: 'html',
+        code: '<img src="https://collect.example.com/px.gif?transport=pixel" width="1" height="1" alt="">',
+      },
+      {
+        lang: 'json',
+        code: JSON.stringify(
+          {
+            sources: {
+              express: {
+                package: '@walkeros/server-source-express',
+                config: {
+                  ingest: {
+                    map: {
+                      userAgent: { key: 'headers.user-agent' },
+                      transport: { key: 'query.transport' },
+                    },
+                  },
+                },
+              },
+            },
+            transformers: {
+              bot: {
+                package: '@walkeros/server-transformer-bot',
+                config: { settings: { context: CONTEXT_FROM_TRANSPORT } },
+              },
             },
           },
           null,

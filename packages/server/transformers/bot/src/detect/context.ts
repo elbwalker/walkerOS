@@ -23,6 +23,20 @@ export type BotContext =
   | 'fetch'
   | 'server';
 
+const BOT_CONTEXTS: ReadonlySet<string> = new Set<BotContext>([
+  'auto',
+  'navigation',
+  'pixel',
+  'beacon',
+  'fetch',
+  'server',
+]);
+
+/** True when the value is one of the six BotContext literals. */
+export function isBotContext(value: unknown): value is BotContext {
+  return typeof value === 'string' && BOT_CONTEXTS.has(value);
+}
+
 export type PinnedContext = Exclude<BotContext, 'auto'>;
 
 export interface ContextProfile {

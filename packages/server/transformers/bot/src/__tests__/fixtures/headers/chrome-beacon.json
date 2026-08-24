@@ -1,0 +1,21 @@
+{
+  "name": "chrome-beacon",
+  "class": "human",
+  "context": "beacon",
+  "provenance": "Captured 2026-08-24 from the same headed Chromium 152.0.0.0 session as chrome-pixel, this time from navigator.sendBeacon(url, string) to a local header-echo server. Verbatim apart from the dropped Host, Connection, Origin and Content-Length headers. The wildcard Accept and the text/plain Content-Type are what sendBeacon itself sends.",
+  "signals": {
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "acceptLanguage": "en-US,en;q=0.9",
+    "acceptEncoding": "gzip, deflate, br, zstd",
+    "secFetchSite": "same-origin",
+    "secFetchMode": "no-cors",
+    "secFetchDest": "empty",
+    "secChUa": "\"Not?A_Brand\";v=\"24\", \"Chromium\";v=\"152\"",
+    "secChUaMobile": "?0",
+    "secChUaPlatform": "\"Linux\"",
+    "accept": "*/*",
+    "contentType": "text/plain;charset=UTF-8",
+    "referer": "http://127.0.0.1:4177/",
+    "method": "POST"
+  }
+}

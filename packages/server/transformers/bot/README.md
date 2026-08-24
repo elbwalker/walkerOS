@@ -50,7 +50,9 @@ await startFlow({
       code: transformerBot,
       config: {
         settings: {
-          // Pinning the context unlocks the context-dependent checks.
+          // Pinning the context unlocks the context-dependent checks. A
+          // literal pins every request; any Mapping.Value resolves per
+          // request. See "Request context".
           context: 'beacon',
           // Declaring a name asserts the signal is wired, which unlocks the
           // absence-based checks for its family. See "Declared signals".
@@ -202,18 +204,44 @@ from a browser UA is what every real browser sends on a beacon, and a strong bot
 signal on an image pixel. So the context-dependent checks need to know how the
 request was made.
 
-`settings.context` takes
-`'auto' | 'navigation' | 'pixel' | 'beacon' | 'fetch' | 'server'` and defaults
-to `'auto'`.
+`settings.context` is `BotContext | Mapping.Value`, which is three usable forms:
+
+- **An enum literal**, one of
+  `'auto' | 'navigation' | 'pixel' | 'beacon' | 'fetch' | 'server'`, pins one
+  context for every request. Unset behaves like `'auto'`.
+- **A per-request lookup**, resolved against `{ event, ingest }`: a dot-path
+  string such as `'ingest.transport'`, or a `{ key }` / `{ value }` / `{ fn }`
+  object.
+- **A fallback array**, tried in order, e.g.
+  `[{ key: 'ingest.transport' }, { value: 'beacon' }]`.
+
+A bare string is always read as a lookup path, so a string that is not one of
+the six literals must contain a dot: `'beacn'` fails schema validation instead
+of silently becoming a lookup that resolves to nothing. The guard holds inside
+the array too, so a literal there is written `{ value: 'beacon' }` and never the
+bare `'beacon'`.
+
+The lookup form is what lets a single instance serve a deployment that receives
+beacons, pixels and fetches on the same endpoint. The sender annotates its URL
+(`?transport=beacon` on the collect URL, `?transport=pixel` on the pixel embed),
+the source lifts it with `transport: { key: 'query.transport' }`, and the
+transformer resolves it per request. A query parameter is a claim by whoever
+controls the sender: right for telling your own transports apart, worthless
+against a client that wants to be scored as a beacon. For server truth, give
+pixels their own route and derive the context from `ingest.path` instead. The
+end-to-end recipe is on
+[the website page](https://www.walkeros.io/docs/transformers/bot).
 
 Pinning is the strong mode: you know your own routes, and pinning unlocks the
 `Accept` shape check, the Fetch Metadata profile comparison and the beacon
 `Content-Type` check. **`auto` never enables them.** Absence of `Sec-Fetch-*` is
 both a signal worth scoring and the reason auto-derivation fails, and the
 request method does not rescue it, so `auto` runs the context-independent checks
-only and reports `context_undetermined`. The failure mode is "we scored less",
-never "we scored wrong". `server` means server-to-server ingestion and disables
-every browser-shaped check.
+only and reports `context_undetermined`. Anything that resolves outside the
+vocabulary falls back to `auto` as well, so a broken annotation degrades to
+fewer checks rather than to the wrong profile. The failure mode is "we scored
+less", never "we scored wrong". `server` means server-to-server ingestion and
+disables every browser-shaped check.
 
 The client-hint coherence family, the most discriminating header signal
 available, is context-independent and works in every deployment.

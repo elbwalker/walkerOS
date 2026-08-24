@@ -1,0 +1,20 @@
+{
+  "name": "chrome-pixel",
+  "class": "human",
+  "context": "pixel",
+  "provenance": "Captured 2026-08-24 from a headed Chromium 152.0.0.0 (Playwright build chromium-1237, launched with headless:false under Xvfb) loading a 1x1 <img> from a local header-echo server. Verbatim apart from the dropped Host and Connection headers. A Google Chrome stable build lists a third \"Google Chrome\" brand in Sec-CH-UA; every other value here is identical between the two builds.",
+  "signals": {
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "acceptLanguage": "en-US,en;q=0.9",
+    "acceptEncoding": "gzip, deflate, br, zstd",
+    "secFetchSite": "same-origin",
+    "secFetchMode": "no-cors",
+    "secFetchDest": "image",
+    "secChUa": "\"Not?A_Brand\";v=\"24\", \"Chromium\";v=\"152\"",
+    "secChUaMobile": "?0",
+    "secChUaPlatform": "\"Linux\"",
+    "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    "referer": "http://127.0.0.1:4177/",
+    "method": "GET"
+  }
+}

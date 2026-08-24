@@ -191,6 +191,89 @@ describe('transformerBot', () => {
     });
   });
 
+  describe('context as mapping value', () => {
+    const wildcardHeaders = {
+      userAgent: realChromeUA,
+      accept: '*/*',
+      secFetchDest: 'image',
+    };
+    const reasonsOf = (ctx: { ingest: unknown }) =>
+      (ctx.ingest as { bot?: { reasons?: string[] } }).bot?.reasons ?? [];
+
+    test('enum string stays a literal pin', async () => {
+      const instance = await transformerBot(
+        createInitContext({ settings: { context: 'pixel' } }),
+      );
+      const ctx = createPushContext(wildcardHeaders);
+      await instance.push(baseEvent, ctx);
+      expect(reasonsOf(ctx)).toEqual(
+        expect.arrayContaining(['accept_generic_on_typed_context']),
+      );
+    });
+
+    test('per-request lookup resolves from ingest', async () => {
+      const instance = await transformerBot(
+        createInitContext({
+          settings: { context: { key: 'ingest.transport' } },
+        }),
+      );
+      const pixelCtx = createPushContext({
+        ...wildcardHeaders,
+        transport: 'pixel',
+      });
+      await instance.push(baseEvent, pixelCtx);
+      expect(reasonsOf(pixelCtx)).toEqual(
+        expect.arrayContaining(['accept_generic_on_typed_context']),
+      );
+      const beaconCtx = createPushContext({
+        ...wildcardHeaders,
+        transport: 'beacon',
+      });
+      await instance.push(baseEvent, beaconCtx);
+      // A beacon profile expects Sec-Fetch-Dest "empty", so the "image" in
+      // wildcardHeaders proves beacon was really pinned: under "auto" there is
+      // no profile to mismatch against and this code cannot appear.
+      expect(reasonsOf(beaconCtx)).toEqual(
+        expect.arrayContaining(['fetchmeta_profile_mismatch']),
+      );
+      expect(reasonsOf(beaconCtx)).not.toEqual(
+        expect.arrayContaining(['accept_generic_on_typed_context']),
+      );
+    });
+
+    test('fallback chain: missing transport falls back to the static value', async () => {
+      const instance = await transformerBot(
+        createInitContext({
+          settings: {
+            context: [{ key: 'ingest.transport' }, { value: 'pixel' }],
+          },
+        }),
+      );
+      const ctx = createPushContext(wildcardHeaders);
+      await instance.push(baseEvent, ctx);
+      expect(reasonsOf(ctx)).toEqual(
+        expect.arrayContaining(['accept_generic_on_typed_context']),
+      );
+    });
+
+    test('invalid resolved value falls back to auto, never a wrong pin', async () => {
+      const instance = await transformerBot(
+        createInitContext({
+          settings: { context: { key: 'ingest.transport' } },
+        }),
+      );
+      const ctx = createPushContext({
+        userAgent: realChromeUA,
+        transport: 'bogus',
+      });
+      const result = await instance.push(baseEvent, ctx);
+      expect(reasonsOf(ctx)).toEqual(
+        expect.arrayContaining(['context_undetermined']),
+      );
+      expect(result).toMatchObject({ event: { user: { botScore: 0 } } });
+    });
+  });
+
   test('type property is "bot"', async () => {
     const instance = await transformerBot(createInitContext({}));
     expect(instance.type).toBe('bot');

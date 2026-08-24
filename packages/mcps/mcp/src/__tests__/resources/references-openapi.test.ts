@@ -67,8 +67,10 @@ describe('openapi reference resource serves the embedded bundled spec', () => {
     const result = await resource.readCallback();
     const text = result.contents[0].text;
 
-    expect(text).not.toContain('not found');
-
+    // The resource imports the spec statically, so serving it at all plus the
+    // version match below proves the real spec. A substring scan for an error
+    // marker would false-positive on legitimate spec content (404 descriptions
+    // contain "not found").
     const parsed = parseSpec(text);
     expect(parsed.info.version).toBeDefined();
     expect(parsed.info.version).toBe(bundledSpec.info.version);
