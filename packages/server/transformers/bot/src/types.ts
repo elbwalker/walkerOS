@@ -45,10 +45,12 @@ export interface BotSettings {
   input?: BotInput;
   output?: BotOutput;
   /**
-   * How the request reached the collector. Pinning it is what enables the
-   * context-dependent checks; `auto` runs the context-independent ones only.
+   * How the request reached the collector. An enum literal pins one context
+   * for every request; any other Mapping.Value (dot-path string, {key},
+   * {value}, {fn}, or a fallback array) resolves per request against
+   * { event, ingest }. A result that is not a valid context yields "auto".
    */
-  context?: BotContext;
+  context?: BotContext | Mapping.Value;
   /** Graded-layer cut between `human` and `suspicious`. */
   suspiciousAt?: number;
 }

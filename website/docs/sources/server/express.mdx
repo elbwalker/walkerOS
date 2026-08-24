@@ -231,7 +231,7 @@ const { collector } = await startFlow({
 
 | Path | Description |
 |------|-------------|
-| `ip` | Client IP address |
+| `ip` | The socket peer address. Behind a proxy that is the proxy, not the visitor, see [Client IP behind a proxy](#client-ip-behind-a-proxy) |
 | `headers.*` | HTTP headers, lowercased names (user-agent, origin, referer, etc.) |
 | `method` | Uppercase HTTP method |
 | `path` | Pathname, no query string |
@@ -243,6 +243,65 @@ const { collector } = await startFlow({
 These are the shared [request scope](/docs/sources/scope) fields. `protocol` and
 `hostname` are no longer top-level paths: use `headers.host`,
 `headers.x-forwarded-proto`, or `raw.protocol` / `raw.hostname`.
+
+## Client IP behind a proxy
+
+`ip` is Express's `req.ip`, the socket peer address. Behind a load balancer, a
+CDN or a serverless platform that is the last proxy in the chain, never the
+visitor. The `X-Forwarded-For` header carries the real address, but it is a
+comma-separated chain whose left side is written by the client, so parsing it
+means deciding how many trailing hops you trust, a per-deployment security
+judgment.
+
+The recommended pattern needs no source setting at all: let the infrastructure
+that terminates the connection hand you the client address as a single-value
+header it controls, and map that header with the ingest map you already have.
+
+| Platform | Header | How it gets there |
+|---|---|---|
+| Google external HTTPS LB | `X-Client-IP` | Custom request header `X-Client-IP:{client_ip_address}` on the backend service |
+| Cloudflare | `CF-Connecting-IP` | Set automatically |
+| Fastly | `Fastly-Client-IP` | Set automatically |
+| Akamai | `True-Client-IP` | Enable in the property |
+| nginx | `X-Real-IP` | `proxy_set_header X-Real-IP $remote_addr;` |
+
+<CodeSnippet
+  code={`"sources": {
+  "express": {
+    "package": "@walkeros/server-source-express",
+    "config": {
+      "settings": { "port": 8080 },
+      "ingest": { "map": { "ip": { "key": "headers.x-client-ip" } } }
+    }
+  }
+}`}
+  language="json"
+/>
+
+:::warning Trust only a header your own infrastructure controls
+A client can send any header name itself, including these. The pattern is safe
+only when your proxy sets or overwrites the header on every request, so verify
+that override once against your platform before trusting it. Never map a
+client-reachable header like a raw `X-Forwarded-For` as the client IP: its
+leftmost entries are forgeable.
+:::
+
+On a platform that only provides raw `X-Forwarded-For` and no configurable
+header, either accept an absent IP (the pipeline treats a missing signal as
+"measured less", never as a wrong value) or extract the correct hop explicitly
+in the mapping, keeping the trust decision visible in your config:
+
+<CodeSnippet
+  code={`"ip": {
+  "key": "headers.x-forwarded-for",
+  "fn": "$code:(v)=>{const a=(v||'').split(',').map(s=>s.trim()).filter(Boolean);return a.length>=2?a[a.length-2]:''}"
+}`}
+  language="json"
+/>
+
+The example trusts exactly one proxy (takes the entry one hop in from the
+right). Adjust the offset to your topology and verify it with a request from a
+known address.
 
 ## Advanced mapping
 

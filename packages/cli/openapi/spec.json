@@ -2079,6 +2079,11 @@
             "type": "integer",
             "exclusiveMinimum": 0
           },
+          "flowVersionId": {
+            "type": ["string", "null"],
+            "pattern": "^ver_[a-zA-Z0-9_-]+$",
+            "example": "ver_a1b2c3d4"
+          },
           "flowVersionNumber": {
             "type": ["integer", "null"],
             "exclusiveMinimum": 0
@@ -2106,12 +2111,411 @@
           "deploymentSlug",
           "deploymentType",
           "versionNumber",
+          "flowVersionId",
           "flowVersionNumber",
           "status",
           "source",
           "errorCode",
           "createdAt",
           "createdBy"
+        ]
+      },
+      "ListVersionAnnotationsResponse": {
+        "type": "object",
+        "properties": {
+          "annotations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionAnnotation"
+            }
+          }
+        },
+        "required": ["annotations"]
+      },
+      "VersionAnnotation": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "pattern": "^ver_[a-zA-Z0-9_-]+$",
+            "example": "ver_a1b2c3d4"
+          },
+          "humanText": {
+            "type": ["string", "null"]
+          },
+          "generatedSummary": {
+            "type": ["string", "null"]
+          },
+          "author": {
+            "type": "string",
+            "example": "user_a1b2c3d4"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "versionId",
+          "humanText",
+          "generatedSummary",
+          "author",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpsertVersionAnnotationResponse": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "pattern": "^ver_[a-zA-Z0-9_-]+$",
+            "example": "ver_a1b2c3d4"
+          },
+          "humanText": {
+            "type": ["string", "null"]
+          },
+          "generatedSummary": {
+            "type": ["string", "null"]
+          },
+          "author": {
+            "type": "string",
+            "example": "user_a1b2c3d4"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "versionId",
+          "humanText",
+          "generatedSummary",
+          "author",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ListHubThreadsResponse": {
+        "type": "object",
+        "properties": {
+          "threads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HubThread"
+            }
+          },
+          "hasMoreThreads": {
+            "type": "boolean"
+          }
+        },
+        "required": ["threads", "hasMoreThreads"]
+      },
+      "HubThread": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^thr_[a-z0-9]+$",
+            "example": "thr_a1b2c3d4"
+          },
+          "anchorType": {
+            "type": "string",
+            "enum": ["step", "entity_action", "release", "contract", "tag"],
+            "example": "release"
+          },
+          "anchorKey": {
+            "type": "string"
+          },
+          "anchorLabel": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "resolved"],
+            "example": "open"
+          },
+          "resolvedByVersionId": {
+            "type": ["string", "null"]
+          },
+          "resolvedByVersionNumber": {
+            "type": ["integer", "null"]
+          },
+          "resolvedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "resolvedBy": {
+            "type": ["string", "null"]
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "messageCount": {
+            "type": "integer"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HubMessage"
+            }
+          },
+          "hasMoreMessages": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "anchorType",
+          "anchorKey",
+          "anchorLabel",
+          "status",
+          "resolvedByVersionId",
+          "resolvedByVersionNumber",
+          "resolvedAt",
+          "resolvedBy",
+          "createdBy",
+          "createdAt",
+          "updatedAt",
+          "messageCount"
+        ]
+      },
+      "HubMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string",
+            "example": "user_a1b2c3d4"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": ["id", "author", "text", "createdAt"]
+      },
+      "HubThreadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^thr_[a-z0-9]+$",
+            "example": "thr_a1b2c3d4"
+          },
+          "anchorType": {
+            "type": "string",
+            "enum": ["step", "entity_action", "release", "contract", "tag"],
+            "example": "release"
+          },
+          "anchorKey": {
+            "type": "string"
+          },
+          "anchorLabel": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "resolved"],
+            "example": "open"
+          },
+          "resolvedByVersionId": {
+            "type": ["string", "null"]
+          },
+          "resolvedByVersionNumber": {
+            "type": ["integer", "null"]
+          },
+          "resolvedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "resolvedBy": {
+            "type": ["string", "null"]
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "messageCount": {
+            "type": "integer"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HubMessage"
+            }
+          },
+          "hasMoreMessages": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "anchorType",
+          "anchorKey",
+          "anchorLabel",
+          "status",
+          "resolvedByVersionId",
+          "resolvedByVersionNumber",
+          "resolvedAt",
+          "resolvedBy",
+          "createdBy",
+          "createdAt",
+          "updatedAt",
+          "messageCount"
+        ]
+      },
+      "SummarizeReleaseResponse": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": ["draft", "check"]
+          },
+          "text": {
+            "type": "string"
+          },
+          "cached": {
+            "type": "boolean"
+          },
+          "modelId": {
+            "type": "string",
+            "example": "mistral/platform/mistral-large-2512"
+          },
+          "versionNumber": {
+            "type": "integer"
+          },
+          "prevVersionNumber": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mode",
+          "text",
+          "cached",
+          "modelId",
+          "versionNumber",
+          "prevVersionNumber"
+        ]
+      },
+      "StepHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string"
+          },
+          "flow": {
+            "type": ["string", "null"]
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StepHistoryEntry"
+            }
+          },
+          "scanned": {
+            "type": "integer"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "entriesTruncated": {
+            "type": "boolean"
+          },
+          "knownSteps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "step",
+          "flow",
+          "entries",
+          "scanned",
+          "truncated",
+          "entriesTruncated"
+        ]
+      },
+      "StepHistoryEntry": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "pattern": "^ver_[a-zA-Z0-9_-]+$",
+            "example": "ver_a1b2c3d4"
+          },
+          "versionNumber": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "flow": {
+            "type": ["string", "null"]
+          },
+          "change": {
+            "type": "string",
+            "enum": ["added", "removed", "changed"],
+            "example": "changed"
+          },
+          "humanText": {
+            "type": ["string", "null"]
+          },
+          "generatedSummary": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "versionId",
+          "versionNumber",
+          "createdAt",
+          "flow",
+          "change",
+          "humanText",
+          "generatedSummary"
         ]
       },
       "HeartbeatResponse": {
@@ -12868,6 +13272,976 @@
           },
           "429": {
             "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/releases/annotations": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "List release rationale",
+        "description": "Read the rationale attached to the given releases of a flow. `versionIds` is a comma-separated list of spine version ids (at most 100), all of which must belong to this flow. Releases without rationale are absent from the response. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "ver_a1b2c3d4,ver_e5f6g7h8"
+            },
+            "required": true,
+            "name": "versionIds",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rationale for the requested releases",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListVersionAnnotationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid version ids",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Deployments"],
+        "summary": "Write release rationale",
+        "description": "Create or update the human rationale for one release of this flow. A null `humanText` clears it. The generated summary is machine-written and cannot be set through this route. The target must be a numbered release version of this flow, not an autosave revision. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "versionId": {
+                    "type": "string",
+                    "pattern": "^ver_[a-zA-Z0-9_-]+$",
+                    "example": "ver_a1b2c3d4"
+                  },
+                  "humanText": {
+                    "type": ["string", "null"],
+                    "maxLength": 4000
+                  }
+                },
+                "required": ["versionId", "humanText"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The stored rationale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpsertVersionAnnotationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, or the target is not a release",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/threads": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "List discussion threads on a flow",
+        "description": "Threads anchored to things in this flow, most recently active first. `anchorType` and `anchorKey` narrow to one anchor and are only meaningful together. `includeMessages=true` attaches the messages; otherwise each thread carries `messageCount` alone. Attaching them holds the page to a smaller ceiling than the lean index and caps each thread at its newest 50 messages, with `hasMoreMessages` set when a thread holds more. Because that ceiling is below the `limit` a caller may pass, the response carries `hasMoreThreads`: a full page is not proof of a complete list. A resolved thread carries the release that settled it, and `resolvedByVersionId` is null once that release is gone, which is what `anchorLabel` is kept for. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["step", "entity_action", "release", "contract", "tag"],
+              "example": "release"
+            },
+            "required": false,
+            "name": "anchorType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "ver_a1b2c3d4"
+            },
+            "required": false,
+            "name": "anchorKey",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["open", "resolved"],
+              "example": "open"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "required": false,
+            "name": "includeMessages",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "example": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Threads on this flow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListHubThreadsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Open a discussion thread",
+        "description": "Open a thread on one anchor, with its first message. A thread never exists empty, so `text` is required and may not be blank. A `release` anchor must name a numbered release of this flow: the server verifies it and derives the label, so `anchorLabel` is ignored for that type. For any other anchor type `anchorLabel` is a display snapshot of the anchor as it reads now, stored so a later rename leaves the thread readable instead of unlabeled, and defaults to the anchor key. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "anchorType": {
+                    "type": "string",
+                    "enum": [
+                      "step",
+                      "entity_action",
+                      "release",
+                      "contract",
+                      "tag"
+                    ],
+                    "example": "release"
+                  },
+                  "anchorKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "anchorLabel": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                },
+                "required": ["anchorType", "anchorKey", "text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The opened thread, with its first message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HubThreadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, or the anchor is not a release",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Flow not found, or the anchor names no release of it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/threads/{threadId}/messages": {
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Reply to a thread",
+        "description": "Append a message to a thread. `text` may not be blank: a message cannot be cleared, so empty is invalid rather than a way to erase one. Replying does not reopen a resolved thread: the resolve link is a statement about a release and is never retracted implicitly. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^thr_[a-z0-9]+$",
+              "example": "thr_a1b2c3d4",
+              "description": "Thread ID (thr_...)"
+            },
+            "required": true,
+            "description": "Thread ID (thr_...)",
+            "name": "threadId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                },
+                "required": ["text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The thread, with the new message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HubThreadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/threads/{threadId}": {
+      "patch": {
+        "tags": ["Deployments"],
+        "summary": "Resolve or reopen a thread",
+        "description": "Resolving records the release that settled the thread: pass `resolvedByVersionId`, or omit it to record the flow’s newest release. The target must be a numbered release of this flow, never an autosave revision. Reopening drops the link. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^thr_[a-z0-9]+$",
+              "example": "thr_a1b2c3d4",
+              "description": "Thread ID (thr_...)"
+            },
+            "required": true,
+            "description": "Thread ID (thr_...)",
+            "name": "threadId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["open", "resolved"],
+                    "example": "open"
+                  },
+                  "resolvedByVersionId": {
+                    "type": "string",
+                    "pattern": "^ver_[a-zA-Z0-9_-]+$",
+                    "example": "ver_a1b2c3d4"
+                  }
+                },
+                "required": ["status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated thread",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HubThreadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, or the target is not a release",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/releases/step-history": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "List the releases that touched one step",
+        "description": "The releases of this flow that added, changed, or removed one step, newest first, each carrying the rationale stored for it. `step` is a `type.name` key over source, transformer, destination, store, and contract. `flow` narrows the scan to one named flow inside the config and is ignored for a contract key. `limit` bounds the releases scanned, not the entries returned. When nothing matched, `knownSteps` lists the addressable keys of the newest scanned release. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "destination.ga4"
+            },
+            "required": true,
+            "name": "step",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "web"
+            },
+            "required": false,
+            "name": "flow",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": ["integer", "null"],
+              "example": 25
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The releases that touched the step",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepHistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid step key or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/releases/summarize": {
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Summarize or check a release",
+        "description": "Describe what one release of this flow changed against an earlier release, or check a written note against that same change. In `draft` mode the generated text is stored as the release's generated summary; in `check` mode nothing is stored and the response says whether the note matches. The diff is always recomputed from the two stored snapshots, with secret literals masked, and is never taken from the request. Both versions must be numbered releases of this flow, and `prevVersionId` must be the earlier of the two. Requires member role and the `hub` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "versionId": {
+                    "type": "string",
+                    "pattern": "^ver_[a-zA-Z0-9_-]+$",
+                    "example": "ver_a1b2c3d4"
+                  },
+                  "prevVersionId": {
+                    "type": "string",
+                    "pattern": "^ver_[a-zA-Z0-9_-]+$",
+                    "example": "ver_a1b2c3d4"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": ["draft", "check"]
+                  },
+                  "currentText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                },
+                "required": ["versionId", "prevVersionId", "mode"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The generated summary or the check verdict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummarizeReleaseResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, a target is not a release, the pair is out of order, or no LLM provider is configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The model call failed or returned no usable text",
             "content": {
               "application/json": {
                 "schema": {

@@ -18,6 +18,22 @@ const MappingValueSchema = z.union([
     .describe('Array of fallback values, tried in order'),
 ]);
 
+// A string context is either a BotContext literal or a lookup path. The dot is
+// what tells them apart, so a typo fails validation instead of silently
+// becoming a path lookup that resolves to nothing. It has to be `.regex`, not
+// `.refine`: only the former survives into the generated JSON Schema, which is
+// what `walkeros validate` and the MCP catalog actually check against.
+const DottedPathSchema = z.string().regex(/\./, {
+  message:
+    'A string context is either a BotContext literal or a dot-path lookup like "ingest.transport"; to pin a literal inside a fallback chain use {"value": "beacon"}',
+});
+
+const ContextObjectSchema = z.object({
+  key: z.string().optional(),
+  value: z.unknown().optional(),
+  fn: z.string().optional(),
+});
+
 const OutputPathSchema = (description: string) =>
   z
     .union([z.string(), z.literal(false)])
@@ -69,10 +85,15 @@ export const SettingsSchema = z
       .optional()
       .describe('Output paths for the bot annotations.'),
     context: z
-      .enum(['auto', 'navigation', 'pixel', 'beacon', 'fetch', 'server'])
+      .union([
+        z.enum(['auto', 'navigation', 'pixel', 'beacon', 'fetch', 'server']),
+        DottedPathSchema,
+        ContextObjectSchema,
+        z.array(z.union([DottedPathSchema, ContextObjectSchema])),
+      ])
       .optional()
       .describe(
-        'How the request reaches the collector. Pinning it enables the context-dependent checks (Accept shape, Fetch Metadata profile, beacon Content-Type), because the same header value means opposite things in different contexts. Default: "auto", which runs the context-independent checks only and reports "context_undetermined".',
+        'How the request reaches the collector. An enum literal ("beacon") pins one context for every request. Any other form is a Mapping.Value resolved per request against { event, ingest }: a dot-path string ("ingest.transport"), a {key}/{value}/{fn} object, or a fallback array tried in order ([{key: "ingest.transport"}, {value: "beacon"}]). Wire transport truth in via the source config, e.g. express ingest map transport: {key: "query.transport"} with a ?transport= param on the collect URL. A result that is not a valid context falls back to "auto" (context-independent checks only, reported as "context_undetermined"): scored less, never scored wrong.',
       ),
     suspiciousAt: z
       .number()

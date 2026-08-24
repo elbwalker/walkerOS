@@ -101,6 +101,49 @@ export const searchCrawler: Flow.StepExample = {
   ],
 };
 
+/**
+ * The same request, twice, through one instance configured
+ * `context: [{ key: "ingest.transport" }, { value: "beacon" }]`.
+ */
+export const pixelWildcardAccept: Flow.StepExample = {
+  title: 'Wildcard Accept on an annotated pixel',
+  description:
+    'The pixel embed URL carries ?transport=pixel and the source lifts it into ingest, so this request is scored against the pixel profile. Browsers send a typed image Accept when they load an image, so the wildcard is worth 25.',
+  in: { ...baseEvent, id: 'ev-1700000608' },
+  out: [
+    [
+      'return',
+      {
+        event: {
+          ...baseEvent,
+          id: 'ev-1700000608',
+          user: { botScore: 25, botCategory: 'suspicious' },
+        },
+      },
+    ],
+  ],
+};
+
+/** Byte-identical headers, no annotation: the fallback entry decides. */
+export const unannotatedBeaconFallback: Flow.StepExample = {
+  title: 'Unannotated request falls back to beacon',
+  description:
+    'Same instance, same headers, no ?transport= on the request, so the trailing { value: "beacon" } pins beacon. A wildcard Accept is exactly what navigator.sendBeacon sends, and the identical request now scores 0. This is what pinning per request buys: one header, two correct readings.',
+  in: { ...baseEvent, id: 'ev-1700000609' },
+  out: [
+    [
+      'return',
+      {
+        event: {
+          ...baseEvent,
+          id: 'ev-1700000609',
+          user: { botScore: 0, botCategory: 'human' },
+        },
+      },
+    ],
+  ],
+};
+
 /** A Chromium UA whose client hints disagree with it. */
 export const headerMismatch: Flow.StepExample = {
   title: 'Client hints contradict the UA',
