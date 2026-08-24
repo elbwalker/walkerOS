@@ -1,5 +1,15 @@
 # @walkeros/server-destination-reddit
 
+## 4.5.0
+
+### Patch Changes
+
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+  - @walkeros/server-core@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @walkeros/mcp-source-browser
 
+## 4.5.0
+
+### Patch Changes
+
+- 3571ca1: Add package READMEs and npm keywords. The MCP packages now ship
+  install instructions for Claude Code, Cursor, and VS Code plus MCP registry
+  metadata (mcpName).
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+  - @walkeros/web-source-browser@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

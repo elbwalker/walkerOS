@@ -1,5 +1,26 @@
 # @walkeros/server-destination-api
 
+## 4.5.0
+
+### Minor Changes
+
+- 4de76ed: `config.batch` now works on the server API destination. It previously
+  had no `pushBatch`, which is the collector's gate for batching, so the setting
+  was accepted and silently ignored and every event was still sent as its own
+  request. A flush is now one request whose body is a JSON array of the batched
+  events, one element per event, mapped per event and passed through `transform`
+  per element, matching the web variant. `transform` is also declared in the
+  settings schema now, so it shows up in the package hints instead of being an
+  undocumented option.
+
+### Patch Changes
+
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+  - @walkeros/server-core@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

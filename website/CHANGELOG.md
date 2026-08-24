@@ -1,5 +1,92 @@
 # @walkeros/website
 
+## 4.5.0
+
+### Patch Changes
+
+- Updated dependencies [3571ca1]
+- Updated dependencies [9fef968]
+- Updated dependencies [71d83a3]
+- Updated dependencies [7dc6cb1]
+- Updated dependencies [63845bb]
+- Updated dependencies [b05060a]
+- Updated dependencies [bee026f]
+- Updated dependencies [16728ad]
+- Updated dependencies [4de76ed]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/transformer-validate@4.5.0
+  - @walkeros/server-transformer-fingerprint@4.5.0
+  - @walkeros/server-source-aws@4.5.0
+  - @walkeros/server-source-gcp@4.5.0
+  - @walkeros/server-transformer-bot@4.5.0
+  - @walkeros/server-source-express@4.5.0
+  - @walkeros/core@4.5.0
+  - @walkeros/web-destination-gtag@4.5.0
+  - @walkeros/server-destination-klaviyo@4.5.0
+  - @walkeros/server-destination-api@4.5.0
+  - @walkeros/collector@4.5.0
+  - @walkeros/server-source-fetch@4.5.0
+  - @walkeros/explorer@4.5.0
+  - @walkeros/walker.js@4.5.0
+  - @walkeros/server-destination-amplitude@4.5.0
+  - @walkeros/server-destination-aws@4.5.0
+  - @walkeros/server-destination-bing@4.5.0
+  - @walkeros/server-destination-criteo@4.5.0
+  - @walkeros/server-destination-customerio@4.5.0
+  - @walkeros/server-destination-datamanager@4.5.0
+  - @walkeros/server-destination-file@4.5.0
+  - @walkeros/server-destination-gcp@4.5.0
+  - @walkeros/server-destination-hubspot@4.5.0
+  - @walkeros/server-destination-kafka@4.5.0
+  - @walkeros/server-destination-linkedin@4.5.0
+  - @walkeros/server-destination-meta@4.5.0
+  - @walkeros/server-destination-mixpanel@4.5.0
+  - @walkeros/server-destination-mparticle@4.5.0
+  - @walkeros/server-destination-pinterest@4.5.0
+  - @walkeros/server-destination-posthog@4.5.0
+  - @walkeros/server-destination-reddit@4.5.0
+  - @walkeros/server-destination-redis@4.5.0
+  - @walkeros/server-destination-rudderstack@4.5.0
+  - @walkeros/server-destination-segment@4.5.0
+  - @walkeros/server-destination-slack@4.5.0
+  - @walkeros/server-destination-snapchat@4.5.0
+  - @walkeros/server-destination-sqlite@4.5.0
+  - @walkeros/server-destination-tiktok@4.5.0
+  - @walkeros/server-destination-twitter@4.5.0
+  - @walkeros/server-store-fs@4.5.0
+  - @walkeros/server-store-gcs@4.5.0
+  - @walkeros/server-store-s3@4.5.0
+  - @walkeros/server-store-sheets@4.5.0
+  - @walkeros/server-transformer-file@4.5.0
+  - @walkeros/transformer-ga4@4.5.0
+  - @walkeros/web-destination-amplitude@4.5.0
+  - @walkeros/web-destination-api@4.5.0
+  - @walkeros/web-destination-clarity@4.5.0
+  - @walkeros/web-destination-d8a@4.5.0
+  - @walkeros/web-destination-fullstory@4.5.0
+  - @walkeros/web-destination-heap@4.5.0
+  - @walkeros/web-destination-hotjar@4.5.0
+  - @walkeros/web-destination-linkedin@4.5.0
+  - @walkeros/web-destination-matomo@4.5.0
+  - @walkeros/web-destination-meta@4.5.0
+  - @walkeros/web-destination-mixpanel@4.5.0
+  - @walkeros/web-destination-optimizely@4.5.0
+  - @walkeros/web-destination-piano@4.5.0
+  - @walkeros/web-destination-pinterest@4.5.0
+  - @walkeros/web-destination-piwikpro@4.5.0
+  - @walkeros/web-destination-plausible@4.5.0
+  - @walkeros/web-destination-posthog@4.5.0
+  - @walkeros/web-destination-segment@4.5.0
+  - @walkeros/web-destination-snowplow@4.5.0
+  - @walkeros/web-destination-tiktok@4.5.0
+  - @walkeros/web-source-browser@4.5.0
+  - @walkeros/web-source-cmp-cookiefirst@4.5.0
+  - @walkeros/web-source-cmp-cookiepro@4.5.0
+  - @walkeros/web-source-cmp-usercentrics@4.5.0
+  - @walkeros/web-source-datalayer@4.5.0
+  - @walkeros/web-source-session@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

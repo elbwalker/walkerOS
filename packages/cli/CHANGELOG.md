@@ -1,5 +1,34 @@
 # @walkeros/cli
 
+## 4.5.0
+
+### Minor Changes
+
+- 5977896: `walkeros setup` now resolves a component's package the same way
+  `walkeros bundle` does: the flow's pinned version is downloaded from the
+  registry (sharing the bundle cache) and imported from there. Setup works via
+  npx without a local install; `path:` packages are supported for local
+  development.
+
+### Patch Changes
+
+- 3571ca1: Add package READMEs and npm keywords. The MCP packages now ship
+  install instructions for Claude Code, Cursor, and VS Code plus MCP registry
+  metadata (mcpName).
+- f7536a6: A `path` entry in `config.bundle.packages` now counts as the package
+  pin, so bundling and setup use the local package instead of failing when steps
+  still declare conflicting inline versions of it.
+- Updated dependencies [3571ca1]
+- Updated dependencies [63845bb]
+- Updated dependencies [4de76ed]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/transformer-validate@4.5.0
+  - @walkeros/core@4.5.0
+  - @walkeros/server-destination-api@4.5.0
+  - @walkeros/collector@4.5.0
+  - @walkeros/server-core@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

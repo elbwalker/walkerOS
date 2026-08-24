@@ -1,5 +1,28 @@
 # @walkeros/server-destination-klaviyo
 
+## 4.5.0
+
+### Patch Changes
+
+- bee026f: Revenue now reaches Klaviyo. A mapping rule's `settings.value` was
+  written into the event's `properties`, where Klaviyo stores it as a
+  segmentable custom property and ignores it for revenue reporting, while
+  `valueCurrency` was set on the event attributes with no sibling value to
+  denominate. Both now sit together on the attributes, which is where
+  `klaviyo-api` serializes `value` and `value_currency` from. Properties are
+  unaffected -- map a value through the rule's `data` mapping if you also want
+  it as a custom property.
+- 16728ad: Events now carry Klaviyo's `unique_id` dedup key, defaulting to the
+  walkerOS event id. Klaviyo previously fell back to the event time truncated to
+  the second, which dropped distinct events for one profile and metric inside
+  the same second. Map `settings.uniqueId` on the destination or on a mapping
+  rule to deduplicate on a business identifier instead.
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+  - @walkeros/server-core@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes
