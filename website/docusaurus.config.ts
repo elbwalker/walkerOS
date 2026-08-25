@@ -9,7 +9,24 @@ import normalizeExportLinks from './src/remark/normalize-export-links';
 const vars = {
   github: 'https://github.com/elbwalker/walkerOS/',
   linkedin: 'https://www.linkedin.com/company/elbwalker/',
+  site: 'https://www.walkeros.io',
+  npm: 'https://www.npmjs.com/org/walkeros',
 };
+
+// The llms.txt header is a single blockquote: the plugin writes one `> ` in
+// front of `siteDescription` and nothing else, so a multi-paragraph preamble
+// carries its own continuation markers.
+//
+// Keep it short and factual. It is the first thing a model reads about
+// walkerOS, and its job is to correct the two things a training corpus gets
+// wrong: the package namespace, and what category the project is in.
+const llmsTxtPreamble = [
+  'Privacy-first, composable event data collection (Source → Collector → Destination).',
+  'Current namespace: packages are published under `@walkeros/*` and the command line binary is `walkeros`. Package names from the walker.js era are historical and should not be suggested for new work.',
+  'walkerOS is not a product analytics tool, not a consent management platform, and not a business intelligence layer. It collects events and routes them to those tools.',
+  `To prove an integration works without calling a real endpoint, run \`walkeros push flow.json --event '{"name":"product add"}' --simulate destination.NAME\`. It runs the flow and reports what the destination would have sent.`,
+  `Canonical index: ${vars.site}/llms.txt. Generated ${new Date().toISOString().slice(0, 10)}.`,
+].join('\n>\n> ');
 
 const config: Config = {
   title: 'walkerOS',
@@ -32,7 +49,10 @@ const config: Config = {
     },
   },
 
-  // Set the production url of your site here
+  // Set the production url of your site here.
+  // Keep this a plain string literal matching `vars.site`: the LLM export guard
+  // reads the value straight out of this file rather than importing the config,
+  // so a reference here leaves it with no url to check links against.
   url: 'https://www.walkeros.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
@@ -63,6 +83,48 @@ const config: Config = {
       onBrokenMarkdownLinks: 'warn',
     },
   },
+
+  // Site-wide head tags. Everything here is published, machine-read copy, so it
+  // states facts about the project and nothing else.
+  headTags: [
+    // Docusaurus emits og:title, og:description, og:image, og:url and og:locale
+    // from the theme, but never og:type.
+    {
+      tagName: 'meta',
+      attributes: {
+        property: 'og:type',
+        content: 'website',
+      },
+    },
+    // llms.txt v2 discovery: the index that describes this site. The per-page
+    // `rel="alternate" type="text/markdown"` half is emitted from the doc item
+    // itself, since only doc routes have a Markdown companion.
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'describedby',
+        href: `${vars.site}/llms.txt`,
+      },
+    },
+    {
+      tagName: 'script',
+      attributes: {
+        type: 'application/ld+json',
+      },
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'walkerOS',
+        description:
+          'Open source event data collection. Sources capture events, a collector processes them, and destinations route them to analytics and marketing tools.',
+        url: vars.site,
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'Browser, Node.js',
+        license: 'https://opensource.org/licenses/MIT',
+        sameAs: [vars.github, vars.npm],
+      }),
+    },
+  ],
 
   themes: [
     '@docusaurus/theme-live-codeblock',
@@ -249,6 +311,13 @@ const config: Config = {
         // The plugin fails the build when a `to` is not a real route, so these
         // stay honest as the docs move.
         redirects: [
+          // `/contact` is the path a reader or a crawler guesses for the legal
+          // contact details. Forward it to the imprint rather than growing a
+          // second contact surface that then drifts from it.
+          {
+            from: '/contact',
+            to: '/legal/imprint',
+          },
           {
             from: '/docs/sources/web/session/detection',
             to: '/docs/sources/web/session',
@@ -662,8 +731,7 @@ const config: Config = {
       '@signalwire/docusaurus-plugin-llms-txt',
       {
         siteTitle: 'walkerOS Documentation',
-        siteDescription:
-          'Privacy-first, composable event data collection (Source → Collector → Destination).',
+        siteDescription: llmsTxtPreamble,
         // depth: 2 groups routes like /docs/destinations/web/amplitude into the
         // "docs/destinations" category, mirroring the pipeline taxonomy.
         depth: 2,
