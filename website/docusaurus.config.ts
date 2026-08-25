@@ -5,6 +5,7 @@ import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plu
 import { version as coreVersion } from '../packages/core/package.json';
 import restoreExpressionIndent from './src/remark/restore-expression-indent';
 import normalizeExportLinks from './src/remark/normalize-export-links';
+import prependExportContext from './src/remark/prepend-export-context';
 
 const vars = {
   github: 'https://github.com/elbwalker/walkerOS/',
@@ -763,11 +764,18 @@ const config: Config = {
           // non-root baseUrl.
           relativePaths: Boolean(process.env.DOCUSAURUS_BASEURL),
           excludeRoutes: ['/search', '/404', '/tags/**'],
-          // The export appends `.md` to the route path, so a trailing-slash
-          // route yields `/docs/mapping/.md` while the page is written to
-          // `/docs/mapping.md`. Rewrite those targets after the export's own
-          // link handling.
-          remarkPlugins: [normalizeExportLinks],
+          // These run on the mdast of the per-page exports only, so neither
+          // touches llms.txt:
+          // - The export appends `.md` to the route path, so a trailing-slash
+          //   route yields `/docs/mapping/.md` while the page is written to
+          //   `/docs/mapping.md`. Rewrite those targets after the export's own
+          //   link handling.
+          // - An export is read detached from the site, often by an agent that
+          //   landed on one narrow page. Give it a pointer to the index.
+          remarkPlugins: [
+            normalizeExportLinks,
+            [prependExportContext, { indexUrl: `${vars.site}/llms.txt` }],
+          ],
         },
       } satisfies LlmsTxtOptions,
     ],
