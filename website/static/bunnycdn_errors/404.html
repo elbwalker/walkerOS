@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Page not found | walkerOS</title>
+    <style>
+      :root {
+        --ground: #f6f4f1;
+        --surface: #ffffff;
+        --surface-2: #efece7;
+        --ink: #22252a;
+        --ink-2: #5f5c58;
+        --ink-3: #76716a;
+        --rule: #e4e0d9;
+        --signal: #01b5e2;
+        --signal-ink: #0a7899;
+        --glow: rgb(1 181 226 / 26%);
+        --shadow: 0 2px 6px rgb(34 37 42 / 7%), 0 22px 48px rgb(34 37 42 / 11%);
+        --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas,
+          'Liberation Mono', monospace;
+        --r: 12px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --ground: #191a1c;
+          --surface: #212326;
+          --surface-2: #282a2e;
+          --ink: #f2efeb;
+          --ink-2: #b3aea7;
+          --ink-3: #96918a;
+          --rule: #303235;
+          --signal-ink: #4fcdec;
+          --glow: rgb(1 181 226 / 30%);
+          --shadow: 0 2px 6px rgb(0 0 0 / 45%), 0 22px 48px rgb(0 0 0 / 40%);
+        }
+      }
+
+      :root[data-theme='dark'] {
+        --ground: #191a1c;
+        --surface: #212326;
+        --surface-2: #282a2e;
+        --ink: #f2efeb;
+        --ink-2: #b3aea7;
+        --ink-3: #96918a;
+        --rule: #303235;
+        --signal-ink: #4fcdec;
+        --glow: rgb(1 181 226 / 30%);
+        --shadow: 0 2px 6px rgb(0 0 0 / 45%), 0 22px 48px rgb(0 0 0 / 40%);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 24px 64px;
+        background: var(--ground);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 18px;
+        line-height: 1.6;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* Brand blue as a light source rather than ink. */
+      body::before {
+        content: '';
+        position: absolute;
+        inset: -20% 0 auto;
+        height: 70vh;
+        background: radial-gradient(
+          60% 60% at 50% 0%,
+          var(--glow),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+
+      main {
+        position: relative;
+        width: 100%;
+        max-width: 620px;
+      }
+
+      .brand {
+        display: inline-block;
+        margin-bottom: 56px;
+        color: var(--ink);
+      }
+
+      .brand svg {
+        display: block;
+        width: 176px;
+        height: auto;
+      }
+
+      .mark {
+        fill: var(--signal);
+      }
+
+      .word {
+        fill: currentColor;
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--signal-ink);
+      }
+
+      h1 {
+        margin: 0 0 16px;
+        font-size: clamp(34px, 6vw, 48px);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        font-weight: 700;
+      }
+
+      .lead {
+        margin: 0 0 40px;
+        max-width: 46ch;
+        color: var(--ink-2);
+      }
+
+      nav {
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: var(--r);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      nav a {
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        padding: 18px 22px;
+        text-decoration: none;
+        color: inherit;
+        border-top: 1px solid var(--rule);
+        transition:
+          background-color 0.15s ease,
+          color 0.15s ease;
+      }
+
+      nav a:first-child {
+        border-top: 0;
+      }
+
+      nav a:hover,
+      nav a:focus-visible {
+        background: var(--surface-2);
+        outline: none;
+      }
+
+      .label {
+        font-weight: 600;
+        font-size: 17px;
+        white-space: nowrap;
+      }
+
+      nav a:hover .label,
+      nav a:focus-visible .label {
+        color: var(--signal-ink);
+      }
+
+      .hint {
+        margin-left: auto;
+        text-align: right;
+        font-size: 15px;
+        color: var(--ink-3);
+      }
+
+      .agents {
+        margin: 32px 0 0;
+        font-size: 15px;
+        line-height: 1.7;
+        color: var(--ink-3);
+      }
+
+      .agents a {
+        color: var(--signal-ink);
+        text-decoration-color: var(--rule);
+        text-underline-offset: 3px;
+      }
+
+      .agents code {
+        font-family: var(--mono);
+        font-size: 14px;
+        color: var(--ink-2);
+        word-break: break-all;
+      }
+
+      @media (max-width: 520px) {
+        body {
+          font-size: 17px;
+          padding: 40px 20px 48px;
+        }
+
+        .brand {
+          margin-bottom: 40px;
+        }
+
+        nav a {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+          padding: 16px 18px;
+        }
+
+        .hint {
+          margin-left: 0;
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="brand" href="https://www.walkeros.io/" aria-label="walkerOS">
+        <svg viewBox="0 0 735.42 157.85" role="img" aria-hidden="true">
+          <g class="mark">
+            <path
+              d="M52.5,157.34l22.07.5c12.55.29,24-7.12,28.89-18.67l25.82-59.73-22.07-.5c-12.55-.29-24,7.12-28.89,18.67l-25.82,59.73Z"
+            />
+            <path
+              d="M0,157.34l22.07.5c12.55.29,24-7.12,28.89-18.67L112.01.51,89.94,0c-12.55-.29-24,7.12-28.89,18.67L0,157.34Z"
+            />
+            <path
+              d="M104.27,157.34l22.07.5c12.55.29,24-7.12,28.89-18.67L216.28.51,194.21,0c-12.55-.29-24,7.12-28.89,18.67l-61.05,138.66Z"
+            />
+          </g>
+          <g class="word">
+            <path
+              fill-rule="evenodd"
+              d="M524.59,78.71h14.41l1.15,7.27c4.84-7.78,11.34-8.93,17.72-8.93,1.5,0,2.99.13,4.43.39l-1.44,15.65c-1.45-.4-3.08-.61-5.03-.61-8.16,0-15.68,4.34-15.68,15.94v33.15h-15.56v-62.86h0ZM468.34,102.81c2.29-8.16,9.18-12.24,17.59-12.24,8.92,0,15.3,4.08,16.32,12.24h-33.91ZM517.17,115.69h-49.09c1.02,7.78,7.78,13.39,18.74,13.39,5.74,0,13.26-2.17,16.83-5.86l9.95,9.82c-6.63,6.88-17.47,10.2-27.03,10.2-21.67,0-34.55-13.39-34.55-33.54s13.01-32.89,33.41-32.89,34.17,13.01,31.74,38.89h0ZM399.98,52.45h15.55v51.51l21.17-25.25h18.61v.89l-25.63,28.69,29.2,32.13v1.15h-18.74l-24.61-28.43v28.43h-15.55V52.45h0ZM377.5,52.45h15.43v89.12h-15.43V52.45h0ZM336.4,91.08c24.48,0,24.48,38.12,0,38.12-10.33,0-18.62-7.14-18.62-19.13s8.29-19,18.62-19h0ZM355.02,87.38l.51-8.67h14.92v62.86h-14.66l-.77-9.18c-3.57,7.39-13.39,10.96-20.4,11.09-18.62.13-32.39-11.35-32.39-33.41s14.41-33.02,32.77-32.89c8.41,0,16.45,3.95,20.02,10.2Z"
+            />
+            <path
+              d="M302.72,80.35l-22.88,63.14h-17.6l-14.2-39.2-14.67,39.2h-17.6l-22.77-63.14h17.25l14.9,42.72,15.49-42.72h15.49l15.02,42.72,15.37-42.72h16.2Z"
+            />
+            <path
+              d="M606.54,53.22c26.52-1.88,45.43,13.39,48.22,39.84,3.49,33.1-14.68,57.33-49.41,54.75-51.75-3.83-53.27-90.73,1.19-94.59ZM607.99,69.49c-34.05,3.49-27.39,73.81,11.03,60.89,24.74-8.32,22.69-64.35-11.03-60.89Z"
+            />
+            <path
+              d="M733.32,80.95h-18.1c.26-14.73-28.63-16.18-32.24-4.54-4.51,14.53,19.7,15.2,28.78,17.58,11.16,2.93,21.57,8.18,23.33,20.8,2.34,16.8-7.98,28.31-23.78,31.83-20.34,4.53-49.42-1.16-50.03-26.64h18.1c1.82,12.35,19.51,14.51,29.05,10.76,9.15-3.59,10.81-14.44,1.36-18.9-10.81-5.1-23.59-3.68-34.87-10.36-17.34-10.28-14.71-33.95,2.04-43.37,19.56-11,56.65-4.87,56.35,22.83Z"
+            />
+          </g>
+        </svg>
+      </a>
+
+      <p class="eyebrow">Error 404</p>
+      <h1>Page not found</h1>
+      <p class="lead">
+        This address does not exist. It may be mistyped, or the page has moved.
+        These are good places to pick the thread back up.
+      </p>
+
+      <nav>
+        <a href="https://www.walkeros.io/docs/">
+          <span class="label">Documentation</span>
+          <span class="hint">Sources, collector, destinations, mapping</span>
+        </a>
+        <a href="https://www.walkeros.io/playground/">
+          <span class="label">Playground</span>
+          <span class="hint">Run a flow in the browser</span>
+        </a>
+        <a href="https://www.walkeros.io/skills/">
+          <span class="label">Skills</span>
+          <span class="hint">Reference for coding agents</span>
+        </a>
+        <a href="https://www.walkeros.io/llms.txt">
+          <span class="label">llms.txt</span>
+          <span class="hint">The full documentation index, one file</span>
+        </a>
+      </nav>
+
+      <p class="agents">
+        Every page on this site is listed in the
+        <a href="https://www.walkeros.io/sitemap.xml">sitemap</a>.<br />
+        For AI agents: the full documentation index is at
+        <code>https://www.walkeros.io/llms.txt</code>
+      </p>
+    </main>
+  </body>
+</html>
