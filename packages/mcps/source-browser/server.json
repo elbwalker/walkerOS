@@ -3,7 +3,7 @@
   "name": "io.walkeros/source-browser",
   "title": "walkerOS Source Browser",
   "description": "Generate, parse, and validate walkerOS data-elb HTML tagging attributes",
-  "version": "4.4.0",
+  "version": "4.5.0",
   "websiteUrl": "https://www.walkeros.io/docs/apps/mcp",
   "repository": {
     "url": "https://github.com/elbwalker/walkerOS",
@@ -15,7 +15,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@walkeros/mcp-source-browser",
-      "version": "4.4.0",
+      "version": "4.5.0",
       "transport": {
         "type": "stdio"
       }
