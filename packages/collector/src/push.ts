@@ -11,7 +11,7 @@ import {
   useHooks,
 } from '@walkeros/core';
 import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
-import { bumpDropped } from './report-error';
+import { bumpDropped, errorMeta } from './report-error';
 import { createEvent, enrichEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
 import { buildBaseState, journeyFields } from './observerEmit';
@@ -319,10 +319,15 @@ export function createPush<T extends Collector.Instance>(
             });
           }
           collector.status.failed++;
+          // Identify the event by NAME only. The log context is serialized
+          // into stderr, the error ring and the managed-run jsonl sink, so it
+          // stays primitive and low-cardinality: the full event (user,
+          // consent, data) and the raw ingest payload would be a PII egress,
+          // and per-event values would make every failure look distinct to
+          // the ring's message dedup.
           collector.logger.error('push failed', {
-            event,
-            ingest: options.ingest,
-            error: err,
+            ...errorMeta(err),
+            event: event.name,
           });
           return createPushResult({ ok: false });
         },

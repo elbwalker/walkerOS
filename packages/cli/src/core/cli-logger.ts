@@ -42,9 +42,23 @@ export function createCLILoggerConfig(
     // at DEBUG, ERROR always reaches the handler (and the ring) even without
     // --verbose.
     level: Level.DEBUG,
-    handler: (level, message, _context, scope) => {
+    handler: (level, message, context, scope) => {
       // Build formatted message
       const scopePath = scope.length > 0 ? `[${scope.join(':')}] ` : '';
+      // Serialize the structured context into the line so error details (gRPC
+      // status codes, row counts, target tables) reach stderr and the ring.
+      // Serialization happens BEFORE scrubSecrets so redaction covers context
+      // values too; the heartbeat path's 256-char cap stays as the wire
+      // backstop. A context that cannot stringify (circular) must never break
+      // logging.
+      let meta = '';
+      if (Object.keys(context).length > 0) {
+        try {
+          meta = ` ${JSON.stringify(context)}`;
+        } catch {
+          meta = ' [unserializable context]';
+        }
+      }
       // Redact secrets ONCE here, before BOTH the onLine ring tap and the
       // console.* output. stderr is shipped directly by Cockpit/Loki, so the
       // heartbeat-egress redactor alone (runtime/redact.ts) would miss it; doing
@@ -52,7 +66,7 @@ export function createCLILoggerConfig(
       // (collector + steps, via the D1 wiring) on both paths. Length is
       // preserved here (no truncation); the heartbeat path applies the 256-char
       // wire cap separately as a backstop on already-redacted text.
-      const fullMessage = scrubSecrets(`${scopePath}${message}`);
+      const fullMessage = scrubSecrets(`${scopePath}${message}${meta}`);
 
       // Tap every line before any early return so no level is dropped from capture.
       try {

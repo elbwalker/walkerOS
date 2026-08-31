@@ -345,6 +345,36 @@ describe('store-cache wrapper: write path', () => {
     expect(logger.warn).toHaveBeenCalledTimes(1);
   });
 
+  it('set: the cache-failure warning carries the error message, not a raw Error', async () => {
+    const backing = createBackingStore();
+    const cacheStore = createMockCacheStore();
+    const logger = createMockLogger();
+    cacheStore.set.mockImplementationOnce(() => {
+      throw new Error('cache offline');
+    });
+
+    const cacheConfig: Cache.Cache<Cache.StoreCacheRule> = {
+      rules: [{ ttl: 60 }],
+    };
+    const wrapped = wrapStoreWithCache(backing, {
+      storeId: 'foo',
+      cacheConfig,
+      cacheStore,
+      namespace: 'foo',
+      logger,
+    });
+
+    await wrapped.set('user', 'alice');
+
+    const context = logger.warn.mock.calls[0][1];
+
+    expect(context).toEqual({ error: 'cache offline' });
+    // A raw Error has no enumerable own properties, so logging the object
+    // itself serializes to `"error":{}` and the cause is gone from the
+    // output an operator reads.
+    expect(JSON.stringify(context)).toContain('cache offline');
+  });
+
   it('set: no matching rule -> backing called, cache NOT called', async () => {
     const backing = createBackingStore();
     const cacheStore = createMockCacheStore();

@@ -2835,7 +2835,7 @@ export interface paths {
     put?: never;
     /**
      * Deploy settings
-     * @description Start a deployment for a specific settings entry. Detects platform from the settings.
+     * @description Start a deployment for a specific settings entry. Detects platform from the settings. The body is optional and carries only `humanText`, the reason for the change, which becomes the description of the release this deploy produces; it is ignored when the release already has one.
      */
     post: {
       parameters: {
@@ -2848,7 +2848,11 @@ export interface paths {
         };
         cookie?: never;
       };
-      requestBody?: never;
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['DeploySettingsRequest'];
+        };
+      };
       responses: {
         /** @description Deployment started */
         201: {
@@ -6648,6 +6652,95 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/projects/{projectId}/flows/{flowId}/releases/{versionId}/content': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read a release snapshot
+     * @description The flow config one release of this flow froze, addressed by its spine version id. This is the only route that serves a release snapshot: the positional `/versions/{versionNumber}` route numbers the autosave revisions, a disjoint set of rows, so a release number handed to it addresses an unrelated revision or nothing. Inline secret literals are masked. An unknown id, a sibling flow's version, and an autosave revision all answer 404 alike. Requires member role and the `hub` feature.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Spine version ID of the release (ver_...) */
+          versionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The release snapshot */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReleaseContentResponse'];
+          };
+        };
+        /** @description Invalid version id */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/projects/{projectId}/flows/{flowId}/releases/annotations': {
     parameters: {
       query?: never;
@@ -7197,6 +7290,387 @@ export interface paths {
         };
       };
     };
+    trace?: never;
+  };
+  '/api/projects/{projectId}/knowledge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List knowledge captured in this project
+     * @description What people wrote on pages, most recently active first. Two kinds come back together and `kind` separates them: a `thread` carries its text in messages, a `description` carries one body and cannot be replied to. `sourceKey` narrows to one page; `markId` narrows to one mark within it and is refused without `sourceKey`, since a mark id alone addresses nothing. `includeMessages=true` attaches message bodies and holds the page to a much smaller ceiling, so `hasMoreEntries` is what separates a complete answer from a truncated one. `validity` says when an entry was true and `freshness` compares that against the flow’s newest release; neither is a verdict. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          sourceKey?: string;
+          markId?: string;
+          includeMessages?: 'true' | 'false';
+          limit?: number;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Knowledge in this project */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListKnowledgeResponse'];
+          };
+        };
+        /** @description Invalid query, or a mark filter with no page */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Open a thread on a mark
+     * @description Open a thread on one mark of one page, with its first message. A thread never exists empty, so `text` is required and may not be blank. `clientThreadId` and `clientMessageId` are minted by the client at compose time and are what make a replay idempotent: repeating a known `clientThreadId` hands back the existing thread and writes nothing, so an offline queue can drain repeatedly without duplicating what a person wrote once. `flowId` binds the capture to a flow or is explicitly null; a flow this project cannot see answers 404, never 403. The server decides the plan id, the composed anchor key, the born release, the author and the source: a client cannot assert any of them. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @example tag
+             * @enum {string}
+             */
+            anchorType: 'tag';
+            sourceKey: string;
+            markId: string;
+            anchorLabel?: string;
+            flowId: string | null;
+            subjectKey?: string;
+            spatial?: components['schemas']['KnowledgeSpatial'];
+            /** @example ct_7f3a91 */
+            clientThreadId: string;
+            text: string;
+            /** @example ct_7f3a91 */
+            clientMessageId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The thread, with its first message */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['KnowledgeThreadResponse'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The named flow is not in this project */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/knowledge/{threadId}/messages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reply to a knowledge thread
+     * @description Append a message to a thread and get the whole thread back, so a surface renders the new exchange without a second read. `text` may not be blank: a message cannot be cleared, so empty is invalid rather than a way to erase one. Repeating a `clientMessageId` already on the thread appends nothing and leaves `updatedAt` alone, so a retrying drain never keeps bumping a thread to the top of every list. A description has no conversation and cannot be replied to; addressing one answers 404. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Thread ID (thr_...) */
+          threadId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            text: string;
+            /** @example ct_7f3a91 */
+            clientMessageId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The thread, with the new message */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['KnowledgeThreadResponse'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/knowledge/description': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Write the description of a mark
+     * @description Write the one description of one mark, replacing whatever it said before. There is no id to mint: the anchor is the key, so a replayed write lands on the same row by construction, which is why this is a PUT. An empty `body` is refused rather than stored, so a drain that arrives with nothing to say can never erase what a person wrote. The response is 200 whether the description was opened or replaced. Requires member role.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @example tag
+             * @enum {string}
+             */
+            anchorType: 'tag';
+            sourceKey: string;
+            markId: string;
+            anchorLabel?: string;
+            flowId: string | null;
+            subjectKey?: string;
+            spatial?: components['schemas']['KnowledgeSpatial'];
+            body: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The stored description */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['KnowledgeDescriptionResponse'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The named flow is not in this project */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/api/projects/{projectId}/flows/{flowId}/releases/step-history': {
@@ -9270,6 +9744,10 @@ export interface components {
        */
       updatedAt: string;
     };
+    DeploySettingsRequest: {
+      flow?: string;
+      humanText?: string;
+    };
     DeploySettingsResponse: {
       deploymentId: string;
       /** @example cfg_a1b2c3d4 */
@@ -9711,6 +10189,21 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
       createdBy: string | null;
+      createdByLabel: string | null;
+    };
+    ReleaseContentResponse: {
+      /** @example ver_a1b2c3d4 */
+      versionId: string;
+      /** @example 22 */
+      versionNumber: number;
+      content: components['schemas']['FlowConfig'];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /** @enum {string} */
+      createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
     };
     ListVersionAnnotationsResponse: {
       annotations: components['schemas']['VersionAnnotation'][];
@@ -9841,6 +10334,199 @@ export interface components {
       messageCount: number;
       messages?: components['schemas']['HubMessage'][];
       hasMoreMessages?: boolean;
+    };
+    ListKnowledgeResponse: {
+      entries: components['schemas']['KnowledgeEntry'][];
+      hasMoreEntries: boolean;
+    };
+    KnowledgeEntry:
+      | components['schemas']['KnowledgeThread']
+      | components['schemas']['KnowledgeDescription'];
+    KnowledgeThread: {
+      id: string;
+      anchorKey: string;
+      anchorLabel: string;
+      planId: string | null;
+      sourceKey: string | null;
+      flowId: string | null;
+      subjectKey: string | null;
+      spatial: components['schemas']['KnowledgeSpatial'];
+      validity: components['schemas']['KnowledgeValidity'];
+      /** @enum {string} */
+      freshness: 'current' | 'subject_changed' | 'unknown';
+      author: components['schemas']['KnowledgeAuthor'];
+      /** @enum {string} */
+      source: 'tag_mode' | 'hub' | 'mcp';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'thread';
+      /**
+       * @example release
+       * @enum {string}
+       */
+      anchorType: 'step' | 'entity_action' | 'release' | 'contract' | 'tag';
+      /**
+       * @example open
+       * @enum {string}
+       */
+      status: 'open' | 'resolved';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      messageCount: number;
+      messages?: components['schemas']['KnowledgeMessage'][];
+      hasMoreMessages?: boolean;
+    };
+    KnowledgeSpatial: {
+      at: {
+        x: number;
+        y: number;
+      };
+      element?: {
+        [key: string]: unknown;
+      };
+    } | null;
+    KnowledgeValidity:
+      | {
+          /** @enum {string} */
+          tier: 'release';
+          versionId: string;
+          versionNumber: number;
+          promoted: boolean;
+        }
+      | {
+          /** @enum {string} */
+          tier: 'draft';
+          versionId?: string;
+        }
+      | {
+          /** @enum {string} */
+          tier: 'none';
+        };
+    KnowledgeAuthor: {
+      /** @enum {string} */
+      kind: 'user' | 'preview' | 'agent';
+      id: string | null;
+      label: string;
+    };
+    KnowledgeMessage: {
+      id: string;
+      /** @example user_a1b2c3d4 */
+      author: string;
+      /** @example ayla@elbwalker.com */
+      authorLabel: string;
+      text: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      clientMessageId: string | null;
+    };
+    KnowledgeDescription: {
+      id: string;
+      anchorKey: string;
+      anchorLabel: string;
+      planId: string | null;
+      sourceKey: string | null;
+      flowId: string | null;
+      subjectKey: string | null;
+      spatial: components['schemas']['KnowledgeSpatial'];
+      validity: components['schemas']['KnowledgeValidity'];
+      /** @enum {string} */
+      freshness: 'current' | 'subject_changed' | 'unknown';
+      author: components['schemas']['KnowledgeAuthor'];
+      /** @enum {string} */
+      source: 'tag_mode' | 'hub' | 'mcp';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'description';
+      /** @enum {string} */
+      anchorType: 'tag';
+      body: string;
+    };
+    KnowledgeThreadResponse: {
+      id: string;
+      anchorKey: string;
+      anchorLabel: string;
+      planId: string | null;
+      sourceKey: string | null;
+      flowId: string | null;
+      subjectKey: string | null;
+      spatial: components['schemas']['KnowledgeSpatial'];
+      validity: components['schemas']['KnowledgeValidity'];
+      /** @enum {string} */
+      freshness: 'current' | 'subject_changed' | 'unknown';
+      author: components['schemas']['KnowledgeAuthor'];
+      /** @enum {string} */
+      source: 'tag_mode' | 'hub' | 'mcp';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /** @enum {string} */
+      kind: 'thread';
+      /**
+       * @example release
+       * @enum {string}
+       */
+      anchorType: 'step' | 'entity_action' | 'release' | 'contract' | 'tag';
+      /**
+       * @example open
+       * @enum {string}
+       */
+      status: 'open' | 'resolved';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      messageCount: number;
+      messages?: components['schemas']['KnowledgeMessage'][];
+      hasMoreMessages?: boolean;
+    };
+    KnowledgeDescriptionResponse: {
+      id: string;
+      anchorKey: string;
+      anchorLabel: string;
+      planId: string | null;
+      sourceKey: string | null;
+      flowId: string | null;
+      subjectKey: string | null;
+      spatial: components['schemas']['KnowledgeSpatial'];
+      validity: components['schemas']['KnowledgeValidity'];
+      /** @enum {string} */
+      freshness: 'current' | 'subject_changed' | 'unknown';
+      author: components['schemas']['KnowledgeAuthor'];
+      /** @enum {string} */
+      source: 'tag_mode' | 'hub' | 'mcp';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /** @enum {string} */
+      kind: 'description';
+      /** @enum {string} */
+      anchorType: 'tag';
+      body: string;
     };
     SummarizeReleaseResponse: {
       /** @enum {string} */

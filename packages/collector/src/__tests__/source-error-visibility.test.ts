@@ -40,9 +40,32 @@ describe('source factory throws (Category A)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         sourceId: 'bad',
-        error: expect.any(Error),
+        error: 'factory boom',
       }),
     );
+  });
+
+  test('the failure context serializes the message, not a blind empty error', async () => {
+    const { collector } = await startFlow({
+      logger: { handler: () => undefined },
+    });
+    installMockLogger(collector);
+
+    await initSources(collector, {
+      bad: {
+        code: () => {
+          throw new Error('factory boom');
+        },
+      } as Source.InitSource,
+    });
+
+    const context = findLoggerError(collector, 'source factory failed')?.[1];
+
+    expect(context).toEqual({ sourceId: 'bad', error: 'factory boom' });
+    // A raw Error has no enumerable own properties, so logging the object
+    // itself serializes to `"error":{}` — the message is lost in exactly the
+    // output an operator reads to find out what broke.
+    expect(JSON.stringify(context)).toContain('factory boom');
   });
 });
 
@@ -77,7 +100,7 @@ describe('source init throws (Category A)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         sourceId: 'stuck',
-        error: expect.any(Error),
+        error: 'init boom',
       }),
     );
   });
@@ -110,7 +133,7 @@ describe('source queued on flush throws (Category A)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         type: 'consent',
-        error: expect.any(Error),
+        error: 'on boom',
       }),
     );
   });

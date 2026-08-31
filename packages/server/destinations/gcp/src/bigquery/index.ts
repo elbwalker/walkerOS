@@ -8,10 +8,19 @@ import { openWriter, closeWriter } from './writer';
 // Types
 export * as DestinationBigQuery from './types';
 
-// Default gRPC deadline (ms) when the standard per-step `config.timeout` is
-// unset or <= 0. Mirrors the collector's DEFAULT_DESTINATION_TIMEOUT_MS and its
-// `> 0 ? value : default` rule (packages/collector/src/destination.ts), so the
-// gax deadline matches the window the collector uses to race the push.
+// Timeout layering (who owns which bound):
+// - The COLLECTOR bounds every delivery: it races each push/pushBatch at
+//   config.timeout (default 10s, packages/collector/src/destination.ts) and
+//   converts a hung delivery into a counted DLQ failure. That is the
+//   per-operation protection.
+// - This DESTINATION owns the connection lifecycle: broken-writer detection
+//   via the connection 'error' listener, one lazy re-open on the next push
+//   (ensureWriter), collapsed across concurrent pushes.
+// - The gax deadline below bounds UNARY control-plane calls only (the
+//   getWriteStream schema fetch during open/re-open). It is never applied to
+//   the appendRows bidi stream: a deadline there bounds the stream's total
+//   lifetime and would kill a healthy connection on expiry. The stream keeps
+//   the SDK's own long-lived AppendRows default.
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 export const destinationBigQuery: Destination = {
@@ -24,9 +33,9 @@ export const destinationBigQuery: Destination = {
   async init({ config: partialConfig, env, logger, id, reportError }) {
     const config = getConfig(partialConfig, env, logger);
 
-    // The gax deadline derives from the standard per-step config.timeout (the
-    // same value the collector uses to race the push), not a destination-custom
-    // knob. A positive number wins; 0/unset falls back to the default.
+    // Deadline for unary control-plane calls, derived from the standard
+    // per-step config.timeout (the same value the collector uses to race the
+    // push). A positive number wins; 0/unset falls back to the default.
     const timeout =
       config.timeout && config.timeout > 0
         ? config.timeout
@@ -51,7 +60,8 @@ export const destinationBigQuery: Destination = {
     // broken writer. Closes over the openWriter args + onConnectionError so the
     // fresh connection carries the same containment handler. The reused args
     // (projectId/datasetId/tableId/bigquery/timeout) are immutable post-init, so
-    // a re-open targets the same table with the same auth and deadline.
+    // a re-open targets the same table with the same auth and unary-call
+    // deadline.
     settings.reopenWriter = () =>
       openWriter(
         {
