@@ -58,7 +58,7 @@ import {
 } from '@walkeros/core';
 import { buildBaseState, journeyFields } from './observerEmit';
 import { getCacheStore, getStateStore } from './cache';
-import { buildReportError } from './report-error';
+import { buildReportError, errorMeta } from './report-error';
 
 /**
  * Extracts transformer next configuration for chain walking.
@@ -644,7 +644,7 @@ export async function runTransformerChain(
           .scope(`transformer:${transformer.type || 'unknown'}`)
           .error('transformer init failed', {
             transformer: transformerName,
-            error: err,
+            ...errorMeta(err),
           });
         return false;
       },
@@ -825,7 +825,7 @@ export async function runTransformerChain(
             tryCatchAsync(runTransformerChain, (err) => {
               collector.logger
                 .scope('transformer:many')
-                .error(`many branch ${id} failed`, { error: err });
+                .error(`many branch ${id} failed`, errorMeta(err));
               return { event: null, respond: undefined };
             })(
               collector,
@@ -858,7 +858,7 @@ export async function runTransformerChain(
     const result = await tryCatchAsync(transformerPush, (err) => {
       collector.logger
         .scope(`transformer:${transformer.type || 'unknown'}`)
-        .error('Push failed', { error: err });
+        .error('Push failed', errorMeta(err));
       return false as const; // Stop chain on error
     })(
       collector,
@@ -951,7 +951,7 @@ export async function runTransformerChain(
                 tryCatchAsync(runTransformerChain, (err) => {
                   collector.logger
                     .scope('transformer:many')
-                    .error(`many branch ${id} failed`, { error: err });
+                    .error(`many branch ${id} failed`, errorMeta(err));
                   return { event: null, respond: undefined };
                 })(
                   collector,
@@ -1095,7 +1095,7 @@ export async function runTransformerChain(
             tryCatchAsync(runTransformerChain, (err) => {
               collector.logger
                 .scope('transformer:many')
-                .error(`many branch ${id} failed`, { error: err });
+                .error(`many branch ${id} failed`, errorMeta(err));
               return { event: null, respond: undefined };
             })(
               collector,
@@ -1197,7 +1197,7 @@ export async function runTransformerChain(
             tryCatchAsync(runTransformerChain, (err) => {
               collector.logger
                 .scope('transformer:many')
-                .error(`many branch ${id} failed`, { error: err });
+                .error(`many branch ${id} failed`, errorMeta(err));
               return { event: null, respond: undefined };
             })(
               collector,

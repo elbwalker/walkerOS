@@ -87,6 +87,51 @@ describe('reportError', () => {
 
       expect(() => reportError(new Error('stream broken'))).not.toThrow();
     });
+
+    test('orphan log meta carries the error name and transport code when present', async () => {
+      const c = await collector({});
+      const logger = createMockLogger();
+      const reportError = buildReportError(
+        c,
+        'destination',
+        'bigquery',
+        logger,
+      );
+
+      // Shape of a gax GoogleError: an Error subclass with a numeric gRPC
+      // status code. The log line must surface both so a stream failure is
+      // diagnosable from logs alone.
+      const googleError: Error & { code?: number } = Object.assign(
+        new Error('Total timeout of API exceeded 10000 milliseconds'),
+        { code: 4 },
+      );
+      googleError.name = 'GoogleError';
+
+      reportError(googleError);
+
+      expect(logger.error).toHaveBeenCalledWith('connection error', {
+        error: 'Total timeout of API exceeded 10000 milliseconds',
+        name: 'GoogleError',
+        code: 4,
+      });
+    });
+
+    test('orphan log meta stays lean for a plain Error (no name/code noise)', async () => {
+      const c = await collector({});
+      const logger = createMockLogger();
+      const reportError = buildReportError(
+        c,
+        'destination',
+        'bigquery',
+        logger,
+      );
+
+      reportError(new Error('stream broken'));
+
+      expect(logger.error).toHaveBeenCalledWith('connection error', {
+        error: 'stream broken',
+      });
+    });
   });
 
   describe('event-bearing form', () => {
@@ -132,6 +177,32 @@ describe('reportError', () => {
 
       expect(() => reportError(new Error('x'), event)).not.toThrow();
       expect(c.status.failed).toBe(1);
+    });
+
+    test('event-bearing log meta carries the transport code when present', async () => {
+      const c = await collector({});
+      const logger = createMockLogger();
+      const dlq: Destination.DLQ = [];
+      const reportError = buildReportError(
+        c,
+        'destination',
+        'bigquery',
+        logger,
+        makeDestination(dlq),
+      );
+
+      const err: Error & { code?: number } = Object.assign(
+        new Error('append failed'),
+        { code: 14 },
+      );
+
+      reportError(err, event);
+
+      expect(logger.error).toHaveBeenCalledWith('report error', {
+        error: 'append failed',
+        code: 14,
+        event: event.name,
+      });
     });
   });
 

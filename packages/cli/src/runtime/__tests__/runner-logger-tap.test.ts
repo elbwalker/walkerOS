@@ -110,7 +110,9 @@ export default async function(context = {}) {
 
     const snapshot = errorRing.snapshot();
     expect(snapshot).toHaveLength(1);
-    expect(snapshot[0].message).toBe('[bq] Push failed');
+    expect(snapshot[0].message).toBe(
+      '[bq] Push failed {"event":"order complete"}',
+    );
 
     expect(handle.file).toBe(bundle);
   });

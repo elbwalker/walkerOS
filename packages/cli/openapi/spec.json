@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "4.3.0",
+    "version": "4.4.0",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -970,6 +970,18 @@
           "createdAt",
           "updatedAt"
         ]
+      },
+      "DeploySettingsRequest": {
+        "type": "object",
+        "properties": {
+          "flow": {
+            "type": "string"
+          },
+          "humanText": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        }
       },
       "DeploySettingsResponse": {
         "type": "object",
@@ -2103,6 +2115,9 @@
           },
           "createdBy": {
             "type": ["string", "null"]
+          },
+          "createdByLabel": {
+            "type": ["string", "null"]
           }
         },
         "required": [
@@ -2116,6 +2131,41 @@
           "status",
           "source",
           "errorCode",
+          "createdAt",
+          "createdBy",
+          "createdByLabel"
+        ]
+      },
+      "ReleaseContentResponse": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "pattern": "^ver_[a-zA-Z0-9_-]+$",
+            "example": "ver_a1b2c3d4"
+          },
+          "versionNumber": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "example": 22
+          },
+          "content": {
+            "$ref": "#/components/schemas/FlowConfig"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "createdBy": {
+            "type": "string",
+            "enum": ["user", "auto_save", "restore", "deploy", "preview"]
+          }
+        },
+        "required": [
+          "versionId",
+          "versionNumber",
+          "content",
           "createdAt",
           "createdBy"
         ]
@@ -2402,6 +2452,513 @@
           "createdAt",
           "updatedAt",
           "messageCount"
+        ]
+      },
+      "ListKnowledgeResponse": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeEntry"
+            }
+          },
+          "hasMoreEntries": {
+            "type": "boolean"
+          }
+        },
+        "required": ["entries", "hasMoreEntries"]
+      },
+      "KnowledgeEntry": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/KnowledgeThread"
+          },
+          {
+            "$ref": "#/components/schemas/KnowledgeDescription"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "thread": "#/components/schemas/KnowledgeThread",
+            "description": "#/components/schemas/KnowledgeDescription"
+          }
+        }
+      },
+      "KnowledgeThread": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "anchorKey": {
+            "type": "string"
+          },
+          "anchorLabel": {
+            "type": "string"
+          },
+          "planId": {
+            "type": ["string", "null"]
+          },
+          "sourceKey": {
+            "type": ["string", "null"]
+          },
+          "flowId": {
+            "type": ["string", "null"]
+          },
+          "subjectKey": {
+            "type": ["string", "null"]
+          },
+          "spatial": {
+            "$ref": "#/components/schemas/KnowledgeSpatial"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/KnowledgeValidity"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": ["current", "subject_changed", "unknown"]
+          },
+          "author": {
+            "$ref": "#/components/schemas/KnowledgeAuthor"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["tag_mode", "hub", "mcp"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["thread"]
+          },
+          "anchorType": {
+            "type": "string",
+            "enum": ["step", "entity_action", "release", "contract", "tag"],
+            "example": "release"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "resolved"],
+            "example": "open"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "messageCount": {
+            "type": "integer"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeMessage"
+            }
+          },
+          "hasMoreMessages": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "anchorKey",
+          "anchorLabel",
+          "planId",
+          "sourceKey",
+          "flowId",
+          "subjectKey",
+          "spatial",
+          "validity",
+          "freshness",
+          "author",
+          "source",
+          "updatedAt",
+          "kind",
+          "anchorType",
+          "status",
+          "createdAt",
+          "messageCount"
+        ]
+      },
+      "KnowledgeSpatial": {
+        "type": ["object", "null"],
+        "properties": {
+          "at": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": ["x", "y"]
+          },
+          "element": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": ["at"]
+      },
+      "KnowledgeValidity": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "enum": ["release"]
+              },
+              "versionId": {
+                "type": "string"
+              },
+              "versionNumber": {
+                "type": "integer"
+              },
+              "promoted": {
+                "type": "boolean"
+              }
+            },
+            "required": ["tier", "versionId", "versionNumber", "promoted"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "enum": ["draft"]
+              },
+              "versionId": {
+                "type": "string"
+              }
+            },
+            "required": ["tier"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "enum": ["none"]
+              }
+            },
+            "required": ["tier"]
+          }
+        ]
+      },
+      "KnowledgeAuthor": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["user", "preview", "agent"]
+          },
+          "id": {
+            "type": ["string", "null"]
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": ["kind", "id", "label"]
+      },
+      "KnowledgeMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string",
+            "example": "user_a1b2c3d4"
+          },
+          "authorLabel": {
+            "type": "string",
+            "example": "ayla@elbwalker.com"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "clientMessageId": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "id",
+          "author",
+          "authorLabel",
+          "text",
+          "createdAt",
+          "clientMessageId"
+        ]
+      },
+      "KnowledgeDescription": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "anchorKey": {
+            "type": "string"
+          },
+          "anchorLabel": {
+            "type": "string"
+          },
+          "planId": {
+            "type": ["string", "null"]
+          },
+          "sourceKey": {
+            "type": ["string", "null"]
+          },
+          "flowId": {
+            "type": ["string", "null"]
+          },
+          "subjectKey": {
+            "type": ["string", "null"]
+          },
+          "spatial": {
+            "$ref": "#/components/schemas/KnowledgeSpatial"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/KnowledgeValidity"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": ["current", "subject_changed", "unknown"]
+          },
+          "author": {
+            "$ref": "#/components/schemas/KnowledgeAuthor"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["tag_mode", "hub", "mcp"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["description"]
+          },
+          "anchorType": {
+            "type": "string",
+            "enum": ["tag"]
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "anchorKey",
+          "anchorLabel",
+          "planId",
+          "sourceKey",
+          "flowId",
+          "subjectKey",
+          "spatial",
+          "validity",
+          "freshness",
+          "author",
+          "source",
+          "updatedAt",
+          "kind",
+          "anchorType",
+          "body"
+        ]
+      },
+      "KnowledgeThreadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "anchorKey": {
+            "type": "string"
+          },
+          "anchorLabel": {
+            "type": "string"
+          },
+          "planId": {
+            "type": ["string", "null"]
+          },
+          "sourceKey": {
+            "type": ["string", "null"]
+          },
+          "flowId": {
+            "type": ["string", "null"]
+          },
+          "subjectKey": {
+            "type": ["string", "null"]
+          },
+          "spatial": {
+            "$ref": "#/components/schemas/KnowledgeSpatial"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/KnowledgeValidity"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": ["current", "subject_changed", "unknown"]
+          },
+          "author": {
+            "$ref": "#/components/schemas/KnowledgeAuthor"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["tag_mode", "hub", "mcp"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["thread"]
+          },
+          "anchorType": {
+            "type": "string",
+            "enum": ["step", "entity_action", "release", "contract", "tag"],
+            "example": "release"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "resolved"],
+            "example": "open"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "messageCount": {
+            "type": "integer"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeMessage"
+            }
+          },
+          "hasMoreMessages": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "anchorKey",
+          "anchorLabel",
+          "planId",
+          "sourceKey",
+          "flowId",
+          "subjectKey",
+          "spatial",
+          "validity",
+          "freshness",
+          "author",
+          "source",
+          "updatedAt",
+          "kind",
+          "anchorType",
+          "status",
+          "createdAt",
+          "messageCount"
+        ]
+      },
+      "KnowledgeDescriptionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "anchorKey": {
+            "type": "string"
+          },
+          "anchorLabel": {
+            "type": "string"
+          },
+          "planId": {
+            "type": ["string", "null"]
+          },
+          "sourceKey": {
+            "type": ["string", "null"]
+          },
+          "flowId": {
+            "type": ["string", "null"]
+          },
+          "subjectKey": {
+            "type": ["string", "null"]
+          },
+          "spatial": {
+            "$ref": "#/components/schemas/KnowledgeSpatial"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/KnowledgeValidity"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": ["current", "subject_changed", "unknown"]
+          },
+          "author": {
+            "$ref": "#/components/schemas/KnowledgeAuthor"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["tag_mode", "hub", "mcp"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["description"]
+          },
+          "anchorType": {
+            "type": "string",
+            "enum": ["tag"]
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "anchorKey",
+          "anchorLabel",
+          "planId",
+          "sourceKey",
+          "flowId",
+          "subjectKey",
+          "spatial",
+          "validity",
+          "freshness",
+          "author",
+          "source",
+          "updatedAt",
+          "kind",
+          "anchorType",
+          "body"
         ]
       },
       "SummarizeReleaseResponse": {
@@ -9046,7 +9603,7 @@
       "post": {
         "tags": ["Settings"],
         "summary": "Deploy settings",
-        "description": "Start a deployment for a specific settings entry. Detects platform from the settings.",
+        "description": "Start a deployment for a specific settings entry. Detects platform from the settings. The body is optional and carries only `humanText`, the reason for the change, which becomes the description of the release this deploy produces; it is ignored when the release already has one.",
         "parameters": [
           {
             "schema": {
@@ -9079,6 +9636,16 @@
             "in": "path"
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploySettingsRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Deployment started",
@@ -13283,6 +13850,109 @@
         }
       }
     },
+    "/api/projects/{projectId}/flows/{flowId}/releases/{versionId}/content": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "Read a release snapshot",
+        "description": "The flow config one release of this flow froze, addressed by its spine version id. This is the only route that serves a release snapshot: the positional `/versions/{versionNumber}` route numbers the autosave revisions, a disjoint set of rows, so a release number handed to it addresses an unrelated revision or nothing. Inline secret literals are masked. An unknown id, a sibling flow's version, and an autosave revision all answer 404 alike. Requires member role and the `hub` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^ver_[a-zA-Z0-9_-]+$",
+              "example": "ver_a1b2c3d4",
+              "description": "Spine version ID of the release (ver_...)"
+            },
+            "required": true,
+            "description": "Spine version ID of the release (ver_...)",
+            "name": "versionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The release snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseContentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid version id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{projectId}/flows/{flowId}/releases/annotations": {
       "get": {
         "tags": ["Deployments"],
@@ -13982,6 +14652,521 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/knowledge": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "List knowledge captured in this project",
+        "description": "What people wrote on pages, most recently active first. Two kinds come back together and `kind` separates them: a `thread` carries its text in messages, a `description` carries one body and cannot be replied to. `sourceKey` narrows to one page; `markId` narrows to one mark within it and is refused without `sourceKey`, since a mark id alone addresses nothing. `includeMessages=true` attaches message bodies and holds the page to a much smaller ceiling, so `hasMoreEntries` is what separates a complete answer from a truncated one. `validity` says when an entry was true and `freshness` compares that against the flow’s newest release; neither is a verdict. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "https://shop.example/checkout"
+            },
+            "required": false,
+            "name": "sourceKey",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "mark_add_to_cart"
+            },
+            "required": false,
+            "name": "markId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "required": false,
+            "name": "includeMessages",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "example": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Knowledge in this project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListKnowledgeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query, or a mark filter with no page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Open a thread on a mark",
+        "description": "Open a thread on one mark of one page, with its first message. A thread never exists empty, so `text` is required and may not be blank. `clientThreadId` and `clientMessageId` are minted by the client at compose time and are what make a replay idempotent: repeating a known `clientThreadId` hands back the existing thread and writes nothing, so an offline queue can drain repeatedly without duplicating what a person wrote once. `flowId` binds the capture to a flow or is explicitly null; a flow this project cannot see answers 404, never 403. The server decides the plan id, the composed anchor key, the born release, the author and the source: a client cannot assert any of them. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "anchorType": {
+                    "type": "string",
+                    "enum": ["tag"],
+                    "example": "tag"
+                  },
+                  "sourceKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "markId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "anchorLabel": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "flowId": {
+                    "type": ["string", "null"],
+                    "minLength": 1
+                  },
+                  "subjectKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "spatial": {
+                    "$ref": "#/components/schemas/KnowledgeSpatial"
+                  },
+                  "clientThreadId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "example": "ct_7f3a91"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "clientMessageId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "example": "ct_7f3a91"
+                  }
+                },
+                "required": [
+                  "anchorType",
+                  "sourceKey",
+                  "markId",
+                  "flowId",
+                  "clientThreadId",
+                  "text",
+                  "clientMessageId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The thread, with its first message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeThreadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The named flow is not in this project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/knowledge/{threadId}/messages": {
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Reply to a knowledge thread",
+        "description": "Append a message to a thread and get the whole thread back, so a surface renders the new exchange without a second read. `text` may not be blank: a message cannot be cleared, so empty is invalid rather than a way to erase one. Repeating a `clientMessageId` already on the thread appends nothing and leaves `updatedAt` alone, so a retrying drain never keeps bumping a thread to the top of every list. A description has no conversation and cannot be replied to; addressing one answers 404. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^thr_[a-z0-9]+$",
+              "example": "thr_a1b2c3d4",
+              "description": "Thread ID (thr_...)"
+            },
+            "required": true,
+            "description": "Thread ID (thr_...)",
+            "name": "threadId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "clientMessageId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "example": "ct_7f3a91"
+                  }
+                },
+                "required": ["text", "clientMessageId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The thread, with the new message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeThreadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/knowledge/description": {
+      "put": {
+        "tags": ["Projects"],
+        "summary": "Write the description of a mark",
+        "description": "Write the one description of one mark, replacing whatever it said before. There is no id to mint: the anchor is the key, so a replayed write lands on the same row by construction, which is why this is a PUT. An empty `body` is refused rather than stored, so a drain that arrives with nothing to say can never erase what a person wrote. The response is 200 whether the description was opened or replaced. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "anchorType": {
+                    "type": "string",
+                    "enum": ["tag"],
+                    "example": "tag"
+                  },
+                  "sourceKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "markId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "anchorLabel": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "flowId": {
+                    "type": ["string", "null"],
+                    "minLength": 1
+                  },
+                  "subjectKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "spatial": {
+                    "$ref": "#/components/schemas/KnowledgeSpatial"
+                  },
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "anchorType",
+                  "sourceKey",
+                  "markId",
+                  "flowId",
+                  "body"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The stored description",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeDescriptionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The named flow is not in this project",
             "content": {
               "application/json": {
                 "schema": {

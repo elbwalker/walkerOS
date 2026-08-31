@@ -2,6 +2,7 @@ import type { Collector, Elb } from '@walkeros/core';
 import type { HandleCommandFn } from './types/collector';
 import { FatalError, useHooks, tryCatchAsync } from '@walkeros/core';
 import { createPushResult } from './destination';
+import { errorMeta } from './report-error';
 
 /**
  * Creates the command function for the collector.
@@ -28,10 +29,13 @@ export function createCommand<T extends Collector.Instance>(
         (err: unknown) => {
           if (err instanceof FatalError) throw err;
           collector.status.failed++;
+          // `command` is a low-cardinality identifier and stays; the
+          // arbitrary `data` payload does not. Log context is serialized into
+          // stderr, the error ring and the jsonl sink, where a command's
+          // operand (consent state, user fields) would be a PII egress.
           collector.logger.error('command failed', {
+            ...errorMeta(err),
             command,
-            data,
-            error: err,
           });
           return createPushResult({ ok: false });
         },
